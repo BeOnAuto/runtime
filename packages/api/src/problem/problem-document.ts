@@ -1,6 +1,7 @@
 import {
   CancelledKindSchema,
   ConflictKindSchema,
+  InvalidInputKindSchema,
   IssueSchema,
   RejectionBecauseSchema,
   UnansweredKindSchema,
@@ -43,6 +44,7 @@ const ProblemReasonSchema = Schema.Union(reasons).annotate({ description: 'Why t
 export type ProblemReason = typeof ProblemReasonSchema.Type;
 
 const RejectionKindSchema = Schema.Union([
+  InvalidInputKindSchema,
   ConflictKindSchema,
   UnavailableKindSchema,
   CancelledKindSchema,

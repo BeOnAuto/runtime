@@ -17,6 +17,9 @@ const closing = workflowSource(
     '  on: { one: { with: { type: com.acme.ledger.closed } } }',
     "  cron: '* * * * *'",
     '  every: PT1M',
+    'input:',
+    '  schema:',
+    '    document: { type: object, required: [month] }',
     'do:',
     "  - keep: { set: { input: '${ $data }' } }",
     '',
@@ -175,5 +178,22 @@ describe('a workflow with an event trigger, a cron schedule and an every schedul
     ]);
     expect(seen.startOverMcp).toEqual(seen.starts[0]);
     expect(seen.starts.flatMap(({ summary }) => internalTermsIn(summary))).toEqual([]);
+  });
+});
+
+describe('a workflow with triggers and an input schema that requires a field their inputs lack', () => {
+  it('refuses from a caller the input of a schedule, which its triggered runs above started with', async () => {
+    const fromACaller = await server.call('POST', `${alpha}/definitions/workflow/close-the-month/run`, {
+      body: { input: { schedule: { due: '2026-10-19T09:00:00.000Z' } } },
+    });
+
+    expect(fromACaller).toMatchObject({
+      status: 422,
+      body: {
+        reason: 'invalid_input',
+        kind: 'input_schema',
+        errors: [{ pointer: '/input/month', detail: 'The input: expected the field month.' }],
+      },
+    });
   });
 });

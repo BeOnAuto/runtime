@@ -1,4 +1,4 @@
-import type { CallResult } from '@on.auto/operations';
+import type { CallResult, RejectedCall } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
@@ -11,8 +11,8 @@ import { workflow } from '../testing/workflows.ts';
 
 const calling = workflow("do:\n  - ask: { call: notify, with: { to: '${ $data.name }' } }");
 
-function wordedBy(name: string, given: Json, reason: string): string {
-  return `turned ${name} for ${JSON.stringify(given)} down as ${reason}`;
+function wordedBy(name: string, given: Json, { reason, kind, detail }: RejectedCall): string {
+  return `turned ${name} for ${JSON.stringify(given)} down as ${reason} of the kind ${String(kind)}, saying ${detail}`;
 }
 
 function endedWith(result: CallResult) {
@@ -26,15 +26,17 @@ function endedWith(result: CallResult) {
 }
 
 describe('a call whose functions word its refusals', () => {
-  it('is titled in the words the functions give the rejection, read from the call and its arguments', () => {
-    expect(endedWith({ status: 'rejected', reason: 'invalid_input', detail: 'No' })).toEqual({
+  it('is titled in the words the functions give the rejection, read from the call, its arguments and the rejection', () => {
+    expect(endedWith({ status: 'rejected', reason: 'invalid_input', kind: 'input_schema', detail: 'No' })).toEqual({
       kind: 'raised',
       error: {
         type: errorType('validation'),
         status: 400,
         instance: '/do/0/ask',
-        title: 'The function notify turned notify for {"to":"ada"} down as invalid_input',
+        title:
+          'The function notify turned notify for {"to":"ada"} down as invalid_input of the kind input_schema, saying No',
         detail: 'No',
+        kind: 'input_schema',
       },
     });
   });

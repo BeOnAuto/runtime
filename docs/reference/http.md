@@ -461,7 +461,7 @@ A request that reuses an id for another definition or another input returns `con
 
 The last row has two exceptions.
 
-A workflow runs once for its id. A request with the id of a workflow run that ended without a final result returns `conflict` with the kind `unworkable`. Its detail says to use a new run id.
+A workflow runs once for its id. A request with the id of a workflow run that ended without a final result returns `conflict` with the kind `unworkable`, once its input passes the workflow's input schema, which is checked first. Its detail says to use a new run id.
 
 A run that may have called a tool is never attempted again under its id. That is a run of a reasoning function with `tools`, or of an interaction function with `call`:
 
@@ -1099,12 +1099,12 @@ A successful operation responds with JSON and `Cache-Control: no-store`. The cre
 
 An error is an RFC 9457 problem document, with `Content-Type: application/problem+json`. Inspect its `reason` and `detail`:
 
-- `invalid_input` includes an `errors` list of JSON pointers.
+- `invalid_input` includes an `errors` list of JSON pointers, and the kind `input_schema` when the input schema of the function or workflow refused the input it was given, before it ran.
 - A rejection that has a `kind` carries it.
 - An `unavailable` or `conflict` rejection that has a `because` carries it.
 - A `conflict` may have the kind `oversized`, for a workflow whose output is larger than a run can record.
 
-A refusal of a function's input says each issue in its `detail`, one sentence each, in the words of the input schema. A sentence names the field, then its `description` and `examples`, then the rule it broke. Each entry of `errors` holds one sentence and the field's pointer, so a reader can show it at its field:
+A refusal of the input of a function or a workflow says each issue in its `detail`, one sentence each, in the words of the input schema. A sentence names the field, then its `description` and `examples`, then the rule it broke. Each entry of `errors` holds one sentence and the field's pointer, so a reader can show it at its field:
 
 ```json
 {
@@ -1118,7 +1118,8 @@ A refusal of a function's input says each issue in its `detail`, one sentence ea
       "detail": "month, The month to report on, such as \"April 2026\" or \"2026-04\": expected at least 6 characters.",
       "pointer": "/input/month"
     }
-  ]
+  ],
+  "kind": "input_schema"
 }
 ```
 

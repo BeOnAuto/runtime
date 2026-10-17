@@ -1,3 +1,5 @@
+import type { RejectedCall } from '@on.auto/operations';
+
 import type { Json, JsonObject } from './json.ts';
 import type { Rejection } from './policy-checks.ts';
 
@@ -5,7 +7,7 @@ type ArgumentRejections = (arguments_: Json | undefined, pointer: string) => rea
 
 type CallDescription = (name: string, arguments_: Json) => string;
 
-type RefusalWords = (name: string, arguments_: Json, reason: string) => string;
+type RefusalWords = (name: string, arguments_: Json, rejected: RejectedCall) => string;
 
 export interface ChildCall {
   readonly function: string;

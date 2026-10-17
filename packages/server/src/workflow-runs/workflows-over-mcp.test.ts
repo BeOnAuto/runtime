@@ -1,4 +1,4 @@
-import { listedTools, toolNamesIn, withMcpSession, type McpSession } from '@on.auto/api/testing';
+import { listedTools, problemIn, toolNamesIn, withMcpSession, type McpSession } from '@on.auto/api/testing';
 import { answers, jsonResult, type ScriptedReply } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -31,6 +31,22 @@ const approval = workflowSource(
             with: { type: com.acme.approval.decided }
       output:
         as: '\${ ({ decided: $data[0] }) }'
+`,
+);
+
+const expensing = workflowSource(
+  'expensing',
+  `input:
+  schema:
+    document:
+      type: object
+      required: [expense]
+      properties:
+        expense: { type: string, description: What was bought }
+do:
+  - judge:
+      call: run_definition
+      with: { type: reasoning, name: verdict, input: { expense: '\${ $data.expense }' } }
 `,
 );
 
@@ -122,6 +138,26 @@ describe('workflows over MCP', () => {
     expect(started.structuredContent).toMatchObject({ type: 'workflow', status: 'started' });
     expect(sent.structuredContent).toMatchObject({ event: { type: 'com.acme.approval.decided', data: 'yes' } });
     expect(run.structuredContent).toMatchObject({ status: 'succeeded', output: { decided: 'yes' } });
+  });
+});
+
+describe('a workflow whose input schema refuses the input, over MCP', () => {
+  it('answers the run with isError and the problem document, each issue at its field under /input', async () => {
+    const ran = await onAlpha([], async (session) => {
+      await session.callTool('create_definition', { type: 'workflow', name: 'expensing', source: expensing });
+      return session.callTool('run_definition', { type: 'workflow', name: 'expensing', input: { expense: 7 } });
+    });
+
+    expect({ isError: ran.isError, problem: problemIn(ran) }).toMatchObject({
+      isError: true,
+      problem: {
+        status: 422,
+        reason: 'invalid_input',
+        kind: 'input_schema',
+        errors: [{ pointer: '/input/expense', detail: 'expense, What was bought: expected text.' }],
+      },
+    });
+    expect(server.modelCalls()).toBe(0);
   });
 });
 

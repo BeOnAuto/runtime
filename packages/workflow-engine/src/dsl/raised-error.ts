@@ -8,8 +8,8 @@ import {
   RejectionBecauseSchema,
   UnansweredKindSchema,
   type ConflictKind,
-  type Issue,
   type KindWithType,
+  type RejectedCall,
   type Settlement,
 } from '@on.auto/operations';
 import { Schema } from 'effect';
@@ -215,15 +215,6 @@ export function settlementOf(outcome: SettledOutcome): Settlement {
     return { status: 'succeeded', output: outcome.output };
   }
   return outcome.kind === 'raised' ? settledRejectionOf(outcome.error) : endingOf(outcome);
-}
-
-interface RejectedCall {
-  readonly status: 'rejected';
-  readonly reason: string;
-  readonly detail: string;
-  readonly kind?: string;
-  readonly because?: string;
-  readonly issues?: readonly Issue[];
 }
 
 export type FailedCall =

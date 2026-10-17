@@ -175,8 +175,21 @@ export function wordedIssuesOf(schema: CompiledSchema, value: Schema.Json): read
     .map((issue) => ({ pointer: issue.pointer, detail: asSentence(sentenceOf(schema, issue)) }));
 }
 
+function sentencesOf(issues: readonly Issue[]): string {
+  return issues.map(({ detail }) => detail).join(' ');
+}
+
 export function refusedInput(issues: readonly Issue[]): InvalidInput {
-  return new InvalidInput({ detail: issues.map(({ detail }) => detail).join(' '), issues });
+  return new InvalidInput({ detail: sentencesOf(issues), issues });
+}
+
+interface StatedRefusal {
+  readonly detail: string;
+  readonly issues: readonly Issue[];
+}
+
+export function refusedByTheInputSchema(refusal: StatedRefusal): InvalidInput {
+  return new InvalidInput({ ...refusal, kind: 'input_schema' });
 }
 
 function tooDeepFor(noun: string): InvalidInput {
@@ -195,5 +208,7 @@ export function checkedInput(
     return Effect.fail(tooDeepFor(noun));
   }
   const issues = schema === undefined ? [] : wordedIssuesOf(schema, input);
-  return issues.length === 0 ? Effect.succeed(input) : Effect.fail(refusedInput(issues));
+  return issues.length === 0
+    ? Effect.succeed(input)
+    : Effect.fail(refusedByTheInputSchema({ detail: sentencesOf(issues), issues }));
 }

@@ -5,7 +5,7 @@ import {
   type CalledDefinition,
   type PlaybookOwnNames,
 } from '@on.auto/definitions';
-import { refusalInWords } from '@on.auto/operations';
+import { InvalidInputKindSchema, refusalInWords, type RejectedCall } from '@on.auto/operations';
 import {
   allTaskEntries,
   type CallFunctions,
@@ -20,6 +20,7 @@ import {
   rejection,
   textField,
 } from '@on.auto/workflow-engine';
+import { Schema } from 'effect';
 
 import { outputRefusalOf } from './workflow-output.ts';
 import { scheduleRejections } from './workflow-schedule.ts';
@@ -81,9 +82,12 @@ function definitionDescribed(name: string, arguments_: Json): string {
 
 const refusedByItsSteps: ReadonlySet<string> = new Set(['invalid_input', 'unavailable', 'conflict', 'unanswered']);
 
-function refusalOfACall(_name: string, arguments_: Json, reason: string): string {
+const refusedTheInputItWasGiven = Schema.is(InvalidInputKindSchema);
+
+function refusalOfACall(_name: string, arguments_: Json, { reason, kind }: RejectedCall): string {
   const type = isObject(arguments_) ? textField(arguments_, 'type') : undefined;
-  return type === workflowType && refusedByItsSteps.has(reason) ? 'stopped' : refusalInWords(reason);
+  const stoppedAtAStep = type === workflowType && refusedByItsSteps.has(reason) && !refusedTheInputItWasGiven(kind);
+  return stoppedAtAStep ? 'stopped' : refusalInWords(reason);
 }
 
 function emitRejectionsOf({ types }: PlaybookOwnNames) {

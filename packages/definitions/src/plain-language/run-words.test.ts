@@ -72,6 +72,11 @@ const rejections: ReadonlyArray<readonly [string, Readonly<Record<string, unknow
     'what was given does not fit what it needs. This can be corrected and tried again; the details below say what to change.',
   ],
   [
+    'an input its input schema refused',
+    { reason: 'invalid_input', kind: 'input_schema', detail: 'x', issues: [] },
+    'what was given does not fit what it needs. This can be corrected and tried again; the details below say what to change.',
+  ],
+  [
     'something it relies on that was not available',
     { reason: 'unavailable', detail: 'x' },
     'something the server relies on is not available right now. Only whoever runs the server can put this right, so there is nothing to change on your side; once they have, it can be tried again. Meanwhile, everything that does not need it still works.',

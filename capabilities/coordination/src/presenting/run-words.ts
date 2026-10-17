@@ -1,6 +1,7 @@
 import {
   CancelledKindSchema,
   ConflictKindSchema,
+  InvalidInputKindSchema,
   UnansweredKindSchema,
   RejectionBecauseSchema,
   UnavailableKindSchema,
@@ -35,6 +36,8 @@ function happened(receipt: InputReceipt): string {
     : 'The workflow was asked to stop';
 }
 
+const decodeInvalidInputKind = Schema.decodeUnknownOption(InvalidInputKindSchema);
+
 const decodeUnavailableKind = Schema.decodeUnknownOption(UnavailableKindSchema);
 
 const decodeConflictKind = Schema.decodeUnknownOption(ConflictKindSchema);
@@ -50,6 +53,10 @@ type Rejection = NonNullable<Extract<InputReceipt, { readonly kind: 'call_answer
 function whyNot({ kind, because }: Rejection): string {
   const known = Option.getOrUndefined(decodeBecause(because));
   const withBecause = known === undefined ? {} : { because: known };
+  const refused = Option.getOrUndefined(decodeInvalidInputKind(kind));
+  if (refused !== undefined) {
+    return explanationOf({ reason: 'invalid_input', kind: refused }).why;
+  }
   const unavailable = Option.getOrUndefined(decodeUnavailableKind(kind));
   if (unavailable !== undefined) {
     return explanationOf({ reason: 'unavailable', kind: unavailable, ...withBecause }).why;

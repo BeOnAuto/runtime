@@ -110,7 +110,7 @@ export const beforeAnything: ReadonlyArray<readonly [string, Row, Ending]> = [
   [
     'an input that does not match',
     { input: { channel: 7 } },
-    { status: 422, type: `${problems}invalid_input`, detail: someDetail, retryAfter: null },
+    { status: 422, type: `${problems}invalid_input`, kind: 'input_schema', detail: someDetail, retryAfter: null },
   ],
   [
     'an argument that reads what the input lacks',

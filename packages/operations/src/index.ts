@@ -22,7 +22,13 @@ export {
 } from './caller/call-lineage.ts';
 export { PlaybookWriter } from './ledger/playbook-writer.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
-export { CallResultSchema, invalidArguments, type CallResult, type CallStatus } from './outcome/call-result.ts';
+export {
+  CallResultSchema,
+  invalidArguments,
+  type CallResult,
+  type CallStatus,
+  type RejectedCall,
+} from './outcome/call-result.ts';
 export { catalogPathOf, makeCatalog, type Catalog } from './catalog/catalog.ts';
 export { CancelledKindSchema, RunCancelled, type CancelledKind } from './outcome/cancelled-run.ts';
 export { Conflict, ConflictKindSchema, type ConflictKind } from './outcome/conflict.ts';
@@ -138,7 +144,7 @@ export { ServedAsTool } from './dispatch/served-as-tool.ts';
 export type { HandlerServices } from './definition/handler-services.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';
-export { InvalidInput } from './outcome/invalid-input.ts';
+export { InvalidInput, InvalidInputKindSchema, type InvalidInputKind } from './outcome/invalid-input.ts';
 export {
   InvalidCursor,
   type ExaminedPlace,

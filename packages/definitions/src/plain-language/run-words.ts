@@ -34,8 +34,11 @@ export function explainedRejectionOf(rejection: DescribedRun['rejection']): Expl
   if (rejection.reason === 'cancelled' || rejection.reason === 'unanswered') {
     return { reason: rejection.reason, kind: rejection.kind };
   }
-  if (rejection.reason === 'invalid_input' || rejection.kind === undefined) {
+  if (rejection.kind === undefined) {
     return { reason: rejection.reason };
+  }
+  if (rejection.reason === 'invalid_input') {
+    return { reason: rejection.reason, kind: rejection.kind };
   }
   const { reason, kind, because } = rejection;
   return because === undefined ? { reason, kind } : { reason, kind, because };

@@ -1,4 +1,4 @@
-import type { ConflictKind, RejectionBecause, UnavailableKind } from '@on.auto/operations';
+import type { ConflictKind, InvalidInputKind, RejectionBecause, UnavailableKind } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { CapabilityAnswer, CapabilityRejection } from '../capability/capability.ts';
@@ -49,9 +49,14 @@ function rejectedWith(rejection: RunRejection, { record }: Recorded): Effect.Eff
   );
 }
 
-function rejectedForInput(rejection: Rejection & Recorded): Effect.Effect<RunResult> {
-  const { detail, issues } = rejection;
-  return rejectedWith({ reason: 'invalid_input', detail, issues: issuesUnder('input', issues) }, rejection);
+function rejectedForInput(
+  rejection: Rejection & Recorded & { readonly kind?: InvalidInputKind },
+): Effect.Effect<RunResult> {
+  const { detail, issues, kind } = rejection;
+  return rejectedWith(
+    { reason: 'invalid_input', detail, issues: issuesUnder('input', issues), ...(kind === undefined ? {} : { kind }) },
+    rejection,
+  );
 }
 
 interface Unavailability extends Recorded {
