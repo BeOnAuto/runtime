@@ -37,6 +37,7 @@ describe('the words of a simple schema', () => {
       wordsOf({ type: 'string' }),
       wordsOf({ type: 'string', format: 'date-time' }),
       wordsOf({ type: 'string', format: 'email' }),
+      wordsOf({ type: 'string', format: 'phone' }),
       wordsOf({ type: 'integer' }),
       wordsOf({ type: 'number' }),
       wordsOf({ type: 'boolean' }),
@@ -46,7 +47,8 @@ describe('the words of a simple schema', () => {
     ]).toEqual([
       'Text.',
       'A date and time.',
-      'Text in the form the schema calls email.',
+      'An email address.',
+      'Text in the form the schema calls phone.',
       'A whole number.',
       'A number.',
       'Yes or no.',

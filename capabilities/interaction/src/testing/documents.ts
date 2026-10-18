@@ -8,6 +8,8 @@ const answerSchema = [
   '      note: { type: string, maxLength: 2000 }',
 ];
 
+export const datedAnswerSchema: readonly string[] = [...answerSchema, '      due: { type: string, format: date }'];
+
 const inputSchema = [
   'input:',
   '  schema:',
@@ -30,7 +32,11 @@ export const chatDelivery: readonly string[] = [
   '    id: /ts',
 ];
 
-export function approvalDocument(delivery: readonly string[] = [], expires = 'P2D'): string {
+export function approvalDocument(
+  delivery: readonly string[] = [],
+  expires = 'P2D',
+  answer: readonly string[] = answerSchema,
+): string {
   return [
     '---',
     'description: Ask the campaign owner to approve a brief',
@@ -38,7 +44,7 @@ export function approvalDocument(delivery: readonly string[] = [], expires = 'P2
     `expires: ${expires}`,
     ...delivery,
     ...inputSchema,
-    ...answerSchema,
+    ...answer,
     '---',
     'Please review the brief for {{ input.campaign }}.',
   ].join('\n');

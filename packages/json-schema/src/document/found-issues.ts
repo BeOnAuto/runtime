@@ -1,12 +1,15 @@
 import { Schema, SchemaAST, SchemaIssue } from 'effect';
 
+import { formatCheckId, formatOfCheck } from './format-checks.ts';
 import { pointerOf, type SchemaIssue as Issue } from './json-bounds.ts';
+import type { FormatName } from './string-formats.ts';
 
 export type Breach =
   | { readonly rule: 'kind' }
   | { readonly rule: 'missing' }
   | { readonly rule: 'unexpected' }
-  | { readonly rule: 'bound'; readonly keywords: Schema.JsonObject };
+  | { readonly rule: 'bound'; readonly keywords: Schema.JsonObject }
+  | { readonly rule: 'format'; readonly format: FormatName };
 
 export interface FoundIssue extends Issue {
   readonly breach?: Breach;
@@ -42,6 +45,10 @@ function boundNamed(keyword: string): CheckBreach {
   });
 }
 
+function formatNamed(filter: SchemaAST.Filter<unknown>): Breach {
+  return { rule: 'format', format: formatOfCheck(filter.annotations?.representation?.payload) };
+}
+
 function lengthOrItems(filter: SchemaAST.Filter<unknown>, holder: SchemaAST.AST | undefined): Breach {
   return boundNamed(holder !== undefined && SchemaAST.isString(holder) ? 'minLength' : 'minItems')(filter, holder);
 }
@@ -60,6 +67,7 @@ const breachesOfChecks: ReadonlyMap<string | undefined, CheckBreach> = new Map<s
   ['effect/schema/isMaxProperties', boundNamed('maxProperties')],
   ['effect/schema/isUnique', () => ({ rule: 'bound', keywords: { uniqueItems: true } })],
   ['effect/schema/isInt', () => ofAnotherKind],
+  [formatCheckId, formatNamed],
 ]);
 
 function isTheCheckOfNames(issue: SchemaIssue.Issue): issue is SchemaIssue.Filter {

@@ -157,7 +157,7 @@ describe('an output of a shape', () => {
 });
 
 describe('the warnings of a definition', () => {
-  it('say where a JSON output schema is not portable across providers, or not checked here', () => {
+  it('say where a JSON output schema is not portable across providers, and nothing of a format the runtime checks', () => {
     const definition = parsed(
       documentOf(
         [
@@ -177,7 +177,6 @@ describe('the warnings of a definition', () => {
 
     expect(definition.warnings).toEqual([
       'Line 8, /output/schema/properties/total/minimum: minimum is not enforced while Anthropic models write the answer; an answer outside it fails as output_invalid (anthropic, bedrock, bedrock-anthropic, vertex-anthropic)',
-      'Line 9, /output/schema/properties/day/format: format is sent to the provider but not checked here',
     ]);
   });
 

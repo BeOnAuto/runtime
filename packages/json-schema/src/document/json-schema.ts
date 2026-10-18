@@ -1,5 +1,6 @@
 import { JsonSchema, Result, Schema, SchemaRepresentation } from 'effect';
 
+import { withFormatChecks } from './format-checks.ts';
 import { foundIssuesOf, type FoundIssue } from './found-issues.ts';
 import {
   boundedIssues,
@@ -10,7 +11,7 @@ import {
   type SchemaIssue as Issue,
 } from './json-bounds.ts';
 import { referenceLoopIssues } from './reference-loops.ts';
-import { shapeIssues } from './schema-shape.ts';
+import { shapeIssues, type OtherFormats } from './schema-shape.ts';
 
 export const jsonSchemaLimits = {
   bytes: 65_536,
@@ -31,6 +32,7 @@ export interface Validation {
   readonly what: string;
   readonly nesting: number;
   readonly further?: FurtherCheck;
+  readonly otherFormats?: OtherFormats;
 }
 
 type Decoder = (input: unknown) => Result.Result<unknown, Schema.SchemaError>;
@@ -66,8 +68,11 @@ export function boundedJsonSchema(document: unknown): Result.Result<Schema.JsonO
     : Result.succeed(document);
 }
 
-function wellFormedDocument(document: Schema.JsonObject): Result.Result<Schema.JsonObject, readonly Issue[]> {
-  const issues = [...shapeIssues(document), ...referenceLoopIssues(document)];
+function wellFormedDocument(
+  document: Schema.JsonObject,
+  otherFormats: OtherFormats | undefined,
+): Result.Result<Schema.JsonObject, readonly Issue[]> {
+  const issues = [...shapeIssues(document, otherFormats), ...referenceLoopIssues(document)];
   return issues.length > 0 ? Result.fail(boundedIssues(issues, issueBounds)) : Result.succeed(document);
 }
 
@@ -90,7 +95,8 @@ function importFailure(error: unknown): string {
 function decoderOf(document: Schema.JsonObject): Result.Result<Decoder, readonly Issue[]> {
   try {
     const imported = SchemaRepresentation.fromJsonSchemaDocument(importedDocument(document));
-    return Result.succeed(Schema.decodeUnknownResult(Schema.make<Schema.Codec<unknown>>(imported.ast), strictly));
+    const asserted = Schema.make<Schema.Codec<unknown>>(withFormatChecks(imported.ast, document));
+    return Result.succeed(Schema.decodeUnknownResult(asserted, strictly));
   } catch (error) {
     return Result.fail(rootIssue(importFailure(error)));
   }
@@ -140,7 +146,7 @@ export function compileJsonSchema(
   validation: Validation,
 ): Result.Result<CompiledSchema, readonly Issue[]> {
   return boundedJsonSchema(document).pipe(
-    Result.flatMap(wellFormedDocument),
+    Result.flatMap((bounded) => wellFormedDocument(bounded, validation.otherFormats)),
     Result.flatMap((usable) => Result.map(decoderOf(usable), (decode) => compiledOf(usable, decode, validation))),
   );
 }

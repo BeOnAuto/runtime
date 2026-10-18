@@ -147,7 +147,7 @@ The schemas the document carries are the types the program is checked against. `
 
 A definition's type is named such as `Input_address` for `#/$defs/address` of the input schema. A character a name cannot hold is written as its code point between two `$`, as `Input_street$45$address` for `street-address`.
 
-What a type cannot say, such as `minimum`, `maximum` and `multipleOf`, is checked when the run checks its input and output. A `pattern` is refused when the document is saved. A `format` is not checked: a value of its type is taken whatever its form, and the overview names the form.
+What a type cannot say, such as `minimum`, `maximum`, `multipleOf` and `format`, is checked when the run checks its input and output. A `format` is one of `date`, `date-time`, `time`, `email`, `uri` and `uuid`, as [Answers that are JSON](reasoning-format.md#answers-that-are-json) sets out, so an input of April for a `date` is refused before the run, with the words `expected a date such as 2026-04-01`. A `pattern`, and any other `format`, are refused when the document is saved. The overview names the form.
 
 ### Checked when it is saved
 

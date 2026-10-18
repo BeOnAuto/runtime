@@ -140,6 +140,6 @@ No failure or defect carries the request or response bodies the SDK keeps on its
 
 - `unsupported`: what makes the schema unusable here;
 - `not_portable`: what some providers reject or do not enforce, with the prefixes concerned (`src/schema/schema-portability.ts`);
-- `unchecked`: what is sent to the provider but not checked here, such as `format` and unknown keywords.
+- `unchecked`: what is sent to the provider but not checked here, the keywords the compiler does not know. A `format` is not among them: the compiler checks `date`, `date-time`, `time`, `email`, `uri` and `uuid` whatever the provider enforces, and any other is `unsupported`.
 
 A definition is rejected for `unsupported` issues, and carries the `not_portable` and `unchecked` ones as `warnings`, at most 100 (`src/definition/definition-schemas.ts`). `jsonOutput` (`src/adapter/json-output.ts`) hands the schema to the AI SDK's `Output.object` with a validator that checks the answer against the schema as written; a document the SDK cannot take fails as `definition_invalid` with `The output schema is not one this package can validate`.

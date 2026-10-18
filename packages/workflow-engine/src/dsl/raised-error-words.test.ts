@@ -58,7 +58,7 @@ describe('the issues of a refused input a step met', () => {
   it('carries the issues of a refused input, each at its pointer and in its sentence, into the rejection of the run', () => {
     const issues: readonly Issue[] = [
       { pointer: '/input/seats', detail: 'seats, How many seats: expected at least 1.' },
-      { pointer: '/input/day', detail: 'day: expected text in the form the schema calls date.' },
+      { pointer: '/input/day', detail: 'day: expected a date such as 2026-04-01.' },
     ];
     const refused = callErrorOf(
       { status: 'rejected', reason: 'invalid_input', detail: issues.map(({ detail }) => detail).join(' '), issues },
@@ -70,7 +70,7 @@ describe('the issues of a refused input a step met', () => {
       status: 'rejected',
       reason: 'invalid_input',
       detail:
-        'The function notify refused its input, at the step ask: seats, How many seats: expected at least 1. day: expected text in the form the schema calls date.',
+        'The function notify refused its input, at the step ask: seats, How many seats: expected at least 1. day: expected a date such as 2026-04-01.',
       issues,
     });
     expect(settlementOf({ kind: 'raised', error: { ...refused, status: 503 } })).not.toHaveProperty('issues');

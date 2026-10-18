@@ -1,21 +1,11 @@
+import { isFormatName } from '@on.auto/json-schema';
 import { alternatives, asSentence } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import { inWords } from '../plain-language/in-words.ts';
 import { named, paragraph, type OverviewBlock, type Phrase, type Phrases } from './overview.ts';
 import { amountOf, countedIn, entry, entryBound, item, itemBound, trailingWords, type Bound } from './schema-bounds.ts';
-import {
-  anyValue,
-  countOf,
-  dateAndTime,
-  eachOf,
-  list,
-  nouns,
-  record,
-  text,
-  values,
-  type Count,
-} from './schema-nouns.ts';
+import { anyValue, countOf, eachOf, forms, list, nouns, record, text, values, type Count } from './schema-nouns.ts';
 import {
   deeper,
   isJsonList,
@@ -120,10 +110,17 @@ function saysAnExample(description: string, examples: Schema.JsonArray): boolean
   return givesExamples.test(description) || examples.some((example) => holdsAsAWord(description, valueText(example)));
 }
 
+function isSaidIn(description: string | undefined, examples: Schema.JsonArray): boolean {
+  return description !== undefined && saysAnExample(description, examples);
+}
+
 export function examplesWordsOf(examples: Schema.JsonArray, description: string | undefined): readonly string[] {
   const shown = examples.flatMap((example) => shownInWords(example));
-  const said = description !== undefined && saysAnExample(description, examples);
-  return said || shown.length === 0 ? [] : [`such as ${alternatives(shown)}`];
+  return isSaidIn(description, examples) || shown.length === 0 ? [] : [`such as ${alternatives(shown)}`];
+}
+
+export function givesAnExample(examples: Schema.JsonArray, description: string | undefined): boolean {
+  return isSaidIn(description, examples) || examples.some((example) => shownInWords(example).length > 0);
 }
 
 function subFieldPhrases(name: string, property: JsonSchema, required: boolean, reading: SchemaReading): Phrases {
@@ -184,8 +181,8 @@ function listWords(schema: JsonSchema, reading: SchemaReading, count: Count): Wo
 }
 
 function textWords(format: string | undefined, count: Count): string {
-  if (format === 'date-time') {
-    return dateAndTime[count];
+  if (isFormatName(format)) {
+    return forms[format][count];
   }
   return format === undefined ? text[count] : `${text[count]} in the form the schema calls ${format}`;
 }

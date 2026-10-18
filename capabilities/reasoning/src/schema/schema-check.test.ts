@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkAnswerSchema } from './answer-schema.ts';
+import { checkAnswerSchema, notPortableAsToolInput } from './answer-schema.ts';
 
 const anthropicModels = ['anthropic', 'bedrock', 'bedrock-anthropic', 'vertex-anthropic'];
 const strictOpenAi = ['openai', 'azure'];
@@ -28,6 +28,10 @@ const portable = {
 
 function withProperty(name: string, schema: object): object {
   return { ...portable, properties: { ...portable.properties, [name]: schema } };
+}
+
+function withFormat(format: string): object {
+  return withProperty('owner', { type: 'string', format });
 }
 
 describe('checkAnswerSchema', () => {
@@ -114,30 +118,30 @@ describe('checkAnswerSchema for Anthropic models', () => {
 });
 
 describe('checkAnswerSchema for keywords it does not check', () => {
-  it('reports formats as unchecked, and formats Anthropic models do not accept as not portable', () => {
-    const formats = {
-      ...portable,
-      properties: {
-        ...portable.properties,
-        summary: { type: 'string', format: 'email' },
-        owner: { type: 'string', format: 'phone' },
+  it('reports nothing of a format the runtime checks, and refuses a format it does not check', () => {
+    expect([checkAnswerSchema(withFormat('email')), checkAnswerSchema(withFormat('phone'))]).toEqual([
+      { unsupported: [], not_portable: [], unchecked: [] },
+      {
+        unsupported: [
+          {
+            pointer: '/properties/owner/format',
+            detail: 'Expected one of the formats checked here: date, date-time, time, email, uri or uuid',
+          },
+        ],
+        not_portable: [],
+        unchecked: [],
       },
-    };
+    ]);
+  });
 
-    expect(checkAnswerSchema(formats)).toEqual({
-      unsupported: [],
-      not_portable: [
-        {
-          pointer: '/properties/owner/format',
-          detail: 'Anthropic models do not accept this format',
-          providers: anthropicModels,
-        },
-      ],
-      unchecked: [
-        { pointer: '/properties/summary/format', detail: 'format is sent to the provider but not checked here' },
-        { pointer: '/properties/owner/format', detail: 'format is sent to the provider but not checked here' },
-      ],
-    });
+  it('names a format a provider does not accept in the input schema of a tool, which reasoning does not compile', () => {
+    expect(notPortableAsToolInput(withFormat('phone'))).toEqual([
+      {
+        pointer: '/properties/owner/format',
+        detail: 'Anthropic models do not accept this format',
+        providers: anthropicModels,
+      },
+    ]);
   });
 
   it('reports extension keywords', () => {

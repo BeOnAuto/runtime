@@ -1,4 +1,10 @@
-import { compileJsonSchema, issuesDetail, jsonSchemaLimits, type SchemaIssue } from '@on.auto/json-schema';
+import {
+  compileJsonSchema,
+  issuesDetail,
+  jsonSchemaLimits,
+  type SchemaIssue,
+  type Validation,
+} from '@on.auto/json-schema';
 import { Result, Schema } from 'effect';
 
 const ArgumentIssueSchema = Schema.Struct({
@@ -23,7 +29,7 @@ export type ArgumentCheck = typeof ArgumentCheckSchema.Type;
 
 type ArgumentIssue = typeof ArgumentIssueSchema.Type;
 
-const checking = { what: 'arguments object', nesting: jsonSchemaLimits.nesting };
+const checking: Validation = { what: 'arguments object', nesting: jsonSchemaLimits.nesting, otherFormats: 'unchecked' };
 
 function issueOf({ pointer, detail }: SchemaIssue): ArgumentIssue {
   return { path: pointer, message: detail };

@@ -1,21 +1,9 @@
 import { compileJsonSchema } from '@on.auto/json-schema';
-import { Result, type Schema } from 'effect';
+import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { refusedInput, wordedIssuesOf } from '../index.ts';
-
-function refusalOf(document: Schema.JsonObject, value: Schema.Json, what = 'input') {
-  const issues = wordedIssuesOf(Result.getOrThrow(compileJsonSchema(document, { what, nesting: 64 })), value);
-  return issues.length === 0 ? undefined : refusedInput(issues);
-}
-
-function wordsOf(document: Schema.JsonObject, value: Schema.Json, what?: string): string | undefined {
-  return refusalOf(document, value, what)?.detail;
-}
-
-function fieldWords(field: Schema.JsonObject, value: Schema.Json): string | undefined {
-  return wordsOf({ type: 'object', properties: { field } }, { field: value });
-}
+import { wordedIssuesOf } from '../index.ts';
+import { fieldWords, refusalOf, wordsOf } from '../testing/refusal-words.ts';
 
 const month = {
   type: 'string',
@@ -88,7 +76,7 @@ describe('the words of a value of another kind', () => {
     ]).toEqual([
       'field: expected a whole number, from 1 to 100.',
       'field: expected a number.',
-      'field: expected text in the form the schema calls date.',
+      'field: expected a date.',
       'field: expected yes or no.',
       'field: expected text or nothing.',
       'field: expected exactly approve.',

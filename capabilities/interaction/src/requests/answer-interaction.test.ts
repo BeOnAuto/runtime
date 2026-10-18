@@ -8,6 +8,7 @@ import {
   approvalDocument,
   askedRunId,
   askedThroughChat,
+  datedAnswerSchema,
   interactionHarness,
   notificationDocument,
   recordedReply,
@@ -59,9 +60,9 @@ const interaction = {
 
 const refused = { ...interaction, conversation: 'C0123/1699.1', answerer: 'U024BE7LH', reply_refusals: 2 };
 
-async function askedApproval() {
+async function askedApproval(document = approvalDocument()) {
   const playbook = interactionHarness();
-  await playbook.define('approve-brief', approvalDocument());
+  await playbook.define('approve-brief', document);
   const asked = await playbook.ask('approve-brief', { campaign: 'Spring', owner: 'ada' }, runId);
   return { playbook, asked };
 }
@@ -159,13 +160,13 @@ describe('an answer to a request a reply answered first', () => {
 
 describe('an answer the request does not take', () => {
   it('is invalid input when it does not match the answer schema, with pointers, and leaves the request open', async () => {
-    const { playbook } = await askedApproval();
+    const { playbook } = await askedApproval(approvalDocument([], 'P2D', datedAnswerSchema));
 
-    expect(await playbook.call(answer, { run_id: runId, answer: { choice: 'maybe' } })).toMatchObject({
+    expect(await playbook.call(answer, { run_id: runId, answer: { choice: 'maybe', due: 'Friday' } })).toMatchObject({
       status: 'rejected',
       reason: 'invalid_input',
-      detail: 'choice: expected one of: approve, reject.',
-      issues: [{ pointer: '/answer/choice' }],
+      detail: 'choice: expected one of: approve, reject. due: expected a date such as 2026-04-01.',
+      issues: [{ pointer: '/answer/choice' }, { pointer: '/answer/due' }],
     });
     expect(await playbook.call(listInteractions, {})).toMatchObject({
       output: { interactions: [{ run_id: runId }] },

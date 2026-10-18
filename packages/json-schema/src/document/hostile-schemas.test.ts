@@ -7,6 +7,7 @@ import { isKnownKeyword } from './schema-shape.ts';
 const asAnAnswer = { what: 'answer', nesting: 128 };
 
 const unsafePattern = 'Regular expressions are not accepted, because a hostile pattern can stall validation';
+const uncheckedFormat = 'Expected one of the formats checked here: date, date-time, time, email, uri or uuid';
 const typeNames = 'Expected one of null, boolean, object, array, number, string, integer, or a non-empty list of them';
 
 function issuesOf(document: unknown): unknown {
@@ -42,6 +43,9 @@ const malformed: readonly (readonly [unknown, string, string])[] = [
     'Expected a reference to a definition of this schema, such as "#/$defs/address"',
   ],
   [{ description: 5 }, '/description', 'Expected a string'],
+  [{ type: 'string', format: 'phone' }, '/format', uncheckedFormat],
+  [{ type: 'integer', format: 'int64' }, '/format', uncheckedFormat],
+  [{ properties: { a: { format: 7 } } }, '/properties/a/format', uncheckedFormat],
   [{ minimum: '1' }, '/minimum', 'Expected a number'],
   [{ multipleOf: 0 }, '/multipleOf', 'Expected a number greater than 0'],
   [{ minLength: -1 }, '/minLength', 'Expected an integer of 0 or more'],
@@ -208,7 +212,7 @@ describe('a schema with annotations and boolean subschemas', () => {
       examples: [{ flag: true }],
       deprecated: false,
       writeOnly: false,
-      format: 'custom',
+      format: 'date',
       minItems: 0,
       minProperties: 0,
       maxProperties: 9,

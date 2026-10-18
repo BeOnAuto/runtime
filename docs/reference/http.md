@@ -947,7 +947,7 @@ Authorization: Bearer <key>
 }
 ```
 
-`validate` checks `arguments`, at most 16 KiB as JSON, against the tool's input schema. It returns `valid` (`true` or `false`) and `issues`. Each issue has the JSON Pointer of the argument at fault as `path`, and what is wrong there as `message`. It lists at most 20 issues, then one saying how many more there are. For a schema the runtime's checker cannot handle, such as one with a regular expression, it returns `valid: null` with one issue saying why; the arguments may still be right.
+`validate` checks `arguments`, at most 16 KiB as JSON, against the tool's input schema. It returns `valid` (`true` or `false`) and `issues`. Each issue has the JSON Pointer of the argument at fault as `path`, and what is wrong there as `message`. It lists at most 20 issues, then one saying how many more there are. For a schema the runtime's checker cannot handle, such as one with a regular expression, it returns `valid: null` with one issue saying why; the arguments may still be right. An argument out of a `format` the runtime checks, `date`, `date-time`, `time`, `email`, `uri` or `uuid`, is an issue at its pointer, such as `Expected a string in the format date, such as 2026-04-01`, and a `format` other than those, such as `int64`, is left unchecked while the rest of the schema is checked, so `valid` can be `true`.
 
 ```http
 POST /v1/orgs/acme/playbooks/sales/tool-servers/billing/tools/getInvoice/validate

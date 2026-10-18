@@ -1,10 +1,15 @@
 import { Predicate, type Schema } from 'effect';
 
 import { pointerOf, type SchemaIssue } from './json-bounds.ts';
+import { formatNames, isFormatName } from './string-formats.ts';
 
 type Path = readonly (string | number)[];
 
-type KeywordCheck = (value: Schema.Json, path: Path) => readonly SchemaIssue[];
+type KeywordCheck = (value: Schema.Json, path: Path, checks: KeywordChecks) => readonly SchemaIssue[];
+
+type KeywordChecks = ReadonlyMap<string, KeywordCheck>;
+
+export type OtherFormats = 'refused' | 'unchecked';
 
 const mostEnumValues = 1000;
 
@@ -16,6 +21,8 @@ const containment = 'contains, minContains and maxContains cannot be validated h
 const dependent = 'Dependent schemas and dependent required keys cannot be validated here';
 const unevaluated = 'unevaluatedItems and unevaluatedProperties cannot be validated here';
 const dynamic = 'Dynamic and recursive anchors cannot be validated here; use $ref to "#/$defs/<name>"';
+const checkedFormats = new Intl.ListFormat('en-GB', { type: 'disjunction' }).format(formatNames);
+const uncheckedFormat = `Expected one of the formats checked here: ${checkedFormats}`;
 
 const unsupportedKeywords: ReadonlyMap<string, string> = new Map([
   ['pattern', unsafePattern],
@@ -65,6 +72,10 @@ function text(value: Schema.Json, path: Path): readonly SchemaIssue[] {
   return typeof value === 'string' ? [] : issue(path, 'Expected a string');
 }
 
+function checkedFormat(value: Schema.Json, path: Path): readonly SchemaIssue[] {
+  return isFormatName(value) ? [] : issue(path, uncheckedFormat);
+}
+
 function number(value: Schema.Json, path: Path): readonly SchemaIssue[] {
   return typeof value === 'number' ? [] : issue(path, 'Expected a number');
 }
@@ -111,8 +122,8 @@ function localReference(value: Schema.Json, path: Path): readonly SchemaIssue[] 
   return local ? [] : issue(path, 'Expected a reference to a definition of this schema, such as "#/$defs/address"');
 }
 
-function subschema(value: Schema.Json, path: Path): readonly SchemaIssue[] {
-  return typeof value === 'boolean' ? [] : shapeIssuesAt(value, path);
+function subschema(value: Schema.Json, path: Path, checks: KeywordChecks): readonly SchemaIssue[] {
+  return typeof value === 'boolean' ? [] : shapeIssuesAt(value, path, checks);
 }
 
 function nothing(value: Schema.Json, path: Path): readonly SchemaIssue[] {
@@ -120,74 +131,81 @@ function nothing(value: Schema.Json, path: Path): readonly SchemaIssue[] {
   return empty ? [] : issue(path, 'Only "not": {} (no value matches) can be validated here');
 }
 
-function schemaList(value: Schema.Json, path: Path): readonly SchemaIssue[] {
+function schemaList(value: Schema.Json, path: Path, checks: KeywordChecks): readonly SchemaIssue[] {
   if (!isList(value) || value.length === 0) {
     return issue(path, 'Expected a non-empty list of schemas');
   }
-  return value.flatMap((entry, index) => subschema(entry, [...path, index]));
+  return value.flatMap((entry, index) => subschema(entry, [...path, index], checks));
 }
 
-function schemaMap(value: Schema.Json, path: Path): readonly SchemaIssue[] {
+function schemaMap(value: Schema.Json, path: Path, checks: KeywordChecks): readonly SchemaIssue[] {
   if (!isObject(value)) {
     return issue(path, 'Expected an object of schemas');
   }
   return Object.entries(value).flatMap(([name, entry]: readonly [string, Schema.Json]) =>
-    subschema(entry, [...path, name]),
+    subschema(entry, [...path, name], checks),
   );
 }
 
-const keywordChecks: ReadonlyMap<string, KeywordCheck> = new Map<string, KeywordCheck>([
-  ['type', typeKeyword],
-  ['properties', schemaMap],
-  ['$defs', schemaMap],
-  ['definitions', schemaMap],
-  ['required', stringList],
-  ['items', subschema],
-  ['additionalProperties', subschema],
-  ['propertyNames', subschema],
-  ['not', nothing],
-  ['prefixItems', schemaList],
-  ['anyOf', schemaList],
-  ['oneOf', schemaList],
-  ['allOf', schemaList],
-  ['enum', scalarList],
-  ['const', type],
-  ['$ref', localReference],
-  ['$schema', text],
-  ['$id', text],
-  ['$comment', text],
-  ['title', text],
-  ['description', text],
-  ['format', text],
-  ['minimum', number],
-  ['maximum', number],
-  ['exclusiveMinimum', number],
-  ['exclusiveMaximum', number],
-  ['multipleOf', positiveNumber],
-  ['minLength', count],
-  ['maxLength', count],
-  ['minItems', count],
-  ['maxItems', count],
-  ['minProperties', count],
-  ['maxProperties', count],
-  ['uniqueItems', flag],
-  ['readOnly', flag],
-  ['writeOnly', flag],
-  ['deprecated', flag],
-  ['default', anything],
-  ['examples', list],
-]);
-
-export function isKnownKeyword(keyword: string): boolean {
-  return keywordChecks.has(keyword) || unsupportedKeywords.has(keyword);
+function keywordChecksWith(format: KeywordCheck): KeywordChecks {
+  return new Map<string, KeywordCheck>([
+    ['type', typeKeyword],
+    ['properties', schemaMap],
+    ['$defs', schemaMap],
+    ['definitions', schemaMap],
+    ['required', stringList],
+    ['items', subschema],
+    ['additionalProperties', subschema],
+    ['propertyNames', subschema],
+    ['not', nothing],
+    ['prefixItems', schemaList],
+    ['anyOf', schemaList],
+    ['oneOf', schemaList],
+    ['allOf', schemaList],
+    ['enum', scalarList],
+    ['const', type],
+    ['$ref', localReference],
+    ['$schema', text],
+    ['$id', text],
+    ['$comment', text],
+    ['title', text],
+    ['description', text],
+    ['format', format],
+    ['minimum', number],
+    ['maximum', number],
+    ['exclusiveMinimum', number],
+    ['exclusiveMaximum', number],
+    ['multipleOf', positiveNumber],
+    ['minLength', count],
+    ['maxLength', count],
+    ['minItems', count],
+    ['maxItems', count],
+    ['minProperties', count],
+    ['maxProperties', count],
+    ['uniqueItems', flag],
+    ['readOnly', flag],
+    ['writeOnly', flag],
+    ['deprecated', flag],
+    ['default', anything],
+    ['examples', list],
+  ]);
 }
 
-function keywordIssues(keyword: string, value: Schema.Json, path: Path): readonly SchemaIssue[] {
+const keywordChecksFor: Readonly<Record<OtherFormats, KeywordChecks>> = {
+  refused: keywordChecksWith(checkedFormat),
+  unchecked: keywordChecksWith(text),
+};
+
+export function isKnownKeyword(keyword: string): boolean {
+  return keywordChecksFor.refused.has(keyword) || unsupportedKeywords.has(keyword);
+}
+
+function keywordIssues(keyword: string, value: Schema.Json, path: Path, checks: KeywordChecks): readonly SchemaIssue[] {
   const unsupported = unsupportedKeywords.get(keyword);
   if (unsupported !== undefined) {
     return issue([...path, keyword], unsupported);
   }
-  return keywordChecks.get(keyword)?.(value, [...path, keyword]) ?? [];
+  return checks.get(keyword)?.(value, [...path, keyword], checks) ?? [];
 }
 
 function combinationIssues(schema: Schema.JsonObject, path: Path): readonly SchemaIssue[] {
@@ -201,18 +219,18 @@ function combinationIssues(schema: Schema.JsonObject, path: Path): readonly Sche
     : [];
 }
 
-function shapeIssuesAt(schema: Schema.Json, path: Path): readonly SchemaIssue[] {
+function shapeIssuesAt(schema: Schema.Json, path: Path, checks: KeywordChecks): readonly SchemaIssue[] {
   if (!isObject(schema)) {
     return issue(path, 'Expected a schema: a JSON object, or true or false');
   }
   return [
     ...Object.entries(schema).flatMap(([keyword, value]: readonly [string, Schema.Json]) =>
-      keywordIssues(keyword, value, path),
+      keywordIssues(keyword, value, path, checks),
     ),
     ...combinationIssues(schema, path),
   ];
 }
 
-export function shapeIssues(schema: Schema.JsonObject): readonly SchemaIssue[] {
-  return shapeIssuesAt(schema, []);
+export function shapeIssues(schema: Schema.JsonObject, otherFormats: OtherFormats = 'refused'): readonly SchemaIssue[] {
+  return shapeIssuesAt(schema, [], keywordChecksFor[otherFormats]);
 }

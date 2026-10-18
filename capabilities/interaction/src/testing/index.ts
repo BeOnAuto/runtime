@@ -10,6 +10,7 @@ export {
 export {
   approvalDocument,
   chatDelivery,
+  datedAnswerSchema,
   notificationDocument,
   replyRuleLines,
   threadDocument,

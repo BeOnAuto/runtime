@@ -1,10 +1,17 @@
-import type { Breach, CompiledSchema, FoundIssue } from '@on.auto/json-schema';
+import {
+  stringFormats,
+  type Breach,
+  type CompiledSchema,
+  type FormatName,
+  type FoundIssue,
+} from '@on.auto/json-schema';
 import { articled, asSentence, InvalidInput, type Issue } from '@on.auto/operations';
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine';
 import { Effect, JsonPointer, type Schema } from 'effect';
 
 import type { Phrases } from '../overview/overview.ts';
 import { trailingWords } from '../overview/schema-bounds.ts';
+import { forms } from '../overview/schema-nouns.ts';
 import {
   isItemOf,
   listOf,
@@ -14,7 +21,7 @@ import {
   type PlaceStep,
   type SchemaPlace,
 } from '../overview/schema-reading.ts';
-import { descriptionOf, examplesWordsOf, expectedWordsOf } from '../overview/schema-words.ts';
+import { descriptionOf, examplesWordsOf, expectedWordsOf, givesAnExample } from '../overview/schema-words.ts';
 
 const kindKeywords = ['type', 'enum', 'const', 'anyOf', 'oneOf', 'properties', 'items', 'prefixItems'];
 
@@ -47,15 +54,29 @@ function describedIn(schema: JsonSchema): readonly string[] {
   return description === undefined ? [] : [description];
 }
 
-function aboutOf(schemas: readonly JsonSchema[]): string {
+interface About {
+  readonly description: string | undefined;
+  readonly examples: Schema.JsonArray;
+}
+
+function aboutTheField(schemas: readonly JsonSchema[]): About {
   const [description] = schemas.flatMap((schema) => describedIn(schema));
-  const examples = schemas.flatMap((schema) => listOf(schema, 'examples'));
+  return { description, examples: schemas.flatMap((schema) => listOf(schema, 'examples')) };
+}
+
+function aboutOf(schemas: readonly JsonSchema[]): string {
+  const { description, examples } = aboutTheField(schemas);
   return [
     ...(description === undefined ? [] : [withoutFullStop(description)]),
     ...examplesWordsOf(examples, description),
   ]
     .map((part) => `, ${part}`)
     .join('');
+}
+
+function givesItsOwnExample({ steps, schemas }: SchemaPlace): boolean {
+  const { description, examples } = aboutTheField(schemas);
+  return steps.length > 0 && givesAnExample(examples, description);
 }
 
 function fieldsOf({ steps, schemas }: SchemaPlace, root: string): string {
@@ -93,11 +114,24 @@ function holderSentence({ document, what }: CompiledSchema, tokens: readonly str
   return `${holder}: expected ${missing.join('')}${aboutOf(place.schemas)}`;
 }
 
+function formWords(format: FormatName, field: SchemaPlace): string {
+  const { one } = forms[format];
+  return givesItsOwnExample(field) ? one : `${one} such as ${stringFormats[format].example}`;
+}
+
+function ruleWords(breach: Breach, field: SchemaPlace): string | undefined {
+  if (breach.rule === 'bound') {
+    return trailingWords(breach.keywords, []).join(', ');
+  }
+  return breach.rule === 'format' ? formWords(breach.format, field) : undefined;
+}
+
 function valueSentence({ document, what }: CompiledSchema, tokens: readonly string[], breach: Breach, detail: string) {
   const place = placeAt(document, tokens);
-  return breach.rule === 'bound'
-    ? `${subjectOf(place, what)}: expected ${trailingWords(breach.keywords, []).join(', ')}`
-    : `${subjectOf(place, what)}: ${kindWords(place.schemas, document, detail)}`;
+  const rule = ruleWords(breach, place);
+  return rule === undefined
+    ? `${subjectOf(place, what)}: ${kindWords(place.schemas, document, detail)}`
+    : `${subjectOf(place, what)}: expected ${rule}`;
 }
 
 function breachSentence(schema: CompiledSchema, tokens: readonly string[], breach: Breach, detail: string): string {
@@ -117,9 +151,10 @@ function nameSentence({ document, what }: CompiledSchema, tokens: readonly strin
   if (breach === undefined) {
     return `${name}: ${asPhrase(detail)}`;
   }
-  return breach.rule === 'bound'
-    ? `${name}: expected ${trailingWords(breach.keywords, []).join(', ')}`
-    : `${name}: ${kindWords(namesAt(document, holding), document, detail)}`;
+  const rule = ruleWords(breach, holder);
+  return rule === undefined
+    ? `${name}: ${kindWords(namesAt(document, holding), document, detail)}`
+    : `${name}: expected ${rule}`;
 }
 
 function sentenceOf(schema: CompiledSchema, issue: FoundIssue): string {

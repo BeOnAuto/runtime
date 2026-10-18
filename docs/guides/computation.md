@@ -20,7 +20,7 @@ Before you ask your agent, know three things:
 
 - The figures you need. Give each a name that says its unit, such as `spend_cents`, and keep the output to what a reader or a later step needs.
 - The inputs they come from. The program sees only its input: it has no network, no files and no randomness. A workflow step, or your agent, gathers the data first.
-- The date the figures are for, if they depend on one. The program's clock reads the moment the run started, so a program that reads it can give a different output on each run. Pass the date in the input instead, such as `"as_of": "2026-10-10"`. A program that does not read the clock gives the same output for the same input every time.
+- The date the figures are for, if they depend on one. The program's clock reads the moment the run started, so a program that reads it can give a different output on each run. Pass the date in the input instead, such as `"as_of": "2026-10-10"`, and have the input schema give it `format: date`, so a run with any other text there, such as `"October"`, is refused before it starts. A program that does not read the clock gives the same output for the same input every time.
 
 ### Keep every figure exact
 

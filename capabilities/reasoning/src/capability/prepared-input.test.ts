@@ -12,7 +12,7 @@ const withSchema = documentOf(
     'input:',
     '  schema:',
     '    type: object',
-    '    properties: {text: {type: string}, words: {type: integer, minimum: 1}}',
+    '    properties: {text: {type: string}, words: {type: integer, minimum: 1}, due: {type: string, format: date}}',
     '    required: [text, words]',
     '    additionalProperties: false',
     '  default: {words: 50}',
@@ -66,6 +66,18 @@ describe('the input of a run', () => {
           ],
         }),
       ),
+    );
+    expect(requests()).toEqual([]);
+  });
+});
+
+describe('the input of a run whose schema names a format', () => {
+  it('must hold a string in the form its schema names, or the run asks no model', async () => {
+    const { running, requests } = reasoningWith();
+    const refusal = 'due: expected a date such as 2026-04-01.';
+
+    expect(await running(withSchema, { text: 'the report', due: 'Friday' })).toEqual(
+      Exit.fail(new InvalidInput({ detail: refusal, issues: [{ pointer: '/due', detail: refusal }] })),
     );
     expect(requests()).toEqual([]);
   });

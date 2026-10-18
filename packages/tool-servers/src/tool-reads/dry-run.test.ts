@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { playbookToolCalls, reportingAccess, serveFakeMcp, toolReader, type FakeMcpServer } from '../testing/index.ts';
+import { servedDocumentAt } from '../api-testing/described-documents.ts';
+import {
+  describedAccess,
+  playbookToolCalls,
+  reportingAccess,
+  serveFakeMcp,
+  toolReader,
+  type FakeMcpServer,
+} from '../testing/index.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -158,6 +166,42 @@ describe('dry_run of the hints and the arguments of a tool', () => {
     expect(await call('dry_run', { server: 'graph', tool: 'search', arguments: { query: 7 } })).toMatchObject({
       output: { would_run: true, arguments: { valid: false, issues: [{ path: '/query' }] } },
     });
+  });
+});
+
+describe('dry_run of the arguments of a tool whose schema names formats', () => {
+  it('checks an argument against a format the compiler checks, and leaves any other format unchecked', async () => {
+    const parameters = [
+      { name: 'day', in: 'query', schema: { type: 'string', format: 'date' } },
+      { name: 'count', in: 'query', schema: { type: 'integer', format: 'int64' } },
+    ];
+    const document = {
+      openapi: '3.1.0',
+      info: { title: 'Bookings', version: '1' },
+      servers: [{ url: 'https://bookings.example.com' }],
+      paths: { '/bookings': { get: { operationId: 'listBookings', parameters } } },
+    };
+    const url = await servedDocumentAt(() => Promise.resolve(Response.json(document)));
+    const { access } = await describedAccess({ graph: { org: 'acme', document: url } });
+    closing.push(access.close);
+    const { call } = playbookToolCalls(access);
+    const asked = { server: 'graph', tool: 'listBookings' };
+
+    expect([
+      await call('dry_run', { ...asked, arguments: { day: '2026-04-01', count: 7 } }),
+      await call('dry_run', { ...asked, arguments: { day: 'Friday', count: 7 } }),
+    ]).toMatchObject([
+      { output: { would_run: true, arguments: { valid: true, issues: [] } } },
+      {
+        output: {
+          would_run: true,
+          arguments: {
+            valid: false,
+            issues: [{ path: '/day', message: 'Expected a string in the format date, such as 2026-04-01' }],
+          },
+        },
+      },
+    ]);
   });
 });
 

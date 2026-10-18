@@ -1,6 +1,8 @@
 import { MockLanguageModelV4 } from 'ai/test';
+import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { compileAnswerSchema } from '../schema/answer-schema.ts';
 import { jsonRequest, textRequest, verdictSchema } from '../testing/adapter-harness.ts';
 import { generatedText, mockGeneration } from '../testing/mock-models.ts';
 
@@ -162,6 +164,27 @@ describe('a generation of JSON', () => {
       type: 'json',
       name: 'verdict',
       description: 'The verdict',
+    });
+  });
+
+  it('fails as output_invalid when the answer holds a string out of the form its schema names', async () => {
+    const dated = Result.getOrThrow(
+      compileAnswerSchema({
+        type: 'object',
+        properties: { due: { type: 'string', format: 'date' } },
+        required: ['due'],
+      }),
+    );
+    const model = answering(() => generatedText('{"due":"next Friday"}'));
+
+    const failure = await mockGeneration(() => model).failed(
+      jsonRequest('mock/model', { output: { type: 'json', schema: dated } }),
+    );
+
+    expect(failure).toMatchObject({
+      _tag: 'output_invalid',
+      detail: 'The answer does not match the output schema',
+      issues: [{ pointer: '/due', detail: 'Expected a string in the format date, such as 2026-04-01' }],
     });
   });
 

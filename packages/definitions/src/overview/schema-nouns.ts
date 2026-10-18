@@ -1,3 +1,5 @@
+import type { FormatName } from '@on.auto/json-schema';
+
 import type { Amount } from './schema-bounds.ts';
 
 export type Count = 'one' | 'other' | 'countedOne' | 'countedOther';
@@ -36,11 +38,23 @@ export const nouns: Readonly<Record<string, Noun>> = {
   null: nothing,
 };
 
-export const dateAndTime: Noun = {
-  one: 'a date and time',
-  other: 'dates and times',
-  countedOne: 'date and time',
-  countedOther: 'dates and times',
+export const forms: Readonly<Record<FormatName, Noun>> = {
+  date: { one: 'a date', other: 'dates', countedOne: 'date', countedOther: 'dates' },
+  'date-time': {
+    one: 'a date and time',
+    other: 'dates and times',
+    countedOne: 'date and time',
+    countedOther: 'dates and times',
+  },
+  time: { one: 'a time', other: 'times', countedOne: 'time', countedOther: 'times' },
+  email: {
+    one: 'an email address',
+    other: 'email addresses',
+    countedOne: 'email address',
+    countedOther: 'email addresses',
+  },
+  uri: { one: 'a URI', other: 'URIs', countedOne: 'URI', countedOther: 'URIs' },
+  uuid: { one: 'a UUID', other: 'UUIDs', countedOne: 'UUID', countedOther: 'UUIDs' },
 };
 
 export const list: Noun = { one: 'a list', other: 'lists', countedOne: 'list', countedOther: 'lists' };

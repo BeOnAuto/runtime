@@ -95,6 +95,51 @@ describe('validate', () => {
   });
 });
 
+function bookingDocument(day: Readonly<Record<string, unknown>>) {
+  return {
+    openapi: '3.1.0',
+    info: { title: 'Bookings', version: '1' },
+    servers: [{ url: 'https://bookings.example.com' }],
+    paths: {
+      '/bookings': {
+        get: { operationId: 'listBookings', parameters: [{ name: 'day', in: 'query', schema: day }] },
+      },
+    },
+  };
+}
+
+async function validatingBookings(day: Readonly<Record<string, unknown>>) {
+  const url = await servedDocumentAt(() => Promise.resolve(Response.json(bookingDocument(day))));
+  const { call } = await validatingAnApi({ document: url });
+  return (value: unknown) => call('validate', { server: 'graph', tool: 'listBookings', arguments: { day: value } });
+}
+
+describe('validate against the format of a string', () => {
+  it('answers where an argument is out of a format the compiler checks', async () => {
+    const validate = await validatingBookings({ type: 'string', format: 'date' });
+
+    expect([await validate('2026-04-01'), await validate('Friday')]).toEqual([
+      { status: 'succeeded', output: { valid: true, issues: [] } },
+      {
+        status: 'succeeded',
+        output: {
+          valid: false,
+          issues: [{ path: '/day', message: 'Expected a string in the format date, such as 2026-04-01' }],
+        },
+      },
+    ]);
+  });
+
+  it('checks the rest of a schema that names a format the compiler does not check, and leaves that format unchecked', async () => {
+    const validate = await validatingBookings({ type: 'integer', format: 'int64' });
+
+    expect([await validate(7), await validate('x')]).toEqual([
+      { status: 'succeeded', output: { valid: true, issues: [] } },
+      { status: 'succeeded', output: { valid: false, issues: [{ path: '/day', message: 'Expected number' }] } },
+    ]);
+  });
+});
+
 describe('validate against a schema this server cannot check', () => {
   it('answers valid null, with one issue saying why', async () => {
     const document = {

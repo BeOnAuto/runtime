@@ -21,7 +21,7 @@ do:
 
 const refusedSeats: readonly Issue[] = [
   { pointer: '/input/seats', detail: 'seats, How many seats to hold: expected at least 1.' },
-  { pointer: '/input/day', detail: 'day: expected text in the form the schema calls date.' },
+  { pointer: '/input/day', detail: 'day: expected a date.' },
 ];
 
 function refusing(issues: readonly Issue[]): () => DefinitionCallResult {
@@ -50,7 +50,7 @@ describe('a workflow whose step refused its input', () => {
       status: 'rejected',
       reason: 'invalid_input',
       detail:
-        'The computation function seat-hold refused its input, at the step hold-seats: seats, How many seats to hold: expected at least 1. day: expected text in the form the schema calls date.',
+        'The computation function seat-hold refused its input, at the step hold-seats: seats, How many seats to hold: expected at least 1. day: expected a date.',
       issues: refusedSeats,
     });
   });

@@ -125,28 +125,17 @@ function formatIssues({ schema, path }: SchemaNode): readonly PortabilityIssue[]
 }
 
 function uncheckedIssues({ schema, path }: SchemaNode): readonly SchemaIssue[] {
-  const unknown = Object.keys(schema)
+  return Object.keys(schema)
     .filter((keyword) => !isKnownKeyword(keyword))
     .map((keyword) => ({
       pointer: pointerOf([...path, keyword]),
       detail: `${keyword} is not a keyword this package checks; it is sent to the provider as written`,
     }));
-  const format =
-    schema['format'] === undefined
-      ? []
-      : [{ pointer: pointerOf([...path, 'format']), detail: 'format is sent to the provider but not checked here' }];
-  return [...unknown, ...format];
 }
 
 type NodeRule = (node: SchemaNode, written: Written) => readonly PortabilityIssue[];
 
-const answerRules: readonly NodeRule[] = [
-  closedObjectIssues,
-  requiredKeyIssues,
-  boundIssues,
-  oneOfIssues,
-  formatIssues,
-];
+const answerRules: readonly NodeRule[] = [closedObjectIssues, requiredKeyIssues, boundIssues, oneOfIssues];
 
 const toolArgumentRules: readonly NodeRule[] = [boundIssues, oneOfIssues, formatIssues];
 

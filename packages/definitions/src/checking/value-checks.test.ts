@@ -35,6 +35,15 @@ describe('the check of an output against the output schema', () => {
     expect(outputCheckOf({ type: 'object' })(twice)).toEqual([]);
   });
 
+  it('names a string of the output out of the form its schema names', () => {
+    const check = outputCheckOf({ type: 'object', properties: { due: { type: 'string', format: 'date' } } });
+
+    expect([check({ due: '2026-04-01' }), check({ due: 'Friday' })]).toEqual([
+      [],
+      [{ pointer: '/due', detail: 'Expected a string in the format date, such as 2026-04-01' }],
+    ]);
+  });
+
   it('refuses every output when the schema it is given does not compile, naming why', () => {
     expect(outputCheckOf('not a schema')(1)).toEqual([{ pointer: '', detail: 'A schema is a JSON object' }]);
   });
@@ -49,6 +58,15 @@ describe('the check of a view against the view schema', () => {
     expect(check({ spring: [1, 2], autumn: [1, 2] })).toBe(
       '/spring: Expected a value with a length of at most 1; /autumn: Expected a value with a length of at most 1',
     );
+  });
+
+  it('names an entry of the view out of the form its schema names', () => {
+    const check = viewCheckOf({ type: 'object', additionalProperties: { type: 'string', format: 'date-time' } });
+
+    expect([check({ spring: '2026-04-01T09:30:00Z' }), check({ spring: 'April' })]).toEqual([
+      undefined,
+      '/spring: Expected a string in the format date-time, such as 2026-04-01T09:30:00Z',
+    ]);
   });
 });
 
