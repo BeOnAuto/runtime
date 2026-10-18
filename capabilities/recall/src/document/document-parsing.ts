@@ -7,6 +7,7 @@ import {
   type DocumentParts,
   type ReadFrontMatter,
   type SourceLines,
+  type ValueContract,
 } from '@on.auto/definitions/document';
 import { compileJsonSchema, type CompiledSchema } from '@on.auto/json-schema';
 import { oneLanguage } from '@on.auto/workflow-engine';
@@ -16,7 +17,7 @@ import { Result, type Schema } from 'effect';
 
 import { recallBounds } from '../run/recall-bounds.ts';
 import { decodeFrontMatter, recallFrontMatter, type RecallFrontMatter } from './front-matter.ts';
-import type { FilterExpression, RecallFunctionDefinitionDocument, ValueContract } from './recall-document.ts';
+import type { FilterExpression, RecallFunctionDefinitionDocument } from './recall-document.ts';
 import { filtersOf } from './source-filters.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;

@@ -1,7 +1,5 @@
-import type { FrontMatterSection, FrontMatterShape } from '@on.auto/definitions/document';
+import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
 import { Schema } from 'effect';
-
-const descriptionLength = 1000;
 
 const SectionSchema = Schema.Struct({ schema: Schema.optionalKey(Schema.JsonObject) });
 
@@ -13,7 +11,7 @@ const ViewSchema = Schema.Struct({
 });
 
 const FrontMatterSchema = Schema.Struct({
-  description: Schema.optionalKey(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(descriptionLength))),
+  description: Schema.optionalKey(DescriptionSchema),
   language: Schema.String,
   source: SourceSchema,
   view: Schema.optionalKey(ViewSchema),

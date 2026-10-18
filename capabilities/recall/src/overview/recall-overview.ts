@@ -1,14 +1,18 @@
 import {
   bulletList,
+  charactersIn,
+  describedSchemaBlocks,
   eventFilterPhrases,
   paragraph,
+  plainTextOf,
   schemaBlocks,
   sectionOf,
+  shownUnderSource,
+  undescribedSentence,
   type Diagram,
   type OverviewBlock,
   type OverviewParts,
   type OverviewSection,
-  type Phrases,
 } from '@on.auto/definitions';
 import { capitalized } from '@on.auto/operations';
 import type { ViewFilter } from '@on.auto/workflow-host';
@@ -16,13 +20,7 @@ import type { Schema } from 'effect';
 
 import type { RecallFunctionDefinitionDocument } from '../document/recall-document.ts';
 
-const mostInitialCharacters = 300;
-
-const anyOutput = 'Any output, which its document does not describe.';
-
-function plainText(phrases: Phrases): string {
-  return phrases.map((phrase) => (typeof phrase === 'string' ? phrase : Object.values(phrase).join(''))).join('');
-}
+const mostInitialViewCharacters = 300;
 
 function remembersSection(filters: readonly ViewFilter[]): OverviewSection {
   const once = filters.length > 1 ? [paragraph('It remembers an event that matches more than one of these once.')] : [];
@@ -43,14 +41,8 @@ function initialBlocks(initial: Schema.Json): readonly OverviewBlock[] {
     return [];
   }
   const written = JSON.stringify(initial);
-  return written.length > mostInitialCharacters
-    ? [
-        paragraph(
-          'Before the first event, the view is the value of ',
-          { code: 'view.initial' },
-          ', shown under Source.',
-        ),
-      ]
+  return charactersIn(written) > mostInitialViewCharacters
+    ? [shownUnderSource('value', 'Before the first event, the view is the value of ', { code: 'view.initial' })]
     : [paragraph('Before the first event, the view is ', { code: written }, '.')];
 }
 
@@ -58,7 +50,7 @@ function keepsSection({ details }: RecallFunctionDefinitionDocument): OverviewSe
   return sectionOf(
     'What it keeps',
     paragraph('It keeps one view, which its program updates with each event it remembers:'),
-    ...schemaBlocks(details.schema, 'Any value, which its document does not describe.'),
+    ...schemaBlocks(details.schema, undescribedSentence('value', 'alone')),
     ...initialBlocks(details.initial),
   );
 }
@@ -67,10 +59,10 @@ function answerBlocks({ output, answers }: RecallFunctionDefinitionDocument): re
   if (answers) {
     return [
       paragraph('It answers with what its program makes of the view and that input:'),
-      ...schemaBlocks(output.schema?.document, anyOutput),
+      ...schemaBlocks(output.schema?.document, undescribedSentence('output', 'alone')),
     ];
   }
-  const checked = output.schema === undefined ? [] : schemaBlocks(output.schema.document, anyOutput);
+  const checked = output.schema === undefined ? [] : describedSchemaBlocks(output.schema.document);
   return [paragraph('It answers with the view itself, as it stands.'), ...checked];
 }
 
@@ -78,7 +70,7 @@ function answersSection(document: RecallFunctionDefinitionDocument): OverviewSec
   return sectionOf(
     'What it answers',
     paragraph('Each run takes:'),
-    ...schemaBlocks(document.input.schema?.document, 'Any input, which its document does not describe.'),
+    ...schemaBlocks(document.input.schema?.document, undescribedSentence('input', 'alone')),
     ...answerBlocks(document),
   );
 }
@@ -88,7 +80,7 @@ function diagramOf(filters: readonly ViewFilter[], answers: boolean): Diagram {
   return {
     kind: 'diagram',
     nodes: [
-      ...filters.map((filter) => ({ label: capitalized(plainText(eventFilterPhrases(filter))) })),
+      ...filters.map((filter) => ({ label: capitalized(plainTextOf(eventFilterPhrases(filter))) })),
       { label: 'The view', shape: 'cylinder' },
       { label: answers ? 'The answer of a run' : 'The answer of a run, the view itself' },
     ],
@@ -103,11 +95,12 @@ function keptSection({ details, answers }: RecallFunctionDefinitionDocument): Ov
     paragraph(
       "Its view is built from the first event of the playbook's history when the function is saved, and again whenever it changes, and is kept up to date as the events it remembers arrive.",
     ),
-    paragraph(
+    shownUnderSource(
+      'program',
       'The program, its ',
       { code: 'fold' },
       ...(answers ? [' and its ', { code: 'answer' }] : []),
-      ', is TypeScript and is shown under Source.',
+      ',',
     ),
   );
 }
