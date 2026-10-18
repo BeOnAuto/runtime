@@ -1,5 +1,5 @@
-import { ignored } from '../connections/ignored.ts';
-import type { LinkOptions } from '../connections/link-openers.ts';
+import { ignored } from '../clients/ignored.ts';
+import type { LinkOptions } from '../clients/link-openers.ts';
 import { listingWaysOf, type ListingWays } from '../listing/listing-ways.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { noConnections, type ConnectionSource } from '../org-servers/connection-source.ts';
@@ -10,7 +10,7 @@ import type { LinkedAccess } from './linked-access.ts';
 import { runWaysOf, type RunWays } from './run-ways.ts';
 
 export interface ToolAccessOptions {
-  readonly client: LinkOptions['client'];
+  readonly clientInfo: LinkOptions['clientInfo'];
   readonly content: ContentStore;
   readonly reportServerMessage: (report: ServerMessage) => void;
   readonly connections?: ConnectionSource;

@@ -29,7 +29,7 @@ describe('readSettings', () => {
     const { models, toolServers, interaction, ...server } = readSettings({});
 
     expect(models.openai).toEqual({ configured: false, missing: ['OPENAI_API_KEY'] });
-    expect(toolServers).toEqual({ servers: [] });
+    expect(toolServers).toEqual({ servers: [], referencedVariables: [] });
     expect(interaction).toEqual({ mostOpenRequests: 10_000 });
     expect(server).toEqual({
       host: '0.0.0.0',

@@ -1,10 +1,10 @@
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { CallSettled } from '../connections/server-connection.ts';
-import { failureOf } from '../connections/server-failures.ts';
+import type { CallSettled } from '../clients/server-client.ts';
+import { failureOf } from '../clients/server-failures.ts';
 import { serveFakeApi, type FakeApiServer } from '../testing/index.ts';
-import { apiConnection } from './api-connection.ts';
+import { apiClient } from './api-client.ts';
 import type { ApiOperation } from './api-tools.ts';
 import type { DescribedApiSettings } from './described-api.ts';
 
@@ -27,7 +27,7 @@ function searchAt(path: string): ApiOperation {
 }
 
 function calledAt(baseUrl: string, path: string): Promise<CallSettled> {
-  const connection = apiConnection(
+  const client = apiClient(
     {
       ...settings,
       headers: new Map([['X-Api-Key', Redacted.make(apiKey)]]),
@@ -35,7 +35,7 @@ function calledAt(baseUrl: string, path: string): Promise<CallSettled> {
     },
     { fetch: globalThis.fetch, tokens: undefined, now: Date.now },
   );
-  return connection.call({
+  return client.call({
     tool: 'search',
     input: {},
     meta: {},
@@ -72,10 +72,10 @@ const settings: DescribedApiSettings = {
   api: { baseUrl: 'https://graph.example.com/v1', operations: [] },
 };
 
-describe('the connection to an HTTP API', () => {
+describe('the client of an HTTP API', () => {
   it('refuses a call of a tool its document does not hold, sending nothing', async () => {
     const sent: string[] = [];
-    const connection = apiConnection(settings, {
+    const client = apiClient(settings, {
       fetch: () => {
         sent.push('a request');
         return Promise.resolve(new Response('{}'));
@@ -84,7 +84,7 @@ describe('the connection to an HTTP API', () => {
       now: Date.now,
     });
 
-    const settled = await connection.call({
+    const settled = await client.call({
       tool: 'search',
       input: {},
       meta: {},
@@ -100,12 +100,12 @@ describe('the connection to an HTTP API', () => {
   });
 
   it('closes when it ends, holding no session', async () => {
-    const connection = apiConnection(settings, { fetch: globalThis.fetch, tokens: undefined, now: Date.now });
+    const client = apiClient(settings, { fetch: globalThis.fetch, tokens: undefined, now: Date.now });
 
-    await connection.end();
+    await client.end();
 
-    await expect(connection.closed).resolves.toBeUndefined();
-    expect(await connection.listTools(1000)).toEqual([]);
+    await expect(client.closed).resolves.toBeUndefined();
+    expect(await client.listTools(1000)).toEqual([]);
   });
 });
 

@@ -43,7 +43,7 @@ async function silentOnListing(): Promise<LoopbackServer> {
 }
 
 describe('listing the tools of a server as a run opens them', () => {
-  it('takes at most the bound of opening a connection, not the longer bound of a call', async () => {
+  it('takes at most the bound of opening a client, not the longer bound of a call', async () => {
     const server = await silentOnListing();
     const { access } = reportingAccess(
       { graph: { url: `${server.origin}/mcp`, org: 'acme' } },

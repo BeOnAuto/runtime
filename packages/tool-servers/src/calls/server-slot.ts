@@ -1,31 +1,31 @@
 import { Result } from 'effect';
 
-import type { ServerConnection } from '../connections/server-connection.ts';
-import { failureOf, type ServerFailure } from '../connections/server-failures.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import type { ServerClient } from '../clients/server-client.ts';
+import { failureOf, type ServerFailure } from '../clients/server-failures.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
 
 type Restart = 'running' | 'restarted' | 'exited_again';
 
 export interface ServerSlot {
   readonly settings: LinkedServerSettings;
-  readonly connection: () => ServerConnection;
+  readonly client: () => ServerClient;
   readonly reopenOnce: () => Promise<boolean>;
   readonly restartIfExited: () => Promise<Restart>;
   readonly release: () => Promise<void>;
 }
 
-function serverSlot(link: ServerLink, first: ServerConnection): ServerSlot {
+function serverSlot(link: ServerLink, first: ServerClient): ServerSlot {
   let current = first;
   let exited = false;
   let reopened = false;
   let restarted = false;
-  const watched = (connection: ServerConnection): ServerConnection => {
-    void connection.closed.then(() => {
-      exited = exited || current === connection;
+  const watched = (client: ServerClient): ServerClient => {
+    void client.closed.then(() => {
+      exited = exited || current === client;
       return exited;
     });
-    return connection;
+    return client;
   };
   const renewed = async (): Promise<void> => {
     current = watched(await link.renew(current));
@@ -34,7 +34,7 @@ function serverSlot(link: ServerLink, first: ServerConnection): ServerSlot {
   watched(first);
   return {
     settings: link.settings,
-    connection: () => current,
+    client: () => current,
     reopenOnce: async () => {
       if (reopened) {
         return false;
@@ -60,7 +60,7 @@ function serverSlot(link: ServerLink, first: ServerConnection): ServerSlot {
 
 export function takenSlot(link: ServerLink): Promise<Result.Result<ServerSlot, ServerFailure>> {
   return link.take().then(
-    (connection) => Result.succeed(serverSlot(link, connection)),
+    (client) => Result.succeed(serverSlot(link, client)),
     (error: unknown) => Result.fail(failureOf(error)),
   );
 }

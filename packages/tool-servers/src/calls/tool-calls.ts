@@ -2,9 +2,9 @@ import { setTimeout } from 'node:timers/promises';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-results.ts';
-import { ignored } from '../connections/ignored.ts';
-import type { Observed } from '../connections/observed-requests.ts';
-import { failureOf, type FailureKind } from '../connections/server-failures.ts';
+import { ignored } from '../clients/ignored.ts';
+import type { Observed } from '../clients/observed-requests.ts';
+import { failureOf, type FailureKind } from '../clients/server-failures.ts';
 import type { CallFailedBecause } from './call-facts.ts';
 import type { ServerSlot } from './server-slot.ts';
 
@@ -142,7 +142,7 @@ function settledFailure(kind: FailureKind, message: string, observed: Observed):
 }
 
 async function attempted(forwarding: Forwarding, attempt: Attempt): Promise<Forwarded> {
-  const settled = await forwarding.slot.connection().call({
+  const settled = await forwarding.slot.client().call({
     tool: forwarding.tool,
     input: forwarding.input,
     meta: forwarding.meta,

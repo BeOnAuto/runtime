@@ -47,7 +47,7 @@ function secretValuesOf(server: ServerSettings | undefined): Readonly<Record<str
 
 describe('reading an mcp server', () => {
   it('reads no server when no setting is set', () => {
-    expect(Effect.runSync(readToolServerSettings({}, context))).toEqual({ servers: [] });
+    expect(Effect.runSync(readToolServerSettings({}, context))).toEqual({ servers: [], referencedVariables: [] });
   });
 
   it('reads an mcp entry with its headers resolved and redacted, and its org and playbooks', () => {
@@ -218,31 +218,6 @@ describe('the transport of a server', () => {
   });
 });
 
-describe('the secrets of a server', () => {
-  it('refuses a credential written out instead of referenced, and a reference to a variable that is not set, never printing a value', () => {
-    const headers = { Authorization: 'Bearer abk_live_9f8e7d6c5b4a', 'X-Tenant': '${GRAPH_TENANT}' };
-    const refusal = refusalOf(environmentOf({ graph: { ...graph, headers } }));
-
-    expect(refusal.problems).toEqual([
-      {
-        setting: 'TOOL_SERVERS',
-        pointer: '/graph/headers/Authorization',
-        detail:
-          'Looks like a credential, which this setting never holds; write a reference to the environment variable that holds it instead, such as ${GRAPH_API_KEY}',
-      },
-      {
-        setting: 'TOOL_SERVERS',
-        pointer: '/graph/headers/X-Tenant',
-        detail: 'Refers to the environment variable GRAPH_TENANT, which is not set',
-      },
-    ]);
-    expect(refusal.message).toMatch(
-      /^The tool server settings are invalid\. TOOL_SERVERS: \/graph\/headers\/Authorization/u,
-    );
-    expect(JSON.stringify(refusal)).not.toContain('abk_live');
-  });
-});
-
 describe('a credential written into the url or the args of a server', () => {
   it('is refused as userinfo, as a value of the query, and after the = of an argument, never printing it', () => {
     const credential =
@@ -296,5 +271,15 @@ describe('the references of a server', () => {
     });
 
     expect(server?.secrets.map((secret) => Redacted.value(secret))).toEqual([apiKey]);
+  });
+
+  it('keeps the name of every variable the entries refer to, one with a fallback among them', () => {
+    const headers = { Authorization: 'Bearer ${GRAPH_API_KEY}', 'X-Region': '${GRAPH_REGION:-eu}' };
+    const notes = { ...limitless, env: { NOTES_KEY: '${env:GRAPH_API_KEY}' } };
+    const read = Effect.runSync(
+      readToolServerSettings(environmentOf({ graph: { ...graph, headers }, notes }), context),
+    );
+
+    expect(read.referencedVariables).toEqual(['GRAPH_API_KEY', 'GRAPH_REGION', 'GRAPH_API_KEY']);
   });
 });

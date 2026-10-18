@@ -1,6 +1,6 @@
 import type { Issue } from '@on.auto/operations';
 import {
-  isConnectionSettings,
+  isConnectionServerSettings,
   type ConnectionServer,
   type ConnectionServing,
   type ConnectionSource,
@@ -54,7 +54,7 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
     if (Result.isFailure(read)) {
       return yield* Effect.fail(unchecked(connection.name, read.failure));
     }
-    const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionSettings));
+    const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionServerSettings));
     const reaches = (url: string): string | undefined =>
       hostRefusalOf(policy.allowedHosts, new URL(url).hostname)?.detail;
     return { settings, reaches };

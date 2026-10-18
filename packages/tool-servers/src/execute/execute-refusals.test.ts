@@ -39,7 +39,7 @@ function executingOn(fake: FakeMcpServer, entry: Readonly<Record<string, unknown
 }
 
 describe('a tool this playbook is not offered', () => {
-  it('is refused before any connection when its entry does not allow it or no server of the name serves the playbook', async () => {
+  it('is refused before any client opens when its entry does not allow it or no server of the name serves the playbook', async () => {
     const fake = await fakeServer();
     const narrowed = executingOn(fake, { allowed: ['echo'] });
     const elsewhere = executingOn(fake, { org: 'globex' });

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import type { CallSettled } from '../connections/server-connection.ts';
-import { failureOf } from '../connections/server-failures.ts';
+import type { CallSettled } from '../clients/server-client.ts';
+import { failureOf } from '../clients/server-failures.ts';
 import { settledOf } from './api-answers.ts';
 
 const answering = { requestIdHeader: 'x-request-id', now: () => Date.parse('2026-10-13T09:00:00.000Z') };

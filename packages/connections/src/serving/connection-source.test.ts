@@ -1,6 +1,6 @@
 import type {
   ConnectionServer,
-  ConnectionSettings,
+  ConnectionServerSettings,
   ConnectionSource,
   ConnectionUnready,
   OrgConnection,
@@ -62,7 +62,7 @@ async function connectedOf(source: ConnectionSource, id: string): Promise<Connec
   return Option.getOrThrow(Option.liftPredicate(await serverOf(source, id), isServer));
 }
 
-async function settingsOf(source: ConnectionSource, id: string): Promise<ConnectionSettings> {
+async function settingsOf(source: ConnectionSource, id: string): Promise<ConnectionServerSettings> {
   return (await connectedOf(source, id)).settings;
 }
 
@@ -72,7 +72,7 @@ function revealed(values: ReadonlyMap<string, Redacted.Redacted>): Readonly<Reco
   );
 }
 
-function placedOf(settings: ConnectionSettings) {
+function placedOf(settings: ConnectionServerSettings) {
   return {
     headers: revealed(settings.headers),
     query: settings.type === 'openapi' ? revealed(settings.query_params) : {},

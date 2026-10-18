@@ -1,5 +1,5 @@
 import { defaultTiming } from '../bounds/call-bounds.ts';
-import { serverLink, type ServerLink } from '../connections/server-links.ts';
+import { serverLink, type ServerLink } from '../clients/server-links.ts';
 import { listedServer } from '../listing/tool-servers.ts';
 import { oneCall, type OneCall, type RunCall } from '../one-call/one-call.ts';
 import type { ToolServers } from '../openapi/described-api.ts';
@@ -25,7 +25,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
   const timing = options.timing ?? defaultTiming;
   const { secrets, keepIn } = options;
   const linkOptions = {
-    client: options.client,
+    clientInfo: options.clientInfo,
     fetch: options.fetch ?? globalThis.fetch,
     secrets,
     now: options.now ?? Date.now,

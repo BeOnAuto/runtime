@@ -7,7 +7,7 @@ const call = { jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'sea
 const answeredWith = (headers: Readonly<Record<string, string>> = {}, status = 200) =>
   new Response(null, { status, headers });
 
-describe('the requests a connection observes', () => {
+describe('the requests a client observes', () => {
   it('pairs a request sent under a marker with the HTTP answer to it', () => {
     const observed = observations('x-request-id', 1024);
     const marker = observed.mark();

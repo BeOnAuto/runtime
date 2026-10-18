@@ -1,29 +1,29 @@
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import { ignored } from './ignored.ts';
 import { openerOf, type LinkOptions } from './link-openers.ts';
-import type { ServerConnection } from './server-connection.ts';
+import type { ServerClient } from './server-client.ts';
 
 export interface ServerLink {
   readonly settings: LinkedServerSettings;
-  readonly take: () => Promise<ServerConnection>;
-  readonly renew: (failed: ServerConnection) => Promise<ServerConnection>;
+  readonly take: () => Promise<ServerClient>;
+  readonly renew: (failed: ServerClient) => Promise<ServerClient>;
   readonly release: () => Promise<void>;
   readonly stop: () => Promise<void>;
 }
 
-function endOf(connection: Promise<ServerConnection> | undefined): Promise<void> | undefined {
-  return connection?.then((opened) => opened.end(), ignored);
+function endOf(client: Promise<ServerClient> | undefined): Promise<void> | undefined {
+  return client?.then((opened) => opened.end(), ignored);
 }
 
-interface HeldConnection {
-  readonly using: () => Promise<ServerConnection>;
-  readonly forgotten: () => Promise<ServerConnection> | undefined;
-  readonly isLatest: (connection: ServerConnection) => boolean;
+interface HeldClient {
+  readonly using: () => Promise<ServerClient>;
+  readonly forgotten: () => Promise<ServerClient> | undefined;
+  readonly isLatest: (client: ServerClient) => boolean;
 }
 
-function heldConnection(open: () => Promise<ServerConnection>): HeldConnection {
-  let current: Promise<ServerConnection> | undefined;
-  let latest: ServerConnection | undefined;
+function heldClient(open: () => Promise<ServerClient>): HeldClient {
+  let current: Promise<ServerClient> | undefined;
+  let latest: ServerClient | undefined;
   return {
     using: () => {
       current ??= open().then((opened) => {
@@ -38,11 +38,11 @@ function heldConnection(open: () => Promise<ServerConnection>): HeldConnection {
       latest = undefined;
       return forgetting;
     },
-    isLatest: (connection) => latest === connection,
+    isLatest: (client) => latest === client,
   };
 }
 
-async function usedOrForgotten(held: HeldConnection): Promise<ServerConnection> {
+async function usedOrForgotten(held: HeldClient): Promise<ServerClient> {
   try {
     return await held.using();
   } catch (failure) {
@@ -52,7 +52,7 @@ async function usedOrForgotten(held: HeldConnection): Promise<ServerConnection> 
 }
 
 export function serverLink(settings: LinkedServerSettings, options: LinkOptions): ServerLink {
-  const held = heldConnection(openerOf(settings, options));
+  const held = heldClient(openerOf(settings, options));
   let holders = 0;
   return {
     settings,

@@ -4,15 +4,15 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { secretsOf } from '../bounds/secrets.ts';
 import type { StdioServerSettings } from '../settings/server-settings.ts';
 import { fakeStdioServerPath, testClientInfo } from '../testing/index.ts';
-import { errorsNoLongerReported } from './mcp-connection.ts';
+import { errorsNoLongerReported } from './mcp-client.ts';
 import { observations } from './observed-requests.ts';
 import { failureOf } from './server-failures.ts';
 import { serverLink } from './server-links.ts';
 import { outputNoLongerReported, StdioProcessTransport } from './stdio-transport.ts';
 
-type ServerConnection = Awaited<ReturnType<ReturnType<typeof serverLink>['take']>>;
+type ServerClient = Awaited<ReturnType<ReturnType<typeof serverLink>['take']>>;
 
-type CallSettled = Awaited<ReturnType<ServerConnection['call']>>;
+type CallSettled = Awaited<ReturnType<ServerClient['call']>>;
 
 const coverage = process.env['NODE_V8_COVERAGE'];
 
@@ -50,7 +50,7 @@ function stdioSettings(args: readonly string[], changes: Partial<StdioServerSett
 function linkTo(settings: StdioServerSettings, openMs = patientMs) {
   const lines: string[] = [];
   const link = serverLink(settings, {
-    client: testClientInfo,
+    clientInfo: testClientInfo,
     fetch: globalThis.fetch,
     secrets: secretsOf([Redacted.make('fake MCP server')]),
     now: Date.now,
@@ -89,8 +89,8 @@ const errorsDropped = `limitless: ${errorsNoLongerReported}`;
 
 const clientErrors: ReadonlySet<string> = new Set([notJsonRpc, errorsDropped]);
 
-const called = (connection: ServerConnection, tool: string, input: Readonly<Record<string, unknown>> = {}) =>
-  connection.call({ tool, input, meta: {}, signal: new AbortController().signal, timeoutMs: patientMs });
+const called = (client: ServerClient, tool: string, input: Readonly<Record<string, unknown>> = {}) =>
+  client.call({ tool, input, meta: {}, signal: new AbortController().signal, timeoutMs: patientMs });
 
 function failureOfCall(settled: CallSettled) {
   return 'error' in settled ? failureOf(settled.error) : undefined;
@@ -131,10 +131,10 @@ describe('one stdio server that the tests of a link share', () => {
 
   it('reports what the process writes to stderr, line by line, scrubbed, cut and bounded, until it is stopped', async () => {
     const { link, lines } = shared;
-    const connection = await link.take();
+    const client = await link.take();
 
     await link.stop();
-    await connection.closed;
+    await client.closed;
 
     const written = lines.filter((line) => line !== notJsonRpc);
     expect(written).toHaveLength(101);
@@ -160,20 +160,20 @@ describe('what a stdio server writes', () => {
 
   it('closes a process that writes more than its output may take at once, and marks the call it answered too large', async () => {
     const { link } = linked(stdioSettings([]));
-    const connection = await link.take();
+    const client = await link.take();
 
-    const settled = await called(connection, 'large', { kib: 4200 });
-    await connection.closed;
+    const settled = await called(client, 'large', { kib: 4200 });
+    await client.closed;
 
     expect(settled).toMatchObject({ observed: { response: { tooLarge: true } } });
   });
 
   it('sees a process exit while it is called', async () => {
     const { link } = linked(stdioSettings([]));
-    const connection = await link.take();
+    const client = await link.take();
 
-    const settled = await called(connection, 'exit');
-    await connection.closed;
+    const settled = await called(client, 'exit');
+    await client.closed;
     await link.stop();
 
     expect(failureOfCall(settled)).toMatchObject({ kind: 'closed' });
@@ -242,11 +242,11 @@ describe('a stdio server that does not start or stop', () => {
 
   it('kills a process that does not end when its input does, once it has been patient', async () => {
     const { link } = linked(stdioSettings(['--linger-ms', '60000']));
-    const connection = await link.take();
+    const client = await link.take();
 
     const began = performance.now();
     await link.stop();
-    await connection.closed;
+    await client.closed;
 
     expect(performance.now() - began).toBeGreaterThanOrEqual(1900);
   });

@@ -5,7 +5,7 @@ import { problem, readYaml, type SettingProblem, type YamlKind } from '@on.auto/
 import { nestedDeeperThan } from '@on.auto/json-schema';
 import { Data, Result } from 'effect';
 
-import { counted } from '../connections/observed-requests.ts';
+import { counted } from '../clients/observed-requests.ts';
 import { at } from '../settings/checked.ts';
 import { toolServersSetting } from '../settings/server-entries.ts';
 import type { ApiDocumentSource } from '../settings/server-settings.ts';

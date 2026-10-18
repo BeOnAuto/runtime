@@ -1,4 +1,4 @@
-import { problem, servedScopeOf, type SettingProblem } from '@on.auto/config';
+import { problem, servedScopeOf, variableNamePattern, type SettingProblem } from '@on.auto/config';
 import { Result, type Redacted } from 'effect';
 
 import { endsAtTheFirstSeparator } from '../names/model-facing-names.ts';
@@ -8,13 +8,11 @@ import { accepted, at, problemsOf, refused, rejected, secretsOf, type Checked } 
 import { checkedAuth, checkedHeaders } from './remote-checks.ts';
 import { toolServersSetting, type ServerEntryFields } from './server-entries.ts';
 import type { McpServerSettings, ServerSettings, ServerType, StdioServerSettings } from './server-settings.ts';
-import { toolListsOf } from './tool-lists.ts';
+import { toolListProblems } from './tool-lists.ts';
 
 type Transport<S extends ServerSettings> = S extends ServerSettings
   ? Omit<S, 'name' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'secrets' | 'connection'>
   : never;
-
-const variableName = /^[A-Za-z_][A-Za-z0-9_]*$/u;
 
 const serverKinds: Readonly<Record<ServerType, string>> = {
   mcp: 'an mcp server',
@@ -32,7 +30,7 @@ const sourcesOfKinds = { mcp: 'url', stdio: 'command', openapi: 'document' } as 
 
 const serverTypes: readonly ServerType[] = ['mcp', 'stdio', 'openapi'];
 
-function checkedName(name: string, providers: readonly string[]): Checked<string> {
+function checkedName(name: string, modelProviders: readonly string[]): Checked<string> {
   if (!isServerName(name)) {
     return refused(
       name,
@@ -47,7 +45,7 @@ function checkedName(name: string, providers: readonly string[]): Checked<string
       "Expected no two hyphens together and none at the end: a model sees each tool of the server as server__tool, a hyphen as an underscore, and the server's name ends at the first __",
     );
   }
-  return providers.includes(name)
+  return modelProviders.includes(name)
     ? refused(
         name,
         [],
@@ -56,8 +54,8 @@ function checkedName(name: string, providers: readonly string[]): Checked<string
     : accepted(name);
 }
 
-export function serverNameProblems(name: string, providers: readonly string[]): readonly SettingProblem[] {
-  return problemsOf(checkedName(name, providers));
+export function serverNameProblems(name: string, modelProviders: readonly string[]): readonly SettingProblem[] {
+  return problemsOf(checkedName(name, modelProviders));
 }
 
 function foreignFieldProblems(name: string, fields: ServerEntryFields, type: ServerType): readonly SettingProblem[] {
@@ -92,7 +90,7 @@ function stdioTransport(
   const problems = [
     ...(command.trim() === '' ? problemsOf(refused(name, ['command'], 'Expected a command')) : []),
     ...Object.keys(env).flatMap((variable) =>
-      variableName.test(variable)
+      variableNamePattern.test(variable)
         ? []
         : problemsOf(refused(name, ['env', variable], 'Expected an environment variable name')),
     ),
@@ -149,8 +147,21 @@ function checkedTransport(
   return transport.ok && foreign.length === 0 ? transport : rejected([...foreign, ...problemsOf(transport)]);
 }
 
-export interface EntryContext {
-  readonly providers: readonly string[];
+type WrittenFields = Pick<ServerEntryFields, 'playbooks' | 'allowed' | 'record_content' | 'request_id'>;
+
+type ServedFields = Pick<ServerSettings, 'playbooks' | 'allowed' | 'record_content' | 'request_id'>;
+
+export function servedFieldsOf({ playbooks, allowed, record_content, request_id }: WrittenFields): ServedFields {
+  return {
+    playbooks: playbooks ?? null,
+    allowed: allowed ?? null,
+    record_content: record_content ?? true,
+    request_id: request_id ?? null,
+  };
+}
+
+interface EntryContext {
+  readonly modelProviders: readonly string[];
   readonly directory: string;
   readonly secrets: readonly Redacted.Redacted[];
 }
@@ -158,28 +169,25 @@ export interface EntryContext {
 export function checkedEntry(
   name: string,
   fields: ServerEntryFields,
-  { providers, directory, secrets }: EntryContext,
+  { modelProviders, directory, secrets }: EntryContext,
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
-  const named = checkedName(name, providers);
+  const named = checkedName(name, modelProviders);
   const scope = servedScopeOf(toolServersSetting, name, fields, 'server');
   const transport = checkedTransport(name, fields, directory);
-  const tools = toolListsOf(name, fields);
-  if (!named.ok || Result.isFailure(scope) || !transport.ok || Result.isFailure(tools)) {
+  const toolLists = toolListProblems(name, fields);
+  if (!named.ok || Result.isFailure(scope) || !transport.ok || toolLists.length > 0) {
     return Result.fail([
       ...problemsOf(named),
       ...(Result.isFailure(scope) ? scope.failure : []),
       ...problemsOf(transport),
-      ...(Result.isFailure(tools) ? tools.failure : []),
+      ...toolLists,
     ]);
   }
   return Result.succeed({
     ...transport.value,
     name,
     orgs: scope.success.orgs,
-    playbooks: scope.success.playbooks,
-    ...tools.success,
-    record_content: fields.record_content ?? true,
-    request_id: fields.request_id ?? null,
+    ...servedFieldsOf(fields),
     secrets,
     connection: null,
   });

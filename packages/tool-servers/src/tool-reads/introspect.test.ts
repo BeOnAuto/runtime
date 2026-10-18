@@ -122,7 +122,7 @@ describe('introspect of an operation of an HTTP API', () => {
 });
 
 describe('introspect refusing', () => {
-  it('refuses a server not set up for the playbook and a tool its entry does not allow before any connection', async () => {
+  it('refuses a server not set up for the playbook and a tool its entry does not allow before any client opens', async () => {
     const fake = await fakeServer();
     const { call } = callsOn({ graph: remote(fake, { allowed: ['echo'] }), crm: remote(fake, { org: 'globex' }) });
 

@@ -2,6 +2,7 @@ import { Redacted } from 'effect';
 
 import {
   accepted,
+  headerNamePattern,
   isPinnableUrl,
   pinnedUrlShape,
   problemsOf,
@@ -16,8 +17,6 @@ import type { AuthCredential, AuthSettings } from './server-settings.ts';
 
 type Auth = NonNullable<ServerEntryFields['auth']>;
 
-const headerName = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
-
 export function checkedHeaders(
   name: string,
   headers: Readonly<Record<string, string>>,
@@ -26,7 +25,7 @@ export function checkedHeaders(
   const reserved = headersTheRuntimeSets(type);
   const problems = problemsOf(
     ...Object.keys(headers).map((header) => {
-      if (!headerName.test(header)) {
+      if (!headerNamePattern.test(header)) {
         return refused(name, ['headers', header], 'Expected a header name');
       }
       return reserved.names.has(header.toLowerCase())

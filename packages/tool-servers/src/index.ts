@@ -27,11 +27,11 @@ export { answerDocument, isReadOnly, type ToolAnnotations } from './bounds/tool-
 export type { NamingCheck } from './org-servers/org-naming.ts';
 export type { PreparedCall } from './access/call-ways.ts';
 export {
-  isConnectionSettings,
+  isConnectionServerSettings,
   noConnections,
   type ConnectionServer,
+  type ConnectionServerSettings,
   type ConnectionServing,
-  type ConnectionSettings,
   type ConnectionSource,
   type ConnectionState,
   type ConnectionUnready,
@@ -80,8 +80,8 @@ export {
   toolServersSetting,
   type ServerEntryFields,
 } from './settings/server-entries.ts';
-export { checkedEntry, serverNameProblems, type EntryContext } from './settings/entry-checks.ts';
-export { isPinnableUrl, pinnedUrlShape } from './settings/checked.ts';
+export { servedFieldsOf, serverNameProblems } from './settings/entry-checks.ts';
+export { headerNamePattern, isPinnableUrl, pinnedUrlShape } from './settings/checked.ts';
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';
 export type { ServerSettings, ToolServerSettings } from './settings/server-settings.ts';

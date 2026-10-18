@@ -11,9 +11,9 @@ import { Redacted } from 'effect';
 
 import type { McpServerSettings } from '../settings/server-settings.ts';
 import { ignored } from './ignored.ts';
-import { connectionOver, observingFetch, openingClient, type ClientInfo } from './mcp-connection.ts';
+import { observingFetch, openingClient, serverClientOver, type ClientInfo } from './mcp-client.ts';
 import type { Observations } from './observed-requests.ts';
-import type { ServerConnection } from './server-connection.ts';
+import type { ServerClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
 
 export interface Timer {
@@ -30,7 +30,7 @@ export const systemTimer: Timer = {
 };
 
 export interface HttpOpening {
-  readonly client: ClientInfo;
+  readonly clientInfo: ClientInfo;
   readonly fetch: FetchLike;
   readonly authProvider: AuthProvider | undefined;
   readonly timeoutMs: number;
@@ -78,36 +78,36 @@ class ObservedHttpTransport extends StreamableHTTPClientTransport {
   }
 }
 
-async function connectedOnce(settings: McpServerSettings, opening: HttpOpening): Promise<ServerConnection | Limited> {
-  const opened = openingClient(opening.client, settings.request_id, opening.reportError);
-  const transport = new ObservedHttpTransport(settings, opening, opened.observations);
+async function openedOnce(settings: McpServerSettings, opening: HttpOpening): Promise<ServerClient | Limited> {
+  const sdk = openingClient(opening.clientInfo, settings.request_id, opening.reportError);
+  const transport = new ObservedHttpTransport(settings, opening, sdk.observations);
   try {
-    await opened.client.connect(transport, { timeout: opening.timeoutMs });
+    await sdk.client.connect(transport, { timeout: opening.timeoutMs });
   } catch (failure) {
-    await opened.client.close();
+    await sdk.client.close();
     if (failureOf(failure).kind === 'rate_limited') {
-      return { failure, retryAfterMs: opened.observations.lastRetryAfterMs() };
+      return { failure, retryAfterMs: sdk.observations.lastRetryAfterMs() };
     }
     throw failure;
   }
-  return connectionOver(opened.client, opened.observations, opened.closed, async () => {
+  return serverClientOver(sdk.client, sdk.observations, sdk.closed, async () => {
     const expired = Promise.withResolvers<void>();
     const stopWaiting = opening.timer.after(opening.timeoutMs, expired.resolve);
     try {
       await Promise.race([transport.terminateSession().catch(ignored), expired.promise]);
     } finally {
       stopWaiting();
-      await opened.client.close();
+      await sdk.client.close();
     }
   });
 }
 
-function isLimited(opened: ServerConnection | Limited): opened is Limited {
+function isLimited(opened: ServerClient | Limited): opened is Limited {
   return 'failure' in opened;
 }
 
-export async function openHttp(settings: McpServerSettings, opening: HttpOpening): Promise<ServerConnection> {
-  const first = await connectedOnce(settings, opening);
+export async function openHttp(settings: McpServerSettings, opening: HttpOpening): Promise<ServerClient> {
+  const first = await openedOnce(settings, opening);
   if (!isLimited(first)) {
     return first;
   }
@@ -116,7 +116,7 @@ export async function openHttp(settings: McpServerSettings, opening: HttpOpening
     throw failure;
   }
   await delay(retryAfterMs);
-  const second = await connectedOnce(settings, opening);
+  const second = await openedOnce(settings, opening);
   if (isLimited(second)) {
     throw second.failure;
   }

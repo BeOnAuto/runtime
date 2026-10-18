@@ -38,7 +38,7 @@ export async function toolAccessOf(
   };
   const servers = await Effect.runPromise(describedToolServers(toolServers, { reportLeftOut }));
   return makeToolAccess(servers, {
-    client: release,
+    clientInfo: release,
     connections,
     reportLeftOut,
     ...(toolTiming === undefined ? {} : { timing: toolTiming }),

@@ -2,23 +2,23 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 
 import type { Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
-import { apiConnection } from '../openapi/api-connection.ts';
+import { apiClient } from '../openapi/api-client.ts';
 import type { DescribedApiSettings, LinkedServerSettings } from '../openapi/described-api.ts';
-import { openHttp, systemTimer, type Timer } from './http-connection.ts';
+import { openHttp, systemTimer, type Timer } from './http-client.ts';
 import {
   boundedReport,
   errorsNoLongerReported,
-  tracedConnection,
+  tracedClient,
   type ClientInfo,
   type OutputReport,
   type TraceMeta,
-} from './mcp-connection.ts';
-import type { ServerConnection } from './server-connection.ts';
-import { openStdio } from './stdio-connection.ts';
+} from './mcp-client.ts';
+import type { ServerClient } from './server-client.ts';
+import { openStdio } from './stdio-client.ts';
 import { tokenSource, type Discovery, type TokenSource } from './token-source.ts';
 
 export interface LinkOptions {
-  readonly client: ClientInfo;
+  readonly clientInfo: ClientInfo;
   readonly fetch: FetchLike;
   readonly secrets: Secrets;
   readonly now: () => number;
@@ -52,11 +52,11 @@ function tokenHolderOf({ name, connection }: LinkedServerSettings): string {
   return connection === null ? name : `connection ${connection}`;
 }
 
-function tracedOpener(open: () => Promise<ServerConnection>, traceMeta?: TraceMeta): () => Promise<ServerConnection> {
-  return traceMeta === undefined ? open : async () => tracedConnection(await open(), traceMeta);
+function tracedOpener(open: () => Promise<ServerClient>, traceMeta?: TraceMeta): () => Promise<ServerClient> {
+  return traceMeta === undefined ? open : async () => tracedClient(await open(), traceMeta);
 }
 
-export function openerOf(settings: LinkedServerSettings, options: LinkOptions): () => Promise<ServerConnection> {
+export function openerOf(settings: LinkedServerSettings, options: LinkOptions): () => Promise<ServerClient> {
   const output: OutputReport = {
     scrub: options.secrets.scrub,
     report: (line) => {
@@ -65,7 +65,7 @@ export function openerOf(settings: LinkedServerSettings, options: LinkOptions): 
   };
   if (settings.type === 'stdio') {
     return tracedOpener(
-      () => openStdio(settings, { client: options.client, timeoutMs: options.timing.openMs, output }),
+      () => openStdio(settings, { clientInfo: options.clientInfo, timeoutMs: options.timing.openMs, output }),
       options.traceMeta,
     );
   }
@@ -79,7 +79,7 @@ export function openerOf(settings: LinkedServerSettings, options: LinkOptions): 
       },
       options,
     );
-    return () => Promise.resolve(apiConnection(settings, { fetch: options.fetch, tokens, now: options.now }));
+    return () => Promise.resolve(apiClient(settings, { fetch: options.fetch, tokens, now: options.now }));
   }
   const authProvider = tokensOf(
     { server: tokenHolderOf(settings), auth: settings.auth, serverUrl: settings.url, discovery: 'from_the_server' },
@@ -89,7 +89,7 @@ export function openerOf(settings: LinkedServerSettings, options: LinkOptions): 
   return tracedOpener(
     () =>
       openHttp(settings, {
-        client: options.client,
+        clientInfo: options.clientInfo,
         fetch: options.fetch,
         authProvider,
         timeoutMs: openMs,

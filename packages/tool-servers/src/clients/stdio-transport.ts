@@ -6,7 +6,7 @@ import { ReadBuffer, type JSONRPCMessage, type Transport } from '@modelcontextpr
 
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { ignored } from './ignored.ts';
-import { boundedReport, type OutputReport } from './mcp-connection.ts';
+import { boundedReport, type OutputReport } from './mcp-client.ts';
 import type { Observations, SendOptions } from './observed-requests.ts';
 
 export interface StdioParameters {
