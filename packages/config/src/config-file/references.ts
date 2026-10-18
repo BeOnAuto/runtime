@@ -34,6 +34,12 @@ const variableName = '[A-Za-z_][A-Za-z0-9_]*';
 
 export const variableNamePattern = new RegExp(`^${variableName}$`, 'u');
 
+const placeholderName = '[a-z][a-z0-9_]*';
+
+export const placeholderNamePattern = new RegExp(`^${placeholderName}$`, 'u');
+
+const placeholder = new RegExp(`(?<!\\$)\\{(${placeholderName})\\}`, 'gu');
+
 const environmentReference = new RegExp(`^\\$\\{(?:env:)?(${variableName})(?::-([^}]*))?\\}$`, 'u');
 
 const notAReference =
@@ -132,6 +138,14 @@ export function referencedVariablesOf(value: Schema.Json): readonly string[] {
     });
   }
   return entriesOf(value).flatMap(([, item]) => referencedVariablesOf(item));
+}
+
+export function placeholdersIn(text: string): readonly string[] {
+  return [...text.matchAll(placeholder)].map(([, name]: readonly string[]) => String(name));
+}
+
+export function placeholdersReplaced(text: string, replacement: (name: string) => string): string {
+  return text.replaceAll(placeholder, (_written, name: string) => replacement(name));
 }
 
 export function holdsReference(textWithReferences: string): boolean {
