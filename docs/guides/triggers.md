@@ -32,7 +32,7 @@ A workflow may have one trigger of each kind, and each starts its own runs. Your
 
 ### What a triggered run gets
 
-No trigger has an input of its own. A run that a schedule starts gets only `{ "schedule": { "due": "<time>" } }`, and a run that an event starts gets a list holding the event. Neither gets the input your agent passes, so decide where the workflow's data comes from:
+No trigger has an input of its own. A run that a schedule starts gets only `{ "schedule": { "due": "<time>" } }`, and a run that an event starts gets a list holding the event. Neither gets the input your agent passes, and the workflow's input schema, which checks what your agent passes, does not check what a trigger gives. So decide where the workflow's data comes from:
 
 - A workflow on a schedule must find its input on its own. Step 1 below sets that up before you add the schedule.
 - A workflow started by an event takes its data from the event. `input.from` shapes the run's input before the first step.
@@ -66,22 +66,24 @@ Ask your agent:
 In my "<playbook name>" playbook, I want the "<workflow name>" workflow to run
 on a schedule with this input: <the input it needs>. A scheduled run gets only
 the time it was due. Either have the workflow fill in that input when a
-schedule starts it, or prepare a small workflow that runs it with that input.
-Tell me which you chose, and show me the document before saving it.
+schedule starts it, or prepare a small workflow that runs it with that input;
+if its input schema requires a field the schedule's input lacks, prepare the
+small workflow. Tell me which you chose, and show me the document before
+saving it.
 ```
 
-For example, a workflow that takes a campaign can fill in a fixed one when a schedule starts it. If the workflow already has an `input`, `from` goes beside its `schema`:
+For example, a workflow that takes a campaign can fill in a fixed one when a schedule starts it. If the workflow already has an input schema, one that requires no field the schedule's input lacks, `from` goes beside its `schema`:
 
 ```yaml
 input:
   from: '${ $data.schedule ? { campaign: "autumn-reporting-trial" } : $data }'
 ```
 
-[Example: review a standing brief every Monday](#example-review-a-standing-brief-every-monday) shows a small scheduled workflow.
+A workflow whose input schema requires a field the schedule's input lacks takes a small scheduled workflow instead. The schema checks the input of every run your agent or another workflow starts, so the test in step 2, which gives the schedule's input, would be refused before it starts, while the call the small workflow makes gives the fields the schema requires. [Example: review a standing brief every Monday](#example-review-a-standing-brief-every-monday) shows a small scheduled workflow.
 
 ### 2. Test it with a schedule's input
 
-Before you turn on a schedule, run the workflow once with the input a schedule would give it. If you added a small scheduled workflow, run that one. Ask:
+Before you turn on a schedule, run the workflow once with the input a schedule would give it. If you added a small scheduled workflow, run that one: its call of your workflow is checked against your workflow's input schema exactly as the call it makes when the schedule starts it will be. Ask:
 
 ```text
 Run the "<workflow name>" workflow in my "<playbook name>" playbook with the

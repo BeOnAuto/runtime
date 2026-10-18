@@ -1,3 +1,4 @@
+import type { RejectedCall } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { testPlaybookNames, testWorkflowPolicy as workflowPolicy } from '../testing/test-sandbox.ts';
@@ -6,6 +7,12 @@ import { definitionsCalledIn, workflowFunctionsOf } from './workflow-functions.t
 import { summaryOf } from './workflow-summary.ts';
 
 const workflowFunctions = workflowFunctionsOf(testPlaybookNames);
+
+const workflowRun = { type: 'workflow', name: 'monthly' };
+
+function refusedBy(reason: string): RejectedCall {
+  return { status: 'rejected', reason, detail: 'The step said no.' };
+}
 
 function rejectedIn(tasks: string): readonly string[] {
   return workflowPolicy(workflow(`do:\n${tasks}`)).map(({ pointer, detail }) => `${pointer}: ${detail}`);
@@ -45,17 +52,19 @@ describe('a call of run_definition', () => {
   });
 
   it('says a workflow it ran stopped when one of its steps did, and what its reason did otherwise', () => {
-    const workflowRun = { type: 'workflow', name: 'monthly' };
-
     expect([
-      workflowFunctions.refusal?.('run_definition', workflowRun, 'invalid_input'),
-      workflowFunctions.refusal?.('run_definition', workflowRun, 'unavailable'),
-      workflowFunctions.refusal?.('run_definition', workflowRun, 'conflict'),
-      workflowFunctions.refusal?.('run_definition', workflowRun, 'unanswered'),
-      workflowFunctions.refusal?.('run_definition', workflowRun, 'cancelled'),
-      workflowFunctions.refusal?.('run_definition', workflowRun, 'not_found'),
-      workflowFunctions.refusal?.('run_definition', { type: 'computation', name: 'month-window' }, 'invalid_input'),
-      workflowFunctions.refusal?.('run_definition', 'monthly', 'invalid_input'),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refusedBy('invalid_input')),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refusedBy('unavailable')),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refusedBy('conflict')),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refusedBy('unanswered')),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refusedBy('cancelled')),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refusedBy('not_found')),
+      workflowFunctions.refusal?.(
+        'run_definition',
+        { type: 'computation', name: 'month-window' },
+        refusedBy('invalid_input'),
+      ),
+      workflowFunctions.refusal?.('run_definition', 'monthly', refusedBy('invalid_input')),
     ]).toEqual([
       'stopped',
       'stopped',
@@ -66,6 +75,23 @@ describe('a call of run_definition', () => {
       'refused its input',
       'refused its input',
     ]);
+  });
+});
+
+describe('a call of run_definition of a workflow that refused with the issues of an input', () => {
+  it('says the workflow refused its input when the rejection is of the kind input_schema, and stopped otherwise', () => {
+    const issues = [{ pointer: '/input/month', detail: 'month: expected text.' }];
+    const refused: RejectedCall = {
+      status: 'rejected',
+      reason: 'invalid_input',
+      detail: 'month: expected text.',
+      issues,
+    };
+
+    expect([
+      workflowFunctions.refusal?.('run_definition', workflowRun, { ...refused, kind: 'input_schema' }),
+      workflowFunctions.refusal?.('run_definition', workflowRun, refused),
+    ]).toEqual(['refused its input', 'stopped']);
   });
 });
 

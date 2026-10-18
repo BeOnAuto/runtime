@@ -383,7 +383,7 @@ An operation failure is a tool result with `isError: true` and no `structuredCon
 
 - The first text block explains the failure in words.
 - The second contains the JSON problem document. Its `reason` and `detail` distinguish invalid input, permission failures, conflicts and unavailable dependencies.
-- Invalid arguments are `invalid_input`, with a pointer at each field, so an agent can correct them.
+- Invalid arguments are `invalid_input`, with a pointer at each field, so an agent can correct them. An input that the input schema of the function or workflow it runs refused has the kind `input_schema`.
 
 Some failures come before a tool runs, outside any tool result:
 

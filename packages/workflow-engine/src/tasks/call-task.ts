@@ -65,7 +65,7 @@ function refusedBy(machine: Machine, body: CallBody, result: FailedResult): Pick
   const words = machine.session.options.functions.refusal;
   return result.status !== 'rejected' || words === undefined
     ? {}
-    : { refused: words(body.function, machine.session.valueOf(body.arguments), result.reason) };
+    : { refused: words(body.function, machine.session.valueOf(body.arguments), result) };
 }
 
 function errorOf(machine: Machine, result: FailedResult, body: CallBody): DslError {

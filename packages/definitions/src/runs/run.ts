@@ -1,6 +1,7 @@
 import {
   CancelledKindSchema,
   ConflictKindSchema,
+  InvalidInputKindSchema,
   IssueSchema,
   UnansweredKindSchema,
   RejectionBecauseSchema,
@@ -17,7 +18,17 @@ import { OutputShapeNameSchema } from '../shapes/shape-names.ts';
 import { mostResultBytes } from './recorded-size.ts';
 
 export const RunRejectionSchema = Schema.Union([
-  Schema.Struct({ reason: Schema.Literal('invalid_input'), detail: Schema.String, issues: Schema.Array(IssueSchema) }),
+  Schema.Struct({
+    reason: Schema.Literal('invalid_input'),
+    detail: Schema.String,
+    issues: Schema.Array(IssueSchema),
+    kind: Schema.optionalKey(
+      InvalidInputKindSchema.annotate({
+        description:
+          'What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right',
+      }),
+    ),
+  }),
   Schema.Struct({
     reason: Schema.Literal('unavailable'),
     detail: Schema.String,

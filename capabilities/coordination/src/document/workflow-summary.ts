@@ -1,6 +1,7 @@
 import { publishedOutputOf, type DefinitionSummary } from '@on.auto/definitions';
 import { type JsonObject, objectField, textField } from '@on.auto/workflow-engine';
 
+import { inlineSchemaOf } from './workflow-document.ts';
 import { definitionsCalledIn } from './workflow-functions.ts';
 import { outputShapeOf } from './workflow-output.ts';
 import { triggersOfDocument } from './workflow-schedule.ts';
@@ -25,8 +26,4 @@ export function summaryOf(document: JsonObject): DefinitionSummary {
     }),
     ...(triggers.length === 0 ? {} : { triggers }),
   };
-}
-
-function inlineSchemaOf(document: JsonObject, part: string): JsonObject | undefined {
-  return objectField(objectField(objectField(document, part) ?? {}, 'schema') ?? {}, 'document');
 }

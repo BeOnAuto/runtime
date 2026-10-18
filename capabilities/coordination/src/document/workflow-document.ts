@@ -1,5 +1,6 @@
 import { readYaml, type LocatedProblem, type Position, type YamlKind } from '@on.auto/config';
 import { runnableExpression, type PlaybookOwnNames, type StrippedForms } from '@on.auto/definitions';
+import { compileJsonSchema, type CompiledSchema } from '@on.auto/json-schema';
 import { InvalidInput, type Issue } from '@on.auto/operations';
 import {
   durationLimitRejections,
@@ -8,6 +9,7 @@ import {
   isObject,
   mostValueDepth,
   nestingRejections,
+  objectField,
   pointerTo,
   workflowExpressionsOf,
   type Json,
@@ -15,7 +17,7 @@ import {
   type JsonObject,
   type Rejection,
 } from '@on.auto/workflow-engine';
-import { Effect } from 'effect';
+import { Effect, Result } from 'effect';
 
 import { dslProblems, type Problem } from './dsl-validation.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from './workflow-functions.ts';
@@ -27,8 +29,11 @@ export type WorkflowDefinitionDocument = JsonObject;
 
 export interface ReadWorkflow {
   readonly document: WorkflowDefinitionDocument;
+  readonly inputSchema?: CompiledSchema;
   readonly locate: (pointer: string) => Position;
 }
+
+type CompiledInput = Result.Result<Pick<ReadWorkflow, 'inputSchema'>, readonly Problem[]>;
 
 const workflowYaml: YamlKind = {
   noun: 'a workflow document',
@@ -44,6 +49,34 @@ export interface LocatedIssue {
 
 export const notRunnable = 'The workflow document is not a workflow this runtime runs';
 
+export function inlineSchemaOf(document: JsonObject, part: 'input' | 'output'): JsonObject | undefined {
+  return objectField(objectField(objectField(document, part) ?? {}, 'schema') ?? {}, 'document');
+}
+
+const inputSchemaPlace = '/input/schema/';
+
+function compiledInputOf(document: JsonObject, rejections: readonly Rejection[]): CompiledInput {
+  const schema = inlineSchemaOf(document, 'input');
+  if (schema === undefined || rejections.some(({ pointer }) => pointer.startsWith(inputSchemaPlace))) {
+    return Result.succeed({});
+  }
+  return Result.mapBoth(compileJsonSchema(schema, { what: 'input', nesting: mostValueDepth }), {
+    onSuccess: (inputSchema) => ({ inputSchema }),
+    onFailure: (issues) =>
+      issues.map(({ pointer, detail }) => ({ pointer: `${inputSchemaPlace}document${pointer}`, detail })),
+  });
+}
+
+function refusedIn(locate: ReadWorkflow['locate']) {
+  return (problems: readonly Problem[]): Effect.Effect<never, InvalidInput> =>
+    Effect.fail(
+      invalidDocument(
+        notRunnable,
+        problems.map(({ pointer, detail }) => ({ position: locate(pointer), detail: `${placeOf(pointer)}${detail}` })),
+      ),
+    );
+}
+
 function readWorkflowDocument(
   source: string,
   policy: WorkflowPolicy,
@@ -58,7 +91,7 @@ function readWorkflowDocument(
     const rejections = policy(value);
     const unreadable =
       nestingRejections(value).length > 0 || rejections.some(({ pointer }) => pointer === '/document/dsl');
-    const problems = [
+    const found: readonly Problem[] = [
       ...(unreadable
         ? []
         : dslProblems(value, { connecting: rejections.length === 0 }).filter(
@@ -67,10 +100,13 @@ function readWorkflowDocument(
       ...rejections,
       ...(unreadable ? [] : durationLimitRejections(value, mostDuration)),
       ...outputShapeRejections(value),
-    ].map(({ pointer, detail }) => ({ position: locate(pointer), detail: `${placeOf(pointer)}${detail}` }));
-    return problems.length === 0
-      ? Effect.succeed({ document: value, locate })
-      : Effect.fail(invalidDocument(notRunnable, problems));
+    ];
+    const refused = refusedIn(locate);
+    return Result.match(compiledInputOf(value, rejections), {
+      onFailure: (issues) => refused([...found, ...issues]),
+      onSuccess: (input) =>
+        found.length === 0 ? Effect.succeed({ document: value, ...input, locate }) : refused(found),
+    });
   });
 }
 

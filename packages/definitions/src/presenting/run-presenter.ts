@@ -39,7 +39,8 @@ type ToolCallShown = Shown<'tool_call_started' | 'tool_call_answered' | 'tool_ca
 function rejectionShown(rejection: RunRejection) {
   const detail = cutAtCodePoint(rejection.detail, mostDetailBytes);
   if (rejection.reason === 'invalid_input') {
-    return { reason: rejection.reason, detail, ...issuesShown(rejection.issues) };
+    const { reason, kind, issues } = rejection;
+    return { reason, detail, ...(kind === undefined ? {} : { kind }), ...issuesShown(issues) };
   }
   if (rejection.reason === 'cancelled' || rejection.reason === 'unanswered') {
     const { reason, kind } = rejection;

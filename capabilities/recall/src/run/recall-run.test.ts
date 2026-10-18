@@ -63,7 +63,7 @@ describe('a run of a recall function', () => {
 });
 
 describe('the input of a run of a recall function', () => {
-  it('refuses an input its schema refuses, or one nested deeper than a value may, with a pointer', async () => {
+  it('refuses an input its schema refuses, of the kind input_schema, or one nested deeper than a value may, with a pointer', async () => {
     const run = recallWith();
     run.keep(liveView(reviews));
     const deep = Array.from({ length: 600 }).reduce<Schema.Json>((inner) => [inner], null);
@@ -73,6 +73,7 @@ describe('the input of a run of a recall function', () => {
         new InvalidInput({
           detail: 'The input: expected the field campaign.',
           issues: [{ pointer: '/campaign', detail: 'The input: expected the field campaign.' }],
+          kind: 'input_schema',
         }),
       ),
     );

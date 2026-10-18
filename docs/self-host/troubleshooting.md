@@ -79,7 +79,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 Every error is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem document (`application/problem+json`) with a machine-readable `reason`, such as:
 
 - `bad_request`;
-- `invalid_input`, with an `errors` list of JSON pointers;
+- `invalid_input`, with an `errors` list of JSON pointers, and the kind `input_schema` when an input schema refused the input a run was given;
 - `forbidden`;
 - `not_found`;
 - `conflict`.

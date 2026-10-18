@@ -15,6 +15,7 @@
   "dependencies": {
     "@on.auto/config": "workspace:*",
     "@on.auto/definitions": "workspace:*",
+    "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",
     "@on.auto/workflow-host": "workspace:*",

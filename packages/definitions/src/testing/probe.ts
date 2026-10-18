@@ -1,7 +1,10 @@
+import { compileJsonSchema } from '@on.auto/json-schema';
 import { Conflict, InvalidInput, Unavailable } from '@on.auto/operations';
-import { Effect, Predicate, type Schema } from 'effect';
+import { mostValueDepth } from '@on.auto/workflow-engine';
+import { Effect, Predicate, Result, type Schema } from 'effect';
 
 import {
+  checkedInput,
   defineCapability,
   type CapabilityAnswer,
   type RunContext,
@@ -76,7 +79,17 @@ const mishaps: Readonly<Record<Mishap, Effect.Effect<never, Unavailable | Confli
   ),
 };
 
+const seatsSchema = Result.getOrThrow(
+  compileJsonSchema(
+    { type: 'object', properties: { seats: { type: 'integer', minimum: 1 } } },
+    { what: 'input', nesting: mostValueDepth },
+  ),
+);
+
 function answerTo(input: Schema.Json, run: RunContext, runs: number): Effect.Effect<CapabilityAnswer, InvalidInput> {
+  if (Predicate.hasProperty(input, 'seats')) {
+    return checkedInput(input, seatsSchema, 'probe').pipe(Effect.as({ output: input, record: {} }));
+  }
   if (Predicate.hasProperty(input, 'reject')) {
     return Effect.fail(
       new InvalidInput({

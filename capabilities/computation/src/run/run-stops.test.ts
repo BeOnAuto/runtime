@@ -74,7 +74,7 @@ describe('a run that was unavailable', () => {
 });
 
 describe('the input of a run', () => {
-  it('is checked against the input schema, with a pointer to what does not fit', async () => {
+  it('is checked against the input schema, with a pointer to what does not fit, refused as of the kind input_schema', async () => {
     expect(
       await computationWith().running(campaignPace, {
         period: { days_elapsed: 12, days_total: 31 },
@@ -90,6 +90,7 @@ describe('the input of a run', () => {
               detail: 'rows, then item 1, then cost_cents: expected a whole number, from 0 to 5,000,000.',
             },
           ],
+          kind: 'input_schema',
         }),
       ),
     );

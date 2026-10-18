@@ -129,6 +129,12 @@ describe('explanationOf', () => {
     expect(explanationOf({ reason })).toEqual({ why, remedy });
   });
 
+  it('explains an input the input schema of what it runs refused in the words of any input it did not take', () => {
+    expect(explanationOf({ reason: 'invalid_input', kind: 'input_schema' })).toEqual(
+      explanationOf({ reason: 'invalid_input' }),
+    );
+  });
+
   it.each(byConflict)('explains a conflict of the kind %s', (kind, why, remedy) => {
     expect(explanationOf({ reason: 'conflict', kind })).toEqual({ why, remedy });
   });

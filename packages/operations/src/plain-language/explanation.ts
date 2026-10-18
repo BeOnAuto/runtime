@@ -47,6 +47,7 @@ const ranUntilCancelled =
   'Nothing more of it runs, but what it did before may have changed something; start a new run if it is still needed.';
 
 const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
+  input_schema: explanationByReason.invalid_input,
   taken: { why: 'that name is already taken', remedy: 'A different name will work.' },
   retired: {
     why: 'it has been retired',

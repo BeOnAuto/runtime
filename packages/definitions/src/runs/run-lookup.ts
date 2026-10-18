@@ -29,7 +29,8 @@ type ReplayedRejection = InvalidInput | Unavailable | Conflict | RunCancelled | 
 
 function replayed(rejection: RunRejection): ReplayedRejection {
   if (rejection.reason === 'invalid_input') {
-    return new InvalidInput({ detail: rejection.detail, issues: rejection.issues });
+    const { detail, issues, kind } = rejection;
+    return new InvalidInput({ detail, issues, ...(kind === undefined ? {} : { kind }) });
   }
   if (rejection.reason === 'unavailable') {
     const { detail, kind, because } = rejection;

@@ -5271,6 +5271,13 @@
                                 ],
                                 "additionalProperties": false
                               }
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "input_schema"
+                              ],
+                              "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
                             }
                           },
                           "required": [
@@ -5668,6 +5675,13 @@
                                 ],
                                 "additionalProperties": false
                               }
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "input_schema"
+                              ],
+                              "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
                             }
                           },
                           "required": [
@@ -6080,6 +6094,13 @@
                                 ],
                                 "additionalProperties": false
                               }
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "input_schema"
+                              ],
+                              "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
                             }
                           },
                           "required": [
@@ -6546,6 +6567,7 @@
                             "kind": {
                               "type": "string",
                               "enum": [
+                                "input_schema",
                                 "model_not_offered",
                                 "tool_not_offered",
                                 "tool_server_failed",
@@ -6615,7 +6637,7 @@
                             "reason"
                           ],
                           "additionalProperties": false,
-                          "description": "Why the run was rejected: its reason, the kind it gave for unavailable or conflict, the kind of a cancellation or of a request nobody answered, and for unavailable or conflict the because it gave"
+                          "description": "Why the run was rejected: its reason, the kind it gave for invalid_input, unavailable or conflict, the kind of a cancellation or of a request nobody answered, and for unavailable or conflict the because it gave"
                         }
                       },
                       "required": [
@@ -10595,6 +10617,7 @@
           "kind": {
             "type": "string",
             "enum": [
+              "input_schema",
               "taken",
               "retired",
               "concurrent_change",

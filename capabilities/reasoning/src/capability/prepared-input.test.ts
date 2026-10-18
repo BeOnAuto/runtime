@@ -21,7 +21,7 @@ const withSchema = documentOf(
 );
 
 describe('the input of a run', () => {
-  it('is a JSON object', async () => {
+  it('is a JSON object, as its input schema takes, or is refused of the kind input_schema', async () => {
     const { running, requests } = reasoningWith();
 
     expect(await running(withSchema, ['text'])).toEqual(
@@ -29,6 +29,7 @@ describe('the input of a run', () => {
         new InvalidInput({
           detail: 'The input of a reasoning function definition is a JSON object',
           issues: [{ pointer: '', detail: 'Expected a JSON object' }],
+          kind: 'input_schema',
         }),
       ),
     );
@@ -50,8 +51,10 @@ describe('the input of a run', () => {
 
     expect(requests()[0]?.messages).toMatchObject([{ content: [{ text: 'Summarize the report in 10 words.' }] }]);
   });
+});
 
-  it('must match the input schema, with pointers to its fields', async () => {
+describe('the input of a run that does not match the input schema', () => {
+  it('is refused of the kind input_schema, with pointers to its fields, before the model is called', async () => {
     const { running, requests } = reasoningWith();
 
     expect(await running(withSchema, { words: 0, colour: 'red' })).toEqual(
@@ -64,6 +67,7 @@ describe('the input of a run', () => {
             { pointer: '/text', detail: 'The input: expected the field text.' },
             { pointer: '/words', detail: 'words: expected at least 1.' },
           ],
+          kind: 'input_schema',
         }),
       ),
     );
@@ -77,7 +81,9 @@ describe('the input of a run whose schema names a format', () => {
     const refusal = 'due: expected a date such as 2026-04-01.';
 
     expect(await running(withSchema, { text: 'the report', due: 'Friday' })).toEqual(
-      Exit.fail(new InvalidInput({ detail: refusal, issues: [{ pointer: '/due', detail: refusal }] })),
+      Exit.fail(
+        new InvalidInput({ detail: refusal, issues: [{ pointer: '/due', detail: refusal }], kind: 'input_schema' }),
+      ),
     );
     expect(requests()).toEqual([]);
   });

@@ -1,12 +1,14 @@
 import {
+  checkedInput,
   defineCapability,
   outputInWords,
   type PlaybookOwnNames,
   type Capability,
   type DeclaringCapability,
+  type RunContext,
 } from '@on.auto/definitions';
-import type { InvalidInput } from '@on.auto/operations';
-import type { Effect } from 'effect';
+import type { InvalidInput, Noun } from '@on.auto/operations';
+import { Effect, type Schema } from 'effect';
 
 import { checkedExpressions, type ExpressionCheck } from '../document/expression-check.ts';
 import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../document/workflow-document.ts';
@@ -22,13 +24,23 @@ export interface WorkflowAdapterDependencies extends WorkflowStarts {
 
 export const workflowFacts: DeclaringCapability = { type: 'workflow', facts: { onRuns: [], streams: [runPresenter] } };
 
+const noun: Noun = { one: 'workflow', other: 'workflows' };
+
+function admittedInput(
+  { inputSchema }: ReadWorkflow,
+  input: Schema.Json,
+  { trigger }: RunContext,
+): Effect.Effect<Schema.Json, InvalidInput> {
+  return trigger === undefined ? checkedInput(input, inputSchema, noun.one) : Effect.succeed(input);
+}
+
 export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): Capability {
   const readWorkflowDocument = workflowReaderOf(dependencies.names);
   return defineCapability({
     type: workflowFacts.type,
     title: 'Workflow',
     guide: { name: 'workflow' },
-    noun: { one: 'workflow', other: 'workflows' },
+    noun,
     describeOutput: outputInWords('result'),
     mediaType: 'application/yaml',
     parse: (source: string): Effect.Effect<ReadWorkflow, InvalidInput> =>
@@ -36,8 +48,10 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
     check: checkedExpressions(dependencies.check),
     summarize: ({ document }) => summaryOf(document),
     overview: workflowOverview,
-    run: ({ document }, input, run, stripped) =>
-      started(dependencies, runnableDocument(document, stripped), input, run),
+    run: (read, input, run, stripped) =>
+      Effect.flatMap(admittedInput(read, input, run), (admitted) =>
+        started(dependencies, runnableDocument(read.document, stripped), admitted, run),
+      ),
     whenCancelled: 'finish',
     finishesLater: true,
     longestRunOf: () => dependencies.mostDurationMs,

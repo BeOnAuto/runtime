@@ -20,4 +20,6 @@ export const CallResultSchema = Schema.Union([
 
 export type CallResult = typeof CallResultSchema.Type;
 
+export type RejectedCall = Extract<CallResult, { readonly status: 'rejected' }>;
+
 export type CallStatus = CallResult['status'];
