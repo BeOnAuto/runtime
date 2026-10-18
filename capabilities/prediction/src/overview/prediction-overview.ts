@@ -1,4 +1,4 @@
-import { bulletList, paragraph, sectionOf, type OverviewSection } from '@on.auto/definitions';
+import { bulletList, paragraph, sectionOf, type OverviewParts, type OverviewSection } from '@on.auto/definitions';
 
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { learnedSection } from './data-words.ts';
@@ -18,15 +18,16 @@ function rulesSections(rules: readonly string[]): readonly OverviewSection[] {
       ];
 }
 
-export function predictionOverview(
-  document: PredictionFunctionDefinitionDocument,
-  source: string,
-): readonly OverviewSection[] {
-  return [
-    predictedSection(document.predicts, document.data),
-    learnedSection(document),
-    trainerSection(document.source, source),
-    goingLiveSection(document),
-    ...rulesSections(document.rules),
-  ];
+export function predictionOverview(document: PredictionFunctionDefinitionDocument): OverviewParts {
+  return {
+    body: [],
+    sections: [
+      predictedSection(document.predicts, document.data),
+      learnedSection(document),
+      trainerSection(document.source, document.brief),
+      goingLiveSection(document),
+      ...rulesSections(document.rules),
+    ],
+    appendix: [],
+  };
 }

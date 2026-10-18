@@ -31,6 +31,10 @@ export function textOf(schema: JsonSchema, keyword: string): string | undefined 
   return typeof value === 'string' ? value : undefined;
 }
 
+export function valueText(value: Schema.Json): string {
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
 export function numberOf(schema: JsonSchema, keyword: string): number | undefined {
   const value = schema[keyword];
   return typeof value === 'number' ? value : undefined;

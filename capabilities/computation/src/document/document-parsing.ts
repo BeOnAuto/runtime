@@ -8,13 +8,14 @@ import {
   type DocumentParts,
   type ReadFrontMatter,
   type SourceLines,
+  type ValueContract,
 } from '@on.auto/definitions/document';
 import { compileJsonSchema } from '@on.auto/json-schema';
 import { oneLanguage } from '@on.auto/workflow-engine';
 import { mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Result, type Schema } from 'effect';
 
-import type { ComputationFunctionDefinitionDocument, OutputContract, ValueContract } from './computation-document.ts';
+import type { ComputationFunctionDefinitionDocument, OutputContract } from './computation-document.ts';
 import { computationFrontMatter, decodeFrontMatter, type OutputSection } from './front-matter.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;

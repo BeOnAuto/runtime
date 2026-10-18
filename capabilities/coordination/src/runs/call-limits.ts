@@ -2,7 +2,7 @@ import type { RunContext } from '@on.auto/definitions';
 import { allTaskEntries, field, holdsAnExpression, type JsonObject } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 
-import { definitionCallOf, type RunDefinitionCall } from '../document/workflow-functions.ts';
+import { definitionCallOf, namesItsDefinition, type NamedRunDefinitionCall } from '../document/workflow-functions.ts';
 
 export const callMarginMs = 60_000;
 
@@ -13,7 +13,7 @@ interface CalledDefinition {
   readonly longest: (lengths: RunLengths) => Effect.Effect<number | undefined>;
 }
 
-function longestOf({ type, name, given }: RunDefinitionCall): CalledDefinition['longest'] {
+function longestOf({ type, name, given }: NamedRunDefinitionCall): CalledDefinition['longest'] {
   const input = field(given, 'input') ?? {};
   return holdsAnExpression(input)
     ? ({ longestRunOf }) => longestRunOf(type, name)
@@ -22,7 +22,7 @@ function longestOf({ type, name, given }: RunDefinitionCall): CalledDefinition['
 
 function calledDefinitionOf(task: JsonObject, reference: string): readonly CalledDefinition[] {
   const call = definitionCallOf(task);
-  return call === undefined ? [] : [{ reference, longest: longestOf(call) }];
+  return namesItsDefinition(call) ? [{ reference, longest: longestOf(call) }] : [];
 }
 
 type CallLimit = readonly [string, number];

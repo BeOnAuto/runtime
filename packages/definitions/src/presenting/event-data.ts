@@ -34,19 +34,6 @@ export function cutAtCodePoint(text: string, mostBytes: number): string {
   return text;
 }
 
-export function firstCharacters(text: string, count: number): string {
-  let taken = 0;
-  let end = 0;
-  for (const character of text) {
-    if (taken === count) {
-      return text.slice(0, end);
-    }
-    taken += 1;
-    end += character.length;
-  }
-  return text;
-}
-
 export function issuesShown(issues: readonly ShownIssue[]) {
   return {
     issue_count: issues.length,

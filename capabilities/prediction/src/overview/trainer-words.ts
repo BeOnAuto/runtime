@@ -1,7 +1,5 @@
-import { durationInWords, named, paragraph, sectionOf, type OverviewSection } from '@on.auto/definitions';
-import { splitDocument } from '@on.auto/definitions/document';
-import { readableTemplate } from '@on.auto/definitions/template';
-import { Result } from 'effect';
+import { durationInWords, named, paragraph, sectionOf, templateLead, type OverviewSection } from '@on.auto/definitions';
+import { readableTemplate, type TemplateText } from '@on.auto/definitions/template';
 
 import { predictionBounds } from '../capability/prediction-bounds.ts';
 import type { BuildSource } from '../document/prediction-document.ts';
@@ -14,24 +12,20 @@ function askedThrough({ through, to }: BuildSource) {
     : paragraph('Each build asks for candidate models through the interaction function ', named(through), '.');
 }
 
-function briefBlocks(source: string) {
-  const { body, bodyLine } = Result.getOrThrow(splitDocument(source, 'A prediction function definition'));
-  const brief = readableTemplate({ text: body, firstLine: bodyLine });
+function briefBlocks(written: TemplateText) {
+  const brief = readableTemplate(written);
   return brief.length === 0
     ? [paragraph('Its brief holds no text a trainer reads, so its trainer reads the rows and the rules alone.')]
-    : [
-        paragraph('Its trainer reads the brief first, with the values of each build in place of the names in bold:'),
-        ...brief,
-      ];
+    : [templateLead('Its trainer reads the brief first', 'build'), ...brief];
 }
 
-export function trainerSection(buildSource: BuildSource, source: string): OverviewSection {
+export function trainerSection(buildSource: BuildSource, brief: TemplateText): OverviewSection {
   return sectionOf(
     'Who trains it',
     askedThrough(buildSource),
     paragraph(
       `A build waits at most ${durationInWords(buildSource.expiresMs)} for its candidates, and the playbook then scores up to ${candidatesInABuild} of them, each within ${durationInWords(scoringACandidateMs)}.`,
     ),
-    ...briefBlocks(source),
+    ...briefBlocks(brief),
   );
 }

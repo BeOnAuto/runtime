@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import { BaselineSchema, MetricSchema } from '../document/front-matter.ts';
+import { BaselineSchema, MetricSchema } from '../document/evaluation-names.ts';
 import { enclosings } from '../periods/enclosing.ts';
 import { grains } from '../periods/grains.ts';
 import type { ModelFeeds } from './model-sessions.ts';

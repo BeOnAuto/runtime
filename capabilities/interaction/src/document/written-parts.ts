@@ -1,11 +1,16 @@
-import { issueAt, type DocumentIssue, type DocumentParts, type SourceLines } from '@on.auto/definitions/document';
+import {
+  issueAt,
+  type DocumentIssue,
+  type DocumentParts,
+  type SourceLines,
+  type ValueContract,
+} from '@on.auto/definitions/document';
 import type { ParsedTemplate } from '@on.auto/definitions/template';
 import { compileJsonSchema } from '@on.auto/json-schema';
 import { mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Result, type Schema } from 'effect';
 
 import { expiryOf } from './expiry.ts';
-import type { ValueContract } from './interaction-document.ts';
 import { compiledTemplate } from './request-templates.ts';
 
 export type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;

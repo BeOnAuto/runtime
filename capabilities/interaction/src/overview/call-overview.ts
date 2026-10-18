@@ -1,8 +1,11 @@
 import {
+  describedSchemaBlocks,
   named,
   paragraph,
   schemaBlocks,
   sectionOf,
+  theToolOf,
+  undescribedSentence,
   type OverviewSection,
   type Phrase,
   type Phrases,
@@ -10,8 +13,6 @@ import {
 import { JsonPointer } from 'effect';
 
 import type { CallDocument } from '../document/interaction-document.ts';
-
-const anyInput = 'It takes any input, which its document does not describe.';
 
 function readPhrases(read: string | undefined): Phrases {
   const segments = (read ?? '')
@@ -30,15 +31,12 @@ function readPhrases(read: string | undefined): Phrases {
 
 export function callSections({ call, input, output }: CallDocument): readonly OverviewSection[] {
   return [
-    sectionOf(
-      'Who it asks',
-      paragraph('It asks a system: each run calls the tool ', named(call.tool), ' of ', named(call.server), ' once.'),
-    ),
+    sectionOf('Who it asks', paragraph('It asks a system: each run calls ', ...theToolOf(call), ' once.')),
     sectionOf(
       'What it sends',
       paragraph("It sends the tool the arguments its document writes, from each run's input:"),
-      ...schemaBlocks(input.schema?.document, anyInput),
+      ...schemaBlocks(input.schema?.document, undescribedSentence('input')),
     ),
-    sectionOf('What it reads', paragraph(...readPhrases(call.read)), ...schemaBlocks(output.schema.document, anyInput)),
+    sectionOf('What it reads', paragraph(...readPhrases(call.read)), ...describedSchemaBlocks(output.schema.document)),
   ];
 }

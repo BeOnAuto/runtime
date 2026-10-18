@@ -1,4 +1,4 @@
-import { escapedInline, oneLine, phrasesText } from './markdown-text.ts';
+import { blockQuoted, escapedInline, oneLine, phrasesText, type Part } from './markdown-text.ts';
 import { mermaidOf } from './mermaid-diagram.ts';
 import {
   named,
@@ -8,6 +8,7 @@ import {
   type OverviewBlock,
   type OverviewSection,
   type Phrases,
+  type Quote,
 } from './overview.ts';
 
 export const mostOverviewBytes = 65_536;
@@ -18,11 +19,18 @@ const counted = new Intl.NumberFormat('en');
 
 const cutLine = `*The overview stops here, at the ${counted.format(mostOverviewBytes)} bytes an overview may take; the whole definition is under Source.*`;
 
+const detailsHeading = '## Details';
+
 const blockSeparator = '\n\n';
 
 const finalLineBreak = /\n$/u;
 
 const utf8 = new TextEncoder();
+
+interface Within {
+  readonly kept: readonly string[];
+  readonly cut: boolean;
+}
 
 function bytesOf(text: string): number {
   return utf8.encode(text).byteLength;
@@ -32,40 +40,53 @@ function tableRow(cells: readonly string[]): string {
   return `| ${cells.join(' | ')} |`;
 }
 
-function fieldRow({ name, required, words }: FieldRow): string {
-  return tableRow([phrasesText([named(name)], 'cell'), required ? 'yes' : 'no', phrasesText(words, 'cell').trim()]);
+function fieldRow({ name, required, words }: FieldRow, part: Part): string {
+  return tableRow([
+    phrasesText([named(name)], 'cell', part),
+    required ? 'yes' : 'no',
+    phrasesText(words, 'cell', part).trim(),
+  ]);
 }
 
-function fieldTableText({ rows }: FieldTable): string {
+function fieldTableText({ rows }: FieldTable, part: Part): string {
   const more = rows.length - mostTableRows;
   return [
     tableRow(['Field', 'Required', 'What it is']),
     tableRow(['---', '---', '---']),
-    ...rows.slice(0, mostTableRows).map((row) => fieldRow(row)),
+    ...rows.slice(0, mostTableRows).map((row) => fieldRow(row, part)),
     ...(more > 0 ? [tableRow([`and ${more} more`, '', ''])] : []),
   ].join('\n');
 }
 
-function itemsText(items: readonly Phrases[], markerOf: (index: number) => string): string {
-  return items.map((item, index) => `${markerOf(index)} ${oneLine(phrasesText(item, 'prose')).trim()}`).join('\n');
+function itemsText(items: readonly Phrases[], markerOf: (index: number) => string, part: Part): string {
+  return items
+    .map((item, index) => `${markerOf(index)} ${oneLine(phrasesText(item, 'prose', part)).trim()}`)
+    .join('\n');
 }
 
-function blockText(block: OverviewBlock): string {
+function quoteText({ lines }: Quote, part: Part): string {
+  return blockQuoted(lines.flatMap((line) => phrasesText(line, 'prose', part).split('\n')));
+}
+
+function blockText(block: OverviewBlock, part: Part): string {
   if (block.kind === 'paragraph') {
-    return phrasesText(block.phrases, 'prose');
+    return phrasesText(block.phrases, 'prose', part);
   }
   if (block.kind === 'list') {
-    return itemsText(block.items, () => '-');
+    return itemsText(block.items, () => '-', part);
   }
   if (block.kind === 'numbered') {
-    return itemsText(block.items, (index) => `${index + 1}.`);
+    return itemsText(block.items, (index) => `${index + 1}.`, part);
   }
-  return block.kind === 'fields' ? fieldTableText(block) : mermaidOf(block);
+  if (block.kind === 'quote') {
+    return quoteText(block, part);
+  }
+  return block.kind === 'fields' ? fieldTableText(block, part) : mermaidOf(block);
 }
 
-function blocksWithin(blocks: readonly string[]): readonly string[] {
+function blocksWithin(blocks: readonly string[]): Within {
   if (bytesOf(blocks.join(blockSeparator)) + 1 <= mostOverviewBytes) {
-    return blocks;
+    return { kept: blocks, cut: false };
   }
   const room = mostOverviewBytes - 1 - bytesOf(cutLine) - blockSeparator.length;
   const kept: string[] = [];
@@ -77,24 +98,59 @@ function blocksWithin(blocks: readonly string[]): readonly string[] {
     }
     kept.push(block);
   }
-  return [...kept, cutLine];
+  return { kept, cut: true };
 }
 
-function sectionText({ heading, blocks }: OverviewSection): readonly string[] {
-  return [`## ${escapedInline(heading)}`, ...blocks.map((block) => blockText(block))];
+function withCutLine({ kept, cut }: Within): readonly string[] {
+  return cut ? [...kept, cutLine] : kept;
 }
 
-export function markdownOf({ title, opening, sections }: Overview): string {
-  const blocks = [
+function sectionText({ heading, blocks }: OverviewSection, level: string, part: Part): readonly string[] {
+  return [`${level} ${escapedInline(heading)}`, ...blocks.map((block) => blockText(block, part))];
+}
+
+function headingsOf(appendix: readonly OverviewSection[]): ReadonlySet<number> {
+  const headings = new Set([0]);
+  let at = 1;
+  for (const { blocks } of appendix) {
+    headings.add(at);
+    at += 1 + blocks.length;
+  }
+  return headings;
+}
+
+function withoutLoneHeadings(kept: readonly string[], from: number, headings: ReadonlySet<number>): readonly string[] {
+  let end = kept.length;
+  while (end > from && headings.has(end - 1 - from)) {
+    end -= 1;
+  }
+  return kept.slice(0, end);
+}
+
+function detailsWithin(story: readonly string[], appendix: readonly OverviewSection[]): Within {
+  const detailed = appendix.filter(({ blocks }) => blocks.length > 0);
+  if (detailed.length === 0) {
+    return blocksWithin(story);
+  }
+  const details = detailed.flatMap((section) => sectionText(section, '###', 'appendix'));
+  const { kept, cut } = blocksWithin([...story, detailsHeading, ...details]);
+  return { kept: withoutLoneHeadings(kept, story.length, headingsOf(detailed)), cut };
+}
+
+export function markdownOf({ title, opening, body, sections, appendix }: Overview): string {
+  const story = [
     `# ${escapedInline(title)}`,
-    phrasesText(opening, 'prose'),
-    ...sections.flatMap((section) => sectionText(section)),
+    phrasesText(opening, 'prose', 'body'),
+    ...body.map((block) => blockText(block, 'body')),
+    ...sections.flatMap((section) => sectionText(section, '##', 'body')),
   ];
-  return `${blocksWithin(blocks).join(blockSeparator)}\n`;
+  return `${withCutLine(detailsWithin(story, appendix)).join(blockSeparator)}\n`;
 }
 
 export function appendedSection(markdown: string, section: OverviewSection): string {
   const written = markdown.replace(finalLineBreak, '');
-  const blocks = blocksWithin([written, ...sectionText(section)]);
-  return written.endsWith(cutLine) || blocks[0] !== written ? markdown : `${blocks.join(blockSeparator)}\n`;
+  const { kept, cut } = blocksWithin([written, ...sectionText(section, '##', 'body')]);
+  return written.endsWith(cutLine) || kept[0] !== written
+    ? markdown
+    : `${withCutLine({ kept, cut }).join(blockSeparator)}\n`;
 }

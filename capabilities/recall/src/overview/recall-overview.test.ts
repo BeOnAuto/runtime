@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
 import { foldOf, recallDocument } from '../testing/campaign-reviews.ts';
@@ -28,13 +29,9 @@ function overviewOf(frontMatter: readonly string[], answer?: string): string {
   return recallWith().prepared(source).overview('reviews');
 }
 
-function sectionOf(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
-}
-
 function rememberedOf(...filters: readonly string[]): readonly string[] {
   const events = filters.map((filter) => `    - ${filter}`);
-  const remembered = sectionOf(
+  const remembered = sectionIn(
     overviewOf(['language: typescript', 'source:', '  events:', ...events]),
     'What it remembers',
   );
@@ -45,7 +42,7 @@ function rememberedOf(...filters: readonly string[]): readonly string[] {
 }
 
 function initialOf(initial: string): string {
-  return sectionOf(overviewOf([...twoFilters, 'view:', `  initial: ${initial}`]), 'What it keeps');
+  return sectionIn(overviewOf([...twoFilters, 'view:', `  initial: ${initial}`]), 'What it keeps');
 }
 
 describe('the overviews of the examples of the reference of recall functions', () => {
@@ -79,7 +76,7 @@ describe('how the view of a recall function is kept, in its overview', () => {
   it('is a diagram from each filter to the view, drawn as a cylinder, and from the view to the answer', () => {
     const overview = overviewOf(twoFilters, 'return view;');
 
-    expect(sectionOf(overview, 'How it is kept').split('\n\n')[0]).toBe(
+    expect(sectionIn(overview, 'How it is kept').split('\n\n')[0]).toBe(
       [
         '```mermaid',
         'flowchart LR',
@@ -93,7 +90,7 @@ describe('how the view of a recall function is kept, in its overview', () => {
         '```',
       ].join('\n'),
     );
-    expect(sectionOf(overview, 'What it remembers')).toMatch(
+    expect(sectionIn(overview, 'What it remembers')).toMatch(
       /\n\nIt remembers an event that matches more than one of these once\.$/u,
     );
   });
@@ -119,16 +116,16 @@ describe('what a recall function keeps and answers, in its overview', () => {
   it('says a function without an answer answers with its view, and the schema its view is checked against', () => {
     const answered = ['Each run takes:', 'Any input, which its document does not describe.'];
 
-    expect(sectionOf(overviewOf(twoFilters), 'What it answers')).toBe(
+    expect(sectionIn(overviewOf(twoFilters), 'What it answers')).toBe(
       [...answered, 'It answers with the view itself, as it stands.'].join('\n\n'),
     );
-    expect(sectionOf(overviewOf([...twoFilters, 'output:', '  schema: { type: object }']), 'What it answers')).toBe(
+    expect(sectionIn(overviewOf([...twoFilters, 'output:', '  schema: { type: object }']), 'What it answers')).toBe(
       [...answered, 'It answers with the view itself, as it stands.', 'A record.'].join('\n\n'),
     );
   });
 
   it('says what a function with an answer but no schemas takes and answers', () => {
-    expect(sectionOf(overviewOf(twoFilters, 'return view;'), 'What it answers')).toBe(
+    expect(sectionIn(overviewOf(twoFilters, 'return view;'), 'What it answers')).toBe(
       [
         'Each run takes:',
         'Any input, which its document does not describe.',
@@ -136,5 +133,22 @@ describe('what a recall function keeps and answers, in its overview', () => {
         'Any output, which its document does not describe.',
       ].join('\n\n'),
     );
+  });
+});
+
+describe('the view a recall function starts with, in its overview', () => {
+  it('is said within 300 characters and named under Source at 301, a character beyond the Basic Multilingual Plane counted once', () => {
+    const underSource = 'Before the first event, the view is the value of `view.initial`, shown under Source.';
+
+    expect(
+      [`'${'x'.repeat(298)}'`, `'${'x'.repeat(299)}'`, `'${'😀'.repeat(298)}'`, `'${'😀'.repeat(299)}'`].map(
+        (initial) => initialOf(initial).split('\n\n').at(-1),
+      ),
+    ).toEqual([
+      `Before the first event, the view is \`"${'x'.repeat(298)}"\`.`,
+      underSource,
+      `Before the first event, the view is \`"${'😀'.repeat(298)}"\`.`,
+      underSource,
+    ]);
   });
 });

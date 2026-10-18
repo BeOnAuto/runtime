@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 
 import { markdownOf } from '@on.auto/definitions';
+import { sectionIn } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { summaryOf } from '../document/workflow-summary.ts';
 import { recordingStarts, recordingWorkflows } from '../testing/recording-starts.ts';
 import { workflow } from '../testing/workflows.ts';
 import { workflowOverview } from './workflow-overview.ts';
@@ -23,10 +25,6 @@ function goldenOf(name: string): string {
 
 function overviewOf(source: string, name = 'flow'): string {
   return Effect.runSync(workflows.prepare(source)).overview(name);
-}
-
-function sectionIn(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
 }
 
 const [reviewAndApprove = '', schedule = ''] = yamlBlocksOf('workflow-format.md');
@@ -110,8 +108,11 @@ describe('the overview of a workflow that calls definitions', () => {
 
 describe('the overview of a workflow without steps', () => {
   it('says so in one line', () => {
-    const sections = workflowOverview({ document: workflow('do: []'), locate: () => ({ line: 1, column: 1 }) });
-    const written = markdownOf({ title: 'idle', opening: [], sections });
+    const document = workflow('do: []');
+    const parts = workflowOverview({ document, locate: () => ({ line: 1, column: 1 }) }, 'idle', {
+      summary: summaryOf(document),
+    });
+    const written = markdownOf({ title: 'idle', opening: [], ...parts });
 
     expect(sectionIn(written, 'What it does')).toBe('It has no steps, so a run ends as it starts.');
   });

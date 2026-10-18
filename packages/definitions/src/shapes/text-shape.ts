@@ -2,12 +2,12 @@ import { utf8Bytes, type SchemaIssue } from '@on.auto/json-schema';
 import type { Schema } from 'effect';
 
 import { shapeOf, type OutputShape } from './output-shape.ts';
-import { counted, issueAt, recordOf, textOf } from './shape-values.ts';
+import { counted, issueAt, recordOf, textValue } from './shape-values.ts';
 
 export const textBounds = { mostBytes: 65_536 } as const;
 
 function textIssues(value: Schema.Json): readonly SchemaIssue[] {
-  const text = textOf(recordOf(value)['text']);
+  const text = textValue(recordOf(value)['text']);
   return text !== undefined && utf8Bytes(text) > textBounds.mostBytes
     ? [issueAt(['text'], `Expected at most ${counted.format(textBounds.mostBytes)} bytes as UTF-8`)]
     : [];

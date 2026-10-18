@@ -1,7 +1,7 @@
 import { DefinitionContextSchema, factOf, type Decided } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { BaselineSchema } from '../document/front-matter.ts';
+import { BaselineSchema } from '../document/evaluation-names.ts';
 import { AgainstSchema, ScoreSchema, TensorSchema } from './build-facts.ts';
 
 export const modelsStreamKind = 'models';

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { mostReadCharacters } from '@on.auto/definitions/template';
+import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
 import { reasoningWith } from '../testing/reasoning-runs.ts';
@@ -25,17 +26,13 @@ function overviewOf(...lines: readonly string[]): string {
   return prepared(lines.join('\n')).overview('review-brief');
 }
 
-function sectionOf(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
-}
-
 function goldenOf(file: string): string {
   return readFileSync(new URL(file, import.meta.url), 'utf8');
 }
 
 function modelAndToolsOf(...tools: readonly string[]): string {
   const overview = overviewOf('---', 'model: openai/gpt-5', `tools: [${tools.join(', ')}]`, '---', 'Find it.');
-  return sectionOf(overview, 'Which model and tools');
+  return sectionIn(overview, 'Which model and tools');
 }
 
 describe('the overviews of the example of the reference of reasoning functions', () => {
@@ -74,9 +71,9 @@ describe('the overview of a reasoning function', () => {
       'Score {{ input.brief }}',
     );
 
-    expect(sectionOf(overview, 'What it needs')).toContain('| **tone** | no | Text, “warm” when left out. |');
-    expect(sectionOf(overview, 'What it needs')).toContain('| **max** | no | Any value. |');
-    expect(sectionOf(overview, 'What it produces')).toContain('| **score** | yes | A whole number, at most 10. |');
+    expect(sectionIn(overview, 'What it needs')).toContain('| **tone** | no | Text, “warm” when left out. |');
+    expect(sectionIn(overview, 'What it needs')).toContain('| **max** | no | Any value. |');
+    expect(sectionIn(overview, 'What it produces')).toContain('| **score** | yes | A whole number, at most 10. |');
   });
 });
 
@@ -84,7 +81,7 @@ describe('the overview of a reasoning function whose output names a shape', () =
   it('says the shape in what it produces, in place of the fields of its schema', () => {
     const overview = overviewOf('---', 'model: openai/gpt-5', 'output: {shape: text}', '---', 'Write it.');
 
-    expect(sectionOf(overview, 'What it produces')).toBe('It answers a **text**: Markdown of at most 65,536 bytes.');
+    expect(sectionIn(overview, 'What it produces')).toBe('It answers a **text**: Markdown of at most 65,536 bytes.');
   });
 });
 
@@ -92,7 +89,7 @@ describe('the model and tools of a reasoning function in its overview', () => {
   it('say the model and that it calls no tools, with nothing drawn, when its document names none', () => {
     const overview = overviewOf('---', 'model: openai/gpt-5', '---', 'Find it.');
 
-    expect(sectionOf(overview, 'Which model and tools')).toBe(
+    expect(sectionIn(overview, 'Which model and tools')).toBe(
       ['It reasons with the model `openai/gpt-5`.', 'It calls no tools.'].join('\n\n'),
     );
   });
@@ -139,8 +136,8 @@ describe('the overview of a reasoning function without an input schema or instru
       '{% if input.vip %}Treat them as a VIP.{% endif %} Hello {{ input.name | default: "friend" }}.',
     );
 
-    expect(sectionOf(overview, 'What it needs')).toBe('It takes any input, which its document does not describe.');
-    expect(sectionOf(overview, 'What it is told')).toBe(
+    expect(sectionIn(overview, 'What it needs')).toBe('It takes any input, which its document does not describe.');
+    expect(sectionIn(overview, 'What it is told')).toBe(
       [
         'Its message, with the values of each run in place of the names in bold:',
         'Treat them as a VIP when input.vip. Hello **name**.\n',

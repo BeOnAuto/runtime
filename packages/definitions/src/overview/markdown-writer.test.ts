@@ -21,7 +21,9 @@ function overviewWith(...blocks: readonly OverviewBlock[]): Overview {
   return {
     title: 'review-brief',
     opening: ['Reviews a campaign brief'],
+    body: [],
     sections: [sectionOf('What it does', ...blocks)],
+    appendix: [],
   };
 }
 
@@ -43,7 +45,9 @@ describe('the Markdown of an overview', () => {
       markdownOf({
         title: 'review-brief',
         opening: ['Reviews a campaign brief'],
+        body: [],
         sections: [sectionOf('What it needs', paragraph('A brief.')), sectionOf('What it produces')],
+        appendix: [],
       }),
     ).toBe('# review-brief\n\nReviews a campaign brief\n\n## What it needs\n\nA brief.\n\n## What it produces\n');
   });
@@ -72,7 +76,9 @@ describe('the Markdown of an overview', () => {
       '```a ``b`` c```\n\n`` `x` ``\n',
     );
   });
+});
 
+describe('a list of an overview', () => {
   it('writes a list an item a line, each on one line', () => {
     expect(writtenBlocks(bulletList([['the tool ', named('search'), ' of ', named('graph')], ['every\ntool']]))).toBe(
       '- the tool **search** of **graph**\n- every tool\n',

@@ -14,6 +14,7 @@ import {
   isObject,
   type Json,
   type JsonObject,
+  objectField,
   pointerTo,
   policyOf,
   type Rejection,
@@ -32,29 +33,36 @@ const workflowType = 'workflow';
 const runDefinitionArguments = new Set(['type', 'name', 'input']);
 
 export interface RunDefinitionCall {
-  readonly type: string;
-  readonly name: string;
+  readonly type: string | undefined;
+  readonly name: string | undefined;
   readonly given: JsonObject;
 }
 
-function literalOf(value: Json | undefined): string | undefined {
+export interface NamedRunDefinitionCall extends RunDefinitionCall {
+  readonly type: string;
+  readonly name: string;
+}
+
+export function literalText(value: Json | undefined): string | undefined {
   return typeof value === 'string' && enclosedBody(value) === undefined ? value : undefined;
 }
 
 export function definitionCallOf(task: JsonObject): RunDefinitionCall | undefined {
-  const given = field(task, 'with');
-  if (field(task, 'call') !== runDefinitionFunction || !isObject(given)) {
+  if (field(task, 'call') !== runDefinitionFunction) {
     return undefined;
   }
-  const type = literalOf(field(given, 'type'));
-  const name = literalOf(field(given, 'name'));
-  return type === undefined || name === undefined ? undefined : { type, name, given };
+  const given = objectField(task, 'with') ?? {};
+  return { type: literalText(field(given, 'type')), name: literalText(field(given, 'name')), given };
+}
+
+export function namesItsDefinition(call: RunDefinitionCall | undefined): call is NamedRunDefinitionCall {
+  return call?.type !== undefined && call.name !== undefined;
 }
 
 export function definitionsCalledIn(document: JsonObject): readonly CalledDefinition[] {
   const calls: readonly CalledDefinition[] = allTaskEntries(field(document, 'do'), '/do').flatMap(({ task }) => {
     const call = definitionCallOf(task);
-    return call === undefined ? [] : [{ type: call.type, name: call.name }];
+    return namesItsDefinition(call) ? [{ type: call.type, name: call.name }] : [];
   });
   return calls.filter(
     ({ type, name }, index) => calls.findIndex((call) => call.type === type && call.name === name) === index,

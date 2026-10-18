@@ -11,6 +11,8 @@ export {
   defineCapability,
   type AnswerIssues,
   type AnsweringRun,
+  type OverviewContext,
+  type OverviewOf,
   defaultRunWords,
   type CancelDecision,
   type CancelledRun,
@@ -173,7 +175,8 @@ export {
   type TriggerFilter,
 } from './registry/definition-triggers.ts';
 export { runStartedOf } from './runs/run-starts.ts';
-export { inWords, outputInWords, wordsOf } from './plain-language/in-words.ts';
+export { inWords, nameInWords, outputInWords } from './plain-language/in-words.ts';
+export { charactersIn } from './plain-language/characters.ts';
 export { triggerNamed } from './plain-language/event-words.ts';
 export { mostInputBytes, mostInputDepth, mostResultBytes } from './runs/recorded-size.ts';
 export {
@@ -226,11 +229,18 @@ export {
   type Paragraph,
   type Phrase,
   type Phrases,
+  type Quote,
 } from './overview/overview.ts';
 export { durationInWords } from './overview/duration-words.ts';
 export { eventFilterPhrases, type EventFilter } from './overview/event-filter-words.ts';
 export { appendedSection, markdownOf, mostOverviewBytes, mostTableRows } from './overview/markdown-writer.ts';
-export { mostFieldDescriptionCharacters, schemaBlocks } from './overview/schema-words.ts';
+export { describedSchemaBlocks, mostFieldDescriptionCharacters, schemaBlocks } from './overview/schema-words.ts';
+export { plainTextOf } from './overview/markdown-text.ts';
+export { isJsonSchema } from './overview/schema-reading.ts';
+export { shownUnderSource } from './overview-words/source-words.ts';
+export { templateLead } from './overview-words/template-words.ts';
+export { theToolOf } from './overview-words/tool-words.ts';
+export { undescribedSentence } from './overview-words/value-words.ts';
 export type { OutputShape } from './shapes/output-shape.ts';
 export { OutputShapeNameSchema, type OutputShapeName } from './shapes/shape-names.ts';
 export { outputShapeNamed, outputShapeNames, shapeMismatchOf } from './shapes/output-shapes.ts';
@@ -244,7 +254,7 @@ export {
   outputSection,
   usedBySection,
   writtenOverview,
-  type SectionsOf,
+  type OverviewParts,
 } from './overview/definition-overview.ts';
 export { CalledDefinitionSchema, type CalledDefinition } from './used-by/called-definitions.ts';
 export type { DefinitionUser, NamedDefinition, UserRelation } from './used-by/user-relations.ts';

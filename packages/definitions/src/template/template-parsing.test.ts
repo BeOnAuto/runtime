@@ -25,6 +25,12 @@ describe('a template that parses', () => {
     ]);
   });
 
+  it('keeps the text it was parsed from and the line of the document it starts on, as an overview reads it', () => {
+    const { text, firstLine } = parsed('Hi {{ input.name }}', 4);
+
+    expect({ text, firstLine }).toEqual({ text: 'Hi {{ input.name }}', firstLine: 4 });
+  });
+
   it('notes, beside it, when it uses more names than a template may', () => {
     const many = Array.from({ length: templateLimits.names + 1 }, (_, index) => `{{ n${index} }}`).join('');
 

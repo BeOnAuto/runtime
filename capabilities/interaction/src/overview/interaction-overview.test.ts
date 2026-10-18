@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { sectionIn } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -18,10 +19,6 @@ function goldenOf(file: string): string {
 
 function overviewOf(source: string, name = 'read-thread'): string {
   return Effect.runSync(capability.prepare(source)).overview(name);
-}
-
-function sectionOf(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
 }
 
 const [inboxExample = '', chatExample = ''] = examplesOf('interaction-format.md');
@@ -43,11 +40,11 @@ describe('the overview of an interaction function that asks a system', () => {
   it('names the tool it calls, what it sends and where in the answer it reads', () => {
     const overview = overviewOf(callDocument({ read: '/data/items~1all~0x' }));
 
-    expect(sectionOf(overview, 'Who it asks')).toBe(
+    expect(sectionIn(overview, 'Who it asks')).toBe(
       'It asks a system: each run calls the tool **thread** of **chat** once.',
     );
-    expect(sectionOf(overview, 'What it sends')).toContain('| **channel** | yes | Text. |');
-    expect(sectionOf(overview, 'What it reads')).toBe(
+    expect(sectionIn(overview, 'What it sends')).toContain('| **channel** | yes | Text. |');
+    expect(sectionIn(overview, 'What it reads')).toBe(
       [
         'It answers with what the tool answered under **data**, then **items/all~x**:',
         'A list of at most 100 records with: **user** (text), **text** (text), **ts** (text).\n',
@@ -58,12 +55,12 @@ describe('the overview of an interaction function that asks a system', () => {
   it('answers with the whole answer without read, and says so of an input its document does not describe', () => {
     const overview = overviewOf(callDocument({ read: null, input: [], with: ['    limit: 100'] }));
 
-    expect(sectionOf(overview, 'What it sends')).toBe(
+    expect(sectionIn(overview, 'What it sends')).toBe(
       [
         "It sends the tool the arguments its document writes, from each run's input:",
         'It takes any input, which its document does not describe.',
       ].join('\n\n'),
     );
-    expect(sectionOf(overview, 'What it reads')).toMatch(/^It answers with the whole of what the tool answered:\n\n/u);
+    expect(sectionIn(overview, 'What it reads')).toMatch(/^It answers with the whole of what the tool answered:\n\n/u);
   });
 });

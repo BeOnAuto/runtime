@@ -3,7 +3,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { wordedIssuesOf } from '../index.ts';
-import { fieldWords, refusalOf, wordsOf } from '../testing/refusal-words.ts';
+import { fieldWords, refusalOf, refusalWordsOf } from '../testing/refusal-words.ts';
 
 const month = {
   type: 'string',
@@ -14,17 +14,17 @@ const month = {
 
 describe('the refusal of a value its schema does not take', () => {
   it('names the field by its name and its description, then the rule it broke, in one sentence', () => {
-    expect(wordsOf({ type: 'object', properties: { month } }, { month: 'April' })).toBe(
+    expect(refusalWordsOf({ type: 'object', properties: { month } }, { month: 'April' })).toBe(
       'month, The month to report on, such as "April 2026" or "2026-04": expected at least 6 characters.',
     );
     expect(
-      wordsOf(
+      refusalWordsOf(
         { type: 'object', properties: { status: { enum: ['draft', 'sent', 'approved'], description: 'The stage' } } },
         { status: 'paid' },
       ),
     ).toBe('status, The stage: expected one of: draft, sent, approved.');
     expect(
-      wordsOf(
+      refusalWordsOf(
         { type: 'object', properties: { seats: { type: 'integer', minimum: 1, description: 'How many seats.' } } },
         { seats: 0 },
       ),
@@ -136,7 +136,7 @@ const order = {
 
 describe('the refusal of a value whose fields do not fit', () => {
   it('names a missing field, or one the schema does not take, at the field that holds it', () => {
-    expect(wordsOf(order, { address: {}, extra: true })).toBe(
+    expect(refusalWordsOf(order, { address: {}, extra: true })).toBe(
       'The input: expected no field extra. ' +
         'The input: expected the field month, The month to report on, such as "April 2026" or "2026-04". ' +
         'address, Where it goes: expected the field city, The city.',
@@ -145,7 +145,7 @@ describe('the refusal of a value whose fields do not fit', () => {
 
   it('names a nested field by its path in words, with the items of a list by their place', () => {
     expect(
-      wordsOf(order, {
+      refusalWordsOf(order, {
         month: 'April 2026',
         address: { city: 'X' },
         lines: [{ amount: 1 }, { amount: 'ten' }],
@@ -156,10 +156,10 @@ describe('the refusal of a value whose fields do not fit', () => {
         'lines, then item 2, then amount, The amount: expected a whole number. ' +
         'totals, then june, A total in cents: expected a whole number.',
     );
-    expect(wordsOf(order, { month: 'April 2026', address: { city: 'Paris' }, pair: ['a'] })).toBe(
+    expect(refusalWordsOf(order, { month: 'April 2026', address: { city: 'Paris' }, pair: ['a'] })).toBe(
       'pair: expected item 2.',
     );
-    expect(wordsOf(order, { month: 'April 2026', address: { city: 'Paris' }, pair: ['a', 1, 2] })).toBe(
+    expect(refusalWordsOf(order, { month: 'April 2026', address: { city: 'Paris' }, pair: ['a', 1, 2] })).toBe(
       'pair: expected no item 3.',
     );
   });
@@ -180,7 +180,7 @@ describe('the refusal of a value no keyword of the schema words', () => {
     expect([
       fieldWords({ oneOf: [{ type: 'string' }, { type: 'string', minLength: 1 }] }, 'a'),
 
-      wordsOf({ oneOf: [{ type: 'string' }, { type: 'string', minLength: 1 }] }, 'a', 'answer'),
+      refusalWordsOf({ oneOf: [{ type: 'string' }, { type: 'string', minLength: 1 }] }, 'a', 'answer'),
     ]).toEqual(['field: expected exactly one member to match.', 'Expected exactly one member to match.']);
   });
 
@@ -196,7 +196,7 @@ describe('the refusal of a name a schema bounds', () => {
     expect([
       fieldWords({ type: 'object', propertyNames: { maxLength: 2 } }, { long: 1 }),
       fieldWords({ type: 'object', description: 'By region', propertyNames: { enum: ['eu', 'us'] } }, { asia: 1 }),
-      wordsOf(
+      refusalWordsOf(
         {
           type: 'object',
           $defs: { region: { enum: ['eu', 'us'] } },
@@ -204,7 +204,7 @@ describe('the refusal of a name a schema bounds', () => {
         },
         { totals: { asia: 1 } },
       ),
-      wordsOf({ type: 'object', propertyNames: { not: {} } }, { any: 1 }),
+      refusalWordsOf({ type: 'object', propertyNames: { not: {} } }, { any: 1 }),
       fieldWords({ type: 'object', propertyNames: { not: {} } }, { any: 1 }),
       fieldWords({ type: 'object', propertyNames: { oneOf: [{ type: 'string' }, { minLength: 1 }] } }, { a: 1 }),
     ]).toEqual([
@@ -225,22 +225,22 @@ describe('the refusal of a value whose schema is read too deep for its words', (
       a11: { type: 'string' },
     };
 
-    expect(wordsOf({ type: 'object', $defs: chain, properties: { field: { $ref: '#/$defs/a0' } } }, { field: 5 })).toBe(
-      'field: expected a0.',
-    );
+    expect(
+      refusalWordsOf({ type: 'object', $defs: chain, properties: { field: { $ref: '#/$defs/a0' } } }, { field: 5 }),
+    ).toBe('field: expected a0.');
   });
 });
 
 describe('the refusal of a value as a whole', () => {
   it('names the root as what the schema checks', () => {
-    expect(wordsOf({ type: 'object' }, 'x', 'answer')).toBe('The answer: expected a record.');
+    expect(refusalWordsOf({ type: 'object' }, 'x', 'answer')).toBe('The answer: expected a record.');
   });
 
   it('says a value is one where the schema allows none, at the field that holds it', () => {
     expect([
       fieldWords({ not: {} }, 1),
       fieldWords({ type: 'object', additionalProperties: false }, { now: true }),
-      wordsOf({ not: {} }, 1),
+      refusalWordsOf({ not: {} }, 1),
     ]).toEqual([
       'The input: expected no field field.',
       'field: expected no field now.',

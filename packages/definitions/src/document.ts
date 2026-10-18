@@ -6,3 +6,4 @@ export {
   type FrontMatterShape,
   type ReadFrontMatter,
 } from './document/front-matter-keys.ts';
+export { DescriptionSchema, type ValueContract } from './document/function-fields.ts';

@@ -1,19 +1,22 @@
 import {
   bulletList,
   inputSection,
+  isJsonSchema,
   named,
   outputSection,
   paragraph,
   sectionOf,
+  templateLead,
+  theToolOf,
   type Diagram,
   type OverviewBlock,
+  type OverviewParts,
   type OverviewSection,
   type Phrases,
 } from '@on.auto/definitions';
-import { splitDocument } from '@on.auto/definitions/document';
 import { readableParts } from '@on.auto/definitions/template';
-import { writtenOf, type ToolReference } from '@on.auto/tool-servers/policy';
-import { Result, type Schema } from 'effect';
+import { namesEveryTool, writtenOf, type ToolReference } from '@on.auto/tool-servers/policy';
+import type { Schema } from 'effect';
 
 import type {
   InputContract,
@@ -22,8 +25,6 @@ import type {
 import type { OutputRequest } from '../model/model-request.ts';
 
 type Entry = readonly [string, Schema.Json];
-
-const everyTool = '*';
 
 const everyToolOf = 'every tool of ';
 
@@ -36,20 +37,17 @@ const modelNode = 1;
 
 const firstToolNode = 2;
 
-function isRecord(value: Schema.Json | undefined): value is Schema.JsonObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function withDefault([name, property]: Entry, defaults: Schema.JsonObject): Entry {
   const value = defaults[name];
-  return value === undefined || !isRecord(property)
+  return value === undefined || !isJsonSchema(property)
     ? [name, property]
     : [name, Object.fromEntries([...Object.entries(property), ['default', value]])];
 }
 
 function documentedInput({ schema, defaults }: InputContract): Schema.JsonObject | undefined {
   const properties = schema?.document['properties'];
-  if (schema === undefined || !isRecord(properties)) {
+  const namesItsFields = isJsonSchema(properties);
+  if (schema === undefined || !namesItsFields) {
     return schema?.document;
   }
   const withDefaults = Object.entries(properties).map((entry: Entry) => withDefault(entry, defaults));
@@ -62,12 +60,12 @@ function producedSection(output: OutputRequest): OverviewSection {
     : sectionOf('What it produces', paragraph('Text: the answer the model writes.'));
 }
 
-function toolPhrases({ server, tool }: ToolReference): Phrases {
-  return tool === everyTool ? [everyToolOf, named(server)] : ['the tool ', named(tool), ' of ', named(server)];
+function toolPhrases(reference: ToolReference): Phrases {
+  return namesEveryTool(reference) ? [everyToolOf, named(reference.server)] : theToolOf(reference);
 }
 
 function toolLabel(reference: ToolReference): string {
-  return reference.tool === everyTool ? `${everyToolOf}${reference.server}` : writtenOf(reference);
+  return namesEveryTool(reference) ? `${everyToolOf}${reference.server}` : writtenOf(reference);
 }
 
 function modelAndTools(name: string, { model, tools }: ReasoningFunctionDefinitionDocument): Diagram {
@@ -101,28 +99,22 @@ function modelSection(name: string, definition: ReasoningFunctionDefinitionDocum
   );
 }
 
-function toldSection(source: string): OverviewSection {
-  const { body, bodyLine } = Result.getOrThrow(splitDocument(source, 'A reasoning function definition'));
-  const { inside, outside } = readableParts({ text: body, firstLine: bodyLine }, 'system');
+function toldSection({ template }: ReasoningFunctionDefinitionDocument): OverviewSection {
+  const { inside, outside } = readableParts(template, 'system');
   const instructions =
     inside.length === 0 ? [] : [paragraph('Its instructions, which it follows on every run:'), ...inside];
-  return sectionOf(
-    'What it is told',
-    ...instructions,
-    paragraph('Its message, with the values of each run in place of the names in bold:'),
-    ...outside,
-  );
+  return sectionOf('What it is told', ...instructions, templateLead('Its message', 'run'), ...outside);
 }
 
-export function reasoningOverview(
-  definition: ReasoningFunctionDefinitionDocument,
-  source: string,
-  name: string,
-): readonly OverviewSection[] {
-  return [
-    inputSection(documentedInput(definition.input)),
-    producedSection(definition.output),
-    modelSection(name, definition),
-    toldSection(source),
-  ];
+export function reasoningOverview(definition: ReasoningFunctionDefinitionDocument, name: string): OverviewParts {
+  return {
+    body: [],
+    sections: [
+      inputSection(documentedInput(definition.input)),
+      producedSection(definition.output),
+      modelSection(name, definition),
+      toldSection(definition),
+    ],
+    appendix: [],
+  };
 }

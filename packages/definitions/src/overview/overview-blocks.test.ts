@@ -5,6 +5,8 @@ import {
   markdownOf,
   named,
   numberedList,
+  paragraph,
+  plainTextOf,
   sectionOf,
   type Diagram,
   type OverviewBlock,
@@ -12,9 +14,13 @@ import {
 
 function writtenBlock(block: OverviewBlock): string {
   return String(
-    markdownOf({ title: 'flow', opening: [], sections: [sectionOf('What it does', block)] }).split(
-      '## What it does\n\n',
-    )[1],
+    markdownOf({
+      title: 'flow',
+      opening: [],
+      body: [],
+      sections: [sectionOf('What it does', block)],
+      appendix: [],
+    }).split('## What it does\n\n')[1],
   );
 }
 
@@ -97,6 +103,70 @@ describe('the groups of a diagram', () => {
         '',
       ].join('\n'),
     );
+  });
+});
+
+describe('a definition and a server named in an overview', () => {
+  it('are written in bold, a definition by its title or by its name in words with its first letter raised', () => {
+    expect(
+      writtenBlock(
+        paragraph(
+          'It runs ',
+          { definition: { type: 'computation', name: 'month-window' } },
+          ', then ',
+          { definition: { type: 'workflow', name: 'monthly-report', title: 'The *monthly* report' } },
+          ', and posts through ',
+          { server: 'chat' },
+          '.',
+        ),
+      ),
+    ).toBe('It runs **Month window**, then **The \\*monthly\\* report**, and posts through **chat**.\n');
+  });
+
+  it('write a definition readable in bold in the body and the sections, and by its name in code in the appendix', () => {
+    const monthWindow = { definition: { type: 'computation', name: 'month-window', title: 'Month window' } };
+
+    expect(
+      markdownOf({
+        title: 'report',
+        opening: ['Reports'],
+        body: [paragraph('It runs ', monthWindow, '.')],
+        sections: [sectionOf('What it calls', paragraph(monthWindow))],
+        appendix: [sectionOf('Calls', paragraph(monthWindow, ' and ', { server: 'chat' }))],
+      }),
+    ).toBe(
+      [
+        '# report',
+        'Reports',
+        'It runs **Month window**.',
+        '## What it calls',
+        '**Month window**',
+        '## Details',
+        '### Calls',
+        '`month-window` and **chat**\n',
+      ].join('\n\n'),
+    );
+  });
+});
+
+describe('phrases in plain text', () => {
+  it('are each kind as it reads, a definition by its title or its readable name and a server by its name', () => {
+    expect(
+      plainTextOf([
+        'Runs ',
+        named('brief'),
+        ', ',
+        { emphasis: 'then' },
+        ' ',
+        { code: 'set' },
+        ', ',
+        { definition: { type: 'computation', name: 'month-window' } },
+        ', ',
+        { definition: { type: 'workflow', name: 'report', title: 'The report' } },
+        ' through ',
+        { server: 'chat' },
+      ]),
+    ).toBe('Runs brief, then set, Month window, The report through chat');
   });
 });
 

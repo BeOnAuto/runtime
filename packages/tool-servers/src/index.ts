@@ -73,7 +73,13 @@ export { handCallPresenter } from './hand-calls/hand-call-presenter.ts';
 export { conversationCallPresenter } from './own-calls/conversation-call-presenter.ts';
 export { defaultTiming, runBoundMs, toolBounds, type Timing } from './bounds/call-bounds.ts';
 export { secretsOf, type Secrets } from './bounds/secrets.ts';
-export { toolReferenceOf, toolReferenceShape, writtenOf, type ToolReference } from './names/tool-reference.ts';
+export {
+  namesEveryTool,
+  toolReferenceOf,
+  toolReferenceShape,
+  writtenOf,
+  type ToolReference,
+} from './names/tool-reference.ts';
 export {
   ServerEntrySchema,
   ToolServersSchema,

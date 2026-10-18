@@ -10,7 +10,7 @@ import {
   rangeIssues,
   recordOf,
   repeatedNameIssues,
-  textOf,
+  textValue,
   type Path,
 } from './shape-values.ts';
 
@@ -46,7 +46,7 @@ export const seriesMarksSchema = {
 function orderIssues(points: readonly Schema.Json[], path: Path, timeline: Timeline): readonly SchemaIssue[] {
   let last: number | undefined;
   return points.flatMap((entry, index) => {
-    const at = textOf(recordOf(entry)['at']);
+    const at = textValue(recordOf(entry)['at']);
     if (at === undefined) {
       return [];
     }
@@ -72,7 +72,7 @@ function lineIssues(entry: Schema.Json, index: number, timeline: Timeline | unde
 }
 
 function originIssues(origin: Schema.Json | undefined, timeline: Timeline | undefined): readonly SchemaIssue[] {
-  const at = textOf(origin);
+  const at = textValue(origin);
   if (at === undefined || timeline === undefined || timeline.momentOf(at) !== undefined) {
     return [];
   }

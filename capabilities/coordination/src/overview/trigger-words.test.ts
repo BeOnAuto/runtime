@@ -1,4 +1,4 @@
-import type { Phrases } from '@on.auto/definitions';
+import { plainTextOf, type Phrases } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import { summaryOf } from '../document/workflow-summary.ts';
@@ -24,7 +24,7 @@ function plainOf(phrases: Phrases): string {
       if (typeof phrase === 'string') {
         return phrase;
       }
-      return 'name' in phrase ? `**${phrase.name}**` : `\`${Object.values(phrase).join('')}\``;
+      return 'name' in phrase ? `**${phrase.name}**` : `\`${plainTextOf([phrase])}\``;
     })
     .join('');
 }

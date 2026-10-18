@@ -1,3 +1,5 @@
+import type { NamedDefinition } from '../used-by/user-relations.ts';
+
 interface Name {
   readonly name: string;
 }
@@ -10,7 +12,19 @@ interface Code {
   readonly code: string;
 }
 
-export type Phrase = string | Name | Emphasis | Code;
+interface TitledDefinition extends NamedDefinition {
+  readonly title?: string;
+}
+
+interface DefinitionPhrase {
+  readonly definition: TitledDefinition;
+}
+
+interface ServerPhrase {
+  readonly server: string;
+}
+
+export type Phrase = string | Name | Emphasis | Code | DefinitionPhrase | ServerPhrase;
 
 export type Phrases = readonly Phrase[];
 
@@ -67,7 +81,12 @@ export interface Diagram {
   readonly groups?: readonly DiagramGroup[];
 }
 
-export type OverviewBlock = Paragraph | BulletList | NumberedList | FieldTable | Diagram;
+export interface Quote {
+  readonly kind: 'quote';
+  readonly lines: readonly Phrases[];
+}
+
+export type OverviewBlock = Paragraph | BulletList | NumberedList | FieldTable | Diagram | Quote;
 
 export interface OverviewSection {
   readonly heading: string;
@@ -77,7 +96,9 @@ export interface OverviewSection {
 export interface Overview {
   readonly title: string;
   readonly opening: Phrases;
+  readonly body: readonly OverviewBlock[];
   readonly sections: readonly OverviewSection[];
+  readonly appendix: readonly OverviewSection[];
 }
 
 const conjunction = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });

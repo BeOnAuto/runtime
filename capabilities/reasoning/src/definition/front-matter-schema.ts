@@ -1,4 +1,5 @@
 import {
+  DescriptionSchema,
   frontMatterIn as sharedFrontMatterIn,
   type DocumentIssue,
   type FrontMatterSection,
@@ -8,8 +9,6 @@ import { Schema, type Result } from 'effect';
 
 import type { ReasoningEffort } from '../model/model-request.ts';
 
-const descriptionLength = 1000;
-
 const reasoningEfforts = [
   'none',
   'minimal',
@@ -18,8 +17,6 @@ const reasoningEfforts = [
   'high',
   'xhigh',
 ] as const satisfies readonly ReasoningEffort[];
-
-const DescriptionSchema = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(descriptionLength));
 
 const ConfigSchema = Schema.Struct({
   max_output_tokens: Schema.optionalKey(Schema.Number),

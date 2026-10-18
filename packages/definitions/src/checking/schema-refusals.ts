@@ -9,7 +9,7 @@ import { articled, asSentence, InvalidInput, type Issue } from '@on.auto/operati
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine';
 import { Effect, JsonPointer, type Schema } from 'effect';
 
-import type { Phrases } from '../overview/overview.ts';
+import { plainTextOf } from '../overview/markdown-text.ts';
 import { trailingWords } from '../overview/schema-bounds.ts';
 import { forms } from '../overview/schema-nouns.ts';
 import {
@@ -32,10 +32,6 @@ function withoutFullStop(text: string): string {
 function asPhrase(words: string): string {
   const phrase = withoutFullStop(words);
   return `${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`;
-}
-
-function plainText(phrases: Phrases): string {
-  return phrases.map((phrase) => (typeof phrase === 'string' ? phrase : Object.values(phrase).join(''))).join('');
 }
 
 function tokensOf(pointer: string): readonly string[] {
@@ -101,7 +97,7 @@ function refusedWords(steps: readonly PlaceStep[]): string {
 
 function kindWords(schemas: readonly JsonSchema[], root: JsonSchema, detail: string): string {
   const said = schemas.find((schema) => kindKeywords.some((keyword) => schema[keyword] !== undefined));
-  return said === undefined ? asPhrase(detail) : `expected ${plainText(expectedWordsOf(said, root))}`;
+  return said === undefined ? asPhrase(detail) : `expected ${plainTextOf(expectedWordsOf(said, root))}`;
 }
 
 function holderSentence({ document, what }: CompiledSchema, tokens: readonly string[], breach: Breach): string {

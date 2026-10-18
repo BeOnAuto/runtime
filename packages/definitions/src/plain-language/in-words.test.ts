@@ -1,7 +1,8 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { inWords, outputInWords, wordsOf } from '../index.ts';
+import { inWords, nameInWords, outputInWords } from '../index.ts';
+import { readableName } from './in-words.ts';
 
 const renderings: ReadonlyArray<readonly [Schema.Json, string]> = [
   ['Profits rose.', '“Profits rose.”'],
@@ -36,6 +37,10 @@ describe('inWords', () => {
   it('renders a value that just fits', () => {
     expect(inWords('a'.repeat(298))).toBe(`“${'a'.repeat(298)}”`);
   });
+
+  it('counts a character outside the Basic Multilingual Plane once, as a person reads it', () => {
+    expect([inWords('😀'.repeat(298)), inWords('😀'.repeat(299))]).toEqual([`“${'😀'.repeat(298)}”`, undefined]);
+  });
 });
 
 describe('outputInWords', () => {
@@ -52,13 +57,23 @@ describe('outputInWords', () => {
   });
 });
 
-describe('wordsOf', () => {
+describe('nameInWords', () => {
   it.each([
     ['customer_name', 'customer name'],
     ['maxTokens', 'max tokens'],
     ['order-id', 'order id'],
     ['text', 'text'],
   ])('turns %s into %s', (name, words) => {
-    expect(wordsOf(name)).toBe(words);
+    expect(nameInWords(name)).toBe(words);
+  });
+});
+
+describe('readableName', () => {
+  it('is the name in words with its first letter raised', () => {
+    expect([readableName('month-window'), readableName('weekly_review'), readableName('x')]).toEqual([
+      'Month window',
+      'Weekly review',
+      'X',
+    ]);
   });
 });

@@ -1,9 +1,5 @@
 import type { OutputShape } from '@on.auto/definitions';
-import type { CompiledSchema } from '@on.auto/json-schema';
-
-export interface ValueContract {
-  readonly schema?: CompiledSchema;
-}
+import type { ValueContract } from '@on.auto/definitions/document';
 
 export interface OutputContract extends ValueContract {
   readonly shape?: OutputShape;

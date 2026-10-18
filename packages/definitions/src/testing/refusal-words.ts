@@ -9,10 +9,10 @@ export function refusalOf(document: Schema.JsonObject, value: Schema.Json, what 
   return issues.length === 0 ? undefined : refusedInput(issues);
 }
 
-export function wordsOf(document: Schema.JsonObject, value: Schema.Json, what?: string): string | undefined {
+export function refusalWordsOf(document: Schema.JsonObject, value: Schema.Json, what?: string): string | undefined {
   return refusalOf(document, value, what)?.detail;
 }
 
 export function fieldWords(field: Schema.JsonObject, value: Schema.Json): string | undefined {
-  return wordsOf({ type: 'object', properties: { field } }, { field: value });
+  return refusalWordsOf({ type: 'object', properties: { field } }, { field: value });
 }

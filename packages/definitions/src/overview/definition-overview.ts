@@ -2,6 +2,7 @@ import type { Noun } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
+import { undescribedSentence } from '../overview-words/value-words.ts';
 import type { OutputShape } from '../shapes/output-shape.ts';
 import { shapeBlocks } from '../shapes/shape-words.ts';
 import type { DefinitionUser, UserRelation } from '../used-by/user-relations.ts';
@@ -9,34 +10,29 @@ import { appendedSection, markdownOf } from './markdown-writer.ts';
 import { bulletList, named, sectionOf, type Overview, type OverviewSection } from './overview.ts';
 import { schemaBlocks } from './schema-words.ts';
 
+export type OverviewParts = Pick<Overview, 'body' | 'sections' | 'appendix'>;
+
 interface OverviewSubject {
   readonly description?: string;
   readonly inputSchema?: Schema.JsonObject;
   readonly outputSchema?: Schema.JsonObject;
 }
 
-export type SectionsOf<Parsed> = (parsed: Parsed, source: string, name: string) => readonly OverviewSection[];
-
 interface OverviewRequest {
   readonly name: string;
   readonly noun: Noun;
   readonly summary: OverviewSubject;
-  readonly sections?: readonly OverviewSection[] | undefined;
+  readonly parts?: OverviewParts | undefined;
 }
 
 export function inputSection(schema?: Schema.JsonObject): OverviewSection {
-  return sectionOf(
-    'What it needs',
-    ...schemaBlocks(schema, 'It takes any input, which its document does not describe.'),
-  );
+  return sectionOf('What it needs', ...schemaBlocks(schema, undescribedSentence('input')));
 }
 
 export function outputSection(schema?: Schema.JsonObject, shape?: OutputShape): OverviewSection {
   return sectionOf(
     'What it produces',
-    ...(shape === undefined
-      ? schemaBlocks(schema, 'It produces any output, which its document does not describe.')
-      : shapeBlocks(shape)),
+    ...(shape === undefined ? schemaBlocks(schema, undescribedSentence('output')) : shapeBlocks(shape)),
   );
 }
 
@@ -67,12 +63,15 @@ function openingOf(description: string | undefined, noun: Noun): string {
     : description;
 }
 
-function overviewOf({ name, noun, summary, sections }: OverviewRequest): Overview {
-  const { description, inputSchema, outputSchema } = summary;
+function typeWideParts({ inputSchema, outputSchema }: OverviewSubject): OverviewParts {
+  return { body: [], sections: [inputSection(inputSchema), outputSection(outputSchema)], appendix: [] };
+}
+
+function overviewOf({ name, noun, summary, parts }: OverviewRequest): Overview {
   return {
     title: name,
-    opening: [openingOf(description, noun)],
-    sections: sections ?? [inputSection(inputSchema), outputSection(outputSchema)],
+    opening: [openingOf(summary.description, noun)],
+    ...(parts ?? typeWideParts(summary)),
   };
 }
 

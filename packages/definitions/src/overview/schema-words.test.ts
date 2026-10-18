@@ -1,12 +1,16 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { mostFieldDescriptionCharacters, schemaBlocks, type OverviewBlock, type Phrases } from '../index.ts';
+import {
+  mostFieldDescriptionCharacters,
+  plainTextOf,
+  schemaBlocks,
+  type OverviewBlock,
+  type Phrases,
+} from '../index.ts';
 
 function plain(phrases: Phrases): string {
-  return phrases
-    .map((phrase) => (typeof phrase === 'string' ? phrase : `**${Object.values(phrase).join('')}**`))
-    .join('');
+  return phrases.map((phrase) => (typeof phrase === 'string' ? phrase : `**${plainTextOf([phrase])}**`)).join('');
 }
 
 function shown(block: OverviewBlock): unknown {

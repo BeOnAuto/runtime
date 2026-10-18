@@ -1,10 +1,9 @@
-import type { FrontMatterSection, FrontMatterShape } from '@on.auto/definitions/document';
+import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
 import { Schema } from 'effect';
 
 import { enclosings } from '../periods/enclosing.ts';
 import { grains } from '../periods/grains.ts';
-
-const descriptionLength = 1000;
+import { BaselineSchema, MetricSchema } from './evaluation-names.ts';
 
 export const aggregations = ['count', 'sum', 'last', 'mean'] as const;
 
@@ -31,10 +30,6 @@ const DataSchema = Schema.Struct({
   dataset: Schema.optionalKey(Schema.String),
 });
 
-export const BaselineSchema = Schema.Literals(['persistence', 'seasonal-naive']);
-
-export const MetricSchema = Schema.Literals(['mase', 'winkler', 'quantile']);
-
 const ActivationSchema = Schema.Union([Schema.Literal('automatic'), Schema.Struct({ approved: Schema.String })]);
 
 const EvaluationSchema = Schema.Struct({
@@ -54,7 +49,7 @@ const SourceSchema = Schema.Struct({
 });
 
 const FrontMatterSchema = Schema.Struct({
-  description: Schema.optionalKey(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(descriptionLength))),
+  description: Schema.optionalKey(DescriptionSchema),
   predicts: PredictsSchema,
   data: DataSchema,
   evaluation: EvaluationSchema,

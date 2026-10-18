@@ -1,5 +1,14 @@
 import type { LineOfOffset } from '../template/engine-failure.ts';
-import { asWritten, loopOf, phrasesOf, trimmed, type Piece, type ReadPiece, type TagPiece } from './liquid-phrases.ts';
+import {
+  asWritten,
+  loopOf,
+  phrasesOf,
+  trimmed,
+  writtenOf,
+  type Piece,
+  type ReadPiece,
+  type TagPiece,
+} from './liquid-phrases.ts';
 import { escapedInline } from './markdown-text.ts';
 import type { Phrases } from './overview.ts';
 
@@ -111,10 +120,6 @@ function branchesOf(inner: readonly Piece[], splitters: readonly string[]): Bran
   return { first, alternatives };
 }
 
-function writtenOf(piece: Piece): string {
-  return piece.kind === 'text' ? piece.text : piece.written;
-}
-
 function separatedOf(pieces: readonly Piece[]): Separated {
   const last = pieces.length - 1;
   const trailing = [...matchedBlocks(pieces).values()].find(({ end }) => end === last);
@@ -201,7 +206,7 @@ function markedBranch({ opening, pieces }: Branch, lineOf: LineOfOffset): Marked
   return { phrases: branchWords(opening, shownOf(phrases)), mark };
 }
 
-function joined(readings: readonly Phrases[]): Phrases {
+function joinedByCommas(readings: readonly Phrases[]): Phrases {
   return readings.flatMap((reading, index) => (index > 0 ? [', ', ...reading] : reading));
 }
 
@@ -227,7 +232,7 @@ function loopPhrases({ opening, inner, closing }: Construct, lineOf: LineOfOffse
     ...shownOf(saidOf(items, lineOf)),
     ...separatorPhrases(separator),
   ];
-  return spacedAround(inner, joined([each, ...alternatives.map((branch) => branchPhrases(branch, lineOf))]));
+  return spacedAround(inner, joinedByCommas([each, ...alternatives.map((branch) => branchPhrases(branch, lineOf))]));
 }
 
 function conditionPhrases({ opening, inner, closing }: Construct, lineOf: LineOfOffset): Phrases | undefined {
@@ -237,7 +242,7 @@ function conditionPhrases({ opening, inner, closing }: Construct, lineOf: LineOf
   const { first, alternatives } = branchesOf(inner, ['elsif', 'else']);
   const readings = [{ opening, pieces: first }, ...alternatives].map((branch) => markedBranch(branch, lineOf));
   const mark = readings.findLast((reading) => reading.mark !== '')?.mark ?? '';
-  return spacedAround(inner, [...joined(readings.map((reading) => reading.phrases)), mark]);
+  return spacedAround(inner, [...joinedByCommas(readings.map((reading) => reading.phrases)), mark]);
 }
 
 function constructPhrases(construct: Construct, lineOf: LineOfOffset): Phrases | undefined {

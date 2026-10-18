@@ -24,20 +24,22 @@ const units: readonly Unit[] = [
 
 const counted = new Intl.NumberFormat('en');
 
-function amountOf(amount: number, { one, other }: Unit): string {
+function partInWords(amount: number, { one, other }: Unit): string {
   return `${counted.format(amount)} ${amount === 1 ? one : other}`;
 }
 
-function countedIn({ rest, parts }: Counting, unit: Unit): Counting {
+function withWholeUnits({ rest, parts }: Counting, unit: Unit): Counting {
   const amount = Math.floor(rest / unit.per);
-  return amount === 0 ? { rest, parts } : { rest: rest - amount * unit.per, parts: [...parts, amountOf(amount, unit)] };
+  return amount === 0
+    ? { rest, parts }
+    : { rest: rest - amount * unit.per, parts: [...parts, partInWords(amount, unit)] };
 }
 
 export function durationInWords(milliseconds: number): string {
   const whole = Math.max(0, Math.round(milliseconds));
   if (whole < minute.per) {
-    return amountOf(whole / second.per, second);
+    return partInWords(whole / second.per, second);
   }
   const start: Counting = { rest: Math.round(whole / second.per) * second.per, parts: [] };
-  return listed(units.reduce((counting, unit) => countedIn(counting, unit), start).parts);
+  return listed(units.reduce((counting, unit) => withWholeUnits(counting, unit), start).parts);
 }

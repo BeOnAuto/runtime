@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import type { Presenter } from '@on.auto/operations';
 
+import { firstCharacters } from '../plain-language/characters.ts';
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
 import { definitionCreated, definitionRetired, definitionUpdated } from '../plain-language/event-words.ts';
 import {
@@ -10,7 +11,7 @@ import {
   type RecordedDefinitionEvent,
 } from '../registry/definition-events.ts';
 import { jsonBytesOf } from '../runs/recorded-size.ts';
-import { firstCharacters, mostDescriptionCharacters } from './event-data.ts';
+import { mostDescriptionCharacters } from './event-data.ts';
 import { eventPresenter, type Account } from './event-presenter.ts';
 
 function contentShown({

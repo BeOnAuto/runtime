@@ -3,6 +3,7 @@ export { conversationCallIdKey, deliveryIdKey, runIdKey } from './calls/call-met
 export {
   isServerName,
   isToolName,
+  namesEveryTool,
   serverNameShape,
   toolNameShape,
   toolReferenceOf,

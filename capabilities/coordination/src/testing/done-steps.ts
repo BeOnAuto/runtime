@@ -21,7 +21,9 @@ export function doneIn(tasks: string, entries: readonly string[] = ['By a call']
   const parts = markdownOf({
     title: 'flow',
     opening: [],
+    body: [],
     sections: [sectionOf('What it does', diagram, numberedList(steps))],
+    appendix: [],
   }).split('\n\n');
   return { diagram: String(parts[3]).split('\n').slice(2, -1), steps: String(parts[4]).trimEnd().split('\n') };
 }

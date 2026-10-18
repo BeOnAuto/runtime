@@ -5,7 +5,11 @@ import { readableTemplate } from '../template.ts';
 
 function read(...lines: readonly string[]): string {
   const blocks = readableTemplate({ text: lines.join('\n'), firstLine: 1 });
-  return markdownOf({ title: 't', opening: ['o'], sections: [sectionOf('s', ...blocks)] }).split('## s\n\n')[1] ?? '';
+  return (
+    markdownOf({ title: 't', opening: ['o'], body: [], sections: [sectionOf('s', ...blocks)], appendix: [] }).split(
+      '## s\n\n',
+    )[1] ?? ''
+  );
 }
 
 function loopSeparatedBy(spelling: string, separator: string, end: string): string {
