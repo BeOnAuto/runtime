@@ -43,7 +43,7 @@ function connectionsServedBy(
     secrets,
     policy: settings.connections,
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
-    providers: modelProvidersOf(settings.models),
+    modelProviders: modelProvidersOf(settings.models),
     pages: { studio: studioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
   });
@@ -59,7 +59,7 @@ function sourceServedBy(
     secrets,
     policy: settings.connections,
     variables: settings.connectionVariables,
-    providers: modelProvidersOf(settings.models),
+    modelProviders: modelProvidersOf(settings.models),
   });
 }
 

@@ -65,7 +65,7 @@ async function connectedThrough(
     secrets: h.secrets,
     policy,
     variables: placing.variables,
-    providers: [],
+    modelProviders: [],
   });
 }
 

@@ -5,6 +5,7 @@ import type {
   ConnectionUnready,
   OrgConnection,
 } from '@on.auto/tool-servers';
+import { pendingWords } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -22,7 +23,7 @@ function sourceOf(h: Harness, changes: Partial<Omit<ServingServices, 'registry'>
     secrets: h.secrets,
     policy: connectionPolicyOf({}),
     variables: new Map(),
-    providers: ['openai'],
+    modelProviders: ['openai'],
     ...changes,
   });
 }
@@ -124,6 +125,20 @@ describe('the connections of an org as tool servers', () => {
         detail:
           'Nobody has approved the connection crm yet; the person who added it opens its link, or removes it and adds it again for a new link',
       },
+    });
+  });
+});
+
+describe('a connection nobody has approved', () => {
+  it('is unready in the sentence the fake source of the tool servers answers for one', async () => {
+    const h = harness();
+    await added(h, crm);
+
+    const [pending] = await listedBy(sourceOf(h));
+
+    expect(pending?.state).toEqual({
+      status: 'unready',
+      unready: { because: 'connection_pending', detail: pendingWords('crm') },
     });
   });
 });

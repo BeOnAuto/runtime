@@ -23,7 +23,7 @@ export interface AdditionInput {
 
 export interface EntryChecking {
   readonly org: string;
-  readonly providers: readonly string[];
+  readonly modelProviders: readonly string[];
 }
 
 const heldCredential =
@@ -74,7 +74,7 @@ function addressIssues({ kind, entry }: AdditionInput): readonly Issue[] {
 
 export function entryIssuesOf(input: AdditionInput, checking: EntryChecking): readonly Issue[] {
   const named = issuesOf(
-    serverNameProblems(input.name, checking.providers),
+    serverNameProblems(input.name, checking.modelProviders),
     `/${JsonPointer.escapeToken(input.name)}`,
     '/name',
   );
@@ -108,6 +108,6 @@ export function invalidAddition(issues: readonly Issue[]): InvalidInput {
   return new InvalidInput({ detail: 'The connection cannot be added as it is given', issues });
 }
 
-export function takenByTheFile(name: string): Conflict {
+export function conflictAsTakenByTheFile(name: string): Conflict {
   return new Conflict({ detail: takenByTheConfiguration(name), kind: 'taken' });
 }

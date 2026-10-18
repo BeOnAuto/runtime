@@ -14,7 +14,7 @@ export interface ServingServices {
   readonly secrets: Pick<SecretKeeping, 'read'>;
   readonly policy: ConnectionPolicy;
   readonly variables: ReadonlyMap<string, Redacted.Redacted>;
-  readonly providers: readonly string[];
+  readonly modelProviders: readonly string[];
 }
 
 export interface Serving {

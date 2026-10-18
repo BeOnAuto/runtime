@@ -1,6 +1,7 @@
 import type { Issue } from '@on.auto/operations';
 import {
   isConnectionServerSettings,
+  servedFieldsOf,
   type ConnectionServer,
   type ConnectionServing,
   type ConnectionSource,
@@ -17,15 +18,7 @@ import { givenOf, notAllowed, type Serving, type ServingServices } from './given
 import { servingWords } from './serving-words.ts';
 
 function servingOf(org: string, { name, kind, entry }: KeptConnection['connection']): ConnectionServing {
-  return {
-    name,
-    type: kind,
-    orgs: [org],
-    playbooks: entry.playbooks ?? null,
-    allowed: entry.allowed ?? null,
-    record_content: entry.record_content ?? true,
-    request_id: entry.request_id ?? null,
-  };
+  return { name, type: kind, orgs: [org], ...servedFieldsOf(entry) };
 }
 
 function unchecked(name: string, issues: readonly Issue[]): ConnectionUnready {
@@ -38,9 +31,9 @@ function unchecked(name: string, issues: readonly Issue[]): ConnectionUnready {
 }
 
 function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, ConnectionUnready> {
-  const { policy, providers } = serving.services;
+  const { policy, modelProviders } = serving.services;
   const { connection } = serving.kept;
-  const checking = { org: serving.org, providers };
+  const checking = { org: serving.org, modelProviders };
   return Effect.gen(function* () {
     const refusal = useRefusalOf(policy, connection);
     if (refusal !== undefined) {
