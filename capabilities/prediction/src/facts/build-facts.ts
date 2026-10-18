@@ -1,7 +1,7 @@
 import { RunContextSchema, factOf } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
-import { BaselineSchema } from '../document/front-matter.ts';
+import { BaselineSchema } from '../document/evaluation-names.ts';
 
 export const TensorSchema = Schema.Struct({
   name: Schema.String,

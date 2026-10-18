@@ -3,7 +3,7 @@ import { availableParallelism } from 'node:os';
 import { pooledJob, type ProcessOutcome, type ProcessPool, type ProcessValue } from '@on.auto/workflow-engine/dsl';
 import { Effect, Option, Schema } from 'effect';
 
-import { BaselineSchema } from '../document/front-matter.ts';
+import { BaselineSchema } from '../document/evaluation-names.ts';
 import { TensorSchema } from '../facts/build-facts.ts';
 import type { BaselinesJob, Fed, WalkJob, WindowJob } from '../model-jobs/model-feeds.ts';
 

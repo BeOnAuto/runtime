@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
 import { dailyTotalsWith, dailyVisitsWith, uploadedDailyVisits } from '../testing/daily-documents.ts';
@@ -20,10 +21,6 @@ function goldenOf(name: string): string {
 
 function overviewOf(source: string): string {
   return predictionRuns().prepared(source).overview('weekly-orders');
-}
-
-function sectionIn(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
 }
 
 function withDataPart(data: string): string {

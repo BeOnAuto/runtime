@@ -1,4 +1,4 @@
-import { durationInWords, named, paragraph, sectionOf, type OverviewSection } from '@on.auto/definitions';
+import { durationInWords, named, paragraph, sectionOf, templateLead, type OverviewSection } from '@on.auto/definitions';
 import { readableTemplate, type TemplateText } from '@on.auto/definitions/template';
 
 import { predictionBounds } from '../capability/prediction-bounds.ts';
@@ -16,10 +16,7 @@ function briefBlocks(written: TemplateText) {
   const brief = readableTemplate(written);
   return brief.length === 0
     ? [paragraph('Its brief holds no text a trainer reads, so its trainer reads the rows and the rules alone.')]
-    : [
-        paragraph('Its trainer reads the brief first, with the values of each build in place of the names in bold:'),
-        ...brief,
-      ];
+    : [templateLead('Its trainer reads the brief first', 'build'), ...brief];
 }
 
 export function trainerSection(buildSource: BuildSource, brief: TemplateText): OverviewSection {
