@@ -1,5 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
+import { withUserAgent } from '@on.auto/outbound';
 import {
   describedToolServers,
   makeToolAccess,
@@ -33,12 +34,14 @@ export async function toolAccessOf(
   { toolTiming, connections, telemetry }: ToolAccessWiring & ServedConnections,
 ): Promise<ToolAccess> {
   const traceMeta = telemetry?.traceMeta;
+  const outboundFetch = withUserAgent(globalThis.fetch, `auto-runtime/${release.version}`);
   const reportLeftOut: Describing['reportLeftOut'] = (server, leftOut) => {
     void runtime.run(logLeftOutOperation(server, leftOut));
   };
-  const servers = await Effect.runPromise(describedToolServers(toolServers, { reportLeftOut }));
+  const servers = await Effect.runPromise(describedToolServers(toolServers, { fetch: outboundFetch, reportLeftOut }));
   return makeToolAccess(servers, {
     clientInfo: release,
+    fetch: outboundFetch,
     connections,
     reportLeftOut,
     ...(toolTiming === undefined ? {} : { timing: toolTiming }),
