@@ -22,9 +22,13 @@ function matches(pattern: string, host: string): boolean {
   return lowered.startsWith('*.') ? host.endsWith(lowered.slice(1)) : host === lowered;
 }
 
-function hostsOf({ type, entry, credential }: Addition): readonly string[] {
-  const addresses = [...(type === 'mcp' ? [entry.url] : [entry.document, entry.base_url]), credential.issuer];
-  return addresses.filter((address) => address !== undefined).map((address) => new URL(address).hostname);
+function hostsOf({ type, entry, credential }: Addition, documentServer: string | undefined): readonly string[] {
+  const server = type === 'mcp' ? [entry.url] : [entry.document, entry.base_url, documentServer];
+  const addresses = [...server, credential.issuer];
+  return addresses.flatMap((address) => {
+    const parsed = address === undefined ? null : URL.parse(address);
+    return parsed === null ? [] : [parsed.hostname];
+  });
 }
 
 export function hostRefusalOf(allowedHosts: readonly string[] | null, host: string): Forbidden | undefined {
@@ -35,8 +39,12 @@ export function hostRefusalOf(allowedHosts: readonly string[] | null, host: stri
       });
 }
 
-function hostRefusal(allowedHosts: readonly string[] | null, addition: Addition): Forbidden | undefined {
-  const refused = hostsOf(addition).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
+function hostRefusal(
+  allowedHosts: readonly string[] | null,
+  addition: Addition,
+  documentServer: string | undefined,
+): Forbidden | undefined {
+  const refused = hostsOf(addition, documentServer).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
   return refused === undefined ? undefined : hostRefusalOf(allowedHosts, refused);
 }
 
@@ -81,25 +89,41 @@ export function bindsPerson(access: RuntimeAccess): boolean {
   return access === 'people';
 }
 
-function rulesRefusalOf(policy: ConnectionPolicy, addition: Addition): Forbidden | undefined {
+function rulesRefusalOf(
+  policy: ConnectionPolicy,
+  addition: Addition,
+  documentServer: string | undefined,
+): Forbidden | undefined {
   return (
-    hostRefusal(policy.allowedHosts, addition) ??
+    hostRefusal(policy.allowedHosts, addition, documentServer) ??
     kindRefusal(policy.credentialKinds, addition) ??
     referenceRefusal(policy.variables, addition)
   );
 }
 
-export function policyRefusalOf(policy: ConnectionPolicy, addition: Addition): Forbidden | undefined {
-  return policy.peopleMayAdd
-    ? rulesRefusalOf(policy, addition)
+export function addingRefusalOf({ peopleMayAdd }: ConnectionPolicy): Forbidden | undefined {
+  return peopleMayAdd
+    ? undefined
     : new Forbidden({
         detail: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
       });
 }
 
-export function useRefusalOf(policy: ConnectionPolicy, addition: Addition): Forbidden | undefined {
+export function policyRefusalOf(
+  policy: ConnectionPolicy,
+  addition: Addition,
+  documentServer: string | undefined,
+): Forbidden | undefined {
+  return addingRefusalOf(policy) ?? rulesRefusalOf(policy, addition, documentServer);
+}
+
+export function useRefusalOf(
+  policy: ConnectionPolicy,
+  addition: Addition,
+  documentServer: string | undefined,
+): Forbidden | undefined {
   return policy.peopleMayAdd
-    ? rulesRefusalOf(policy, addition)
+    ? rulesRefusalOf(policy, addition, documentServer)
     : new Forbidden({
         detail: 'This runtime uses no connection: its operator sets up its tool servers itself',
       });

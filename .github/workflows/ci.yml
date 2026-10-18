@@ -93,6 +93,7 @@ jobs:
               - operations
               - outbound
               - playbooks
+              - providers
               - reasoning
               - recall
               - tool-servers

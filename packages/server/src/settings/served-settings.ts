@@ -1,5 +1,6 @@
 import type { Environment, FileUse } from '@on.auto/config';
-import { Effect } from 'effect';
+import { readProviders } from '@on.auto/providers';
+import { Effect, Result } from 'effect';
 
 import { readConnectionSettings, type ConnectionSettings } from '../connections/connection-settings.ts';
 import { readFunctionSettings, type FunctionSettings } from '../function-settings/function-settings.ts';
@@ -13,7 +14,7 @@ export function readServedSettings(environment: Environment, file: FileUse | und
   const functions = readFunctionSettings(environment, file);
   return {
     ...functions,
-    ...readConnectionSettings(environment, file, functions),
+    ...readConnectionSettings(environment, file, functions, Result.getOrThrow(readProviders())),
     workflows: Effect.runSync(readWorkflowSettings(environment)),
   };
 }

@@ -1,0 +1,14 @@
+name: github
+title: GitHub
+description: Read repositories, files and commits, and read, open and update issues and pull requests and their comments and reviews on GitHub, through GitHub's MCP server.
+website: https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/customize-copilot/extend-copilot-with-tools-and-context/set-up-the-github-mcp-server
+type: mcp
+url: https://api.githubcopilot.com/mcp/
+headers:
+  X-MCP-Toolsets: context,repos,issues,pull_requests,users
+credentials:
+  - kind: secret
+    in: header
+    name: Authorization
+    scheme: Bearer
+    description: A fine-grained personal access token with access to the repositories, issues and pull requests your functions use.

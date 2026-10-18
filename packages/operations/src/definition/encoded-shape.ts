@@ -1,4 +1,4 @@
-import { Predicate, Schema, SchemaAST } from 'effect';
+import { Option, Predicate, Schema, SchemaAST } from 'effect';
 
 function membersOf(ast: SchemaAST.AST): readonly SchemaAST.AST[] {
   return SchemaAST.isUnion(ast) ? ast.types : [ast];
@@ -10,6 +10,27 @@ export function encodedMembersOf(schema: Schema.Constraint): readonly SchemaAST.
 
 export function handlerMembersOf(schema: Schema.Constraint): readonly SchemaAST.AST[] {
   return membersOf(SchemaAST.toType(schema.ast));
+}
+
+function bodyOf(member: SchemaAST.Objects, pathParameters: readonly string[]): Schema.Codec<unknown> {
+  const fields = member.propertySignatures.filter(({ name }) => !pathParameters.includes(String(name)));
+  return Schema.make<Schema.Codec<unknown>>(
+    new SchemaAST.Objects(
+      fields,
+      member.indexSignatures,
+      member.annotations,
+      member.checks,
+      member.encoding,
+      member.context,
+      member.encodingChecks,
+    ),
+  );
+}
+
+export function refusesEmptyBody(schema: Schema.Constraint, pathParameters: readonly string[]): boolean {
+  return membersOf(Schema.toCodecJson(schema).ast)
+    .filter((member) => SchemaAST.isObjects(member))
+    .every((member) => Option.isNone(Schema.decodeUnknownOption(bodyOf(member, pathParameters))({})));
 }
 
 function isEmptyStruct(ast: SchemaAST.AST): boolean {

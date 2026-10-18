@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { referencedVariablesOf, substituted } from '../index.ts';
+import {
+  placeholderNamePattern,
+  placeholdersIn,
+  placeholdersReplaced,
+  referencedVariablesOf,
+  substituted,
+} from '../index.ts';
 
 describe('the references a substitution finds', () => {
   it('names each reference with its place and the value the environment gave it', () => {
@@ -57,5 +63,22 @@ describe('the variables a value refers to', () => {
 
     expect(referencedVariablesOf(value)).toEqual(['HOST', 'PORT', 'TOKEN', 'TOKEN']);
     expect(referencedVariablesOf('plain')).toEqual([]);
+  });
+});
+
+describe('the placeholders a text holds', () => {
+  it('are named, and replaced, by each brace around a lowercase name, in turn, and never by a reference or a name of another form', () => {
+    expect(placeholdersIn('https://{site}.example.com/{site}/v1?region={region_2}')).toEqual([
+      'site',
+      'site',
+      'region_2',
+    ]);
+    expect(placeholdersIn('${site} {Site} {2site} {} plain')).toEqual([]);
+    expect(placeholdersReplaced('https://{site}.example.com/${site}/{region}', (name) => name.toUpperCase())).toBe(
+      'https://SITE.example.com/${site}/REGION',
+    );
+    expect(
+      ['client_id', 'site', 'Site', '2site', 'site-name'].map((name) => placeholderNamePattern.test(name)),
+    ).toEqual([true, true, false, false, false]);
   });
 });

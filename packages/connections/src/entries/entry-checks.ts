@@ -11,12 +11,13 @@ import { JsonPointer, Redacted, Result, Schema } from 'effect';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
-import { placedCredential, readPlaced, type GivenValue } from '../serving/placed-credentials.ts';
+import { placedCredential, readPlaced, type GivenValue, type Providing } from '../serving/placed-credentials.ts';
 import { credentialIssuesOf } from './credential-checks.ts';
 
 export interface AdditionInput {
   readonly name: string;
   readonly type: ConnectionType;
+  readonly provider: string | null;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
 }
@@ -24,6 +25,7 @@ export interface AdditionInput {
 export interface EntryChecking {
   readonly org: string;
   readonly modelProviders: readonly string[];
+  readonly providing: Providing | undefined;
 }
 
 const heldCredential =
@@ -68,28 +70,37 @@ function placed(pointers: readonly string[], detail: string): readonly Issue[] {
   return [...new Set(pointers)].map((pointer) => ({ pointer, detail }));
 }
 
-function writtenIssues(name: string, entry: ConnectionEntry): readonly Issue[] {
-  const written = asJson(entry);
+function isTheProvidersOwn(pointer: string): boolean {
+  return pointer.startsWith('/entry/headers/') || pointer.startsWith('/entry/query_params/');
+}
+
+function referencedIssues(written: Schema.Json, providing: Providing | undefined): readonly Issue[] {
   const resolved = substituted(written, '/entry', {});
+  const pointers = [...resolved.problems, ...resolved.references].map(({ pointer }) => pointer);
+  return placed(
+    providing === undefined ? pointers : pointers.filter((pointer) => !isTheProvidersOwn(pointer)),
+    heldReference,
+  );
+}
+
+function writtenIssues(name: string, entry: ConnectionEntry, providing: Providing | undefined): readonly Issue[] {
+  const written = asJson(entry);
   return [
     ...placed(
       credentialProblems(name, written, '/entry').map(({ pointer }) => pointer),
       heldCredential,
     ),
-    ...placed(
-      [...resolved.problems, ...resolved.references].map(({ pointer }) => pointer),
-      heldReference,
-    ),
+    ...referencedIssues(written, providing),
   ];
 }
 
-function addressIssues({ type, entry }: AdditionInput): readonly Issue[] {
+function addressIssues({ type, entry }: AdditionInput, { providing }: EntryChecking): readonly Issue[] {
   if (type === 'mcp') {
     return entry.url === undefined || isPinnableUrl(entry.url)
       ? []
       : [{ pointer: '/entry/url', detail: pinnedUrlShape }];
   }
-  return entry.document !== undefined && !URL.canParse(entry.document)
+  return providing === undefined && entry.document !== undefined && !URL.canParse(entry.document)
     ? [{ pointer: '/entry/document', detail: fileOnly }]
     : [];
 }
@@ -102,8 +113,8 @@ export function entryIssuesOf(input: AdditionInput, checking: EntryChecking): re
   );
   return [
     ...named,
-    ...addressIssues(input),
-    ...writtenIssues(input.name, input.entry),
+    ...addressIssues(input, checking),
+    ...writtenIssues(input.name, input.entry, checking.providing),
     ...credentialIssuesOf(input.credential, input.type, input.entry),
   ];
 }
@@ -113,7 +124,7 @@ export function readAddition(
   checking: EntryChecking,
   given: GivenValue | undefined,
 ): Result.Result<ServerSettings, readonly Issue[]> {
-  const read = readPlaced(input, placedCredential(input.entry, input.credential, given), checking);
+  const read = readPlaced(input, placedCredential(input, given), checking);
   return Result.mapError(read, (problems) => issuesOf(problems, `/${JsonPointer.escapeToken(input.name)}`, '/entry'));
 }
 

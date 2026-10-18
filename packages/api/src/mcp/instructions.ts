@@ -127,7 +127,7 @@ const modelsAndTools: Sentences = ({ reasoning, listed }) => {
 };
 
 const connections: Sentences = ({ listed }) =>
-  listed('add_connection') ? ['Add a tool server with add_connection; the person approves it.'] : [];
+  listed('add_connection') ? ['add_connection adds a provider, or a server by hand; a person approves.'] : [];
 
 const typesThatFinishLater: ReadonlySet<string> = new Set(['workflow']);
 
@@ -143,7 +143,7 @@ const runsThatFinishLater: Sentences = ({ listed, definitionTypes }) => {
 const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
   listed('answer_interaction')
     ? [
-        'When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not with a new run.',
+        'When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run.',
       ]
     : [];
 

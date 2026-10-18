@@ -24,7 +24,7 @@ A reasoning function can call tools itself, through tool servers the runtime's o
 - A connection lists only the tools its key or token may call. A read-only key sees the tools that read, and none that creates or runs a function. A key that may only read inside some playbooks is offered `list_playbooks`, which lists those playbooks.
 - Which tools a connection lists depends on both the endpoint and the caller's permissions. A missing `create_definition` can mean either. The connection may be to the org endpoint, or its key or token may lack `playbook:write`.
 - The org and playbook a scoped endpoint names stay subject to the caller's access. Choosing a more specific endpoint grants no extra permission.
-- Five prediction routes are served only over [HTTP](http.md#prediction-functions): the three a build's trainer calls, the upload of a dataset and the activation of a version. So are the three routes of Studio's page that approves a [connection](#connections): `read_link`, `approve` and `give_credential`. So are five reads an agent does with another tool or leaves to Studio: `get_playbook`, since each playbook `list_playbooks` returns holds the same fields; `get_connection`, since each connection `list_connections` returns holds the same fields, its `status` among them; `get_run_history`, since `list_playbook_events` with a `run_id` returns the run's events and those of every run it started; `get_playbook_analytics`, which Studio presents; and `validate`, since `dry_run` reports the same check of the arguments in its `arguments` field. No endpoint offers any of them as a tool.
+- Five prediction routes are served only over [HTTP](http.md#prediction-functions): the three a build's trainer calls, the upload of a dataset and the activation of a version. So are the three routes of Studio's page that approves a [connection](#connections): `read_link`, `approve` and `give_credential`, and `list_providers`, which a page reads to show what a person may connect. So are five reads an agent does with another tool or leaves to Studio: `get_playbook`, since each playbook `list_playbooks` returns holds the same fields; `get_connection`, since each connection `list_connections` returns holds the same fields, its `status` among them; `get_run_history`, since `list_playbook_events` with a `run_id` returns the run's events and those of every run it started; `get_playbook_analytics`, which Studio presents; and `validate`, since `dry_run` reports the same check of the arguments in its `arguments` field. No endpoint offers any of them as a tool.
 
 ### What a connecting agent is told
 
@@ -35,7 +35,7 @@ An agent that connects receives instructions written for the tools its key or to
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
 - that `get_guide` returns the format of each definition and the recipes;
 - how a reasoning function names its model and its tools;
-- where `add_connection` is listed, that it adds a tool server, which the person approves;
+- where `add_connection` is listed, that it adds a provider, or a server by hand, and that a person approves;
 - that `get_run` shows whether a run that finishes later has ended or is still waiting;
 - that when the person answers what a run waits on, such as an approval, the agent answers the request with `answer_interaction` and starts no new run for it. The tool's description gives the shape of the answer;
 - that runs, events and requests come one page at a time;
@@ -179,18 +179,19 @@ Four tools work with the tool servers of the playbook, those set up in the confi
 
 ### Connections
 
-A connection is a tool server that a person adds to the org through their agent, which every playbook of the org may use, or the playbooks its entry names. These tools are listed on `/mcp` and the org endpoint. Their routes are relative to `/v1/orgs/{org}`.
+A connection is a tool server that a person adds to the org through their agent, a provider by its name or a server given by hand, which every playbook of the org may use, or the playbooks its entry names. These tools are listed on `/mcp` and the org endpoint. Their routes are relative to `/v1/orgs/{org}`.
 
-| Tool                | HTTP operation             | What it is for                                                                     |
-| ------------------- | -------------------------- | ---------------------------------------------------------------------------------- |
-| `add_connection`    | `POST /connections`        | Add a tool server to the org, pending, and answer the link that approves it        |
-| `list_connections`  | `GET /connections`         | List the org's connections, newest first, and whether each is pending or connected |
-| `remove_connection` | `DELETE /connections/{id}` | Remove a connection for good, which forgets its credential                         |
+| Tool                | HTTP operation             | What it is for                                                                            |
+| ------------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
+| `add_connection`    | `POST /connections`        | Add a provider or a tool server to the org, pending, and answer the link that approves it |
+| `list_connections`  | `GET /connections`         | List the org's connections, newest first, and whether each is pending or connected        |
+| `remove_connection` | `DELETE /connections/{id}` | Remove a connection for good, which forgets its credential                                |
 
 - A connection is added by a person: where the runtime signs people in, `add_connection` refuses a key, and a runtime of API keys alone, which signs nobody in, refuses every connection, since no person could approve it.
 - The agent adds a connection without its credential: an entry that holds a value that looks like a credential, or a reference such as `${CRM_API_KEY}`, is refused. The person approves the connection, and gives its credential where it takes one, on Studio's page, which `connect.url` of the answer opens within ten minutes.
 - `add_connection` always puts the link in its answer. To a client of the `2026-07-28` revision that declares in its request that it opens links, the `url` form of elicitation, it also asks for the link to be opened, with a message that says what to do. The client opens the page or declines, and retries the call, which answers the connection added once and never adds a second one. A retry by another caller, or in another org, is refused, and the connection stays added. A client of an earlier revision, whose requests carry no capabilities on this stateless server, is not asked; it shows the person the link from the answer.
-- `add_connection` takes `name`, the name a function gives the server; `type`, `mcp` for a remote MCP server or `openapi` for an HTTP API; `entry`, the server without its credential; and `credential`.
+- `add_connection` takes one of two inputs. For a provider: `provider`, its name; `placeholders`, the value of each placeholder it takes; and, where they are wanted, `name`, the provider's when left out, `credential` with its `kind` alone, the provider's first way when left out, and `entry` with `playbooks`, `allowed` and `record_content` alone. The provider gives the rest, and `type`, the server in `entry` and the other fields of `credential` are refused. For a server given by hand: `name`, the name a function gives the server; `type`, `mcp` for a remote MCP server or `openapi` for an HTTP API; `entry`, the server without its credential; and `credential`, with no `placeholders`.
+- A provider the runtime does not have is refused at `/provider`, a placeholder or a value refused at `/placeholders/<name>`, and what the checks of an entry find in what the provider resolved at `/provider`.
 - The credential is one object: its `kind` and the fields that kind takes, `variable`, `name` and `in` for `reference`, `name` and `in` for `secret`, each with an optional `scheme` such as `Bearer` where `in` is `header`, which the runtime writes before the value, and `issuer`, an optional `client_id` and an optional `scope` for `client_credentials`. A `client_id` left out is given by the person on Studio's page, with the secret or the key. A field its kind lacks or does not take is refused as `invalid_input` at that field.
 - Once connected, a connection is a tool server of the org: a function names it by its name as `name/tool`, and `search`, `introspect`, `dry_run` and `execute` reach it, as [Tool servers](#tool-servers) describes.
 - A link is gone after its ten minutes, and nothing gives a pending connection another: remove the connection with `remove_connection` and add it again.

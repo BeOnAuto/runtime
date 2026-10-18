@@ -1,0 +1,11 @@
+name: slack-api
+title: Slack API
+description: Read channels, conversation history, threads and people, and post and update messages and add reactions as your Slack app's bot, through the Slack Web API.
+website: https://docs.slack.dev/apis/web-api/
+type: openapi
+document: documents/slack-api.openapi.json
+credentials:
+  - kind: secret
+    in: security
+    name: bot_token
+    description: The bot token (xoxb-) of a Slack app installed in your workspace.

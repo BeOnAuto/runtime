@@ -1,22 +1,29 @@
 import { Caller, OrgContext, defineCommand, quoted } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { additionIssuesOf, conflictAsTakenByTheFile, invalidAddition } from '../entries/entry-checks.ts';
 import { connectPageOf } from '../links/connect-page.ts';
 import { issuedLink } from '../links/link-token.ts';
-import { adderRefusalOf, policyRefusalOf } from '../policy/policy-rules.ts';
+import { adderRefusalOf } from '../policy/policy-rules.ts';
+import { checkedAdditionOf, refusalOfTheAddition } from '../providers/provider-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed, linkWords } from './connection-words.ts';
 import { additionOf, recordInRegistry } from './registry-access.ts';
 
 const description = [
-  "Adds a tool server to the org as a connection, which its playbooks may use, and answers it pending with a link to Studio's page.",
-  'Use it when the person wants a function to reach a server the runtime does not set up; search lists the servers there are.',
-  'The entry holds no credential: the person approves the connection, and gives its credential, on the page the link opens within ten minutes.',
+  "Connects a service the org's functions should reach: a provider by its name and placeholders, answered pending with a link to Studio's page.",
+  'A server given by hand takes name, type, entry and credential instead, none holding a secret.',
+  'The person approves it, and gives its credential, on the page the link opens within ten minutes.',
 ].join(' ');
 
-export function defineAddConnection({ policy, fileEntries, modelProviders, pages, access }: ConnectionServices) {
+export function defineAddConnection({
+  policy,
+  fileEntries,
+  modelProviders,
+  pages,
+  access,
+  ...serving
+}: ConnectionServices) {
   return defineCommand('org', {
     name: 'add_connection',
     title: 'Add connection',
@@ -32,19 +39,13 @@ export function defineAddConnection({ policy, fileEntries, modelProviders, pages
         return yield* Effect.fail(adderRefusal);
       }
       const { org } = yield* OrgContext;
-      const issues = additionIssuesOf(input, { org, modelProviders });
-      if (issues.length > 0) {
-        return yield* Effect.fail(invalidAddition(issues));
-      }
-      const refusal = policyRefusalOf(policy, input);
+      const given = yield* Effect.fromResult(checkedAdditionOf(input, { org, modelProviders }, serving));
+      const refusal = refusalOfTheAddition(given, policy, fileEntries, serving);
       if (refusal !== undefined) {
         return yield* Effect.fail(refusal);
       }
-      if (fileEntries.includes(input.name)) {
-        return yield* Effect.fail(conflictAsTakenByTheFile(input.name));
-      }
       const { token, ...link } = yield* issuedLink;
-      const addition = additionOf(input, link);
+      const addition = additionOf(given, link);
       const kept = yield* recordInRegistry(addition).pipe(
         Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die }),
       );
@@ -53,7 +54,8 @@ export function defineAddConnection({ policy, fileEntries, modelProviders, pages
     }),
     plainLanguage: {
       task: 'add a connection',
-      attempt: ({ name }) => `add the connection ${quoted(name)}`,
+      attempt: ({ name, provider }) =>
+        name === undefined ? `connect the provider ${quoted(String(provider))}` : `add the connection ${quoted(name)}`,
       outcome: (added) => `Added ${connectionNamed(added)}. ${linkWords}`,
     },
     linkToOpen: (added) => ({

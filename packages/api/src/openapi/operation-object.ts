@@ -14,7 +14,6 @@ import {
   fieldsOfEveryMember,
   identifiedSchemaOf,
   isUnion,
-  requiresFields,
   schemaOf,
   withoutFields,
   type Field,
@@ -74,9 +73,9 @@ function streamedBodyOf({ kind, mostBytes }: StreamedBody): OpenApiObject {
   };
 }
 
-function jsonBodyOf(operationId: string, body: OpenApiObject): OpenApiObject {
+function jsonBodyOf(operationId: string, body: OpenApiObject, refusesEmptyBody: boolean): OpenApiObject {
   return {
-    required: requiresFields(body),
+    required: refusesEmptyBody,
     content: { 'application/json': { schema: identifiedSchemaOf(body, `${operationId}/input`) } },
   };
 }
@@ -100,7 +99,7 @@ function inputPartsOf(registration: RouteRegistration, operationId: string): Inp
     return { parameters: path, requestBody: streamedBodyOf(body) };
   }
   return body.kind === 'json'
-    ? { parameters: path, requestBody: jsonBodyOf(operationId, given) }
+    ? { parameters: path, requestBody: jsonBodyOf(operationId, given, registration.refusesEmptyBody) }
     : { parameters: path };
 }
 

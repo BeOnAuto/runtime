@@ -22,7 +22,14 @@ export interface StoresAndConnections {
 
 type ServingSettings = Pick<
   Settings,
-  'connections' | 'connectionVariables' | 'toolServers' | 'modelProviders' | 'signIn' | 'apiKeys'
+  | 'connections'
+  | 'connectionVariables'
+  | 'providers'
+  | 'providerValues'
+  | 'toolServers'
+  | 'modelProviders'
+  | 'signIn'
+  | 'apiKeys'
 >;
 
 function accessOf({ signIn, apiKeys }: ServingSettings): RuntimeAccess {
@@ -43,6 +50,8 @@ function connectionsServedBy(
     policy: settings.connections,
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
     modelProviders: settings.modelProviders,
+    providers: settings.providers,
+    providerValues: settings.providerValues,
     pages: { studio: studioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
   });
@@ -59,6 +68,8 @@ function sourceServedBy(
     policy: settings.connections,
     variables: settings.connectionVariables,
     modelProviders: settings.modelProviders,
+    providers: settings.providers,
+    providerValues: settings.providerValues,
   });
 }
 

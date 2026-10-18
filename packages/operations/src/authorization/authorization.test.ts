@@ -1,7 +1,7 @@
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineQuery, type CallerIdentity } from '../index.ts';
+import { defineQuery, permissionRefusalOf, type CallerIdentity } from '../index.ts';
 import { acmeAdmin, acmeAlphaReader } from '../testing/callers.ts';
 import { harness, toPlaybook, toOrg } from '../testing/harness.ts';
 import { addNote, getNote } from '../testing/notes.ts';
@@ -87,6 +87,18 @@ describe('an operation permitted by more than one permission', () => {
       reason: 'forbidden',
       detail: 'The caller lacks the org:read or playbook:read permission',
     });
+  });
+});
+
+describe('the words of a missing permission', () => {
+  it('are the refusal a dispatched call answers, for a caller that holds none of the permissions, and none otherwise', async () => {
+    const { dispatcher: calls, run } = harness();
+    const reader = holding('org:read');
+
+    const dispatched = await run(calls.dispatchToOrg(labelPlaybook.registration, toAcme(reader)));
+
+    expect(dispatched).toMatchObject({ detail: permissionRefusalOf(labelPlaybook.registration.permissions, reader) });
+    expect(permissionRefusalOf(['org:read', 'playbook:read'], reader)).toBeUndefined();
   });
 });
 

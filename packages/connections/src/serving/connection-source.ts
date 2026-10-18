@@ -12,6 +12,7 @@ import { Effect, Option, Result } from 'effect';
 
 import { entryIssuesOf, readAddition } from '../entries/entry-checks.ts';
 import { hostRefusalOf, useRefusalOf } from '../policy/policy-rules.ts';
+import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst, type KeptConnection } from '../registry/registry.ts';
 import { givenOf, notAllowed, type Serving, type ServingServices } from './given-credentials.ts';
@@ -33,9 +34,9 @@ function unchecked(name: string, issues: readonly Issue[]): ConnectionUnready {
 function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, ConnectionUnready> {
   const { policy, modelProviders } = serving.services;
   const { connection } = serving.kept;
-  const checking = { org: serving.org, modelProviders };
+  const checking = { org: serving.org, modelProviders, providing: providingOf(connection, serving.services) };
   return Effect.gen(function* () {
-    const refusal = useRefusalOf(policy, connection);
+    const refusal = useRefusalOf(policy, connection, checking.providing?.documentServer);
     if (refusal !== undefined) {
       return yield* Effect.fail(notAllowed(refusal.detail));
     }

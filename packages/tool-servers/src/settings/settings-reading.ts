@@ -1,6 +1,7 @@
 import {
   credentialProblems,
   decodedJsonSetting,
+  placeholdersReplaced,
   pointerOf,
   problem,
   referencedVariablesOf,
@@ -20,6 +21,7 @@ export type Environment = Readonly<Record<string, string | undefined>>;
 export interface ToolServerSettingsContext {
   readonly modelProviders: readonly string[];
   readonly documentsDirectory?: string;
+  readonly placedValues?: ReadonlyMap<string, string>;
 }
 
 export class ToolServerSettingsInvalid extends Data.TaggedError('tool_server_settings_invalid')<{
@@ -31,6 +33,26 @@ const credentialAdvice =
   'Looks like a credential, which this setting never holds; write a reference to the environment variable that holds it instead, such as ${GRAPH_API_KEY}';
 
 const decodeEntry = Schema.decodeUnknownSync(ServerEntrySchema);
+
+type PlacedValues = ReadonlyMap<string, string>;
+
+function valuesPlaced(values: Readonly<Record<string, string>>, placed: PlacedValues): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]: readonly [string, string]) => [
+      key,
+      placeholdersReplaced(value, (name) => placed.get(name) ?? `{${name}}`),
+    ]),
+  );
+}
+
+function withValuesPlaced(fields: ServerEntryFields, placed: PlacedValues): ServerEntryFields {
+  const { headers, query_params: queryParams } = fields;
+  return {
+    ...fields,
+    ...(headers === undefined ? {} : { headers: valuesPlaced(headers, placed) }),
+    ...(queryParams === undefined ? {} : { query_params: valuesPlaced(queryParams, placed) }),
+  };
+}
 
 export function readEntry(
   name: string,
@@ -50,7 +72,7 @@ export function readEntry(
   if (problems.length > 0) {
     return Result.fail(problems);
   }
-  const fields = decodeEntry(resolved.value);
+  const fields = withValuesPlaced(decodeEntry(resolved.value), context.placedValues ?? new Map());
   return checkedEntry(name, fields, {
     modelProviders: context.modelProviders,
     directory: context.documentsDirectory ?? process.cwd(),

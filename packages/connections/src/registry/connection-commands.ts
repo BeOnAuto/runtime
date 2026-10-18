@@ -7,6 +7,8 @@ export interface ConnectionAddition {
   readonly connection: string;
   readonly name: string;
   readonly server_type: ConnectionType;
+  readonly provider: string | null;
+  readonly placeholders: Readonly<Record<string, string>> | null;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
   readonly link: OpenLink;

@@ -1,7 +1,7 @@
 import type { Schema } from 'effect';
 
 import { below, entriesOf, type FileProblem } from './file-problem.ts';
-import { holdsReference, literalTextOf } from './references.ts';
+import { holdsReference, literalTextOf, placeholdersIn, placeholdersReplaced } from './references.ts';
 
 const credentialWords: ReadonlySet<string> = new Set([
   'apikey',
@@ -42,8 +42,16 @@ function namesCredential(name: string): boolean {
   );
 }
 
+function isWhollyPlaceholders(value: string): boolean {
+  return placeholdersIn(value).length > 0 && placeholdersReplaced(value, () => '') === '';
+}
+
+function isLiteral(value: string): boolean {
+  return !holdsReference(value) && !isWhollyPlaceholders(value);
+}
+
 function namedAsCredential(name: string, value: string): boolean {
-  return namesCredential(name) && !holdsReference(value);
+  return namesCredential(name) && isLiteral(value);
 }
 
 function looksLikeCredential(text: string): boolean {

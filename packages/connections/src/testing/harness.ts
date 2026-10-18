@@ -12,6 +12,7 @@ import {
   recordingReporter,
   type MemoryLedger,
 } from '@on.auto/operations/testing';
+import { fixtureProviders } from '@on.auto/providers/testing';
 import { Array as Arr, DateTime, Effect, Layer, Option, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
 
@@ -71,6 +72,8 @@ function keptSecrets(beforeKeeping: () => Promise<unknown> = () => Promise.resol
   };
 }
 
+export const fixtureServing = { providers: fixtureProviders, providerValues: new Map<string, Redacted.Redacted>() };
+
 export interface Harness {
   readonly ledger: MemoryLedger;
   readonly facts: () => Promise<readonly RecordedConnectionEvent[]>;
@@ -102,6 +105,8 @@ export function harness({ beforeKeeping, ...given }: HarnessOptions = {}): Harne
     policy: connectionPolicyOf({}),
     fileEntries: ['wiki'],
     modelProviders: ['openai'],
+    providers: fixtureProviders,
+    providerValues: new Map(),
     pages: { studio, runtime: () => runtimeOrigin },
     access: 'people',
     ...given,

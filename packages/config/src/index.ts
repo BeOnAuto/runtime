@@ -12,8 +12,12 @@ export { ConfigFileInvalid } from './config-file/config-file.ts';
 export { configFileVariable, configurationOf, type Configuration, type FileUse } from './config-file/configuration.ts';
 export { fileSetting, type FileSetting, type FileSettingOptions, type References } from './config-file/file-setting.ts';
 export { credentialProblems } from './config-file/credentials.ts';
+export { placeIn } from './config-file/places.ts';
 export type { FileProblem } from './config-file/file-problem.ts';
 export {
+  placeholderNamePattern,
+  placeholdersIn,
+  placeholdersReplaced,
   referencedVariablesOf,
   substituted,
   variableNamePattern,

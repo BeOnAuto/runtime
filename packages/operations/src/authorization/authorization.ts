@@ -10,14 +10,21 @@ import { PlaybookRegistry, type LivePlaybookStatus, type PlaybookStatus } from '
 import { rejected, type Rejected } from '../outcome/outcome.ts';
 import { alternatives } from '../plain-language/phrasing.ts';
 
+export function permissionRefusalOf(
+  permissions: CallerIdentity['permissions'],
+  caller: CallerIdentity,
+): string | undefined {
+  return permissions.some((permission) => caller.permissions.includes(permission))
+    ? undefined
+    : `The caller lacks the ${alternatives(permissions)} permission`;
+}
+
 function rejectionOfCaller(registration: Runnable, { caller, org }: OrgRequest): Rejected | undefined {
   if (caller.org !== org) {
     return rejected('forbidden', 'The caller does not belong to this org');
   }
-  const { permissions } = registration;
-  return permissions.some((permission) => caller.permissions.includes(permission))
-    ? undefined
-    : rejected('forbidden', `The caller lacks the ${alternatives(permissions)} permission`);
+  const refusal = permissionRefusalOf(registration.permissions, caller);
+  return refusal === undefined ? undefined : rejected('forbidden', refusal);
 }
 
 const playbookUnnamed = 'The caller may access only some playbooks of this org; name one of them in playbook';

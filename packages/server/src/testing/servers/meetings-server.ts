@@ -26,7 +26,7 @@ export interface MeetingsOptions {
 }
 
 export function sentencesOf(text: string): readonly string[] {
-  return text.split(/(?<=[.!?])\s+(?=[A-Z`])/u);
+  return text.split(/(?<=[.!?])\s+(?=[A-Z`]|[a-z]+_[a-z_]+\b)/u);
 }
 
 export function sentenceNaming(text: string, ...words: readonly string[]): string {

@@ -26,6 +26,7 @@ export interface RegisteredFieldsOf<S extends OperationScope, K extends Operatio
   readonly permissions: readonly Permission[];
   readonly reasons: readonly DeclarableReason[];
   readonly input: JsonSchemaDocument;
+  readonly refusesEmptyBody: boolean;
   readonly plainLanguage?: RegisteredPlainLanguage;
   readonly linkToOpen?: (output: unknown) => LinkToOpen;
 }

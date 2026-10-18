@@ -1,7 +1,7 @@
 import { Caller, OrgReader, OrgWriter, randomUUIDv7, type NotFound } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
-import type { AdditionInput } from '../entries/entry-checks.ts';
+import type { GivenAddition } from '../providers/provider-additions.ts';
 import type { ConnectionAddition, ConnectionCommandData } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
 import { findConnection } from '../registry/registry-lookup.ts';
@@ -21,8 +21,21 @@ export const actedNow = Effect.gen(function* () {
   return { by, at: DateTime.formatIso(yield* DateTime.now) };
 });
 
-export function additionOf({ name, type, entry, credential }: AdditionInput, link: OpenLink): ConnectionAddition {
-  return { type: 'add', connection: randomUUIDv7(), name, server_type: type, entry, credential, link };
+export function additionOf(
+  { name, type, provider, placeholders, entry, credential }: GivenAddition,
+  link: OpenLink,
+): ConnectionAddition {
+  return {
+    type: 'add',
+    connection: randomUUIDv7(),
+    name,
+    server_type: type,
+    provider,
+    placeholders,
+    entry,
+    credential,
+    link,
+  };
 }
 
 export const recordInRegistry = Effect.fnUntraced(function* (data: ConnectionCommandData) {
