@@ -2,10 +2,11 @@ import {
   bulletList,
   durationInWords,
   inputSection,
-  named,
   paragraph,
   schemaBlocks,
   sectionOf,
+  templateLead,
+  theToolOf,
   type OverviewSection,
 } from '@on.auto/definitions';
 import { readableTemplate } from '@on.auto/definitions/template';
@@ -35,11 +36,7 @@ function whereSection({ route, output }: RequestDocument): OverviewSection {
       ),
     );
   }
-  const { server, tool } = route.deliver;
-  return sectionOf(
-    'Where',
-    paragraph('It sends the request through the tool ', named(tool), ' of ', named(server), '.'),
-  );
+  return sectionOf('Where', paragraph('It sends the request through ', ...theToolOf(route.deliver), '.'));
 }
 
 function waitSection({ expiresMs, output }: RequestDocument): OverviewSection {
@@ -65,10 +62,8 @@ function repliesSections({ route, reply, from }: RequestDocument): readonly Over
     sectionOf(
       'Replies',
       paragraph(
-        'It reads the replies to its message with the tool ',
-        named(tool),
-        ' of ',
-        named(route.deliver.server),
+        'It reads the replies to its message with ',
+        ...theToolOf({ server: route.deliver.server, tool }),
         `, and a reply from ${answerer} answers it when its reply rule reads it:`,
       ),
       bulletList(replyRuleItems(reply)),
@@ -81,11 +76,7 @@ export function requestSections(document: RequestDocument): readonly OverviewSec
   return [
     inputSection(document.input.schema?.document),
     whoSection(document),
-    sectionOf(
-      'What it sends',
-      paragraph('Its message, with the values of each run in place of the names in bold:'),
-      ...readableTemplate(document.message),
-    ),
+    sectionOf('What it sends', templateLead('Its message', 'run'), ...readableTemplate(document.message)),
     whereSection(document),
     waitSection(document),
     sectionOf('What answer it expects', ...schemaBlocks(document.output.schema?.document, notification)),

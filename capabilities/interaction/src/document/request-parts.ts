@@ -1,11 +1,17 @@
-import { issueAt, type DocumentParts, type ReadFrontMatter, type SourceLines } from '@on.auto/definitions/document';
+import {
+  issueAt,
+  type DocumentParts,
+  type ReadFrontMatter,
+  type SourceLines,
+  type ValueContract,
+} from '@on.auto/definitions/document';
 import type { ParsedTemplate } from '@on.auto/definitions/template';
 import { Result } from 'effect';
 
 import type { ReplyRule } from '../replies/reply-rule.ts';
 import type { WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
-import type { RequestDocument, ValueContract } from './interaction-document.ts';
+import type { RequestDocument } from './interaction-document.ts';
 import { fromOf, replyOf } from './reply-parts.ts';
 import { routeIn } from './route-parts.ts';
 import { contractOf, expiresOf, issuesOf, messageOf, toOf, type Checked } from './written-parts.ts';

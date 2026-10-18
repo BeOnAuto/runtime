@@ -1,3 +1,4 @@
+import { sectionIn } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -16,12 +17,8 @@ function overviewOf(source: string): string {
   return Effect.runSync(capability.prepare(source)).overview('approve-brief');
 }
 
-function sectionOf(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
-}
-
 function waitOf(expires: string): string {
-  return sectionOf(overviewOf(approvalDocument([], expires)), 'How long it waits');
+  return sectionIn(overviewOf(approvalDocument([], expires)), 'How long it waits');
 }
 
 const choices = [
@@ -51,11 +48,11 @@ describe('how long a request waits, in the overview', () => {
   it('says of a notification when its request expires, and that it takes no answer', () => {
     const overview = overviewOf(notificationDocument());
 
-    expect(sectionOf(overview, 'How long it waits')).toBe('Its request expires after 1 hour.');
-    expect(sectionOf(overview, 'Where')).toBe(
+    expect(sectionIn(overview, 'How long it waits')).toBe('Its request expires after 1 hour.');
+    expect(sectionIn(overview, 'Where')).toBe(
       "It leaves the request in the playbook's inbox, where a caller who may write to the playbook reads it.",
     );
-    expect(sectionOf(overview, 'What answer it expects')).toBe(
+    expect(sectionIn(overview, 'What answer it expects')).toBe(
       'None: it is a notification, which takes no answer and succeeds once its request is delivered.\n',
     );
     expect(overview).not.toContain('## Replies');
@@ -75,7 +72,7 @@ describe('what a request needs, in the overview', () => {
 
 describe('who a request asks, in the overview', () => {
   it('reads the party and the answerer through the reader of templates', () => {
-    expect(sectionOf(overviewOf(threadDocument()), 'Who it asks')).toBe(
+    expect(sectionIn(overviewOf(threadDocument()), 'Who it asks')).toBe(
       [
         'It asks a person, and each request goes to #approvals-**team**.',
         'Its answerer, whose reply counts, is **owner**.',
@@ -89,7 +86,7 @@ describe('who a request asks, in the overview', () => {
       "to: '{% if input.urgent %}on-call{% else %}{{ input.owner }}{% endif %}'",
     );
 
-    expect(sectionOf(overviewOf(source), 'Who it asks')).toBe(
+    expect(sectionIn(overviewOf(source), 'Who it asks')).toBe(
       'It asks a person, and each request goes to on-call when input.urgent, otherwise **owner**.',
     );
   });
@@ -100,7 +97,7 @@ describe('who a request asks, in the overview', () => {
       'to: "{% if input.urgent %}on-call\\n{% else %}{{ input.owner }}{% endif %}"',
     );
 
-    expect(sectionOf(overviewOf(source), 'Who it asks')).toBe(
+    expect(sectionIn(overviewOf(source), 'Who it asks')).toBe(
       [
         'It asks a person, and each request goes to the party this names:',
         '*When input.urgent:*',
@@ -116,7 +113,7 @@ describe('the replies of a request, in the overview', () => {
   it('say the reply rule of each part, the words that mean each value and who answers', () => {
     const source = threadDocument({ rule: [] }).replace(/output:\n[\s\S]*maxLength: 2000 \}/u, choices.join('\n'));
 
-    expect(sectionOf(overviewOf(source), 'Replies')).toBe(
+    expect(sectionIn(overviewOf(source), 'Replies')).toBe(
       [
         'It reads the replies to its message with the tool **thread_replies** of **chat**, and a reply from its answerer answers it when its reply rule reads it:',
         [
@@ -132,7 +129,7 @@ describe('the replies of a request, in the overview', () => {
   it('say that a reply the rule cannot read is refused, without telling the party where the function does not', () => {
     const source = threadDocument({ replies: threadReplies.slice(0, -5) });
 
-    expect(sectionOf(overviewOf(source), 'Replies')).toMatch(/\n\nA reply the rule cannot read is refused\.\n$/u);
+    expect(sectionIn(overviewOf(source), 'Replies')).toMatch(/\n\nA reply the rule cannot read is refused\.\n$/u);
   });
 
   it('are left out of a function that reads no replies', () => {

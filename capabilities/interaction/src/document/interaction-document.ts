@@ -1,13 +1,10 @@
+import type { ValueContract } from '@on.auto/definitions/document';
 import type { ParsedTemplate } from '@on.auto/definitions/template';
 import type { CompiledSchema } from '@on.auto/json-schema';
 
 import type { ReplyRule } from '../replies/reply-rule.ts';
 import type { WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
 import type { CallBlock } from '../tool-blocks/tool-block-schemas.ts';
-
-export interface ValueContract {
-  readonly schema?: CompiledSchema;
-}
 
 interface WrittenFunction {
   readonly description?: string;

@@ -1,4 +1,4 @@
-import type { FrontMatterSection, FrontMatterShape } from '@on.auto/definitions/document';
+import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
 import { Schema } from 'effect';
 
 import { WrittenRuleSchema } from '../replies/reply-rule.ts';
@@ -12,12 +12,10 @@ import {
   TellSchema,
 } from '../tool-blocks/tool-block-schemas.ts';
 
-const descriptionLength = 1000;
-
 const SectionSchema = Schema.Struct({ schema: Schema.optionalKey(Schema.JsonObject) });
 
 const FrontMatterSchema = Schema.Struct({
-  description: Schema.optionalKey(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(descriptionLength))),
+  description: Schema.optionalKey(DescriptionSchema),
   call: Schema.optionalKey(CallBlockSchema),
   to: Schema.optionalKey(Schema.String),
   from: Schema.optionalKey(Schema.String),
