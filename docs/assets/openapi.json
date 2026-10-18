@@ -1282,7 +1282,7 @@
                     "type": "string",
                     "description": "The name a function gives the server, in lowercase and hyphens"
                   },
-                  "kind": {
+                  "type": {
                     "type": "string",
                     "enum": [
                       "mcp",
@@ -1376,6 +1376,11 @@
                         ],
                         "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                       },
+                      "scheme": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "For a header, the scheme written before the value, such as Bearer"
+                      },
                       "issuer": {
                         "type": "string",
                         "description": "For client_credentials, the https URL of the authorization server"
@@ -1383,7 +1388,7 @@
                       "client_id": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "For client_credentials, the id of the client"
+                        "description": "For client_credentials, the id of the client, else given on the page"
                       },
                       "scope": {
                         "type": "string",
@@ -1399,7 +1404,7 @@
                 },
                 "required": [
                   "name",
-                  "kind",
+                  "type",
                   "entry",
                   "credential"
                 ]
@@ -1425,7 +1430,7 @@
                       "type": "string",
                       "description": "The name a function gives the connection in server/tool"
                     },
-                    "kind": {
+                    "type": {
                       "type": "string",
                       "enum": [
                         "mcp",
@@ -1519,6 +1524,11 @@
                           ],
                           "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                         },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
                         "issuer": {
                           "type": "string",
                           "description": "For client_credentials, the https URL of the authorization server"
@@ -1526,7 +1536,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client"
+                          "description": "For client_credentials, the id of the client, else given on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -1623,7 +1633,7 @@
                   "required": [
                     "id",
                     "name",
-                    "kind",
+                    "type",
                     "entry",
                     "credential",
                     "status",
@@ -1740,7 +1750,7 @@
                           "type": "string",
                           "description": "The name a function gives the connection in server/tool"
                         },
-                        "kind": {
+                        "type": {
                           "type": "string",
                           "enum": [
                             "mcp",
@@ -1834,6 +1844,11 @@
                               ],
                               "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                             },
+                            "scheme": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "For a header, the scheme written before the value, such as Bearer"
+                            },
                             "issuer": {
                               "type": "string",
                               "description": "For client_credentials, the https URL of the authorization server"
@@ -1841,7 +1856,7 @@
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client"
+                              "description": "For client_credentials, the id of the client, else given on the page"
                             },
                             "scope": {
                               "type": "string",
@@ -1920,7 +1935,7 @@
                       "required": [
                         "id",
                         "name",
-                        "kind",
+                        "type",
                         "entry",
                         "credential",
                         "status",
@@ -2023,7 +2038,7 @@
                       "type": "string",
                       "description": "The name a function gives the connection in server/tool"
                     },
-                    "kind": {
+                    "type": {
                       "type": "string",
                       "enum": [
                         "mcp",
@@ -2117,6 +2132,11 @@
                           ],
                           "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                         },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
                         "issuer": {
                           "type": "string",
                           "description": "For client_credentials, the https URL of the authorization server"
@@ -2124,7 +2144,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client"
+                          "description": "For client_credentials, the id of the client, else given on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -2203,7 +2223,7 @@
                   "required": [
                     "id",
                     "name",
-                    "kind",
+                    "type",
                     "entry",
                     "credential",
                     "status",
@@ -2302,7 +2322,7 @@
                       "type": "string",
                       "description": "The name a function gives the connection in server/tool"
                     },
-                    "kind": {
+                    "type": {
                       "type": "string",
                       "enum": [
                         "mcp",
@@ -2396,6 +2416,11 @@
                           ],
                           "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                         },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
                         "issuer": {
                           "type": "string",
                           "description": "For client_credentials, the https URL of the authorization server"
@@ -2403,7 +2428,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client"
+                          "description": "For client_credentials, the id of the client, else given on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -2482,7 +2507,7 @@
                   "required": [
                     "id",
                     "name",
-                    "kind",
+                    "type",
                     "entry",
                     "credential",
                     "status",
@@ -2549,7 +2574,7 @@
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, so Studio's page can show what the person is asked to approve. A link is open for ten minutes from when add_connection gave it, until the connection is approved. A token that is unknown, used up or expired is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for ten minutes from when add_connection gave it, until the connection is approved. A token that is unknown, used up or expired is answered as not found.",
         "tags": [
           "connections"
         ],
@@ -2597,7 +2622,7 @@
                       "type": "string",
                       "description": "The name a function gives the connection in server/tool"
                     },
-                    "kind": {
+                    "type": {
                       "type": "string",
                       "enum": [
                         "mcp",
@@ -2691,6 +2716,11 @@
                           ],
                           "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                         },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
                         "issuer": {
                           "type": "string",
                           "description": "For client_credentials, the https URL of the authorization server"
@@ -2698,7 +2728,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client"
+                          "description": "For client_credentials, the id of the client, else given on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -2772,12 +2802,25 @@
                         }
                       ],
                       "description": "Why it is broken, while it is"
+                    },
+                    "link": {
+                      "type": "object",
+                      "properties": {
+                        "expires_at": {
+                          "type": "string",
+                          "description": "When the link expires, in ISO 8601 UTC"
+                        }
+                      },
+                      "required": [
+                        "expires_at"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
                     "id",
                     "name",
-                    "kind",
+                    "type",
                     "entry",
                     "credential",
                     "status",
@@ -2786,10 +2829,11 @@
                     "connected_at",
                     "connected_by",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "link"
                   ],
                   "additionalProperties": false,
-                  "description": "A tool server the org added, shared by its playbooks"
+                  "description": "The connection an open link names, and when the link expires"
                 }
               }
             }
@@ -2917,7 +2961,7 @@
                       "type": "string",
                       "description": "The name a function gives the connection in server/tool"
                     },
-                    "kind": {
+                    "type": {
                       "type": "string",
                       "enum": [
                         "mcp",
@@ -3011,6 +3055,11 @@
                           ],
                           "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                         },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
                         "issuer": {
                           "type": "string",
                           "description": "For client_credentials, the https URL of the authorization server"
@@ -3018,7 +3067,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client"
+                          "description": "For client_credentials, the id of the client, else given on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -3097,7 +3146,7 @@
                   "required": [
                     "id",
                     "name",
-                    "kind",
+                    "type",
                     "entry",
                     "credential",
                     "status",
@@ -3219,6 +3268,11 @@
                     "minLength": 1,
                     "description": "The secret, for a credential of the kind secret"
                   },
+                  "client_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The id of the client of client credentials, where the connection's credential holds none"
+                  },
                   "client_secret": {
                     "type": "string",
                     "minLength": 1,
@@ -3259,7 +3313,7 @@
                       "type": "string",
                       "description": "The name a function gives the connection in server/tool"
                     },
-                    "kind": {
+                    "type": {
                       "type": "string",
                       "enum": [
                         "mcp",
@@ -3353,6 +3407,11 @@
                           ],
                           "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
                         },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
                         "issuer": {
                           "type": "string",
                           "description": "For client_credentials, the https URL of the authorization server"
@@ -3360,7 +3419,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client"
+                          "description": "For client_credentials, the id of the client, else given on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -3439,7 +3498,7 @@
                   "required": [
                     "id",
                     "name",
-                    "kind",
+                    "type",
                     "entry",
                     "credential",
                     "status",

@@ -1,4 +1,5 @@
 import {
+  behaviourKey,
   describedAccess,
   serversUnderTest,
   toolAccessBehaviour,
@@ -42,6 +43,37 @@ function givenOnThePage(credential: CredentialUnderTest): Placing {
   return { credential: { kind: 'secret', name, in: placement }, giving: { value }, variables };
 }
 
+function isByClientCredentials(credential: CredentialUnderTest): credential is Exclude<CredentialUnderTest, SentIn> {
+  return credential.in === 'auth';
+}
+
+function givenAfterItsScheme(credential: CredentialUnderTest): Placing {
+  const { name } = Option.getOrThrow(Option.liftPredicate(credential, isSentIn));
+  return {
+    credential: { kind: 'secret', name, in: 'header', scheme: 'Bearer' },
+    giving: { value: behaviourKey },
+    variables: new Map(),
+  };
+}
+
+function referencedAfterItsScheme(credential: CredentialUnderTest): Placing {
+  const { name } = Option.getOrThrow(Option.liftPredicate(credential, isSentIn));
+  return {
+    credential: { kind: 'reference', variable, name, in: 'header', scheme: 'Bearer' },
+    giving: undefined,
+    variables: new Map([[variable, Redacted.make(behaviourKey)]]),
+  };
+}
+
+function givenWithItsClientId(credential: CredentialUnderTest): Placing {
+  const { issuer, clientId, value } = Option.getOrThrow(Option.liftPredicate(credential, isByClientCredentials));
+  return {
+    credential: { kind: 'client_credentials', issuer },
+    giving: { client_id: clientId, client_secret: value },
+    variables: new Map(),
+  };
+}
+
 function byReference(credential: CredentialUnderTest): Placing {
   const { name, in: placement, value } = Option.getOrThrow(Option.liftPredicate(credential, isSentIn));
   return {
@@ -57,7 +89,7 @@ async function connectedThrough(
 ) {
   const h = harness({ policy });
   const placing = placingOf(credential);
-  const { id, token } = await added(h, { name: 'graph', kind: type, entry: bare, credential: placing.credential });
+  const { id, token } = await added(h, { name: 'graph', type, entry: bare, credential: placing.credential });
   const giving = placing.giving === undefined ? 'approve' : 'give_credential';
   await h.call(operationNamed(h.operations, giving), ada, { id, token, ...placing.giving });
   return makeConnectionSource({
@@ -88,4 +120,22 @@ for (const underTest of serversUnderTest) {
 
 for (const underTest of serversUnderTest.filter(({ kind }) => !kind.includes('client credentials'))) {
   toolAccessBehaviour(underTest, referenced);
+}
+
+const afterItsScheme = aConnection('a connection whose header names its scheme', givenAfterItsScheme);
+
+const referencedAfterIt = aConnection(
+  'a connection of a reference whose header names its scheme',
+  referencedAfterItsScheme,
+);
+
+for (const underTest of serversUnderTest.filter(({ kind }) => kind === 'an MCP server')) {
+  toolAccessBehaviour(underTest, afterItsScheme);
+  toolAccessBehaviour(underTest, referencedAfterIt);
+}
+
+const withItsClientId = aConnection('a connection given its client id on the page', givenWithItsClientId);
+
+for (const underTest of serversUnderTest.filter(({ kind }) => kind.includes('client credentials'))) {
+  toolAccessBehaviour(underTest, withItsClientId);
 }

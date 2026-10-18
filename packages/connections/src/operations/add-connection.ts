@@ -1,4 +1,4 @@
-import { Caller, OrgContext, defineCommand, quoted, randomUUIDv7 } from '@on.auto/operations';
+import { Caller, OrgContext, defineCommand, quoted } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { additionIssuesOf, conflictAsTakenByTheFile, invalidAddition } from '../entries/entry-checks.ts';
@@ -8,7 +8,7 @@ import { adderRefusalOf, policyRefusalOf } from '../policy/policy-rules.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed, linkWords } from './connection-words.ts';
-import { recordInRegistry } from './registry-access.ts';
+import { additionOf, recordInRegistry } from './registry-access.ts';
 
 const description = [
   "Adds a tool server to the org as a connection, which its playbooks may use, and answers it pending with a link to Studio's page.",
@@ -44,12 +44,11 @@ export function defineAddConnection({ policy, fileEntries, modelProviders, pages
         return yield* Effect.fail(conflictAsTakenByTheFile(input.name));
       }
       const { token, ...link } = yield* issuedLink;
-      const { name, kind, entry, credential } = input;
-      const connection = randomUUIDv7();
-      const kept = yield* recordInRegistry({ type: 'add', connection, name, kind, entry, credential, link }).pipe(
+      const addition = additionOf(input, link);
+      const kept = yield* recordInRegistry(addition).pipe(
         Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die }),
       );
-      const url = connectPageOf(pages, { org, connection, token });
+      const url = connectPageOf(pages, { org, connection: addition.connection, token });
       return { ...kept.connection, credential_ends_with: null, connect: { url, expires_at: link.expires_at } };
     }),
     plainLanguage: {

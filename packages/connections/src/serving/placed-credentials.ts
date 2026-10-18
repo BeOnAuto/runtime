@@ -1,7 +1,7 @@
 import { readEntry, type Environment, type ServerEntryFields } from '@on.auto/tool-servers';
 import { Option, Redacted, Schema } from 'effect';
 
-import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionKind } from '../registry/connection-entry.ts';
+import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
 
 export interface GivenValue {
@@ -32,9 +32,13 @@ const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 const asEntry = Schema.decodeUnknownSync(ConnectionEntrySchema);
 
+function literalText(text: string): string {
+  return text.replaceAll('$', () => '$$');
+}
+
 function literal(value: Schema.Json): Schema.Json {
   if (typeof value === 'string') {
-    return value.replaceAll('$', () => '$$');
+    return literalText(value);
   }
   if (Array.isArray(value)) {
     return value.map((item: Schema.Json) => literal(item));
@@ -56,12 +60,13 @@ function variableOf(credential: Credential): string {
   return credential.kind === 'reference' ? required(credential.variable) : givenVariable;
 }
 
+function writtenValueOf(credential: Credential): string {
+  const reference = referenceTo(variableOf(credential));
+  return credential.scheme === undefined ? reference : `${credential.scheme} ${reference}`;
+}
+
 function placedValue(entry: ConnectionEntry, credential: Credential): ServerEntryFields {
-  const fields = placedIn[required(credential.in)](
-    entry,
-    required(credential.name),
-    referenceTo(variableOf(credential)),
-  );
+  const fields = placedIn[required(credential.in)](entry, required(credential.name), writtenValueOf(credential));
   return { ...entry, ...fields };
 }
 
@@ -70,9 +75,10 @@ function placedClientCredentials(entry: ConnectionEntry, credential: Credential,
   const secret =
     given.algorithm === undefined
       ? { client_secret: reference }
-      : { private_key: reference, algorithm: given.algorithm };
-  const scope = credential.scope === undefined ? {} : { scope: credential.scope };
-  const auth = { issuer: required(credential.issuer), client_id: required(credential.client_id), ...scope, ...secret };
+      : { private_key: reference, algorithm: literalText(given.algorithm) };
+  const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
+  const issuer = literalText(required(credential.issuer));
+  const auth = { issuer, client_id: literalText(required(credential.client_id)), ...scope, ...secret };
   return { ...entry, auth };
 }
 
@@ -93,7 +99,7 @@ export function placedCredential(
 
 interface Named {
   readonly name: string;
-  readonly kind: ConnectionKind;
+  readonly type: ConnectionType;
 }
 
 interface Reading {
@@ -101,8 +107,8 @@ interface Reading {
   readonly modelProviders: readonly string[];
 }
 
-export function readPlaced({ name, kind }: Named, { written, environment }: Placed, { org, modelProviders }: Reading) {
-  return readEntry(name, { ...written, type: kind, org }, environment, {
+export function readPlaced({ name, type }: Named, { written, environment }: Placed, { org, modelProviders }: Reading) {
+  return readEntry(name, { ...written, type, org }, environment, {
     modelProviders,
     documentsDirectory: '.',
   });

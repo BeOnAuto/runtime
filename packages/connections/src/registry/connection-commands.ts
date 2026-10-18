@@ -1,4 +1,4 @@
-import type { ConnectionEntry, ConnectionKind } from './connection-entry.ts';
+import type { ConnectionEntry, ConnectionType } from './connection-entry.ts';
 import type { Credential } from './credential.ts';
 import type { OpenLink } from './registry.ts';
 
@@ -6,7 +6,7 @@ export interface ConnectionAddition {
   readonly type: 'add';
   readonly connection: string;
   readonly name: string;
-  readonly kind: ConnectionKind;
+  readonly server_type: ConnectionType;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
   readonly link: OpenLink;
@@ -26,6 +26,7 @@ export interface CredentialGiving extends LinkUse {
   readonly type: 'give';
   readonly secret_id: string;
   readonly algorithm?: string;
+  readonly client_id?: string;
 }
 
 export interface ConnectionRemoval {

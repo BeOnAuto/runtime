@@ -9,7 +9,7 @@ const connections = '/v1/orgs/local/connections';
 
 const crm = {
   name: 'crm',
-  kind: 'mcp',
+  type: 'mcp',
   entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
   credential: { kind: 'secret', name: 'Authorization', in: 'header' },
 };
@@ -44,7 +44,7 @@ async function added(served: ReasoningServer, body: unknown = crm) {
   const { token } = Schema.decodeUnknownSync(Schema.Struct({ token: Schema.String }))(
     Object.fromEntries(page.searchParams),
   );
-  return { answer, id, page, token };
+  return { answer, id, page, token, expiresAt: connect.expires_at };
 }
 
 describe('adding a connection over HTTP in local mode', () => {
@@ -62,9 +62,9 @@ describe('adding a connection over HTTP in local mode', () => {
     expect(`${page.origin}${page.pathname}`).toBe('https://studio.on.auto/connect');
   });
 
-  it('lists the connection and reads it, and reads it through its link', async () => {
+  it('lists the connection and reads it, and reads it through its link with when the link expires', async () => {
     const served = await serving();
-    const { id, token } = await added(served);
+    const { id, token, expiresAt } = await added(served);
 
     const [listed, read, linked] = [
       await served.call('GET', connections),
@@ -72,8 +72,11 @@ describe('adding a connection over HTTP in local mode', () => {
       await served.call('GET', `${connections}/${id}/link/${token}`),
     ];
 
-    expect(listed).toMatchObject({ status: 200, body: { connections: [{ id, name: 'crm' }] } });
-    expect([read.body, linked.body]).toMatchObject([{ id }, { id, status: 'pending' }]);
+    expect(listed).toMatchObject({ status: 200, body: { connections: [{ id, name: 'crm', type: 'mcp' }] } });
+    expect([read.body, linked.body]).toMatchObject([
+      { id },
+      { id, status: 'pending', link: { expires_at: expiresAt } },
+    ]);
     expect((await served.call('GET', `${connections}/${id}/link/unknown`)).status).toBe(404);
   });
 });

@@ -31,7 +31,7 @@ export function takesNoCredential(name: string): Conflict {
 }
 
 function decideAddition(
-  { connection, name, kind, entry, credential, link }: ConnectionAddition,
+  { connection, name, server_type: serverType, entry, credential, link }: ConnectionAddition,
   registry: Registry,
 ): Decision {
   const kept = [...registry.values()].filter((each) => each.connection.status !== 'removed');
@@ -46,7 +46,7 @@ function decideAddition(
         }),
       )
     : Result.succeed([
-        { type: 'connection_added', data: { connection, name, kind, entry, credential } },
+        { type: 'connection_added', data: { connection, name, server_type: serverType, entry, credential } },
         { type: 'connection_link_issued', data: { connection, ...link } },
       ]);
 }
@@ -67,15 +67,14 @@ function decideApproval(command: ConnectionApproval & CommandMetadata, registry:
 }
 
 function decideGiving(command: CredentialGiving & CommandMetadata, registry: Registry): Decision {
-  const { connection, secret_id: secretId, algorithm } = command;
+  const { connection, secret_id: secretId, algorithm, client_id: clientId } = command;
+  const signing = algorithm === undefined ? {} : { algorithm };
+  const client = clientId === undefined ? {} : { client_id: clientId };
   return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
     takesAValue(kept)
       ? Result.succeed([
           { type: 'connection_approved', data: { connection } },
-          {
-            type: 'connection_connected',
-            data: { connection, secret_id: secretId, ...(algorithm === undefined ? {} : { algorithm }) },
-          },
+          { type: 'connection_connected', data: { connection, secret_id: secretId, ...signing, ...client } },
         ])
       : Result.fail(takesNoCredential(kept.connection.name)),
   );

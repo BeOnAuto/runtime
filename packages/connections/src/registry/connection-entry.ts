@@ -1,16 +1,16 @@
 import { ServerEntrySchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-const { url, document, base_url, headers, query_params, allowed, playbooks, record_content, request_id } =
+const { type, url, document, base_url, headers, query_params, allowed, playbooks, record_content, request_id } =
   ServerEntrySchema.fields;
 
 const neverASecret = 'never a secret or a reference';
 
-export const ConnectionKindSchema = Schema.Literals(['mcp', 'openapi']).annotate({
+export const ConnectionTypeSchema = type.schema.pick(['mcp', 'openapi']).annotate({
   description: 'mcp for a remote MCP server, given url; openapi for an HTTP API, given document',
 });
 
-export type ConnectionKind = typeof ConnectionKindSchema.Type;
+export type ConnectionType = typeof ConnectionTypeSchema.Type;
 
 export const ConnectionEntrySchema = Schema.Struct({
   url: url.annotate({ description: 'The https URL of the MCP server' }),

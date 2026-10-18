@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import { ConnectionEntrySchema, ConnectionKindSchema } from './connection-entry.ts';
+import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { CredentialSchema } from './credential.ts';
 
 const ConnectionStatusSchema = Schema.Literals(['pending', 'connected', 'broken', 'removed']);
@@ -8,7 +8,7 @@ const ConnectionStatusSchema = Schema.Literals(['pending', 'connected', 'broken'
 export const ConnectionSchema = Schema.Struct({
   id: Schema.String.annotate({ description: 'The id of the connection, a UUIDv7' }),
   name: Schema.String.annotate({ description: 'The name a function gives the connection in server/tool' }),
-  kind: ConnectionKindSchema,
+  type: ConnectionTypeSchema,
   entry: ConnectionEntrySchema,
   credential: CredentialSchema,
   status: ConnectionStatusSchema.annotate({
