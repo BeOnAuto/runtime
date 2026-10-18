@@ -1,7 +1,7 @@
 import type { Issue } from '@on.auto/operations';
 import { headersTheRuntimeSets } from '@on.auto/tool-servers';
 
-import type { ConnectionEntry, ConnectionKind } from '../registry/connection-entry.ts';
+import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
 
 function issue(pointer: string, detail: string): readonly Issue[] {
@@ -16,8 +16,8 @@ function sentAlready(names: Readonly<Record<string, string>> | undefined, name: 
   return among(Object.keys(names ?? {}), name);
 }
 
-function headerIssuesOf(name: string | undefined, kind: ConnectionKind, entry: ConnectionEntry): readonly Issue[] {
-  const reserved = headersTheRuntimeSets(kind);
+function headerIssuesOf(name: string | undefined, type: ConnectionType, entry: ConnectionEntry): readonly Issue[] {
+  const reserved = headersTheRuntimeSets(type);
   if (among(reserved.names, name)) {
     return issue('/credential/name', `A header ${reserved.setBy} sets itself, so the credential cannot go in it`);
   }
@@ -28,13 +28,13 @@ function headerIssuesOf(name: string | undefined, kind: ConnectionKind, entry: C
 
 export function credentialIssuesOf(
   credential: Credential,
-  kind: ConnectionKind,
+  type: ConnectionType,
   entry: ConnectionEntry,
 ): readonly Issue[] {
   if (credential.in === 'header') {
-    return headerIssuesOf(credential.name, kind, entry);
+    return headerIssuesOf(credential.name, type, entry);
   }
-  if (credential.in !== undefined && kind === 'mcp') {
+  if (credential.in !== undefined && type === 'mcp') {
     return issue(
       '/credential/in',
       'Expected header for an mcp connection: a query parameter or a security scheme is an HTTP API’s',

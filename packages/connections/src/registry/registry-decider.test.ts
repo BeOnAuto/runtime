@@ -16,7 +16,7 @@ const crmAdded: ConnectionEvent = {
   data: {
     connection: 'crm-id',
     name: 'crm',
-    kind: 'mcp',
+    server_type: 'mcp',
     entry: { url: 'https://crm.example.com/mcp' },
     credential: { kind: 'none' },
   },
@@ -94,7 +94,7 @@ function addedAs(index: number): ConnectionEvent {
     data: {
       connection: `id-${index}`,
       name: `crm-${index}`,
-      kind: 'mcp',
+      server_type: 'mcp',
       entry: { url: 'https://crm.example.com/mcp' },
       credential: { kind: 'none' },
     },
@@ -108,7 +108,7 @@ describe('adding a connection to an org that holds the most it may', () => {
       type: 'add',
       connection: 'wiki-id',
       name: 'wiki',
-      kind: 'mcp',
+      server_type: 'mcp',
       entry: { url: 'https://wiki.example.com/mcp' },
       credential: { kind: 'none' },
       link: { token_sha256: 'c3d4', expires_at: '2026-10-15T14:10:00.000Z' },

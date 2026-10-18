@@ -2,7 +2,7 @@ import { allPermissions, defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
-import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
+import { ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
@@ -11,11 +11,19 @@ const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
 const answeringTheRecord = { kind: 'json', outputSchema: ConnectionSchema } as const;
 
+const LinkedSchema = Schema.Struct({
+  ...ConnectionSchema.fields,
+  link: Schema.Struct({ expires_at: ExpiresAtField }),
+}).annotate({
+  identifier: 'LinkedConnection',
+  description: 'The connection an open link names, and when the link expires',
+});
+
 export const readLink = defineHttpOperation('org', 'query', {
   name: 'read_link',
   title: 'Read link',
   description: [
-    "Reads the connection an open link names, so Studio's page can show what the person is asked to approve.",
+    "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
     'A link is open for ten minutes from when add_connection gave it, until the connection is approved.',
     'A token that is unknown, used up or expired is answered as not found.',
   ].join(' '),
@@ -23,7 +31,7 @@ export const readLink = defineHttpOperation('org', 'query', {
   body: { kind: 'none' },
   permittedBy: allPermissions,
   inputSchema: LinkSchema,
-  answer: answeringTheRecord,
+  answer: { kind: 'json', outputSchema: LinkedSchema },
   reasons: ['not_found'],
   handle: Effect.fnUntraced(function* ({ id, token }) {
     const registry = yield* loadRegistry;
@@ -31,7 +39,7 @@ export const readLink = defineHttpOperation('org', 'query', {
     const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, yield* actedNow)).pipe(
       Effect.catchTag('forbidden', Effect.die),
     );
-    return connectionShown(kept.connection, null);
+    return { ...connectionShown(kept.connection, null), link: { expires_at: kept.link.expires_at } };
   }),
 });
 

@@ -2,7 +2,11 @@ import { Forbidden, NotFound } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
 import type { LinkUse } from './connection-commands.ts';
-import type { KeptConnection, Registry } from './registry.ts';
+import type { KeptConnection, OpenLink, Registry } from './registry.ts';
+
+export interface KeptWithLink extends KeptConnection {
+  readonly link: OpenLink;
+}
 
 function connectionNotFound(id: string): NotFound {
   return new NotFound({ detail: `There is no connection ${id} in this org` });
@@ -19,7 +23,8 @@ export function findConnection(registry: Registry, id: string): Effect.Effect<Ke
   return Effect.fromResult(keptConnectionOf(registry, id));
 }
 
-function isOpen({ connection, link }: KeptConnection, tokenSha256: string, at: string): boolean {
+function isOpen(kept: KeptConnection, tokenSha256: string, at: string): kept is KeptWithLink {
+  const { connection, link } = kept;
   return (
     connection.status === 'pending' && link !== undefined && link.token_sha256 === tokenSha256 && link.expires_at > at
   );
@@ -29,10 +34,10 @@ export function linkedConnectionOf(
   registry: Registry,
   { connection, token_sha256: tokenSha256, bindsPerson }: LinkUse,
   { by, at }: { readonly by: string; readonly at: string },
-): Result.Result<KeptConnection, NotFound | Forbidden> {
+): Result.Result<KeptWithLink, NotFound | Forbidden> {
   return Result.flatMap(
     keptConnectionOf(registry, connection),
-    (kept): Result.Result<KeptConnection, NotFound | Forbidden> => {
+    (kept): Result.Result<KeptWithLink, NotFound | Forbidden> => {
       if (!isOpen(kept, tokenSha256, at)) {
         return Result.fail(noOpenLink);
       }

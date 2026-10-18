@@ -5,7 +5,7 @@ import { ada, operationNamed, type Harness } from './harness.ts';
 
 export const crm = {
   name: 'crm',
-  kind: 'mcp',
+  type: 'mcp',
   entry: {
     url: 'https://crm.example.com/mcp',
     headers: { 'X-Tenant': 'acme-eu' },
@@ -17,14 +17,14 @@ export const crm = {
 
 export const billing = {
   name: 'billing',
-  kind: 'openapi',
+  type: 'openapi',
   entry: { document: 'https://billing.example.com/openapi.json', base_url: 'https://api.billing.example.com/v2' },
   credential: { kind: 'client_credentials', issuer: 'https://auth.billing.example.com', client_id: 'acme' },
 } as const;
 
 export const notes = {
   name: 'notes',
-  kind: 'mcp',
+  type: 'mcp',
   entry: { url: 'https://notes.example.com/mcp' },
   credential: { kind: 'none' },
 } as const;

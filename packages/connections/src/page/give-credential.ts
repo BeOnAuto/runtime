@@ -1,80 +1,18 @@
-import { allPermissions, defineHttpOperation, InvalidInput, type Conflict } from '@on.auto/operations';
-import { Effect, Redacted, Result, Schema } from 'effect';
+import { allPermissions, defineHttpOperation, OrgContext } from '@on.auto/operations';
+import { Effect, Redacted } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
-import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
-import type { Credential } from '../registry/credential.ts';
-import { takesNoCredential } from '../registry/registry-decisions.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
-
-const SecretValue = Schema.String.check(Schema.isMinLength(1));
-
-const GivingSchema = Schema.Struct({
-  id: ConnectionIdField,
-  token: TokenField,
-  value: Schema.optionalKey(SecretValue.annotate({ description: 'The secret, for a credential of the kind secret' })),
-  client_secret: Schema.optionalKey(SecretValue.annotate({ description: 'The client secret of client credentials' })),
-  private_key: Schema.optionalKey(
-    SecretValue.annotate({
-      description: 'The private key in PEM that signs the client assertion of client credentials',
-    }),
-  ),
-  algorithm: Schema.optionalKey(
-    Schema.String.annotate({ description: 'The signing algorithm of private_key, such as RS256 or ES256' }),
-  ),
-});
-
-type Giving = typeof GivingSchema.Type;
-
-interface Given {
-  readonly pointer: string;
-  readonly value: string;
-  readonly endsWith?: string;
-  readonly algorithm?: string;
-}
-
-const charactersShown = 4;
-
-const fewestCharactersToShowAny = 12;
-
-function shownEndingOf(value: string): { readonly endsWith?: string } {
-  return value.length < fewestCharactersToShowAny ? {} : { endsWith: value.slice(-charactersShown) };
-}
-
-function refused(pointer: string, detail: string): InvalidInput {
-  return new InvalidInput({ detail: 'The credential cannot be taken as it is given', issues: [{ pointer, detail }] });
-}
-
-function secretOf({ value, client_secret, private_key, algorithm }: Giving): Result.Result<Given, InvalidInput> {
-  return value !== undefined && [client_secret, private_key, algorithm].every((field) => field === undefined)
-    ? Result.succeed({ pointer: '/value', value, ...shownEndingOf(value) })
-    : Result.fail(refused('', 'Expected value alone, the secret of a credential of the kind secret'));
-}
-
-function clientCredentialsOf(giving: Giving): Result.Result<Given, InvalidInput> {
-  const { value, client_secret: clientSecret, private_key: privateKey, algorithm } = giving;
-  if (value === undefined && clientSecret !== undefined && privateKey === undefined && algorithm === undefined) {
-    return Result.succeed({ pointer: '/client_secret', value: clientSecret, ...shownEndingOf(clientSecret) });
-  }
-  return value === undefined && clientSecret === undefined && privateKey !== undefined && algorithm !== undefined
-    ? Result.succeed({ pointer: '/private_key', value: privateKey, algorithm })
-    : Result.fail(refused('', 'Expected client_secret, or private_key with its algorithm, one of the two'));
-}
-
-function givenOf(name: string, credential: Credential, giving: Giving): Result.Result<Given, InvalidInput | Conflict> {
-  if (credential.kind === 'secret') {
-    return secretOf(giving);
-  }
-  return credential.kind === 'client_credentials' ? clientCredentialsOf(giving) : Result.fail(takesNoCredential(name));
-}
+import { GivingSchema, givenOf, refused } from './given-fields.ts';
 
 export function defineGiveCredential({
   secrets,
+  modelProviders,
   bindsPerson,
-}: Pick<ConnectionServices, 'secrets'> & { readonly bindsPerson: boolean }) {
+}: Pick<ConnectionServices, 'secrets' | 'modelProviders'> & { readonly bindsPerson: boolean }) {
   return defineHttpOperation('org', 'command', {
     name: 'give_credential',
     title: 'Give credential',
@@ -92,14 +30,20 @@ export function defineGiveCredential({
     handle: Effect.fnUntraced(function* (giving) {
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry, use, yield* actedNow));
-      const given = yield* Effect.fromResult(givenOf(kept.connection.name, kept.connection.credential, giving));
+      const { org } = yield* OrgContext;
+      const given = yield* Effect.fromResult(givenOf(kept.connection, giving, { org, modelProviders }));
       const secretId = yield* secrets
         .keep(Redacted.make(given.value), given.endsWith)
-        .pipe(Effect.mapError(({ detail }) => refused(given.pointer, detail)));
+        .pipe(Effect.mapError(({ detail }) => refused([{ pointer: given.pointer, detail }])));
       const algorithm = given.algorithm === undefined ? {} : { algorithm: given.algorithm };
-      const connected = yield* recordInRegistry({ type: 'give', ...use, secret_id: secretId, ...algorithm }).pipe(
-        Effect.tapError(() => secrets.forget(secretId)),
-      );
+      const client = given.clientId === undefined ? {} : { client_id: given.clientId };
+      const connected = yield* recordInRegistry({
+        type: 'give',
+        ...use,
+        secret_id: secretId,
+        ...algorithm,
+        ...client,
+      }).pipe(Effect.tapError(() => secrets.forget(secretId)));
       return connectionShown(connected.connection, given.endsWith ?? null);
     }),
   });

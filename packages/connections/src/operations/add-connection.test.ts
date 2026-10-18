@@ -12,7 +12,7 @@ describe('the answer to adding a connection', () => {
       status: 'succeeded',
       output: {
         name: 'crm',
-        kind: 'mcp',
+        type: 'mcp',
         entry: {
           url: 'https://crm.example.com/mcp',
           headers: { 'X-Tenant': 'acme-eu' },
@@ -69,7 +69,7 @@ describe('the facts of adding a connection', () => {
       await adding(harness(), { ...billing, entry: { ...billing.entry, playbooks: ['billing-runs'] } }),
     ).toMatchObject({
       status: 'succeeded',
-      output: { kind: 'openapi', entry: { playbooks: ['billing-runs'] }, credential: { kind: 'client_credentials' } },
+      output: { type: 'openapi', entry: { playbooks: ['billing-runs'] }, credential: { kind: 'client_credentials' } },
     });
   });
 });

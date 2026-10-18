@@ -6,6 +6,7 @@ import type {
   RecordedConnectionEvent,
 } from './connection-events.ts';
 import type { RecordedConnection } from './connection.ts';
+import type { Credential } from './credential.ts';
 
 export interface OpenLink {
   readonly token_sha256: string;
@@ -24,12 +25,12 @@ export type Registry = ReadonlyMap<string, KeptConnection>;
 export const initialRegistry: Registry = new Map();
 
 function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
-  const { connection: id, name, kind, entry, credential } = data;
+  const { connection: id, name, server_type: type, entry, credential } = data;
   return {
     connection: {
       id,
       name,
-      kind,
+      type,
       entry,
       credential,
       status: 'pending',
@@ -49,10 +50,16 @@ function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
   return { ...kept, link: { token_sha256: data.token_sha256, expires_at: data.expires_at } };
 }
 
-function connected(kept: KeptConnection, { data, context }: ConnectionConnected): KeptConnection {
+function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnected): Credential {
+  return data.client_id === undefined ? connection.credential : { ...connection.credential, client_id: data.client_id };
+}
+
+function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnection {
+  const { data, context } = event;
   return {
     connection: {
       ...kept.connection,
+      credential: credentialOf(kept, event),
       status: 'connected',
       connected_at: context.at,
       connected_by: context.by,

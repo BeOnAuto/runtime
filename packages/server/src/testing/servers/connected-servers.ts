@@ -16,7 +16,7 @@ export interface AddedConnection {
 export function aSecretHeader(name: string, url: string) {
   return {
     name,
-    kind: 'mcp',
+    type: 'mcp',
     entry: { url },
     credential: { kind: 'secret', name: 'Authorization', in: 'header' },
   };

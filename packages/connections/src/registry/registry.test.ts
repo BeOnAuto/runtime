@@ -14,7 +14,7 @@ const later: ActedContext = { by: 'person:grace', at: '2026-10-15T14:05:00.000Z'
 const crm = {
   connection: '0199-crm',
   name: 'crm',
-  kind: 'mcp',
+  server_type: 'mcp',
   entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
   credential: { kind: 'secret', name: 'Authorization', in: 'header' },
 } as const;
@@ -51,7 +51,7 @@ describe('an added connection, as the stream folds it', () => {
       connection: {
         id: '0199-crm',
         name: 'crm',
-        kind: 'mcp',
+        type: 'mcp',
         entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
         credential: { kind: 'secret', name: 'Authorization', in: 'header' },
         status: 'pending',
@@ -111,5 +111,36 @@ describe('the registry of connections', () => {
 
     expect(newestFirst(registry).map((kept) => kept.connection.name)).toEqual(['wiki', 'crm']);
     expect(registry.has('nowhere')).toBe(false);
+  });
+});
+
+const issuer = 'https://auth.billing.example.com';
+
+function credentialAfter(...events: readonly ConnectionEvent[]) {
+  const registry = events.reduce((state, event) => evolvedWith(state, event, later), registryDecider.initialState);
+  return registry.get('0199-billing')?.connection.credential;
+}
+
+describe('a connection of client credentials whose client id is given on the page, as the stream folds it', () => {
+  it('holds no client id while it is pending, and the one its connection names once it is connected', () => {
+    const billing: ConnectionEvent = {
+      type: 'connection_added',
+      data: {
+        connection: '0199-billing',
+        name: 'billing',
+        server_type: 'openapi',
+        entry: { document: 'https://billing.example.com/openapi.json' },
+        credential: { kind: 'client_credentials', issuer },
+      },
+    };
+    const connectedWithItsClient: ConnectionEvent = {
+      type: 'connection_connected',
+      data: { connection: '0199-billing', secret_id: 'secret-2', client_id: 'acme' },
+    };
+
+    expect([credentialAfter(billing), credentialAfter(billing, connectedWithItsClient)]).toEqual([
+      { kind: 'client_credentials', issuer },
+      { kind: 'client_credentials', issuer, client_id: 'acme' },
+    ]);
   });
 });

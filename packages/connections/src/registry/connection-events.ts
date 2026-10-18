@@ -1,7 +1,7 @@
 import { ActedContextSchema, factOf, type Decided } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { ConnectionEntrySchema, ConnectionKindSchema } from './connection-entry.ts';
+import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { CredentialSchema } from './credential.ts';
 
 const ofTheConnection = { connection: Schema.String };
@@ -12,7 +12,7 @@ export const ConnectionEventSchema = Schema.Union([
     Schema.Struct({
       ...ofTheConnection,
       name: Schema.String,
-      kind: ConnectionKindSchema,
+      server_type: ConnectionTypeSchema,
       entry: ConnectionEntrySchema,
       credential: CredentialSchema,
     }),
@@ -30,6 +30,7 @@ export const ConnectionEventSchema = Schema.Union([
       ...ofTheConnection,
       secret_id: Schema.optionalKey(Schema.String),
       algorithm: Schema.optionalKey(Schema.String),
+      client_id: Schema.optionalKey(Schema.String),
     }),
     ActedContextSchema,
   ),

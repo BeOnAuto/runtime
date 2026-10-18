@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { added, crm, notes } from '../testing/additions.ts';
+import { added, billing, crm, notes } from '../testing/additions.ts';
 import { acmeViewer, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const elevenMinutesLater = '2026-10-15T14:11:00.000Z';
@@ -21,11 +21,25 @@ const noOpenLink = {
 };
 
 describe('reading a link', () => {
-  it('answers the connection it names to any caller of the org who holds its token', async () => {
+  it('answers the connection it names, and when the link expires, to any caller of the org who holds its token', async () => {
     const h = harness();
-    const { id, token } = await added(h, crm);
+    const { id, token, expiresAt } = await added(h, crm);
 
-    expect(await reading(h, id, token)).toMatchObject({ status: 'succeeded', output: { id, status: 'pending' } });
+    expect(await reading(h, id, token, '2026-10-15T14:03:00.000Z')).toMatchObject({
+      status: 'succeeded',
+      output: { id, status: 'pending', link: { expires_at: expiresAt } },
+    });
+  });
+
+  it('answers the credential of client credentials without a client id where the person gives it on the page', async () => {
+    const h = harness();
+    const credential = { kind: 'client_credentials', issuer: 'https://auth.billing.example.com' };
+    const { id, token } = await added(h, { ...billing, credential });
+
+    const read = await reading(h, id, token);
+
+    expect(read).toMatchObject({ output: { credential } });
+    expect(read).not.toHaveProperty('output.credential.client_id');
   });
 
   it('answers not found for a token that is unknown, of another connection or expired', async () => {
@@ -57,6 +71,7 @@ describe('approving a connection', () => {
       output: { id, status: 'connected', connected_at: '2026-10-15T14:00:00.000Z' },
     });
     expect(await approving(h, reference.id, reference.token)).toMatchObject({ output: { status: 'connected' } });
+    expect(approved).not.toHaveProperty('output.link');
     expect(await approving(h, id, token)).toEqual(noOpenLink);
     expect((await h.facts()).slice(4, 6).map(({ type, data }) => [type, data])).toEqual([
       ['connection_approved', { connection: id }],

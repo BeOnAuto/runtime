@@ -1,5 +1,8 @@
+import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { connectionPolicyOf } from '../policy/connection-policy.ts';
+import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added, billing, crm, issuesIn, notes } from '../testing/additions.ts';
 import { ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
@@ -15,6 +18,7 @@ describe('giving the credential of a connection', () => {
     const given = await giving(h, { id, token, value: 'Bearer crm-0f3c' });
 
     expect(given).toMatchObject({ status: 'succeeded', output: { id, status: 'connected' } });
+    expect(given).not.toHaveProperty('output.link');
     expect([...h.secrets.values()]).toEqual([['secret-1', 'Bearer crm-0f3c']]);
     const facts = await h.facts();
     expect(facts.slice(2).map(({ type, data }) => [type, data])).toEqual([
@@ -119,5 +123,175 @@ describe('a credential given in the wrong fields', () => {
 
     expect(await giving(h, { id, token, value: 'Bearer crm-0f3c' })).toMatchObject({ reason: 'not_found' });
     expect(h.secrets.values().size).toBe(0);
+  });
+});
+
+const crmOfItsScheme = { ...crm, credential: { ...crm.credential, scheme: 'Bearer' } };
+
+describe('the secret of a header that names its scheme', () => {
+  it('is the token alone, kept alone, which the runtime writes after the scheme', async () => {
+    const h = harness();
+    const { id, token } = await added(h, crmOfItsScheme);
+
+    expect(await giving(h, { id, token, value: 'crm-0f3c' })).toMatchObject({
+      status: 'succeeded',
+      output: { status: 'connected', credential: crmOfItsScheme.credential },
+    });
+    expect([...h.secrets.values()]).toEqual([['secret-1', 'crm-0f3c']]);
+  });
+
+  it('is refused at its place when it starts with the scheme and a space, in any case, and nothing is kept', async () => {
+    const h = harness();
+    const { id, token } = await added(h, crmOfItsScheme);
+
+    expect(issuesIn(await giving(h, { id, token, value: 'bearer crm-0f3c' }))).toEqual([
+      {
+        pointer: '/value',
+        detail: 'Paste the token alone, without Bearer before it: the runtime writes Bearer itself',
+      },
+    ]);
+    expect(h.secrets.values().size).toBe(0);
+  });
+});
+
+const billingOfNoClient = { ...billing, credential: { kind: 'client_credentials', issuer: billing.credential.issuer } };
+
+const clientIdLacking = {
+  pointer: '/client_id',
+  detail:
+    "Expected client_id: the connection's credential holds no client id, so it is given here with the secret or the key",
+};
+
+describe('client credentials whose client id the connection does not hold', () => {
+  it('take it beside the client secret, recorded with the connection and held in its credential from then on', async () => {
+    const h = harness();
+    const { id, token } = await added(h, billingOfNoClient);
+
+    const given = await giving(h, { id, token, client_id: 'acme', client_secret: 'billing-client-secret' });
+
+    expect(given).toMatchObject({ status: 'succeeded', output: { credential: billing.credential } });
+    expect((await h.facts()).at(-1)?.data).toEqual({ connection: id, secret_id: 'secret-1', client_id: 'acme' });
+    expect(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id })).toMatchObject({
+      output: { status: 'connected', credential: billing.credential },
+    });
+  });
+
+  it('take it beside a private key and its algorithm', async () => {
+    const h = harness();
+    const { id, token } = await added(h, billingOfNoClient);
+
+    await giving(h, { id, token, client_id: 'acme', private_key: '-----BEGIN PRIVATE KEY-----', algorithm: 'ES256' });
+
+    expect((await h.facts()).at(-1)?.data).toEqual({
+      connection: id,
+      secret_id: 'secret-1',
+      algorithm: 'ES256',
+      client_id: 'acme',
+    });
+  });
+
+  it('are refused without it, beside whatever else is missing, and nothing is kept', async () => {
+    const h = harness();
+    const { id, token } = await added(h, billingOfNoClient);
+
+    const refusals = [
+      issuesIn(await giving(h, { id, token, client_secret: 'billing-client-secret' })),
+      issuesIn(await giving(h, { id, token })),
+    ];
+
+    expect(refusals).toEqual([
+      [clientIdLacking],
+      [
+        { pointer: '', detail: 'Expected client_secret, or private_key with its algorithm, one of the two' },
+        clientIdLacking,
+      ],
+    ]);
+    expect(h.secrets.values().size).toBe(0);
+  });
+});
+
+describe('a client id given where the connection holds one or takes none', () => {
+  it('is refused beside a secret, and beside client credentials that hold theirs, and nothing is kept', async () => {
+    const h = harness();
+    const secret = await added(h, crm);
+    const client = await added(h, billing);
+
+    const refusals = [
+      issuesIn(await giving(h, { id: secret.id, token: secret.token, value: 'crm-0f3c', client_id: 'acme' })),
+      issuesIn(await giving(h, { id: client.id, token: client.token, client_secret: 'x', client_id: 'acme' })),
+    ];
+
+    expect(refusals).toEqual([
+      [{ pointer: '', detail: 'Expected value alone, the secret of a credential of the kind secret' }],
+      [
+        {
+          pointer: '/client_id',
+          detail: "Expected no client_id: the connection's credential holds its client id already",
+        },
+      ],
+    ]);
+    expect(h.secrets.values().size).toBe(0);
+  });
+});
+
+describe('a client id given on the page that looks like a credential', () => {
+  it('is refused at its place, saying where the secret goes, nothing is kept, and the link stays open', async () => {
+    const h = harness();
+    const { id, token } = await added(h, billingOfNoClient);
+    const withTheSecret = { id, token, client_secret: 'billing-client-secret' };
+
+    expect(issuesIn(await giving(h, { ...withTheSecret, client_id: 'sk-live-0123456789abcdef' }))).toEqual([
+      {
+        pointer: '/client_id',
+        detail:
+          "Looks like a credential, which a client id never is: the connection's record keeps the client id in the open, so the secret or the key goes in its own field, where it is sealed",
+      },
+    ]);
+    expect(h.secrets.values().size).toBe(0);
+    expect(await giving(h, { ...withTheSecret, client_id: 'acme' })).toMatchObject({
+      status: 'succeeded',
+      output: { status: 'connected', credential: billing.credential },
+    });
+  });
+});
+
+async function authSentBy(h: Harness, id: string) {
+  const source = makeConnectionSource({
+    registry: h.ledger.service,
+    secrets: h.secrets,
+    policy: connectionPolicyOf({}),
+    variables: new Map(),
+    modelProviders: ['openai'],
+  });
+  const listed = await Effect.runPromise(source.connectionsOf('acme'));
+  const { state } = Option.getOrThrow(Option.fromNullishOr(listed.find((each) => each.id === id)));
+  return state.status === 'connected' ? (await Effect.runPromise(state.server)).settings.auth : null;
+}
+
+describe('the client credentials a connection sends', () => {
+  it('are its issuer, its scope and the client id given on the page as they are written, a ${…} in them too', async () => {
+    const h = harness();
+    const issuer = 'https://auth.billing.example.com/${NOPE:-acme}';
+    const credential = { kind: 'client_credentials', issuer, scope: '${CONNECTION_CREDENTIAL}' };
+    const { id, token } = await added(h, { ...billing, credential });
+
+    await giving(h, { id, token, client_id: '${BILLING_CLIENT_ID}', client_secret: 'billing-client-secret' });
+
+    expect(await authSentBy(h, id)).toMatchObject({
+      issuer,
+      client_id: '${BILLING_CLIENT_ID}',
+      scope: '${CONNECTION_CREDENTIAL}',
+    });
+  });
+
+  it('are the private key and the algorithm given beside it, the algorithm as it is written', async () => {
+    const h = harness();
+    const { id, token } = await added(h, billing);
+
+    await giving(h, { id, token, private_key: '-----BEGIN PRIVATE KEY-----', algorithm: '${NOPE:-ES256}' });
+
+    expect(await authSentBy(h, id)).toMatchObject({
+      credential: { kind: 'private_key', algorithm: '${NOPE:-ES256}' },
+    });
   });
 });

@@ -22,7 +22,7 @@ afterAll(async () => {
   await server.stop();
 });
 
-const notes = { kind: 'mcp', entry: { url: 'https://notes.example.com/mcp' }, credential: { kind: 'none' } };
+const notes = { type: 'mcp', entry: { url: 'https://notes.example.com/mcp' }, credential: { kind: 'none' } };
 
 const AddedSchema = Schema.Struct({ connect: Schema.Struct({ url: Schema.String }) });
 

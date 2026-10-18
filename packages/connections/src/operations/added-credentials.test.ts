@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { adding, billing, crm, issuesIn, statusesOf } from '../testing/additions.ts';
 import { harness } from '../testing/harness.ts';
 
@@ -26,9 +27,9 @@ const refusedCredentials = [
   ['a secret in a header the entry sends', { kind: 'secret', name: 'x-tenant', in: 'header' }, '/credential/name'],
   ['a secret in no header', { kind: 'secret', name: 'a header', in: 'header' }, '/credential/name'],
   [
-    'client credentials without their client',
-    { kind: 'client_credentials', issuer: 'https://auth.example.com' },
-    '/credential/client_id',
+    'a scheme that holds a space',
+    { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer token' },
+    '/credential/scheme',
   ],
   [
     'client credentials of an issuer that is not pinned',
@@ -51,6 +52,7 @@ describe('a credential that cannot be taken', () => {
       { kind: 'reference', name: 'Authorization', in: 'header' },
       { kind: 'none', in: 'header' },
       { kind: 'client_credentials', issuer: 'https://auth.example.com', client_id: 'acme', name: 'CRM_API_KEY' },
+      { kind: 'secret', name: 'Authorization', in: 'header', issuer: 'https://auth.example.com' },
     ];
 
     const refused = await Promise.all(
@@ -66,6 +68,88 @@ describe('a credential that cannot be taken', () => {
           detail: 'Expected no name: a client_credentials credential takes issuer, client_id, and scope',
         },
       ],
+      [{ pointer: '/credential/issuer', detail: 'Expected no issuer: a secret credential takes name, in, and scheme' }],
+    ]);
+  });
+});
+
+function withScheme(scheme: string, credential: Readonly<Record<string, string>> = {}) {
+  return { kind: 'secret', name: 'Authorization', in: 'header', scheme, ...credential };
+}
+
+describe('the scheme of a credential sent in a header', () => {
+  it('is taken by a secret and a reference, and answered with the credential', async () => {
+    const h = harness({ policy: connectionPolicyOf({ variables: ['CRM_API_KEY'] }) });
+    const reference = withScheme('Token', { kind: 'reference', variable: 'CRM_API_KEY' });
+
+    const answers = [
+      await adding(h, { ...crm, credential: withScheme('Bearer') }),
+      await adding(h, { ...crm, name: 'crm-key', credential: reference }),
+    ];
+
+    expect(answers).toMatchObject([
+      { status: 'succeeded', output: { credential: withScheme('Bearer') } },
+      { status: 'succeeded', output: { credential: reference } },
+    ]);
+  });
+
+  it('is refused in its own words where nothing is sent in a header, and where it holds what a scheme cannot', async () => {
+    const api = { ...billing, credential: withScheme('Bearer', { name: 'key', in: 'query' }) };
+    const additions: readonly unknown[] = [
+      { ...crm, credential: { kind: 'none', scheme: 'Bearer' } },
+      { ...billing, credential: { ...billing.credential, scheme: 'Bearer' } },
+      api,
+      { ...api, credential: withScheme('Bearer', { name: 'apiKeyAuth', in: 'security' }) },
+      { ...crm, credential: withScheme('Bearer$') },
+      { ...crm, credential: withScheme('Bearer:') },
+    ];
+
+    const refused = await Promise.all(additions.map(async (addition) => issuesIn(await adding(harness(), addition))));
+
+    expect(refused).toEqual(
+      [
+        'Expected no scheme: a none credential places no value in a header for the runtime to write a scheme before',
+        'Expected no scheme: a client_credentials credential places no value in a header for the runtime to write a scheme before',
+        'Expected no scheme, which goes before a value sent in a header: this credential is sent in a query parameter',
+        'Expected no scheme, which goes before a value sent in a header: this credential is sent in a security scheme of the document, which says how the value is sent',
+        'Expected a scheme without $, which the reading of the entry takes for a reference or an escape',
+        'Expected a scheme of the characters a header name holds, such as Bearer',
+      ].map((detail) => [{ pointer: '/credential/scheme', detail }]),
+    );
+  });
+});
+
+const withoutTheClient = { kind: 'client_credentials', issuer: billing.credential.issuer };
+
+describe('client credentials without their client id', () => {
+  it('are taken, pending, and answered without it, since the person gives it on the page with the secret', async () => {
+    expect(await adding(harness(), { ...billing, credential: withoutTheClient })).toMatchObject({
+      status: 'succeeded',
+      output: { status: 'pending', credential: withoutTheClient },
+    });
+  });
+
+  it('are read as the entry will be read once it is given, so an entry its reading refuses is refused', async () => {
+    const unaddressed = { name: 'billing', type: 'mcp', entry: {}, credential: withoutTheClient };
+
+    expect(await adding(harness(), unaddressed)).toMatchObject({
+      status: 'rejected',
+      reason: 'invalid_input',
+      issues: [{ pointer: '/entry' }],
+    });
+  });
+});
+
+describe('a client id that looks like a credential', () => {
+  it('is refused at the field the agent wrote, saying that the person gives the secret on the page', async () => {
+    const credential = { ...billing.credential, client_id: 'sk-live-0123456789abcdef' };
+
+    expect(issuesIn(await adding(harness(), { ...billing, credential }))).toEqual([
+      {
+        pointer: '/credential/client_id',
+        detail:
+          'Looks like a credential, which a client id never is: leave the secret out, and the person gives it on the page the link opens',
+      },
     ]);
   });
 });

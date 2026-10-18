@@ -1,14 +1,14 @@
 import { isSignedInPerson } from '@on.auto/identity';
 import { Forbidden, listed, type CallerIdentity } from '@on.auto/operations';
 
-import type { ConnectionEntry, ConnectionKind } from '../registry/connection-entry.ts';
+import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
 import type { ConnectionPolicy } from './connection-policy.ts';
 
 export type RuntimeAccess = 'people' | 'keys' | 'local';
 
 export interface Addition {
-  readonly kind: ConnectionKind;
+  readonly type: ConnectionType;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
 }
@@ -22,8 +22,8 @@ function matches(pattern: string, host: string): boolean {
   return lowered.startsWith('*.') ? host.endsWith(lowered.slice(1)) : host === lowered;
 }
 
-function hostsOf({ kind, entry, credential }: Addition): readonly string[] {
-  const addresses = [...(kind === 'mcp' ? [entry.url] : [entry.document, entry.base_url]), credential.issuer];
+function hostsOf({ type, entry, credential }: Addition): readonly string[] {
+  const addresses = [...(type === 'mcp' ? [entry.url] : [entry.document, entry.base_url]), credential.issuer];
   return addresses.filter((address) => address !== undefined).map((address) => new URL(address).hostname);
 }
 

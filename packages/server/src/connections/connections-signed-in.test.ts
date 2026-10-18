@@ -15,7 +15,7 @@ const builder = createApiKey({ id: 'acme-builder', org: 'acme', permissions: all
 
 const notes = {
   name: 'notes',
-  kind: 'mcp',
+  type: 'mcp',
   entry: { url: 'https://notes.example.com/mcp' },
   credential: { kind: 'none' },
 };
