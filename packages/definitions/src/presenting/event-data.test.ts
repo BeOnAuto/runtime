@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cutAtCodePoint, firstCharacters, issuesShown } from './event-data.ts';
+import { cutAtCodePoint, issuesShown } from './event-data.ts';
 
 describe('a text cut at a code point', () => {
   it('keeps a text that fits whole', () => {
@@ -17,16 +17,6 @@ describe('a text cut at a code point', () => {
       cutAtCodePoint('a\u0000b', 7),
       cutAtCodePoint('"quoted"', 3),
     ]).toEqual(['abcd', 'éé', 'a', 'a😀', 'a', 'a\u0000', '"q']);
-  });
-});
-
-describe('the first characters of a text', () => {
-  it('counts code points, not halves of them', () => {
-    expect([firstCharacters('abc', 2), firstCharacters('😀😀😀', 2), firstCharacters('ab', 2)]).toEqual([
-      'ab',
-      '😀😀',
-      'ab',
-    ]);
   });
 });
 

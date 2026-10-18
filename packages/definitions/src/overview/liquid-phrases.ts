@@ -70,6 +70,10 @@ function lastNameIn(content: string): string | undefined {
   return last;
 }
 
+export function writtenOf(piece: Piece): string {
+  return piece.kind === 'text' ? piece.text : piece.written;
+}
+
 export function asWritten(args: string): string {
   return args.trim().replaceAll(/\s+/gu, ' ');
 }

@@ -7,13 +7,13 @@ import {
   sectionOf,
   type Diagram,
   type OverviewBlock,
+  type OverviewParts,
   type OverviewSection,
   type Phrases,
 } from '@on.auto/definitions';
-import { splitDocument } from '@on.auto/definitions/document';
 import { readableParts } from '@on.auto/definitions/template';
 import { writtenOf, type ToolReference } from '@on.auto/tool-servers/policy';
-import { Result, type Schema } from 'effect';
+import type { Schema } from 'effect';
 
 import type {
   InputContract,
@@ -101,9 +101,8 @@ function modelSection(name: string, definition: ReasoningFunctionDefinitionDocum
   );
 }
 
-function toldSection(source: string): OverviewSection {
-  const { body, bodyLine } = Result.getOrThrow(splitDocument(source, 'A reasoning function definition'));
-  const { inside, outside } = readableParts({ text: body, firstLine: bodyLine }, 'system');
+function toldSection({ template }: ReasoningFunctionDefinitionDocument): OverviewSection {
+  const { inside, outside } = readableParts(template, 'system');
   const instructions =
     inside.length === 0 ? [] : [paragraph('Its instructions, which it follows on every run:'), ...inside];
   return sectionOf(
@@ -114,15 +113,15 @@ function toldSection(source: string): OverviewSection {
   );
 }
 
-export function reasoningOverview(
-  definition: ReasoningFunctionDefinitionDocument,
-  source: string,
-  name: string,
-): readonly OverviewSection[] {
-  return [
-    inputSection(documentedInput(definition.input)),
-    producedSection(definition.output),
-    modelSection(name, definition),
-    toldSection(source),
-  ];
+export function reasoningOverview(definition: ReasoningFunctionDefinitionDocument, name: string): OverviewParts {
+  return {
+    body: [],
+    sections: [
+      inputSection(documentedInput(definition.input)),
+      producedSection(definition.output),
+      modelSection(name, definition),
+      toldSection(definition),
+    ],
+    appendix: [],
+  };
 }

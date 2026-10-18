@@ -1,8 +1,9 @@
 import { Tokenizer, TypeGuards } from 'liquidjs';
 
+import { charactersIn, firstCharacters } from '../plain-language/characters.ts';
 import { linesOf, type LineOfOffset } from '../template/engine-failure.ts';
 import { withInlineConstructs } from './inline-constructs.ts';
-import { blocksOf, type Piece, type TextPiece } from './liquid-phrases.ts';
+import { blocksOf, writtenOf, type Piece, type TextPiece } from './liquid-phrases.ts';
 import { paragraph, type OverviewBlock } from './overview.ts';
 
 export const mostReadCharacters = 8192;
@@ -21,8 +22,6 @@ interface Bounded {
   readonly kept: readonly Piece[];
   readonly cutAt: number | undefined;
 }
-
-const highSurrogate = /[\uD800-\uDBFF]$/u;
 
 function piecesOf(text: string): readonly Piece[] {
   const pieces: Piece[] = [];
@@ -84,16 +83,13 @@ function routed(pieces: readonly Piece[], apart: string): RoutedPieces {
 }
 
 function cutIndexOf(text: string, room: number): number {
-  const shown = text.slice(0, room);
+  const shown = firstCharacters(text, room);
   const lastBreak = shown.lastIndexOf('\n');
   if (lastBreak > 0) {
     return lastBreak + 1;
   }
   const lastSpace = Math.max(shown.lastIndexOf(' '), shown.lastIndexOf('\t'));
-  if (lastSpace > 0) {
-    return lastSpace + 1;
-  }
-  return highSurrogate.test(shown) ? room - 1 : room;
+  return lastSpace > 0 ? lastSpace + 1 : shown.length;
 }
 
 function leadingPart(piece: TextPiece, room: number): TextPiece {
@@ -106,12 +102,13 @@ function withinBound(pieces: readonly Piece[]): Bounded {
   let used = 0;
   for (const piece of pieces) {
     const room = mostReadCharacters - used;
-    if (piece.end - piece.begin > room) {
+    const characters = charactersIn(writtenOf(piece));
+    if (characters > room) {
       const part = piece.kind === 'text' ? [leadingPart(piece, room)] : [];
       return { kept: [...kept, ...part], cutAt: part.at(0)?.end ?? piece.begin };
     }
     kept.push(piece);
-    used += piece.end - piece.begin;
+    used += characters;
   }
   return { kept, cutAt: undefined };
 }

@@ -1,4 +1,8 @@
-import type { RenderFailure as EngineRenderFailure, VariableReference } from '@on.auto/definitions/template';
+import type {
+  RenderFailure as EngineRenderFailure,
+  TemplateText,
+  VariableReference,
+} from '@on.auto/definitions/template';
 import type { Result, Schema } from 'effect';
 
 export type { TemplateIssue } from '@on.auto/definitions/template';
@@ -20,7 +24,7 @@ export type RenderFailure =
   | EngineRenderFailure
   | { readonly reason: 'too_long'; readonly part: PromptPart; readonly line: number };
 
-export interface CompiledTemplate {
+export interface CompiledTemplate extends TemplateText {
   readonly hasInstructions: boolean;
   readonly hasMessage: boolean;
   readonly variables: readonly VariableReference[];

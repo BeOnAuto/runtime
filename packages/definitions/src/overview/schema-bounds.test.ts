@@ -1,12 +1,10 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { schemaBlocks, type Phrases } from '../index.ts';
+import { plainTextOf, schemaBlocks, type Phrases } from '../index.ts';
 
 function plain(phrases: Phrases): string {
-  return phrases
-    .map((phrase) => (typeof phrase === 'string' ? phrase : `**${Object.values(phrase).join('')}**`))
-    .join('');
+  return phrases.map((phrase) => (typeof phrase === 'string' ? phrase : `**${plainTextOf([phrase])}**`)).join('');
 }
 
 function wordsOf(field: Schema.JsonObject): string {

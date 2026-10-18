@@ -2,6 +2,7 @@ import { isFormatName } from '@on.auto/json-schema';
 import { alternatives, asSentence } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
+import { firstCharacters } from '../plain-language/characters.ts';
 import { inWords } from '../plain-language/in-words.ts';
 import { named, paragraph, type OverviewBlock, type Phrase, type Phrases } from './overview.ts';
 import { amountOf, countedIn, entry, entryBound, item, itemBound, trailingWords, type Bound } from './schema-bounds.ts';
@@ -17,6 +18,7 @@ import {
   resolvedSchema,
   textOf,
   typesOf,
+  valueText,
   type JsonSchema,
   type SchemaReading,
 } from './schema-reading.ts';
@@ -32,10 +34,6 @@ const mostNamedValues = 12;
 const mostNamedFields = 12;
 
 const mostAlternatives = 4;
-
-function valueText(value: Schema.Json): string {
-  return typeof value === 'string' ? value : JSON.stringify(value);
-}
 
 function andMore(shown: readonly string[], total: number): string {
   return [...shown, ...(total > shown.length ? [`and ${total - shown.length} more`] : [])].join(', ');
@@ -78,10 +76,8 @@ export function descriptionOf(schema: JsonSchema): string | undefined {
   if (description === undefined || description === '') {
     return undefined;
   }
-  const characters = Array.from(description);
-  return characters.length <= mostFieldDescriptionCharacters
-    ? description
-    : `${characters.slice(0, mostFieldDescriptionCharacters).join('')}…`;
+  const shown = firstCharacters(description, mostFieldDescriptionCharacters);
+  return shown === description ? description : `${shown}…`;
 }
 
 function shownInWords(example: Schema.Json): readonly string[] {
@@ -251,7 +247,7 @@ function wordsOf(schema: JsonSchema, reading: SchemaReading, count: Count): Word
   return [first, ...rest, ...trailing.map((words) => `${separator}${words}`)];
 }
 
-function capitalized([first, ...rest]: Words): Words {
+function capitalizedWords([first, ...rest]: Words): Words {
   return [`${first.charAt(0).toUpperCase()}${first.slice(1)}`, ...rest];
 }
 
@@ -260,7 +256,7 @@ function fieldWords(property: JsonSchema, reading: SchemaReading): Phrases {
   const description = descriptionOf(read);
   return [
     ...(description === undefined ? [] : [`${asSentence(description)} `]),
-    ...capitalized(wordsOf(property, reading, 'one')),
+    ...capitalizedWords(wordsOf(property, reading, 'one')),
     ...examplesWordsOf(listOf(read, 'examples'), description).map((words) => `, ${words}`),
     '.',
   ];
@@ -270,17 +266,14 @@ export function expectedWordsOf(schema: JsonSchema, root: JsonSchema): Phrases {
   return wordsOf(schema, { root, depth: 0, expanded: false }, 'one');
 }
 
-export function schemaBlocks(schema: JsonSchema | undefined, unknown: string): readonly OverviewBlock[] {
-  if (schema === undefined) {
-    return [paragraph(unknown)];
-  }
+export function describedSchemaBlocks(schema: JsonSchema): readonly OverviewBlock[] {
   const reading: SchemaReading = { root: schema, depth: 0, expanded: false };
   const { schema: read, reading: within } = resolvedSchema(schema, reading);
   const description = descriptionOf(read);
   const opening = description === undefined ? [] : [paragraph(asSentence(description))];
   const properties = propertiesOf(read);
   if (properties.length === 0) {
-    return [...opening, paragraph(...capitalized(wordsOf(schema, reading, 'one')), '.')];
+    return [...opening, paragraph(...capitalizedWords(wordsOf(schema, reading, 'one')), '.')];
   }
   const required = requiredOf(read);
   const rows = properties.map(([name, property]) => ({
@@ -289,4 +282,8 @@ export function schemaBlocks(schema: JsonSchema | undefined, unknown: string): r
     words: fieldWords(property, deeper(within)),
   }));
   return [...opening, { kind: 'fields', rows }];
+}
+
+export function schemaBlocks(schema: JsonSchema | undefined, unknown: string): readonly OverviewBlock[] {
+  return schema === undefined ? [paragraph(unknown)] : describedSchemaBlocks(schema);
 }

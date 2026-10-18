@@ -6,6 +6,7 @@ import {
   sectionOf,
   type Diagram,
   type OverviewBlock,
+  type OverviewParts,
   type OverviewSection,
   type Phrases,
 } from '@on.auto/definitions';
@@ -111,11 +112,15 @@ function keptSection({ details, answers }: RecallFunctionDefinitionDocument): Ov
   );
 }
 
-export function recallOverview(document: RecallFunctionDefinitionDocument): readonly OverviewSection[] {
-  return [
-    remembersSection(document.details.filters),
-    keepsSection(document),
-    answersSection(document),
-    keptSection(document),
-  ];
+export function recallOverview(document: RecallFunctionDefinitionDocument): OverviewParts {
+  return {
+    body: [],
+    sections: [
+      remembersSection(document.details.filters),
+      keepsSection(document),
+      answersSection(document),
+      keptSection(document),
+    ],
+    appendix: [],
+  };
 }

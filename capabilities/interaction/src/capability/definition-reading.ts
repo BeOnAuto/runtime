@@ -1,4 +1,4 @@
-import type { DefinitionSummary, OverviewSection } from '@on.auto/definitions';
+import type { DefinitionSummary, OverviewParts } from '@on.auto/definitions';
 import { issueText } from '@on.auto/definitions/document';
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
@@ -41,6 +41,10 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
   };
 }
 
-export function overview(document: InteractionFunctionDefinitionDocument, source: string): readonly OverviewSection[] {
-  return document.shape === 'call' ? callSections(document) : requestSections(document, source);
+export function overview(document: InteractionFunctionDefinitionDocument): OverviewParts {
+  return {
+    body: [],
+    sections: document.shape === 'call' ? callSections(document) : requestSections(document),
+    appendix: [],
+  };
 }

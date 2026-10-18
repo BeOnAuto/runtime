@@ -3,7 +3,7 @@ import { Option, Schema } from 'effect';
 
 import { defaultRunWords, type Capability, type RunWords } from '../capability/capability.ts';
 import type { ListedDefinition } from '../registry/definition.ts';
-import { wordsOf } from './in-words.ts';
+import { nameInWords } from './in-words.ts';
 
 const mostNamed = 20;
 
@@ -39,7 +39,7 @@ export function definitionWordsFor(capabilities: readonly Capability[]): Definit
 function propertyWordsOf(schema: Schema.JsonObject | undefined): readonly string[] {
   return Option.match(propertiesOf(schema), {
     onNone: () => [],
-    onSome: ({ properties }) => Object.keys(properties).map((name) => wordsOf(name)),
+    onSome: ({ properties }) => Object.keys(properties).map((name) => nameInWords(name)),
   });
 }
 

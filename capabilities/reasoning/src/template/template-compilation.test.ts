@@ -21,6 +21,10 @@ describe('a template', () => {
     });
   });
 
+  it('keeps the prompt it was compiled from and the line of the document it starts on, as the overview reads it', () => {
+    expect(compiled('Hello {{ input.name }}', 6)).toMatchObject({ text: 'Hello {{ input.name }}', firstLine: 6 });
+  });
+
   it('knows when it writes nothing outside the system block', () => {
     expect(compiled('\n  \n').hasMessage).toBe(false);
     expect(compiled(' {% system %}Be brief. {{ input.x }}{% endsystem %}\n').hasMessage).toBe(false);

@@ -8,40 +8,14 @@ import {
   sectionOf,
   type OverviewSection,
 } from '@on.auto/definitions';
-import { frontMatterIn, issueAt, splitDocument } from '@on.auto/definitions/document';
-import { readableTemplate, type TemplateText } from '@on.auto/definitions/template';
-import { Result, Schema } from 'effect';
+import { readableTemplate } from '@on.auto/definitions/template';
 
-import { interactionFrontMatter } from '../document/front-matter.ts';
 import type { RequestDocument } from '../document/interaction-document.ts';
 import { partyBlocks, replyRuleItems } from './request-words.ts';
 
-interface WrittenTemplates {
-  readonly to: TemplateText;
-  readonly from?: TemplateText;
-  readonly message: TemplateText;
-}
-
-const decodeParties = Schema.decodeUnknownSync(
-  Schema.Struct({ to: Schema.String, from: Schema.optionalKey(Schema.String) }),
-);
-
 const notification = 'None: it is a notification, which takes no answer and succeeds once its request is delivered.';
 
-function writtenTemplates(source: string): WrittenTemplates {
-  const { frontMatter, frontMatterLine, body, bodyLine } = Result.getOrThrow(
-    splitDocument(source, 'An interaction function definition'),
-  );
-  const { root, lines } = Result.getOrThrow(frontMatterIn(frontMatter, frontMatterLine, interactionFrontMatter));
-  const { to, from } = decodeParties(root);
-  return {
-    to: { text: to, firstLine: issueAt(lines, '/to', '').line },
-    ...(from === undefined ? {} : { from: { text: from, firstLine: issueAt(lines, '/from', '').line } }),
-    message: { text: body, firstLine: bodyLine },
-  };
-}
-
-function whoSection({ to, from }: WrittenTemplates): OverviewSection {
+function whoSection({ to, from }: RequestDocument): OverviewSection {
   const answerer =
     from === undefined ? [] : partyBlocks('Its answerer, whose reply counts, is', readableTemplate(from));
   return sectionOf(
@@ -80,7 +54,7 @@ function waitSection({ expiresMs, output }: RequestDocument): OverviewSection {
   );
 }
 
-function repliesSections({ route, reply }: RequestDocument, { from }: WrittenTemplates): readonly OverviewSection[] {
+function repliesSections({ route, reply, from }: RequestDocument): readonly OverviewSection[] {
   if (route?.replies === undefined || reply === undefined) {
     return [];
   }
@@ -103,19 +77,18 @@ function repliesSections({ route, reply }: RequestDocument, { from }: WrittenTem
   ];
 }
 
-export function requestSections(document: RequestDocument, source: string): readonly OverviewSection[] {
-  const written = writtenTemplates(source);
+export function requestSections(document: RequestDocument): readonly OverviewSection[] {
   return [
     inputSection(document.input.schema?.document),
-    whoSection(written),
+    whoSection(document),
     sectionOf(
       'What it sends',
       paragraph('Its message, with the values of each run in place of the names in bold:'),
-      ...readableTemplate(written.message),
+      ...readableTemplate(document.message),
     ),
     whereSection(document),
     waitSection(document),
     sectionOf('What answer it expects', ...schemaBlocks(document.output.schema?.document, notification)),
-    ...repliesSections(document, written),
+    ...repliesSections(document),
   ];
 }

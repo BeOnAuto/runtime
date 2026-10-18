@@ -4,7 +4,11 @@ import { markdownOf, sectionOf, type OverviewBlock } from '../index.ts';
 import { mostReadCharacters, readableParts, readableTemplate } from '../template.ts';
 
 function markdownIn(blocks: readonly OverviewBlock[]): string {
-  return markdownOf({ title: 't', opening: ['o'], sections: [sectionOf('s', ...blocks)] }).split('## s\n\n')[1] ?? '';
+  return (
+    markdownOf({ title: 't', opening: ['o'], body: [], sections: [sectionOf('s', ...blocks)], appendix: [] }).split(
+      '## s\n\n',
+    )[1] ?? ''
+  );
 }
 
 function read(text: string, firstLine = 1): string {
@@ -171,15 +175,20 @@ describe(`a template past ${mostReadCharacters} characters`, () => {
 
   it('is cut at the last space that fits on a long line, and at a whole character on a line without one', () => {
     const words = 'word '.repeat(2000);
-    const emoji = `${'x'.repeat(mostReadCharacters - 1)}😀 and on`;
 
     expect(
       read(words).endsWith(`${'word '.repeat(1637).trimEnd()}\n\n… The rest is in the source, from line 1.\n`),
     ).toBe(true);
-    expect(read(emoji)).toBe(`${'x'.repeat(mostReadCharacters - 1)}\n\n… The rest is in the source, from line 1.\n`);
     expect(read('x'.repeat(mostReadCharacters + 5))).toBe(
       `${'x'.repeat(mostReadCharacters)}\n\n… The rest is in the source, from line 1.\n`,
     );
+  });
+
+  it('counts a character outside the Basic Multilingual Plane once, as a person reads it, and never cuts it apart', () => {
+    const emoji = `${'x'.repeat(mostReadCharacters - 1)}😀😀 and on`;
+
+    expect(read(emoji)).toBe(`${'x'.repeat(mostReadCharacters - 1)}😀\n\n… The rest is in the source, from line 1.\n`);
+    expect(read('😀'.repeat(mostReadCharacters))).toBe(`${'😀'.repeat(mostReadCharacters)}\n`);
   });
 
   it('is cut before a tag or an output that would pass the bound', () => {

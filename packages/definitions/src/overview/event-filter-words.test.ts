@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { eventFilterPhrases, type EventFilter, type Phrases } from '../index.ts';
+import { eventFilterPhrases, plainTextOf, type EventFilter, type Phrases } from '../index.ts';
 
 function plain(phrases: Phrases): string {
   return phrases
@@ -8,7 +8,7 @@ function plain(phrases: Phrases): string {
       if (typeof phrase === 'string') {
         return phrase;
       }
-      return 'name' in phrase ? `**${phrase.name}**` : `\`${Object.values(phrase).join('')}\``;
+      return 'name' in phrase ? `**${phrase.name}**` : `\`${plainTextOf([phrase])}\``;
     })
     .join('');
 }

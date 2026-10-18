@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { outputSection, outputShapeNames, seriesPathBlocks, type OverviewBlock, type Phrases } from '../index.ts';
+import {
+  outputSection,
+  outputShapeNames,
+  plainTextOf,
+  seriesPathBlocks,
+  type OverviewBlock,
+  type Phrases,
+} from '../index.ts';
 import { shapeNamed } from '../testing/index.ts';
 
 function plain(phrases: Phrases): string {
-  return phrases
-    .map((phrase) => (typeof phrase === 'string' ? phrase : `**${Object.values(phrase).join('')}**`))
-    .join('');
+  return phrases.map((phrase) => (typeof phrase === 'string' ? phrase : `**${plainTextOf([phrase])}**`)).join('');
 }
 
 function shown(block: OverviewBlock): string {

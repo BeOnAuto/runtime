@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fieldWords, wordsOf } from '../testing/refusal-words.ts';
+import { fieldWords, refusalWordsOf } from '../testing/refusal-words.ts';
 
 describe('the words of a string out of its form', () => {
   it('says the form a field takes and an example of it, as the bounds are said', () => {
@@ -41,7 +41,7 @@ describe('the words of a string out of its form', () => {
         { type: 'object', description: 'Totals by day, such as 2026-05-01', propertyNames: { format: 'date' } },
         { soon: 1 },
       ),
-      wordsOf({ type: 'string', format: 'date', examples: ['2026-05-01'] }, 'Friday'),
+      refusalWordsOf({ type: 'string', format: 'date', examples: ['2026-05-01'] }, 'Friday'),
     ]).toEqual([
       'field, such as “2026-05-01”: expected a date.',
       'field, The day, such as 2026-05-01: expected a date.',

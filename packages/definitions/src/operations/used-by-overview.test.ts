@@ -19,7 +19,7 @@ function detailing(type: string): Capability {
     mediaType: 'application/json',
     parse: (source: string) => Effect.orDie(decodeDetails(source)),
     summarize: (details) => ({ details }),
-    overview: () => [],
+    overview: () => ({ body: [], sections: [], appendix: [] }),
     run: () => Effect.succeed({ output: null, record: {} }),
   });
 }

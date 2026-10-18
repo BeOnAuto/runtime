@@ -21,7 +21,7 @@ export function itemsOf(value: Json): readonly Schema.Json[] {
   return isList(value) ? value : [];
 }
 
-export function textOf(value: Json): string | undefined {
+export function textValue(value: Json): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
@@ -66,7 +66,7 @@ export function rangeIssues(entry: Json, path: Path): readonly SchemaIssue[] {
 export function repeatedNameIssues(entries: readonly Schema.Json[], path: Path, noun: string): readonly SchemaIssue[] {
   const seen = new Set<string>();
   return entries.flatMap((entry, index) => {
-    const name = textOf(recordOf(entry)['name']);
+    const name = textValue(recordOf(entry)['name']);
     if (name === undefined) {
       return [];
     }

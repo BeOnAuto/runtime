@@ -12,7 +12,7 @@ import type {
 import type { CallEnded, CallStarted } from '@on.auto/tool-servers';
 import { Effect, type Schema } from 'effect';
 
-import { writtenOverview, type SectionsOf } from '../overview/definition-overview.ts';
+import { writtenOverview, type OverviewParts } from '../overview/definition-overview.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
@@ -114,6 +114,10 @@ export interface AnsweringRun {
 
 export type AnswerIssues = (answer: Schema.Json, run: AnsweringRun) => readonly Issue[];
 
+export type OverviewContext = Readonly<{ summary: DefinitionSummary }>;
+
+export type OverviewOf<Parsed> = (parsed: Parsed, name: string, context: OverviewContext) => OverviewParts;
+
 const defaultLongestAnyRunMs = 600_000;
 
 export interface CapabilityDeclaration<Parsed> {
@@ -130,7 +134,7 @@ export interface CapabilityDeclaration<Parsed> {
     saved: SavedDefinitions,
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
-  readonly overview?: SectionsOf<NoInfer<Parsed>>;
+  readonly overview?: OverviewOf<NoInfer<Parsed>>;
   readonly run: (
     parsed: NoInfer<Parsed>,
     input: Schema.Json,
@@ -176,10 +180,7 @@ function noDeferralShown(): undefined {
   return undefined;
 }
 
-export const defaultRunWords: RunWords = {
-  deferralType: 'run_deferred',
-  deferral: noDeferralShown,
-};
+export const defaultRunWords: RunWords = { deferralType: 'run_deferred', deferral: noDeferralShown };
 
 export function cancelledAsAsked({ kind, reason }: CancelledRun): Settlement {
   return { status: 'rejected', reason: 'cancelled', kind, detail: reason };
@@ -282,7 +283,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
           const summary = summarize(parsed);
           return {
             summary,
-            overview: (name) => writtenOverview({ name, noun, summary, sections: overview?.(parsed, source, name) }),
+            overview: (name) => writtenOverview({ name, noun, summary, parts: overview?.(parsed, name, { summary }) }),
             check: (saved) => Effect.suspend(() => check(parsed, source, saved)),
             run: (input, context) => run(parsed, input, context, stripped),
             whenCancelled,

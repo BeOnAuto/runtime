@@ -20,6 +20,7 @@ export interface ParsedTemplate {
   readonly templates: () => Template[];
   readonly variables: readonly VariableReference[];
   readonly issues: readonly TemplateIssue[];
+  readonly text: string;
   readonly firstLine: number;
 }
 
@@ -86,6 +87,7 @@ export function parsedTemplate(
     templates: () => templates,
     variables: variableReferences(() => engine.analyze(() => templates), firstLine),
     issues: nameIssues(engine, body, firstLine),
+    text: body,
     firstLine,
   });
 }

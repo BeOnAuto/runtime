@@ -12,6 +12,7 @@ import {
   writtenOverview,
 } from '../index.ts';
 import { echo } from '../testing/echo.ts';
+import { sectionIn } from '../testing/index.ts';
 import { overviewWithUsers } from './definition-overview.ts';
 
 function overviewOf(source: string, name = 'greet'): string {
@@ -27,10 +28,17 @@ const told = defineCapability({
   mediaType: 'text/plain',
   parse: (source: string) => Effect.succeed({ words: source.trim() }),
   summarize: ({ words }) => ({ description: words, inputSchema: { type: 'object' } }),
-  overview: ({ words }, source) => [
-    inputSection(),
-    sectionOf('What it says', paragraph('It says ', named(words), ` from a document of ${source.length} characters.`)),
-  ],
+  overview: ({ words }, name, { summary }) => ({
+    body: [paragraph(`It is told as ${name}.`)],
+    sections: [
+      inputSection(),
+      sectionOf(
+        'What it says',
+        paragraph('It says ', named(words), `, which it describes as ${summary.description ?? 'nothing'}.`),
+      ),
+    ],
+    appendix: [sectionOf('Input', paragraph('A record.'))],
+  }),
   run: ({ words }) => Effect.succeed({ output: words, record: {} }),
 });
 
@@ -74,6 +82,15 @@ describe('the overview of a definition that says little', () => {
       ].join('\n\n'),
     );
   });
+
+  it('holds sections a test reads by their heading, and none of a heading it does not write', () => {
+    const written = writtenOverview({ name: 'plain', noun: { one: 'item', other: 'items' }, summary: {} });
+
+    expect([sectionIn(written, 'What it needs'), sectionIn(written, 'Used by')]).toEqual([
+      'It takes any input, which its document does not describe.',
+      '',
+    ]);
+  });
 });
 
 describe('the section of the definitions that use a definition', () => {
@@ -113,15 +130,19 @@ describe('the section of the definitions that use a definition', () => {
 });
 
 describe('the overview of a capability of its own', () => {
-  it('is given in place of the one of every type', () => {
+  it('is given in place of the one of every type, its body, its sections and its appendix, from the summary its capability made', () => {
     expect(Effect.runSync(told.prepare(' hello ')).overview('saying')).toBe(
       [
         '# saying',
         'hello',
+        'It is told as saying.',
         '## What it needs',
         'It takes any input, which its document does not describe.',
         '## What it says',
-        'It says **hello** from a document of 7 characters.\n',
+        'It says **hello**, which it describes as hello.',
+        '## Details',
+        '### Input',
+        'A record.\n',
       ].join('\n\n'),
     );
   });
