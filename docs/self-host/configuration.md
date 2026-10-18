@@ -269,6 +269,8 @@ tool_servers:
 | `record_content` | every type       | Whether the arguments and results of calls are kept whole, scrubbed of secrets, in the playbook's ledger, where anyone who may read the playbook reads them. `true` when left out; `false` keeps their sizes alone                                                                                                                        |
 | `request_id`     | every type       | The response header, or for an MCP server the key of a result's metadata, in which the server returns its own id of a request, recorded with each call                                                                                                                                                                                    |
 
+Every request the server makes to an `mcp` or `openapi` server carries `User-Agent: auto-runtime/<version>`, the name of the runtime's command with the version of the release that runs. That covers the read of a document, every call, and the requests for a token and for an authorization server's metadata, for an entry of this file and for a connection alike. A `User-Agent` in an entry's `headers` is sent on that server's calls instead; the read of its document and the requests for its tokens still carry the runtime's.
+
 ### Keep secrets out of the file
 
 Only `headers`, `query_params`, `security`, `env` and `auth` may hold a reference. A reference in `url`, `command`, `args`, `document` or `base_url` stops the server at start: an argument shows in the machine's list of processes, and the URL of a server or of a document is no place for a credential.
@@ -328,7 +330,7 @@ Which credentials a call sends:
 
 - A requirement is a list of alternatives. Each alternative is a set of schemes that must all be given.
 - An operation is offered as a tool when the entry gives one of its alternatives.
-- A call sends the credentials of the first alternative the entry gives, in the document's order, and no other.
+- A call sends the credentials of the first alternative the entry gives, in the document's order, and no other. Where the operation needs a header that the entry's `headers` do not name, it sends the first alternative the entry gives whose `apiKey` schemes place that header instead.
 - An operation whose requirement is empty, or of a document that declares none, sends none.
 - An operation for which the entry gives none of the alternatives is not offered as a tool. At start, the server logs a warning that names the schemes it needs.
 - The scopes an `oauth2` requirement names are the operation's. The `auth` block asks for its own `scope`, so set it to cover what the operations require.
@@ -370,17 +372,20 @@ Each operation becomes one tool:
 
 Some operations are not offered as tools. At start, the server logs a warning for each operation it leaves out, naming the entry and the reason. It leaves out an operation that:
 
-- needs a header or a cookie;
+- needs a cookie;
+- needs a header that the entry's `headers` do not name and its security scheme does not place. The warning says that `headers` can give it, or, for a header the server sets itself such as `Host`, that it does. A header parameter named `Accept`, `Content-Type` or `Authorization` is ignored, as the OpenAPI specification says;
 - takes an object in its query;
 - takes a body that is not JSON;
 - is a `TRACE`, or a `GET` or `HEAD` that takes a body;
 - has a path parameter of a `style` other than `simple`;
-- has a query parameter of a `style` other than `form`, or with `explode: false`;
+- has a query parameter of a `style` other than `form`, such as `spaceDelimited`, `pipeDelimited` or `deepObject`;
 - has an input schema of more than 64 KiB.
+
+An operation that needs a header the entry's `headers` name, in any case, is offered, such as one that needs an account id on every call. The header is not an input of the tool: every call sends the entry's value. So is an operation that needs the header of an `apiKey` scheme its call sends, which the call fills with the credential the entry gives under `security`.
 
 A call:
 
-- fills the path and the query, with an array sent as repeated keys;
+- fills the path and the query, with an array sent as repeated keys, or as one key of comma-joined items when the document writes the parameter with `explode: false`;
 - refuses a path argument that is empty, holds a `/`, or is `.` or `..`;
 - sends nothing to an address that would leave the origin or the path of `base_url`;
 - sends the body as JSON, with the entry's headers and query parameters.
