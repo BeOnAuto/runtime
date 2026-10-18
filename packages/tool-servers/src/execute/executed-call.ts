@@ -3,7 +3,7 @@ import { DateTime, Effect, Schema } from 'effect';
 import { toolBounds } from '../bounds/call-bounds.ts';
 import type { CallReply } from '../calls/call-replies.ts';
 import type { OfferedTool, RunTools } from '../calls/run-tools.ts';
-import { ignored } from '../connections/ignored.ts';
+import { ignored } from '../clients/ignored.ts';
 import { notListed } from '../names/tool-naming.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import { CalledOutcomeSchema, type CalledOutcome } from './execute-schemas.ts';

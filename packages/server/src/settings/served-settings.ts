@@ -10,9 +10,10 @@ export interface ServedSettings extends FunctionSettings, ConnectionSettings {
 }
 
 export function readServedSettings(environment: Environment, file: FileUse | undefined): ServedSettings {
+  const functions = readFunctionSettings(environment, file);
   return {
-    ...readFunctionSettings(environment, file),
-    ...readConnectionSettings(environment, file),
+    ...functions,
+    ...readConnectionSettings(environment, file, functions),
     workflows: Effect.runSync(readWorkflowSettings(environment)),
   };
 }

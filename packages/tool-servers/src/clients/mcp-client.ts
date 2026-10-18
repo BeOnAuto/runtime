@@ -4,7 +4,7 @@ import { Predicate } from 'effect';
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { decodeListedTools, decodeToolResult, type ToolResult } from '../bounds/tool-results.ts';
 import { observations, type Observations } from './observed-requests.ts';
-import type { ServerConnection } from './server-connection.ts';
+import type { ServerClient } from './server-client.ts';
 
 export type TraceMeta = () => Readonly<Record<string, string>>;
 
@@ -87,19 +87,19 @@ function settledOf(answer: unknown): { readonly result: ToolResult; readonly res
   return { result: decodeToolResult(answer), resultJson: contentJsonOf(answer) };
 }
 
-export function tracedConnection(connection: ServerConnection, traceMeta: TraceMeta): ServerConnection {
+export function tracedClient(client: ServerClient, traceMeta: TraceMeta): ServerClient {
   return {
-    ...connection,
-    call: (calling) => connection.call({ ...calling, meta: { ...traceMeta(), ...calling.meta } }),
+    ...client,
+    call: (calling) => client.call({ ...calling, meta: { ...traceMeta(), ...calling.meta } }),
   };
 }
 
-export function connectionOver(
+export function serverClientOver(
   client: ToolClient,
   observed: Observations,
   closed: Promise<void>,
   end: () => Promise<void>,
-): ServerConnection {
+): ServerClient {
   return {
     call: async ({ tool, input, meta, signal, timeoutMs }) => {
       const marker = observed.mark();

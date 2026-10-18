@@ -98,12 +98,12 @@ interface Named {
 
 interface Reading {
   readonly org: string;
-  readonly providers: readonly string[];
+  readonly modelProviders: readonly string[];
 }
 
-export function readPlaced({ name, kind }: Named, { written, environment }: Placed, { org, providers }: Reading) {
+export function readPlaced({ name, kind }: Named, { written, environment }: Placed, { org, modelProviders }: Reading) {
   return readEntry(name, { ...written, type: kind, org }, environment, {
-    modelProviders: providers,
+    modelProviders,
     documentsDirectory: '.',
   });
 }

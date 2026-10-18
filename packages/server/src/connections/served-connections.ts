@@ -12,7 +12,6 @@ import type { DatabaseSettings } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
-import { modelProvidersOf } from '../function-settings/reasoning-settings.ts';
 import type { Settings } from '../settings/settings.ts';
 
 export interface StoresAndConnections {
@@ -23,7 +22,7 @@ export interface StoresAndConnections {
 
 type ServingSettings = Pick<
   Settings,
-  'connections' | 'connectionVariables' | 'toolServers' | 'models' | 'signIn' | 'apiKeys'
+  'connections' | 'connectionVariables' | 'toolServers' | 'modelProviders' | 'signIn' | 'apiKeys'
 >;
 
 function accessOf({ signIn, apiKeys }: ServingSettings): RuntimeAccess {
@@ -43,7 +42,7 @@ function connectionsServedBy(
     secrets,
     policy: settings.connections,
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
-    providers: modelProvidersOf(settings.models),
+    modelProviders: settings.modelProviders,
     pages: { studio: studioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
   });
@@ -59,7 +58,7 @@ function sourceServedBy(
     secrets,
     policy: settings.connections,
     variables: settings.connectionVariables,
-    providers: modelProvidersOf(settings.models),
+    modelProviders: settings.modelProviders,
   });
 }
 

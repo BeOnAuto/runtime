@@ -101,7 +101,7 @@ export function harness({ beforeKeeping, ...given }: HarnessOptions = {}): Harne
     secrets,
     policy: connectionPolicyOf({}),
     fileEntries: ['wiki'],
-    providers: ['openai'],
+    modelProviders: ['openai'],
     pages: { studio, runtime: () => runtimeOrigin },
     access: 'people',
     ...given,

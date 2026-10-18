@@ -49,6 +49,7 @@ describe('the tool servers of the server', () => {
 
     expect(settings.toolServers).toEqual({
       servers: [expect.objectContaining({ name: 'graph', orgs: ['acme'], allowed: ['search', 'execute'] })],
+      referencedVariables: ['GRAPH_API_KEY'],
     });
     expect(authorizationOf(settings)).toBe(`Bearer ${apiKey}`);
   });

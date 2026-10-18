@@ -2,13 +2,13 @@ import { Array as Arr, Option, Result } from 'effect';
 
 import { isReadOnly, type ListedTool } from '../bounds/tool-results.ts';
 import type { ServerSlot } from '../calls/server-slot.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import { listedThrough, type Listing } from '../listing/server-listing.ts';
 import { notListed, offeredOn, unlistedOn } from '../names/tool-naming.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import { serverFailed } from '../org-servers/server-refusals.ts';
 import { notOfferedOnce, refusedOnce, type UnopenedOnce } from './called-once.ts';
-import { boundedSlot, restartedIfExited, takenWithin } from './connection-bound.ts';
+import { boundedSlot, restartedIfExited, takenWithin } from './client-bound.ts';
 
 export interface Opened {
   readonly slot: ServerSlot;

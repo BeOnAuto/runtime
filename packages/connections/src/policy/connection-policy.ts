@@ -1,4 +1,10 @@
-import { decodedJsonSetting, problem, settingProblemText, type SettingProblem } from '@on.auto/config';
+import {
+  decodedJsonSetting,
+  problem,
+  settingProblemText,
+  variableNamePattern,
+  type SettingProblem,
+} from '@on.auto/config';
 import { Data, Effect, Result, Schema } from 'effect';
 
 import { CredentialKindSchema, type CredentialKind } from '../registry/credential.ts';
@@ -14,7 +20,7 @@ const HostPatternSchema = Schema.String.check(
 );
 
 const VariableNameSchema = Schema.String.check(
-  Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u, { message: 'Expected the name of a variable, such as CRM_API_KEY' }),
+  Schema.isPattern(variableNamePattern, { message: 'Expected the name of a variable, such as CRM_API_KEY' }),
 );
 
 export const ConnectionPolicySchema = Schema.Struct({

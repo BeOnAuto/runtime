@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ServerSlot } from '../calls/server-slot.ts';
-import type { ServerConnection } from '../connections/server-connection.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import type { ServerClient } from '../clients/server-client.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import type { StdioServerSettings } from '../settings/server-settings.ts';
 import { until } from '../testing/until.ts';
-import { boundedSlot, takenWithin } from './connection-bound.ts';
+import { boundedSlot, takenWithin } from './client-bound.ts';
 
-const connection: ServerConnection = {
+const client: ServerClient = {
   call: () => Promise.reject(new Error('No call is made')),
   listTools: () => Promise.resolve([]),
   closed: Promise.withResolvers<void>().promise,
@@ -35,7 +35,7 @@ interface Opening extends ServerLink {
   readonly released: () => number;
 }
 
-function opening(take: () => Promise<ServerConnection>): Opening {
+function opening(take: () => Promise<ServerClient>): Opening {
   const counts = { released: 0 };
   return {
     settings,
@@ -50,9 +50,9 @@ function opening(take: () => Promise<ServerConnection>): Opening {
   };
 }
 
-describe('the opening of a connection for one call', () => {
-  it('takes a connection that opens in time, and the failure of one that cannot open', async () => {
-    const quick = opening(() => Promise.resolve(connection));
+describe('the opening of a client for one call', () => {
+  it('takes a client that opens in time, and the failure of one that cannot open', async () => {
+    const quick = opening(() => Promise.resolve(client));
     const failing = opening(() => Promise.reject(new Error('connect ECONNREFUSED 127.0.0.1:1')));
 
     expect(await takenWithin(quick, 1000)).toMatchObject({ slot: { settings } });
@@ -60,15 +60,15 @@ describe('the opening of a connection for one call', () => {
     expect([quick.released(), failing.released()]).toEqual([0, 0]);
   });
 
-  it('gives up at its bound, and lets go of a connection that opens after it, never of one that fails', async () => {
-    const slowOpening = Promise.withResolvers<ServerConnection>();
-    const failingOpening = Promise.withResolvers<ServerConnection>();
+  it('gives up at its bound, and lets go of a client that opens after it, never of one that fails', async () => {
+    const slowOpening = Promise.withResolvers<ServerClient>();
+    const failingOpening = Promise.withResolvers<ServerClient>();
     const slow = opening(() => slowOpening.promise);
     const slowFailing = opening(() => failingOpening.promise);
 
     const taken = await Promise.all([takenWithin(slow, 10), takenWithin(slowFailing, 10)]);
     failingOpening.reject(new Error('The server went away'));
-    slowOpening.resolve(connection);
+    slowOpening.resolve(client);
     await until(() => slow.released() === 1);
 
     expect(taken).toEqual([{ late: true }, { late: true }]);
@@ -79,7 +79,7 @@ describe('the opening of a connection for one call', () => {
 describe('the session of one call, opened again or its process started again', () => {
   const hanging: ServerSlot = {
     settings,
-    connection: () => connection,
+    client: () => client,
     reopenOnce: () => Promise.withResolvers<boolean>().promise,
     restartIfExited: () => Promise.withResolvers<'restarted'>().promise,
     release: () => Promise.resolve(),

@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 
 import { recordingOf, type CallJournal, type KeepIn } from '../calls/recorded-calls.ts';
 import { journalledCall, type CallJournalling } from '../calls/tool-caller.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import type { Listing } from '../listing/server-listing.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { OrgServer } from '../org-servers/org-servers.ts';

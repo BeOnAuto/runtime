@@ -108,6 +108,33 @@ connections:
   });
 });
 
+const gatewaysAndServers = {
+  MODEL_GATEWAYS: JSON.stringify([{ name: 'lab', base_url: 'https://lab.example.com/v1', api_key_env: 'LAB_KEY' }]),
+  TOOL_SERVERS: JSON.stringify({
+    graph: {
+      url: 'https://graph.example.com/mcp',
+      org: 'acme',
+      headers: { Authorization: 'Bearer ${GRAPH_API_KEY}', 'X-Region': '${GRAPH_REGION:-eu}' },
+    },
+  }),
+  LAB_KEY: 'k',
+  CORP_KEY: 'k',
+  GRAPH_API_KEY: 'k',
+};
+
+describe('the variables the runtime reads for itself, of what it has read', () => {
+  it("are its own, the gateways' keys, the references of the servers, a fallback among them, and the file's", () => {
+    const named = ['CRM_API_KEY', 'SECRETS_KEY', 'CORP_KEY', 'LAB_KEY', 'GRAPH_API_KEY', 'GRAPH_REGION', 'WIKI_TOKEN'];
+    const gateways = `model_gateways:\n  - { name: corp, base_url: 'https://llm.example.com/v1', api_key: '\${CORP_KEY}' }\n`;
+    const environment = { ...gatewaysAndServers, CONNECTIONS: JSON.stringify({ variables: named }) };
+    const own = named.slice(1, -1);
+
+    expect(refusalOf(fileOf(gateways), environment)).toBe(
+      `connection_policy_invalid: The connection settings are invalid. ${own.map((name, index) => `CONNECTIONS: /variables/${String(index + 1)}: ${name} ${ownVariable}`).join('; ')}`,
+    );
+  });
+});
+
 describe('the variables a connection may never name', () => {
   it('refuses a variable any settings module reads or a library it uses reads, and a credential of the Azure library', () => {
     const own = [

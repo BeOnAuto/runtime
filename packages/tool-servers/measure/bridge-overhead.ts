@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 
 import { serveFakeApi } from '../src/api-testing/fake-api-server.ts';
-import { ignored } from '../src/connections/ignored.ts';
-import { apiConnection } from '../src/openapi/api-connection.ts';
+import { ignored } from '../src/clients/ignored.ts';
+import { apiClient } from '../src/openapi/api-client.ts';
 import type { DescribedApiSettings } from '../src/openapi/described-api.ts';
 import { describedToolServers } from '../src/openapi/described-servers.ts';
 import { readToolServerSettings } from '../src/settings/settings-reading.ts';
@@ -57,7 +57,7 @@ const api = servers.find((server): server is DescribedApiSettings => server.type
 if (api === undefined) {
   throw new Error('The document of the fake API described no API');
 }
-const connection = apiConnection(api, {
+const client = apiClient(api, {
   fetch: globalThis.fetch,
   tokens: undefined,
   now: Date.now,
@@ -69,7 +69,7 @@ const direct = () =>
     (response) => response.text(),
   );
 const bridged = () =>
-  connection.call({
+  client.call({
     tool: 'search',
     input: { query: 'acme' },
     meta: {},
@@ -96,7 +96,7 @@ const throughTheAccess = measuredOf(await durationsOf(callsMeasured, accessed));
 
 console.log(`${callsMeasured} calls of GET /search on loopback, each measured after ${callsToWarm} to warm up`);
 console.log(`a direct fetch:                   ${shown(directly)}`);
-console.log(`the bridge's connection:          ${shown(throughTheBridge)}`);
+console.log(`the bridge's client:              ${shown(throughTheBridge)}`);
 console.log(`one call through the tool access: ${shown(throughTheAccess)}`);
 console.log(
   `overhead at the median: the bridge ${(throughTheBridge.medianMs - directly.medianMs).toFixed(3)} ms, the tool access ${(throughTheAccess.medianMs - directly.medianMs).toFixed(3)} ms`,

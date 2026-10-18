@@ -27,6 +27,7 @@ interface ReasoningBounds {
 
 export interface ReasoningSettings {
   readonly models: ModelSettings;
+  readonly modelProviders: readonly string[];
   readonly toolServers: ToolServerSettings;
   readonly reasoning: ReasoningBounds;
 }
@@ -66,7 +67,7 @@ function serversPlaced(invalid: Problems, file: FileUse | undefined): ToolServer
   });
 }
 
-export function modelProvidersOf(models: ModelSettings): readonly string[] {
+function modelProvidersOf(models: ModelSettings): readonly string[] {
   const { configured, unconfigured } = providerStatus(models, { entraId: false });
   return [...configured, ...unconfigured.map(({ provider }) => provider)];
 }
@@ -75,12 +76,13 @@ export function readReasoningSettings(environment: Environment, file: FileUse | 
   const models = Effect.runSync(
     readModelSettings(environment).pipe(Effect.mapError((invalid: Problems) => modelsPlaced(invalid, file))),
   );
+  const modelProviders = modelProvidersOf(models);
   const toolServers = Effect.runSync(
     readToolServerSettings(environment, {
-      modelProviders: modelProvidersOf(models),
+      modelProviders,
       ...(file === undefined ? {} : { documentsDirectory: dirname(file.path) }),
     }).pipe(Effect.mapError((invalid: Problems) => serversPlaced(invalid, file))),
   );
   const reasoning = Effect.runSync(countsIn(environment, { settings: 'reasoning function settings', bounds }));
-  return { models, toolServers, reasoning };
+  return { models, modelProviders, toolServers, reasoning };
 }

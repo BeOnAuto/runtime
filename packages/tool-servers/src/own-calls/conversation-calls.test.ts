@@ -131,7 +131,7 @@ describe('a telling the playbook makes in a conversation', () => {
     ]);
   });
 
-  it('fails with no answer when the server no longer offers the tool, or its connection could not be opened', () => {
+  it('fails with no answer when the server no longer offers the tool, or its client could not be opened', () => {
     expect([
       tellingEndedOf(telling, notOffered, recorded).event,
       tellingEndedOf(

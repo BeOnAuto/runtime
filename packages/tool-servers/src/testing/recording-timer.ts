@@ -1,4 +1,4 @@
-import type { Timer } from '../connections/http-connection.ts';
+import type { Timer } from '../clients/http-client.ts';
 
 export interface Wait {
   readonly ms: number;

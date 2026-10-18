@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { noCalls } from '../bounds/call-bounds.ts';
-import { ignored } from '../connections/ignored.ts';
+import { ignored } from '../clients/ignored.ts';
 import {
   controlledSignals,
   fakeApiKey,

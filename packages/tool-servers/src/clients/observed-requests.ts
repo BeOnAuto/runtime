@@ -1,5 +1,6 @@
 import { Option, Schema } from 'effect';
 
+import { headerNamePattern } from '../settings/checked.ts';
 import { ignored } from './ignored.ts';
 
 type RequestId = string | number;
@@ -63,8 +64,6 @@ const MessageSchema = Schema.Struct({
 
 const decodeBody = Schema.decodeUnknownSync(Schema.fromJsonString(MessageSchema));
 
-const headerName = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
-
 const decodeMessage = Schema.decodeUnknownOption(MessageSchema);
 
 function idIn(body: unknown): RequestId | undefined {
@@ -117,7 +116,7 @@ function overflowOf(answered: Map<RequestId, ObservedResponse | null>, stopOf: S
 }
 
 export function observations(requestId: string | null, mostAnswerBytes: number): Observations {
-  const requestIdHeader = requestId !== null && headerName.test(requestId) ? requestId : null;
+  const requestIdHeader = requestId !== null && headerNamePattern.test(requestId) ? requestId : null;
   const sent = new Map<Marker, RequestId>();
   const answered = new Map<RequestId, ObservedResponse | null>();
   const stops = new Map<Marker, () => void>();

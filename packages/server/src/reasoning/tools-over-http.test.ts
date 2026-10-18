@@ -115,7 +115,7 @@ describe('a reasoning function that calls tools, over HTTP', () => {
       fake
         .seen()
         .filter(({ rpc }) => rpc === 'initialize')
-        .map(({ client }) => client),
+        .map(({ clientInfo }) => clientInfo),
     ).toEqual([release]);
   });
 

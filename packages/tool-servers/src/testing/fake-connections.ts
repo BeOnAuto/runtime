@@ -1,9 +1,9 @@
 import { Array as Arr, Effect, Option } from 'effect';
 
 import {
-  isConnectionSettings,
+  isConnectionServerSettings,
   type ConnectionServer,
-  type ConnectionSettings,
+  type ConnectionServerSettings,
   type ConnectionSource,
   type ConnectionUnready,
   type OrgConnection,
@@ -30,7 +30,7 @@ type Standing =
 interface Kept {
   readonly org: string;
   readonly connection: FakeConnection;
-  readonly settings: ConnectionSettings;
+  readonly settings: ConnectionServerSettings;
 }
 
 export interface FakeConnections extends ConnectionSource {
@@ -53,17 +53,17 @@ interface Held {
 }
 
 export function pendingWords(name: string): string {
-  return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or removes it and adds it again`;
+  return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or removes it and adds it again for a new link`;
 }
 
-function settingsOf(org: string, { name, entry, environment = {} }: FakeConnection): ConnectionSettings {
+function settingsOf(org: string, { name, entry, environment = {} }: FakeConnection): ConnectionServerSettings {
   const read = Effect.runSync(
     readToolServerSettings(
       { ...environment, TOOL_SERVERS: JSON.stringify({ [name]: { ...entry, org } }) },
       { modelProviders: [] },
     ),
   );
-  return Option.getOrThrow(Arr.head(read.servers.filter((settings) => isConnectionSettings(settings))));
+  return Option.getOrThrow(Arr.head(read.servers.filter((settings) => isConnectionServerSettings(settings))));
 }
 
 function unreadyOf(name: string, standing: Standing): ConnectionUnready | undefined {

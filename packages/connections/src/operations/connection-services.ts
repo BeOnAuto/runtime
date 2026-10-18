@@ -15,7 +15,7 @@ export interface ConnectionServices {
   readonly secrets: SecretKeeping;
   readonly policy: ConnectionPolicy;
   readonly fileEntries: readonly string[];
-  readonly providers: readonly string[];
+  readonly modelProviders: readonly string[];
   readonly pages: ConnectPages;
   readonly access: RuntimeAccess;
 }

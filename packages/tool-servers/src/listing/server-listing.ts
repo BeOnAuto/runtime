@@ -3,8 +3,8 @@ import { Result } from 'effect';
 import type { Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { takenSlot, type ServerSlot } from '../calls/server-slot.ts';
-import { failureOf } from '../connections/server-failures.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import { failureOf } from '../clients/server-failures.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import type { Listed } from '../names/tool-naming.ts';
 import { serverFailed, type Unusable } from '../org-servers/server-refusals.ts';
 
@@ -18,7 +18,7 @@ export function listedThrough(
   { secrets, timing }: Listing,
 ): Promise<Result.Result<Listed, Unusable>> {
   return slot
-    .connection()
+    .client()
     .listTools(timing.openMs)
     .then(
       (tools) => Result.succeed({ slot, tools }),
@@ -29,7 +29,7 @@ export function listedThrough(
     );
 }
 
-export async function connectedTo(link: ServerLink, listing: Listing): Promise<Result.Result<Listed, Unusable>> {
+export async function takenAndListed(link: ServerLink, listing: Listing): Promise<Result.Result<Listed, Unusable>> {
   const taken = await takenSlot(link);
   return Result.isFailure(taken)
     ? Result.fail(serverFailed(link, taken.failure, listing.secrets))
@@ -44,10 +44,10 @@ export async function listedOn(
   links: readonly ServerLink[],
   listing: Listing,
 ): Promise<Result.Result<readonly Listed[], Unusable>> {
-  const connected = await Promise.all(links.map((link) => connectedTo(link, listing)));
+  const tried = await Promise.all(links.map((link) => takenAndListed(link, listing)));
   const listed: Listed[] = [];
   const failures: Unusable[] = [];
-  for (const each of connected) {
+  for (const each of tried) {
     if (Result.isSuccess(each)) {
       listed.push(each.success);
     } else {

@@ -29,7 +29,7 @@ describe('readSettings', () => {
     const { models, toolServers, interaction, ...server } = readSettings({});
 
     expect(models.openai).toEqual({ configured: false, missing: ['OPENAI_API_KEY'] });
-    expect(toolServers).toEqual({ servers: [] });
+    expect(toolServers).toEqual({ servers: [], referencedVariables: [] });
     expect(interaction).toEqual({ mostOpenRequests: 10_000 });
     expect(server).toEqual({
       host: '0.0.0.0',
@@ -44,6 +44,16 @@ describe('readSettings', () => {
       proxy: { enabled: false, environment: {} },
       logFormat: 'json',
       logLevel: 'info',
+      modelProviders: [
+        'anthropic',
+        'openai',
+        'google',
+        'bedrock',
+        'bedrock-anthropic',
+        'azure',
+        'vertex',
+        'vertex-anthropic',
+      ],
       reasoning: { mostInputTokens: 2_000_000 },
       workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
       computation: { workers: 4 },
@@ -101,6 +111,16 @@ describe('readSettings given every setting', () => {
       proxy: { enabled: true, environment: { HTTPS_PROXY: 'http://proxy.internal:3128' } },
       logFormat: 'pretty',
       logLevel: 'warn',
+      modelProviders: [
+        'openai',
+        'anthropic',
+        'google',
+        'bedrock',
+        'bedrock-anthropic',
+        'azure',
+        'vertex',
+        'vertex-anthropic',
+      ],
       reasoning: { mostInputTokens: 500_000 },
       workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
       computation: { workers: 4 },

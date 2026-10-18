@@ -3,6 +3,7 @@ import {
   decodedJsonSetting,
   pointerOf,
   problem,
+  referencedVariablesOf,
   settingProblemText,
   substituted,
   type SettingProblem,
@@ -51,7 +52,7 @@ export function readEntry(
   }
   const fields = decodeEntry(resolved.value);
   return checkedEntry(name, fields, {
-    providers: context.modelProviders,
+    modelProviders: context.modelProviders,
     directory: context.documentsDirectory ?? process.cwd(),
     secrets: secretsOfEntry(name, fields, resolved.references),
   });
@@ -61,9 +62,9 @@ function serversOf(
   text: string | undefined,
   environment: Environment,
   context: ToolServerSettingsContext,
-): Result.Result<readonly ServerSettings[], readonly SettingProblem[]> {
+): Result.Result<ToolServerSettings, readonly SettingProblem[]> {
   if (text === undefined) {
-    return Result.succeed([]);
+    return Result.succeed({ servers: [], referencedVariables: [] });
   }
   return Result.flatMap(decodedJsonSetting(toolServersSetting, text, ToolServersSchema), (entries) => {
     const read = Object.entries(entries).map(([name, written]: readonly [string, ServerEntryFields]) =>
@@ -73,7 +74,12 @@ function serversOf(
     for (const entry of read) {
       problems.push(...Result.getFailure(entry).pipe(Option.getOrElse((): readonly SettingProblem[] => [])));
     }
-    return problems.length > 0 ? Result.fail(problems) : Result.all(read);
+    return problems.length > 0
+      ? Result.fail(problems)
+      : Result.map(Result.all(read), (servers: readonly ServerSettings[]) => ({
+          servers,
+          referencedVariables: referencedVariablesOf(entries),
+        }));
   });
 }
 
@@ -87,7 +93,7 @@ export function readToolServerSettings(
   context: ToolServerSettingsContext,
 ): Effect.Effect<ToolServerSettings, ToolServerSettingsInvalid> {
   return Result.match(serversOf(environment[toolServersSetting], environment, context), {
-    onSuccess: (servers) => Effect.succeed({ servers }),
+    onSuccess: (settings) => Effect.succeed(settings),
     onFailure: (problems) => Effect.fail(invalid(problems)),
   });
 }

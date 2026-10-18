@@ -17,7 +17,7 @@ function sourceOf(h: Harness, changes: Partial<ServingServices> = {}): Connectio
     secrets: h.secrets,
     policy: connectionPolicyOf({}),
     variables: new Map(),
-    providers: ['openai'],
+    modelProviders: ['openai'],
     ...changes,
   });
 }
@@ -149,7 +149,7 @@ describe('a connection the rules of the moment no longer allow', () => {
     const { id, token } = await added(h, { ...notes, name: 'mistral' });
     await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
 
-    expect(await refusalOf(sourceOf(h, { providers: ['openai', 'mistral'] }), id)).toEqual({
+    expect(await refusalOf(sourceOf(h, { modelProviders: ['openai', 'mistral'] }), id)).toEqual({
       because: 'connection_not_allowed',
       detail:
         'The entry of the connection mistral is not one this runtime takes any more: The name of a model provider or gateway, which a reasoning function could not tell apart from it',

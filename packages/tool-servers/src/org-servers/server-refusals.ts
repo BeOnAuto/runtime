@@ -1,7 +1,7 @@
 import { ToolNotOffered } from '../access/tool-not-offered.ts';
 import { ToolServerFailed } from '../access/tool-server-failed.ts';
 import type { Secrets } from '../bounds/secrets.ts';
-import type { FailureKind, ServerFailure } from '../connections/server-failures.ts';
+import type { FailureKind, ServerFailure } from '../clients/server-failures.ts';
 import type { UnavailableBecause } from '../listing/tool-server.ts';
 import type { ServerSettings } from '../settings/server-settings.ts';
 import { isUnready } from './connection-source.ts';

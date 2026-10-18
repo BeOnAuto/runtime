@@ -12,14 +12,11 @@ export interface AuthSettings {
   readonly credential: AuthCredential;
 }
 
-export interface ToolLists {
-  readonly allowed: readonly string[] | null;
-}
-
-interface ServedBy extends ToolLists {
+interface ServedBy {
   readonly name: string;
   readonly orgs: readonly string[] | null;
   readonly playbooks: readonly string[] | null;
+  readonly allowed: readonly string[] | null;
   readonly record_content: boolean;
   readonly request_id: string | null;
   readonly secrets: readonly Redacted.Redacted[];
@@ -60,6 +57,7 @@ export type ServerType = ServerSettings['type'];
 
 export interface ToolServerSettings {
   readonly servers: readonly ServerSettings[];
+  readonly referencedVariables: readonly string[];
 }
 
 export interface ServersScope {

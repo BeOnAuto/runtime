@@ -5,12 +5,12 @@ import { Effect } from 'effect';
 import type { ServerMessage } from '../access/caller-context.ts';
 import { makeToolAccess, type ToolAccess, type ToolAccessOptions } from '../access/tool-access.ts';
 import type { Timing } from '../bounds/call-bounds.ts';
-import { ignored } from '../connections/ignored.ts';
+import { ignored } from '../clients/ignored.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { describedToolServers } from '../openapi/described-servers.ts';
 import { readToolServerSettings, type Environment } from '../settings/settings-reading.ts';
 
-export const testClientInfo: ToolAccessOptions['client'] = { name: '@on.auto/runtime', version: '0.0.0-test' };
+export const testClientInfo: ToolAccessOptions['clientInfo'] = { name: '@on.auto/runtime', version: '0.0.0-test' };
 
 export interface AccessOptions {
   readonly environment?: Environment;
@@ -42,7 +42,7 @@ function accessOver(settings: ToolServers, { timing, fetch, traceMeta, connectio
   const messages: ServerMessage[] = [];
   const content = memoryRecordedContent();
   const access = makeToolAccess(settings, {
-    client: testClientInfo,
+    clientInfo: testClientInfo,
     content,
     reportServerMessage: (message) => {
       messages.push(message);
@@ -71,5 +71,5 @@ export async function describedAccess(
 
 export const noToolServers: ToolAccess = makeToolAccess(
   { servers: [] },
-  { client: testClientInfo, content: memoryRecordedContent(), reportServerMessage: ignored },
+  { clientInfo: testClientInfo, content: memoryRecordedContent(), reportServerMessage: ignored },
 );

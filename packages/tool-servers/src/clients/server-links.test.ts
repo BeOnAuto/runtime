@@ -11,8 +11,8 @@ import {
   type FakeMcpOptions,
   type FakeMcpServer,
 } from '../testing/index.ts';
-import { errorsNoLongerReported } from './mcp-connection.ts';
-import type { CallSettled, ServerConnection } from './server-connection.ts';
+import { errorsNoLongerReported } from './mcp-client.ts';
+import type { CallSettled, ServerClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
 import { serverLink } from './server-links.ts';
 
@@ -63,7 +63,7 @@ function linked(settings: McpServerSettings, options: Partial<Parameters<typeof 
   const secrets = secretsOf([]);
   const reported: string[] = [];
   const link = serverLink(settings, {
-    client: testClientInfo,
+    clientInfo: testClientInfo,
     fetch: globalThis.fetch,
     secrets,
     now: Date.now,
@@ -77,8 +77,8 @@ function linked(settings: McpServerSettings, options: Partial<Parameters<typeof 
   return { link, secrets, reported };
 }
 
-const searched = (connection: ServerConnection) =>
-  connection.call({
+const searched = (client: ServerClient) =>
+  client.call({
     tool: 'search',
     input: { query: 'acme' },
     meta: {},
@@ -217,24 +217,24 @@ describe('an http server that does not end its session', () => {
         return unanswered.promise;
       }),
     });
-    const connection = await link.take();
+    const client = await link.take();
     const finished = link[ending]().then(() => true);
     const request = await deleting.promise;
 
     expect(await finished).toBe(true);
     expect(request).toHaveProperty('signal.aborted', true);
-    await connection.closed;
+    await client.closed;
     unanswered.resolve(new Response(null, { status: 204 }));
   });
 
-  it('closes the local connection even when the server refuses deletion', async () => {
+  it('closes the client even when the server refuses deletion', async () => {
     const fake = await fakeServer();
     const { link } = linked(httpSettings(fake.url), {
       fetch: fetchWithDeletion(fetch, () => Promise.resolve(new Response(null, { status: 500 }))),
     });
-    const connection = await link.take();
+    const client = await link.take();
 
-    await expect(link.release().then(() => connection.closed)).resolves.toBeUndefined();
+    await expect(link.release().then(() => client.closed)).resolves.toBeUndefined();
   });
 });
 
@@ -243,11 +243,11 @@ describe('an http session that ends before the deadline', () => {
     const fake = await fakeServer();
     const { timer, waits } = recordingTimer();
     const { link } = linked(httpSettings(fake.url), { timer });
-    const connection = await link.take();
+    const client = await link.take();
 
     await link.release();
 
-    await expect(connection.closed).resolves.toBeUndefined();
+    await expect(client.closed).resolves.toBeUndefined();
     expect(waits()).toEqual([{ ms: timing.openMs, stopped: true }]);
   });
 });
@@ -267,12 +267,12 @@ describe('a link to an http server with an auth block', () => {
   it('authenticates again once on a 401, and fails on a second as a refused key', async () => {
     const fake = await fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
     const { link } = linked(httpSettings(fake.url, { auth: authOf(fake) }));
-    const connection = await link.take();
+    const client = await link.take();
 
     fake.revokeTokens();
-    const reauthenticated = await searched(connection);
+    const reauthenticated = await searched(client);
     fake.answerNextWith(401, 2);
-    const refused = await searched(connection);
+    const refused = await searched(client);
 
     expect(reauthenticated).toMatchObject({ result: { content: [{ text: 'Found 2 rows for acme.' }] } });
     expect(failureOfCall(refused)).toEqual({ kind: 'key_refused', message: 'The tool server answered HTTP 401' });

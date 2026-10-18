@@ -92,7 +92,7 @@ describe('one call through a tool this playbook is not offered', () => {
     expect(fake.seen()).toEqual([]);
   });
 
-  it('is told by name alone, before any connection, as a run asks before it records anything', async () => {
+  it('is told by name alone, before any client opens, as a run asks before it records anything', async () => {
     const fake = await oneCallServer();
     const access = oneCallAccess(fake.url);
 
@@ -106,7 +106,7 @@ describe('one call through a tool this playbook is not offered', () => {
   });
 });
 
-describe('one call to a server that opens no connection', () => {
+describe('one call to a server whose client never opens', () => {
   it('fails at the open bound, as unreachable, with nothing sent', async () => {
     const silent = createServer(Function.constVoid);
     silent.listen(0, '127.0.0.1');

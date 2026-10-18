@@ -13,7 +13,13 @@ export { configFileVariable, configurationOf, type Configuration, type FileUse }
 export { fileSetting, type FileSetting, type FileSettingOptions, type References } from './config-file/file-setting.ts';
 export { credentialProblems } from './config-file/credentials.ts';
 export type { FileProblem } from './config-file/file-problem.ts';
-export { referencedVariablesOf, substituted, type Reference, type Substituted } from './config-file/references.ts';
+export {
+  referencedVariablesOf,
+  substituted,
+  variableNamePattern,
+  type Reference,
+  type Substituted,
+} from './config-file/references.ts';
 export {
   decodedJsonSetting,
   decodedJsonSettingWith,

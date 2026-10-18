@@ -3,7 +3,7 @@ import { Effect, Order } from 'effect';
 
 import type { ToolNotOffered } from '../access/tool-not-offered.ts';
 import type { ToolServerFailed } from '../access/tool-server-failed.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import type { ConnectionUnready } from './connection-source.ts';
 import { refusalOf, type Unusable } from './server-refusals.ts';
@@ -50,14 +50,16 @@ function takenAtUse(name: string): string {
   return `${takenByTheConfiguration(name)}; remove it and add it again under another name`;
 }
 
-function takenByTheFile(name: string): ConnectionUnready {
+function unreadyAsTakenByTheFile(name: string): ConnectionUnready {
   return { because: 'connection_not_allowed', detail: takenAtUse(name) };
 }
 
 export function withTheFileFirst(files: readonly OrgServer[], connections: readonly OrgServer[]): readonly OrgServer[] {
   const fileNames = new Set(files.map(({ settings }) => settings.name));
   const shadowed = connections.map((server) =>
-    fileNames.has(server.settings.name) ? unreadyServer(server.settings, takenByTheFile(server.settings.name)) : server,
+    fileNames.has(server.settings.name)
+      ? unreadyServer(server.settings, unreadyAsTakenByTheFile(server.settings.name))
+      : server,
   );
   return [...files, ...shadowed];
 }

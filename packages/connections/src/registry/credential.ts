@@ -1,5 +1,6 @@
+import { variableNamePattern } from '@on.auto/config';
 import { listed } from '@on.auto/operations';
-import { isPinnableUrl } from '@on.auto/tool-servers';
+import { headerNamePattern, isPinnableUrl } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 const credentialKinds = ['none', 'reference', 'secret', 'client_credentials'] as const;
@@ -57,10 +58,6 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   client_credentials: { required: ['issuer', 'client_id'], optional: ['scope'] },
 };
 
-const variableName = /^[A-Za-z_][A-Za-z0-9_]*$/u;
-
-const headerName = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
-
 interface FieldIssue {
   readonly path: readonly [Field];
   readonly issue: string;
@@ -91,13 +88,13 @@ function presenceIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
 }
 
 function variableIssuesOf({ variable }: CredentialFields): readonly FieldIssue[] {
-  return variable === undefined || variableName.test(variable)
+  return variable === undefined || variableNamePattern.test(variable)
     ? []
     : [{ path: ['variable'], issue: 'Expected the name of a variable, such as CRM_API_KEY' }];
 }
 
 function nameIssuesOf({ name, in: placement }: CredentialFields): readonly FieldIssue[] {
-  return name !== undefined && placement === 'header' && !headerName.test(name)
+  return name !== undefined && placement === 'header' && !headerNamePattern.test(name)
     ? [{ path: ['name'], issue: 'Expected a header name' }]
     : [];
 }

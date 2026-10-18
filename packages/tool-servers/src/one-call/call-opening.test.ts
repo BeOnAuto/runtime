@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
 import { secretsOf } from '../bounds/secrets.ts';
-import type { ServerConnection } from '../connections/server-connection.ts';
-import type { ServerLink } from '../connections/server-links.ts';
+import type { ServerClient } from '../clients/server-client.ts';
+import type { ServerLink } from '../clients/server-links.ts';
 import type { StdioServerSettings } from '../settings/server-settings.ts';
 import { openedFor } from './call-opening.ts';
 
@@ -25,8 +25,8 @@ const settings: StdioServerSettings = {
 
 const hanging: ServerLink = {
   settings,
-  take: () => Promise.withResolvers<ServerConnection>().promise,
-  renew: () => Promise.withResolvers<ServerConnection>().promise,
+  take: () => Promise.withResolvers<ServerClient>().promise,
+  renew: () => Promise.withResolvers<ServerClient>().promise,
   release: () => Promise.resolve(),
   stop: () => Promise.resolve(),
 };
@@ -36,7 +36,7 @@ const listing = {
   timing: { ...defaultTiming, openMs: 10 },
 };
 
-const exited: ServerConnection = {
+const exited: ServerClient = {
   call: () => Promise.reject(new Error('No call is made')),
   listTools: () => Promise.reject(new Error('No listing is made')),
   closed: Promise.resolve(),
@@ -61,7 +61,7 @@ describe('the opening of one call to a process that exited', () => {
 });
 
 describe('the opening of one call', () => {
-  it('gives up on a connection that does not open within the open bound, as a server that could not be reached', async () => {
+  it('gives up on a client that does not open within the open bound, as a server that could not be reached', async () => {
     expect(await openedFor({ server: 'notes', tool: 'search' }, hanging, listing)).toEqual({
       kind: 'unopened',
       refused: 'tool_server_failed',

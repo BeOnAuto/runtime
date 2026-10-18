@@ -1,6 +1,6 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 
-import { HostRefused } from '../connections/server-failures.ts';
+import { HostRefused } from '../clients/server-failures.ts';
 
 export type Reaches = (url: string) => string | undefined;
 

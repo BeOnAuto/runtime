@@ -97,10 +97,10 @@ export function servedScopeOf(
   entry: string,
   written: WrittenScope,
   served: string,
-): Result.Result<ServedScope, readonly SettingProblem[]> {
+): Result.Result<Pick<ServedScope, 'orgs'>, readonly SettingProblem[]> {
   const placing = { setting, entry };
   const problems = [...orgProblems(placing, written, served), ...playbookProblems(placing, written.playbooks ?? [])];
   return written.org === undefined || problems.length > 0
     ? Result.fail(problems)
-    : Result.succeed({ orgs: orgsOf(written.org), playbooks: written.playbooks ?? null });
+    : Result.succeed({ orgs: orgsOf(written.org) });
 }

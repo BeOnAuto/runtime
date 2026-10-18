@@ -11,6 +11,8 @@ const loopbackHosts: ReadonlySet<string> = new Set(['127.0.0.1', 'localhost', '[
 
 export const pinnedUrlShape = 'Expected an https URL, or an http URL on a loopback address';
 
+export const headerNamePattern = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
+
 export function at(name: string, ...path: readonly string[]): string {
   return [name, ...path].map((segment) => `/${JsonPointer.escapeToken(segment)}`).join('');
 }

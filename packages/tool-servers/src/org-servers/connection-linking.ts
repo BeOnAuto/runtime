@@ -1,11 +1,11 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { Predicate, Result } from 'effect';
 
-import type { LinkOptions } from '../connections/link-openers.ts';
-import { serverLink } from '../connections/server-links.ts';
+import type { LinkOptions } from '../clients/link-openers.ts';
+import { serverLink } from '../clients/server-links.ts';
 import type { Describing, LinkedServerSettings } from '../openapi/described-api.ts';
 import type { Linking } from './connection-links.ts';
-import type { ConnectionServer, ConnectionSettings } from './connection-source.ts';
+import type { ConnectionServer, ConnectionServerSettings } from './connection-source.ts';
 import { fetchWithin } from './fetch-within.ts';
 import { serverFailed } from './server-refusals.ts';
 
@@ -23,7 +23,7 @@ interface Describe {
 type Described = { readonly settings: LinkedServerSettings } | Exclude<Linking, { readonly link: unknown }>;
 
 async function describedConnection(
-  settings: ConnectionSettings,
+  settings: ConnectionServerSettings,
   { server, fetch, linking }: Describe,
 ): Promise<Described> {
   if (settings.type === 'mcp') {
@@ -49,7 +49,7 @@ export async function connectionLinkOf(
   linking: ConnectionLinking,
 ): Promise<Linking> {
   const fetch = fetchWithin(linking.options.fetch, server.reaches);
-  const settings: ConnectionSettings = { ...server.settings, connection: id };
+  const settings: ConnectionServerSettings = { ...server.settings, connection: id };
   const described = await describedConnection(settings, { server, fetch, linking });
   return 'settings' in described ? { link: serverLink(described.settings, { ...linking.options, fetch }) } : described;
 }

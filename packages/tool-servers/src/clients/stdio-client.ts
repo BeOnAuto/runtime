@@ -3,17 +3,17 @@ import { Redacted } from 'effect';
 import type { StdioServerSettings } from '../settings/server-settings.ts';
 import {
   boundedReport,
-  connectionOver,
   errorsNoLongerReported,
   openingClient,
+  serverClientOver,
   type ClientInfo,
   type OutputReport,
-} from './mcp-connection.ts';
-import type { ServerConnection } from './server-connection.ts';
+} from './mcp-client.ts';
+import type { ServerClient } from './server-client.ts';
 import { StdioProcessTransport } from './stdio-transport.ts';
 
 export interface StdioOpening {
-  readonly client: ClientInfo;
+  readonly clientInfo: ClientInfo;
   readonly timeoutMs: number;
   readonly output: OutputReport;
 }
@@ -24,22 +24,22 @@ function environmentOf({ env }: StdioServerSettings): Readonly<Record<string, st
   );
 }
 
-export async function openStdio(settings: StdioServerSettings, opening: StdioOpening): Promise<ServerConnection> {
-  const opened = openingClient(
-    opening.client,
+export async function openStdio(settings: StdioServerSettings, opening: StdioOpening): Promise<ServerClient> {
+  const sdk = openingClient(
+    opening.clientInfo,
     settings.request_id,
     boundedReport(opening.output, errorsNoLongerReported),
   );
   const transport = new StdioProcessTransport(
     { command: settings.command, args: settings.args, env: environmentOf(settings) },
-    opened.observations,
+    sdk.observations,
     opening.output,
   );
   try {
-    await opened.client.connect(transport, { timeout: opening.timeoutMs });
+    await sdk.client.connect(transport, { timeout: opening.timeoutMs });
   } catch (failure) {
     await transport.close();
     throw failure;
   }
-  return connectionOver(opened.client, opened.observations, opened.closed, () => opened.client.close());
+  return serverClientOver(sdk.client, sdk.observations, sdk.closed, () => sdk.client.close());
 }

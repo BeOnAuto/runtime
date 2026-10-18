@@ -86,7 +86,7 @@ export const mcpUnderTest: ServerUnderTest = {
   },
 };
 
-export const mcpClientUnderTest: ServerUnderTest = {
+export const mcpClientCredentialsUnderTest: ServerUnderTest = {
   kind: 'an MCP server of client credentials',
   serve: async (requestIdHeader) => {
     const fake = await serveFakeMcp({ client: theClient, ...requestIdOf(requestIdHeader) });
@@ -131,7 +131,7 @@ export const apiQueryParameterUnderTest: ServerUnderTest = {
   },
 };
 
-export const apiClientUnderTest: ServerUnderTest = {
+export const apiClientCredentialsUnderTest: ServerUnderTest = {
   kind: 'an HTTP API of client credentials',
   serve: async (requestIdHeader) => {
     const fake = await serveFakeApi({ client: theClient, ...requestIdOf(requestIdHeader) });
@@ -146,9 +146,9 @@ export const apiClientUnderTest: ServerUnderTest = {
 
 export const serversUnderTest: readonly ServerUnderTest[] = [
   mcpUnderTest,
-  mcpClientUnderTest,
+  mcpClientCredentialsUnderTest,
   apiUnderTest,
   apiQueryKeyUnderTest,
   apiQueryParameterUnderTest,
-  apiClientUnderTest,
+  apiClientCredentialsUnderTest,
 ];

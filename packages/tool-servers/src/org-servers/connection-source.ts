@@ -2,14 +2,14 @@ import { Effect, Schema } from 'effect';
 
 import type { McpServerSettings, OpenApiServerSettings, ServerSettings } from '../settings/server-settings.ts';
 
-export type ConnectionSettings = McpServerSettings | OpenApiServerSettings;
+export type ConnectionServerSettings = McpServerSettings | OpenApiServerSettings;
 
-export function isConnectionSettings(settings: ServerSettings): settings is ConnectionSettings {
+export function isConnectionServerSettings(settings: ServerSettings): settings is ConnectionServerSettings {
   return settings.type !== 'stdio';
 }
 
 export type ConnectionServing = Pick<
-  ConnectionSettings,
+  ConnectionServerSettings,
   'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id'
 >;
 
@@ -27,7 +27,7 @@ export interface ConnectionUnready {
 }
 
 export interface ConnectionServer {
-  readonly settings: ConnectionSettings;
+  readonly settings: ConnectionServerSettings;
   readonly reaches: (url: string) => string | undefined;
 }
 

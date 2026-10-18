@@ -23,9 +23,10 @@ export const functionVariables: readonly string[] = [
 ];
 
 export function readFunctionSettings(environment: Environment, file: FileUse | undefined): FunctionSettings {
-  const { models, toolServers, reasoning } = readReasoningSettings(environment, file);
+  const { models, modelProviders, toolServers, reasoning } = readReasoningSettings(environment, file);
   return {
     models,
+    modelProviders,
     toolServers,
     reasoning,
     computation: Effect.runSync(readComputationSettings(environment)),

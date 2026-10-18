@@ -1,7 +1,7 @@
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { decodeToolResult } from '../bounds/tool-results.ts';
-import { counted, retryAfterMsOf, type Observed } from '../connections/observed-requests.ts';
-import type { CallSettled } from '../connections/server-connection.ts';
+import { counted, retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
+import type { CallSettled } from '../clients/server-client.ts';
 import { AnsweredStatus } from './answered-status.ts';
 
 export interface Answering {

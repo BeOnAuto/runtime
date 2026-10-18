@@ -3,23 +3,19 @@ import { describe, expect, it } from 'vitest';
 
 import { servedScopeOf, servesOrg, servesPlaybook } from '../index.ts';
 
-describe('the org and playbooks an entry serves', () => {
-  it('are its org and the playbooks it names, or every playbook of the org when it names none', () => {
+describe('the scope an entry serves', () => {
+  it('are its org, whether or not it names playbooks', () => {
     expect(servedScopeOf('EXAMPLE', 'graph', { org: 'acme', playbooks: ['sales'] }, 'server')).toEqual(
-      Result.succeed({ orgs: ['acme'], playbooks: ['sales'] }),
+      Result.succeed({ orgs: ['acme'] }),
     );
-    expect(servedScopeOf('EXAMPLE', 'graph', { org: 'acme' }, 'server')).toEqual(
-      Result.succeed({ orgs: ['acme'], playbooks: null }),
-    );
+    expect(servedScopeOf('EXAMPLE', 'graph', { org: 'acme' }, 'server')).toEqual(Result.succeed({ orgs: ['acme'] }));
   });
 
-  it('are the orgs of a list, with the playbooks it names within each, or every org for *', () => {
+  it('are the orgs of a list, or every org for *', () => {
     expect(servedScopeOf('EXAMPLE', 'graph', { org: ['acme', 'globex'], playbooks: ['sales'] }, 'server')).toEqual(
-      Result.succeed({ orgs: ['acme', 'globex'], playbooks: ['sales'] }),
+      Result.succeed({ orgs: ['acme', 'globex'] }),
     );
-    expect(servedScopeOf('EXAMPLE', 'graph', { org: '*' }, 'server')).toEqual(
-      Result.succeed({ orgs: null, playbooks: null }),
-    );
+    expect(servedScopeOf('EXAMPLE', 'graph', { org: '*' }, 'server')).toEqual(Result.succeed({ orgs: null }));
   });
 
   it('are refused without an org, or with an org or playbook that is not an id, at their places', () => {
