@@ -30,7 +30,11 @@ interface Piece {
   readonly text: string;
 }
 
-const environmentReference = /^\$\{(?:env:)?([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}$/u;
+const variableName = '[A-Za-z_][A-Za-z0-9_]*';
+
+export const variableNamePattern = new RegExp(`^${variableName}$`, 'u');
+
+const environmentReference = new RegExp(`^\\$\\{(?:env:)?(${variableName})(?::-([^}]*))?\\}$`, 'u');
 
 const notAReference =
   'Holds a ${…} that is not a reference to an environment variable; write ${NAME}, or $$ for a literal $';
