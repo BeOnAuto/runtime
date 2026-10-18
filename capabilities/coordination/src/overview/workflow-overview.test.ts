@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { markdownOf } from '@on.auto/definitions';
+import { sectionIn } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -24,10 +25,6 @@ function goldenOf(name: string): string {
 
 function overviewOf(source: string, name = 'flow'): string {
   return Effect.runSync(workflows.prepare(source)).overview(name);
-}
-
-function sectionIn(overview: string, heading: string): string {
-  return overview.split(`## ${heading}\n\n`)[1]?.split('\n\n## ')[0] ?? '';
 }
 
 const [reviewAndApprove = '', schedule = ''] = yamlBlocksOf('workflow-format.md');

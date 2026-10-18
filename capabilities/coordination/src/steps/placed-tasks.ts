@@ -9,8 +9,9 @@ import {
   type TaskKind,
 } from '@on.auto/workflow-engine';
 
-import { labelOf } from './task-labels.ts';
 import { objectAt } from './task-reading.ts';
+
+export type LabelOf = (kind: TaskKind | undefined, task: JsonObject, name: string) => string;
 
 export interface PlacedTask {
   readonly name: string;
@@ -62,7 +63,7 @@ function groupOf({ label, within }: GroupDraft, nodes: readonly number[]): Diagr
   return within === undefined ? { label, nodes } : { label, nodes, within };
 }
 
-export function placedTasksOf(list: Json | undefined, entries: number): Placement {
+export function placedTasksOf(list: Json | undefined, entries: number, labelOf: LabelOf): Placement {
   const nodes: DiagramNode[] = [];
   const nodeGroups: (number | undefined)[] = [];
   const drafts: GroupDraft[] = [];

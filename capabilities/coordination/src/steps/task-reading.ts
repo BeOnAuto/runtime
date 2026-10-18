@@ -10,6 +10,8 @@ import {
   type JsonObject,
 } from '@on.auto/workflow-engine';
 
+import { literalText } from '../document/workflow-functions.ts';
+
 type ListenMode = 'one' | 'any' | 'all';
 
 export interface Listened {
@@ -27,10 +29,6 @@ export function objectAt(value: JsonObject, ...keys: readonly string[]): JsonObj
 
 export function expressionText(value: Json): string {
   return typeof value === 'string' ? (enclosedBody(value) ?? value).trim() : JSON.stringify(value);
-}
-
-export function literalText(value: Json | undefined): string | undefined {
-  return typeof value === 'string' && enclosedBody(value) === undefined ? value : undefined;
 }
 
 export function durationText(value: Json | undefined): string | undefined {

@@ -1,28 +1,17 @@
 import { definitionResourceLabel, listedPhrases, named, type Phrases } from '@on.auto/definitions';
 import { field, textField, type JsonObject } from '@on.auto/workflow-engine';
 
-import { runDefinitionFunction } from '../document/workflow-functions.ts';
-import {
-  durationText,
-  expressionText,
-  listenedOf,
-  literalText,
-  namedKeys,
-  objectAt,
-  runKindOf,
-} from './task-reading.ts';
+import { definitionCallOf, literalText, namesItsDefinition } from '../document/workflow-functions.ts';
+import { durationText, expressionText, listenedOf, namedKeys, objectAt, runKindOf } from './task-reading.ts';
 
 export function callWords(task: JsonObject): Phrases {
-  const call = textField(task, 'call');
-  if (call !== runDefinitionFunction) {
-    return ['calls ', { code: String(call) }];
+  const call = definitionCallOf(task);
+  if (call === undefined) {
+    return ['calls ', { code: String(textField(task, 'call')) }];
   }
-  const using = objectAt(task, 'with');
-  const type = literalText(field(using, 'type'));
-  const name = literalText(field(using, 'name'));
-  return type === undefined || name === undefined
-    ? ['runs the definition its call names when it runs']
-    : [`runs the ${definitionResourceLabel(type)} `, named(name)];
+  return namesItsDefinition(call)
+    ? [`runs the ${definitionResourceLabel(call.type)} `, named(call.name)]
+    : ['runs the definition its call names when it runs'];
 }
 
 export function setWords(task: JsonObject): Phrases {
