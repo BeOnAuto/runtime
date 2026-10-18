@@ -1,4 +1,5 @@
 import type { StreamReader, StreamWriter } from '@on.auto/operations';
+import type { ProviderList } from '@on.auto/providers';
 import type { ConnectionUnready } from '@on.auto/tool-servers';
 import { DateTime, Effect, Option, type Redacted } from 'effect';
 
@@ -15,6 +16,8 @@ export interface ServingServices {
   readonly policy: ConnectionPolicy;
   readonly variables: ReadonlyMap<string, Redacted.Redacted>;
   readonly modelProviders: readonly string[];
+  readonly providers: ProviderList;
+  readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
 }
 
 export interface Serving {

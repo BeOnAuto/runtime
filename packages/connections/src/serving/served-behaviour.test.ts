@@ -13,7 +13,7 @@ import { expect } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import type { Credential } from '../registry/credential.ts';
 import { added } from '../testing/additions.ts';
-import { ada, harness, operationNamed } from '../testing/harness.ts';
+import { ada, harness, operationNamed, fixtureServing } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
 const variable = 'GRAPH_API_KEY';
@@ -98,6 +98,7 @@ async function connectedThrough(
     policy,
     variables: placing.variables,
     modelProviders: [],
+    ...fixtureServing,
   });
 }
 

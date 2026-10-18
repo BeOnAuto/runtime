@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added, billing, crm, issuesIn, notes } from '../testing/additions.ts';
-import { ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, grace, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
 
 function giving(h: Harness, input: Readonly<Record<string, string>>, caller = ada, at?: string) {
   return h.call(operationNamed(h.operations, 'give_credential'), caller, input, at);
@@ -262,6 +262,7 @@ async function authSentBy(h: Harness, id: string) {
     policy: connectionPolicyOf({}),
     variables: new Map(),
     modelProviders: ['openai'],
+    ...fixtureServing,
   });
   const listed = await Effect.runPromise(source.connectionsOf('acme'));
   const { state } = Option.getOrThrow(Option.fromNullishOr(listed.find((each) => each.id === id)));

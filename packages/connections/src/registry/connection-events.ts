@@ -13,6 +13,8 @@ export const ConnectionEventSchema = Schema.Union([
       ...ofTheConnection,
       name: Schema.String,
       server_type: ConnectionTypeSchema,
+      provider: Schema.NullOr(Schema.String),
+      placeholders: Schema.NullOr(Schema.Record(Schema.String, Schema.String)),
       entry: ConnectionEntrySchema,
       credential: CredentialSchema,
     }),

@@ -43,6 +43,7 @@
     "@on.auto/outbound": "workspace:*",
     "@on.auto/playbooks": "workspace:*",
     "@on.auto/prediction": "workspace:*",
+    "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",
     "@on.auto/recall": "workspace:*",
     "@on.auto/tool-servers": "workspace:*",

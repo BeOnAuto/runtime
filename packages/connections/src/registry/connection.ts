@@ -9,6 +9,12 @@ export const ConnectionSchema = Schema.Struct({
   id: Schema.String.annotate({ description: 'The id of the connection, a UUIDv7' }),
   name: Schema.String.annotate({ description: 'The name a function gives the connection in server/tool' }),
   type: ConnectionTypeSchema,
+  provider: Schema.NullOr(Schema.String).annotate({
+    description: 'The provider it was added from, by name, or null for a server given by hand',
+  }),
+  placeholders: Schema.NullOr(Schema.Record(Schema.String, Schema.String)).annotate({
+    description: "The values given for the provider's placeholders, or null",
+  }),
   entry: ConnectionEntrySchema,
   credential: CredentialSchema,
   status: ConnectionStatusSchema.annotate({

@@ -29,6 +29,9 @@
       "description": "The tool servers people add to the org, which its playbooks share, and the routes of Studio's page that approves them"
     },
     {
+      "name": "providers"
+    },
+    {
       "name": "definitions",
       "description": "A playbook's function and workflow definitions, and the runs they start"
     },
@@ -1259,7 +1262,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Adds a tool server to the org as a connection, which its playbooks may use, and answers it pending with a link to Studio's page. Use it when the person wants a function to reach a server the runtime does not set up; search lists the servers there are. The entry holds no credential: the person approves the connection, and gives its credential, on the page the link opens within ten minutes.",
+        "description": "Connects a service the org's functions should reach: a provider by its name and placeholders, answered pending with a link to Studio's page. A server given by hand takes name, type, entry and credential instead, none holding a secret. The person approves it, and gives its credential, on the page the link opens within ten minutes.",
         "tags": [
           "connections"
         ],
@@ -1269,7 +1272,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -1281,6 +1284,17 @@
                   "name": {
                     "type": "string",
                     "description": "The name a function gives the server, in lowercase and hyphens"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "A provider to connect, by its name"
+                  },
+                  "placeholders": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "With provider, its placeholders' values"
                   },
                   "type": {
                     "type": "string",
@@ -1401,13 +1415,7 @@
                     "additionalProperties": false,
                     "description": "How the server is credentialled, never its value, which the person gives on the page"
                   }
-                },
-                "required": [
-                  "name",
-                  "type",
-                  "entry",
-                  "credential"
-                ]
+                }
               }
             }
           }
@@ -1437,6 +1445,31 @@
                         "openapi"
                       ],
                       "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
                     },
                     "entry": {
                       "type": "object",
@@ -1634,6 +1667,8 @@
                     "id",
                     "name",
                     "type",
+                    "provider",
+                    "placeholders",
                     "entry",
                     "credential",
                     "status",
@@ -1757,6 +1792,31 @@
                             "openapi"
                           ],
                           "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                        },
+                        "provider": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The provider it was added from, by name, or null for a server given by hand"
+                        },
+                        "placeholders": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The values given for the provider's placeholders, or null"
                         },
                         "entry": {
                           "type": "object",
@@ -1936,6 +1996,8 @@
                         "id",
                         "name",
                         "type",
+                        "provider",
+                        "placeholders",
                         "entry",
                         "credential",
                         "status",
@@ -2046,6 +2108,31 @@
                       ],
                       "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
                     },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
                     "entry": {
                       "type": "object",
                       "properties": {
@@ -2224,6 +2311,8 @@
                     "id",
                     "name",
                     "type",
+                    "provider",
+                    "placeholders",
                     "entry",
                     "credential",
                     "status",
@@ -2330,6 +2419,31 @@
                       ],
                       "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
                     },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
                     "entry": {
                       "type": "object",
                       "properties": {
@@ -2508,6 +2622,8 @@
                     "id",
                     "name",
                     "type",
+                    "provider",
+                    "placeholders",
                     "entry",
                     "credential",
                     "status",
@@ -2629,6 +2745,31 @@
                         "openapi"
                       ],
                       "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
                     },
                     "entry": {
                       "type": "object",
@@ -2821,6 +2962,8 @@
                     "id",
                     "name",
                     "type",
+                    "provider",
+                    "placeholders",
                     "entry",
                     "credential",
                     "status",
@@ -2968,6 +3111,31 @@
                         "openapi"
                       ],
                       "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
                     },
                     "entry": {
                       "type": "object",
@@ -3147,6 +3315,8 @@
                     "id",
                     "name",
                     "type",
+                    "provider",
+                    "placeholders",
                     "entry",
                     "credential",
                     "status",
@@ -3321,6 +3491,31 @@
                       ],
                       "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
                     },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
                     "entry": {
                       "type": "object",
                       "properties": {
@@ -3499,6 +3694,8 @@
                     "id",
                     "name",
                     "type",
+                    "provider",
+                    "placeholders",
                     "entry",
                     "credential",
                     "status",
@@ -3571,6 +3768,249 @@
           {
             "openIdConnect": [
               "playbook:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/providers": {
+      "get": {
+        "operationId": "list_providers",
+        "summary": "List providers",
+        "description": "Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes. Use it to show a person what they can connect; add_connection connects one by its name. `may_add` says whether this caller may add a connection, and `refusal` why not.",
+        "tags": [
+          "providers"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_providers/output",
+                  "type": "object",
+                  "properties": {
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Provider"
+                      }
+                    },
+                    "may_add": {
+                      "type": "boolean",
+                      "description": "Whether this caller may add a connection here"
+                    },
+                    "refusal": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why this caller may not add a connection here"
+                    }
+                  },
+                  "required": [
+                    "providers",
+                    "may_add",
+                    "refusal"
+                  ],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "Provider": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "The provider's name, the default name of a connection to it"
+                        },
+                        "title": {
+                          "type": "string",
+                          "description": "What a person reads"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "website": {
+                          "type": "string",
+                          "description": "Where a person reads about the server and makes a credential"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "mcp",
+                            "openapi"
+                          ],
+                          "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                        },
+                        "credentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "secret",
+                                  "client_credentials",
+                                  "none"
+                                ]
+                              },
+                              "in": {
+                                "type": "string",
+                                "enum": [
+                                  "header",
+                                  "query",
+                                  "security"
+                                ]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "scheme": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "issuer": {
+                                "type": "string"
+                              },
+                              "scope": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "offered": {
+                                "type": "boolean",
+                                "description": "Whether a person may connect the provider this way here"
+                              },
+                              "because": {
+                                "type": "string",
+                                "description": "Why the way is not offered, where it is not"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "offered"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A way a credential reaches the server, the first the default"
+                          }
+                        },
+                        "placeholders": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "pattern": {
+                                "type": "string"
+                              },
+                              "example": {
+                                "type": "string"
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "choices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "value": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "value",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "description",
+                              "required"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A value that differs per connection, which the person gives when they connect"
+                          }
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "title",
+                        "description",
+                        "website",
+                        "type",
+                        "credentials",
+                        "placeholders"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A service a person may connect, by its name"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
             ]
           }
         ]

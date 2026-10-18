@@ -578,6 +578,9 @@ importers:
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations
+      '@on.auto/providers':
+        specifier: workspace:*
+        version: link:../providers
       '@on.auto/tool-servers':
         specifier: workspace:*
         version: link:../tool-servers
@@ -879,6 +882,9 @@ importers:
       '@on.auto/prediction':
         specifier: workspace:*
         version: link:../../capabilities/prediction
+      '@on.auto/providers':
+        specifier: workspace:*
+        version: link:../providers
       '@on.auto/reasoning':
         specifier: workspace:*
         version: link:../../capabilities/reasoning

@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, billing, crm, notes } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './given-credentials.ts';
 
@@ -24,6 +24,7 @@ function sourceOf(h: Harness, changes: Partial<Omit<ServingServices, 'registry'>
     policy: connectionPolicyOf({}),
     variables: new Map(),
     modelProviders: ['openai'],
+    ...fixtureServing,
     ...changes,
   });
 }

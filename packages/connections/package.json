@@ -17,6 +17,7 @@
     "@on.auto/config": "workspace:*",
     "@on.auto/identity": "workspace:*",
     "@on.auto/operations": "workspace:*",
+    "@on.auto/providers": "workspace:*",
     "@on.auto/tool-servers": "workspace:*",
     "effect": "catalog:"
   },

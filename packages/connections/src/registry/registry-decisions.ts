@@ -30,10 +30,8 @@ export function takesNoCredential(name: string): Conflict {
   return new Conflict({ detail: `The connection ${name} takes no credential to give, so it is approved as it is` });
 }
 
-function decideAddition(
-  { connection, name, server_type: serverType, entry, credential, link }: ConnectionAddition,
-  registry: Registry,
-): Decision {
+function decideAddition({ link, ...added }: ConnectionAddition, registry: Registry): Decision {
+  const { connection, name } = added;
   const kept = [...registry.values()].filter((each) => each.connection.status !== 'removed');
   if (kept.some((each) => each.connection.name === name)) {
     return Result.fail(new Conflict({ detail: `There is already a connection ${name} in this org`, kind: 'taken' }));
@@ -46,9 +44,21 @@ function decideAddition(
         }),
       )
     : Result.succeed([
-        { type: 'connection_added', data: { connection, name, server_type: serverType, entry, credential } },
+        { type: 'connection_added', data: addedData(added) },
         { type: 'connection_link_issued', data: { connection, ...link } },
       ]);
+}
+
+function addedData({
+  connection,
+  name,
+  server_type: serverType,
+  provider,
+  placeholders,
+  entry,
+  credential,
+}: Omit<ConnectionAddition, 'link'>) {
+  return { connection, name, server_type: serverType, provider, placeholders, entry, credential };
 }
 
 function decideApproval(command: ConnectionApproval & CommandMetadata, registry: Registry): Decision {

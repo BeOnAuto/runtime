@@ -4,6 +4,7 @@ import { Effect, Redacted } from 'effect';
 import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
+import { providingOf } from '../providers/provider-additions.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { GivingSchema, givenOf, refused } from './given-fields.ts';
@@ -11,8 +12,12 @@ import { GivingSchema, givenOf, refused } from './given-fields.ts';
 export function defineGiveCredential({
   secrets,
   modelProviders,
+  providers,
+  providerValues,
   bindsPerson,
-}: Pick<ConnectionServices, 'secrets' | 'modelProviders'> & { readonly bindsPerson: boolean }) {
+}: Pick<ConnectionServices, 'secrets' | 'modelProviders' | 'providers' | 'providerValues'> & {
+  readonly bindsPerson: boolean;
+}) {
   return defineHttpOperation('org', 'command', {
     name: 'give_credential',
     title: 'Give credential',
@@ -31,7 +36,9 @@ export function defineGiveCredential({
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry, use, yield* actedNow));
       const { org } = yield* OrgContext;
-      const given = yield* Effect.fromResult(givenOf(kept.connection, giving, { org, modelProviders }));
+      const providing = providingOf(kept.connection, { providers, providerValues });
+      const checking = { org, modelProviders, providing };
+      const given = yield* Effect.fromResult(givenOf(kept.connection, giving, checking));
       const secretId = yield* secrets
         .keep(Redacted.make(given.value), given.endsWith)
         .pipe(Effect.mapError(({ detail }) => refused([{ pointer: given.pointer, detail }])));

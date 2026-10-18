@@ -1,3 +1,4 @@
+import { clientIdPlaceholder } from '@on.auto/providers';
 import { readEntry, type Environment, type ServerEntryFields } from '@on.auto/tool-servers';
 import { Option, Redacted, Schema } from 'effect';
 
@@ -12,6 +13,7 @@ export interface GivenValue {
 export interface Placed {
   readonly written: ServerEntryFields;
   readonly environment: Environment;
+  readonly placedValues: ReadonlyMap<string, string>;
 }
 
 type Placement = NonNullable<Credential['in']>;
@@ -19,6 +21,14 @@ type Placement = NonNullable<Credential['in']>;
 type Fields = Pick<ServerEntryFields, 'headers' | 'query_params' | 'security'>;
 
 const givenVariable = 'CONNECTION_CREDENTIAL';
+
+const noValuesPlaced: ReadonlyMap<string, string> = new Map();
+
+interface Credentialled {
+  readonly provider: string | null;
+  readonly entry: ConnectionEntry;
+  readonly credential: Credential;
+}
 
 function referenceTo(variable: string): string {
   return `\${${variable}}`;
@@ -70,7 +80,7 @@ function placedValue(entry: ConnectionEntry, credential: Credential): ServerEntr
   return { ...entry, ...fields };
 }
 
-function placedClientCredentials(entry: ConnectionEntry, credential: Credential, given: GivenValue): ServerEntryFields {
+function placedClientCredentials({ provider, entry, credential }: Credentialled, given: GivenValue): Placed {
   const reference = referenceTo(givenVariable);
   const secret =
     given.algorithm === undefined
@@ -78,23 +88,43 @@ function placedClientCredentials(entry: ConnectionEntry, credential: Credential,
       : { private_key: reference, algorithm: literalText(given.algorithm) };
   const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
   const issuer = literalText(required(credential.issuer));
-  const auth = { issuer, client_id: literalText(required(credential.client_id)), ...scope, ...secret };
-  return { ...entry, auth };
+  const clientId = required(credential.client_id);
+  const auth = { issuer, client_id: literalText(clientId), ...scope, ...secret };
+  return {
+    written: { ...entry, auth },
+    environment: { [givenVariable]: Redacted.value(given.value) },
+    placedValues: provider === null ? noValuesPlaced : new Map([[clientIdPlaceholder, clientId]]),
+  };
 }
 
-export function placedCredential(
-  written: ConnectionEntry,
-  credential: Credential,
-  given: GivenValue | undefined,
-): Placed {
-  const entry = asEntry(literal(asJson(written)));
+function valuesAsWritten({
+  headers,
+  query_params: query,
+}: ConnectionEntry): Pick<ConnectionEntry, 'headers' | 'query_params'> {
+  return {
+    ...(headers === undefined ? {} : { headers }),
+    ...(query === undefined ? {} : { query_params: query }),
+  };
+}
+
+function writtenEntryOf({ provider, entry }: Credentialled): ConnectionEntry {
+  const literalEntry = asEntry(literal(asJson(entry)));
+  return provider === null ? literalEntry : { ...literalEntry, ...valuesAsWritten(entry) };
+}
+
+export function placedCredential(written: Credentialled, given: GivenValue | undefined): Placed {
+  const entry = writtenEntryOf(written);
+  const { credential } = written;
   if (given === undefined) {
-    return { written: entry, environment: {} };
+    return { written: entry, environment: {}, placedValues: noValuesPlaced };
   }
-  const environment = { [variableOf(credential)]: Redacted.value(given.value) };
   return credential.kind === 'client_credentials'
-    ? { written: placedClientCredentials(entry, credential, given), environment }
-    : { written: placedValue(entry, credential), environment };
+    ? placedClientCredentials({ ...written, entry }, given)
+    : {
+        written: placedValue(entry, credential),
+        environment: { [variableOf(credential)]: Redacted.value(given.value) },
+        placedValues: noValuesPlaced,
+      };
 }
 
 interface Named {
@@ -102,14 +132,33 @@ interface Named {
   readonly type: ConnectionType;
 }
 
+export interface Providing {
+  readonly documents: string;
+  readonly values: ReadonlyMap<string, Redacted.Redacted>;
+  readonly documentServer: string | undefined;
+}
+
 interface Reading {
   readonly org: string;
   readonly modelProviders: readonly string[];
+  readonly providing: Providing | undefined;
 }
 
-export function readPlaced({ name, type }: Named, { written, environment }: Placed, { org, modelProviders }: Reading) {
-  return readEntry(name, { ...written, type, org }, environment, {
-    modelProviders,
-    documentsDirectory: '.',
-  });
+function operatorEnvironmentOf(providing: Providing | undefined): Environment {
+  return Object.fromEntries(
+    [...(providing?.values ?? [])].map(([name, value]: readonly [string, Redacted.Redacted]) => [
+      name,
+      Redacted.value(value),
+    ]),
+  );
+}
+
+export function readPlaced({ name, type }: Named, { written, environment, placedValues }: Placed, reading: Reading) {
+  const { org, modelProviders, providing } = reading;
+  return readEntry(
+    name,
+    { ...written, type, org },
+    { ...operatorEnvironmentOf(providing), ...environment },
+    { modelProviders, documentsDirectory: providing?.documents ?? '.', placedValues },
+  );
 }

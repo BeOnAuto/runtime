@@ -104,6 +104,23 @@ describe('an entry that holds what a connection never holds', () => {
   });
 });
 
+describe('a value written beside a placeholder under the name of a credential', () => {
+  it('is judged as a value written out, in a header and in a query parameter given by hand', async () => {
+    const held =
+      "Looks like a credential, which a connection's entry never holds: the person gives it on the page the link opens";
+    const header = { ...crm, entry: { ...crm.entry, headers: { 'X-Api-Key': 'key-{client_id}' } } };
+    const query = { ...billing, entry: { ...billing.entry, query_params: { api_key: 'abc{tenant}' } } };
+
+    expect([
+      issuesIn(await adding(harness(), { ...header, credential: { kind: 'none' } })),
+      issuesIn(await adding(harness(), { ...query, credential: { kind: 'none' } })),
+    ]).toEqual([
+      [{ pointer: '/entry/headers/X-Api-Key', detail: held }],
+      [{ pointer: '/entry/query_params/api_key', detail: held }],
+    ]);
+  });
+});
+
 const refusedEntries = [
   ['a name of the wrong shape', { ...notes, name: 'Notes' }, '/name'],
   ['the name of a model provider', { ...notes, name: 'openai' }, '/name'],

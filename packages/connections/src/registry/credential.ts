@@ -1,5 +1,6 @@
 import { variableNamePattern } from '@on.auto/config';
 import { listed } from '@on.auto/operations';
+import { wayFields } from '@on.auto/providers';
 import { headerNamePattern, isPinnableUrl } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -11,7 +12,7 @@ export type CredentialKind = typeof CredentialKindSchema.Type;
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
-const CredentialFieldsSchema = Schema.Struct({
+export const CredentialFieldsSchema = Schema.Struct({
   kind: CredentialKindSchema,
   variable: Schema.optionalKey(
     NamedSchema.annotate({
@@ -19,23 +20,23 @@ const CredentialFieldsSchema = Schema.Struct({
     }),
   ),
   name: Schema.optionalKey(
-    NamedSchema.annotate({
+    wayFields.name.annotate({
       description: 'For secret and reference, the header, query parameter or security scheme the value is sent as',
     }),
   ),
   in: Schema.optionalKey(
-    Schema.Literals(['header', 'query', 'security']).annotate({
+    wayFields.in.annotate({
       description:
         'For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document',
     }),
   ),
   scheme: Schema.optionalKey(
-    NamedSchema.annotate({
+    wayFields.scheme.annotate({
       description: 'For a header, the scheme written before the value, such as Bearer',
     }),
   ),
   issuer: Schema.optionalKey(
-    Schema.String.annotate({ description: 'For client_credentials, the https URL of the authorization server' }),
+    wayFields.issuer.annotate({ description: 'For client_credentials, the https URL of the authorization server' }),
   ),
   client_id: Schema.optionalKey(
     NamedSchema.annotate({
@@ -43,7 +44,7 @@ const CredentialFieldsSchema = Schema.Struct({
     }),
   ),
   scope: Schema.optionalKey(
-    Schema.String.annotate({
+    wayFields.scope.annotate({
       description: 'For client_credentials, the scopes, separated by spaces; none when left out',
     }),
   ),
@@ -148,16 +149,21 @@ function issuerIssuesOf({ kind, issuer }: CredentialFields): readonly FieldIssue
     : [{ path: ['issuer'], issue: 'Expected an https URL, or an http URL on a loopback address' }];
 }
 
-export const CredentialSchema = CredentialFieldsSchema.annotate({
-  description: 'How the server is credentialled, never its value, which the person gives on the page',
-}).check(
-  Schema.makeFilter((credential: CredentialFields) => [
+export const credentialDescription =
+  'How the server is credentialled, never its value, which the person gives on the page';
+
+export function credentialFieldIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
+  return [
     ...presenceIssuesOf(credential),
     ...variableIssuesOf(credential),
     ...nameIssuesOf(credential),
     ...schemeIssuesOf(credential),
     ...issuerIssuesOf(credential),
-  ]),
+  ];
+}
+
+export const CredentialSchema = CredentialFieldsSchema.annotate({ description: credentialDescription }).check(
+  Schema.makeFilter((credential: CredentialFields) => credentialFieldIssuesOf(credential)),
 );
 
 export type Credential = typeof CredentialSchema.Type;
