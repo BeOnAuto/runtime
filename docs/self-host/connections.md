@@ -8,7 +8,7 @@ This page is for whoever runs Auto. It says how a connection is added, what it h
 
 1. The person asks their agent to connect a tool server, such as their CRM. The agent calls `add_connection` with the server's address, its options and how it is credentialled, never the credential itself.
 2. Auto keeps the connection, `pending`, and answers with a link to Studio's page, `https://studio.on.auto/connect`, which lasts ten minutes. An agent whose client opens links asks the person to open it; any other agent gives the person the link from its answer.
-3. On the page, signed in, the person approves the connection. Where it takes a secret or client credentials, the person types the credential there, and giving it approves the connection. The connection is then `connected`.
+3. On the page, signed in, the person approves the connection. Where it takes a secret or client credentials, the person types the credential there, with the client id where the agent left it out, and giving it approves the connection. The connection is then `connected`.
 
 On a runtime that signs people in, only the person who added a connection may approve it, signed in as themselves. In [local mode](security.md#local-mode), the link alone binds: whoever holds it within its ten minutes approves the connection. A link is gone after its ten minutes, and nothing gives a pending connection another, so the way on is to remove the connection and add it again.
 
@@ -49,12 +49,12 @@ A person approves every connection, so a connection is added by a person, and a 
 
 ## What a connection holds
 
-A connection has a name, which a function will give it as a tool server's name, a kind, an entry and a credential.
+A connection has a name, which a function will give it as a tool server's name, a type, an entry and a credential.
 
 | Part         | What it holds                                                                                                                                                                                                                                                        |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`       | 1 to 32 lowercase letters, digits and hyphens, starting with a letter. It may not be the name of a tool server of the settings file, nor of another connection of the org that is not removed                                                                        |
-| `kind`       | `mcp` for a remote MCP server, `openapi` for an HTTP API described by an OpenAPI document                                                                                                                                                                            |
+| `type`       | `mcp` for a remote MCP server, `openapi` for an HTTP API described by an OpenAPI document, as the `type` of an entry of the settings file says                                                                                                                       |
 | `entry`      | The server without its credential: `url` for `mcp`, or `document` and `base_url` for `openapi`, with `headers`, `query_params`, `allowed`, `playbooks`, `record_content` and `request_id` as an [entry of the settings file](configuration.md#tool-servers) has them |
 | `credential` | How the server is credentialled, below, never its value: one object, its `kind` and the fields that kind takes                                                                                                                                                       |
 
@@ -67,11 +67,13 @@ Auto checks an entry as it checks an entry of the settings file, and refuses one
 | `none`               | Nothing; the server takes no credential                                                                                                                                                                                                                                                                     | Nowhere                                 |
 | `reference`          | Nothing; `variable` names an environment variable of Auto, such as `CRM_API_KEY`, that you set and list in the rule `variables`, and `name` and `in` say where its value goes, as for a `secret`                                                                                                            | In Auto's environment, where you put it |
 | `secret`             | A key or token, on Studio's page. `name` and `in` say where it goes: `in: header` and the header's name, never one Auto sets itself such as `Content-Type`, `Host` or `Mcp-Session-Id`, or for an HTTP API `in: query` and a query parameter's name, or `in: security` and a scheme of its OpenAPI document | Sealed in Auto's secret store           |
-| `client_credentials` | The client secret, or a private key with its algorithm, on Studio's page. `issuer`, `client_id` and `scope` name the authorization server and the client                                                                                                                                                    | Sealed in Auto's secret store           |
+| `client_credentials` | The client secret, or a private key with its algorithm, on Studio's page, with the client id where `client_id` is left out. `issuer`, `client_id` and `scope` name the authorization server and the client                                                                                                  | Sealed in Auto's secret store           |
+
+A `secret` or a `reference` sent in a header may name its `scheme`, such as `Bearer`: Auto writes the scheme and a space before the value, so the person pastes the token alone, the variable you set for a reference holds the token alone, and the server receives `Authorization: Bearer <token>`. Auto refuses a token pasted with the scheme before it, saying to paste the token alone.
 
 Auto seals a secret under its secret key, `SECRETS_KEY` or the key file beside a SQLite ledger, as [the configuration reference](configuration.md#storage) sets out. No record of the org, no answer and no history holds the value, and the link's token is kept only as its SHA-256. Of a secret or a client secret of twelve characters or more, Auto also keeps its last four characters beside the sealed value in the secret store, never in the org's record, and `list_connections` and `get_connection` answer them as `credential_ends_with`, so the person can tell which key a connection holds; a private key, or a shorter value, has none. Removing a connection forgets its secret, and the ending with it.
 
-Every value of a credential is a secret Auto scrubs from what it records and answers, in each form it may take, as it scrubs the value of a reference of the settings file. A value in a header that is a scheme and a credential, such as `Bearer <token>`, is scrubbed whole and its credential alone.
+Every value of a credential is a secret Auto scrubs from what it records and answers, in each form it may take, as it scrubs the value of a reference of the settings file. A value in a header that is a scheme and a credential, such as `Bearer <token>`, is scrubbed whole and its credential alone; where the credential names its `scheme`, the value is the token, scrubbed whole.
 
 A secret is only as recoverable as the key it was sealed under. When the key is lost, Auto can no longer read the credentials sealed under it, so their connections are broken. Auto marks such a connection `broken` when it first needs the credential, with a sentence that says why; the person removes it and adds it again.
 
