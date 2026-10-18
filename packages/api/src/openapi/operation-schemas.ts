@@ -90,18 +90,6 @@ export function fieldsOf(schema: Readonly<JsonSchema>): readonly Field[] {
   return fieldsOfObject(schema, $defs);
 }
 
-function requiresSomeField(object: Readonly<JsonSchema>): boolean {
-  return fieldsOf(object).some(({ required }) => required);
-}
-
-export function requiresFields(schema: Readonly<JsonSchema>): boolean {
-  return Option.match(unionOf(schema), {
-    onNone: () => requiresSomeField(schema),
-    onSome: ({ anyOf, $defs = {} }) =>
-      anyOf.every((member) => requiresSomeField(inlinedRootOf({ schema: member, definitions: $defs }))),
-  });
-}
-
 export function fieldsOfEveryMember(schema: Readonly<JsonSchema>): readonly Field[] {
   return Option.match(unionOf(schema), {
     onNone: () => fieldsOf(schema),

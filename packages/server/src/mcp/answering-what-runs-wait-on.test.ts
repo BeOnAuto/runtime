@@ -152,7 +152,7 @@ describe('episode 7: the person approves, in the chat, a draft a workflow sent t
     const guide = await meetings.onMcp((session) => session.callTool('get_guide', { guide: 'interaction-function' }));
 
     expect(sentenceNaming(instructions, 'answer_interaction')).toBe(
-      'When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not with a new run.',
+      'When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run.',
     );
     expect(sentenceNaming(instructions, 'get_run')).toBe(
       'A run of a workflow answers started; get_run shows whether it ended or still waits.',

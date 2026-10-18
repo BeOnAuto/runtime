@@ -29,7 +29,8 @@
       "description": "The tool servers people add to the org, which its playbooks share, and the routes of Studio's page that approves them"
     },
     {
-      "name": "providers"
+      "name": "providers",
+      "description": "The providers a person may connect to the org by name, and whether the caller may add a connection"
     },
     {
       "name": "definitions",
@@ -1272,7 +1273,7 @@
           }
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {

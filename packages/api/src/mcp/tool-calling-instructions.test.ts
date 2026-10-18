@@ -13,10 +13,10 @@ import {
 import { instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,993 characters on /mcp, 1,671 on the org endpoint and 1,881 on the playbook endpoint', () => {
+  it('take 1,997 characters on /mcp, 1,680 on the org endpoint and 1,876 on the playbook endpoint', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes, recipes).length),
-    ).toEqual([1671, 1881, 1993]);
+    ).toEqual([1680, 1876, 1997]);
   });
 });
 
@@ -76,7 +76,7 @@ describe('what the instructions say of calling a tool, to a key that may only wr
 });
 
 describe('the instructions of an endpoint that lists add_connection', () => {
-  const connectionSentence = 'Add a tool server with add_connection; the person approves it.';
+  const connectionSentence = 'add_connection adds a provider, or a server by hand; a person approves.';
 
   it('say what a connection is after the sentence on tools, and an endpoint that does not list it does not', () => {
     const listing = instructionsFor('own org', withConnections(ownOrg), definitionTypes, recipes);
