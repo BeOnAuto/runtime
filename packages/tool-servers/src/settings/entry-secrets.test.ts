@@ -1,13 +1,27 @@
-import { Effect, Redacted } from 'effect';
+import { Effect, Redacted, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { readEntry, readToolServerSettings } from '../index.ts';
+import { readEntry, readToolServerSettings, type ServerSettings } from '../index.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const context = { modelProviders: ['openai'] };
 
 const graph = { url: 'https://graph.example.com/mcp', org: 'acme' };
+
+const billing = { document: 'https://billing.example.com/openapi.json', org: 'acme' };
+
+const placedValues = new Map([['client_id', 'ledger-client-7']]);
+
+function plain(values: ReadonlyMap<string, Redacted.Redacted>): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    [...values].map(([name, value]: readonly [string, Redacted.Redacted]) => [name, Redacted.value(value)]),
+  );
+}
+
+function sentOf(server: ServerSettings): readonly Readonly<Record<string, string>>[] {
+  return server.type === 'openapi' ? [plain(server.headers), plain(server.query_params)] : [];
+}
 
 function refusalOf(servers: unknown) {
   return Effect.runSync(Effect.flip(readToolServerSettings({ TOOL_SERVERS: JSON.stringify(servers) }, context)));
@@ -53,5 +67,45 @@ describe('the secrets of a server', () => {
       /^The tool server settings are invalid\. TOOL_SERVERS: \/graph\/headers\/Authorization/u,
     );
     expect(JSON.stringify(refusal)).not.toContain('abk_live');
+  });
+});
+
+describe('the values the runtime places', () => {
+  it('stand for their placeholders in the header and query values alone, after the entry as written is judged', () => {
+    const headers = { 'X-Api-Key': '{client_id}', 'X-Region': '{region}' };
+    const read = readEntry(
+      'billing',
+      {
+        ...billing,
+        base_url: 'https://billing.example.com/{client_id}',
+        headers,
+        query_params: { client: 'id-{client_id}' },
+      },
+      {},
+      { ...context, placedValues },
+    );
+    const server = Result.getOrThrow(read);
+
+    expect(server).toMatchObject({ base_url: 'https://billing.example.com/{client_id}', secrets: [] });
+    expect(sentOf(server)).toEqual([
+      { 'X-Api-Key': 'ledger-client-7', 'X-Region': '{region}' },
+      { client: 'id-ledger-client-7' },
+    ]);
+  });
+
+  it('leave a value written beside a placeholder under the name of a credential refused, as it is written', () => {
+    const read = readEntry(
+      'graph',
+      { ...graph, headers: { 'X-Api-Key': 'key-{client_id}' } },
+      {},
+      {
+        ...context,
+        placedValues,
+      },
+    );
+
+    expect(Result.getFailure(read)).toMatchObject({
+      value: [{ pointer: '/graph/headers/X-Api-Key' }],
+    });
   });
 });
