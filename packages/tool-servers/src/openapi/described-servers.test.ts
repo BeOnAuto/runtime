@@ -15,6 +15,10 @@ const notes =
 
 const keyed = { apiKeyAuth: '${GRAPH_API_KEY}' };
 
+const sessionStateTool: unknown = expect.objectContaining({ name: 'sessionState' });
+
+const offersSessionState: unknown = expect.arrayContaining([expect.objectContaining({ tool: sessionStateTool })]);
+
 async function fakeApi(): Promise<FakeApiServer> {
   const fake = await serveFakeApi();
   onTestFinished(fake.close);
@@ -56,6 +60,21 @@ describe('the document of an openapi server, read from its URL at start', () => 
     const entry = { document: fake.documentUrl, base_url: 'https://graph.example.com/v2', org: 'acme' };
 
     expect(await describedApiOf({ graph: entry })).toMatchObject({ baseUrl: 'https://graph.example.com/v2' });
+  });
+});
+
+describe('the operations of an openapi server that need a header', () => {
+  it('are offered where the headers of the entry give each of them, whatever the case either writes', async () => {
+    const fake = await fakeApi();
+    const headers = { 'X-SESSION': 'session-of-acme' };
+    const { effect, leftOut } = describing({
+      graph: { document: fake.documentUrl, org: 'acme', security: keyed, headers },
+    });
+
+    const { servers } = await Effect.runPromise(effect);
+
+    expect(servers).toMatchObject([{ api: { operations: offersSessionState } }]);
+    expect(leftOut.map(({ operation }) => operation)).toEqual(['filtered (GET /filtered)', 'upload (POST /uploads)']);
   });
 });
 

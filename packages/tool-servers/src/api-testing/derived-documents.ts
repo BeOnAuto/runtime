@@ -5,9 +5,10 @@ import { decodedDocument, type DocumentProblem } from '../openapi/api-document.t
 import { derivedTools, type DerivedTools } from '../openapi/api-tools.ts';
 import type { Presented } from '../openapi/security-schemes.ts';
 
-const keyPresented: Presented = {
+export const keyPresented: Presented = {
   security: new Map([['apiKeyAuth', Redacted.make('graph-api-key-4f1d9a7c2b')]]),
   auth: false,
+  headers: new Set(),
 };
 
 type DocumentFields = Readonly<Record<string, Schema.Json>>;

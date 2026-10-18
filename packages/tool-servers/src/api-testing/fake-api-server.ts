@@ -6,7 +6,7 @@ import {
   type FakeAuthorization,
 } from '../mcp-testing/fake-authorization.ts';
 import { deniedText } from '../mcp-testing/fake-tools.ts';
-import { serveOnLoopback, type FetchHandler } from '../testing/loopback-server.ts';
+import { serveOnLoopback, type FetchHandler, type LoopbackServer } from '../testing/loopback-server.ts';
 import { fakeApiDocument, type FakeApiVersion } from './fake-api-document.ts';
 import { answerTo, type ApiAnswering, type ProgrammedAnswer, type SeenApiRequest } from './fake-api-routes.ts';
 
@@ -30,6 +30,7 @@ export interface FakeApiServer {
   readonly documentUrl: string;
   readonly issuing: FakeIssuing | undefined;
   readonly seen: () => readonly SeenApiRequest[];
+  readonly heard: LoopbackServer['heard'];
   readonly documentReads: () => number;
   readonly answerNextWith: (answer: ProgrammedAnswer, times?: number) => void;
   readonly close: () => Promise<void>;
@@ -37,6 +38,7 @@ export interface FakeApiServer {
 
 interface Issuing extends FakeIssuing {
   readonly accepts: (token: string) => boolean;
+  readonly heard: LoopbackServer['heard'];
   readonly close: () => Promise<void>;
 }
 
@@ -120,6 +122,7 @@ async function issuingFor(client: ClientRegistration): Promise<Issuing> {
         each.revokeEveryToken();
       }
     },
+    heard: listening.heard,
     close: listening.close,
   };
 }
@@ -146,12 +149,14 @@ export async function serveFakeApi(options: FakeApiOptions = {}): Promise<FakeAp
   };
   const issuing = options.client === undefined ? undefined : await issuingFor(options.client);
   const listening = await serveOnLoopback(() => apiHandler(options, answering, issuing));
+  const hearing = issuing === undefined ? [listening] : [listening, issuing];
   return {
     origin: listening.origin,
     baseUrl: `${listening.origin}${basePath}`,
     documentUrl: `${listening.origin}${documentPath}`,
     issuing,
     seen: () => [...seen],
+    heard: () => hearing.flatMap((each) => each.heard()),
     documentReads: () => documentReads,
     answerNextWith: (answer, times = 1) => {
       programmed.push(...Array.from({ length: times }, () => answer));

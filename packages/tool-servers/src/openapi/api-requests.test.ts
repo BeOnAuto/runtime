@@ -19,8 +19,8 @@ const listing: ApiOperation = {
   inputs: [
     { name: 'folder', in: 'path' },
     { name: 'id', in: 'path' },
-    { name: 'tag', in: 'query' },
-    { name: 'limit', in: 'query' },
+    { name: 'tag', in: 'query', joinsLists: false },
+    { name: 'limit', in: 'query', joinsLists: false },
   ],
   body: null,
   credentials: [],
@@ -137,6 +137,30 @@ describe('the request of a call of an HTTP API', () => {
         ({ body }) => body,
       ),
     ).toEqual(Result.succeed(null));
+  });
+});
+
+describe('the query of a call of an HTTP API', () => {
+  it('joins by commas a list of a query parameter written with explode false, each item encoded and the commas not', () => {
+    const joined: ApiOperation = {
+      ...listing,
+      path: '/notes',
+      inputs: [
+        { name: 'label', in: 'query', joinsLists: true },
+        { name: 'state', in: 'query', joinsLists: true },
+        { name: 'none', in: 'query', joinsLists: true },
+        { name: 'tag', in: 'query', joinsLists: false },
+      ],
+    };
+
+    expect(
+      Result.map(
+        apiRequestOf(joined, { label: ['red', 'a,b', 'x y'], state: 'open', none: [], tag: ['p', 'q'] }, endpoint),
+        ({ url }) => url,
+      ),
+    ).toEqual(
+      Result.succeed('https://graph.example.com/v1/notes?label=red,a%2Cb,x+y&state=open&tag=p&tag=q&tenant=acme'),
+    );
   });
 });
 

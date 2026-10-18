@@ -232,8 +232,8 @@ describe('the parameters of the tools of an HTTP API', () => {
       additionalProperties: false,
     });
     expect(operation?.inputs).toEqual([
-      { name: 'q', in: 'query' },
-      { name: 'n', in: 'query' },
+      { name: 'q', in: 'query', joinsLists: false },
+      { name: 'n', in: 'query', joinsLists: false },
     ]);
   });
 });

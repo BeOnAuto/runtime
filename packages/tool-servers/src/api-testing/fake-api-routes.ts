@@ -49,6 +49,7 @@ const routes: ReadonlyMap<string, Route> = new Map<string, Route>([
   ['GET /profiles/ada', () => Response.json({ name: 'Ada', rows: 2 })],
   ['PUT /profiles/ada', async (request) => Response.json({ updated: bodyOf(await request.text()) })],
   ['GET /rows', (_request, url) => Response.json({ tags: url.searchParams.getAll('tag') })],
+  ['GET /sessions', (request) => Response.json({ session: request.headers.get('x-session') })],
   ['GET /photo', () => new Response(pixel, { headers: { 'content-type': 'image/png' } })],
   ['GET /notes', () => new Response('', { status: 200 })],
 ]);

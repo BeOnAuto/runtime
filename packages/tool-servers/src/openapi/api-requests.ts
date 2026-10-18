@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { Predicate, Redacted, Result } from 'effect';
 
-import type { ApiOperation } from './api-tools.ts';
+import type { ApiOperation, QueryInput } from './api-tools.ts';
 import type { Placement } from './security-schemes.ts';
 
 export interface ApiEndpoint {
@@ -82,31 +82,43 @@ function pathOf(operation: ApiOperation, input: Readonly<Record<string, unknown>
     : Result.fail('The path arguments would take the call out of the path of this operation, as a . or a .. does');
 }
 
+function formEncoded(text: string): string {
+  return new URLSearchParams([['', text]]).toString().slice('='.length);
+}
+
+function pairOf(name: string, values: readonly string[]): string {
+  return `${formEncoded(name)}=${values.map((value) => formEncoded(value)).join(',')}`;
+}
+
+function pairsOf({ name, joinsLists }: QueryInput, values: readonly string[]): readonly string[] {
+  if (values.length === 0) {
+    return [];
+  }
+  return joinsLists ? [pairOf(name, values)] : values.map((value) => pairOf(name, [value]));
+}
+
 function queryOf(
   operation: ApiOperation,
   input: Readonly<Record<string, unknown>>,
   endpoint: ApiEndpoint,
 ): Built<string> {
-  const query = new URLSearchParams();
-  for (const { name } of operation.inputs.filter((each) => each.in === 'query')) {
-    const values = scalarsOf(name, input[name]);
+  const pairs: string[] = [];
+  for (const queried of operation.inputs.filter((each) => each.in === 'query')) {
+    const values = scalarsOf(queried.name, input[queried.name]);
     if (Result.isFailure(values)) {
       return Result.fail(values.failure);
     }
-    for (const value of values.success) {
-      query.append(name, value);
-    }
+    pairs.push(...pairsOf(queried, values.success));
   }
   for (const [name, value] of endpoint.query) {
-    query.append(name, Redacted.value(value));
+    pairs.push(pairOf(name, [Redacted.value(value)]));
   }
   for (const placement of operation.credentials) {
     if (placement.kind === 'query') {
-      query.append(placement.name, Redacted.value(placement.value));
+      pairs.push(pairOf(placement.name, [Redacted.value(placement.value)]));
     }
   }
-  const written = query.toString();
-  return Result.succeed(written === '' ? '' : `?${written}`);
+  return Result.succeed(pairs.length === 0 ? '' : `?${pairs.join('&')}`);
 }
 
 function unknownArgument(operation: ApiOperation, input: Readonly<Record<string, unknown>>): string | undefined {

@@ -1,9 +1,15 @@
 import { JsonPointer, type Schema } from 'effect';
 
+import { headersTheRuntimeSets } from '../settings/reserved-headers.ts';
 import type { Method, Parameter } from './api-document.ts';
 import type { BodyOf, Placed } from './api-parameters.ts';
 import type { Components } from './input-schemas.ts';
 import { isSchemaObject } from './schema-translation.ts';
+
+interface OperationContext {
+  readonly components: Components;
+  readonly sentHeaders: ReadonlySet<string>;
+}
 
 const mostReferenceHops = 8;
 
@@ -34,11 +40,14 @@ function sharedNameOf(names: readonly string[]): string | undefined {
   return names.find((name, index) => names.indexOf(name) < index);
 }
 
-function isSentAsWritten({ in: place, style, explode }: Parameter): boolean {
-  if (place === 'path') {
-    return style === undefined || style === 'simple';
-  }
-  return place !== 'query' || ((style === undefined || style === 'form') && explode !== false);
+const sentStyles: ReadonlyMap<Parameter['in'], string> = new Map([
+  ['path', 'simple'],
+  ['query', 'form'],
+]);
+
+function unsentStyleOf({ in: place, style }: Parameter): string | undefined {
+  const sentStyle = sentStyles.get(place);
+  return style === undefined || sentStyle === undefined || style === sentStyle ? undefined : style;
 }
 
 function methodBecause(method: Method, body: BodyOf): string | undefined {
@@ -51,26 +60,62 @@ function methodBecause(method: Method, body: BodyOf): string | undefined {
 }
 
 function serializedBecause(sent: readonly Parameter[]): string | undefined {
-  const styled = sent.find((each) => !isSentAsWritten(each));
-  return styled === undefined
-    ? undefined
-    : `its ${styled.in} parameter ${styled.name} is written with style ${styled.style ?? 'form'} and explode ${String(styled.explode ?? true)}, a form a call does not send`;
+  for (const each of sent) {
+    const style = unsentStyleOf(each);
+    if (style !== undefined) {
+      return `its ${each.in} parameter ${each.name} is written with style ${style}, a form a call does not send`;
+    }
+  }
+  return undefined;
+}
+
+const ignoredHeaders: ReadonlySet<string> = new Set(['accept', 'content-type', 'authorization']);
+
+const runtimeHeaders = headersTheRuntimeSets('openapi').names;
+
+function requiredHeaderOf({ in: place, name, required }: Parameter): string | undefined {
+  const header = name.toLowerCase();
+  return place === 'header' && required === true && !ignoredHeaders.has(header) ? header : undefined;
+}
+
+export function requiredHeadersOf(parameters: readonly Placed<Parameter>[]): readonly string[] {
+  return parameters.flatMap(({ value }) => {
+    const header = requiredHeaderOf(value);
+    return header === undefined ? [] : [header];
+  });
+}
+
+function isUnsent(parameter: Parameter, sentHeaders: ReadonlySet<string>): boolean {
+  const header = requiredHeaderOf(parameter);
+  return (
+    (parameter.in === 'cookie' && parameter.required === true) || (header !== undefined && !sentHeaders.has(header))
+  );
+}
+
+function unsentWords({ in: place, name }: Parameter): string {
+  if (place === 'cookie') {
+    return `it needs the cookie ${name}, which a function cannot send`;
+  }
+  return runtimeHeaders.has(name.toLowerCase())
+    ? `it needs the header ${name}, which the runtime sets itself and neither a function nor the headers of the entry can give`
+    : `it needs the header ${name}, which a function cannot send; the headers of the entry can give it`;
+}
+
+function neededBecause(sent: readonly Parameter[], sentHeaders: ReadonlySet<string>): string | undefined {
+  const needed = sent.find((each) => isUnsent(each, sentHeaders));
+  return needed === undefined ? undefined : unsentWords(needed);
 }
 
 export function leftOutBecause(
   method: Method,
   parameters: readonly Placed<Parameter>[],
   body: BodyOf,
-  components: Components,
+  { components, sentHeaders }: OperationContext,
 ): string | undefined {
   const sent = parameters.map(({ value }) => value);
-  const unsendable = methodBecause(method, body) ?? serializedBecause(sent);
+  const unsendable = methodBecause(method, body) ?? serializedBecause(sent) ?? neededBecause(sent, sentHeaders);
   if (unsendable !== undefined) {
     return unsendable;
-  }
-  const needed = sent.find((each) => (each.in === 'header' || each.in === 'cookie') && each.required === true);
-  if (needed !== undefined) {
-    return `it needs the ${needed.in} ${needed.name}, which a function cannot send`;
   }
   const objectQuery = sent.find((each) => each.in === 'query' && isObjectSchema(each.schema, components));
   if (objectQuery !== undefined) {

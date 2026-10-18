@@ -71,7 +71,11 @@ export async function describedApi(
   if (Result.isFailure(read)) {
     return Result.fail(read.failure);
   }
-  const presented = { security: settings.security, auth: settings.auth !== null };
+  const presented = {
+    security: settings.security,
+    auth: settings.auth !== null,
+    headers: new Set([...settings.headers.keys()].map((name) => name.toLowerCase())),
+  };
   const derived = Result.flatMap(decodedDocument(read.success), (decoded) =>
     Result.map(derivedTools(decoded, presented), (tools) => ({ document: decoded.document, tools })),
   );
