@@ -1,0 +1,12 @@
+name: profound
+title: Profound
+description: Read how your brand appears in AI answers, its visibility, citations, sentiment and prompts, and the traffic AI agents send to your site, through Profound's MCP server.
+website: https://docs.tryprofound.com/mcp/overview
+type: mcp
+url: https://mcp.tryprofound.com/mcp
+credentials:
+  - kind: secret
+    in: header
+    name: Authorization
+    scheme: Bearer
+    description: A Profound API key, made under Settings, Account, API Keys, on the Enterprise plan.
