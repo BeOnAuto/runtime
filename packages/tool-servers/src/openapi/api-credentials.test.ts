@@ -63,6 +63,29 @@ async function sentWith(security: Readonly<Record<string, string>>) {
   };
 }
 
+const keyHeaderNeeded = {
+  openapi: '3.1.0',
+  info: { title: 'Graph', version: '1' },
+  security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
+  paths: {
+    '/search': {
+      get: {
+        operationId: 'search',
+        parameters: [
+          { name: 'query', in: 'query', required: true },
+          { name: 'X-Api-Key', in: 'header', required: true },
+        ],
+      },
+    },
+  },
+  components: {
+    securitySchemes: {
+      bearerAuth: { type: 'http', scheme: 'bearer' },
+      apiKeyAuth: { type: 'apiKey', in: 'header', name: 'X-Api-Key' },
+    },
+  },
+};
+
 const basicOfKey = `Basic ${Buffer.from(`ada:${key}`).toString('base64')}`;
 
 describe('the credential of a security scheme, placed as the document says', () => {
@@ -122,6 +145,29 @@ describe('the credentials of a call whose entry gives more than one scheme', () 
       [key, undefined],
     ]);
     expect(fake.issuing?.tokenRequests()).toBe(0);
+  });
+});
+
+describe('the credentials of a call whose operation needs the header one of its schemes places', () => {
+  it('are those of the alternative that places the header, though the entry gives an earlier one too', async () => {
+    const fake = await fakeApi();
+    const document = await servedDocumentAt(() => Promise.resolve(Response.json(keyHeaderNeeded)));
+    const security = { bearerAuth: '${GRAPH_API_KEY}', apiKeyAuth: '${GRAPH_API_KEY}' };
+    const reporting = await describedAccess(
+      { graph: { org: 'acme', document, base_url: fake.baseUrl, security } },
+      { environment: { GRAPH_API_KEY: key }, timing },
+    );
+    closing.push(reporting.access.close);
+
+    const called = await searched(reporting);
+    const [seen] = fake.seen();
+
+    expect(called).toMatchObject({ outcome: 'result' });
+    expect([seen?.path, seen?.headers['x-api-key'], seen?.headers['authorization']]).toEqual([
+      '/v1/search',
+      key,
+      undefined,
+    ]);
   });
 });
 

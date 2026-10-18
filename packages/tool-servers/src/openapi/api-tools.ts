@@ -16,13 +16,21 @@ import { bodyOf, collected, parametersOf, type BodyOf, type JsonBody, type Place
 import { keepsItsSegments } from './api-requests.ts';
 import { documentBounds } from './document-reading.ts';
 import { bytesOf, componentsOf, inputSchemaOf, oversizedBecause, type Components } from './input-schemas.ts';
-import { leftOutBecause } from './left-out.ts';
-import { requirementOf, type Placement, type Presented } from './security-schemes.ts';
+import { leftOutBecause, requiredHeadersOf } from './left-out.ts';
+import { headersPlacedBy, requirementOf, type Placement, type Presented } from './security-schemes.ts';
 
-interface ApiInput {
+interface PathInput {
   readonly name: string;
-  readonly in: 'path' | 'query';
+  readonly in: 'path';
 }
+
+export interface QueryInput {
+  readonly name: string;
+  readonly in: 'query';
+  readonly joinsLists: boolean;
+}
+
+type ApiInput = PathInput | QueryInput;
 
 export interface ApiOperation {
   readonly tool: ListedTool;
@@ -116,10 +124,15 @@ function annotationsOf(method: Method): ToolAnnotations {
   };
 }
 
+function inputOf({ name, in: place, explode }: Parameter): readonly ApiInput[] {
+  if (place === 'path') {
+    return [{ name, in: 'path' }];
+  }
+  return place === 'query' ? [{ name, in: 'query', joinsLists: explode === false }] : [];
+}
+
 function inputsOf(parameters: readonly Placed<Parameter>[]): readonly ApiInput[] {
-  return parameters.flatMap(({ value }) =>
-    value.in === 'path' || value.in === 'query' ? [{ name: value.name, in: value.in }] : [],
-  );
+  return parameters.flatMap(({ value }) => inputOf(value));
 }
 
 function namedOperation({ method, path, operation }: Located): string {
@@ -162,11 +175,16 @@ function derivedAt(read: ReadDocument, { components, presented }: Context, locat
       ...(Result.isFailure(body) ? body.failure : []),
     ]);
   }
-  const because = leftOutBecause(located.method, parameters.success, body.success, components);
+  const unnamed = requiredHeadersOf(parameters.success).filter((header) => !presented.headers.has(header));
+  const requirement = requirementOf(read.document, located.operation.value, presented, new Set(unnamed));
+  const placed = headersPlacedBy(requirement).map((name) => name.toLowerCase());
+  const because = leftOutBecause(located.method, parameters.success, body.success, {
+    components,
+    sentHeaders: new Set([...presented.headers, ...placed]),
+  });
   if (because !== undefined) {
     return Result.succeed(leftOut(located, because));
   }
-  const requirement = requirementOf(read.document, located.operation.value, presented);
   if (requirement.kind === 'unmet') {
     return Result.succeed(leftOut(located, requirement.because));
   }

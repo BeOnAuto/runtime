@@ -1,6 +1,7 @@
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { documentOf, toolsOf } from '../api-testing/derived-documents.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { failureOf } from '../clients/server-failures.ts';
 import { serveFakeApi, type FakeApiServer } from '../testing/index.ts';
@@ -127,5 +128,39 @@ describe('the address of a call of an HTTP API, checked before it is sent', () =
 
     expect(failureOfSettled(settled)).toEqual(outsideTheBase);
     expect(other.seen()).toEqual([]);
+  });
+});
+
+const unexploded = documentOf({
+  '/rows': {
+    get: {
+      operationId: 'rows',
+      parameters: [{ name: 'tag', in: 'query', style: 'form', explode: false, schema: { type: 'array' } }],
+    },
+  },
+});
+
+describe('the query of a call of an HTTP API whose document writes a list with explode false', () => {
+  it('reaches the API as one key, its items joined by commas and a comma inside an item encoded', async () => {
+    const api = await elsewhere();
+    const client = apiClient(
+      {
+        ...settings,
+        headers: new Map([['X-Api-Key', Redacted.make(apiKey)]]),
+        api: { baseUrl: api.baseUrl, operations: toolsOf(unexploded).operations },
+      },
+      { fetch: globalThis.fetch, tokens: undefined, now: Date.now },
+    );
+
+    const settled = await client.call({
+      tool: 'rows',
+      input: { tag: ['open', 'mine, too'] },
+      meta: {},
+      signal: new AbortController().signal,
+      timeoutMs: 1000,
+    });
+
+    expect(settled).toMatchObject({ result: { structuredContent: { tags: ['open,mine, too'] } } });
+    expect(api.seen()).toMatchObject([{ path: '/v1/rows', query: '?tag=open,mine%2C+too' }]);
   });
 });

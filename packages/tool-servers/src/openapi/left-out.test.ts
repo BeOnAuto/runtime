@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { documentOf, toolNamed, toolsOf } from '../api-testing/derived-documents.ts';
+import { documentOf, keyPresented, toolNamed, toolsOf } from '../api-testing/derived-documents.ts';
 import { fakeApiDocument } from '../testing/index.ts';
 
 describe('an operation of an HTTP API that no tool is offered for', () => {
@@ -8,7 +8,7 @@ describe('an operation of an HTTP API that no tool is offered for', () => {
     expect(toolsOf(fakeApiDocument('3.1', '/v1')).leftOut).toEqual([
       {
         operation: 'sessionState (GET /sessions)',
-        because: 'it needs the header X-Session, which a function cannot send',
+        because: 'it needs the header X-Session, which a function cannot send; the headers of the entry can give it',
       },
       {
         operation: 'filtered (GET /filtered)',
@@ -47,7 +47,92 @@ describe('an operation of an HTTP API that no tool is offered for', () => {
   });
 });
 
+describe('an operation of an HTTP API that needs a header', () => {
+  it('is offered when the headers of its entry name each header it needs, in any case, which is then no input', () => {
+    const required = { in: 'header', required: true, schema: { type: 'string' } };
+    const { operations, leftOut } = toolsOf(
+      documentOf({
+        '/a': {
+          get: {
+            parameters: [
+              { name: 'X-Client-Id', ...required },
+              { name: 'q', in: 'query' },
+            ],
+          },
+        },
+        '/b': {
+          get: {
+            parameters: [
+              { name: 'X-Client-Id', ...required },
+              { name: 'X-Account', ...required },
+            ],
+          },
+        },
+        '/c': {
+          get: {
+            parameters: [
+              { name: 'x-client-id', ...required },
+              { name: 'session', in: 'cookie', required: true },
+            ],
+          },
+        },
+      }),
+      { ...keyPresented, headers: new Set(['x-client-id']) },
+    );
+
+    expect(operations.map(({ tool, inputs }) => [tool.name, tool.inputSchema['properties'], inputs])).toEqual([
+      ['get_a', { q: {} }, [{ name: 'q', in: 'query', joinsLists: false }]],
+    ]);
+    expect(leftOut).toEqual([
+      {
+        operation: 'GET /b',
+        because: 'it needs the header X-Account, which a function cannot send; the headers of the entry can give it',
+      },
+      { operation: 'GET /c', because: 'it needs the cookie session, which a function cannot send' },
+    ]);
+  });
+});
+
+describe('a header parameter of an HTTP API that the OpenAPI specification says to ignore', () => {
+  it('is Accept, Content-Type or Authorization in any case, never needed and never named in a refusal', () => {
+    const required = { in: 'header', required: true, schema: { type: 'string' } };
+    const { operations, leftOut } = toolsOf(
+      documentOf({
+        '/a': {
+          get: {
+            parameters: [
+              { name: 'Accept', ...required },
+              { name: 'content-type', ...required },
+              { name: 'AUTHORIZATION', ...required },
+            ],
+          },
+        },
+      }),
+    );
+
+    expect(operations.map(({ tool, inputs }) => [tool.name, inputs])).toEqual([['get_a', []]]);
+    expect(leftOut).toEqual([]);
+  });
+
+  it('is Host or Content-Length, which the runtime sets itself, said so where it leaves its operation out', () => {
+    const required = { in: 'header', required: true };
+    const { leftOut } = toolsOf(
+      documentOf({
+        '/a': { get: { parameters: [{ name: 'Host', ...required }] } },
+        '/b': { get: { parameters: [{ name: 'content-length', ...required }] } },
+      }),
+    );
+
+    expect(leftOut.map(({ because }) => because)).toEqual([
+      'it needs the header Host, which the runtime sets itself and neither a function nor the headers of the entry can give',
+      'it needs the header content-length, which the runtime sets itself and neither a function nor the headers of the entry can give',
+    ]);
+  });
+});
+
 const listed = { name: 'tags', schema: { type: 'array', items: { type: 'string' } } };
+
+const scalar = { name: 'state', schema: { type: 'string', enum: ['open', 'closed'] } };
 
 describe('an operation of an HTTP API that a call could only send in another form, or not at all', () => {
   it('is TRACE, which fetch refuses, or a GET or HEAD that takes a body', () => {
@@ -61,37 +146,83 @@ describe('an operation of an HTTP API that a call could only send in another for
     ]);
   });
 
-  it('writes a parameter in a style or with an explode other than the ones a call sends, a path as simple and a query as exploded form', () => {
+  it('writes a path parameter in a style other than simple, which is the style a call sends a path in', () => {
     const { operations, leftOut } = toolsOf(
       documentOf({
         '/a/{id}': {
           get: { parameters: [{ name: 'id', in: 'path', required: true, style: 'label' }] },
           put: { parameters: [{ name: 'id', in: 'path', required: true, style: 'simple', explode: true }] },
-        },
-        '/b': {
-          get: { parameters: [{ ...listed, in: 'query', explode: false }] },
-          put: { parameters: [{ ...listed, in: 'query', style: 'pipeDelimited' }] },
-          post: { parameters: [{ ...listed, in: 'query', style: 'form', explode: true }] },
           delete: { parameters: [{ name: 'X-Trace', in: 'header', style: 'simple', explode: true }] },
         },
       }),
     );
 
-    expect(operations.map(({ tool }) => tool.name)).toEqual(['put_a_id', 'post_b', 'delete_b']);
+    expect(operations.map(({ tool }) => tool.name)).toEqual(['put_a_id', 'delete_a_id']);
     expect(leftOut).toEqual([
       {
         operation: 'GET /a/{id}',
-        because: 'its path parameter id is written with style label and explode true, a form a call does not send',
+        because: 'its path parameter id is written with style label, a form a call does not send',
       },
-      {
-        operation: 'GET /b',
-        because: 'its query parameter tags is written with style form and explode false, a form a call does not send',
-      },
-      {
-        operation: 'PUT /b',
-        because:
-          'its query parameter tags is written with style pipeDelimited and explode true, a form a call does not send',
-      },
+    ]);
+  });
+});
+
+describe('a query parameter of an HTTP API, by the style its document writes it in', () => {
+  it('leaves its operation out as spaceDelimited, pipeDelimited or deepObject, whatever its schema', () => {
+    const { operations, leftOut } = toolsOf(
+      documentOf({
+        '/b': {
+          get: { parameters: [{ ...listed, in: 'query', style: 'form', explode: true }] },
+          put: { parameters: [{ ...listed, in: 'query', style: 'pipeDelimited' }] },
+          post: { parameters: [{ ...listed, in: 'query', style: 'spaceDelimited', explode: false }] },
+          patch: { parameters: [{ ...scalar, in: 'query', style: 'deepObject' }] },
+        },
+      }),
+    );
+
+    expect(operations.map(({ tool }) => tool.name)).toEqual(['get_b']);
+    expect(leftOut.map(({ operation, because }) => `${operation}: ${because}`)).toEqual([
+      'PUT /b: its query parameter tags is written with style pipeDelimited, a form a call does not send',
+      'POST /b: its query parameter tags is written with style spaceDelimited, a form a call does not send',
+      'PATCH /b: its query parameter state is written with style deepObject, a form a call does not send',
+    ]);
+  });
+});
+
+describe('a query parameter of an HTTP API that its document writes as form with explode false', () => {
+  it('is offered, a scalar sent as written and a list joined by commas, but not an object', () => {
+    const unexploded = { in: 'query', style: 'form', explode: false };
+    const filter = { name: 'f', ...unexploded, schema: { $ref: '#/components/schemas/Filter' } };
+    const { operations, leftOut } = toolsOf(
+      documentOf(
+        {
+          '/b': {
+            get: {
+              parameters: [
+                { ...listed, ...unexploded },
+                { ...scalar, ...unexploded },
+              ],
+            },
+            put: { parameters: [{ name: 'count', in: 'query', explode: false, schema: { type: 'integer' } }] },
+            post: { parameters: [filter] },
+          },
+        },
+        { components: { schemas: { Filter: { type: 'object' } } } },
+      ),
+    );
+
+    expect(operations.map(({ tool, inputs }) => [tool.name, inputs])).toEqual([
+      [
+        'get_b',
+        [
+          { name: 'tags', in: 'query', joinsLists: true },
+          { name: 'state', in: 'query', joinsLists: true },
+        ],
+      ],
+      ['put_b', [{ name: 'count', in: 'query', joinsLists: true }]],
+    ]);
+    expect(leftOut).toEqual([
+      { operation: 'POST /b', because: 'its query parameter f is an object, which a call does not send in a query' },
     ]);
   });
 });

@@ -100,6 +100,26 @@ describe('a connection to an HTTP API whose document cannot be read', () => {
   });
 });
 
+describe('a connection to an HTTP API whose entry gives a header its document says an operation needs', () => {
+  it('offers the operation, and a call of it sends the header', async () => {
+    const fake = await serveFakeApi({ key: fakeApiKey });
+    closing.push(fake.close);
+    const access = await accessThrough({
+      entry: {
+        document: fake.documentUrl,
+        headers: { 'X-Session': 'session-of-acme' },
+        security: { apiKeyAuth: '${GRAPH_API_KEY}' },
+      },
+    });
+
+    const called = await Effect.runPromise(
+      access.callOnce({ ...alpha, reference: { server: 'graph', tool: 'sessionState' }, input: {}, meta: {} }),
+    );
+
+    expect(called).toMatchObject({ outcome: 'result', answer: { structuredContent: { session: 'session-of-acme' } } });
+  });
+});
+
 describe('a connection to an HTTP API whose document is refused for what it says', () => {
   it('is unavailable as failing in the words of its document, which is not read again for as long as the runtime runs', async () => {
     const reads = { made: 0 };

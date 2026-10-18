@@ -20,7 +20,7 @@ const schemes: Schema.JsonObject = {
 };
 
 function presented(names: readonly string[], auth = false): Presented {
-  return { security: new Map(names.map((name) => [name, key])), auth };
+  return { security: new Map(names.map((name) => [name, key])), auth, headers: new Set() };
 }
 
 function securedDocument(paths: Schema.JsonObject, security?: Schema.Json): Readonly<Record<string, Schema.Json>> {
@@ -81,6 +81,84 @@ describe('the requirements of an operation of an HTTP API', () => {
     expect(toolsOf(documentOf({ '/c': { get: { operationId: 'c' } } }), presented([])).operations).toMatchObject([
       { tool: { name: 'c' }, credentials: [] },
     ]);
+  });
+});
+
+const needsTheKey = { parameters: [{ name: 'x-api-key', in: 'header', required: true }] };
+
+describe('a header an operation of an HTTP API needs, which its security places', () => {
+  it('is met by the key of the alternative that places it, its own or that of the document, before an earlier one', () => {
+    const paths = {
+      '/a': { get: { operationId: 'a', security: [{ headerKey: [] }], ...needsTheKey } },
+      '/b': { get: { operationId: 'b', security: [{ bearer: [] }, { headerKey: [] }], ...needsTheKey } },
+      '/c': { get: { operationId: 'c', ...needsTheKey } },
+    };
+    const sentKey = [{ kind: 'header', name: 'X-Api-Key', value: key }];
+
+    expect(credentialsOf(paths, presented(['headerKey', 'bearer']), [{ headerKey: [] }])).toEqual({
+      offered: [
+        ['a', sentKey],
+        ['b', sentKey],
+        ['c', sentKey],
+      ],
+      leftOut: [],
+    });
+  });
+
+  it('is not met by an alternative that places no such header, the only one the entry gives', () => {
+    const paths = {
+      '/b': { get: { operationId: 'b', security: [{ bearer: [] }, { headerKey: [] }], ...needsTheKey } },
+    };
+
+    expect(credentialsOf(paths, presented(['bearer'])).leftOut).toEqual([
+      {
+        operation: 'b (GET /b)',
+        because: 'it needs the header x-api-key, which a function cannot send; the headers of the entry can give it',
+      },
+    ]);
+  });
+
+  it('leaves its operation out in the words of its security where the entry gives none of it', () => {
+    const paths = { '/a': { get: { operationId: 'a', security: [{ headerKey: [] }], ...needsTheKey } } };
+
+    expect(credentialsOf(paths, presented([])).leftOut).toEqual([
+      {
+        operation: 'a (GET /a)',
+        because:
+          'it needs the security scheme headerKey of the document, which the security and the auth of the entry do not give',
+      },
+    ]);
+  });
+});
+
+describe('the headers an operation of an HTTP API needs beyond what its security places', () => {
+  it('chooses the key that places one of two headers it needs, and names the other where it leaves it out', () => {
+    const security = [{ bearer: [] }, { headerKey: [] }];
+    const required = { in: 'header', required: true };
+    const paths = {
+      '/a': { get: { operationId: 'a', security, ...needsTheKey } },
+      '/b': {
+        get: { operationId: 'b', security, parameters: [...needsTheKey.parameters, { name: 'X-Tenant', ...required }] },
+      },
+      '/c': {
+        get: { operationId: 'c', security, parameters: [...needsTheKey.parameters, { name: 'Host', ...required }] },
+      },
+    };
+
+    expect(credentialsOf(paths, presented(['headerKey', 'bearer']))).toEqual({
+      offered: [['a', [{ kind: 'header', name: 'X-Api-Key', value: key }]]],
+      leftOut: [
+        {
+          operation: 'b (GET /b)',
+          because: 'it needs the header X-Tenant, which a function cannot send; the headers of the entry can give it',
+        },
+        {
+          operation: 'c (GET /c)',
+          because:
+            'it needs the header Host, which the runtime sets itself and neither a function nor the headers of the entry can give',
+        },
+      ],
+    });
   });
 });
 

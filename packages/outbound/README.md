@@ -1,6 +1,6 @@
 # @on.auto/outbound
 
-How the server calls systems on the internet. It walks the causes of a failed call, and tells a certificate the server does not trust from any other failure of a call: the reasoning function adapter and the tool-servers package take the classification from here, so a model provider and a tool server whose certificate the server does not trust are named alike; every caller keeps its own client and bounds. And it makes the settings of a client of the AWS SDK, which the Bedrock provider of the reasoning capability and the object store of [`@on.auto/object-storage`](../object-storage/README.md) share, and signs the tokens the server signs in to the ledger's database with when `DATABASE_CREDENTIALS=aws-iam`.
+How the server calls systems on the internet. It walks the causes of a failed call, and tells a certificate the server does not trust from any other failure of a call: the reasoning function adapter and the tool-servers package take the classification from here, so a model provider and a tool server whose certificate the server does not trust are named alike; every caller keeps its own client and bounds. It names the runtime in the `User-Agent` of each request a `fetch` it wraps sends, which the server gives its tool servers. And it makes the settings of a client of the AWS SDK, which the Bedrock provider of the reasoning capability and the object store of [`@on.auto/object-storage`](../object-storage/README.md) share, and signs the tokens the server signs in to the ledger's database with when `DATABASE_CREDENTIALS=aws-iam`.
 
 ## The causes of a failure
 
@@ -9,6 +9,10 @@ How the server calls systems on the internet. It walks the causes of a failed ca
 ## Certificates
 
 `isUntrustedCertificate(error)` says whether any of the codes `codesOf` names is the code of a certificate the server does not trust.
+
+## The User-Agent of a request
+
+`withUserAgent(fetch, userAgent)` (`src/user-agent/user-agent-fetch.ts`) sends each request through the `fetch` it wraps with `User-Agent` set to `userAgent` where the request sets none, in whatever case the request writes the name, so a `User-Agent` the caller writes is the one sent. It reads the request's headers as a `Headers`, a list of pairs of strings or an object of strings, and hands headers of any other shape to the `fetch` beneath as they are, which sends its own (`node` for Node's, measured with Node 26.10.0). The server wraps `globalThis.fetch` once with `auto-runtime/<version>`, the name of the runtime's command and the version of the release it announces to an MCP server in `clientInfo`, since a product token holds no `@` or `/` in its name, and gives that fetch to the tool servers alone (`packages/server/src/composition/served-tool-access.ts`); every other client of the server sends what its own client sends, the model providers, the object store, the exporters of telemetry, the requests to the identity issuer and those of prediction functions among them.
 
 ## AWS clients
 
@@ -20,4 +24,4 @@ How the server calls systems on the internet. It walks the causes of a failed ca
 
 ## Source
 
-`src/causes` holds the walk of a failure's causes, `src/certificates` the classification, `src/proxy` the settings of the environment proxy, and `src/aws` the settings of AWS clients.
+`src/causes` holds the walk of a failure's causes, `src/certificates` the classification, `src/user-agent` the `User-Agent` of a request, `src/proxy` the settings of the environment proxy, and `src/aws` the settings of AWS clients.

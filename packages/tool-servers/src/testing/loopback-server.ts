@@ -4,14 +4,21 @@ import { Readable } from 'node:stream';
 
 import { Schema } from 'effect';
 
-export interface FailedRequest {
+interface FailedRequest {
   readonly method: string;
   readonly path: string;
   readonly error: string;
 }
 
+interface HeardRequest {
+  readonly method: string;
+  readonly path: string;
+  readonly userAgent: string | undefined;
+}
+
 export interface LoopbackServer {
   readonly origin: string;
+  readonly heard: () => readonly HeardRequest[];
   readonly failures: () => readonly FailedRequest[];
   readonly close: () => Promise<void>;
 }
@@ -87,6 +94,7 @@ export async function serveOnLoopback(handlerAt: (origin: string) => FetchHandle
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const origin = `http://127.0.0.1:${portOf(server.address()).port}`;
+  const heard: HeardRequest[] = [];
   const failures: FailedRequest[] = [];
   const answering: Answering = {
     origin,
@@ -96,10 +104,16 @@ export async function serveOnLoopback(handlerAt: (origin: string) => FetchHandle
     },
   };
   server.on('request', (incoming: IncomingMessage, outgoing: ServerResponse) => {
+    heard.push({
+      method: String(incoming.method),
+      path: String(incoming.url),
+      userAgent: incoming.headers['user-agent'],
+    });
     void respond(incoming, outgoing, answering);
   });
   return {
     origin,
+    heard: () => [...heard],
     failures: () => [...failures],
     close: async () => {
       const closed = once(server, 'close');

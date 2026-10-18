@@ -15,11 +15,12 @@ export type Placement =
 export interface Presented {
   readonly security: ReadonlyMap<string, Redacted.Redacted>;
   readonly auth: boolean;
+  readonly headers: ReadonlySet<string>;
 }
 
 export type Requirement =
   | { readonly kind: 'met'; readonly placements: readonly Placement[] }
-  | { readonly kind: 'unmet'; readonly because: string };
+  | { readonly kind: 'unmet'; readonly because: string; readonly headers: readonly string[] };
 
 export interface SecuredEntry {
   readonly security: ReadonlyMap<string, Redacted.Redacted>;
@@ -85,21 +86,60 @@ function alternativesInWords(alternatives: readonly SecurityRequirement[]): stri
   return alternatives.map((alternative) => Object.keys(alternative).join(' with ')).join(', or ');
 }
 
-export function requirementOf(document: ApiDocument, operation: Operation, presented: Presented): Requirement {
+function headersNamedBy(alternatives: readonly SecurityRequirement[], schemes: Schemes): readonly string[] {
+  return alternatives.flatMap((alternative) =>
+    Object.keys(alternative).flatMap((name) => {
+      const scheme = schemeNamed(schemes, name);
+      return scheme?.type === 'apiKey' && scheme.in === 'header' ? [scheme.name] : [];
+    }),
+  );
+}
+
+export function headersPlacedBy(requirement: Requirement): readonly string[] {
+  return requirement.kind === 'met'
+    ? requirement.placements.flatMap((placement) => (placement.kind === 'header' ? [placement.name] : []))
+    : requirement.headers;
+}
+
+function placesEvery(placements: readonly Placement[], headers: readonly string[]): boolean {
+  return headers.every((header) =>
+    placements.some((placement) => placement.kind === 'header' && placement.name.toLowerCase() === header),
+  );
+}
+
+function placeableOf(
+  neededHeaders: ReadonlySet<string>,
+  alternatives: readonly SecurityRequirement[],
+  schemes: Schemes,
+): readonly string[] {
+  const named = new Set(headersNamedBy(alternatives, schemes).map((header) => header.toLowerCase()));
+  return [...neededHeaders].filter((header) => named.has(header));
+}
+
+export function requirementOf(
+  document: ApiDocument,
+  operation: Operation,
+  presented: Presented,
+  neededHeaders: ReadonlySet<string>,
+): Requirement {
   const alternatives = operation.security ?? document.security ?? [];
   const schemes = schemesOf(document);
   if (alternatives.length === 0) {
     return { kind: 'met', placements: [] };
   }
-  for (const alternative of alternatives) {
+  const met = alternatives.flatMap((alternative) => {
     const placements = placementsOf(alternative, schemes, presented);
-    if (placements !== undefined) {
-      return { kind: 'met', placements };
-    }
+    return placements === undefined ? [] : [placements];
+  });
+  const [first] = met;
+  if (first !== undefined) {
+    const placeable = placeableOf(neededHeaders, alternatives, schemes);
+    return { kind: 'met', placements: met.find((placements) => placesEvery(placements, placeable)) ?? first };
   }
   return {
     kind: 'unmet',
     because: `it needs the security scheme ${alternativesInWords(alternatives)} of the document, which the security and the auth of the entry do not give`,
+    headers: headersNamedBy(alternatives, schemes),
   };
 }
 

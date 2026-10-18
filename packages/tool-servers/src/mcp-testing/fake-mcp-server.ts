@@ -1,7 +1,7 @@
 import { OAuthError, OAuthErrorCode, requireBearerAuth } from '@modelcontextprotocol/server';
 import { Option, Schema } from 'effect';
 
-import { serveOnLoopback, type FailedRequest, type FetchHandler } from '../testing/loopback-server.ts';
+import { serveOnLoopback, type FetchHandler, type LoopbackServer } from '../testing/loopback-server.ts';
 import { fakeAuthorization, type ClientRegistration, type FakeAuthorization } from './fake-authorization.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions } from './fake-sessions.ts';
@@ -35,7 +35,8 @@ export interface FakeMcpServer {
   readonly url: string;
   readonly origin: string;
   readonly seen: () => readonly SeenRequest[];
-  readonly failures: () => readonly FailedRequest[];
+  readonly heard: LoopbackServer['heard'];
+  readonly failures: LoopbackServer['failures'];
   readonly received: () => readonly ReceivedCall[];
   readonly chat: FakeChat;
   readonly openSessions: () => number;
@@ -274,6 +275,7 @@ export async function serveFakeMcp(options: FakeMcpOptions = {}): Promise<FakeMc
     url: `${listening.origin}/mcp`,
     origin: listening.origin,
     seen: () => [...seen],
+    heard: listening.heard,
     failures: listening.failures,
     received: () => [...received],
     chat,

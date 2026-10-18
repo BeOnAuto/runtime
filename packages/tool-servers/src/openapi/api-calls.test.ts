@@ -120,6 +120,22 @@ describe('the request of a call of a tool of an HTTP API', () => {
   });
 });
 
+describe('a call of an operation of an HTTP API that needs a header', () => {
+  it('sends a header the operation needs from the headers of its entry, which give the model no input for it', async () => {
+    const fake = await fakeApi();
+    const session = { 'x-session': 'session-of-acme' };
+    const access = await accessTo({ ...keyed(fake), headers: session });
+
+    const answered = await called(access, 'sessionState');
+
+    expect(answered).toMatchObject({
+      outcome: 'result',
+      answer: { structuredContent: { session: 'session-of-acme' } },
+    });
+    expect(fake.seen()[0]).toMatchObject({ path: '/v1/sessions', query: '', headers: session });
+  });
+});
+
 describe('the query of a call of a tool of an HTTP API', () => {
   it('carries the query parameters of its entry beside the key its security scheme places in the query', async () => {
     const fake = await fakeApi();
