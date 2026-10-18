@@ -5,6 +5,7 @@ import { rejected, type Rejected, type Succeeded } from '../outcome/outcome.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import { checkedDefinition } from './definition-checks.ts';
 import type { Definition, JsonAnswer, ObjectSchema, StreamAnswer } from './definition.ts';
+import { refusesEmptyBody } from './encoded-shape.ts';
 import { jsonSchemaDocumentOf, type JsonSchemaDocument } from './json-schema.ts';
 import type { RegisteredAnswer, RegisteredFieldsOf } from './registration.ts';
 
@@ -75,6 +76,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     permissions,
     reasons: [...new Set(definition.reasons)],
     input: jsonSchemaDocumentOf(definition.inputSchema),
+    refusesEmptyBody: refusesEmptyBody(definition.inputSchema, pathParameters),
   };
 }
 

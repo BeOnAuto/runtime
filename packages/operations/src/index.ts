@@ -223,6 +223,7 @@ export {
   defaultPageLimit,
 } from './reading/paging-fields.ts';
 export { PermissionSchema, allPermissions, permissionFor, type Permission } from './caller/permission.ts';
+export { permissionRefusalOf } from './authorization/authorization.ts';
 export type { KeptContent, PresentedFact, PresentedPart, Presenter } from './reading/presenter.ts';
 export {
   presentationOf,

@@ -202,6 +202,32 @@ describe('a route parameter that is a string once encoded', () => {
   });
 });
 
+const posted: { readonly method: 'POST'; readonly path: '/probe/{name}' } = { method: 'POST', path: '/probe/{name}' };
+
+const noted = Schema.Struct({ name: Schema.String, note: Schema.optionalKey(Schema.String) });
+
+function noteIssuesOf({ note }: typeof noted.Type): readonly Schema.FilterIssue[] {
+  return [note].filter((given) => given === undefined).map(() => ({ path: ['note'], issue: 'Expected a note' }));
+}
+
+function refusesEmptyBody(inputSchema: Schema.Codec<{ readonly name: string; readonly note?: string }>): boolean {
+  return defineCommand('playbook', { ...probe, route: posted, inputSchema, outputSchema: Empty }).registration
+    .refusesEmptyBody;
+}
+
+describe('whether an input refuses an empty body', () => {
+  it('is judged with the route parameters aside, by the fields and by the checks of the input', () => {
+    const noteRequired = Schema.Struct({ name: Schema.String, note: Schema.String });
+
+    expect([
+      refusesEmptyBody(noted),
+      refusesEmptyBody(noted.check(Schema.makeFilter(noteIssuesOf))),
+      refusesEmptyBody(noteRequired),
+      refusesEmptyBody(Schema.Union([noteRequired, noted])),
+    ]).toEqual([false, true, true, false]);
+  });
+});
+
 describe('the declared reasons', () => {
   it('are kept once each', () => {
     expect(
