@@ -15,6 +15,7 @@ export interface GatewaySettings {
   readonly name: string;
   readonly base_url: string;
   readonly api_key: Redacted.Redacted | null;
+  readonly api_key_env: string | null;
   readonly headers: ReadonlyMap<string, Redacted.Redacted>;
   readonly query_params: ReadonlyMap<string, Redacted.Redacted>;
   readonly structured_outputs: boolean;
@@ -168,6 +169,7 @@ const gatewayFrom = Effect.fnUntraced(function* (environment: Environment, entry
       name: entry.name,
       base_url: withoutTrailingSlashes(entry.base_url),
       api_key: api_key ?? null,
+      api_key_env: entry.api_key_env ?? null,
       headers: secretsOf(entry.headers),
       query_params: secretsOf(entry.query_params),
       structured_outputs: entry.structured_outputs ?? false,
