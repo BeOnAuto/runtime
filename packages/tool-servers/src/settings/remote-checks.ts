@@ -36,6 +36,8 @@ export function checkedHeaders(
   return problems.length === 0 ? accepted(redactedValuesOf(headers)) : rejected(problems);
 }
 
+export const secretOrKeyExpected = 'Expected client_secret, or private_key with its algorithm, one of the two';
+
 function checkedCredential(name: string, { client_secret, private_key, algorithm }: Auth): Checked<AuthCredential> {
   if (client_secret !== undefined && private_key === undefined && algorithm === undefined) {
     return accepted({ kind: 'client_secret', client_secret: Redacted.make(client_secret) });
@@ -43,7 +45,7 @@ function checkedCredential(name: string, { client_secret, private_key, algorithm
   if (private_key !== undefined && algorithm !== undefined && client_secret === undefined) {
     return accepted({ kind: 'private_key', private_key: Redacted.make(private_key), algorithm });
   }
-  return refused(name, ['auth'], 'Expected client_secret, or private_key with its algorithm, one of the two');
+  return refused(name, ['auth'], secretOrKeyExpected);
 }
 
 export function checkedAuth(name: string, { auth, headers = {} }: ServerEntryFields): Checked<AuthSettings | null> {

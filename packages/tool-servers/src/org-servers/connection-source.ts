@@ -8,12 +8,10 @@ export function isConnectionServerSettings(settings: ServerSettings): settings i
   return settings.type !== 'stdio';
 }
 
-export interface ConnectionServing extends Pick<
+export type ConnectionServing = Pick<
   ConnectionServerSettings,
-  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id'
-> {
-  readonly provider: string | null;
-}
+  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'provider'
+>;
 
 export const unreadyReasons = ['connection_pending', 'connection_broken', 'connection_not_allowed'] as const;
 

@@ -8,12 +8,10 @@ import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import type { ConnectionUnready } from './connection-source.ts';
 import { refusalOf, type Unusable } from './server-refusals.ts';
 
-export interface Served extends Pick<
+export type Served = Pick<
   LinkedServerSettings,
-  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'connection'
-> {
-  readonly provider: string | null;
-}
+  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'connection' | 'provider'
+>;
 
 export type Linked = { readonly link: ServerLink } | { readonly refused: Unusable };
 

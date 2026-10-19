@@ -18,6 +18,7 @@ const settings: StdioServerSettings = {
   request_id: null,
   secrets: [],
   connection: null,
+  provider: null,
   command: '/usr/local/bin/notes-mcp-server',
   args: [],
   env: new Map(),

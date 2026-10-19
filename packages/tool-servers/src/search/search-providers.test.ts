@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defineSearch, defineSearchInOrg, type OfferedProvider, type ProviderOffering } from '../index.ts';
 import { fakeConnections, type FakeConnections } from '../testing/fake-connections.ts';
+import { fakeProviders, type FakeProvider } from '../testing/fake-providers.ts';
 import { fakeApiKey, patientTiming, playbookToolCalls, serveFakeMcp, type FakeMcpServer } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
 
@@ -168,6 +169,37 @@ describe('a provider a connection of the org serves', () => {
       output: { servers: [], tools: [], scopes: [], providers: [chat, ledgers] },
     });
     expect(connections.orgReads()).toBe(1);
+  });
+});
+
+function trackerAt(fake: FakeMcpServer): FakeProvider {
+  return ({ credential }) => ({ url: fake.url, headers: { Authorization: `Bearer \${${credential.value ?? ''}}` } });
+}
+
+describe('a provider an entry of the file serves', () => {
+  it('is left out of the providers, and its server is searched with the provider', async () => {
+    const fake = await fakeServer();
+    const providers = fakeProviders(new Map([['tracker', trackerAt(fake)]]));
+    const { access } = reportingAccess(
+      { issues: { provider: 'tracker', credential: '${GRAPH_API_KEY}', org: 'acme', allowed: ['search'] } },
+      { timing: patientTiming, environment: { GRAPH_API_KEY: fakeApiKey }, providers: providers.resolver },
+    );
+    closing.push(access.close);
+    const { registration } = defineSearchInOrg(access, () => Effect.void, offeredToTheAdder([tracker, ledgers, chat]));
+
+    const searched = await Effect.runPromise(
+      makeDispatcher([])
+        .dispatchToOrg(registration, { caller: adder, org: 'acme', input: {}, encoding: 'strings' })
+        .pipe(Effect.provide(services)),
+    );
+
+    expect(searched).toMatchObject({
+      status: 'succeeded',
+      output: {
+        servers: [{ name: 'issues', provider: 'tracker', tool_count: 1 }],
+        providers: [chat, ledgers],
+      },
+    });
   });
 });
 

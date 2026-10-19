@@ -21,6 +21,7 @@ interface ServedBy {
   readonly request_id: string | null;
   readonly secrets: readonly Redacted.Redacted[];
   readonly connection: string | null;
+  readonly provider: string | null;
 }
 
 export interface McpServerSettings extends ServedBy {

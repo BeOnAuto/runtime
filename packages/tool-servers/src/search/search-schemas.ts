@@ -56,7 +56,7 @@ const serverFields = {
   ),
   provider: Schema.NullOr(Schema.String).annotate({
     description:
-      'The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up',
+      'The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand',
   }),
 };
 

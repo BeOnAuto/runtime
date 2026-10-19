@@ -8,7 +8,11 @@ import type { Timing } from '../bounds/call-bounds.ts';
 import { ignored } from '../clients/ignored.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { describedToolServers } from '../openapi/described-servers.ts';
-import { readToolServerSettings, type Environment } from '../settings/settings-reading.ts';
+import {
+  readToolServerSettings,
+  type Environment,
+  type ToolServerSettingsContext,
+} from '../settings/settings-reading.ts';
 
 export const testClientInfo: ToolAccessOptions['clientInfo'] = { name: '@on.auto/runtime', version: '0.0.0-test' };
 
@@ -19,6 +23,7 @@ export interface AccessOptions {
   readonly traceMeta?: ToolAccessOptions['traceMeta'];
   readonly connections?: ToolAccessOptions['connections'];
   readonly runtimeSecrets?: ToolAccessOptions['runtimeSecrets'];
+  readonly providers?: NonNullable<ToolServerSettingsContext['providers']>;
 }
 
 export interface ReportingAccess {
@@ -29,10 +34,13 @@ export interface ReportingAccess {
 
 function servers(
   written: Readonly<Record<string, unknown>>,
-  { environment = {}, fetch }: AccessOptions,
+  { environment = {}, fetch, providers }: AccessOptions,
   describing: Describing,
 ) {
-  return readToolServerSettings({ ...environment, TOOL_SERVERS: JSON.stringify(written) }, { modelProviders: [] }).pipe(
+  return readToolServerSettings(
+    { ...environment, TOOL_SERVERS: JSON.stringify(written) },
+    { modelProviders: [], ...(providers === undefined ? {} : { providers }) },
+  ).pipe(
     Effect.flatMap((settings) =>
       describedToolServers(settings, { ...describing, ...(fetch === undefined ? {} : { fetch }) }),
     ),

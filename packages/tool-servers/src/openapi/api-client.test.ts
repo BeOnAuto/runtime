@@ -70,6 +70,7 @@ const settings: DescribedApiSettings = {
   request_id: null,
   secrets: [],
   connection: null,
+  provider: null,
   api: { baseUrl: 'https://graph.example.com/v1', operations: [] },
 };
 
