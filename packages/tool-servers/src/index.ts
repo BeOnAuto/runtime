@@ -62,6 +62,32 @@ export {
   type RepliesRead,
   type Telling,
 } from './own-calls/conversation-calls.ts';
+export {
+  ClientIdSchema,
+  ClientSourceSchema,
+  clientSources,
+  isSameIssuer,
+  type ClientSource,
+  type RegisteredClient,
+  type RegisteredCredential,
+  type TokenEndpointAuthMethod,
+} from './consent/client-sources.ts';
+export {
+  makeConsentClient,
+  type ChosenClient,
+  type ClientRegistrations,
+  type ConsentClient,
+  type ConsentClientOptions,
+  type ConsentRefusal,
+  type ConsentServer,
+  type ConsentWay,
+  type FinishAsked,
+  type FinishedConsent,
+  type KeptRegistration,
+  type StartAsked,
+  type StartedConsent,
+} from './consent/consent-client.ts';
+export { isScope } from './consent/scopes.ts';
 export { defineSearch } from './search/search.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
 export type { OfferedProvider, ProviderOffering } from './search/found-providers.ts';

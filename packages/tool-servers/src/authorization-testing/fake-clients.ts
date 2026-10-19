@@ -7,16 +7,28 @@ import { json } from './authorization-answers.ts';
 
 export interface ClientRegistration {
   readonly clientId: string;
-  readonly clientSecret?: string;
+  readonly clientSecret?: string | undefined;
   readonly publicKey?: string;
   readonly expiresInSeconds: number | null;
   readonly issuer?: string;
   readonly authorizationServer?: string;
+  readonly protectedResource?: string;
   readonly openIdConnect?: boolean;
   readonly redirectUris?: readonly string[];
   readonly rotatesRefreshTokens?: boolean;
   readonly clientMetadataDocuments?: boolean;
   readonly dynamicRegistration?: boolean;
+  readonly challengeMethods?: readonly string[];
+  readonly grantedScope?: string;
+  readonly issuesRefreshTokens?: boolean;
+  readonly publishesMetadata?: boolean;
+  readonly endpointHost?: string;
+  readonly takesBasicSecrets?: boolean;
+  readonly listsRevocationMethods?: boolean;
+  readonly scopesSupported?: readonly string[];
+  readonly refusesRegistration?: boolean;
+  readonly registeredClientId?: string;
+  readonly registrationSecretSeconds?: number;
 }
 
 export interface KnownClient {
@@ -142,19 +154,28 @@ async function authenticatedIn(
 ): Promise<KnownClient | undefined> {
   const basic = basicCredentialsOf(request);
   if (basic !== undefined) {
-    return withSecret(await knownIn(registry, basic[0]), basic[1]);
+    return registry.registration.takesBasicSecrets === false
+      ? undefined
+      : withSecret(await knownIn(registry, basic[0]), basic[1]);
   }
   const assertion = form.get('client_assertion');
   return assertion === null ? namedIn(registry, form) : assertedIn(registry, assertion);
 }
 
-async function registeredIn({ clients, registered }: Registry, request: Readonly<Request>): Promise<Response> {
+function secretEndOf({ registrationSecretSeconds }: ClientRegistration): number {
+  return registrationSecretSeconds === undefined ? 0 : Math.floor(Date.now() / 1000) + registrationSecretSeconds;
+}
+
+async function registeredIn(
+  { registration, clients, registered }: Registry,
+  request: Readonly<Request>,
+): Promise<Response> {
   const asked = decodeRegistration(await request.text());
-  if (Option.isNone(asked)) {
+  if (Option.isNone(asked) || registration.refusesRegistration === true) {
     return json({ error: 'invalid_client_metadata', error_description: 'Expected redirect_uris' }, 400);
   }
   const method = asked.value.token_endpoint_auth_method ?? 'client_secret_basic';
-  const clientId = `registered-${String(registered.size + 1)}`;
+  const clientId = registration.registeredClientId ?? `registered-${String(registered.size + 1)}`;
   const clientSecret = method === 'none' ? undefined : `registered-secret-${crypto.randomUUID()}`;
   const client = { clientId, clientSecret, publicKey: undefined, redirectUris: asked.value.redirect_uris };
   registered.set(clientId, client);
@@ -162,7 +183,9 @@ async function registeredIn({ clients, registered }: Registry, request: Readonly
   return json(
     {
       client_id: clientId,
-      ...(clientSecret === undefined ? {} : { client_secret: clientSecret, client_secret_expires_at: 0 }),
+      ...(clientSecret === undefined
+        ? {}
+        : { client_secret: clientSecret, client_secret_expires_at: secretEndOf(registration) }),
       client_id_issued_at: Math.floor(Date.now() / 1000),
       redirect_uris: asked.value.redirect_uris,
       token_endpoint_auth_method: method,

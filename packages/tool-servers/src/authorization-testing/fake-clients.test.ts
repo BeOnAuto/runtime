@@ -149,6 +149,24 @@ describe('the client credentials the fake grants', () => {
   });
 });
 
+describe('a fake that takes client secrets in the form alone', () => {
+  it('refuses a secret in the Basic header, and lists no Basic method for its token or revocation endpoints', async () => {
+    const fake = await served({ ...withASecret, takesBasicSecrets: false, listsRevocationMethods: false });
+
+    const answers = [
+      await redeemed(fake, await codeOf(fake), basic('auto-runtime', clientSecret)),
+      await redeemed(fake, await codeOf(fake), {}, { client_id: 'auto-runtime', client_secret: clientSecret }),
+    ];
+    const metadata = await metadataOf(fake);
+
+    expect(answers.map(({ status }) => status)).toEqual([401, 200]);
+    expect([
+      metadata['token_endpoint_auth_methods_supported'],
+      metadata['revocation_endpoint_auth_methods_supported'],
+    ]).toEqual([['client_secret_post', 'private_key_jwt', 'none'], undefined]);
+  });
+});
+
 describe('the dynamic registration of the fake', () => {
   it('registers a client where the test asks, with a secret unless it authenticates with none, whose codes it redeems', async () => {
     const fake = await served({ ...withASecret, dynamicRegistration: true });
