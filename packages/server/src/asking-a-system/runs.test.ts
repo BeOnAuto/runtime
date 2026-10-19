@@ -2,15 +2,15 @@ import { callDocument } from '@on.auto/interaction/testing';
 import { fakeStdioServerPath } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
-import { interactionServerOn } from '../testing/servers/interaction-server.ts';
-import { alpha } from '../testing/servers/reasoning-server.ts';
+import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
 import {
   askingASystem,
   calling,
   problemWith,
   systemRunId,
   type SystemServer,
-} from '../testing/servers/system-calls.ts';
+} from '../testing/interaction-servers/system-calls.ts';
+import { alpha } from '../testing/servers/reasoning-server.ts';
 import { settledRun } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 

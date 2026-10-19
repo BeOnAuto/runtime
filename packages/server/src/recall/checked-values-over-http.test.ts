@@ -3,7 +3,6 @@ import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool } from '../composition/served-computation.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import {
   playbookWithReviews,
@@ -13,6 +12,7 @@ import {
   standingUntil,
   verdicts,
 } from '../testing/servers/recall-server.ts';
+import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
 
 const reviewRuns =
   'language: typescript\nsource:\n  events:\n    - type: run_succeeded\n      subject: reasoning/review-brief';
@@ -58,7 +58,7 @@ describe('values their schemas refuse, through the one checked worker, over HTTP
   it('refuse a computation output and a recall answer, and stall a view, in the one wording of the issues', async () => {
     const modules = new Set<string | undefined>();
     const server = await servingRecall(verdicts({ campaign: 'spring', verdict: 'approve' }), {}, (settings) =>
-      recordingModules(workerPool(settings), modules),
+      recordingModules(patientWorkerPool(settings), modules),
     );
     closing.push(server.stop);
     await playbookWithReviews(server, 1);

@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { asking, brief, servingInteractions } from '../testing/servers/interaction-server.ts';
+import { asking, brief, servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { runIdIn } from '../testing/servers/workflow-server.ts';
 

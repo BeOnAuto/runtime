@@ -12,7 +12,7 @@ import { answers, textResult, type ScriptedReply } from '@on.auto/reasoning/test
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { interactionsCalled } from '../testing/servers/interaction-calls.ts';
+import { interactionsCalled } from '../testing/interaction-servers/interaction-calls.ts';
 import { servingWithAToolServer, toolServerToolsCalled } from '../testing/servers/tool-server-calls.ts';
 import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
 

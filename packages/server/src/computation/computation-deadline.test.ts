@@ -1,5 +1,6 @@
 import { computationBounds } from '@on.auto/computation';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
+import { checkingWithin } from '@on.auto/definitions/testing';
 import { programPool } from '@on.auto/workflow-engine/dsl';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -45,7 +46,9 @@ describe('a run of a computation function that does not end by itself, over HTTP
   it('is unavailable once its warm worker is terminated at the deadline, while another worker answers and the server answers other requests', async () => {
     server = await servingReasoning([], {}, undefined, {
       programPoolOf: ({ workers }) =>
-        programPool({ workers, heapMegabytes: computationBounds.heapMegabytes, worker: blockingOnTwoRows }),
+        checkingWithin(
+          programPool({ workers, heapMegabytes: computationBounds.heapMegabytes, worker: blockingOnTwoRows }),
+        ),
     });
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'pace', source: campaignPace } });

@@ -11,7 +11,7 @@ import {
   servingMeetings,
   type MeetingsServer,
   type Surfaces,
-} from '../testing/servers/meetings-server.ts';
+} from '../testing/interaction-servers/meetings-server.ts';
 import { liveOverMcp } from '../testing/servers/recall-server.ts';
 
 let meetings: MeetingsServer;

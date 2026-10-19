@@ -1,9 +1,14 @@
 import { threadReplies } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
-import { chatKey } from '../testing/servers/chat-deliveries.ts';
+import { chatKey } from '../testing/interaction-servers/chat-deliveries.ts';
+import {
+  askingASystem,
+  systemRunId,
+  threadInput,
+  type HistoryEvent,
+} from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { askingASystem, systemRunId, threadInput, type HistoryEvent } from '../testing/servers/system-calls.ts';
 
 const aNumber: unknown = expect.any(Number);
 

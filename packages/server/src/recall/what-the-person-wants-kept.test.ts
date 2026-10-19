@@ -2,7 +2,7 @@ import { withMcpSession, type McpSession } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { sentenceNaming } from '../testing/servers/meetings-server.ts';
+import { sentenceNaming } from '../testing/interaction-servers/meetings-server.ts';
 import type { ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { liveOverMcp, servingRecall } from '../testing/servers/recall-server.ts';
 

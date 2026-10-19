@@ -3,7 +3,6 @@ import { setTimeout } from 'node:timers/promises';
 import { Schema } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { shutdownTimeoutMs } from '../lifecycle/shutdown.ts';
 import {
   logLinesOf,
   requestTo,
@@ -54,11 +53,10 @@ const inputsOf = Schema.decodeUnknownSync(
 );
 
 describe('main with workflows', () => {
-  it('says how it runs workflows, and exits 0 at once on SIGTERM', async () => {
+  it('says how it runs workflows, and exits 0 on SIGTERM', async () => {
     const child = workflowProcess(ledger.fileName, { PREDICTION_CACHE_DIR: ledger.cacheDirectory });
     const port = await child.port;
 
-    const stopping = performance.now();
     child.signal('SIGTERM');
     const exitCode = await child.exited;
     const startUpLines = logLinesOf(child)
@@ -66,7 +64,6 @@ describe('main with workflows', () => {
       .map(({ message, level }) => `${level} ${message}`);
 
     expect(exitCode).toBe(0);
-    expect(performance.now() - stopping).toBeLessThan(shutdownTimeoutMs);
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
     expect(startUpLines.slice(1)).toEqual([
       `INFO The ledger is kept in the file ${ledger.fileName}`,

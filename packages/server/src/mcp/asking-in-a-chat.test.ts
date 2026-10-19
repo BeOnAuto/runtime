@@ -4,7 +4,11 @@ import { mostGuideBytes } from '@on.auto/api';
 import { plainTextIn, textOf, type McpSession } from '@on.auto/api/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { sentenceNaming, servingMeetings, type MeetingsServer } from '../testing/servers/meetings-server.ts';
+import {
+  sentenceNaming,
+  servingMeetings,
+  type MeetingsServer,
+} from '../testing/interaction-servers/meetings-server.ts';
 
 let meetings: MeetingsServer;
 

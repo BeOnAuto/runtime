@@ -1,11 +1,10 @@
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
-import type { PoolOutcome } from '@on.auto/workflow-engine/dsl';
-import { scriptedPool } from '@on.auto/workflow-engine/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool, type ProgramPoolOf } from '../composition/served-computation.ts';
+import type { ProgramPoolOf } from '../composition/served-computation.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { patientWorkerPool, scriptedWorkerPool } from '../testing/servers/worker-pools.ts';
 
 const raising = [
   '---',
@@ -31,11 +30,7 @@ afterEach(async () => {
   await server.stop();
 });
 
-function scripted(...outcomes: readonly PoolOutcome[]): ProgramPoolOf {
-  return (settings) => scriptedPool(outcomes, workerPool(settings));
-}
-
-async function serving(programPoolOf: ProgramPoolOf = workerPool): Promise<ReasoningServer> {
+async function serving(programPoolOf: ProgramPoolOf = patientWorkerPool): Promise<ReasoningServer> {
   server = await servingReasoning([], {}, undefined, { programPoolOf });
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'pace', source: campaignPace } });
@@ -223,7 +218,7 @@ describe('the definitions and inputs of computation functions, over HTTP', () =>
 
 describe('a run of a computation function the server cannot finish, over HTTP', () => {
   it('is unavailable when no worker is free within its deadline', async () => {
-    await serving(scripted({ ran: 'stopped', because: 'busy', milliseconds: 10_000 }));
+    await serving(scriptedWorkerPool({ ran: 'stopped', because: 'busy', milliseconds: 10_000 }));
 
     expect(await running('pace', { input: campaignRows(2) })).toMatchObject({
       status: 503,
@@ -236,7 +231,11 @@ describe('a run of a computation function the server cannot finish, over HTTP', 
 
   it('fails with an incident when its worker crashes, and the run is recorded as failed', async () => {
     await serving(
-      scripted({ ran: 'crashed', detail: 'The worker ended with code 1 before it answered', milliseconds: 5 }),
+      scriptedWorkerPool({
+        ran: 'crashed',
+        detail: 'The worker ended with code 1 before it answered',
+        milliseconds: 5,
+      }),
     );
 
     const ran = await running('pace', { input: campaignRows(2), run_id: runId });

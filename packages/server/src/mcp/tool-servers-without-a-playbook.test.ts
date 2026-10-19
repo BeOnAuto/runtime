@@ -7,7 +7,7 @@ import {
   sentenceNaming,
   servingMeetings,
   type MeetingsServer,
-} from '../testing/servers/meetings-server.ts';
+} from '../testing/interaction-servers/meetings-server.ts';
 
 let meetings: MeetingsServer;
 

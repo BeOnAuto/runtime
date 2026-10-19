@@ -1,5 +1,7 @@
 import { answers, callingTools, textResult } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import type { HostClock } from '@on.auto/workflow-host';
+import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -23,6 +25,8 @@ const impatient = workflowSource(
 `,
 );
 
+const aSecond = 1000;
+
 const decodeHistory = Schema.decodeUnknownSync(
   Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }),
 );
@@ -33,7 +37,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function serving(fake: FakeMcpServer): Promise<ReasoningServer> {
+async function serving(fake: FakeMcpServer, clock: HostClock): Promise<ReasoningServer> {
   const server = await servingWorkflows(
     [callingTools([['graph__sleep', { ms: 60_000 }]], answers(textResult('Slept.')))],
     {
@@ -42,6 +46,8 @@ async function serving(fake: FakeMcpServer): Promise<ReasoningServer> {
         graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
       }),
     },
+    undefined,
+    clock,
   );
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
@@ -63,11 +69,17 @@ describe('a workflow step that times out while its reasoning function calls a to
   it('aborts the call in flight at its MCP server, and leaves the run cancelled with the call started and unanswered', async () => {
     const fake = await serveFakeMcp({ bearer: apiKey });
     closing.push(fake.close);
-    const server = await serving(fake);
+    const clock = movedClock(Date.now());
+    const server = await serving(fake, clock);
 
     const started = await server.call('POST', `${alpha}/definitions/workflow/impatient/run`, {
       body: { input: {} },
     });
+    await until(
+      () => fake.received(),
+      (received) => received.length > 0,
+    );
+    clock.moveTo(clock.now() + aSecond);
     const workflow = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
     const calls = await untilCancelled(fake);
     const nested = String(server.modelRunIds()[0]);

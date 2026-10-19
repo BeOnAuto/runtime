@@ -2,9 +2,10 @@ import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import type { CheckOutcome, ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool, type ProgramPoolOf } from '../composition/served-computation.ts';
+import type { ProgramPoolOf } from '../composition/served-computation.ts';
 import { checkRefusals, documentOf, totalOf } from '../testing/servers/check-refusals.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
 
 const paceOfTwoRows = {
   campaigns: [
@@ -42,11 +43,11 @@ function countingChecks(): { readonly checks: Checks; readonly poolOf: ProgramPo
         stalled = { ran: 'stopped', because, milliseconds: 2000 };
       },
     },
-    poolOf: (settings) => checking(workerPool(settings)),
+    poolOf: (settings) => checking(patientWorkerPool(settings)),
   };
 }
 
-async function serving(programPoolOf: ProgramPoolOf = workerPool): Promise<ReasoningServer> {
+async function serving(programPoolOf: ProgramPoolOf = patientWorkerPool): Promise<ReasoningServer> {
   server = await servingReasoning([], {}, undefined, { programPoolOf });
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return server;

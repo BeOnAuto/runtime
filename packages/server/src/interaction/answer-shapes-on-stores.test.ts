@@ -8,8 +8,8 @@ import { Client } from 'pg';
 import { onTestFinished } from 'vitest';
 
 import { secretsKey } from '../testing/databases/secrets-key.ts';
+import { answerShapesOn, type ProjectionStore } from '../testing/interaction-servers/answer-shapes.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { answerShapesOn, type ProjectionStore } from '../testing/servers/answer-shapes.ts';
 
 const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 

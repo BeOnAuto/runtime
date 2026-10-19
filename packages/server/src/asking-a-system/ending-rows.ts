@@ -3,16 +3,18 @@ import { patientTiming } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { expect } from 'vitest';
 
-import type { TestResponse } from '../testing/servers/http-client.ts';
 import {
   askingASystem,
   calling,
   openInput,
   type SystemOptions,
   type SystemServer,
-} from '../testing/servers/system-calls.ts';
+} from '../testing/interaction-servers/system-calls.ts';
+import type { TestResponse } from '../testing/servers/http-client.ts';
 
-const quickCalls = { ...patientTiming, openMs: 300, callMs: 300 };
+export const quickCalls = { ...patientTiming, callMs: 300 };
+
+const quickOpening = { ...patientTiming, openMs: 300 };
 
 const someDetail: unknown = expect.any(String);
 
@@ -65,7 +67,7 @@ export function endingOf({ status, body, headers }: TestResponse): Ending {
 }
 
 export async function endedFor({ server = {}, document = {}, input, before }: Row): Promise<Ending> {
-  const asking = await askingASystem({ timing: quickCalls, ...server });
+  const asking = await askingASystem({ timing: patientTiming, ...server });
   await asking.define('asking', document);
   await before?.(asking);
   return endingOf(await asking.runCall('asking', input));
@@ -197,6 +199,7 @@ export const beforeAnything: ReadonlyArray<readonly [string, Row, Ending]> = [
   [
     'a listing of the tools that does not answer in time',
     {
+      server: { timing: quickOpening },
       before: (server) => {
         server.fake.holdNextOf('tools/list');
       },

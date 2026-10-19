@@ -5,14 +5,14 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { alpha } from '../testing/servers/reasoning-server.ts';
 import {
   askingASystem,
   calling,
   problemWith,
   systemRunId,
   type SystemServer,
-} from '../testing/servers/system-calls.ts';
+} from '../testing/interaction-servers/system-calls.ts';
+import { alpha } from '../testing/servers/reasoning-server.ts';
 import { beforeAnything, endedFor, endingOf, problems } from './ending-rows.ts';
 import { afterSending, unreadable } from './sent-ending-rows.ts';
 

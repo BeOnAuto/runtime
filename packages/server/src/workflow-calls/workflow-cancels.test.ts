@@ -1,9 +1,10 @@
 import { withMcpSession } from '@on.auto/api/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
+import { movedClock } from '@on.auto/workflow-host/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { ended, runsOf, servingCalls, startedRunOf } from '../testing/servers/workflow-calls.ts';
+import { ended, impatientTimeoutMs, runsOf, servingCalls, startedRunOf } from '../testing/servers/workflow-calls.ts';
 import { runIdIn, settledRun, settledOverMcp } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
@@ -60,9 +61,15 @@ describe('a cancel of a workflow run, over HTTP', () => {
   });
 
   it('is cancelled by the timeout of the step that waits for it, as past its deadline', async () => {
-    server = await servingCalls([]);
+    const clock = movedClock(Date.now());
+    server = await servingCalls([], {}, clock);
 
     const started = await startedRunOf(server, 'impatient');
+    await until(
+      () => runsOf(server, 'pending'),
+      (runs) => runs.length > 0,
+    );
+    clock.moveTo(clock.now() + impatientTimeoutMs);
     const settled = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
     const pending = await until(() => runsOf(server, 'pending'), ended);
 

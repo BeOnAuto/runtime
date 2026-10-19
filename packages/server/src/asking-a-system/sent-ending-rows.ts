@@ -1,11 +1,12 @@
 import { expect } from 'vitest';
 
-import { calling } from '../testing/servers/system-calls.ts';
+import { calling } from '../testing/interaction-servers/system-calls.ts';
 import {
   failedAfterCalling,
   mayChange,
   mayHaveActed,
   notAnsweredInTime,
+  quickCalls,
   refusingTheArguments,
   unfinished,
   unknown,
@@ -37,7 +38,7 @@ export const afterSending: ReadonlyArray<readonly [string, Row, Ending]> = [
   ],
   [
     'a read-only tool that took longer than a call may',
-    { document: calling('sleep', ['    ms: 5000']) },
+    { server: { timing: quickCalls }, document: calling('sleep', ['    ms: 5000']) },
     unfinished('server_failed', notAnsweredInTime),
   ],
   [
@@ -52,7 +53,7 @@ export const afterSending: ReadonlyArray<readonly [string, Row, Ending]> = [
   ],
   [
     'any other tool that took longer than a call may',
-    { server: { hints: { sleep: mayChange } }, document: calling('sleep', ['    ms: 5000']) },
+    { server: { hints: { sleep: mayChange }, timing: quickCalls }, document: calling('sleep', ['    ms: 5000']) },
     unknown('server_failed', notAnsweredInTime),
   ],
 ];

@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
+import { brief, interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { brief, interactionServerOn } from '../testing/servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { runIdIn } from '../testing/servers/workflow-server.ts';
 import { accessTokenOf, issuerOverHttps } from './issuer-over-https.ts';

@@ -7,8 +7,8 @@ import {
   chatServer,
   deliveryHistoryOf,
   deliveryRowsOf,
-} from '../testing/servers/chat-deliveries.ts';
-import { servingInteractions } from '../testing/servers/interaction-server.ts';
+} from '../testing/interaction-servers/chat-deliveries.ts';
+import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { runIdIn } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';

@@ -2,8 +2,8 @@ import { chatDelivery } from '@on.auto/interaction/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { chatEnvironment, chatServer, deliveryHistoryOf } from '../testing/servers/chat-deliveries.ts';
-import { brief, servingInteractions } from '../testing/servers/interaction-server.ts';
+import { chatEnvironment, chatServer, deliveryHistoryOf } from '../testing/interaction-servers/chat-deliveries.ts';
+import { brief, servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { until } from '../testing/waiting/until.ts';
 

@@ -3,7 +3,7 @@ import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { interactionServerOn } from '../testing/servers/interaction-server.ts';
+import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { fencedBlocksOf, pageOf, tutorialRunOn } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, servingWorkflows } from '../testing/servers/workflow-server.ts';

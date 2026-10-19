@@ -4,10 +4,10 @@ import { serveFakeMcp, type FakeHints, type FakeMcpServer } from '@on.auto/tool-
 import { Schema } from 'effect';
 import { expect, onTestFinished } from 'vitest';
 
+import type { TestResponse } from '../servers/http-client.ts';
+import { alpha } from '../servers/reasoning-server.ts';
 import { chatKey } from './chat-deliveries.ts';
-import type { TestResponse } from './http-client.ts';
 import { interactionServerOn, type InteractionServer } from './interaction-server.ts';
-import { alpha } from './reasoning-server.ts';
 
 export const threadInput = { channel: 'C0123', thread: '1728379900.000050' };
 

@@ -8,7 +8,7 @@ import {
   sentencesOf,
   servingMeetings,
   type MeetingsServer,
-} from '../testing/servers/meetings-server.ts';
+} from '../testing/interaction-servers/meetings-server.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
