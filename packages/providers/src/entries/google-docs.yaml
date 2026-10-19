@@ -1,0 +1,15 @@
+name: google-docs
+title: Google Docs
+description: Read Google Docs documents and update their content, through Google's Docs MCP server. Of its scopes, Google classifies drive.readonly as restricted.
+website: https://developers.google.com/workspace/docs/api/guides/configure-mcp-server
+type: mcp
+url: https://docsmcp.googleapis.com/mcp/v1
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/documents
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Google Docs.

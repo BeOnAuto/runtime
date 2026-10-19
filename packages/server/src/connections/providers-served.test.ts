@@ -119,29 +119,48 @@ async function namesSearchedBy(served: ReasoningServer): Promise<readonly string
   return Schema.decodeUnknownSync(SearchedSchema)(body).providers.map(({ name }) => name);
 }
 
+const atGoogle = shippedProviders
+  .filter(({ entry }) => entry.credentials.some(({ issuer }) => issuer === 'https://accounts.google.com'))
+  .map(({ entry }) => entry.name);
+
+function waysExpected(
+  ofTheOthers: Readonly<Record<string, readonly string[]>>,
+  atGoogleWays: readonly string[],
+): readonly (readonly [string, readonly string[]])[] {
+  const known = { ...Object.fromEntries(atGoogle.map((name) => [name, atGoogleWays])), ...ofTheOthers };
+  return names.map((name) => [name, required(known[name])]);
+}
+
 describe('the ways of the providers a server lists', () => {
   it('offer consent where whoever runs it registered a client at the issuer or the server registers one itself, and search offers a provider with a way offered', async () => {
     const withClients = await servingReasoning([], { CONNECTIONS: registeredAtTheIssuers });
     onTestFinished(() => withClients.stop());
 
     expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
-      [
-        ['github', ['authorization set up first', 'secret offered']],
-        ['profound', ['authorization offered', 'secret offered']],
-        ['slack', ['authorization set up first']],
-        ['slack-api', ['secret offered']],
-      ],
+      waysExpected(
+        {
+          github: ['authorization set up first', 'secret offered'],
+          profound: ['authorization offered', 'secret offered'],
+          slack: ['authorization set up first'],
+          'slack-api': ['secret offered'],
+        },
+        ['authorization set up first'],
+      ),
       ['github', 'profound', 'slack-api'],
     ]);
     expect([await waysListedBy(withClients), await namesSearchedBy(withClients)]).toEqual([
-      [
-        ['github', ['authorization offered', 'secret offered']],
-        ['profound', ['authorization offered', 'secret offered']],
-        ['slack', ['authorization offered']],
-        ['slack-api', ['secret offered']],
-      ],
+      waysExpected(
+        {
+          github: ['authorization offered', 'secret offered'],
+          profound: ['authorization offered', 'secret offered'],
+          slack: ['authorization offered'],
+          'slack-api': ['secret offered'],
+        },
+        ['authorization offered'],
+      ),
       names,
     ]);
+    expect(atGoogle).toHaveLength(13);
   });
 });
 

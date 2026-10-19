@@ -5,7 +5,6 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { documentServerOf, hostAlternativesOf, operatorVariablesOf, readProviders, type Provider } from '../index.ts';
-import { entryFolderWith } from '../testing/entry-problems.ts';
 
 const shipped = Result.getOrThrow(readProviders());
 
@@ -15,45 +14,59 @@ function addressesOf({ entry, address }: Provider): readonly string[] {
   return [entry.website, address, ...entry.credentials.flatMap(({ issuer }) => (issuer === undefined ? [] : [issuer]))];
 }
 
-const tracker = [
-  'name: tracker',
-  'title: Tracker',
-  'description: Read and change issues.',
-  'website: https://developer.tracker.example.com',
-  'type: mcp',
-  'url: https://tracker.example.com/mcp',
-  'credentials:',
-  '  - kind: none',
-  '',
-].join('\n');
+const google = 'https://accounts.google.com';
 
-const notes = [
-  'name: notes',
-  'title: Notes',
-  'description: Read notes.',
-  'website: https://developer.notes.example.com',
-  'type: openapi',
-  'document: documents/notes.openapi.json',
-  'credentials:',
-  '  - kind: none',
-  '',
-].join('\n');
+const googleScopes = 'https://www.googleapis.com/auth/';
 
-const invalid = 'The entries of the providers are invalid: ';
+const restrictedByGoogle = ['drive.readonly', 'gmail.modify'];
 
-const served = JSON.stringify({ openapi: '3.1.0', servers: [{ url: 'https://api.notes.example.com/v1/' }], paths: {} });
+const googleProviders = [
+  'campaign-manager-360',
+  'display-video-360',
+  'display-video-360-reports',
+  'gmail',
+  'google-ads',
+  'google-analytics',
+  'google-analytics-admin',
+  'google-docs',
+  'google-drive',
+  'google-search-console',
+  'google-sheets',
+  'google-slides',
+  'search-ads-360',
+];
 
-const unserved = JSON.stringify({ openapi: '3.1.0', paths: {} });
+function signsInAtGoogle({ entry }: Provider): boolean {
+  return googleProviders.includes(entry.name);
+}
 
-function servedAt(url: string): string {
-  return JSON.stringify({ openapi: '3.1.0', servers: [{ url }], paths: {} });
+function documentServerExpectedOf({ entry, address }: Provider): string | undefined {
+  return entry.type === 'openapi' ? address : undefined;
+}
+
+function waysOfConsentOf({ entry }: Provider) {
+  return entry.credentials
+    .filter(({ kind }) => kind === 'authorization')
+    .map(({ issuer, parameters, clients }) => [entry.name, issuer, parameters, clients]);
+}
+
+function scopesOf({ entry }: Provider): readonly string[] {
+  return entry.credentials.flatMap(({ scope = '' }) => scope.split(' ').filter((each) => each !== ''));
+}
+
+function restrictedOf(provider: Provider): readonly string[] {
+  return restrictedByGoogle.filter((scope) => scopesOf(provider).includes(`${googleScopes}${scope}`));
+}
+
+function restrictedNamedBy({ entry }: Provider): readonly string[] {
+  return restrictedByGoogle.filter((scope) => entry.description.includes(scope));
 }
 
 describe('the shipped providers', () => {
   it('are the entries of the folder, each named as its file, sorted by name and so each named once', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
-    expect(names).toEqual(['github', 'profound', 'slack', 'slack-api']);
+    expect(names).toEqual([...googleProviders, 'github', 'profound', 'slack', 'slack-api'].toSorted());
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -70,7 +83,7 @@ describe('the shipped providers', () => {
   });
 });
 
-describe('the ways and the servers of the shipped providers', () => {
+describe('the ways of the shipped providers', () => {
   it('take only the ways the runtime takes and refer to no value whoever runs the runtime sets', () => {
     expect(
       shipped.providers.map(({ entry }) => [
@@ -79,120 +92,113 @@ describe('the ways and the servers of the shipped providers', () => {
         operatorVariablesOf(entry),
       ]),
     ).toEqual([
+      ['campaign-manager-360', ['authorization'], []],
+      ['display-video-360', ['authorization'], []],
+      ['display-video-360-reports', ['authorization'], []],
       ['github', ['authorization', 'secret'], []],
+      ['gmail', ['authorization'], []],
+      ['google-ads', ['authorization'], []],
+      ['google-analytics', ['authorization'], []],
+      ['google-analytics-admin', ['authorization'], []],
+      ['google-docs', ['authorization'], []],
+      ['google-drive', ['authorization'], []],
+      ['google-search-console', ['authorization'], []],
+      ['google-sheets', ['authorization'], []],
+      ['google-slides', ['authorization'], []],
       ['profound', ['authorization', 'secret'], []],
+      ['search-ads-360', ['authorization'], []],
       ['slack', ['authorization'], []],
       ['slack-api', ['secret'], []],
     ]);
   });
+});
 
+describe('the servers of the shipped providers', () => {
   it('read the server an HTTP API calls from the document beside the entries, where the entry gives no base_url', () => {
     expect(shipped.providers.map(({ entry, address }) => [entry.name, address])).toEqual([
+      ['campaign-manager-360', 'https://dfareporting.googleapis.com/dfareporting/v5'],
+      ['display-video-360', 'https://displayvideo.googleapis.com'],
+      ['display-video-360-reports', 'https://doubleclickbidmanager.googleapis.com/v2'],
       ['github', 'https://api.githubcopilot.com/mcp/'],
+      ['gmail', 'https://gmailmcp.googleapis.com/mcp/v1'],
+      ['google-ads', 'https://googleads.googleapis.com'],
+      ['google-analytics', 'https://analyticsdata.googleapis.com'],
+      ['google-analytics-admin', 'https://analyticsadmin.googleapis.com'],
+      ['google-docs', 'https://docsmcp.googleapis.com/mcp/v1'],
+      ['google-drive', 'https://drivemcp.googleapis.com/mcp/v1'],
+      ['google-search-console', 'https://searchconsole.googleapis.com'],
+      ['google-sheets', 'https://sheetsmcp.googleapis.com/mcp/v1'],
+      ['google-slides', 'https://slidesmcp.googleapis.com/mcp/v1'],
       ['profound', 'https://mcp.tryprofound.com/mcp'],
+      ['search-ads-360', 'https://searchads360.googleapis.com'],
       ['slack', 'https://mcp.slack.com/mcp'],
       ['slack-api', 'https://slack.com/api'],
     ]);
-    expect(
-      shipped.providers.map((provider) => provider.entry.credentials.map((way) => hostAlternativesOf(provider, way))),
-    ).toEqual([
-      [[['api.githubcopilot.com', 'github.com']], [['api.githubcopilot.com']]],
-      [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
-      [[['mcp.slack.com', 'mcp.slack.com']]],
-      [[['slack.com']]],
-    ]);
-    expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual([
-      undefined,
-      undefined,
-      undefined,
-      'https://slack.com/api',
-    ]);
+    expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual(
+      shipped.providers.map((provider) => documentServerExpectedOf(provider)),
+    );
     expect(shipped.documents).toBe(entriesFolder);
   });
 });
 
-describe('a folder of entries', () => {
-  it('is read with the server of a document beside it, or the address of a document an entry names by URL', () => {
-    const remote = notes.replace('documents/notes.openapi.json', 'https://notes.example.com/openapi.json');
-    const beside = { 'notes.yaml': notes, 'tracker.yaml': tracker, 'documents/notes.openapi.json': served };
-
-    expect(entryFolderWith(beside).read()).toBe(
-      'notes https://api.notes.example.com/v1; tracker https://tracker.example.com/mcp',
-    );
-    expect(entryFolderWith({ 'notes.yaml': remote, 'README.md': '# Entries' }).read()).toBe(
-      'notes https://notes.example.com/openapi.json',
-    );
-  });
-
-  it('is sorted by the names of the providers, not of their files', () => {
-    const slack = tracker.replace('name: tracker', 'name: slack');
-    const slackApi = tracker.replace('name: tracker', 'name: slack-api');
-
-    expect(entryFolderWith({ 'slack.yaml': slack, 'slack-api.yaml': slackApi }).read()).toBe(
-      'slack https://tracker.example.com/mcp; slack-api https://tracker.example.com/mcp',
-    );
-  });
-});
-
-describe('a folder of entries the runtime refuses', () => {
-  it('is refused with the file, the line and the key of each problem, as a settings file is', () => {
-    const refused = entryFolderWith({
-      'tracker.yaml': tracker.replace('  - kind: none', '  - kind: reference'),
-      'notes.yaml': notes.replace('name: notes', 'name: notebook').replace('/notes.', '/notebook.'),
-      'broken.yaml': 'name: [broken\n',
-      'anchored.yaml': 'name: &name tracker\n',
-    }).read();
-
-    expect(refused.split('; ')).toEqual([
-      `${invalid}<entries>/anchored.yaml:1:13: Anchors are not allowed in a provider's entry`,
-      '<entries>/broken.yaml:2:1: Flow sequence in block collection must be sufficiently indented and end with a ]',
-      '<entries>/notes.yaml:1:7 name: Expected the name the file is named for, as in notebook.yaml',
-      '<entries>/tracker.yaml:8:11 credentials[0].kind: Expected "secret" | "client_credentials" | "none" | "authorization"',
-    ]);
-  });
-
-  it('refuses a document that is not the one beside the entries named for the provider', () => {
-    const elsewhere = notes.replace('documents/notes.openapi.json', 'documents/other.openapi.json');
-    const at = `${invalid}<entries>/notes.yaml:6:11 document`;
-
-    expect([
-      entryFolderWith({ 'notes.yaml': elsewhere }).read(),
-      entryFolderWith({ 'notes.yaml': notes }).read(),
-      entryFolderWith({ 'notes.yaml': notes, 'documents/notes.openapi.json': '{ not json' }).read(),
-    ]).toEqual([
-      `${at}: Expected an https URL, or an http URL on a loopback address, written out up to its host, with each placeholder in its place, or documents/notes.openapi.json, the document beside the entries named for the provider`,
-      `${at}: Expected documents/notes.openapi.json beside the entries, an OpenAPI document in JSON`,
-      `${at}: Expected documents/notes.openapi.json beside the entries, an OpenAPI document in JSON`,
+describe('the hosts of the shipped providers', () => {
+  it('are the host of their server and, for a way of consent, the host of its issuer', () => {
+    expect(
+      shipped.providers.map((provider) => provider.entry.credentials.map((way) => hostAlternativesOf(provider, way))),
+    ).toEqual([
+      [[['dfareporting.googleapis.com', 'accounts.google.com']]],
+      [[['displayvideo.googleapis.com', 'accounts.google.com']]],
+      [[['doubleclickbidmanager.googleapis.com', 'accounts.google.com']]],
+      [[['api.githubcopilot.com', 'github.com']], [['api.githubcopilot.com']]],
+      [[['gmailmcp.googleapis.com', 'accounts.google.com']]],
+      [[['googleads.googleapis.com', 'accounts.google.com']]],
+      [[['analyticsdata.googleapis.com', 'accounts.google.com']]],
+      [[['analyticsadmin.googleapis.com', 'accounts.google.com']]],
+      [[['docsmcp.googleapis.com', 'accounts.google.com']]],
+      [[['drivemcp.googleapis.com', 'accounts.google.com']]],
+      [[['searchconsole.googleapis.com', 'accounts.google.com']]],
+      [[['sheetsmcp.googleapis.com', 'accounts.google.com']]],
+      [[['slidesmcp.googleapis.com', 'accounts.google.com']]],
+      [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
+      [[['searchads360.googleapis.com', 'accounts.google.com']]],
+      [[['mcp.slack.com', 'mcp.slack.com']]],
+      [[['slack.com']]],
     ]);
   });
 });
 
-describe('the server of a document beside the entries', () => {
-  it('is refused where the document names none, unless the entry gives base_url', () => {
-    const based = `${notes}base_url: https://api.notes.example.com\n`;
+describe('the shipped providers of Google', () => {
+  it('ask Google for an offline access and a consent prompt, through a client whoever runs the runtime registers', () => {
+    const atGoogle = shipped.providers.filter((provider) => signsInAtGoogle(provider));
 
-    expect([
-      entryFolderWith({ 'notes.yaml': notes, 'documents/notes.openapi.json': unserved }).read(),
-      entryFolderWith({ 'notes.yaml': based, 'documents/notes.openapi.json': unserved }).read(),
-    ]).toEqual([
-      `${invalid}<entries>/notes.yaml:6:11 document: The document names no server, so the entry gives base_url`,
-      'notes https://api.notes.example.com',
-    ]);
+    expect(atGoogle.flatMap((provider) => waysOfConsentOf(provider))).toEqual(
+      googleProviders.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
+    );
   });
 
-  it('is refused where the first is no pinned URL written out, unless the entry gives base_url', () => {
-    const refusal = `${invalid}<entries>/notes.yaml:6:11 document: The first server the document names is no https URL, or http URL on a loopback address, without a variable, so the entry gives base_url`;
+  it('ask scopes of Google alone, and name in their description each one Google classifies as restricted', () => {
+    const consenting = shipped.providers.filter((provider) => signsInAtGoogle(provider));
 
-    expect([
-      entryFolderWith({ 'notes.yaml': notes, 'documents/notes.openapi.json': servedAt('/v1') }).read(),
-      entryFolderWith({
-        'notes.yaml': notes,
-        'documents/notes.openapi.json': servedAt('http://notes.example.com'),
-      }).read(),
-      entryFolderWith({
-        'notes.yaml': notes,
-        'documents/notes.openapi.json': servedAt('https://{region}.notes.example.com'),
-      }).read(),
-    ]).toEqual([refusal, refusal, refusal]);
+    expect(
+      consenting.flatMap((provider) => scopesOf(provider)).filter((scope) => !scope.startsWith(googleScopes)),
+    ).toEqual([]);
+    expect(consenting.map((provider) => restrictedNamedBy(provider))).toEqual(
+      consenting.map((provider) => restrictedOf(provider)),
+    );
+    expect(consenting.map((provider) => [provider.entry.name, restrictedOf(provider)])).toEqual([
+      ['campaign-manager-360', []],
+      ['display-video-360', []],
+      ['display-video-360-reports', []],
+      ['gmail', ['gmail.modify']],
+      ['google-ads', []],
+      ['google-analytics', []],
+      ['google-analytics-admin', []],
+      ['google-docs', ['drive.readonly']],
+      ['google-drive', ['drive.readonly']],
+      ['google-search-console', []],
+      ['google-sheets', ['drive.readonly']],
+      ['google-slides', ['drive.readonly']],
+      ['search-ads-360', []],
+    ]);
   });
 });

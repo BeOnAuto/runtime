@@ -43,6 +43,12 @@ const reasoningReference = 'docs/engineering/reference/reasoning-format.md';
 
 const modelSessions = 'capabilities/prediction/src/model-jobs/model-sessions.ts';
 
+const providerDocuments = 'packages/providers/src/entries/documents';
+
+const googleAdsDocument = `${providerDocuments}/google-ads.openapi.json`;
+
+const analyticsDocument = `${providerDocuments}/google-analytics.openapi.json`;
+
 const allowances: readonly Allowance[] = [
   {
     text: 'https://open-workflow-specification.org/spec/1.0.0/errors',
@@ -99,6 +105,13 @@ const allowances: readonly Allowance[] = [
     ],
   },
   { text: 'code_execution', in: ['capabilities/reasoning/src/testing/model-lists.ts'] },
+  { text: 'VAST 4.0 spec', in: [`${providerDocuments}/campaign-manager-360.openapi.json`] },
+  ...['ResponsiveDisplayAdControlSpec', 'controlSpec', 'executionLimitSeconds', 'LLM inference'].map((vendorText) => ({
+    text: vendorText,
+    in: [googleAdsDocument],
+  })),
+  { text: 'A primitive filter', in: [analyticsDocument, `${providerDocuments}/google-analytics-admin.openapi.json`] },
+  ...['CohortSpec', 'cohortSpec'].map((vendorText) => ({ text: vendorText, in: [analyticsDocument] })),
   { text: 'execution-denied', in: ['capabilities/reasoning/src/tools/final-step.test.ts'] },
   ...['primitives?', 'executions?', 'inference', 'orchestration', 'recollection'].map((term) => ({
     text: String.raw`/\b${term}\b/iu`,

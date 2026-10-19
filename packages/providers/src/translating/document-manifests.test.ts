@@ -1,7 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { trackerTranslated } from '../testing/curated-documents.ts';
@@ -39,6 +40,21 @@ function folderWith(files: Readonly<Record<string, unknown>>): string {
     writeFileSync(join(folder, name), JSON.stringify(content));
   }
   return folder;
+}
+
+const decodeOperations = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      paths: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Struct({ operationId: Schema.String }))),
+    }),
+  ),
+);
+
+function operationIdsOf(name: string): readonly string[] {
+  const { paths } = decodeOperations(readFileSync(join(documentsBesideTheEntries, `${name}.openapi.json`), 'utf8'));
+  return Object.values(paths)
+    .flatMap((operations) => Object.values(operations).map(({ operationId }) => operationId))
+    .toSorted();
 }
 
 function parsed(text: string): unknown {
@@ -185,5 +201,13 @@ describe('the manifests beside the entries', () => {
         .filter((address) => !address.startsWith('https://')),
     ).toEqual([]);
     expect(names.length).toBeGreaterThan(0);
+  });
+
+  it('each have their document beside them, whose operations are the methods they keep', () => {
+    const names = manifestNamesIn(documentsBesideTheEntries);
+
+    expect(names.map((name) => operationIdsOf(name))).toEqual(
+      names.map((name) => manifestIn(documentsBesideTheEntries, name).methods.toSorted()),
+    );
   });
 });

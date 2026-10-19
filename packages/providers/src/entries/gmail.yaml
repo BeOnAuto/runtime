@@ -1,0 +1,15 @@
+name: gmail
+title: Gmail
+description: Search and read Gmail threads and their messages, list and create drafts, and list labels and label or unlabel messages and threads, through Google's Gmail MCP server, which drafts mail and does not send it. Google classifies its scope, gmail.modify, as restricted.
+website: https://developers.google.com/workspace/gmail/api/guides/configure-mcp-server
+type: mcp
+url: https://gmailmcp.googleapis.com/mcp/v1
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/gmail.modify
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Gmail.

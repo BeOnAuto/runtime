@@ -1,14 +1,16 @@
+import type { Outcome, Succeeded } from '@on.auto/operations';
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
-import { registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
 import { added } from './additions.ts';
-import { consentFake, consentHarnessAt, startedAt } from './consents.ts';
+import { consentFake, consentHarnessAt, finishing, startedAt } from './consents.ts';
 import type { Harness, HarnessOptions } from './harness.ts';
 
 export interface Vendor {
   readonly metadata: Partial<ClientRegistration>;
-  readonly protectedResourceAt: string;
-  readonly authorizationServerAt: string;
+  readonly protectedResourceAt?: string;
+  readonly authorizationServerAt?: string;
+  readonly openIdConfigurationAt?: string;
 }
 
 export interface AtTheVendor {
@@ -16,13 +18,32 @@ export interface AtTheVendor {
   readonly registeredIssuer: string | undefined;
 }
 
+export interface ConsentedAtTheVendor {
+  readonly asked: URL;
+  readonly finished: Outcome<Succeeded>;
+}
+
+type AnsweredAt = readonly [string, string];
+
 const unpublished = 404;
 
+function pathsAtTheFakeOf({
+  protectedResourceAt,
+  authorizationServerAt,
+  openIdConfigurationAt,
+}: Vendor): ReadonlyMap<string, string> {
+  const answered: readonly (readonly [string | undefined, string])[] = [
+    [protectedResourceAt, '/.well-known/oauth-protected-resource/mcp'],
+    [authorizationServerAt, '/.well-known/oauth-authorization-server'],
+    [openIdConfigurationAt, '/.well-known/openid-configuration'],
+  ];
+  return new Map(
+    answered.flatMap(([address, path]): readonly AnsweredAt[] => (address === undefined ? [] : [[address, path]])),
+  );
+}
+
 function answeredAsTheVendor(fake: FakeMcpServer, vendor: Vendor): ConsentClientOptions['fetch'] {
-  const pathsAtTheFake: ReadonlyMap<string, string> = new Map([
-    [vendor.protectedResourceAt, '/.well-known/oauth-protected-resource/mcp'],
-    [vendor.authorizationServerAt, '/.well-known/oauth-authorization-server'],
-  ]);
+  const pathsAtTheFake = pathsAtTheFakeOf(vendor);
   return (...[address, init]: readonly [unknown, unknown?]) => {
     const asked = new URL(String(address));
     if (asked.origin === fake.origin) {
@@ -53,7 +74,9 @@ export function harnessAtTheVendor(
   });
 }
 
-export async function startedAtTheVendor(h: Harness, provider: string): Promise<URL> {
-  const { url } = await startedAt(h, await added(h, { provider }));
-  return new URL(url);
+export async function consentedAtTheVendor(h: Harness, provider: string): Promise<ConsentedAtTheVendor> {
+  const link = await added(h, { provider });
+  const { url } = await startedAt(h, link);
+  const finished = await finishing(h, link, await consentedAt(url));
+  return { asked: new URL(url), finished };
 }
