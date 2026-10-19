@@ -18,9 +18,13 @@ export function discoveryRefusalOf(error: unknown): ConsentRefusal {
     : refusalOf(error);
 }
 
+export function isInvalidGrant(error: unknown): boolean {
+  return error instanceof OAuthError && error.code === invalidGrant;
+}
+
 export function exchangeRefusalOf(error: unknown): ConsentRefusal {
   if (error instanceof IssuerMismatchError) {
     return { refused: 'iss' };
   }
-  return error instanceof OAuthError && error.code === invalidGrant ? { refused: 'code' } : refusalOf(error);
+  return isInvalidGrant(error) ? { refused: 'code' } : refusalOf(error);
 }

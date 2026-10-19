@@ -5,6 +5,7 @@ import {
   describedToolServers,
   makeToolAccess,
   type ConnectionSource,
+  type ConsentClient,
   type Describing,
   type Timing,
   type ToolAccess,
@@ -26,13 +27,14 @@ export interface ToolAccessWiring {
 }
 
 export interface ServedConnections {
+  readonly consent: ConsentClient;
   readonly connections: ConnectionSource;
 }
 
 export async function toolAccessOf(
   runtime: AppRuntime<DispatcherServices>,
   { toolServers, registeredClients }: Pick<Settings, 'toolServers' | 'registeredClients'>,
-  { toolTiming, connections, telemetry }: ToolAccessWiring & ServedConnections,
+  { toolTiming, consent, connections, telemetry }: ToolAccessWiring & ServedConnections,
 ): Promise<ToolAccess> {
   const traceMeta = telemetry?.traceMeta;
   const reportLeftOut: Describing['reportLeftOut'] = (server, leftOut) => {
@@ -41,6 +43,7 @@ export async function toolAccessOf(
   const servers = await Effect.runPromise(describedToolServers(toolServers, { fetch: outboundFetch, reportLeftOut }));
   return makeToolAccess(servers, {
     clientInfo: release,
+    consent,
     fetch: outboundFetch,
     connections,
     reportLeftOut,

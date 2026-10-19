@@ -1,11 +1,11 @@
 import type { RecordedContent } from '@on.auto/operations';
 import { memoryRecordedContent } from '@on.auto/operations/testing';
-import { Effect } from 'effect';
+import { Effect, Function } from 'effect';
 
 import type { ServerMessage } from '../access/caller-context.ts';
 import { makeToolAccess, type ToolAccess, type ToolAccessOptions } from '../access/tool-access.ts';
 import type { Timing } from '../bounds/call-bounds.ts';
-import { ignored } from '../clients/ignored.ts';
+import { consentClientWith } from '../consent-testing/consent-fakes.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { describedToolServers } from '../openapi/described-servers.ts';
 import {
@@ -20,6 +20,8 @@ export interface AccessOptions {
   readonly environment?: Environment;
   readonly timing?: Timing;
   readonly fetch?: ToolAccessOptions['fetch'];
+  readonly consent?: ToolAccessOptions['consent'];
+  readonly now?: ToolAccessOptions['now'];
   readonly traceMeta?: ToolAccessOptions['traceMeta'];
   readonly connections?: ToolAccessOptions['connections'];
   readonly runtimeSecrets?: ToolAccessOptions['runtimeSecrets'];
@@ -49,18 +51,20 @@ function servers(
 
 function accessOver(
   settings: ToolServers,
-  { timing, fetch, traceMeta, connections, runtimeSecrets }: AccessOptions,
+  { timing, fetch, consent = consentClientWith(), now, traceMeta, connections, runtimeSecrets }: AccessOptions,
 ): ReportingAccess {
   const messages: ServerMessage[] = [];
   const content = memoryRecordedContent();
   const access = makeToolAccess(settings, {
     clientInfo: testClientInfo,
+    consent,
     content,
     reportServerMessage: (message) => {
       messages.push(message);
     },
     ...(timing === undefined ? {} : { timing }),
     ...(fetch === undefined ? {} : { fetch }),
+    ...(now === undefined ? {} : { now }),
     ...(traceMeta === undefined ? {} : { traceMeta }),
     ...(connections === undefined ? {} : { connections }),
     ...(runtimeSecrets === undefined ? {} : { runtimeSecrets }),
@@ -72,17 +76,22 @@ export function reportingAccess(
   written: Readonly<Record<string, unknown>>,
   options: AccessOptions = {},
 ): ReportingAccess {
-  return accessOver(Effect.runSync(servers(written, options, { reportLeftOut: ignored })), options);
+  return accessOver(Effect.runSync(servers(written, options, { reportLeftOut: Function.constVoid })), options);
 }
 
 export async function describedAccess(
   written: Readonly<Record<string, unknown>>,
   options: AccessOptions = {},
 ): Promise<ReportingAccess> {
-  return accessOver(await Effect.runPromise(servers(written, options, { reportLeftOut: ignored })), options);
+  return accessOver(await Effect.runPromise(servers(written, options, { reportLeftOut: Function.constVoid })), options);
 }
 
 export const noToolServers: ToolAccess = makeToolAccess(
   { servers: [] },
-  { clientInfo: testClientInfo, content: memoryRecordedContent(), reportServerMessage: ignored },
+  {
+    clientInfo: testClientInfo,
+    consent: consentClientWith(),
+    content: memoryRecordedContent(),
+    reportServerMessage: Function.constVoid,
+  },
 );

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { secretsOf } from '../bounds/secrets.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
 import {
+  consentClientWith,
   fetchWithDeletion,
   recordingTimer,
   serveFakeMcp,
@@ -66,6 +67,7 @@ function linked(settings: McpServerSettings, options: Partial<Parameters<typeof 
   const link = serverLink(settings, {
     clientInfo: testClientInfo,
     fetch: globalThis.fetch,
+    consent: consentClientWith(),
     secrets,
     now: Date.now,
     timing,

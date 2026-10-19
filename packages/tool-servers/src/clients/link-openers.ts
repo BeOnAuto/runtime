@@ -3,7 +3,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import type { Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { apiClient } from '../openapi/api-client.ts';
-import type { DescribedApiSettings, LinkedServerSettings } from '../openapi/described-api.ts';
+import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import { openHttp, systemTimer, type Timer } from './http-client.ts';
 import {
   boundedReport,
@@ -15,11 +15,12 @@ import {
 } from './mcp-client.ts';
 import type { ServerClient } from './server-client.ts';
 import { openStdio } from './stdio-client.ts';
-import { tokenSource, type Discovery, type TokenSource } from './token-source.ts';
+import { tokenSource, type ConsentTokenSources, type Discovery, type TokenSource } from './token-source.ts';
 
 export interface LinkOptions {
   readonly clientInfo: ClientInfo;
   readonly fetch: FetchLike;
+  readonly consent: ConsentTokenSources;
   readonly secrets: Secrets;
   readonly now: () => number;
   readonly timer?: Timer;
@@ -29,34 +30,41 @@ export interface LinkOptions {
 }
 
 interface Remote {
-  readonly server: string;
-  readonly auth: DescribedApiSettings['auth'];
+  readonly settings: Extract<LinkedServerSettings, { readonly auth: unknown }>;
   readonly serverUrl: string;
   readonly discovery: Discovery;
 }
 
-function tokensOf({ server, auth, serverUrl, discovery }: Remote, options: LinkOptions): TokenSource | undefined {
-  return auth === null
-    ? undefined
-    : tokenSource(auth, {
-        server,
-        serverUrl,
-        discovery,
-        fetch: options.fetch,
-        now: options.now,
-        minted: options.secrets.replace,
-      });
+interface Linking extends LinkOptions {
+  readonly timer: Timer;
 }
 
 function tokenHolderOf({ name, connection }: LinkedServerSettings): string {
   return connection === null ? name : `connection ${connection}`;
 }
 
+function tokensOf({ settings, serverUrl, discovery }: Remote, options: Linking): TokenSource | undefined {
+  const { auth } = settings;
+  if (auth === null) {
+    return undefined;
+  }
+  const { credential } = auth;
+  const holder = tokenHolderOf(settings);
+  const { now, secrets, timer } = options;
+  return credential.kind === 'consent'
+    ? options.consent.tokenSource(credential, { name: settings.name, holder, now, timer, hold: secrets.replace })
+    : tokenSource(
+        { ...auth, credential },
+        { server: holder, serverUrl, discovery, fetch: options.fetch, now, minted: secrets.replace },
+      );
+}
+
 function tracedOpener(open: () => Promise<ServerClient>, traceMeta?: TraceMeta): () => Promise<ServerClient> {
   return traceMeta === undefined ? open : async () => tracedClient(await open(), traceMeta);
 }
 
-export function openerOf(settings: LinkedServerSettings, options: LinkOptions): () => Promise<ServerClient> {
+export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOptions): () => Promise<ServerClient> {
+  const options: Linking = { ...linkOptions, timer: linkOptions.timer ?? systemTimer };
   const output: OutputReport = {
     scrub: options.secrets.scrub,
     report: (line) => {
@@ -70,21 +78,10 @@ export function openerOf(settings: LinkedServerSettings, options: LinkOptions): 
     );
   }
   if (settings.type === 'openapi') {
-    const tokens = tokensOf(
-      {
-        server: tokenHolderOf(settings),
-        auth: settings.auth,
-        serverUrl: settings.api.baseUrl,
-        discovery: 'from_the_issuer',
-      },
-      options,
-    );
+    const tokens = tokensOf({ settings, serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' }, options);
     return () => Promise.resolve(apiClient(settings, { fetch: options.fetch, tokens, now: options.now }));
   }
-  const authProvider = tokensOf(
-    { server: tokenHolderOf(settings), auth: settings.auth, serverUrl: settings.url, discovery: 'from_the_server' },
-    options,
-  );
+  const authProvider = tokensOf({ settings, serverUrl: settings.url, discovery: 'from_the_server' }, options);
   const { openMs, longestRetryWaitMs } = options.timing;
   return tracedOpener(
     () =>
@@ -95,7 +92,7 @@ export function openerOf(settings: LinkedServerSettings, options: LinkOptions): 
         timeoutMs: openMs,
         longestRetryWaitMs,
         reportError: boundedReport(output, errorsNoLongerReported),
-        timer: options.timer ?? systemTimer,
+        timer: options.timer,
       }),
     options.traceMeta,
   );

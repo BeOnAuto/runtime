@@ -73,6 +73,28 @@ export {
   servedForConsent,
   startAskedAt,
 } from '../consent-testing/consent-fakes.ts';
+export {
+  brokenWords,
+  goneWords,
+  manualTimer,
+  memoryTokens,
+  servedAt,
+  type ManualTimer,
+  type MemoryTokens,
+} from '../consent-testing/memory-tokens.ts';
+export { gatedRequests, type GatedRequests } from '../consent-testing/gated-requests.ts';
+export {
+  clockAt,
+  connectedByConsent,
+  connectionName,
+  consentClientAt,
+  rowOf,
+  servedOf,
+  servedTokensOf,
+  type ConsentConnected,
+  type ManualClock,
+  type ServedTokens,
+} from '../consent-testing/served-consents.ts';
 export { toolAccessBehaviour } from '../access-testing/tool-access-behaviour.ts';
 export {
   behaviourKey,

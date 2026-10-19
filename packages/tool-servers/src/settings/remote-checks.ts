@@ -13,7 +13,7 @@ import {
 } from './checked.ts';
 import { headersTheRuntimeSets, type RemoteServerType } from './reserved-headers.ts';
 import type { ServerEntryFields } from './server-entries.ts';
-import type { AuthCredential, AuthSettings } from './server-settings.ts';
+import type { AuthSettings, MintingCredential } from './server-settings.ts';
 
 type Auth = NonNullable<ServerEntryFields['auth']>;
 
@@ -38,7 +38,7 @@ export function checkedHeaders(
 
 export const secretOrKeyExpected = 'Expected client_secret, or private_key with its algorithm, one of the two';
 
-function checkedCredential(name: string, { client_secret, private_key, algorithm }: Auth): Checked<AuthCredential> {
+function checkedCredential(name: string, { client_secret, private_key, algorithm }: Auth): Checked<MintingCredential> {
   if (client_secret !== undefined && private_key === undefined && algorithm === undefined) {
     return accepted({ kind: 'client_secret', client_secret: Redacted.make(client_secret) });
   }

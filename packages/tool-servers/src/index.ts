@@ -76,16 +76,25 @@ export {
   makeConsentClient,
   type ChosenClient,
   type ClientRegistrations,
+  type ConnectionTokens,
+  type ConsentAsked,
   type ConsentClient,
   type ConsentClientOptions,
   type ConsentRefusal,
+  type ConsentServed,
   type ConsentServer,
   type ConsentWay,
   type FinishAsked,
   type FinishedConsent,
+  type HeldTokens,
   type KeptRegistration,
+  type RevocationFailure,
+  type RevokeAsked,
   type StartAsked,
   type StartedConsent,
+  type TokensClaimed,
+  type TokensEnded,
+  type TokensReplaced,
 } from './consent/consent-client.ts';
 export { isScope } from './consent/scopes.ts';
 export { defineSearch } from './search/search.ts';
@@ -118,7 +127,13 @@ export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } fr
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';
 export { secretOrKeyExpected } from './settings/remote-checks.ts';
-export type { ServerSettings, ToolServerSettings } from './settings/server-settings.ts';
+export type {
+  AuthSettings,
+  ConsentAuth,
+  ConsentCredential,
+  ServerSettings,
+  ToolServerSettings,
+} from './settings/server-settings.ts';
 export type { Describing, ToolServers } from './openapi/described-api.ts';
 export type { LeftOutOperation } from './openapi/api-tools.ts';
 export { ToolServerDocumentRefused, describedToolServers } from './openapi/described-servers.ts';

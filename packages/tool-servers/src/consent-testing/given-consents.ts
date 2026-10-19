@@ -1,5 +1,6 @@
-import { Effect, Redacted, Schema } from 'effect';
+import { Effect } from 'effect';
 
+import { keptTokensOf } from '../consent-tokens/kept-tokens.ts';
 import type {
   ClientRegistrations,
   ConsentClient,
@@ -29,20 +30,8 @@ export async function consentedAt(url: string): Promise<Consented> {
   };
 }
 
-const KeptTokensSchema = Schema.fromJsonString(
-  Schema.Struct({
-    access_token: Schema.String,
-    refresh_token: Schema.optionalKey(Schema.String),
-    expires_at: Schema.optionalKey(Schema.String),
-    scope: Schema.optionalKey(Schema.String),
-    token_type: Schema.String,
-  }),
-);
-
-const keptTokensOf = Schema.decodeUnknownSync(KeptTokensSchema);
-
 export function tokensKeptBy({ tokens }: FinishedConsent) {
-  return keptTokensOf(Redacted.value(tokens));
+  return keptTokensOf(tokens);
 }
 
 export async function finishAskedOf(client: ConsentClient, asked: StartAsked): Promise<FinishAsked> {

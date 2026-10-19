@@ -19,6 +19,7 @@ import type { Settings } from '../settings/settings.ts';
 
 export interface StoresAndConnections {
   readonly stores: LedgerStores;
+  readonly consent: ReturnType<typeof consentClientOf>;
   readonly connections: ConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
   readonly offering: ReturnType<typeof makeProviderOffering>;
@@ -47,15 +48,19 @@ function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): Runti
   return signIn === undefined ? 'keys' : 'people';
 }
 
+interface Composed {
+  readonly secrets: SecretStore;
+  readonly consent: ReturnType<typeof consentClientOf>;
+  readonly ownOrigin: () => string;
+}
+
 function connectionServicesOf(
-  runtime: AppRuntime<DispatcherServices>,
   settings: ServingSettings,
-  secrets: SecretStore,
-  ownOrigin: () => string,
+  { secrets, consent, ownOrigin }: Composed,
 ): ConnectionServices {
   const { studio } = settings;
   return {
-    consent: consentClientOf(runtime, settings, secrets),
+    consent,
     secrets,
     policy: settings.connections,
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
@@ -90,9 +95,11 @@ export async function storesAndConnectionsOf(
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
-  const services = connectionServicesOf(runtime, settings, stores.secrets, ownOrigin);
+  const consent = consentClientOf(runtime, settings, stores.secrets);
+  const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, ownOrigin });
   return {
     stores,
+    consent,
     connections: makeConnectionOperations(services),
     source: sourceServedBy(runtime, settings, stores.secrets),
     offering: makeProviderOffering(services),

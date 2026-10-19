@@ -27,6 +27,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
   const linkOptions = {
     clientInfo: options.clientInfo,
     fetch: options.fetch ?? globalThis.fetch,
+    consent: options.consent,
     secrets,
     now: options.now ?? Date.now,
     timing,
