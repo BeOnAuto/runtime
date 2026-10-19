@@ -21,7 +21,7 @@ A tool server is added as an entry in Auto's settings, and one entry can serve m
 | An MCP server that Auto starts as a process  | The server is a program you install, such as one that reads files | `command`, with `args` and `env`      |
 | An HTTP API described by an OpenAPI document | The service has an API with an OpenAPI document but no MCP server | `document`, and the key in `security` |
 
-A remote server needs nothing installed. A process runs on the machine that runs Auto, so under Docker it must be installed in the image; [Run a server as a process](configuration.md#run-a-server-as-a-process) has the rules.
+A remote server needs nothing installed. A process runs on the machine that runs Auto, so under Docker it must be installed in the image; [Run a server as a process](configuration.md#run-a-server-as-a-process) has the rules. A service Auto knows as a provider needs none of these fields: the entry names the provider, as [Name a provider](#name-a-provider) shows.
 
 Then decide three things for the entry:
 
@@ -127,6 +127,33 @@ Check that the agent reports your server with its tools, and which of them have 
 If you left `allowed` out, have the agent add it now with the tools functions need, and restart Auto. `search` then lists only those tools.
 
 Then tell whoever asked for the server that it is ready. They give its tools to a function as [Give a function tools](../guides/tools.md) shows.
+
+## Name a provider {#name-a-provider}
+
+Auto knows some services by name, as providers: those it ships, which [Let people add connections](connections.md#the-providers-auto-ships) lists, and any you add under `connections.providers`, as [Add providers of your own](connections.md#add-providers-of-your-own) shows. An entry may name one in place of its server. The provider gives the server's address and type, its headers and where the key goes, and the entry gives the rest:
+
+```yaml
+tool_servers:
+  code:
+    provider: github
+    credential: ${GITHUB_TOKEN}
+    org: acme
+    playbooks: [marketing]
+  accounts:
+    provider: crm
+    placeholders:
+      tenant: acme
+    credential: ${CRM_API_TOKEN}
+    org: acme
+    allowed: [search_accounts]
+```
+
+- `provider` is the provider's name.
+- `placeholders` gives the values the provider asks for, such as the tenant in its address, each written out as the provider's pattern takes it. A value never holds a reference: `tenant: ${TENANT}` stops Auto at start, at that value.
+- `credential` names the environment variable that holds the key, as `${GITHUB_TOKEN}`, and nothing beside it. Auto places it where the provider says, after the provider's scheme, such as `Bearer`, so the variable holds the token alone. A key written out stops Auto at start, whatever header the provider sends it in. For a provider of client credentials, `credential` gives `client_id`, written out, with `client_secret`, or with `private_key` and its `algorithm`, each key a reference, as `credential: { client_id: acme-books, client_secret: ${BOOKS_CLIENT_SECRET} }`; for a provider that takes no credential, leave it out. The provider's first way is the one taken, and `kind` names another it offers, as `credential: { kind: none }`.
+- `org`, `playbooks`, `allowed` and `record_content` are the entry's, as for any entry. The entry holds none of the fields of a server: a `url`, `headers` or `document` beside `provider` stops Auto at start.
+
+A problem stops Auto at start at the line and the key you wrote: a placeholder the provider does not ask for, or one it asks for and the entry leaves out, a value its pattern does not take, or a way the provider does not offer. `search` lists the server with `provider` set, and no longer offers that provider for a person to connect in the orgs the entry serves; in any other org, a person may still connect it.
 
 ## Example: a folder of briefs
 
