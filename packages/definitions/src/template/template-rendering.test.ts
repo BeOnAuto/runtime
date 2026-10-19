@@ -63,15 +63,6 @@ function rendering(body: string, variables: Readonly<Record<string, Schema.Json>
   return renderingOn(standingRenderClock, body, variables, firstLine);
 }
 
-function renderingOnThePlatformClock(body: string, variables: Readonly<Record<string, Schema.Json>>) {
-  const parsed = Result.getOrThrow(parsedTemplate(engine, body, 1));
-  return renderedTemplate(engine, parsed, {
-    variables,
-    emitter: emitterRefusingObjects(),
-    refusalOf: refusedAsNotText,
-  });
-}
-
 function loopOf(times: number): string {
   return `Hello\n{% for i in (1..${times}) %}{% endfor %}`;
 }
@@ -116,15 +107,6 @@ describe('the time a render may take', () => {
     expect(renderingOn(renderClockOf(steppingClock(1)), loopOf(150))).toEqual(Result.succeed('Hello\n'));
     expect(renderingOn(renderClockOf(steppingClock(1)), loopOf(400))).toEqual(
       Result.fail({ reason: 'limit_exceeded', limit: 'time', line: 2 }),
-    );
-  });
-
-  it('is counted on the clock of the platform for a render given none, which ends a loop no other bound ends', () => {
-    const items = Array.from({ length: 400 }, (_, index) => index);
-    const endless = '{% for a in items %}{% for b in items %}{% for c in items %}{% endfor %}{% endfor %}{% endfor %}';
-
-    expect(renderingOnThePlatformClock(endless, { items })).toEqual(
-      Result.fail({ reason: 'limit_exceeded', limit: 'time', line: 1 }),
     );
   });
 

@@ -3,8 +3,6 @@ import { assert } from 'liquidjs';
 
 export type RenderClock = () => number;
 
-export const platformClock: RenderClock = () => performance.now();
-
 export const renderTimeExceeded = 'template render limit exceeded';
 
 export interface RenderDeadline {
