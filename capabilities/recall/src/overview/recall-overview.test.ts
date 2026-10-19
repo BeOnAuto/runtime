@@ -155,3 +155,27 @@ describe('the view a recall function starts with, in its overview', () => {
     ]);
   });
 });
+
+describe('the overview of a recall function whose document has an about', () => {
+  it('writes the about as its author wrote it, after the description and before what it remembers', () => {
+    const about = [
+      'description: The reviews of each campaign',
+      'about: |',
+      '  The campaign team asks it what the reviews of a campaign have said so far.',
+      '',
+      '  It answers with them latest last.',
+    ];
+
+    expect(
+      overviewOf([...twoFilters, ...about])
+        .split('\n\n')
+        .slice(0, 5),
+    ).toEqual([
+      '# reviews',
+      'The reviews of each campaign',
+      'The campaign team asks it what the reviews of a campaign have said so far.',
+      'It answers with them latest last.',
+      '## What it remembers',
+    ]);
+  });
+});
