@@ -26,9 +26,3 @@ export const PublicOrigin = Schema.String.check(
       'Expected an https URL with no path, query or fragment, such as https://runtime.example.com',
   ),
 );
-
-const loopbackNames: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]']);
-
-export function namesALoopbackHost(origin: string): boolean {
-  return loopbackNames.has(new URL(origin).hostname);
-}

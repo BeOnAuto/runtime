@@ -100,6 +100,23 @@ describe('the tokens of an auth block', () => {
   });
 });
 
+describe('the renewal of a token whose life is shorter than two minutes', () => {
+  it('comes halfway through its life, not a minute before it ends', async () => {
+    const fake = await authorizationServer({ clientId: 'playbook', clientSecret, expiresInSeconds: 60 });
+    const { source, clock } = sourceOf(fake, secretAuth(fake));
+
+    const first = await source.token();
+    clock.now += 29_000;
+    const beforeRenewal = await source.token();
+    clock.now += 1000;
+    const renewed = await source.token();
+
+    expect(beforeRenewal).toBe(first);
+    expect(renewed).not.toBe(first);
+    expect(fake.tokenRequests()).toBe(2);
+  });
+});
+
 describe('the tokens a source mints among the secrets', () => {
   it('replace the token before them on renewal, which still scrubs until the next renewal', async () => {
     const fake = await authorizationServer({ clientId: 'playbook', clientSecret, expiresInSeconds: 120 });

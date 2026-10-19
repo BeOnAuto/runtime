@@ -4,7 +4,7 @@ import { Result, type Redacted } from 'effect';
 import { endsAtTheFirstSeparator } from '../names/model-facing-names.ts';
 import { isServerName } from '../names/tool-reference.ts';
 import { apiTransport } from './api-entry-checks.ts';
-import { accepted, at, problemsOf, refused, rejected, secretsOf, type Checked } from './checked.ts';
+import { accepted, at, problemsOf, refused, rejected, redactedValuesOf, type Checked } from './checked.ts';
 import { checkedAuth, checkedHeaders } from './remote-checks.ts';
 import { toolServersSetting, type ServerEntryFields } from './server-entries.ts';
 import type { McpServerSettings, ServerSettings, ServerType, StdioServerSettings } from './server-settings.ts';
@@ -96,7 +96,7 @@ function stdioTransport(
     ),
   ];
   return problems.length === 0
-    ? accepted({ type: 'stdio', command, args: fields.args ?? [], env: secretsOf(env) })
+    ? accepted({ type: 'stdio', command, args: fields.args ?? [], env: redactedValuesOf(env) })
     : rejected(problems);
 }
 

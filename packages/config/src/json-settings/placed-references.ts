@@ -24,7 +24,7 @@ export function misplacedReferences(
     .map(({ pointer }) => problem(placement.setting, pointer, placement.misplaced));
 }
 
-export function secretsOfEntry(
+export function secretsReferencedIn(
   placement: ReferencePlacement,
   references: readonly Reference[],
 ): readonly Redacted.Redacted[] {

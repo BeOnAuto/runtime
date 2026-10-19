@@ -44,5 +44,9 @@ export {
   type ServedScope,
   type WrittenScope,
 } from './json-settings/served-scope.ts';
-export { misplacedReferences, secretsOfEntry, type ReferencePlacement } from './json-settings/placed-references.ts';
+export {
+  misplacedReferences,
+  secretsReferencedIn,
+  type ReferencePlacement,
+} from './json-settings/placed-references.ts';
 export { withoutTrailingSlashes } from './json-settings/base-urls.ts';

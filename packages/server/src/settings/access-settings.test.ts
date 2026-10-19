@@ -13,7 +13,7 @@ function errorFrom(environment: Environment): unknown {
 }
 
 const httpOffLoopback =
-  'InvalidSettingsError: PUBLIC_URL: Expected an https URL; an http URL is taken only for localhost, 127.0.0.1 or [::1]';
+  'InvalidSettingsError: PUBLIC_URL: Expected an https URL; an http URL is taken only for localhost, 127.0.0.1, or [::1]';
 
 describe('readSettings signing persons in', () => {
   it('signs persons in through the Auto identity service once PUBLIC_URL is set, and on every interface through no one without it', () => {

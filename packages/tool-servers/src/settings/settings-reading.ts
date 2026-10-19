@@ -12,7 +12,7 @@ import {
 import { Data, Effect, Option, Result, Schema } from 'effect';
 
 import { checkedEntry } from './entry-checks.ts';
-import { misplacedReferences, secretsOfEntry, unreferencedSecurity } from './entry-references.ts';
+import { misplacedReferencesOfEntry, secretsOfEntry, unreferencedSecurity } from './entry-references.ts';
 import { ServerEntrySchema, ToolServersSchema, toolServersSetting, type ServerEntryFields } from './server-entries.ts';
 import type { ServerSettings, ToolServerSettings } from './server-settings.ts';
 
@@ -68,7 +68,7 @@ export function readEntry(
   );
   const credentials = [...flagged, ...writtenOut].map((place) => problem(toolServersSetting, place, credentialAdvice));
   const unresolved = resolved.problems.map(({ pointer: place, detail }) => problem(toolServersSetting, place, detail));
-  const problems = [...credentials, ...unresolved, ...misplacedReferences(name, resolved.references)];
+  const problems = [...credentials, ...unresolved, ...misplacedReferencesOfEntry(name, resolved.references)];
   if (problems.length > 0) {
     return Result.fail(problems);
   }

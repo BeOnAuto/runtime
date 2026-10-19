@@ -9,7 +9,7 @@ import {
   problemsOf,
   refused,
   rejected,
-  secretsOf,
+  redactedValuesOf,
   type Checked,
 } from './checked.ts';
 import { checkedAuth, checkedHeaders } from './remote-checks.ts';
@@ -64,7 +64,7 @@ function checkedQuery(
       parameter === '' ? refused(name, ['query_params', parameter], 'Expected a parameter name') : accepted(parameter),
     ),
   );
-  return problems.length === 0 ? accepted(secretsOf(query)) : rejected(problems);
+  return problems.length === 0 ? accepted(redactedValuesOf(query)) : rejected(problems);
 }
 
 function checkedSecurity(
@@ -76,7 +76,7 @@ function checkedSecurity(
       scheme === '' ? refused(name, ['security', scheme], 'Expected the name of a security scheme') : accepted(scheme),
     ),
   );
-  return problems.length === 0 ? accepted(secretsOf(security)) : rejected(problems);
+  return problems.length === 0 ? accepted(redactedValuesOf(security)) : rejected(problems);
 }
 
 export function apiTransport(

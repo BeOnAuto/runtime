@@ -1,4 +1,5 @@
 import { problem, type SettingProblem } from '@on.auto/config';
+import { namesTheLoopback } from '@on.auto/operations';
 import { JsonPointer, Redacted } from 'effect';
 
 import { toolServersSetting } from './server-entries.ts';
@@ -6,8 +7,6 @@ import { toolServersSetting } from './server-entries.ts';
 export type Checked<A> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly problems: readonly SettingProblem[] };
-
-const loopbackHosts: ReadonlySet<string> = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
 export const pinnedUrlShape = 'Expected an https URL, or an http URL on a loopback address';
 
@@ -33,7 +32,7 @@ export function problemsOf(...checked: readonly Checked<unknown>[]): readonly Se
   return checked.flatMap((each) => (each.ok ? [] : each.problems));
 }
 
-export function secretsOf(values: Readonly<Record<string, string>>): ReadonlyMap<string, Redacted.Redacted> {
+export function redactedValuesOf(values: Readonly<Record<string, string>>): ReadonlyMap<string, Redacted.Redacted> {
   return new Map(Object.entries(values).map(([key, value]: readonly [string, string]) => [key, Redacted.make(value)]));
 }
 
@@ -42,5 +41,5 @@ export function isPinnableUrl(url: string): boolean {
     return false;
   }
   const { protocol, hostname } = new URL(url);
-  return protocol === 'https:' || (protocol === 'http:' && loopbackHosts.has(hostname));
+  return protocol === 'https:' || (protocol === 'http:' && namesTheLoopback(hostname));
 }
