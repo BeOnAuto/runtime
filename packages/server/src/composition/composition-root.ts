@@ -25,7 +25,7 @@ export function compositionRootWith(
         services: applicationLayer(ledgerLayerFor(settings, database, wiring.projections.appends)),
         serve: async (runtime, ownOrigin) => {
           const { ledger, workflows, identityIssuer } = settings;
-          const { stores, consent, connections, source, offering } = await storesAndConnectionsOf(
+          const { stores, consent, connections, source, offering, clientMetadata } = await storesAndConnectionsOf(
             runtime,
             settings,
             database,
@@ -48,7 +48,8 @@ export function compositionRootWith(
             orgOperations: [...functions.parts.orgOperations, ...connections],
             ...(clock === undefined ? {} : { clock }),
           };
-          return stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
+          const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
+          return { ...served, routes: [...served.routes, clientMetadata] };
         },
       };
     },

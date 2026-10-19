@@ -1,6 +1,6 @@
 import type { Schema } from 'effect';
 
-import type { WayKind } from './credential-ways.ts';
+import { holdsAClientId, waysHoldingAClientId, type WayKind } from './credential-ways.ts';
 import { clientIdPlaceholder, isRequired, nameIssueOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
 import { namesIn, templatedFieldsOf, type TemplatedField } from './templates.ts';
 
@@ -16,6 +16,8 @@ interface Templated {
 
 type EntryIssue = Schema.FilterIssue;
 
+const clientIdElsewhere = `Holds {client_id}, which only a header or query value of a provider whose every way is ${waysHoldingAClientId} holds`;
+
 interface Names {
   readonly declared: readonly string[];
   readonly setting: readonly string[];
@@ -30,14 +32,12 @@ function namesOf({ placeholders = {}, credentials }: Templated): Names {
       .filter(([, placeholder]: readonly [string, Placeholder]) => setNamesOfEach({ placeholder }).length > 0)
       .map(([name]: readonly [string, Placeholder]) => name),
     set: setNamesOfEach(placeholders),
-    clientIdPlaced: credentials.every(({ kind }) => kind === 'client_credentials'),
+    clientIdPlaced: credentials.every(({ kind }) => holdsAClientId(kind)),
   };
 }
 
 function holdsClientIdWords(field: TemplatedField, names: Names): string {
-  return field.holds === 'value' && names.clientIdPlaced
-    ? ''
-    : 'Holds {client_id}, which only a header or query value of a provider whose every way is client_credentials holds';
+  return field.holds === 'value' && names.clientIdPlaced ? '' : clientIdElsewhere;
 }
 
 function unknownIssueOf(field: TemplatedField, name: string, names: Names): string {

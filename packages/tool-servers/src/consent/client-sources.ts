@@ -35,7 +35,24 @@ export interface WayOfClients {
   readonly clients?: readonly ClientSource[] | undefined;
 }
 
+type ClientMetadata = Readonly<{
+  client_name: string;
+  redirect_uris: readonly string[];
+  grant_types: readonly string[];
+  response_types: readonly string[];
+  application_type: string;
+}>;
+
+type ClientDocument = ClientMetadata & Readonly<{ client_id: string; token_endpoint_auth_method: 'none' }>;
+
+export interface ClientMetadataDocument {
+  readonly address: string;
+  readonly document: ClientDocument;
+}
+
 const metadataDocumentPath = '/oauth/client.json';
+
+const clientName = 'Auto Runtime';
 
 const between = '\n';
 
@@ -67,6 +84,29 @@ export function registeredClientAt(clients: readonly RegisteredClient[], issuer:
 
 export function metadataDocumentOf(publicUrl: string | undefined): string | undefined {
   return publicUrl?.startsWith('https://') === true ? new URL(metadataDocumentPath, publicUrl).href : undefined;
+}
+
+export function clientMetadataOf(returnAddress: string): ClientMetadata {
+  return {
+    client_name: clientName,
+    redirect_uris: [returnAddress],
+    grant_types: ['authorization_code', 'refresh_token'],
+    response_types: ['code'],
+    application_type: 'web',
+  };
+}
+
+export function clientMetadataDocumentOf(
+  publicUrl: string | undefined,
+  returnAddress: string,
+): ClientMetadataDocument | undefined {
+  const address = metadataDocumentOf(publicUrl);
+  return address === undefined
+    ? undefined
+    : {
+        address,
+        document: { client_id: address, ...clientMetadataOf(returnAddress), token_endpoint_auth_method: 'none' },
+      };
 }
 
 function isHad(source: ClientSource, { issuer }: WayOfClients, had: ClientsHad): boolean {

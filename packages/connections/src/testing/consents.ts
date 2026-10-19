@@ -1,5 +1,5 @@
 import type { Outcome, Succeeded } from '@on.auto/operations';
-import { providerListOf, providerOf } from '@on.auto/providers/testing';
+import { audiences, providerListOf, providerOf } from '@on.auto/providers/testing';
 import {
   consentedAt,
   registeredAt,
@@ -13,7 +13,7 @@ import { Schema } from 'effect';
 import type { Added } from './additions.ts';
 import { ada, harness, operationNamed, type Harness, type HarnessOptions } from './harness.ts';
 
-export const studioReturn = 'https://studio.on.auto/connect/return';
+export const studioReturn = 'https://studio.on.auto/connect-return';
 
 export interface ConsentAt {
   readonly url: string;
@@ -96,5 +96,15 @@ export function filesApiAt(fake: FakeMcpServer) {
         revocation_endpoint: `${fake.origin}/revoke`,
       },
     ],
+  });
+}
+
+export function audiencesAt(fake: FakeMcpServer) {
+  const [way] = audiences.credentials;
+  return providerOf({
+    ...audiences,
+    document: `${fake.origin}/openapi.json`,
+    base_url: `${fake.origin}/v1`,
+    credentials: [{ ...way, issuer: fake.origin }],
   });
 }

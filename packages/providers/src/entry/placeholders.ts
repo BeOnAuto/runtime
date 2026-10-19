@@ -1,6 +1,8 @@
 import { placeholderNamePattern } from '@on.auto/config';
 import { Schema } from 'effect';
 
+import { waysHoldingAClientId } from './credential-ways.ts';
+
 export const clientIdPlaceholder = 'client_id';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
@@ -103,7 +105,7 @@ export const PlaceholdersSchema = Schema.Record(Schema.String, PlaceholderSchema
 
 export function nameIssueOf(name: string): string | undefined {
   if (name === clientIdPlaceholder) {
-    return 'Expected another name: {client_id} is the client id of a client_credentials way, never asked';
+    return `Expected another name: {client_id} is the client id of a ${waysHoldingAClientId} way, never asked`;
   }
   return placeholderNamePattern.test(name)
     ? undefined

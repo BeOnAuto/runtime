@@ -1,5 +1,5 @@
 import { settingProblemText } from '@on.auto/config';
-import { fixtureProviders, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { adverts, drive, fixtureProviders, providerListOf, providerOf } from '@on.auto/providers/testing';
 import { readToolServerSettings, secretOrKeyExpected, type ServerSettings } from '@on.auto/tool-servers';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -58,7 +58,9 @@ const billing = providerOf({
   credentials: [{ kind: 'secret', in: 'security', name: 'apiKeyAuth' }],
 });
 
-const resolver = makeProviderResolver(providerListOf(...fixtureProviders.providers, pages, sessions, billing));
+const resolver = makeProviderResolver(
+  providerListOf(...fixtureProviders.providers, pages, sessions, billing, providerOf(drive), providerOf(adverts)),
+);
 
 function read(servers: unknown, variables: Readonly<Record<string, string>> = environment) {
   return readToolServerSettings(
@@ -219,6 +221,40 @@ describe('a provider named in the settings, refused', () => {
       ['TOOL_SERVERS: /named/provider: The entry sends this header already, so the credential cannot go in it'],
       ['TOOL_SERVERS: /named/provider: A header the MCP client sets itself, so the credential cannot go in it'],
     ]);
+  });
+});
+
+const consentAnotherWay =
+  "Expected another way, named with kind: the way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give";
+
+const consentAlone =
+  "The way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give, so the provider is connected on Studio's page alone";
+
+const acmeAdverts = { provider: 'adverts', placeholders: { tenant: 'acme' }, org: 'acme' };
+
+type Refusal = readonly [string, Readonly<Record<string, unknown>>, string];
+
+const consentRefusals: readonly Refusal[] = [
+  ['/credential', { ...acmeAdverts, credential: '${ADVERTS_KEY}' }, consentAnotherWay],
+  ['/credential', acmeAdverts, consentAnotherWay],
+  ['/credential/kind', { ...acmeAdverts, credential: { kind: 'authorization' } }, consentAnotherWay],
+  ['/credential', { provider: 'drive', credential: '${DRIVE_TOKEN}', org: 'acme' }, consentAlone],
+  ['/credential', { provider: 'drive', org: 'acme' }, consentAlone],
+  ['/credential/kind', { provider: 'drive', credential: { kind: 'authorization' }, org: 'acme' }, consentAlone],
+];
+
+describe('a provider whose way is consent, named in the settings', () => {
+  it.each(consentRefusals)(
+    'is refused at %s for the entry %j, in the words of the ways it takes',
+    (pointer, entry, words) => {
+      expect(problemsOf(entry)).toEqual([`TOOL_SERVERS: /named${pointer}: ${words}`]);
+    },
+  );
+
+  it('is its server by another way it takes, named with kind', () => {
+    const server = serverOf({ ...acmeAdverts, credential: { kind: 'secret', value: '${BILLING_KEY}' } });
+
+    expect([headersOf(server), secretsOf(server)]).toEqual([{ 'X-Api-Key': billingKey }, [billingKey]]);
   });
 });
 

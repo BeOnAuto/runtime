@@ -1,6 +1,13 @@
 import { variableNamePattern } from '@on.auto/config';
 import { articled, listed } from '@on.auto/operations';
-import { consentEndpoints, consentIssuesOf, wayAddresses, wayFields, type WayAddress } from '@on.auto/providers';
+import {
+  consentEndpoints,
+  consentIssuesOf,
+  holdsAClientId,
+  wayAddresses,
+  wayFields,
+  type WayAddress,
+} from '@on.auto/providers';
 import {
   ClientIdSchema,
   ClientSourceSchema,
@@ -225,6 +232,10 @@ export function credentialFieldIssuesOf(credential: CredentialFields): readonly 
     ...addressIssuesOf(credential),
     ...consentIssuesOfTheKind(credential),
   ];
+}
+
+export function takesAClientId(kind: CredentialKind): boolean {
+  return holdsAClientId(kind);
 }
 
 const kindsPlacingNoValue: ReadonlySet<CredentialKind> = new Set(['none', 'authorization']);

@@ -1,7 +1,7 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { Clock, Deferred, Effect, Option, Redacted, Schema } from 'effect';
 
-import { ClientIdSchema } from './client-sources.ts';
+import { ClientIdSchema, clientMetadataOf } from './client-sources.ts';
 import type { ClientRegistrations, ConsentRefusal, KeptRegistration } from './consent-client.ts';
 import { refusalOf, unanswered } from './consent-failures.ts';
 
@@ -21,8 +21,6 @@ const answeredFieldsOf = Schema.decodeUnknownOption(RegistrationFieldsSchema);
 const decodeRegistration = Schema.decodeUnknownSync(RegistrationSchema);
 
 const encodeRegistration = Schema.encodeSync(RegistrationSchema);
-
-const clientName = 'Auto Runtime';
 
 const millisOfASecond = 1000;
 
@@ -59,13 +57,7 @@ function answeredRegistration({
       const answer = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({
-          client_name: clientName,
-          redirect_uris: [returnAddress],
-          grant_types: ['authorization_code', 'refresh_token'],
-          response_types: ['code'],
-          application_type: 'web',
-        }),
+        body: JSON.stringify(clientMetadataOf(returnAddress)),
       });
       return answer.ok ? answeredFieldsOf(await answer.json()) : Option.none();
     },

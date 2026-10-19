@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, type GivenToProvider, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { adverts, campaigns, drive, ledgers, metrics, regions, tracker } from '../testing/fixture-providers.ts';
+import {
+  adverts,
+  audiences,
+  campaigns,
+  drive,
+  ledgers,
+  metrics,
+  regions,
+  tracker,
+} from '../testing/fixture-providers.ts';
 
 function resolved(provider: ProviderEntry, given: GivenToProvider) {
   return Result.getOrThrow(additionOfProvider(provider, given));
@@ -77,6 +86,16 @@ describe('the addition a provider of client credentials makes', () => {
       'X-Manager': '1234567890',
       'X-Format': 'json',
     });
+  });
+});
+
+describe('the addition a provider of consent makes', () => {
+  it('keeps {client_id} for the serving to place, as the connection records no client before its consent finishes', () => {
+    expect(resolved(audiences, {})).toMatchObject({
+      entry: { headers: { 'X-Client': '{client_id}' } },
+      credential: { kind: 'authorization', issuer: 'https://accounts.audiences.example.com', scope: 'audiences.read' },
+    });
+    expect(resolved(audiences, {}).credential).not.toHaveProperty('client_id');
   });
 });
 

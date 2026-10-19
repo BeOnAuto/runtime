@@ -2,6 +2,7 @@ export {
   WayKindSchema,
   consentEndpoints,
   consentIssuesOf,
+  holdsAClientId,
   wayFields,
   type ConsentFields,
   type CredentialWay,

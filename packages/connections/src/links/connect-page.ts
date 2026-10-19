@@ -21,6 +21,6 @@ export function connectPageOf({ studio, runtime }: ConnectPages, { org, connecti
   return page.href;
 }
 
-export function returnAddressOf({ studio }: ConnectPages): string {
-  return new URL('/connect/return', studio.origin).href;
+export function returnAddressOf({ studio, runtime }: ConnectPages): string {
+  return new URL('connect-return', studioBaseOf(studio, runtime())).href;
 }

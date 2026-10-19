@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { problemsOf } from '../testing/entry-problems.ts';
-import { ledgers, regions, tracker } from '../testing/fixture-providers.ts';
+import { adverts, audiences, drive, ledgers, regions, tracker } from '../testing/fixture-providers.ts';
 
 const placesOtherwise =
   'Expected an https URL, or an http URL on a loopback address, written out up to its host, with each placeholder in its place';
@@ -16,7 +16,7 @@ const setAndDeclared =
   'Expected api_host, which a choice sets, in the address, a header or a query value, and never among the placeholders';
 
 const clientIdElsewhere =
-  'Holds {client_id}, which only a header or query value of a provider whose every way is client_credentials holds';
+  'Holds {client_id}, which only a header or query value of a provider whose every way is client_credentials or authorization holds';
 
 const optionalElsewhere =
   'Holds the optional placeholder {manager}, which stands only as the whole value of a header or a query parameter, left out where it is not given';
@@ -127,7 +127,7 @@ describe('the placeholders an entry places', () => {
     expect(problemsOf({ ...regions, placeholders: named })).toEqual([
       [
         '/placeholders/client_id',
-        'Expected another name: {client_id} is the client id of a client_credentials way, never asked',
+        'Expected another name: {client_id} is the client id of a client_credentials or authorization way, never asked',
       ],
       [
         '/placeholders/Site',
@@ -157,10 +157,15 @@ describe('the placeholders an entry places where only some may stand', () => {
     ]);
   });
 
-  it('hold {client_id} only where every way of the provider is client_credentials', () => {
-    expect(problemsOf({ ...tracker, headers: { 'X-Client': '{client_id}' } })).toEqual([
-      ['/headers/X-Client', clientIdElsewhere],
-    ]);
+  it('hold {client_id} only where every way of the provider is client_credentials or authorization', () => {
+    const client = { 'X-Client': '{client_id}' };
+
+    expect([
+      problemsOf({ ...tracker, headers: client }),
+      problemsOf({ ...adverts, headers: client }),
+      problemsOf({ ...drive, headers: client }),
+      problemsOf(audiences),
+    ]).toEqual([[['/headers/X-Client', clientIdElsewhere]], [['/headers/X-Client', clientIdElsewhere]], [], []]);
   });
 });
 

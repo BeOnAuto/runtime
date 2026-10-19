@@ -1,4 +1,4 @@
-import { articled, listed } from '@on.auto/operations';
+import { alternatives, articled, listed } from '@on.auto/operations';
 import { ClientSourceSchema, clientSources, isScope } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -22,6 +22,16 @@ export const wayFields = {
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
 
 export type WayKind = typeof WayKindSchema.Type;
+
+const kindsHoldingAClientId: readonly WayKind[] = ['client_credentials', 'authorization'];
+
+const kindHoldingAClientId: ReadonlySet<string> = new Set(kindsHoldingAClientId);
+
+export const waysHoldingAClientId = alternatives(kindsHoldingAClientId);
+
+export function holdsAClientId(kind: string): boolean {
+  return kindHoldingAClientId.has(kind);
+}
 
 const CredentialWayFieldsSchema = Schema.Struct({
   kind: WayKindSchema,

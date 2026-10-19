@@ -25,6 +25,8 @@ export interface Placed extends Placing {
   readonly environment: Environment;
 }
 
+type PlacedCredential = Omit<Placing, 'placedValues'>;
+
 type Placement = NonNullable<Credential['in']>;
 
 type Fields = Pick<ServerEntryFields, 'headers' | 'query_params' | 'security'>;
@@ -96,20 +98,19 @@ function writtenValueOf(credential: Credential, variable: string): string {
   return credential.scheme === undefined ? reference : `${credential.scheme} ${reference}`;
 }
 
-function placedValue(entry: ConnectionEntry, credential: Credential, variable: string): Placing {
+function placedValue(entry: ConnectionEntry, credential: Credential, variable: string): PlacedCredential {
   const placement = required(credential.in);
   const name = required(credential.name);
   return {
     written: { ...entry, ...placedIn[placement](entry, name, writtenValueOf(credential, variable)) },
-    placedValues: noValuesPlaced,
     placedAt: new Map([['value', pointerOf(fieldsOfAPlacement[placement], name)]]),
   };
 }
 
 function placedClientCredentials(
-  { provider, entry, credential }: Credentialled,
+  { entry, credential }: Credentialled,
   { variable, algorithm }: NamedReference,
-): Placing {
+): PlacedCredential {
   const reference = referenceTo(variable);
   const secret =
     algorithm === undefined
@@ -122,9 +123,14 @@ function placedClientCredentials(
   const given = ['client_id', ...Object.keys(secret)];
   return {
     written: { ...entry, auth },
-    placedValues: provider === null ? noValuesPlaced : new Map([[clientIdPlaceholder, clientId]]),
     placedAt: new Map(given.map((field) => [field, pointerOf('auth', field)])),
   };
+}
+
+function clientIdPlacedFor({ provider, credential }: Credentialled): ReadonlyMap<string, string> {
+  return provider === null || credential.client_id === undefined
+    ? noValuesPlaced
+    : new Map([[clientIdPlaceholder, credential.client_id]]);
 }
 
 function valuesAsWritten({
@@ -142,15 +148,19 @@ function writtenEntryOf({ provider, entry }: Credentialled): ConnectionEntry {
   return provider === null ? literalEntry : { ...literalEntry, ...valuesAsWritten(entry) };
 }
 
-export function placedReference(written: Credentialled, reference: NamedReference | undefined): Placing {
+function placedCredentialOf(written: Credentialled, reference: NamedReference | undefined): PlacedCredential {
   const entry = writtenEntryOf(written);
   const { credential } = written;
   if (reference === undefined) {
-    return { written: entry, placedValues: noValuesPlaced, placedAt: nothingPlaced };
+    return { written: entry, placedAt: nothingPlaced };
   }
   return credential.kind === 'client_credentials'
     ? placedClientCredentials({ ...written, entry }, reference)
     : placedValue(entry, credential, reference.variable);
+}
+
+export function placedReference(written: Credentialled, reference: NamedReference | undefined): Placing {
+  return { ...placedCredentialOf(written, reference), placedValues: clientIdPlacedFor(written) };
 }
 
 export function placedCredential(written: Credentialled, given: GivenValue | undefined): Placed {

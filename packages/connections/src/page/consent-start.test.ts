@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import type { ClientRegistration, FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { servedStudio } from '@on.auto/identity/testing';
+import { consentedAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, crm } from '../testing/additions.ts';
-import { consentFake, consentHarnessAt, startedAt, starting, studioReturn } from '../testing/consents.ts';
+import { consentFake, consentHarnessAt, finishing, startedAt, starting, studioReturn } from '../testing/consents.ts';
 import { acmeViewer, grace, harness, operationNamed } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -60,6 +61,32 @@ describe('the start of a consent', () => {
     });
     expect(JSON.stringify(await h.facts())).not.toContain(String(asked.get('state')));
     expect([...h.secrets.values().values()]).toHaveLength(1);
+  });
+});
+
+describe('the return address a consent is started and finished with', () => {
+  it('is connect-return at the root of the Studio host, where the runtime serves no Studio', async () => {
+    const studioHost = { origin: 'https://studio.example.com', served: false };
+    const fake = await served();
+    const h = consentHarnessAt(fake, { pages: { studio: studioHost, runtime: () => 'https://runtime.example.com' } });
+
+    const { url } = await startedAt(h, await added(h, { provider: 'files' }));
+
+    expect(new URL(url).searchParams.get('redirect_uri')).toBe('https://studio.example.com/connect-return');
+  });
+
+  it("is connect-return under the runtime's own /studio/ where it serves Studio, and the finish redeems with it", async () => {
+    const runtime = 'http://127.0.0.1:5555';
+    const servedReturn = `${runtime}/studio/connect-return`;
+    const fake = await served({ redirectUris: [servedReturn] });
+    const h = consentHarnessAt(fake, { pages: { studio: servedStudio, runtime: () => runtime } });
+    const link = await added(h, { provider: 'files' });
+
+    const { url } = await startedAt(h, link);
+    const finished = await finishing(h, link, await consentedAt(url));
+
+    expect(new URL(url).searchParams.get('redirect_uri')).toBe(servedReturn);
+    expect(finished).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
   });
 });
 

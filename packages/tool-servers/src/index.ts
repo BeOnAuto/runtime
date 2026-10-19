@@ -65,8 +65,10 @@ export {
 export {
   ClientIdSchema,
   ClientSourceSchema,
+  clientMetadataDocumentOf,
   clientSources,
   isSameIssuer,
+  type ClientMetadataDocument,
   type ClientSource,
   type RegisteredClient,
   type RegisteredCredential,
