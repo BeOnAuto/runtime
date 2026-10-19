@@ -131,7 +131,12 @@ describe('a provider a caller names', () => {
       status: 'rejected',
       reason: 'invalid_input',
       detail: 'The connection cannot be added as it is given',
-      issues: [{ pointer: '/provider', detail: 'There is no provider named crm here' }],
+      issues: [
+        {
+          pointer: '/provider',
+          detail: 'There is no provider named crm here; search lists the providers a person may connect',
+        },
+      ],
     });
     expect(
       issuesIn(

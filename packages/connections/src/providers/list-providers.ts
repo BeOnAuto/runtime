@@ -1,31 +1,11 @@
-import {
-  Caller,
-  defineHttpOperation,
-  permissionFor,
-  permissionRefusalOf,
-  type CallerIdentity,
-} from '@on.auto/operations';
+import { Caller, defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import type { ConnectionServices } from '../operations/connection-services.ts';
-import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
 import { ProvidersSchema } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
+import { refusalToAdd, type OfferingServices } from './provider-offering.ts';
 
-type Listing = Pick<ConnectionServices, 'providers' | 'providerValues' | 'policy' | 'access'>;
-
-const addingPermissions = [permissionFor('command', 'org')];
-
-function refusalToAdd({ access, policy }: Listing, caller: CallerIdentity): string | null {
-  return (
-    permissionRefusalOf(addingPermissions, caller) ??
-    adderRefusalOf(access, caller)?.detail ??
-    addingRefusalOf(policy)?.detail ??
-    null
-  );
-}
-
-export function defineListProviders(listing: Listing) {
+export function defineListProviders(listing: OfferingServices) {
   return defineHttpOperation('org', 'query', {
     name: 'list_providers',
     title: 'List providers',

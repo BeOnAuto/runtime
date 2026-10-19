@@ -11,4 +11,5 @@ export {
 export type { RuntimeAccess } from './policy/policy-rules.ts';
 export { ConnectionSchema, type Connection } from './registry/connection.ts';
 export { makeConnectionSource } from './serving/connection-source.ts';
+export { makeProviderOffering } from './providers/provider-offering.ts';
 export type { ServingServices } from './serving/given-credentials.ts';

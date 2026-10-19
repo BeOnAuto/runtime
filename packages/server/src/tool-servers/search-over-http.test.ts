@@ -3,6 +3,7 @@ import { internalTermsIn } from '@on.auto/operations/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { offeredByTheServer } from '../testing/servers/connected-servers.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -232,7 +233,11 @@ describe('search on the org endpoint, without a playbook and with one', () => {
     );
 
     expect(inOrg.structuredContent).toMatchObject({ servers: [graphInTheOrg, salesInTheOrg, wikiInTheOrg] });
-    expect(inAlpha.structuredContent).toEqual({ ...foundForAlpha, servers: [graphInTheOrg, wikiInTheOrg] });
+    expect(inAlpha.structuredContent).toEqual({
+      ...foundForAlpha,
+      servers: [graphInTheOrg, wikiInTheOrg],
+      providers: offeredByTheServer,
+    });
     expect(plainTextIn(inAlpha)).toBe(foundInWords);
     expect(plainTextIn(inOrg)).toMatch(
       /^The playbooks of this org may use 3 tool servers\. “graph”, for every playbook, offers 2 tools: search and echo\./u,

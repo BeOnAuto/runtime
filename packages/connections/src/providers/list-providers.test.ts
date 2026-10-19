@@ -1,16 +1,21 @@
 import type { CallerIdentity, Outcome, Succeeded } from '@on.auto/operations';
 import { providersOf, regions, tracker } from '@on.auto/providers/testing';
-import { Redacted, Schema } from 'effect';
+import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
-import { acmeViewer, ada, harness, operationNamed, type HarnessOptions } from '../testing/harness.ts';
+import {
+  acmeViewer,
+  ada,
+  developerTokenSet,
+  harness,
+  operationNamed,
+  type HarnessOptions,
+} from '../testing/harness.ts';
 
 const acmeKey: CallerIdentity = { ...ada, id: 'acme-key' };
 
 const adaReading: CallerIdentity = { ...ada, permissions: ['org:read'] };
-
-const developerToken = new Map([['METRICS_DEVELOPER_TOKEN', Redacted.make('metrics-developer-token-0123')]]);
 
 const ListedSchema = Schema.Struct({
   output: Schema.Struct({
@@ -132,7 +137,7 @@ describe('the providers listed', () => {
   it('offer a way whose values whoever runs the runtime sets only once they are set', async () => {
     expect([
       await offeringsOf('metrics', {}),
-      await offeringsOf('metrics', { providerValues: developerToken }),
+      await offeringsOf('metrics', { providerValues: developerTokenSet }),
     ]).toEqual([
       [
         {

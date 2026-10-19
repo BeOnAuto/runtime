@@ -6,12 +6,17 @@ import {
   defineSearch,
   defineSearchInOrg,
   defineValidate,
+  type ProviderOffering,
   type ToolAccess,
 } from '@on.auto/tool-servers';
 
-export function toolOperationsOf(tools: ToolAccess) {
+export interface ProvidersOffered {
+  readonly offering: ProviderOffering;
+}
+
+export function toolOperationsOf(tools: ToolAccess, { offering }: ProvidersOffered) {
   return {
-    inOrg: [defineSearchInOrg(tools, foundPlaybook)],
+    inOrg: [defineSearchInOrg(tools, foundPlaybook, offering)],
     inPlaybook: [
       defineSearch(tools),
       defineIntrospect(tools),

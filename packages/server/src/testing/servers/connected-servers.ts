@@ -1,8 +1,18 @@
-import { Schema } from 'effect';
+import { readProviders } from '@on.auto/providers';
+import type { OfferedProvider } from '@on.auto/tool-servers';
+import { Result, Schema } from 'effect';
 
 import type { ReasoningServer } from './reasoning-server.ts';
 
 export const connectionsOfAcme = '/v1/orgs/acme/connections';
+
+const shippedProviders = Result.getOrThrow(readProviders()).providers;
+
+export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders.map(({ entry }) => ({
+  name: entry.name,
+  title: entry.title,
+  description: entry.description,
+}));
 
 const AddedSchema = Schema.Struct({ id: Schema.String, connect: Schema.Struct({ url: Schema.String }) });
 

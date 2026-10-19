@@ -7,17 +7,11 @@ import { describe, expect, it } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added, adding, issuesIn, notes } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, developerToken, developerTokenSet, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const acmeLedgers = { provider: 'ledgers', placeholders: { tenant: 'acme', manager: '1234567890' } };
 
 const clientId = 'acme-ledgers-client';
-
-const developerToken = 'metrics-developer-token-0123';
-
-const operatorValues: ReadonlyMap<string, Redacted.Redacted> = new Map([
-  ['METRICS_DEVELOPER_TOKEN', Redacted.make(developerToken)],
-]);
 
 const metricsKey = 'metrics-key-of-the-person';
 
@@ -29,7 +23,7 @@ interface Serving {
 
 function listedBy(
   h: Harness,
-  { providerValues = operatorValues, allowedHosts, providers = fixtureProviders }: Serving = {},
+  { providerValues = developerTokenSet, allowedHosts, providers = fixtureProviders }: Serving = {},
 ): Promise<readonly OrgConnection[]> {
   const source = makeConnectionSource({
     registry: h.ledger.service,
@@ -140,7 +134,7 @@ describe('the client id a person gives on the page for a provider of client cred
 
 describe('a connection added by a provider that sends a value of the operator', () => {
   it('records the reference as the provider writes it, and is served with the value, a secret, beside the credential', async () => {
-    const h = harness({ providerValues: operatorValues });
+    const h = harness({ providerValues: developerTokenSet });
     const { id, token } = await added(h, { provider: 'metrics' });
 
     const given = await h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value: metricsKey });
@@ -154,7 +148,7 @@ describe('a connection added by a provider that sends a value of the operator', 
   });
 
   it('is refused at /provider where the value is not set, and served as not allowed once it is unset', async () => {
-    const h = harness({ providerValues: operatorValues });
+    const h = harness({ providerValues: developerTokenSet });
     const { id, token } = await added(h, { provider: 'metrics' });
     await h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value: metricsKey });
 

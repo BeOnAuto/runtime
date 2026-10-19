@@ -34,6 +34,8 @@ const addedByName = shipped.providers.filter(
   ({ entry }) => entry.type === 'mcp' && entry.placeholders === undefined && entry.credentials[0]?.kind === 'secret',
 );
 
+const refusedName = 'There is no provider named crm here; search lists the providers a person may connect';
+
 let server: ReasoningServer;
 
 beforeAll(async () => {
@@ -124,7 +126,7 @@ describe('a connection added by a provider', () => {
       status: 422,
       body: {
         reason: 'invalid_input',
-        errors: [{ pointer: '/provider', detail: 'There is no provider named crm here' }],
+        errors: [{ pointer: '/provider', detail: refusedName }],
       },
     });
   });

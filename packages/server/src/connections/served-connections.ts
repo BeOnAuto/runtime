@@ -2,12 +2,15 @@ import type { AppRuntime } from '@on.auto/api';
 import {
   makeConnectionOperations,
   makeConnectionSource,
+  makeProviderOffering,
   type ConnectionOperations,
+  type ConnectionServices,
   type RuntimeAccess,
 } from '@on.auto/connections';
 import { studioOrigin } from '@on.auto/identity';
 import type { SecretStore } from '@on.auto/ledger';
 import type { DispatcherServices } from '@on.auto/operations';
+import type { ProviderOffering } from '@on.auto/tool-servers';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
@@ -18,6 +21,7 @@ export interface StoresAndConnections {
   readonly stores: LedgerStores;
   readonly connections: ConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
+  readonly offering: ProviderOffering;
 }
 
 type ServingSettings = Pick<
@@ -39,13 +43,13 @@ function accessOf({ signIn, apiKeys }: ServingSettings): RuntimeAccess {
   return apiKeys === undefined ? 'local' : 'keys';
 }
 
-function connectionsServedBy(
+function connectionServicesOf(
   settings: ServingSettings,
   secrets: SecretStore,
   ownOrigin: () => string,
-): ConnectionOperations {
+): ConnectionServices {
   const { signIn } = settings;
-  return makeConnectionOperations({
+  return {
     secrets,
     policy: settings.connections,
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
@@ -54,7 +58,7 @@ function connectionsServedBy(
     providerValues: settings.providerValues,
     pages: { studio: studioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
-  });
+  };
 }
 
 function sourceServedBy(
@@ -80,9 +84,11 @@ export async function storesAndConnectionsOf(
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
+  const services = connectionServicesOf(settings, stores.secrets, ownOrigin);
   return {
     stores,
-    connections: connectionsServedBy(settings, stores.secrets, ownOrigin),
+    connections: makeConnectionOperations(services),
     source: sourceServedBy(runtime, settings, stores.secrets),
+    offering: makeProviderOffering(services),
   };
 }
