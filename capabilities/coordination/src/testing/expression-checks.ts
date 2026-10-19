@@ -1,4 +1,5 @@
 import { checkedAtSave } from '@on.auto/definitions/check';
+import { checksAwaitedAtMostMs } from '@on.auto/definitions/testing';
 import { programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { afterAll } from 'vitest';
 
@@ -13,5 +14,5 @@ afterAll(async () => {
 
 export const testExpressionCheck: ExpressionCheck = (job) => {
   pool ??= programPool({ workers: 1, heapMegabytes: 256 });
-  return checkedAtSave(pool, job);
+  return checkedAtSave(pool, job, checksAwaitedAtMostMs);
 };

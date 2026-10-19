@@ -67,7 +67,7 @@ The capability's `overview` (`src/overview/workflow-overview.ts`; see [The overv
 
 ## Testing
 
-`src/workflows` holds the tests of how a workflow runs, each a document run through the memory driver of the engine (`src/testing/workflows.ts`, `interpret`), with the commands a run gave its ports and the settlement it ended with. `src/input-logs` holds sixteen recorded paths, whose input logs in `input-logs/` are the replay corpus: each replays through the machine to the events it recorded, and each runs today as it was recorded (`RECORD_INPUT_LOGS=1` records them again). The capability and `send_run_event` are tested on a playbook whose workflows run on a host over a private SQLite database in memory (`src/testing/workflow-playbook.ts`).
+`src/workflows` holds the tests of how a workflow runs, each a document run through the memory driver of the engine (`src/testing/workflows.ts`, `interpret`), with the commands a run gave its ports and the settlement it ended with. `src/input-logs` holds sixteen recorded paths, whose input logs in `input-logs/` are the replay corpus: each replays through the machine to the events it recorded, and each runs today as it was recorded (`RECORD_INPUT_LOGS=1` records them again). The capability and `send_run_event` are tested on a playbook whose workflows run on a host over a private SQLite database in memory (`src/testing/workflow-playbook.ts`), its expressions checked at save by the compiler in a real worker within the 30 s of `checksAwaitedAtMostMs` of `@on.auto/definitions/testing` (`src/testing/expression-checks.ts`), so a check that a busy machine slows is not refused by the 2 s a save allows.
 
 ## Source
 
