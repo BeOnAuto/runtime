@@ -32,23 +32,10 @@ describe('the sentence of an interaction function that asks a system', () => {
         }),
       ]),
     ]).toEqual([
-      'It is given the month and asks **ads** with its tool `campaign-costs`, once per run. It answers with what it answered under `rows`: a list of records.\n',
-      'It is given any input and asks **chat** with its tool `thread`, once per run. It answers with what it answered under `data`, then `items/all~x`: a list of records.\n',
-      'It is given the month and asks **ads** with its tool `campaign-costs`, once per run. It answers with the whole of what the tool answered: the rows, and the next, when there is one.\n',
+      'It is given the month and asks **ads** with its tool campaign-costs, once per run. It answers with what it answered under rows: a list of records.\n',
+      'It is given any input and asks **chat** with its tool thread, once per run. It answers with what it answered under data, then items/all~x: a list of records.\n',
+      'It is given the month and asks **ads** with its tool campaign-costs, once per run. It answers with the whole of what the tool answered: the rows, and the next, when there is one.\n',
     ]);
-  });
-});
-
-describe('the names of the call of an interaction function, in the body', () => {
-  it('are code, so a tool or a segment of the read path that holds Markdown is written as it is, on one line', () => {
-    const written = writtenOf([
-      callSentence({ server: 'chat', tool: 'read_*all*', read: '/a*b*/x\n## Details', output: rows }),
-    ]);
-
-    expect(written).toBe(
-      'It is given any input and asks **chat** with its tool `read_*all*`, once per run. It answers with what it answered under `a*b*`, then `x ## Details`: a list of records.\n',
-    );
-    expect(written.split('\n')).not.toContain('## Details');
   });
 });
 

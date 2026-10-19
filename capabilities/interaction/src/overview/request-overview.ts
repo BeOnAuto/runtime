@@ -52,15 +52,11 @@ function readRepliesOf({ route, reply, output }: RequestDocument): ReadReplies |
     : { route, replies: route.replies, reply, answer };
 }
 
-function refusalSentence(reply: ReplyRule, told: boolean): string {
-  return notTakenSentence(verdictsOf(reply) === undefined ? 'unread' : 'another-first-word', told);
-}
-
 function readingSentences({ replies, reply, answer }: ReadReplies, expiresMs: number): readonly string[] {
   return [
     replyWaitSentence(expiresMs, replyWaitMsOf(replies)),
     replyRuleSentence(reply, answer),
-    refusalSentence(reply, replies.tell !== undefined),
+    ...(verdictsOf(reply) === undefined ? [] : [notTakenSentence(replies.tell !== undefined)]),
     unansweredSentence(expiresMs),
   ];
 }

@@ -2,7 +2,7 @@
 
 Reads the cost rows of every campaign for a month.
 
-It is given the month and asks **ads** with its tool `campaign-costs`, once per run. It answers with what it answered under `rows`: a list of records.
+It is given the month and asks **ads** with its tool campaign-costs, once per run. It answers with what it answered under rows: a list of records.
 
 ## Details
 

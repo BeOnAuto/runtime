@@ -22,7 +22,7 @@ export interface ConsentRequests extends TokenRequests {
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
 }
 
-type Requesting = ConsentClientOptions & TokenRequesting;
+type Requesting = ConsentClientOptions & TokenRequesting & { readonly requestTimeout: (ms: number) => AbortSignal };
 
 const noScope: ConsentRefusal = { refused: 'no_scope' };
 

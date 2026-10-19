@@ -125,6 +125,7 @@ export interface ConsentClientOptions extends ClientsHad {
   readonly fetch: FetchLike;
   readonly registrations: ClientRegistrations;
   readonly requestMs?: number;
+  readonly requestTimeout?: (ms: number) => AbortSignal;
   readonly renewalSpreadMs?: number;
 }
 
@@ -139,7 +140,12 @@ const mostRenewalSpreadMs = 5000;
 
 async function requestsOf(options: ConsentClientOptions, renewalSpreadMs: number): Promise<ConsentRequests> {
   const { consentRequests } = await import('./consent-requests.ts');
-  return consentRequests({ ...options, requestMs: options.requestMs ?? toolBounds.callMs, renewalSpreadMs });
+  return consentRequests({
+    ...options,
+    requestMs: options.requestMs ?? toolBounds.callMs,
+    requestTimeout: options.requestTimeout ?? ((ms) => AbortSignal.timeout(ms)),
+    renewalSpreadMs,
+  });
 }
 
 function servedTokens(

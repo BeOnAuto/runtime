@@ -26,7 +26,11 @@ interface Refreshed extends ServerMetadata {
   readonly fetch: FetchLike;
 }
 
-const leaseMs = 30_000;
+const leaseBeyondTheRequestMs = 15_000;
+
+function leaseOf(requestMs: number): number {
+  return requestMs + leaseBeyondTheRequestMs;
+}
 
 function revokedTokensOf({ access_token: accessToken, refresh_token: refreshToken }: KeptTokens) {
   return { access_token: accessToken, refresh_token: refreshToken };
@@ -88,7 +92,7 @@ function revocationAsked(asked: RevokeAsked, { clients, fetchFor }: Requests): E
 export function tokenRequestsOf(requests: Requests, { requestMs, renewalSpreadMs }: TokenRequesting): TokenRequests {
   const renewal = {
     refreshing: (served: ConsentServed) => refreshingOf(served, requests),
-    leaseMs: Math.max(leaseMs, requestMs),
+    leaseMs: leaseOf(requestMs),
     waitMs: requestMs,
     spreadMs: renewalSpreadMs,
   };

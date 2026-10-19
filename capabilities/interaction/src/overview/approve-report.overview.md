@@ -55,7 +55,7 @@ It answers with the verdict, one of approve and reject, and the note, when there
 
 ### Where
 
-To `{{ input.approver }}`, whose reply alone answers it. Sent through the tool `execute` of the server **gas**; the replies read with the tool `execute` of the server **gas**, at least `PT15S` apart; expires after `P7D`.
+To `{{ input.approver }}`. Sent through the tool `execute` of the server **gas**; the replies read with the tool `execute` of the server **gas**, at least `PT15S` apart; expires after `P7D`.
 
 ### Used by
 

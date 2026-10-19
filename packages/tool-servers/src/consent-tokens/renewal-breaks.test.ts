@@ -64,11 +64,16 @@ function revokedGrantOf(fake: FakeMcpServer, { refresh_token: refreshToken }: Ke
   return postedTo(fake, '/revoke', { token: Option.getOrThrow(Option.fromNullishOr(refreshToken)) });
 }
 
-function failingTokens(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
+interface Failing {
+  still: boolean;
+}
+
+function tokensFailingWhile(failing: Readonly<Failing>) {
   const answer = { error: 'temporarily_unavailable', error_description: 'The token service is down for a moment' };
-  return String(address).endsWith('/token')
-    ? Promise.resolve(Response.json(answer, { status: 503 }))
-    : globalThis.fetch(String(address), Object.assign({}, init));
+  return (...[address, init]: readonly [unknown, unknown?]): Promise<Response> =>
+    failing.still && String(address).endsWith('/token')
+      ? Promise.resolve(Response.json(answer, { status: 503 }))
+      : globalThis.fetch(String(address), Object.assign({}, init));
 }
 
 const unauthorized = (fake: FakeMcpServer) => ({
@@ -142,7 +147,7 @@ describe('a renewal that fails otherwise', () => {
 
     const failed = await renewed(
       connected,
-      sourceOf(connected, consentClientAt(connected.fake, { fetch: failingTokens })),
+      sourceOf(connected, consentClientAt(connected.fake, { fetch: tokensFailingWhile({ still: true }) })),
     );
 
     expect(failed).toMatchObject({ message: 'The token service is down for a moment' });
@@ -182,6 +187,33 @@ describe('a renewal that fails otherwise', () => {
         'The authorization server of the connection files no longer answers as it did when the connection was made, so its tokens cannot be renewed',
       ),
     ]);
+  });
+});
+
+describe('a renewal that failed under its own claim', () => {
+  it('serves the access token it holds while it lasts, then fails at once in the same words, until the claim ends', async () => {
+    const connected = await connectedAt({ expiresInSeconds: 60 });
+    const failing: Failing = { still: true };
+    const consent = consentClientAt(connected.fake, { fetch: tokensFailingWhile(failing) });
+    const { source, timer } = servedTokensOf(connected.served, connected.clock.now, consent);
+
+    connected.clock.setTo(30_000);
+    const failed = await source.token().catch((error: unknown) => error);
+    connected.clock.setTo(30_001);
+    const whileItLasts = await source.token();
+    const refused = await source.onUnauthorized(unauthorized(connected.fake)).catch((error: unknown) => error);
+    connected.clock.setTo(60_000);
+    const pastItsEnd = await source.token().catch((error: unknown) => error);
+    failing.still = false;
+    connected.clock.setTo(75_000);
+    const renewedOnceTheClaimEnds = await source.token();
+
+    expect(failed).toMatchObject({ message: 'The token service is down for a moment' });
+    expect(whileItLasts).toBe(connected.first.access_token);
+    expect([refused, pastItsEnd]).toEqual([failed, failed]);
+    expect(timer.waits()).toEqual([]);
+    expect(connected.row.claims()).toEqual([45_000, 45_000]);
+    expect(renewedOnceTheClaimEnds).not.toBe(connected.first.access_token);
   });
 });
 

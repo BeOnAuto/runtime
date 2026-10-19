@@ -16,7 +16,7 @@ import {
   type JsonSchema,
   type SchemaReading,
 } from '../overview/schema-reading.ts';
-import { kindsOf, mostNamedValues } from '../overview/schema-words.ts';
+import { kindsOf } from '../overview/schema-words.ts';
 import type { OutputShape } from '../shapes/output-shape.ts';
 import { shapeNouns } from '../shapes/shape-words.ts';
 import { fieldMeaning, meaningOfDescription, type Listing } from './field-meanings.ts';
@@ -71,6 +71,8 @@ interface ToldField {
 
 export const mostToldFields = 8;
 
+const mostEnumerated = 12;
+
 function topOf(schema: JsonSchema): JsonSchema {
   return resolvedSchema(schema, { root: schema, depth: 0, expanded: false }).schema;
 }
@@ -86,7 +88,7 @@ function fieldsOf(schema: JsonSchema): readonly ToldField[] {
 }
 
 export function enumerationWords(choices: Schema.JsonArray): Phrases {
-  const shown = choices.slice(0, mostNamedValues).map((value) => [valueText(value)]);
+  const shown = choices.slice(0, mostEnumerated).map((value) => [valueText(value)]);
   const more = choices.length - shown.length;
   return [
     'one of ',
@@ -127,23 +129,13 @@ function fieldsInWords(fields: readonly ToldField[], telling: Telling): Phrases 
   );
 }
 
-function valueSaid(schema: JsonSchema | undefined): Phrases | undefined {
-  const choices = schema === undefined ? undefined : choicesOf(topOf(schema));
-  if (choices !== undefined) {
-    return enumerationWords(choices);
-  }
-  const kind = kindInWords(schema);
-  return kind === anyValue.one ? undefined : [kind];
-}
-
 export function givenWords(schema?: JsonSchema): Phrases {
   const fields = schema === undefined ? [] : fieldsOf(schema);
   if (fields.length > 0) {
     return fieldsInWords(fields, 'given');
   }
   const described = schema === undefined ? undefined : textOf(topOf(schema), 'description');
-  const meaning = described === undefined ? undefined : meaningOfDescription(described, 'alone');
-  return meaning === undefined ? (valueSaid(schema) ?? ['any input']) : [meaning];
+  return [(described === undefined ? undefined : meaningOfDescription(described, 'alone')) ?? 'any input'];
 }
 
 export function givenClause(schema?: JsonSchema): Phrases {
@@ -158,5 +150,6 @@ export function answeredWords(schema?: JsonSchema, shape?: OutputShape): Phrases
   if (fields.length > 0) {
     return fieldsInWords(fields, 'answered');
   }
-  return valueSaid(schema) ?? [anyValue.one];
+  const choices = schema === undefined ? undefined : choicesOf(topOf(schema));
+  return choices === undefined ? [kindInWords(schema)] : enumerationWords(choices);
 }
