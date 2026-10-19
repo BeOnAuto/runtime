@@ -1,0 +1,30 @@
+{
+  "type": "openapi",
+  "sources": ["https://d1y2lf8k3vrkfu.cloudfront.net/openapi/en-us/dest/AmazonAdsAPIALLMerged_prod_3p.json"],
+  "authorization_server": "https://lwa.amazon.com/.well-known/oauth-authorization-server",
+  "info": {
+    "title": "Amazon Ads campaigns, accounts, reports and recommendations",
+    "version": "3.0",
+    "description": "Eleven operations of the Amazon Ads API, kept whole from the vendor's unified OpenAPI document, with an oauth2 scheme in place of the vendor's."
+  },
+  "operations": [
+    "QueryAdvertiserAccount",
+    "QueryCampaign",
+    "QueryAdGroup",
+    "QueryAd",
+    "QueryTarget",
+    "UpdateCampaign",
+    "UpdateAdGroup",
+    "UpdateTarget",
+    "AdsApiv1CreateReport",
+    "AdsApiv1RetrieveReport",
+    "QueryRecommendation"
+  ],
+  "scheme": {
+    "name": "amazon_ads_oauth",
+    "scopes_from_scheme": "OAuth2",
+    "leaving_out": [],
+    "because": "Each operation's own requirement of the vendor's scheme lists the scope it needs, which the entry's way of consent asks for"
+  },
+  "keeps_responses": true
+}

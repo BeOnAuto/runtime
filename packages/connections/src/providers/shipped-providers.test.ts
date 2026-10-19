@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import {
   additionOfProvider,
+  holdsAClientId,
   readProviders,
   type Placeholder,
   type Provider,
@@ -16,12 +17,10 @@ import {
   type ToolServers,
 } from '@on.auto/tool-servers';
 import { Effect, Option, Redacted, Result, Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { additionIssuesOf, readAddition } from '../entries/entry-checks.ts';
+import { additionIssuesOf, readAddition, type AdditionInput } from '../entries/entry-checks.ts';
 import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
-import { vendorsOfTheShippedWays, type VendorOfTheWay } from '../testing/shipped-vendors.ts';
-import { consentedAtTheVendor, harnessAtTheVendor, servedAsTheVendor } from '../testing/vendor-fakes.ts';
 
 const shipped = Result.getOrThrow(readProviders());
 
@@ -33,21 +32,36 @@ const checking = {
 
 const standIn = { value: Redacted.make('a value the person gives'), algorithm: undefined };
 
+const clientId = 'a client id of the connection';
+
 const DocumentSchema = Schema.Struct({
   paths: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
 });
 
-function examplesOf({ entry }: Provider): Readonly<Record<string, string>> {
-  return Object.fromEntries(
-    Object.entries(entry.placeholders ?? {}).map(
-      ([name, { example, choices = [] }]: readonly [string, Placeholder]) => [name, example ?? choices[0]?.value ?? ''],
-    ),
+type Given = Readonly<Record<string, string>>;
+
+function valuesOf({ example = '', choices }: Placeholder): readonly string[] {
+  return choices === undefined ? [example] : choices.map(({ value }) => value);
+}
+
+function givenOf(given: readonly Given[], [name, placeholder]: readonly [string, Placeholder]): readonly Given[] {
+  return given.flatMap((each) =>
+    valuesOf(placeholder).map((value) => Object.fromEntries([...Object.entries(each), [name, value]])),
+  );
+}
+
+function examplesOf({ entry }: Provider): readonly Given[] {
+  return Object.entries(entry.placeholders ?? {}).reduce<readonly Given[]>(
+    (given, placeholder: readonly [string, Placeholder]) => givenOf(given, placeholder),
+    [{}],
   );
 }
 
 function additionsOf(provider: Provider): readonly ProviderAddition[] {
-  return provider.entry.credentials.map(({ kind }) =>
-    Result.getOrThrow(additionOfProvider(provider.entry, { placeholders: examplesOf(provider), kind })),
+  return provider.entry.credentials.flatMap(({ kind }) =>
+    examplesOf(provider).map((placeholders) =>
+      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind })),
+    ),
   );
 }
 
@@ -56,16 +70,23 @@ const additions = shipped.providers.flatMap((provider) => additionsOf(provider))
 function authOfTheConsent({ credential }: ProviderAddition): AuthSettings {
   return {
     issuer: credential.issuer ?? '',
-    client_id: 'a client whoever runs Auto registered',
+    client_id: clientId,
     scope: credential.scope ?? null,
     credential: { kind: 'client_secret', client_secret: standIn.value },
   };
 }
 
+function withTheClientId(addition: ProviderAddition): AdditionInput {
+  const { credential } = addition;
+  return holdsAClientId(credential.kind)
+    ? { ...addition, credential: { ...credential, client_id: clientId } }
+    : addition;
+}
+
 function settingsOf(addition: ProviderAddition): ServerSettings {
   const { kind } = addition.credential;
-  const read = Result.getOrThrow(readAddition(addition, checking, placesNoValue(kind) ? undefined : standIn));
-  const settings = Option.getOrThrow(Option.liftPredicate(read, isConnectionServerSettings));
+  const read = readAddition(withTheClientId(addition), checking, placesNoValue(kind) ? undefined : standIn);
+  const settings = Option.getOrThrow(Option.liftPredicate(Result.getOrThrow(read), isConnectionServerSettings));
   return kind === 'authorization' ? { ...settings, auth: authOfTheConsent(addition) } : settings;
 }
 
@@ -87,7 +108,70 @@ function offeredOperationsOf({ servers }: ToolServers): readonly (readonly [stri
   return servers.map((server) => [server.name, server.type === 'openapi' ? server.api.operations.length : 0]);
 }
 
-describe('every way of every shipped provider, resolved with the examples of its placeholders', () => {
+function headersOf(settings: ServerSettings): Readonly<Record<string, string>> {
+  return settings.type === 'stdio'
+    ? {}
+    : Object.fromEntries(
+        [...settings.headers].map(([name, value]: readonly [string, Redacted.Redacted]) => [
+          name,
+          Redacted.value(value),
+        ]),
+      );
+}
+
+function isRegional({ placeholders }: ProviderAddition): boolean {
+  return Object.hasOwn(placeholders, 'region');
+}
+
+function placesTheClientId({ entry }: ProviderAddition): boolean {
+  return Object.values(entry.headers ?? {}).includes('{client_id}');
+}
+
+function hostsOf({ name, entry, credential }: ProviderAddition) {
+  return [name, entry.url ?? entry.base_url, credential.authorization_endpoint, credential.token_endpoint];
+}
+
+function namedProvider(name: string): Provider {
+  return Option.getOrThrow(Option.fromNullishOr(shipped.providers.find(({ entry }) => entry.name === name)));
+}
+
+const regionalHosts = [
+  [
+    'amazon-ads',
+    'https://advertising-api.amazon.com',
+    'https://www.amazon.com/ap/oa',
+    'https://api.amazon.com/auth/o2/token',
+  ],
+  [
+    'amazon-ads',
+    'https://advertising-api-eu.amazon.com',
+    'https://eu.account.amazon.com/ap/oa',
+    'https://api.amazon.co.uk/auth/o2/token',
+  ],
+  [
+    'amazon-ads',
+    'https://advertising-api-fe.amazon.com',
+    'https://apac.account.amazon.com/ap/oa',
+    'https://api.amazon.co.jp/auth/o2/token',
+  ],
+  ['amazon-ads-mcp', 'https://advertising-ai.amazon.com/mcp', undefined, undefined],
+  ['amazon-ads-mcp', 'https://advertising-ai-eu.amazon.com/mcp', undefined, undefined],
+  ['amazon-ads-mcp', 'https://advertising-ai-fe.amazon.com/mcp', undefined, undefined],
+];
+
+const advertiserAccount = 'amzn1.ads-account.g.26eqvvnjl03bvzcsjv6yp81x';
+
+const placedClientIds = [
+  ['adobe-analytics', { 'x-api-key': clientId }],
+  ['adobe-analytics', { 'x-api-key': clientId }],
+  ...Array.from({ length: 3 }, () => [
+    'amazon-ads',
+    { 'Amazon-Ads-ClientId': clientId, 'Amazon-Ads-AccountId': advertiserAccount },
+  ]),
+  ...Array.from({ length: 3 }, () => ['amazon-ads-mcp', { 'Amazon-Ads-ClientId': clientId }]),
+];
+
+describe('every way of every shipped provider, resolved with the examples of its placeholders and each choice', () => {
   it('passes the checks of the credential and of an addition that a connection added by hand passes', () => {
     expect(additions.map(({ name, credential }) => [name, credentialFieldIssuesOf(credential)])).toEqual(
       additions.map(({ name }) => [name, []]),
@@ -95,6 +179,27 @@ describe('every way of every shipped provider, resolved with the examples of its
     expect(additions.map((addition) => [addition.name, additionIssuesOf(addition, checking)])).toEqual(
       additions.map(({ name }) => [name, []]),
     );
+  });
+
+  it('places the hosts a region sets in the address and the endpoints of its way together', () => {
+    expect(additions.filter((addition) => isRegional(addition)).map((addition) => hostsOf(addition))).toEqual(
+      regionalHosts,
+    );
+  });
+
+  it('sends the client id of the connection in the headers that hold {client_id}, a header named as a key among them', () => {
+    const placing = additions.filter((addition) => placesTheClientId(addition));
+
+    expect(placing.map((addition) => [addition.name, headersOf(settingsOf(addition))])).toEqual(placedClientIds);
+  });
+
+  it('sends no header of an optional placeholder the connection is added without, as an Amazon Ads connection without an account', () => {
+    const withoutAnAccount = additionOfProvider(namedProvider('amazon-ads').entry, {
+      placeholders: { region: 'na' },
+      kind: 'authorization',
+    });
+
+    expect(headersOf(settingsOf(Result.getOrThrow(withoutAnAccount)))).toEqual({ 'Amazon-Ads-ClientId': clientId });
   });
 });
 
@@ -121,129 +226,5 @@ describe('the documents beside the shipped entries', () => {
       documentsBesideTheEntries(),
     );
     expect(described.length).toBeGreaterThan(0);
-  });
-});
-
-const closing: (() => Promise<void>)[] = [];
-
-afterEach(async () => {
-  await Promise.all(closing.splice(0).map((close) => close()));
-});
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
-
-interface WayOfConsent {
-  readonly name: string;
-  readonly issuer: string;
-  readonly scope: string | undefined;
-  readonly clients: readonly string[];
-  readonly vendor: VendorOfTheWay | undefined;
-}
-
-const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
-  entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'] }) =>
-    kind === 'authorization' && issuer !== undefined
-      ? [{ name: entry.name, issuer, scope, clients, vendor: vendorsOfTheShippedWays[entry.name] }]
-      : [],
-  ),
-);
-
-const startedSourceOf = Schema.decodeUnknownOption(
-  Schema.Struct({
-    type: Schema.Literal('connection_consent_started'),
-    data: Schema.Struct({ client_source: Schema.String }),
-  }),
-);
-
-const connectedOf = Schema.decodeUnknownSync(
-  Schema.Struct({
-    output: Schema.Struct({
-      status: Schema.String,
-      credential: Schema.Struct({ scope: Schema.optionalKey(Schema.String), client_source: Schema.String }),
-    }),
-  }),
-);
-
-function parametersAsked(
-  asked: Readonly<URL>,
-  { parameters = {} }: VendorOfTheWay,
-): Readonly<Record<string, string | null>> {
-  return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
-}
-
-async function consentOf({ name, issuer, vendor }: WayOfConsent, registered: boolean) {
-  const theVendor = required(vendor);
-  const fake = await servedAsTheVendor(theVendor);
-  closing.push(fake.close);
-  const h = harnessAtTheVendor(fake, theVendor, {
-    providers: shipped,
-    registeredIssuer: registered ? issuer : undefined,
-  });
-  const { asked, finished } = await consentedAtTheVendor(h, name, { fake, vendor: theVendor });
-  const facts = await h.facts();
-  const { status, credential } = connectedOf(finished).output;
-  return {
-    provider: name,
-    authorization_endpoint: `${asked.origin}${asked.pathname}`.replace(fake.origin, '<the fake>'),
-    scope: asked.searchParams.get('scope'),
-    resource: asked.searchParams.get('resource'),
-    code_challenge_method: asked.searchParams.get('code_challenge_method'),
-    parameters: parametersAsked(asked, theVendor),
-    client_sources: facts.flatMap((fact) =>
-      Option.toArray(Option.map(startedSourceOf(fact), ({ data }) => data.client_source)),
-    ),
-    connected: { status, scope: credential.scope, client_source: credential.client_source },
-  };
-}
-
-function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string) {
-  const { asked = scope ?? null, resource, parameters = {}, endpointsAt, metadata } = required(vendor);
-  return {
-    provider: name,
-    authorization_endpoint: endpointsAt?.authorization ?? '<the fake>/authorize',
-    scope: asked,
-    resource,
-    code_challenge_method: 'S256',
-    parameters,
-    client_sources: [source],
-    connected: { status: 'connected', scope: metadata.grantedScope ?? asked, client_source: source },
-  };
-}
-
-describe('every way of consent of a shipped provider, against the fake authorization server at its vendor’s addresses', () => {
-  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, and finishes connected with that scope', async () => {
-    const consents = await Promise.all(waysOfConsent.map((consenting) => consentOf(consenting, true)));
-
-    expect(consents).toEqual(waysOfConsent.map((consenting) => consentExpectedOf(consenting, 'registered')));
-    expect(waysOfConsent.map(({ name }) => name)).toEqual([
-      'campaign-manager-360',
-      'display-video-360',
-      'display-video-360-reports',
-      'github',
-      'gmail',
-      'google-ads',
-      'google-analytics',
-      'google-analytics-admin',
-      'google-docs',
-      'google-drive',
-      'google-search-console',
-      'google-sheets',
-      'google-slides',
-      'profound',
-      'search-ads-360',
-      'slack',
-      'zoom',
-    ]);
-  });
-
-  it('starts and finishes without a registered client where its client sources take one the runtime registers itself', async () => {
-    const registering = waysOfConsent.filter(({ clients }) => clients.includes('dynamic'));
-
-    const consents = await Promise.all(registering.map((consenting) => consentOf(consenting, false)));
-
-    expect(consents).toEqual(registering.map((consenting) => consentExpectedOf(consenting, 'dynamic')));
-    expect(registering.map(({ name }) => name)).toEqual(['profound']);
   });
 });

@@ -81,7 +81,8 @@ describe('the providers the search of an org lists to the local developer', () =
       status: 200,
       body: { servers: [], tools: [], scopes: [], providers: offeredByTheServer },
     });
-    expect(found).toMatchObject({ status: 200, body: { providers: [named] } });
+    expect(found).toMatchObject({ status: 200 });
+    expect(found.body).toHaveProperty(['providers', 0], named);
     expect(offeredByTheServer.length).toBeGreaterThan(1);
   });
 

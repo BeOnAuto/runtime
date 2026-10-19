@@ -105,6 +105,10 @@ const allowances: readonly Allowance[] = [
     ],
   },
   { text: 'code_execution', in: ['capabilities/reasoning/src/testing/model-lists.ts'] },
+  {
+    text: 'See the Audio Spec for more info: https://advertising.amazon.com/en-us/resources/ad-specs/audio-ads',
+    in: [`${providerDocuments}/amazon-ads.openapi.json`],
+  },
   { text: 'VAST 4.0 spec', in: [`${providerDocuments}/campaign-manager-360.openapi.json`] },
   ...['ResponsiveDisplayAdControlSpec', 'controlSpec', 'executionLimitSeconds', 'LLM inference'].map((vendorText) => ({
     text: vendorText,

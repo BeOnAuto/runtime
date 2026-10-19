@@ -165,3 +165,65 @@ describe('a translation of parameters and schemas refused', () => {
     ).toThrow('No path the document keeps holds {accountId}, which the translation writes as its value');
   });
 });
+
+const answeredWithAll = { 200: { description: 'The campaigns' } };
+
+const campaignsSource = {
+  openapi: '3.0.0',
+  servers: issuesSource.servers,
+  paths: {
+    '/campaigns': {
+      post: {
+        operationId: 'campaigns',
+        security: [{ ApiKey: [] }, { OAuth2: ['campaigns:read', 'campaigns:admin'] }],
+        responses: answeredWithAll,
+      },
+      get: { operationId: 'campaign', security: [{ OAuth2: ['campaigns:read'] }], responses: answeredWithAll },
+      delete: { operationId: 'uncampaign', responses: answeredWithAll },
+    },
+  },
+};
+
+const schemeOfTheCampaigns = {
+  name: 'campaigns_oauth',
+  leaving_out: [':admin'],
+  because: 'Each operation requires the scheme of the vendor with the scopes it needs',
+};
+
+const fromTheVendorsScheme = { ...schemeOfTheCampaigns, scopes_from_scheme: 'OAuth2' };
+
+function campaignsTranslatedWith(scheme: unknown, operations: readonly string[] = ['campaigns', 'campaign']) {
+  return () =>
+    curatedOpenApiOf(
+      [campaignsSource],
+      decodeTranslation({ ...aboutManifest, operations, scheme, keeps_responses: true }),
+      server,
+    );
+}
+
+describe('the scopes of a translation read from the requirement of a scheme of the vendor', () => {
+  it('are those the operation requires of that scheme but those it leaves out, each a requirement of the scheme it writes', () => {
+    expect(campaignsTranslatedWith(fromTheVendorsScheme)()).toMatchObject({
+      security: [{ campaigns_oauth: [] }],
+      paths: {
+        '/campaigns': {
+          post: { operationId: 'campaigns', security: [{ campaigns_oauth: ['campaigns:read'] }] },
+          get: { operationId: 'campaign', security: [{ campaigns_oauth: ['campaigns:read'] }] },
+        },
+      },
+      components: {
+        securitySchemes: {
+          campaigns_oauth: { flows: { authorizationCode: { scopes: { 'campaigns:read': 'campaigns:read' } } } },
+        },
+      },
+    });
+  });
+
+  it('are refused for an operation that requires no scope of that scheme, and where the scheme names both places or neither', () => {
+    expect(campaignsTranslatedWith(fromTheVendorsScheme, ['uncampaign'])).toThrow(
+      'The operation uncampaign lists no scope in its requirement of the scheme OAuth2 that the translation keeps',
+    );
+    expect(campaignsTranslatedWith({ ...fromTheVendorsScheme, scopes_at: ['x-scopes'] })).toThrow('Expected never');
+    expect(campaignsTranslatedWith(schemeOfTheCampaigns)).toThrow('Missing key');
+  });
+});

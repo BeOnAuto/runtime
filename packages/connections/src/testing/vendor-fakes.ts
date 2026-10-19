@@ -9,7 +9,7 @@ import type { Harness, HarnessOptions } from './harness.ts';
 interface EndpointsAt {
   readonly authorization: string;
   readonly token: string;
-  readonly revocation: string;
+  readonly revocation?: string;
 }
 
 export interface Vendor {
@@ -28,6 +28,11 @@ export interface TheVendor {
 export interface AtTheVendor {
   readonly providers: NonNullable<HarnessOptions['providers']>;
   readonly registeredIssuer: string | undefined;
+}
+
+export interface ProviderAsked {
+  readonly provider: string;
+  readonly placeholders: Readonly<Record<string, string>>;
 }
 
 export interface ConsentedAtTheVendor {
@@ -97,10 +102,10 @@ function authorizedAtTheFake(asked: Readonly<URL>, { fake, vendor }: TheVendor):
 
 export async function consentedAtTheVendor(
   h: Harness,
-  provider: string,
+  { provider, placeholders }: ProviderAsked,
   theVendor: TheVendor,
 ): Promise<ConsentedAtTheVendor> {
-  const link = await added(h, { provider });
+  const link = await added(h, { provider, placeholders, credential: { kind: 'authorization' } });
   const asked = new URL((await startedAt(h, link)).url);
   const finished = await finishing(h, link, await consentedAt(authorizedAtTheFake(asked, theVendor)));
   return { asked, finished };

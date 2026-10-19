@@ -1,0 +1,41 @@
+{
+  "type": "swagger",
+  "sources": [
+    {
+      "address": "https://raw.githubusercontent.com/AdobeDocs/analytics-2.0-apis/main/static/swagger.json",
+      "operations": [
+        "findCalculatedMetrics",
+        "getDateRanges_1",
+        "dimensions_getDimensions",
+        "getMetrics",
+        "projects_getProjects",
+        "runReport",
+        "runTopItemReport",
+        "segments_getSegments",
+        "segments_createSegment",
+        "segments_getSegment",
+        "getCurrentUser"
+      ]
+    },
+    {
+      "address": "https://raw.githubusercontent.com/AdobeDocs/analytics-2.0-apis/main/static/report-suites.json",
+      "operations": ["getSuites_1"]
+    }
+  ],
+  "authorization_server": "https://ims-na1.adobelogin.com/.well-known/oauth-authorization-server",
+  "info": {
+    "title": "Adobe Analytics 2.0 API",
+    "version": "2.0",
+    "description": "Twelve operations of the Adobe Analytics 2.0 API, converted from the vendor's Swagger 2.0 and report-suites OpenAPI documents, which name no scheme, with an oauth2 scheme at the endpoints of Adobe's authorization server. Every path is relative to https://analytics.adobe.io/api/{globalCompanyId}, which the entry gives as base_url; every call also carries x-api-key with the client id, which the entry sends."
+  },
+  "path_prefix": {
+    "prefix": "/{globalCompanyId}",
+    "because": "The entry gives the company in its base_url, https://analytics.adobe.io/api/{global_company_id}, so no operation asks for it"
+  },
+  "headers_left_out": {
+    "names": ["Authorization", "x-api-key"],
+    "because": "The runtime sends the token in Authorization, and the entry sends x-api-key with the client id of the connection, so neither is a parameter a function gives"
+  },
+  "lists_as_text": "The API reads a list in a query as its values comma-separated, which the runtime sends from a string and not from a list",
+  "boolean_values_left_out": "The vendor lists 'true' as the one value of some boolean parameters, which no boolean is"
+}

@@ -1,17 +1,17 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { listed } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { CutSchema } from './discovery-cuts.ts';
 import { OpenApiTranslationSchema } from './openapi-operations.ts';
+import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
 import { curatedOpenApiOf } from './translate-openapi.ts';
 
-export const documentsBesideTheEntries = fileURLToPath(new URL('../entries/documents/', import.meta.url));
+export const documentsBesideTheEntries = join(import.meta.dirname, '../entries/documents/');
 
 const AuthorizationServerAddressSchema = Schema.String.annotate({
   description: 'The address of the metadata of the authorization server whose endpoints the oauth2 scheme names',
@@ -45,7 +45,17 @@ const OpenApiManifestSchema = Schema.Struct({
 
 type OpenApiManifest = typeof OpenApiManifestSchema.Type;
 
-const DocumentManifestSchema = Schema.Union([DiscoveryManifestSchema, OpenApiManifestSchema]);
+const SwaggerManifestSchema = Schema.Struct({
+  type: Schema.Literal('swagger').annotate({
+    description: 'A document converted from Swagger 2.0 documents and the OpenAPI 3 documents beside them',
+  }),
+  authorization_server: AuthorizationServerAddressSchema,
+  ...SwaggerConversionSchema.fields,
+});
+
+type SwaggerManifest = typeof SwaggerManifestSchema.Type;
+
+const DocumentManifestSchema = Schema.Union([DiscoveryManifestSchema, OpenApiManifestSchema, SwaggerManifestSchema]);
 
 export type DocumentManifest = typeof DocumentManifestSchema.Type;
 
@@ -137,26 +147,53 @@ async function discoveryTranslated(
   ];
 }
 
-async function openApiTranslated(
+function fetchedAt(
   { name, given }: Asked,
-  manifest: OpenApiManifest,
-  { folder, fetching }: Translating,
-): Promise<readonly Written[]> {
+  addresses: readonly string[],
+  { fetching }: Translating,
+): Promise<readonly unknown[]> {
   if (given !== undefined) {
     throw new Error(
       `The manifest ${name} is of OpenAPI documents, which the command fetches at the addresses it names, so no file is given in place of one. ${usage}`,
     );
   }
-  const documents = await Promise.all(manifest.sources.map((address) => fetchedJson(address, fetching)));
-  const metadata = await fetchedJson(manifest.authorization_server, fetching);
-  return [{ path: documentPathOf(folder, name), text: jsonText(curatedOpenApiOf(documents, manifest, metadata)) }];
+  return Promise.all(addresses.map((address) => fetchedJson(address, fetching)));
+}
+
+async function openApiTranslated(
+  asked: Asked,
+  manifest: OpenApiManifest,
+  translating: Translating,
+): Promise<readonly Written[]> {
+  const documents = await fetchedAt(asked, manifest.sources, translating);
+  const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
+  const document = curatedOpenApiOf(documents, manifest, metadata);
+  return [{ path: documentPathOf(translating.folder, asked.name), text: jsonText(document) }];
+}
+
+async function swaggerConverted(
+  asked: Asked,
+  manifest: SwaggerManifest,
+  translating: Translating,
+): Promise<readonly Written[]> {
+  const documents = await fetchedAt(
+    asked,
+    manifest.sources.map(({ address }) => address),
+    translating,
+  );
+  const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
+  const document = convertedDocumentOf(documents, manifest, metadata);
+  return [{ path: documentPathOf(translating.folder, asked.name), text: jsonText(document) }];
 }
 
 function translatedOne(asked: Asked, translating: Translating): Promise<readonly Written[]> {
   const manifest = manifestIn(translating.folder, asked.name);
-  return manifest.type === 'discovery'
-    ? discoveryTranslated(asked, manifest, translating)
-    : openApiTranslated(asked, manifest, translating);
+  if (manifest.type === 'discovery') {
+    return discoveryTranslated(asked, manifest, translating);
+  }
+  return manifest.type === 'openapi'
+    ? openApiTranslated(asked, manifest, translating)
+    : swaggerConverted(asked, manifest, translating);
 }
 
 export async function translatedDocuments(

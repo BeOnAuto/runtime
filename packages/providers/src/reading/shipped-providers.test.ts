@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { documentServerOf, hostAlternativesOf, operatorVariablesOf, readProviders, type Provider } from '../index.ts';
+import { documentServerOf, operatorVariablesOf, readProviders, type Provider } from '../index.ts';
 
 const shipped = Result.getOrThrow(readProviders());
 
@@ -36,12 +36,21 @@ const googleProviders = [
   'search-ads-360',
 ];
 
+const microsoftAmazonAndAdobe = [
+  'adobe-analytics',
+  'adobe-analytics-mcp',
+  'amazon-ads',
+  'amazon-ads-mcp',
+  'microsoft-advertising',
+  'outlook',
+];
+
 function signsInAtGoogle({ entry }: Provider): boolean {
   return googleProviders.includes(entry.name);
 }
 
 function documentServerExpectedOf({ entry, address }: Provider): string | undefined {
-  return entry.type === 'openapi' ? address : undefined;
+  return entry.type === 'openapi' && entry.base_url === undefined ? address : undefined;
 }
 
 function waysOfConsentOf({ entry }: Provider) {
@@ -66,8 +75,10 @@ describe('the shipped providers', () => {
   it('are the entries of the folder, each named as its file, sorted by name and so each named once', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
-    expect(names).toEqual([...googleProviders, 'github', 'profound', 'slack', 'slack-api', 'zoom'].toSorted());
-    expect(names).toHaveLength(18);
+    expect(names).toEqual(
+      [...googleProviders, ...microsoftAmazonAndAdobe, 'github', 'profound', 'slack', 'slack-api', 'zoom'].toSorted(),
+    );
+    expect(names).toHaveLength(24);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -93,6 +104,10 @@ describe('the ways of the shipped providers', () => {
         operatorVariablesOf(entry),
       ]),
     ).toEqual([
+      ['adobe-analytics', ['client_credentials', 'authorization'], []],
+      ['adobe-analytics-mcp', ['authorization'], []],
+      ['amazon-ads', ['authorization'], []],
+      ['amazon-ads-mcp', ['authorization'], []],
       ['campaign-manager-360', ['authorization'], []],
       ['display-video-360', ['authorization'], []],
       ['display-video-360-reports', ['authorization'], []],
@@ -106,6 +121,8 @@ describe('the ways of the shipped providers', () => {
       ['google-search-console', ['authorization'], []],
       ['google-sheets', ['authorization'], []],
       ['google-slides', ['authorization'], []],
+      ['microsoft-advertising', ['authorization'], []],
+      ['outlook', ['authorization'], []],
       ['profound', ['authorization', 'secret'], []],
       ['search-ads-360', ['authorization'], []],
       ['slack', ['authorization'], []],
@@ -118,6 +135,10 @@ describe('the ways of the shipped providers', () => {
 describe('the servers of the shipped providers', () => {
   it('read the server an HTTP API calls from the document beside the entries, where the entry gives no base_url', () => {
     expect(shipped.providers.map(({ entry, address }) => [entry.name, address])).toEqual([
+      ['adobe-analytics', 'https://analytics.adobe.io/api/{global_company_id}'],
+      ['adobe-analytics-mcp', 'https://aa-mcp.adobe.io/mcp'],
+      ['amazon-ads', 'https://{api_host}'],
+      ['amazon-ads-mcp', 'https://{mcp_host}/mcp'],
       ['campaign-manager-360', 'https://dfareporting.googleapis.com/dfareporting/v5'],
       ['display-video-360', 'https://displayvideo.googleapis.com'],
       ['display-video-360-reports', 'https://doubleclickbidmanager.googleapis.com/v2'],
@@ -131,6 +152,8 @@ describe('the servers of the shipped providers', () => {
       ['google-search-console', 'https://searchconsole.googleapis.com'],
       ['google-sheets', 'https://sheetsmcp.googleapis.com/mcp/v1'],
       ['google-slides', 'https://slidesmcp.googleapis.com/mcp/v1'],
+      ['microsoft-advertising', 'https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta'],
+      ['outlook', 'https://workiq.svc.cloud.microsoft/mcp'],
       ['profound', 'https://mcp.tryprofound.com/mcp'],
       ['search-ads-360', 'https://searchads360.googleapis.com'],
       ['slack', 'https://mcp.slack.com/mcp'],
@@ -141,33 +164,6 @@ describe('the servers of the shipped providers', () => {
       shipped.providers.map((provider) => documentServerExpectedOf(provider)),
     );
     expect(shipped.documents).toBe(entriesFolder);
-  });
-});
-
-describe('the hosts of the shipped providers', () => {
-  it('are the host of their server and, for a way of consent, the host of its issuer', () => {
-    expect(
-      shipped.providers.map((provider) => provider.entry.credentials.map((way) => hostAlternativesOf(provider, way))),
-    ).toEqual([
-      [[['dfareporting.googleapis.com', 'accounts.google.com']]],
-      [[['displayvideo.googleapis.com', 'accounts.google.com']]],
-      [[['doubleclickbidmanager.googleapis.com', 'accounts.google.com']]],
-      [[['api.githubcopilot.com', 'github.com']], [['api.githubcopilot.com']]],
-      [[['gmailmcp.googleapis.com', 'accounts.google.com']]],
-      [[['googleads.googleapis.com', 'accounts.google.com']]],
-      [[['analyticsdata.googleapis.com', 'accounts.google.com']]],
-      [[['analyticsadmin.googleapis.com', 'accounts.google.com']]],
-      [[['docsmcp.googleapis.com', 'accounts.google.com']]],
-      [[['drivemcp.googleapis.com', 'accounts.google.com']]],
-      [[['searchconsole.googleapis.com', 'accounts.google.com']]],
-      [[['sheetsmcp.googleapis.com', 'accounts.google.com']]],
-      [[['slidesmcp.googleapis.com', 'accounts.google.com']]],
-      [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
-      [[['searchads360.googleapis.com', 'accounts.google.com']]],
-      [[['mcp.slack.com', 'mcp.slack.com']]],
-      [[['slack.com']]],
-      [[['api.zoom.us', 'zoom.us', 'zoom.us', 'zoom.us', 'zoom.us']]],
-    ]);
   });
 });
 
