@@ -70,7 +70,7 @@ describe('the size of an HTTP answer', () => {
 
     const answer = observed.noteAnswered(JSON.stringify(call), new Response('fives'));
 
-    await expect(answer.text()).rejects.toThrow('The tool server answered more than the 4 bytes a call may take');
+    await expect(answer.text()).rejects.toThrow('The answer takes more than the 4 bytes it may take');
     expect(stopped).toEqual(['stopped']);
     expect(observed.take(marker)).toMatchObject({ response: { tooLarge: true } });
   });
@@ -92,7 +92,7 @@ describe('the size of an HTTP answer to one of several requests', () => {
 
     await expect(
       observed.noteAnswered(JSON.stringify({ ...call, id: 8 }), new Response('fives')).text(),
-    ).rejects.toThrow('The tool server answered more than the 4 bytes a call may take');
+    ).rejects.toThrow('The answer takes more than the 4 bytes it may take');
     expect(stopped).toEqual(['second']);
   });
 
@@ -100,7 +100,7 @@ describe('the size of an HTTP answer to one of several requests', () => {
     const observed = observations(null, 4);
 
     await expect(observed.noteAnswered(null, new Response('fives')).text()).rejects.toThrow(
-      'The tool server answered more than the 4 bytes a call may take',
+      'The answer takes more than the 4 bytes it may take',
     );
     expect(observed.noteAnswered(null, new Response(null, { status: 202 })).status).toBe(202);
   });

@@ -1,12 +1,16 @@
-import type { FetchLike } from '@modelcontextprotocol/client';
+import { Data } from 'effect';
 
-import { HostRefused } from '../clients/server-failures.ts';
+import type { OutboundFetch } from '../user-agent/user-agent-fetch.ts';
 
 export type Reaches = (url: string) => string | undefined;
 
+export class HostRefused extends Data.TaggedError('host_refused')<{ readonly rule: string }> {}
+
+type Sending = (url: string, init: Readonly<{ redirect: 'manual' }>) => Promise<Response>;
+
 const unfollowed = { redirect: 'manual' } as const;
 
-export function fetchWithin(fetch: FetchLike, reaches: Reaches): FetchLike {
+export function fetchWithin(fetch: Sending, reaches: Reaches): OutboundFetch {
   return (...[url, init]: readonly [unknown, unknown?]) => {
     const address = String(url);
     const refusal = reaches(address);

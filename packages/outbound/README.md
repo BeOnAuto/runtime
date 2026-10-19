@@ -14,6 +14,10 @@ How the server calls systems on the internet. It walks the causes of a failed ca
 
 `withUserAgent(fetch, userAgent)` (`src/user-agent/user-agent-fetch.ts`) sends each request through the `fetch` it wraps with `User-Agent` set to `userAgent` where the request sets none, in whatever case the request writes the name, so a `User-Agent` the caller writes is the one sent. It reads the request's headers as a `Headers`, a list of pairs of strings or an object of strings, and hands headers of any other shape to the `fetch` beneath as they are, which sends its own (`node` for Node's, measured with Node 26.10.0). The server wraps `globalThis.fetch` once with `auto-runtime/<version>`, the name of the runtime's command and the version of the release it announces to an MCP server in `clientInfo`, since a product token holds no `@` or `/` in its name, and gives that fetch to the tool servers alone (`packages/server/src/composition/served-tool-access.ts`); every other client of the server sends what its own client sends, the model providers, the object store, the exporters of telemetry, the requests to the identity issuer and those of prediction functions among them.
 
+## Where a fetch reaches, and how much it reads
+
+`fetchWithin(fetch, reaches)` (`src/reach/fetch-within.ts`) sends each request through `fetch`, by its address as a string and following no redirect, once `reaches` allows the address, and fails with `HostRefused` and the rule `reaches` answers otherwise, sending nothing; a caller that follows a redirect sends each hop through the same fetch, so each is checked again. `boundedAnswerOf(response, mostBytes, tooLarge)` (`src/reach/bounded-answer.ts`) is the answer with its body counted as it is read: past `mostBytes` it calls `tooLarge` and fails the body, `The answer takes more than the <mostBytes> bytes it may take`. The tool-servers package holds a connection's requests within the hosts its rules allow and the answers of a tool server within the bounds of a call with them.
+
 ## AWS clients
 
 `proxySettingsOf(environment)`, in the main entry, reads `ProxySettings`, `{ enabled, environment }`: the switch, `NODE_USE_ENV_PROXY=1`, and the proxy's variables that are set, `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` in either case. The server reads them once and hands them to every client it makes, the model providers' and the object store's.
@@ -24,4 +28,4 @@ How the server calls systems on the internet. It walks the causes of a failed ca
 
 ## Source
 
-`src/causes` holds the walk of a failure's causes, `src/certificates` the classification, `src/user-agent` the `User-Agent` of a request, `src/proxy` the settings of the environment proxy, and `src/aws` the settings of AWS clients.
+`src/causes` holds the walk of a failure's causes, `src/certificates` the classification, `src/user-agent` the `User-Agent` of a request, `src/reach` the fetch held within the hosts it may reach and the answer read within a bound, `src/proxy` the settings of the environment proxy, and `src/aws` the settings of AWS clients.

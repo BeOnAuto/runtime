@@ -1,6 +1,5 @@
 import { INVALID_PARAMS, ProtocolError, SdkError, SdkErrorCode, SdkHttpError } from '@modelcontextprotocol/client';
-import { causesOf, codesOf, isUntrustedCertificate } from '@on.auto/outbound';
-import { Data } from 'effect';
+import { causesOf, codesOf, HostRefused, isUntrustedCertificate } from '@on.auto/outbound';
 
 import { AnsweredStatus } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
@@ -47,8 +46,6 @@ const httpKinds: ReadonlyMap<number, FailureKind> = new Map([
   [404, 'forgotten'],
   [429, 'rate_limited'],
 ]);
-
-export class HostRefused extends Data.TaggedError('host_refused')<{ readonly rule: string }> {}
 
 function isHostRefused(cause: object): cause is HostRefused {
   return cause instanceof HostRefused;

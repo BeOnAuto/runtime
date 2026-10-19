@@ -1,6 +1,6 @@
 import { Predicate } from 'effect';
 
-type OutboundFetch = (url: unknown, init?: unknown) => Promise<Response>;
+export type OutboundFetch = (url: unknown, init?: unknown) => Promise<Response>;
 
 type HeadersInit = NonNullable<ConstructorParameters<typeof Headers>[0]>;
 

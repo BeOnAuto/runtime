@@ -1,4 +1,5 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
+import { fetchWithin } from '@on.auto/outbound';
 import { Predicate, Result } from 'effect';
 
 import type { LinkOptions } from '../clients/link-openers.ts';
@@ -6,7 +7,6 @@ import { serverLink } from '../clients/server-links.ts';
 import type { Describing, LinkedServerSettings } from '../openapi/described-api.ts';
 import type { Linking } from './connection-links.ts';
 import type { ConnectionServer, ConnectionServerSettings } from './connection-source.ts';
-import { fetchWithin } from './fetch-within.ts';
 import { serverFailed } from './server-refusals.ts';
 
 export interface ConnectionLinking {
