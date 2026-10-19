@@ -549,27 +549,23 @@ The run ends `succeeded` with the answer, such as `{"verdict": "approve"}`, as i
 
 ## The overview
 
-`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read Liquid or YAML. Auto Studio shows it before the document. It opens with the `description`, or says the function has none yet, then the `about` as it is written.
+`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read Liquid or YAML. Auto Studio shows it before the document. It opens with the `description`, as a sentence, or says the function has none yet, then the `about` as it is written. It then tells what happens, and names each field by its meaning: the first clause of the field's `description`, such as "the month" for `The month, such as April 2026`, where that clause begins with an article or a question word and is short, or else the field's name in words. The technical facts follow under **Details**.
 
-For a function that asks a system, the overview then says:
-
-1. Who it asks: the tool and its server.
-2. What it sends: each field of `input.schema`, with its type and its bounds.
-3. What it reads: the part of the tool's answer that `read` points at, and each field of `output.schema`.
+For a function that asks a system, the overview says in one paragraph what it is given, the server and the tool it asks once per run, and what it answers with: the part of the tool's answer that `read` points at, and its fields. Under Details: each field of `input.schema` and `output.schema` with its type and its bounds, and the call: the tool, its server, `read` and each argument as written.
 
 For a function that asks a person, it says:
 
-1. What it needs: each field of `input.schema`, with its type and its bounds.
-2. Who it asks: `to` and `from` as a person reads them. Each value a template reads, such as `{{ input.owner }}`, appears as its name in bold, **owner**, as in the instructions of a [reasoning function](reasoning-format.md#the-overview).
-3. What it sends: the message, read the same way.
-4. Where: the tool of `deliver`, or the playbook's inbox.
-5. How long it waits: `expires` in words, such as 2 days for `P2D`.
-6. What answer it expects: each field of `output.schema`, or that it is a notification.
-7. For a function that reads replies: the tool it reads them with, and the reply rule in words. That is where in a reply each property of the answer comes from, and the words that mean each value.
+1. For a function that reads replies by their first word, a diagram: the message, the wait, the first word of a reply deciding each value, and the request that nobody answers.
+2. What it is given and whom it sends the message: the meaning of the value `to` reads where `to` is one value, such as `{{ input.owner }}`, `to` itself where it is text, and the party named under Details otherwise.
+3. The message, quoted as the person receives it. Each value it reads is in brackets, by its meaning, such as `[the draft report]` for `{{ input.draft }}`, so the author's own bold and italics stay as written.
+4. How long it waits and how far apart it reads the replies; how a reply gives each property of the answer, such as "a reply whose first word is approve gives the verdict approve"; that a reply that begins with another word is not taken, and the person told how to answer where `tell` says how; and that a request nobody answers by its expiry ends unanswered. A request in the inbox says that whoever may write to the playbook answers it, and a notification that it waits for nothing.
+5. What it answers with: each field of `output.schema`, a field the answer may leave out "when there is one".
+
+Under Details: each field of `input.schema` and `output.schema` with its type and its bounds, or that a notification takes no answer, and where the request goes: `to` and `from`, the tools and servers of `deliver` and `replies`, and `wait` and `expires`, each as written.
 
 Either kind ends with **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
 
-The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences, and give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The campaign to approve`, so the overview can say it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
+The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences, and give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The campaign to approve`, so the overview can name the field by it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
 
 ```yaml
 about: |
@@ -578,7 +574,7 @@ about: |
   and answers with their decision and their note.
 ```
 
-A function without them still has an overview, with the types alone.
+A function without them still has an overview, with the names of its fields alone.
 
 ## Availability
 
