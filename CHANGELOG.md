@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.12.0](https://github.com/BeOnAuto/runtime/compare/v0.11.0...v0.12.0) (2026-10-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connections:** a record says type, a header names its scheme and the page takes the client id ([#240](https://github.com/BeOnAuto/runtime/issues/240))
+
+### Features
+
+* **connections:** a record says type, a header names its scheme and the page takes the client id ([#240](https://github.com/BeOnAuto/runtime/issues/240)) ([1456a96](https://github.com/BeOnAuto/runtime/commit/1456a960d33f6f35c990d21d16f7b0148dc41699))
+* **coordination:** a workflow checks its input against its schema before it starts ([#238](https://github.com/BeOnAuto/runtime/issues/238)) ([8792cc7](https://github.com/BeOnAuto/runtime/commit/8792cc729ec1bda7c5f9832be1e08c2b8773acb4))
+* **definitions:** the overview is kept as data and written at each read ([#245](https://github.com/BeOnAuto/runtime/issues/245)) ([a7a6d61](https://github.com/BeOnAuto/runtime/commit/a7a6d61550b2341f1e652bc79703672cda57af52))
+* **json-schema:** the compiler checks six formats on strings, and refuses any other format ([#237](https://github.com/BeOnAuto/runtime/issues/237)) ([f7a8fa8](https://github.com/BeOnAuto/runtime/commit/f7a8fa87b6fc677657fcff3fe21237d5c50d73be))
+* **providers:** the providers a person may connect, shipped as entries, and add_connection by name ([#243](https://github.com/BeOnAuto/runtime/issues/243)) ([19c4785](https://github.com/BeOnAuto/runtime/commit/19c47859b826b4a1a293112ba261aaf4a97876c4))
+* **server:** functions call through the connections people add ([#231](https://github.com/BeOnAuto/runtime/issues/231)) ([b3a2bad](https://github.com/BeOnAuto/runtime/commit/b3a2baddd9b0ef86e81f3a11c51d3425ffcc54f7))
+* **tool-servers:** search lists the providers a person may connect ([#244](https://github.com/BeOnAuto/runtime/issues/244)) ([69a880f](https://github.com/BeOnAuto/runtime/commit/69a880faadd78d11a188464fb3314f2142287da1))
+
+
+### Bug Fixes
+
+* **definitions:** a prediction run is a function run ([#236](https://github.com/BeOnAuto/runtime/issues/236)) ([d0032ec](https://github.com/BeOnAuto/runtime/commit/d0032ec94025878b4148b342565c8e41a29f6dc6))
+* **tool-servers:** the reader offers what an entry can send, and every request names the runtime ([#241](https://github.com/BeOnAuto/runtime/issues/241)) ([293f5b8](https://github.com/BeOnAuto/runtime/commit/293f5b8266f718a1b4db4cd87ccd21371ce0c41d))
+
 ## [0.11.0](https://github.com/BeOnAuto/runtime/compare/v0.10.0...v0.11.0) (2026-10-16)
 
 
