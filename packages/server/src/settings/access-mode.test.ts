@@ -64,7 +64,7 @@ describe('the access mode of a server on loopback', () => {
 
     expect(served.status).toBe(200);
     expect(served.stderr).toContain(
-      '"message":"Local mode is on: every request is trusted as the local developer, with every permission in every org. Set PUBLIC_URL or API_KEYS on a machine reachable through a proxy"',
+      '"message":"Local mode is on: every request is trusted as the local developer, with every permission in every org. On a machine reachable through a proxy, set PUBLIC_URL or API_KEYS instead, and no ACCESS_MODE"',
     );
     expect(served.stderr).toContain('"level":"WARN"');
   });
@@ -121,7 +121,7 @@ describe('a server beyond loopback with neither PUBLIC_URL nor API_KEYS', () => 
     expect(child.output()).toEqual({
       stdout: '',
       stderr:
-        'Auto Runtime could not start: ReachableWithoutCredentialsError: A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0\n',
+        'Auto Runtime could not start: ReachableWithoutCredentialsError: A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead\n',
     });
   });
 });

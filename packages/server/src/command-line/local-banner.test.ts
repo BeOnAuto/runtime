@@ -45,7 +45,7 @@ describe('the notice that the server is ready', () => {
       '     Docs     https://on.auto/docs/',
       '',
       '  Local mode: anyone on this computer acts as you, with no sign-in.',
-      '  Set PUBLIC_URL=http://localhost:5555 to sign people in.',
+      '  Set PUBLIC_URL=http://localhost:5555, and no ACCESS_MODE, to sign people in.',
       '',
       '  Connect your agent',
       '    Claude Code   claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.9.1 mcp',
@@ -107,7 +107,9 @@ describe('the notice that a server in local mode is ready', () => {
     const lines = readyNoticeOf({ ...ready, port: 6000 }, 24).split('\n');
 
     expect(lines).toContain('  \u001B[2mLocal mode: anyone on this computer acts as you, with no sign-in.\u001B[22m');
-    expect(lines).toContain('  \u001B[2mSet PUBLIC_URL=http://localhost:6000 to sign people in.\u001B[22m');
+    expect(lines).toContain(
+      '  \u001B[2mSet PUBLIC_URL=http://localhost:6000, and no ACCESS_MODE, to sign people in.\u001B[22m',
+    );
   });
 });
 

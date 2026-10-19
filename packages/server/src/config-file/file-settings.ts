@@ -38,6 +38,14 @@ export const fileSettings: readonly FileSetting[] = [
     asJson,
   ),
   fileSetting(
+    'ACCESS_MODE',
+    Schema.Literal('local').annotate({
+      description:
+        'local declares local mode, where every request acts as the local developer with no credential, for a runtime whose port only this computer reaches, such as a container whose port is published on 127.0.0.1 alone. It takes no API_KEYS, and a PUBLIC_URL only on localhost, 127.0.0.1 or [::1], which names the address of the runtime and signs no one in; a runtime that listens beyond the loopback needs that PUBLIC_URL. ACCESS_MODE wins over it',
+    }),
+    (mode) => mode,
+  ),
+  fileSetting(
     'MODEL_GATEWAYS',
     ModelGatewaysSchema.annotate({
       description: 'OpenAI-compatible gateways, each a provider prefix of its own. MODEL_GATEWAYS wins over it',

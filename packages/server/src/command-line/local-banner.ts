@@ -59,7 +59,7 @@ function localModeNotice(url: string, depth: ColorDepth): readonly string[] {
   return [
     '',
     `  ${paint('dim', 'Local mode: anyone on this computer acts as you, with no sign-in.')}`,
-    `  ${paint('dim', `Set PUBLIC_URL=${url} to sign people in.`)}`,
+    `  ${paint('dim', `Set PUBLIC_URL=${url}, and no ACCESS_MODE, to sign people in.`)}`,
   ];
 }
 

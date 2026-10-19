@@ -38,6 +38,8 @@ describe('readSettings', () => {
       allowedOrigins: [],
       apiKeys: undefined,
       identityIssuer: 'https://clerk.on.auto',
+      publicUrl: undefined,
+      accessMode: undefined,
       signIn: undefined,
       studio: { origin: 'https://studio.on.auto', served: false },
       ledger: { store: 'sqlite', file: 'data/ledger.db' },
@@ -93,10 +95,10 @@ const everySetting = {
 
 describe('readSettings given every setting', () => {
   it('reads every setting from the environment it is given', () => {
-    const { models, toolServers, interaction, studio, ...server } = readSettings(everySetting);
+    const { models, toolServers, interaction, studio, accessMode, publicUrl, ...server } = readSettings(everySetting);
 
-    expect([interaction, studio.served]).toEqual([{ mostOpenRequests: 250 }, false]);
-    expect(models.openai).toMatchObject({ configured: true });
+    expect([interaction, studio.served, accessMode]).toEqual([{ mostOpenRequests: 250 }, false, undefined]);
+    expect([models.openai.configured, publicUrl]).toEqual([true, 'https://runtime.example.com']);
     expect(toolServers.servers).toEqual([]);
     expect(server).toEqual({
       host: '127.0.0.1',

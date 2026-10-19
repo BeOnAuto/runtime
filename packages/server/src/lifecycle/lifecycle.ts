@@ -165,7 +165,11 @@ async function started<R>({ settings, authenticator, telemetry, options }: Start
   await runtime.run(logConfigFile(settings.configFile));
   await runtime.run(logTelemetry(settings.telemetry));
   const listening = { port: settings.port };
-  const served = await servedOf(composed, runtime, () => ownOriginOf(settings.host, listening.port));
+  const served = await servedOf(
+    composed,
+    runtime,
+    () => settings.publicUrl ?? ownOriginOf(settings.host, listening.port),
+  );
   const api = apiOf({ settings, authenticator, routes: served.routes, runtime, telemetry, local });
   const server = createHttpServer(api.listener);
   try {

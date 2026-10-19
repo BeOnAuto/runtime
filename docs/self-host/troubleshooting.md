@@ -64,15 +64,16 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 ## The server stops at start, naming `PUBLIC_URL` and `API_KEYS` {#reachable-without-credentials}
 
-**Symptom.** The server stops before it listens, with a `ReachableWithoutCredentialsError`: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0`.
+**Symptom.** The server stops before it listens, with a `ReachableWithoutCredentialsError`: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead`.
 
-**Cause.** The server listens beyond loopback, as the Docker image does on `0.0.0.0`, and neither `PUBLIC_URL` nor `API_KEYS` is set. Anyone who reached it could otherwise act without a credential.
+**Cause.** The server listens beyond loopback, as the Docker image does on `0.0.0.0`, neither `PUBLIC_URL` nor `API_KEYS` is set, and no `ACCESS_MODE=local` declares local mode. Anyone who reached it could otherwise act without a credential.
 
 **Fix.**
 
 - To sign people in, set `PUBLIC_URL`, as [Run with Docker](docker.md) does.
 - For machines and pipelines, set `API_KEYS` ([API keys](security.md#api-keys)).
 - For one person on their own computer, outside a container, set `HOST=127.0.0.1` instead. The server then runs in [local mode](security.md#local-mode).
+- For one person on their own computer in a container whose port Docker publishes on `127.0.0.1` alone, set `ACCESS_MODE=local` and `PUBLIC_URL=http://localhost:5555` ([On your own machine](docker.md#on-your-own-machine)).
 
 ## Error responses
 

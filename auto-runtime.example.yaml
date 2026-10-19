@@ -135,6 +135,12 @@ allowed_origins:
 # studio_origin: https://studio.on.auto
 # serve_studio: true
 
+# Local mode, declared for a runtime whose port only this computer reaches,
+# such as a container whose port Docker publishes on 127.0.0.1 alone; never
+# with a wider publish. It takes no api_keys, and a runtime that listens beyond
+# the loopback needs PUBLIC_URL=http://localhost:5555 beside it.
+# access_mode: local
+
 # The API keys the server accepts, each as pnpm key prints it. With the list
 # set, even empty, local mode is off and every request needs a key, or, where
 # PUBLIC_URL is set, an access token of the Auto identity service.

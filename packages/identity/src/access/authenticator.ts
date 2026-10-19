@@ -1,7 +1,7 @@
 import type { IdentityService, ProtectedResource } from '../identity-service/identity-service.ts';
 import { keyPrefix, type ApiKey } from '../keys/api-key.ts';
 import { verifyKey } from '../keys/verify-key.ts';
-import { accessModeOf, type AccessMode } from './access-mode.ts';
+import { accessModeOf, type AccessMode, type DeclaredAccessMode } from './access-mode.ts';
 import { localDeveloper, principalOf, unexplained, type Authentication } from './principal.ts';
 import { ReachableWithoutCredentialsError } from './reachable-without-credentials-error.ts';
 
@@ -19,6 +19,7 @@ export interface AccessSettings {
   readonly host: string;
   readonly apiKeys: readonly ApiKey[] | undefined;
   readonly identityService?: IdentityService | undefined;
+  readonly accessMode?: DeclaredAccessMode | undefined;
 }
 
 function keyHolderOf(keys: readonly ApiKey[], presented: string | undefined): Authentication {
@@ -57,11 +58,11 @@ function accessOf(mode: AccessMode, { apiKeys, identityService }: AccessSettings
 }
 
 export function authenticatorFor(settings: AccessSettings): Authenticator {
-  const { host, apiKeys, identityService } = settings;
-  const mode = accessModeOf({ host, apiKeys, signsIn: identityService !== undefined });
+  const { host, apiKeys, identityService, accessMode } = settings;
+  const mode = accessModeOf({ host, apiKeys, signsIn: identityService !== undefined, accessMode });
   if (mode === undefined) {
     throw new ReachableWithoutCredentialsError({
-      message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}`,
+      message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead`,
     });
   }
   return accessOf(mode, settings);

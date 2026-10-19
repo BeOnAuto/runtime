@@ -35,11 +35,12 @@ type ServingSettings = Pick<
   | 'signIn'
   | 'apiKeys'
   | 'host'
+  | 'accessMode'
   | 'studio'
 >;
 
-function accessOf({ host, signIn, apiKeys }: ServingSettings): RuntimeAccess {
-  if (accessModeOf({ host, apiKeys, signsIn: signIn !== undefined }) === 'local') {
+function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): RuntimeAccess {
+  if (accessModeOf({ host, apiKeys, signsIn: signIn !== undefined, accessMode }) === 'local') {
     return 'local';
   }
   return signIn === undefined ? 'keys' : 'people';
@@ -50,7 +51,7 @@ function connectionServicesOf(
   secrets: SecretStore,
   ownOrigin: () => string,
 ): ConnectionServices {
-  const { signIn, studio } = settings;
+  const { studio } = settings;
   return {
     secrets,
     policy: settings.connections,
@@ -58,7 +59,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: { studio, runtime: () => signIn?.publicUrl ?? ownOrigin() },
+    pages: { studio, runtime: ownOrigin },
     access: accessOf(settings),
   };
 }

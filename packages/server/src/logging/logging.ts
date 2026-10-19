@@ -24,7 +24,7 @@ export interface AccessReport {
 }
 
 const localModeOn = Effect.logWarning(
-  'Local mode is on: every request is trusted as the local developer, with every permission in every org. Set PUBLIC_URL or API_KEYS on a machine reachable through a proxy',
+  'Local mode is on: every request is trusted as the local developer, with every permission in every org. On a machine reachable through a proxy, set PUBLIC_URL or API_KEYS instead, and no ACCESS_MODE',
 );
 
 const keylessPaths =

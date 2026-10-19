@@ -38,7 +38,7 @@ describe('logAccessMode', () => {
 
     expect(line).toContain('"level":"WARN"');
     expect(line).toContain(
-      '"message":"Local mode is on: every request is trusted as the local developer, with every permission in every org. Set PUBLIC_URL or API_KEYS on a machine reachable through a proxy"',
+      '"message":"Local mode is on: every request is trusted as the local developer, with every permission in every org. On a machine reachable through a proxy, set PUBLIC_URL or API_KEYS instead, and no ACCESS_MODE"',
     );
   });
 

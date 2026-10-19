@@ -68,12 +68,28 @@ describe('authenticatorFor on a loopback address with neither sign-in nor API ke
   });
 });
 
+describe('authenticatorFor where its operator declares local mode', () => {
+  it.each(otherHosts)('is in local mode on %s, admitting every request as the local developer', async (host) => {
+    const authenticator = authenticatorFor({ host, apiKeys: undefined, accessMode: 'local' });
+    const developer = principalIn(await authenticator.authenticate(undefined, anyPath));
+
+    expect([authenticator.mode, developer?.own.org]).toEqual(['local', 'local']);
+  });
+
+  it('takes the credentials it is given over the declaration', () => {
+    expect([
+      authenticatorFor({ host: '0.0.0.0', apiKeys: keys, accessMode: 'local' }).mode,
+      authenticatorFor({ host: '0.0.0.0', apiKeys: undefined, identityService, accessMode: 'local' }).mode,
+    ]).toEqual(['credentials', 'credentials']);
+  });
+});
+
 describe('authenticatorFor beyond loopback with neither sign-in nor API keys', () => {
   it.each(otherHosts)('stops start-up on %s with a named error that says what the server needs', (host) => {
     expect(() => authenticatorFor({ host, apiKeys: undefined })).toThrow(
       expect.objectContaining({
         name: 'ReachableWithoutCredentialsError',
-        message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}`,
+        message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead`,
       }),
     );
   });

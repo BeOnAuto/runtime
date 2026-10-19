@@ -14,17 +14,18 @@ An [org](../concepts/terminology.md#orgs-and-callers) is the runtime's name for 
 
 ## Who can call a server
 
-Who can call a server follows from two settings, `PUBLIC_URL` and `API_KEYS`, and from the address the server listens on. There is no switch for it:
+Who can call a server follows from two settings, `PUBLIC_URL` and `API_KEYS`, and from the address the server listens on, unless its operator declares local mode with `ACCESS_MODE=local`:
 
-| Settings                                            | Where the server listens                                                       | Who can call it                                                                                         |
-| --------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Neither `PUBLIC_URL` nor `API_KEYS`                 | A loopback address, as `npx @on.auto/runtime` and `pnpm dev` do on `127.0.0.1` | Anyone on this computer, as the local developer: [local mode](#local-mode)                              |
-| Neither `PUBLIC_URL` nor `API_KEYS`                 | Any other address, as the Docker image does on `0.0.0.0`                       | Nobody: the server stops at start with a `ReachableWithoutCredentialsError` ([Local mode](#local-mode)) |
-| `PUBLIC_URL`                                        | Any address                                                                    | People who sign in, and callers with a key that `API_KEYS` lists                                        |
-| `API_KEYS` with at least one entry, no `PUBLIC_URL` | Any address                                                                    | Callers with a listed key                                                                               |
-| `API_KEYS=[]`, no `PUBLIC_URL`                      | Any address                                                                    | Nobody: see [When the key list is empty](#when-the-key-list-is-empty)                                   |
+| Settings                                                                                         | Where the server listens                                                          | Who can call it                                                                                         |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Neither `PUBLIC_URL` nor `API_KEYS`                                                              | A loopback address, as `npx @on.auto/runtime` and `pnpm dev` do on `127.0.0.1`    | Anyone on this computer, as the local developer: [local mode](#local-mode)                              |
+| Neither `PUBLIC_URL` nor `API_KEYS`                                                              | Any other address, as the Docker image does on `0.0.0.0`                          | Nobody: the server stops at start with a `ReachableWithoutCredentialsError` ([Local mode](#local-mode)) |
+| `PUBLIC_URL`                                                                                     | Any address                                                                       | People who sign in, and callers with a key that `API_KEYS` lists                                        |
+| `API_KEYS` with at least one entry, no `PUBLIC_URL`                                              | Any address                                                                       | Callers with a listed key                                                                               |
+| `API_KEYS=[]`, no `PUBLIC_URL`                                                                   | Any address                                                                       | Nobody: see [When the key list is empty](#when-the-key-list-is-empty)                                   |
+| `ACCESS_MODE=local`, no `API_KEYS`, a `PUBLIC_URL` only on the loopback, which a container needs | Any address, such as a container whose port Docker publishes on `127.0.0.1` alone | Anyone who reaches its port, as the local developer: [local mode](#local-mode)                          |
 
-So on your own machine, `npx @on.auto/runtime` and `pnpm dev` run in local mode with nothing set. To sign people in there, put `PUBLIC_URL=http://localhost:5555` in `.env` and start the server again. A container needs `PUBLIC_URL`, `API_KEYS` or both.
+So on your own machine, `npx @on.auto/runtime` and `pnpm dev` run in local mode with nothing set. To sign people in there, put `PUBLIC_URL=http://localhost:5555` in `.env`, with no `ACCESS_MODE`, and start the server again. A container needs `PUBLIC_URL`, `API_KEYS` or both, unless you declare local mode for it on your own machine with `ACCESS_MODE=local`, which needs a `PUBLIC_URL` on `localhost` there too ([Run with Docker](docker.md#on-your-own-machine)).
 
 These paths need no caller, since nothing they return is secret:
 
@@ -154,26 +155,28 @@ A workflow run keeps acting for the caller who started it, with the permissions 
 
 Local mode is for one person on their own computer. No one signs in and no key is needed. Every request acts as the local developer, with every permission in whichever org it names. On `/mcp`, which names no org, the local developer acts in the org `local`.
 
-There is no switch for local mode. A server is in local mode when both of these hold:
+A server is in local mode when both of these hold:
 
 - it listens only on a loopback address: `localhost`, `::1`, or an address in `127.0.0.0/8` such as `127.0.0.1`;
 - neither `PUBLIC_URL` nor `API_KEYS` is set, not even to `API_KEYS=[]`.
 
-`npx @on.auto/runtime` and `pnpm dev` listen on `127.0.0.1`, so they run in local mode until you set `PUBLIC_URL` or `API_KEYS`. To sign people in on your own machine, put `PUBLIC_URL=http://localhost:5555` in `.env` and start the server again ([Let people sign in](#let-people-sign-in)).
+A server whose port only this computer reaches, though it listens on every address, is in local mode where its operator declares it with `ACCESS_MODE=local`, `access_mode: local` in the file. A container is one: Docker publishes its port on `127.0.0.1` alone, which the server inside cannot see ([Run with Docker](docker.md#on-your-own-machine)). The declaration trusts that publish, so never give it with a wider one, and every container on the same Docker network reaches the port whatever the publish, acting as the local developer. It stops the start beside `API_KEYS`, even `[]`, beside a `PUBLIC_URL` that is not on `localhost`, `127.0.0.1` or `[::1]`, and without a `PUBLIC_URL` on a server that listens beyond the loopback, such as a container. There the `PUBLIC_URL` names the address this computer reaches the server at, which its links point at, and signs no one in. The server then behaves as in local mode on a loopback address.
 
-> **Warning:** never run a server in local mode on a machine that can be reached through a proxy; set `PUBLIC_URL` or `API_KEYS` there. A reverse proxy on the same machine, such as nginx with its default settings, forwards remote requests to the loopback address with a localhost `Host` header. The server would trust every remote client as the local developer.
+`npx @on.auto/runtime` and `pnpm dev` listen on `127.0.0.1`, so they run in local mode until you set `PUBLIC_URL` or `API_KEYS`. To sign people in on your own machine, put `PUBLIC_URL=http://localhost:5555` in `.env`, with no `ACCESS_MODE`, and start the server again ([Let people sign in](#let-people-sign-in)).
+
+> **Warning:** never run a server in local mode on a machine that can be reached through a proxy; set `PUBLIC_URL` or `API_KEYS` there, and no `ACCESS_MODE`. A reverse proxy on the same machine, such as nginx with its default settings, forwards remote requests to the loopback address with a localhost `Host` header. The server would trust every remote client as the local developer.
 
 What local mode does:
 
 - The server serves no protected resource metadata.
-- It logs a warning at start that local mode is on, and says to set `PUBLIC_URL` or `API_KEYS` on a machine reachable through a proxy. The warning is at the `warn` level, which `npx @on.auto/runtime` prints only when `LOG_LEVEL` is `warn` or lower, since its default is `error`. The banner `npx @on.auto/runtime` prints when it is ready says that local mode is on, and gives the `PUBLIC_URL` that would sign people in.
+- It logs a warning at start that local mode is on, and says to set `PUBLIC_URL` or `API_KEYS`, and no `ACCESS_MODE`, on a machine reachable through a proxy. The warning is at the `warn` level, which `npx @on.auto/runtime` prints only when `LOG_LEVEL` is `warn` or lower, since its default is `error`. The banner `npx @on.auto/runtime` prints when it is ready says that local mode is on, and gives the `PUBLIC_URL` that, with no `ACCESS_MODE`, would sign people in.
 - The credential a request presents is ignored. A request whose `Host` header is not `localhost`, `127.0.0.1` or `[::1]` is refused `403`, which stops a web page from driving the server through a name that resolves to the loopback address. [Requests in local mode](../reference/authentication.md#requests-in-local-mode) has every rule.
 - The facts your work records name the local developer as who did it. They keep that record after you turn sign-in on.
 - The server serves Studio at `/studio/` on its own address, such as `http://localhost:5555/studio/`, since a page on a public address may not reach an address on your machine ([Studio served by the runtime](#studio-served-by-the-runtime)).
 
-A server that listens beyond loopback, such as a container on `0.0.0.0`, with neither `PUBLIC_URL` nor `API_KEYS`, stops at start, before it listens. Its `ReachableWithoutCredentialsError` names the `HOST` it listens on: a server reachable beyond this computer needs `PUBLIC_URL`, to sign people in, or `API_KEYS`. With `API_KEYS` set, even to `[]`, or with `PUBLIC_URL` set, credentials are enforced on every address.
+A server that listens beyond loopback, such as a container on `0.0.0.0`, with neither `PUBLIC_URL` nor `API_KEYS` and no `ACCESS_MODE=local`, stops at start, before it listens. Its `ReachableWithoutCredentialsError` names the `HOST` it listens on: a server reachable beyond this computer needs `PUBLIC_URL`, to sign people in, or `API_KEYS`, or, where only this computer reaches its port, `ACCESS_MODE=local` with a `PUBLIC_URL` on the loopback. With `API_KEYS` set, even to `[]`, or with `PUBLIC_URL` set and no `ACCESS_MODE`, credentials are enforced on every address.
 
-The Docker image cannot run in local mode, since it listens on every interface.
+The Docker image runs in local mode only where you declare it with `ACCESS_MODE=local` and a `PUBLIC_URL` on `localhost`, since it listens on every interface.
 
 ## Calling from a browser
 
@@ -239,4 +242,4 @@ What the runtime does under `/studio/`:
 - The runtime's own address is then a page origin beside the Studio host's, so the page it serves calls the API from there, with no credential, as local mode asks for none.
 - Answers under `/studio/` carry a `Content-Security-Policy` that lets the page load its scripts, workers, styles, fonts and images from the runtime's address, run the inline scripts of the page the host answers, each allowed by its hash, write styles of its own, and call the runtime's address alone. Every other path keeps the API's, which allows nothing. The other security headers are the same on both.
 
-The Studio the runtime serves works in local mode alone for now: the policy under `/studio/` loads no script of the identity service, so it signs no one in, and it sends no key. Outside local mode the runtime serves none unless `SERVE_STUDIO=true`, and then warns at start that it cannot work there yet; open `https://studio.on.auto` on such a runtime instead ([Open Studio on a runtime](#open-studio-on-a-runtime)).
+The Studio the runtime serves works in local mode alone for now: the policy under `/studio/` loads no script of the identity service, so it signs no one in, and it sends no key. Outside local mode the runtime serves none unless `SERVE_STUDIO=true`, and then warns at start that it cannot work there yet; open `https://studio.on.auto` on such a runtime instead ([Open Studio on a runtime](#open-studio-on-a-runtime)). A container on your own machine serves it once you declare local mode for it with `ACCESS_MODE=local` ([Run with Docker](docker.md#on-your-own-machine)).

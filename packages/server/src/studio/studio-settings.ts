@@ -3,6 +3,7 @@ import {
   accessModeOf,
   defaultStudioOrigin,
   type ApiKey,
+  type DeclaredAccessMode,
   type SignInSettings,
   type StudioSettings,
 } from '@on.auto/identity';
@@ -17,6 +18,7 @@ interface Access {
   readonly host: string;
   readonly apiKeys: readonly ApiKey[] | undefined;
   readonly signIn: SignInSettings | undefined;
+  readonly accessMode: DeclaredAccessMode | undefined;
 }
 
 const studioSettings = Config.all({
@@ -24,7 +26,10 @@ const studioSettings = Config.all({
   served: Config.option(Config.Literals(['true', 'false'], 'SERVE_STUDIO')),
 });
 
-export function readStudioSettings(environment: Environment, { host, apiKeys, signIn }: Access): StudioSettings {
+export function readStudioSettings(
+  environment: Environment,
+  { host, apiKeys, signIn, accessMode }: Access,
+): StudioSettings {
   const { origin, served } = Effect.runSync(
     asInvalidSettings(studioSettings.parse(ConfigProvider.fromEnvRecord(environment))),
   );
@@ -32,6 +37,6 @@ export function readStudioSettings(environment: Environment, { host, apiKeys, si
   if (refusal !== undefined) {
     throw new InvalidSettingsError({ message: refusal });
   }
-  const inLocalMode = accessModeOf({ host, apiKeys, signsIn: signIn !== undefined }) === 'local';
+  const inLocalMode = accessModeOf({ host, apiKeys, signsIn: signIn !== undefined, accessMode }) === 'local';
   return { origin, served: Option.match(served, { onNone: () => inLocalMode, onSome: (given) => given === 'true' }) };
 }

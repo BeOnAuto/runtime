@@ -124,7 +124,7 @@ For an allowed origin, the server responds to CORS like this:
 
 ## Requests in local mode
 
-A server is in [local mode](../self-host/security.md#local-mode) when it listens only on a loopback address and neither `PUBLIC_URL` nor `API_KEYS` is set. There is no switch for it. The runtime then signs no one in and serves no protected resource metadata. It trusts every request as the local developer, with every permission in whichever org the request names. It still checks how a request arrives:
+A server is in [local mode](../self-host/security.md#local-mode) when it listens only on a loopback address and neither `PUBLIC_URL` nor `API_KEYS` is set, or when its operator declares it with `ACCESS_MODE=local`, for a server whose port only this computer reaches, such as a container whose port is published on `127.0.0.1` alone. The declaration takes no `API_KEYS`, and a `PUBLIC_URL` only on `localhost`, `127.0.0.1` or `[::1]`, which names the server's address, signs no one in, and is needed on a server that listens beyond the loopback. The runtime then signs no one in and serves no protected resource metadata. It trusts every request as the local developer, with every permission in whichever org the request names. It still checks how a request arrives:
 
 - The credential a request presents is ignored, since a page signed in to Auto sends its session to every server it calls. A request with a session, an access token or a key acts as the local developer.
 - An `Authorization` header that is not one `Bearer <key or token>` is still refused `400`.
