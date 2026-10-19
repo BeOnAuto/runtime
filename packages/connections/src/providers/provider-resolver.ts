@@ -1,5 +1,11 @@
 import type { Issue } from '@on.auto/operations';
-import { additionOfProvider, providerNamed, type ProviderAddition, type ProviderList } from '@on.auto/providers';
+import {
+  additionOfProvider,
+  providerNamed,
+  type ProviderAddition,
+  type ProviderEntry,
+  type ProviderList,
+} from '@on.auto/providers';
 import type { CredentialGiven, ProviderNamed, ProviderResolved, ProviderResolver } from '@on.auto/tool-servers';
 import { Result } from 'effect';
 
@@ -15,16 +21,34 @@ interface Credentialled {
 
 const takesNone = 'Expected no credential: the way none takes none';
 
+const consentAnotherWay =
+  "Expected another way, named with kind: the way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give";
+
+const consentAlone =
+  "The way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give, so the provider is connected on Studio's page alone";
+
 const theProvider = '/provider';
 
 function underTheCredential(issues: readonly Issue[]): readonly Issue[] {
   return issues.map(({ pointer, detail }) => ({ pointer: `/credential${pointer}`, detail }));
 }
 
+function consentRefusalOf({ credentials }: ProviderEntry, { kind }: CredentialGiven): Issue {
+  return {
+    pointer: kind === undefined ? '/credential' : '/credential/kind',
+    detail: credentials.some((way) => way.kind !== 'authorization') ? consentAnotherWay : consentAlone,
+  };
+}
+
 function credentialledOf(
   credential: Credential,
-  { kind: _kind, ...fields }: CredentialGiven,
+  given: CredentialGiven,
+  provider: ProviderEntry,
 ): Result.Result<Credentialled, readonly Issue[]> {
+  const { kind: _kind, ...fields } = given;
+  if (credential.kind === 'authorization') {
+    return Result.fail([consentRefusalOf(provider, given)]);
+  }
   if (credential.kind === 'none') {
     return Object.values(fields).every((field) => field === undefined)
       ? Result.succeed({ credential, reference: undefined })
@@ -71,7 +95,7 @@ export function makeProviderResolver(providers: ProviderList): ProviderResolver 
       Result.flatMap(
         Result.flatMap(additionOfProvider(entry, { placeholders, kind: credential.kind }), placedWhereTheWayGoes),
         (addition) =>
-          Result.map(credentialledOf(addition.credential, credential), (credentialled) =>
+          Result.map(credentialledOf(addition.credential, credential, entry), (credentialled) =>
             resolvedOf(addition, credentialled, providers.documents),
           ),
       ),
