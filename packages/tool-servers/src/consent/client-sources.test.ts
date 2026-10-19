@@ -2,6 +2,7 @@ import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  clientMetadataDocumentOf,
   isSameIssuer,
   metadataDocumentOf,
   registeredClientAt,
@@ -76,5 +77,33 @@ describe('the client sources a runtime has for a way', () => {
       'https://runtime.example.com/oauth/client.json',
       undefined,
     ]);
+  });
+});
+
+describe('the client metadata document', () => {
+  const returnAddress = 'https://studio.example.com/connect-return';
+
+  it('names the client by its own address and holds the return address, where the public address is https', () => {
+    const address = 'https://runtime.example.com/oauth/client.json';
+
+    expect(clientMetadataDocumentOf('https://runtime.example.com', returnAddress)).toEqual({
+      address,
+      document: {
+        client_id: address,
+        client_name: 'Auto Runtime',
+        redirect_uris: [returnAddress],
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
+        application_type: 'web',
+        token_endpoint_auth_method: 'none',
+      },
+    });
+  });
+
+  it('is none under an http public address or none at all', () => {
+    expect([
+      clientMetadataDocumentOf('http://127.0.0.1:5555', returnAddress),
+      clientMetadataDocumentOf(undefined, returnAddress),
+    ]).toEqual([undefined, undefined]);
   });
 });

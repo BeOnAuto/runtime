@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 
-export const redirectUri = 'https://studio.example.com/connect/return';
+export const redirectUri = 'https://studio.example.com/connect-return';
 
 export const clientSecret = 'auto-runtime-client-secret-3c9e';
 

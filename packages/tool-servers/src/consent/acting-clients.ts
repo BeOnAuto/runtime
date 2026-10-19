@@ -8,9 +8,10 @@ import { fetchWithin, type Reaches } from '@on.auto/outbound';
 import { Effect, Option, Redacted } from 'effect';
 
 import {
-  metadataDocumentOf,
+  clientMetadataDocumentOf,
   registeredClientAt,
   sourcesHad,
+  type ClientMetadataDocument,
   type ClientSource,
   type ClientsHad,
   type RegisteredClient,
@@ -96,10 +97,11 @@ function registeredActing(
   };
 }
 
-function documentedActing(clientId: string, returnAddress: string): ActingClient {
+function documentedActing({ document }: ClientMetadataDocument): ActingClient {
+  const { client_id: clientId, redirect_uris: redirectUris, token_endpoint_auth_method: method } = document;
   return {
     chosen: { client_id: clientId, client_source: 'metadata_document' },
-    identity: { client_id: clientId, redirect_uris: [returnAddress], token_endpoint_auth_method: 'none' },
+    identity: { client_id: clientId, redirect_uris: redirectUris, token_endpoint_auth_method: method },
     authentication: undefined,
   };
 }
@@ -142,7 +144,7 @@ function takenFrom(
   if (source === 'metadata_document') {
     return Effect.succeed(
       server.client_id_metadata_document_supported === true
-        ? documentedActing(required(metadataDocumentOf(choosing.publicUrl)), asked.returnAddress)
+        ? documentedActing(required(clientMetadataDocumentOf(choosing.publicUrl, asked.returnAddress)))
         : undefined,
     );
   }
@@ -166,9 +168,8 @@ function recordedOf({ way, client, returnAddress }: RecordedClient, choosing: Ch
     const registered = registeredClientAt(choosing.registeredClients, way.issuer);
     return registered?.clientId === client.client_id ? registeredActing(registered, returnAddress) : undefined;
   }
-  return metadataDocumentOf(choosing.publicUrl) === client.client_id
-    ? documentedActing(client.client_id, returnAddress)
-    : undefined;
+  const documented = clientMetadataDocumentOf(choosing.publicUrl, returnAddress);
+  return documented?.address === client.client_id ? documentedActing(documented) : undefined;
 }
 
 function recordedFor(recorded: RecordedClient, choosing: Choosing): Effect.Effect<ActingClient, ConsentRefusal> {
