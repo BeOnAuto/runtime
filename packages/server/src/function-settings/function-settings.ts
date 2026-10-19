@@ -1,4 +1,5 @@
 import type { Environment, FileUse } from '@on.auto/config';
+import type { ProviderResolver } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
 import { computationVariables, readComputationSettings, type ComputationSettings } from './computation-settings.ts';
@@ -22,8 +23,12 @@ export const functionVariables: readonly string[] = [
   ...predictionVariables,
 ];
 
-export function readFunctionSettings(environment: Environment, file: FileUse | undefined): FunctionSettings {
-  const { models, modelProviders, toolServers, reasoning } = readReasoningSettings(environment, file);
+export function readFunctionSettings(
+  environment: Environment,
+  file: FileUse | undefined,
+  providers: ProviderResolver,
+): FunctionSettings {
+  const { models, modelProviders, toolServers, reasoning } = readReasoningSettings(environment, file, providers);
   return {
     models,
     modelProviders,

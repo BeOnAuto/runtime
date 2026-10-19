@@ -4,9 +4,10 @@ import {
   namingNoOwnVariable,
   readConnectionsSetting,
   type ConnectionPolicy,
+  type ConnectionsSetting,
   type RegisteredClient,
 } from '@on.auto/connections';
-import { operatorValuesIn, operatorVariablesIn, type ProviderList } from '@on.auto/providers';
+import { joinedProviders, operatorValuesIn, operatorVariablesIn, type ProviderList } from '@on.auto/providers';
 import { Effect, Redacted } from 'effect';
 
 import { problemsListed } from '../config-file/placed-problems.ts';
@@ -19,6 +20,11 @@ export interface ConnectionSettings {
   readonly connectionVariables: ReadonlyMap<string, Redacted.Redacted>;
   readonly providers: ProviderList;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
+}
+
+export interface ConnectionsRead {
+  readonly setting: ConnectionsSetting;
+  readonly providers: ProviderList;
 }
 
 function isGiven(text: string | undefined): text is string {
@@ -59,17 +65,27 @@ function valuesOf(environment: Environment, { variables }: ConnectionPolicy): Re
   );
 }
 
+export function readConnections(
+  environment: Environment,
+  file: FileUse | undefined,
+  shipped: ProviderList,
+): ConnectionsRead {
+  const reading = readConnectionsSetting(environment).pipe(
+    Effect.mapError((invalid: Problems) => placed(invalid, file)),
+  );
+  const setting = Effect.runSync(reading);
+  return { setting, providers: joinedProviders(shipped, setting.providers) };
+}
+
 export function readConnectionSettings(
   environment: Environment,
   file: FileUse | undefined,
   functions: Pick<FunctionSettings, 'models' | 'toolServers'>,
-  providers: ProviderList,
+  { setting, providers }: ConnectionsRead,
 ): ConnectionSettings {
-  const setting = Effect.flatMap(readConnectionsSetting(environment), (read) =>
-    namingNoOwnVariable(read, ownVariablesOf(functions, file, providers)),
-  );
+  const checked = namingNoOwnVariable(setting, ownVariablesOf(functions, file, providers));
   const { policy: connections, registeredClients } = Effect.runSync(
-    setting.pipe(Effect.mapError((invalid: Problems) => placed(invalid, file))),
+    checked.pipe(Effect.mapError((invalid: Problems) => placed(invalid, file))),
   );
   return {
     connections,

@@ -58,6 +58,13 @@ model_aliases:
 # says; headers and query_params hold what the schemes do not, such as a tenant.
 # org names one org, a list of orgs, or * for every org; one entry serves each
 # under one name, with one credential.
+#
+# An entry may name a provider, one the runtime ships or one connections adds
+# below, in place of its server: provider gives the server and where the
+# credential goes, placeholders the values the provider asks for, and
+# credential a reference, or for client credentials the client id written out
+# with client_secret, or with private_key and its algorithm, each key a
+# reference.
 # tool_servers:
 #   graph:
 #     url: https://gateway.example.com/mcp
@@ -79,14 +86,42 @@ model_aliases:
 #       apiKeyAuth: ${BILLING_API_KEY}
 #     org: [acme, globex]
 #     allowed: [listInvoices, getInvoice]
+#   accounts:
+#     provider: crm
+#     placeholders:
+#       tenant: acme
+#     credential: ${CRM_API_TOKEN}
+#     org: acme
+#     allowed: [search_accounts]
 
 # What people may add as connections, the tool servers they add to an org
 # through their agents and approve in Studio. Every rule has a default, so
-# leaving the section out lets people add any connection.
+# leaving the section out lets people add any connection. providers adds
+# providers of your own beside those the runtime ships, which a person connects
+# by name and an entry of tool_servers may name; one named as a shipped
+# provider takes its place.
 # connections:
 #   people_may_add: true
 #   allowed_hosts: ['*.example.com', 'crm.example.com']
 #   credential_kinds: [none, reference, secret, client_credentials]
+#   providers:
+#     - name: crm
+#       title: CRM
+#       description: Read and change the accounts and contacts of your CRM.
+#       website: https://developer.crm.example.com
+#       type: mcp
+#       url: https://{tenant}.crm.example.com/mcp
+#       placeholders:
+#         tenant:
+#           description: The tenant of your CRM, as in https://<tenant>.crm.example.com
+#           pattern: '^[a-z0-9-]{1,63}$'
+#           example: acme
+#       credentials:
+#         - kind: secret
+#           in: header
+#           name: Authorization
+#           scheme: Bearer
+#           description: An API token from the settings of your CRM.
 
 # The origins a page in a browser may call the API from.
 allowed_origins:
