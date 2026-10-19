@@ -201,6 +201,7 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 | Field           | Purpose                                                                                                                                                                                                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `description`   | Optional explanation, 1 to 1,000 characters                                                                                                                                                                                                                                                       |
+| `about`         | Optional Markdown of 1 to 4,000 characters, without headings, for a business reader; the [overview](#the-overview) shows it after the `description`                                                                                                                                               |
 | `call`          | The tool the function asks: `server`, `tool`, `with` and `read`; see [`call`](#call). With it, `output.schema` is required and `to`, `expires`, `deliver`, `replies`, `from`, `reply` and the body are refused                                                                                    |
 | `to`            | Required without `call`, refused with it. A template that renders the party the request goes to: a name the playbook's readers filter by, which a delivery's templates may use as the tool's address                                                                                              |
 | `from`          | Optional. A template, as `to` is, that renders the party whose reply counts, the answerer; `to` when left out. A request sent to a room names the person here                                                                                                                                     |
@@ -215,16 +216,16 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 
 ### Fields by shape
 
-| Field                         | Asks a system | Asks through the inbox                           | Asks through a tool                                              |
-| ----------------------------- | ------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
-| `call`                        | Required      | Refused                                          | Refused                                                          |
-| `to`, `expires`, the message  | Refused       | Required                                         | Required                                                         |
-| `from`                        | Refused       | Optional                                         | Optional                                                         |
-| `deliver`                     | Refused       | Left out                                         | Required                                                         |
-| `replies`                     | Refused       | Refused                                          | Optional; needs `deliver.sent`, `output.schema` and a reply rule |
-| `output.schema`               | Required      | Optional; without it, a notification             | Optional; without it, a notification                             |
-| `reply`                       | Refused       | Optional, with `output.schema`; nothing reads it | Optional, with `output.schema`; read only with `replies`         |
-| `description`, `input.schema` | Optional      | Optional                                         | Optional                                                         |
+| Field                                  | Asks a system | Asks through the inbox                           | Asks through a tool                                              |
+| -------------------------------------- | ------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
+| `call`                                 | Required      | Refused                                          | Refused                                                          |
+| `to`, `expires`, the message           | Refused       | Required                                         | Required                                                         |
+| `from`                                 | Refused       | Optional                                         | Optional                                                         |
+| `deliver`                              | Refused       | Left out                                         | Required                                                         |
+| `replies`                              | Refused       | Refused                                          | Optional; needs `deliver.sent`, `output.schema` and a reply rule |
+| `output.schema`                        | Required      | Optional; without it, a notification             | Optional; without it, a notification                             |
+| `reply`                                | Refused       | Optional, with `output.schema`; nothing reads it | Optional, with `output.schema`; read only with `replies`         |
+| `description`, `about`, `input.schema` | Optional      | Optional                                         | Optional                                                         |
 
 A function that reads replies needs a reply rule: the one `reply` writes, or one made from the answer schema. Without either, it is refused when saved.
 
@@ -548,7 +549,7 @@ The run ends `succeeded` with the answer, such as `{"verdict": "approve"}`, as i
 
 ## The overview
 
-`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read Liquid or YAML. Auto Studio shows it before the document. It opens with the `description`, or says the function has none yet.
+`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read Liquid or YAML. Auto Studio shows it before the document. It opens with the `description`, or says the function has none yet, then the `about` as it is written.
 
 For a function that asks a system, the overview then says:
 
@@ -568,7 +569,16 @@ For a function that asks a person, it says:
 
 Either kind ends with **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
 
-The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it, and give each field of the schemas a `description`, so the overview can say it. A function without them still has an overview, with the types alone.
+The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences, and give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The campaign to approve`, so the overview can say it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
+
+```yaml
+about: |
+  The campaign owner approves each brief before it goes to a client.
+  It runs when a brief is ready, waits two days for the owner's answer,
+  and answers with their decision and their note.
+```
+
+A function without them still has an overview, with the types alone.
 
 ## Availability
 
