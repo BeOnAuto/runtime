@@ -1,5 +1,5 @@
 import type { Environment, FileUse, SettingProblem } from '@on.auto/config';
-import { ConnectionPolicyInvalid, readConnectionPolicy, type ConnectionPolicy } from '@on.auto/connections';
+import { ConnectionsSettingInvalid, readConnectionsSetting, type ConnectionPolicy } from '@on.auto/connections';
 import { operatorValuesIn, operatorVariablesIn, type ProviderList } from '@on.auto/providers';
 import { Effect, Redacted } from 'effect';
 
@@ -36,8 +36,8 @@ interface Problems {
   readonly problems: readonly SettingProblem[];
 }
 
-function placed({ problems }: Problems, file: FileUse | undefined): ConnectionPolicyInvalid {
-  return new ConnectionPolicyInvalid({
+function placed({ problems }: Problems, file: FileUse | undefined): ConnectionsSettingInvalid {
+  return new ConnectionsSettingInvalid({
     message: `The connection settings are invalid. ${problemsListed(problems, file)}`,
     problems,
   });
@@ -58,8 +58,10 @@ export function readConnectionSettings(
   functions: Pick<FunctionSettings, 'models' | 'toolServers'>,
   providers: ProviderList,
 ): ConnectionSettings {
-  const policy = readConnectionPolicy(environment, ownVariablesOf(functions, file, providers));
-  const connections = Effect.runSync(policy.pipe(Effect.mapError((invalid: Problems) => placed(invalid, file))));
+  const setting = readConnectionsSetting(environment, ownVariablesOf(functions, file, providers));
+  const { policy: connections } = Effect.runSync(
+    setting.pipe(Effect.mapError((invalid: Problems) => placed(invalid, file))),
+  );
   return {
     connections,
     connectionVariables: valuesOf(environment, connections),

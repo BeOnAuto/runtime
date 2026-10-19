@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hostAlternativesOf } from '../index.ts';
+import { hostAlternativesOf, isPinnableTemplate, pinnedTemplateShape } from '../index.ts';
 import { problemsOf } from '../testing/entry-problems.ts';
 import { ledgers, providerOf, regions, tracker } from '../testing/fixture-providers.ts';
 
@@ -50,6 +50,22 @@ describe('an address of an entry', () => {
     expect(providerOf(taken).entry.credentials.map((way) => hostAlternativesOf(providerOf(taken), way))).toEqual([
       [['api-na.regions.example.com'], ['api-eu.regions.example.com']],
     ]);
+  });
+});
+
+describe('an address written with placeholders and nothing to place in them', () => {
+  it('is judged by the rule of an address of an entry, in its words', () => {
+    expect(
+      [
+        'https://{tenant}.auth.example.com',
+        'https://login.example.net/{tenant}/v2.0',
+        'http://127.0.0.1:8443/{tenant}',
+        '{tenant}://auth.example.com',
+        'http://{tenant}.auth.example.com',
+        'https://{tenant}@auth.example.com',
+      ].map((template) => isPinnableTemplate(template)),
+    ).toEqual([true, true, true, false, false, false]);
+    expect(pinnedTemplateShape).toBe(unpinned);
   });
 });
 
