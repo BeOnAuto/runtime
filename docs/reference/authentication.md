@@ -119,7 +119,7 @@ For an allowed origin, the server responds to CORS like this:
 
 | Request                                                     | Response                                                                                                                                                                                                                              |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A preflight: `OPTIONS` with `Access-Control-Request-Method` | `204`, before any key is checked. It allows `GET`, `HEAD`, `POST` and `PUT`, and the headers `authorization`, `content-type`, `traceparent`, `tracestate` and `baggage`. The browser may cache it for 600 seconds                     |
+| A preflight: `OPTIONS` with `Access-Control-Request-Method` | `204`, before any key is checked. It allows `GET`, `HEAD`, `POST`, `PUT` and `DELETE`, and the headers `authorization`, `content-type`, `traceparent`, `tracestate` and `baggage`. The browser may cache it for 600 seconds           |
 | Any other request                                           | `Access-Control-Allow-Origin` with that origin, and `Vary: Origin`. The page may read `x-request-id`, `x-trace-id` and `www-authenticate`, so a page that is refused can read the challenge and sign in or ask for the scope it lacks |
 
 ## Requests in local mode
