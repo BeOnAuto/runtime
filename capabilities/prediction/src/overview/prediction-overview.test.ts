@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { dailyTotalsWith, dailyVisitsWith, uploadedDailyVisits } from '../testing/daily-documents.ts';
 import { predictionRuns } from '../testing/prediction-runs.ts';
-import { weeklyOrdersLines } from '../testing/weekly-orders.ts';
+import { weeklyOrdersLines, weeklyOrdersWith } from '../testing/weekly-orders.ts';
 
 const page = readFileSync(new URL('../../../../docs/reference/prediction-format.md', import.meta.url), 'utf8');
 
@@ -144,5 +144,29 @@ describe('the overview of a prediction function over an uploaded dataset of its 
     );
     expect(sectionIn(overview, 'How a version goes live')).not.toContain('beside the active one');
     expect(sectionIn(overview, 'How a version goes live')).toContain('by the Winkler score of its interval.');
+  });
+});
+
+describe('the overview of a prediction function whose document has an about', () => {
+  it('writes the about as its author wrote it, after the description and before what it predicts', () => {
+    const description = 'description: Predicts the orders of each region one and four weeks ahead';
+    const about = [
+      'about: |',
+      '  The sales team plans the stock of each region with it.',
+      '',
+      '  A person approves each version before it answers.',
+    ];
+
+    expect(
+      overviewOf(weeklyOrdersWith([description, [description, ...about].join('\n')]))
+        .split('\n\n')
+        .slice(0, 5),
+    ).toEqual([
+      '# weekly-orders',
+      'Predicts the orders of each region one and four weeks ahead',
+      'The sales team plans the stock of each region with it.',
+      'A person approves each version before it answers.',
+      '## What it predicts',
+    ]);
   });
 });

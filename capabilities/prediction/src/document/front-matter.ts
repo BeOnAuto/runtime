@@ -1,4 +1,9 @@
-import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
+import {
+  AboutSchema,
+  DescriptionSchema,
+  type FrontMatterSection,
+  type FrontMatterShape,
+} from '@on.auto/definitions/document';
 import { Schema } from 'effect';
 
 import { enclosings } from '../periods/enclosing.ts';
@@ -50,6 +55,7 @@ const SourceSchema = Schema.Struct({
 
 const FrontMatterSchema = Schema.Struct({
   description: Schema.optionalKey(DescriptionSchema),
+  about: Schema.optionalKey(AboutSchema),
   predicts: PredictsSchema,
   data: DataSchema,
   evaluation: EvaluationSchema,
