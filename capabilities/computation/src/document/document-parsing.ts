@@ -86,7 +86,7 @@ function documentFrom(
   if (issues.length > 0 || Result.isFailure(decoded)) {
     return Result.fail([...issues, ...issuesOf(program)]);
   }
-  const { description, input, output } = decoded.success;
+  const { description, about, input, output } = decoded.success;
   const parts = {
     language: languageOf(decoded.success.language, lines),
     input: contractOf(input, 'input', lines),
@@ -103,6 +103,7 @@ function documentFrom(
     ? Result.fail(found)
     : Result.map(Result.all(parts), (checked) => ({
         ...(description === undefined ? {} : { description }),
+        ...(about === undefined ? {} : { about }),
         language: checked.language,
         input: checked.input,
         output: checked.output,

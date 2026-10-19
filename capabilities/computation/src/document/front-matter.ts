@@ -1,4 +1,9 @@
-import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
+import {
+  AboutSchema,
+  DescriptionSchema,
+  type FrontMatterSection,
+  type FrontMatterShape,
+} from '@on.auto/definitions/document';
 import { Schema } from 'effect';
 
 const SectionSchema = Schema.Struct({ schema: Schema.optionalKey(Schema.JsonObject) });
@@ -10,6 +15,7 @@ const OutputSectionSchema = Schema.Struct({
 
 const FrontMatterSchema = Schema.Struct({
   description: Schema.optionalKey(DescriptionSchema),
+  about: Schema.optionalKey(AboutSchema),
   language: Schema.String,
   input: Schema.optionalKey(SectionSchema),
   output: Schema.optionalKey(OutputSectionSchema),

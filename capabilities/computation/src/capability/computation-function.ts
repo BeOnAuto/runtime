@@ -32,9 +32,10 @@ function parse(source: string): Effect.Effect<ComputationFunctionDefinitionDocum
   });
 }
 
-function summarize({ description, input, output }: ComputationFunctionDefinitionDocument): DefinitionSummary {
+function summarize({ description, about, input, output }: ComputationFunctionDefinitionDocument): DefinitionSummary {
   return {
     ...(description === undefined ? {} : { description }),
+    ...(about === undefined ? {} : { about }),
     ...(input.schema === undefined ? {} : { inputSchema: input.schema.document }),
     ...publishedOutputOf({ schema: output.schema?.document, shape: output.shape }),
   };

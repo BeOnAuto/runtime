@@ -91,9 +91,9 @@ describe('the front matter of a computation function definition', () => {
         ),
       ),
     ).toEqual([
-      'Line 3, /model: model is not a key of the front matter; it takes description, language, input, output',
-      'Line 4, /config: config is not a key of the front matter; it takes description, language, input, output',
-      'Line 5, /tools: tools is not a key of the front matter; it takes description, language, input, output',
+      'Line 3, /model: model is not a key of the front matter; it takes description, about, language, input, output',
+      'Line 4, /config: config is not a key of the front matter; it takes description, about, language, input, output',
+      'Line 5, /tools: tools is not a key of the front matter; it takes description, about, language, input, output',
       'Line 6, /input/default: default is not a key of input; it takes schema',
       'Line 7, /output/format: format is not a key of output; it takes schema, shape',
     ]);
@@ -118,7 +118,7 @@ describe('the values in the front matter of a computation function definition', 
 
   it('is checked with the program, whose issues it reports beside its own', () => {
     expect(issuesIn(programDocument('  ', 'language: typescript\nsize: 2'))).toEqual([
-      'Line 3, /size: size is not a key of the front matter; it takes description, language, input, output',
+      'Line 3, /size: size is not a key of the front matter; it takes description, about, language, input, output',
       'Line 5: The definition has no program: write it after the front matter',
     ]);
     expect(issuesIn('---\nlanguage: [typescript\n---\n')).toEqual([
@@ -139,5 +139,25 @@ describe('the program of a computation function definition', () => {
     expect(
       parsed(programDocument('export default function (input: Input): Output {\n  return input.perod;\n}')).program,
     ).toBe('export default function (input: Input): Output {\n  return input.perod;\n}');
+  });
+});
+
+describe('the about of a computation function definition', () => {
+  it('is kept as its author wrote it', () => {
+    const frontMatter = 'language: typescript\nabout: |\n  The finance team reads it.';
+
+    expect(parsed(programDocument(functionOf('return input;'), frontMatter)).about).toBe(
+      'The finance team reads it.\n',
+    );
+  });
+
+  it('takes no heading, nor does the description, each refused at its line', () => {
+    const frontMatter =
+      "language: typescript\ndescription: '# Adds one'\nabout: |\n  The finance team reads it.\n  ---";
+
+    expect(issuesIn(programDocument(functionOf('return input;'), frontMatter))).toEqual([
+      'Line 3, /description: description takes no heading, since an overview writes its own: the line that begins “# Adds one” makes one, with # before its words or as a line of = or - under the words above it',
+      'Line 6, /about: about takes no heading, since an overview writes its own: this line makes one, with # before its words or as a line of = or - under the words above it',
+    ]);
   });
 });
