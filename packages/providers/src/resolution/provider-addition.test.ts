@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, type GivenToProvider, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { ledgers, metrics, regions, tracker } from '../testing/fixture-providers.ts';
+import { adverts, campaigns, drive, ledgers, metrics, regions, tracker } from '../testing/fixture-providers.ts';
 
 function resolved(provider: ProviderEntry, given: GivenToProvider) {
   return Result.getOrThrow(additionOfProvider(provider, given));
@@ -222,6 +222,49 @@ describe('a placeholder in the issuer of client credentials', () => {
           detail: 'Expected letters, digits and hyphens alone, since the value names a host',
         },
       ],
+    ]);
+  });
+});
+
+describe('the addition a provider of consent makes', () => {
+  it('carries the way of consent, its endpoints and its issuer with each value in its place', () => {
+    expect([
+      resolved(drive, {}).credential,
+      resolved(adverts, { placeholders: { tenant: 'acme' } }).credential,
+    ]).toEqual([
+      {
+        kind: 'authorization',
+        issuer: 'https://accounts.drive.example.com',
+        scope: 'files.read files.write',
+        parameters: { access_type: 'offline', prompt: 'consent' },
+      },
+      {
+        kind: 'authorization',
+        issuer: 'https://login.adverts.example.com/acme/v2.0',
+        authorization_endpoint: 'https://login.adverts.example.com/acme/oauth2/v2.0/authorize',
+        token_endpoint: 'https://login.adverts.example.com/acme/oauth2/v2.0/token',
+        revocation_endpoint: 'https://login.adverts.example.com/acme/oauth2/v2.0/revoke',
+        scope: 'adverts.manage offline_access',
+        clients: ['registered', 'dynamic'],
+      },
+    ]);
+  });
+});
+
+describe('the addition a provider of consent makes with a choice', () => {
+  it('places the host the choice sets in the token endpoint, as it does in the address of the API', () => {
+    const { entry, credential } = resolved(campaigns, { placeholders: { region: 'eu' } });
+
+    expect([entry.base_url, credential]).toEqual([
+      'https://api-eu.campaigns.example.com/v1',
+      {
+        kind: 'authorization',
+        issuer: 'https://auth.campaigns.example.com',
+        authorization_endpoint: 'https://auth.campaigns.example.com/authorize',
+        token_endpoint: 'https://auth-eu.campaigns.example.com/oauth/token',
+        revocation_endpoint: 'https://auth.campaigns.example.com/revoke',
+        scope: 'campaigns.read',
+      },
     ]);
   });
 });

@@ -353,9 +353,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["none", "reference", "secret", "client_credentials"]
+            "enum": ["none", "reference", "secret", "client_credentials", "authorization"]
           },
-          "description": "The kinds of credential a connection may take, of none, reference, secret and client_credentials; every kind when left out"
+          "description": "The kinds of credential a connection may take, of none, reference, secret, client_credentials and authorization; every kind when left out"
         },
         "variables": {
           "type": "array",
@@ -523,7 +523,7 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": ["secret", "client_credentials", "none"]
+                      "enum": ["secret", "client_credentials", "none", "authorization"]
                     },
                     "in": {
                       "type": "string",
@@ -542,6 +542,28 @@
                     },
                     "scope": {
                       "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "authorization_endpoint": {
+                      "type": "string"
+                    },
+                    "token_endpoint": {
+                      "type": "string"
+                    },
+                    "revocation_endpoint": {
+                      "type": "string"
+                    },
+                    "clients": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["registered", "metadata_document", "dynamic"]
+                      }
                     },
                     "description": {
                       "type": "string",

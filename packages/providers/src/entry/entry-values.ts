@@ -3,7 +3,7 @@ import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Schema } from 'effect';
 
 import { setCombinationsOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
-import { marked, templatedFieldsOf, type TemplatedField } from './templates.ts';
+import { marked, templatedFieldsOf, wayAddresses, type TemplatedField, type WayAddresses } from './templates.ts';
 
 interface Written {
   readonly name: string;
@@ -14,7 +14,11 @@ interface Written {
   readonly query_params?: Readonly<Record<string, string>>;
   readonly request_id?: string;
   readonly placeholders?: Readonly<Record<string, Placeholder>>;
-  readonly credentials: readonly { readonly issuer?: string }[];
+  readonly credentials: readonly WrittenWay[];
+}
+
+interface WrittenWay extends WayAddresses {
+  readonly parameters?: Readonly<Record<string, string>>;
 }
 
 type EntryIssue = Schema.FilterIssue;
@@ -52,6 +56,12 @@ function issuesAt(pointers: readonly string[], issue: string): readonly EntryIss
   return [...new Set(pointers)].map((pointer) => ({ path: pathOf(pointer), issue }));
 }
 
+function definedOf(fields: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]: readonly [string, unknown]) => value !== undefined),
+  );
+}
+
 function serverPartOf({
   url,
   document,
@@ -62,12 +72,14 @@ function serverPartOf({
   credentials,
 }: Written): Schema.Json {
   const fields = { url, document, base_url, headers, query_params, request_id };
-  const issuers = credentials.map(({ issuer }) => (issuer === undefined ? {} : { issuer }));
   return asJson({
-    ...Object.fromEntries(
-      Object.entries(fields).filter(([, value]: readonly [string, unknown]) => value !== undefined),
+    ...definedOf(fields),
+    credentials: credentials.map((way) =>
+      definedOf({
+        parameters: way.parameters,
+        ...Object.fromEntries(wayAddresses.map((field) => [field, way[field]])),
+      }),
     ),
-    credentials: issuers,
   });
 }
 
@@ -92,7 +104,7 @@ function credentialIssuesOf(written: Written): readonly EntryIssue[] {
   const { placeholders = {} } = written;
   const names = [...Object.keys(placeholders), ...setNamesOfEach(placeholders)];
   const pointers = [
-    ...credentialProblems('', serverPartOf(written), ''),
+    ...credentialProblems('', serverPartOf(written), '', wayAddresses),
     ...credentialProblems('placeholders', asJson(placeholders), '/placeholders', names),
   ].map(({ pointer }) => pointer);
   return issuesAt(pointers, heldCredential);

@@ -60,6 +60,8 @@ const anyValue: GivenValue = { value: Redacted.make('a value the person gives'),
 
 const anyClientId = 'a client id the person gives';
 
+const kindsPlacingNoValue: ReadonlySet<string> = new Set(['none', 'authorization']);
+
 const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 function issuesOf(problems: readonly SettingProblem[], from: string, to: string): readonly Issue[] {
@@ -135,7 +137,7 @@ function withAnyClientId(credential: Credential): Credential {
 }
 
 function readingIssuesOf(input: AdditionInput, checking: EntryChecking): readonly Issue[] {
-  const given = input.credential.kind === 'none' ? undefined : anyValue;
+  const given = kindsPlacingNoValue.has(input.credential.kind) ? undefined : anyValue;
   return Result.match(readAddition(input, checking, given), { onSuccess: () => [], onFailure: (read) => read });
 }
 

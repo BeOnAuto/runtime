@@ -1587,7 +1587,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -1616,16 +1617,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -1934,7 +1975,8 @@
                                 "none",
                                 "reference",
                                 "secret",
-                                "client_credentials"
+                                "client_credentials",
+                                "authorization"
                               ]
                             },
                             "variable": {
@@ -1963,16 +2005,56 @@
                             },
                             "issuer": {
                               "type": "string",
-                              "description": "For client_credentials, the https URL of the authorization server"
+                              "description": "For client_credentials and authorization, the https URL of the authorization server"
                             },
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client, else given on the page"
+                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                             },
                             "scope": {
                               "type": "string",
-                              "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                              "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                            },
+                            "parameters": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                            },
+                            "authorization_endpoint": {
+                              "type": "string",
+                              "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                            },
+                            "token_endpoint": {
+                              "type": "string",
+                              "description": "For authorization, the token endpoint, beside the other two"
+                            },
+                            "revocation_endpoint": {
+                              "type": "string",
+                              "description": "For authorization, the revocation endpoint, beside the other two"
+                            },
+                            "clients": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "registered",
+                                  "metadata_document",
+                                  "dynamic"
+                                ]
+                              },
+                              "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                            },
+                            "client_source": {
+                              "type": "string",
+                              "enum": [
+                                "registered",
+                                "metadata_document",
+                                "dynamic"
+                              ],
+                              "description": "For authorization, the source of the client the connection was made with, once connected"
                             }
                           },
                           "required": [
@@ -2249,7 +2331,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -2278,16 +2361,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -2560,7 +2683,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -2589,16 +2713,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -2887,7 +3051,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -2916,16 +3081,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -3253,7 +3458,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -3282,16 +3488,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -3632,7 +3878,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -3661,16 +3908,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -3913,7 +4200,8 @@
                                 "enum": [
                                   "secret",
                                   "client_credentials",
-                                  "none"
+                                  "none",
+                                  "authorization"
                                 ]
                               },
                               "in": {

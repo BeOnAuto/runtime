@@ -3,7 +3,12 @@ import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from '../registry/connection-entry.ts';
 import { ConnectionSchema } from '../registry/connection.ts';
-import { CredentialFieldsSchema, credentialDescription, credentialFieldIssuesOf } from '../registry/credential.ts';
+import {
+  CredentialFieldsSchema,
+  CredentialKindSchema,
+  credentialDescription,
+  credentialFieldIssuesOf,
+} from '../registry/credential.ts';
 
 export const ExpiresAtField = Schema.String.annotate({ description: 'When the link expires, in ISO 8601 UTC' });
 
@@ -15,6 +20,27 @@ export const AddedSchema = Schema.Struct({
   }),
 }).annotate({ identifier: 'AddedConnection', description: 'The connection, pending, and the link that approves it' });
 
+const { variable, name, in: placement, scheme, issuer, client_id: clientId, scope } = CredentialFieldsSchema.fields;
+
+const AddedCredentialSchema = Schema.Struct({
+  kind: CredentialKindSchema.pick(['none', 'reference', 'secret', 'client_credentials']),
+  variable,
+  name,
+  in: placement,
+  scheme,
+  issuer: Schema.optionalKey(
+    issuer.schema.annotate({ description: 'For client_credentials, the https URL of the authorization server' }),
+  ),
+  client_id: Schema.optionalKey(
+    clientId.schema.annotate({ description: 'For client_credentials, the id of the client, else given on the page' }),
+  ),
+  scope: Schema.optionalKey(
+    scope.schema.annotate({
+      description: 'For client_credentials, the scopes, separated by spaces; none when left out',
+    }),
+  ),
+}).annotate({ description: credentialDescription });
+
 const AdditionFieldsSchema = Schema.Struct({
   name: Schema.optionalKey(
     Schema.String.annotate({ description: 'The name a function gives the server, in lowercase and hyphens' }),
@@ -25,7 +51,7 @@ const AdditionFieldsSchema = Schema.Struct({
   ),
   type: Schema.optionalKey(ConnectionTypeSchema),
   entry: Schema.optionalKey(ConnectionEntrySchema),
-  credential: Schema.optionalKey(CredentialFieldsSchema.annotate({ description: credentialDescription })),
+  credential: Schema.optionalKey(AddedCredentialSchema),
 });
 
 export type AdditionGiven = typeof AdditionFieldsSchema.Type;

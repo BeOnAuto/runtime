@@ -30,6 +30,16 @@ export function takesNoCredential(name: string): Conflict {
   return new Conflict({ detail: `The connection ${name} takes no credential to give, so it is approved as it is` });
 }
 
+export function connectedByConsent(name: string): Conflict {
+  return new Conflict({
+    detail: `The connection ${name} is connected by signing in to its provider and allowing Auto, which its page starts`,
+  });
+}
+
+function takesConsent({ connection }: KeptConnection): boolean {
+  return connection.credential.kind === 'authorization';
+}
+
 function decideAddition({ link, ...added }: ConnectionAddition, registry: Registry): Decision {
   const { connection, name } = added;
   const kept = [...registry.values()].filter((each) => each.connection.status !== 'removed');
@@ -62,8 +72,11 @@ function addedData({
 }
 
 function decideApproval(command: ConnectionApproval & CommandMetadata, registry: Registry): Decision {
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
-    takesAValue(kept)
+  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
+    if (takesConsent(kept)) {
+      return Result.fail(connectedByConsent(kept.connection.name));
+    }
+    return takesAValue(kept)
       ? Result.fail(
           new Conflict({
             detail: `The connection ${kept.connection.name} takes a credential, so it is approved by giving its credential`,
@@ -72,22 +85,25 @@ function decideApproval(command: ConnectionApproval & CommandMetadata, registry:
       : Result.succeed([
           { type: 'connection_approved', data: { connection: command.connection } },
           { type: 'connection_connected', data: { connection: command.connection } },
-        ]),
-  );
+        ]);
+  });
 }
 
 function decideGiving(command: CredentialGiving & CommandMetadata, registry: Registry): Decision {
   const { connection, secret_id: secretId, algorithm, client_id: clientId } = command;
   const signing = algorithm === undefined ? {} : { algorithm };
   const client = clientId === undefined ? {} : { client_id: clientId };
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
-    takesAValue(kept)
+  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
+    if (takesConsent(kept)) {
+      return Result.fail(connectedByConsent(kept.connection.name));
+    }
+    return takesAValue(kept)
       ? Result.succeed([
           { type: 'connection_approved', data: { connection } },
           { type: 'connection_connected', data: { connection, secret_id: secretId, ...signing, ...client } },
         ])
-      : Result.fail(takesNoCredential(kept.connection.name)),
-  );
+      : Result.fail(takesNoCredential(kept.connection.name));
+  });
 }
 
 function decideRemoval({ connection }: ConnectionRemoval, registry: Registry): Decision {

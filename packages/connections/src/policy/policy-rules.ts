@@ -1,5 +1,6 @@
 import { isSignedInPerson } from '@on.auto/identity';
-import { Forbidden, listed, type CallerIdentity } from '@on.auto/operations';
+import { Forbidden, articled, listed, type CallerIdentity } from '@on.auto/operations';
+import { wayAddresses } from '@on.auto/providers';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
@@ -24,7 +25,7 @@ function matches(pattern: string, host: string): boolean {
 
 function hostsOf({ type, entry, credential }: Addition, documentServer: string | undefined): readonly string[] {
   const server = type === 'mcp' ? [entry.url] : [entry.document, entry.base_url, documentServer];
-  const addresses = [...server, credential.issuer];
+  const addresses = [...server, ...wayAddresses.map((field) => credential[field])];
   return addresses.flatMap((address) => {
     const parsed = address === undefined ? null : URL.parse(address);
     return parsed === null ? [] : [parsed.hostname];
@@ -67,7 +68,7 @@ function kindRefusal(credentialKinds: ConnectionPolicy['credentialKinds'], { cre
   return credentialKinds === null || credentialKinds.includes(credential.kind)
     ? undefined
     : new Forbidden({
-        detail: `A connection may not take a ${credential.kind} credential on this runtime, which allows ${allowing(credentialKinds, 'no kind of credential')}`,
+        detail: `A connection may not take ${articled(`${credential.kind} credential`)} on this runtime, which allows ${allowing(credentialKinds, 'no kind of credential')}`,
       });
 }
 

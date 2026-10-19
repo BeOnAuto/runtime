@@ -1,10 +1,16 @@
 import { variableNamePattern } from '@on.auto/config';
-import { listed } from '@on.auto/operations';
-import { wayFields } from '@on.auto/providers';
-import { headerNamePattern, isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
+import { articled, listed } from '@on.auto/operations';
+import { consentEndpoints, consentIssuesOf, wayAddresses, wayFields, type WayAddress } from '@on.auto/providers';
+import {
+  ClientIdSchema,
+  ClientSourceSchema,
+  headerNamePattern,
+  isPinnableUrl,
+  pinnedUrlShape,
+} from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-const credentialKinds = ['none', 'reference', 'secret', 'client_credentials'] as const;
+const credentialKinds = ['none', 'reference', 'secret', 'client_credentials', 'authorization'] as const;
 
 export const CredentialKindSchema = Schema.Literals(credentialKinds);
 
@@ -36,16 +42,49 @@ export const CredentialFieldsSchema = Schema.Struct({
     }),
   ),
   issuer: Schema.optionalKey(
-    wayFields.issuer.annotate({ description: 'For client_credentials, the https URL of the authorization server' }),
+    wayFields.issuer.annotate({
+      description: 'For client_credentials and authorization, the https URL of the authorization server',
+    }),
   ),
   client_id: Schema.optionalKey(
-    NamedSchema.annotate({
-      description: 'For client_credentials, the id of the client, else given on the page',
+    ClientIdSchema.annotate({
+      description:
+        'For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected',
     }),
   ),
   scope: Schema.optionalKey(
     wayFields.scope.annotate({
-      description: 'For client_credentials, the scopes, separated by spaces; none when left out',
+      description:
+        'For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed',
+    }),
+  ),
+  parameters: Schema.optionalKey(
+    wayFields.parameters.annotate({
+      description: 'For authorization, the parameters its authorization request carries beside the standard ones',
+    }),
+  ),
+  authorization_endpoint: Schema.optionalKey(
+    wayFields.authorization_endpoint.annotate({
+      description: 'For authorization, the authorization endpoint, where the server publishes no metadata',
+    }),
+  ),
+  token_endpoint: Schema.optionalKey(
+    wayFields.token_endpoint.annotate({ description: 'For authorization, the token endpoint, beside the other two' }),
+  ),
+  revocation_endpoint: Schema.optionalKey(
+    wayFields.revocation_endpoint.annotate({
+      description: 'For authorization, the revocation endpoint, beside the other two',
+    }),
+  ),
+  clients: Schema.optionalKey(
+    wayFields.clients.annotate({
+      description:
+        'For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out',
+    }),
+  ),
+  client_source: Schema.optionalKey(
+    ClientSourceSchema.annotate({
+      description: 'For authorization, the source of the client the connection was made with, once connected',
     }),
   ),
 });
@@ -63,6 +102,10 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'issuer',
   'client_id',
   'scope',
+  'parameters',
+  ...consentEndpoints,
+  'clients',
+  'client_source',
 ];
 
 interface TakenFields {
@@ -75,6 +118,10 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   reference: { required: ['variable', 'name', 'in'], optional: ['scheme'] },
   secret: { required: ['name', 'in'], optional: ['scheme'] },
   client_credentials: { required: ['issuer'], optional: ['client_id', 'scope'] },
+  authorization: {
+    required: ['issuer'],
+    optional: ['scope', 'parameters', ...consentEndpoints, 'clients', 'client_id', 'client_source'],
+  },
 };
 
 const placesOtherThanAHeader: Readonly<Record<Exclude<Placement, 'header'>, string>> = {
@@ -83,8 +130,12 @@ const placesOtherThanAHeader: Readonly<Record<Exclude<Placement, 'header'>, stri
 };
 
 interface FieldIssue {
-  readonly path: readonly [Field];
+  readonly path: readonly string[];
   readonly issue: string;
+}
+
+function credentialOfKind(kind: CredentialKind): string {
+  return articled(`${kind} credential`);
 }
 
 function fieldsTakenInWords({ required, optional }: TakenFields): string {
@@ -98,13 +149,13 @@ function presenceIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return everyFieldButTheScheme.flatMap((field): readonly FieldIssue[] => {
     const given = credential[field] !== undefined;
     if (!given && required.includes(field)) {
-      return [{ path: [field], issue: `Expected ${field}, which a ${credential.kind} credential takes` }];
+      return [{ path: [field], issue: `Expected ${field}, which ${credentialOfKind(credential.kind)} takes` }];
     }
     return given && !required.includes(field) && !optional.includes(field)
       ? [
           {
             path: [field],
-            issue: `Expected no ${field}: a ${credential.kind} credential takes ${fieldsTakenInWords(taken)}`,
+            issue: `Expected no ${field}: ${credentialOfKind(credential.kind)} takes ${fieldsTakenInWords(taken)}`,
           },
         ]
       : [];
@@ -125,7 +176,7 @@ function nameIssuesOf({ name, in: placement }: CredentialFields): readonly Field
 
 function schemeIssueOf({ kind, in: placement }: CredentialFields, scheme: string): string | undefined {
   if (!fieldsOfEachKind[kind].optional.includes('scheme')) {
-    return `Expected no scheme: a ${kind} credential places no value in a header for the runtime to write a scheme before`;
+    return `Expected no scheme: ${credentialOfKind(kind)} places no value in a header for the runtime to write a scheme before`;
   }
   if (placement !== undefined && placement !== 'header') {
     return `Expected no scheme, which goes before a value sent in a header: this credential is sent in ${placesOtherThanAHeader[placement]}`;
@@ -143,10 +194,23 @@ function schemeIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return issue === undefined ? [] : [{ path: ['scheme'], issue }];
 }
 
-function issuerIssuesOf({ kind, issuer }: CredentialFields): readonly FieldIssue[] {
-  return kind !== 'client_credentials' || issuer === undefined || isPinnableUrl(issuer)
-    ? []
-    : [{ path: ['issuer'], issue: pinnedUrlShape }];
+const addressesOfEachKind: Readonly<Record<CredentialKind, readonly WayAddress[]>> = {
+  none: [],
+  reference: [],
+  secret: [],
+  client_credentials: ['issuer'],
+  authorization: wayAddresses,
+};
+
+function addressIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
+  return addressesOfEachKind[credential.kind].flatMap((field) => {
+    const address = credential[field];
+    return address === undefined || isPinnableUrl(address) ? [] : [{ path: [field], issue: pinnedUrlShape }];
+  });
+}
+
+function consentIssuesOfTheKind(credential: CredentialFields): readonly FieldIssue[] {
+  return credential.kind === 'authorization' ? consentIssuesOf(credential) : [];
 }
 
 export const credentialDescription =
@@ -158,7 +222,8 @@ export function credentialFieldIssuesOf(credential: CredentialFields): readonly 
     ...variableIssuesOf(credential),
     ...nameIssuesOf(credential),
     ...schemeIssuesOf(credential),
-    ...issuerIssuesOf(credential),
+    ...addressIssuesOf(credential),
+    ...consentIssuesOfTheKind(credential),
   ];
 }
 

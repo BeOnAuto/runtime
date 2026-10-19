@@ -4,16 +4,13 @@ import { Redacted, Schema } from 'effect';
 import type { CredentialWay } from '../entry/credential-ways.ts';
 import { setCombinationsOf } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
-import { hostTemplateOf } from '../entry/templates.ts';
+import { hostTemplateOf, wayAddresses } from '../entry/templates.ts';
 import type { Provider, ProviderList } from './provider-list.ts';
 
 const asJson = Schema.decodeUnknownSync(Schema.Json);
 
-export function hostAlternativesOf(
-  { entry, address }: Provider,
-  { issuer }: CredentialWay,
-): readonly (readonly string[])[] {
-  const addresses = issuer === undefined ? [address] : [address, issuer];
+export function hostAlternativesOf({ entry, address }: Provider, way: CredentialWay): readonly (readonly string[])[] {
+  const addresses = [address, ...wayAddresses.flatMap((field) => way[field] ?? [])];
   return setCombinationsOf(entry.placeholders ?? {}).map((placed) =>
     addresses.map((each) => hostTemplateOf(each, (name) => placed.get(name))),
   );

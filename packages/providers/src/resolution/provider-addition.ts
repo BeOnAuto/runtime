@@ -4,6 +4,7 @@ import { Option, Result } from 'effect';
 import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
 import { isRequired, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
+import { wayAddresses, type WayAddress, type WayAddresses } from '../entry/templates.ts';
 import { placedText, valuesOf, type Values } from './placeholder-values.ts';
 
 export interface GivenToProvider {
@@ -15,13 +16,14 @@ export interface GivenToProvider {
   readonly record_content?: boolean | undefined;
 }
 
-export interface ProviderCredential {
+export interface ProviderCredential extends WayAddresses {
   readonly kind: WayKind;
   readonly in?: NonNullable<CredentialWay['in']>;
   readonly name?: string;
   readonly scheme?: string;
-  readonly issuer?: string;
   readonly scope?: string;
+  readonly parameters?: Readonly<Record<string, string>>;
+  readonly clients?: NonNullable<CredentialWay['clients']>;
 }
 
 export interface ProviderConnectionEntry {
@@ -63,17 +65,26 @@ function wayOf(
     : Result.succeed(way);
 }
 
-function credentialOf(
-  { kind, in: placement, name, scheme, issuer, scope }: CredentialWay,
-  values: Values,
-): ProviderCredential {
+function placedAddressesOf(way: CredentialWay, values: Values): Partial<Record<WayAddress, string>> {
+  return Object.fromEntries(
+    wayAddresses.flatMap((field) => {
+      const written = way[field];
+      return written === undefined ? [] : [[field, placedText(written, values)]];
+    }),
+  );
+}
+
+function credentialOf(way: CredentialWay, values: Values): ProviderCredential {
+  const { kind, in: placement, name, scheme, scope, parameters, clients } = way;
   return {
     kind,
     ...(placement === undefined ? {} : { in: placement }),
     ...(name === undefined ? {} : { name }),
     ...(scheme === undefined ? {} : { scheme }),
-    ...(issuer === undefined ? {} : { issuer: placedText(issuer, values) }),
+    ...placedAddressesOf(way, values),
     ...(scope === undefined ? {} : { scope }),
+    ...(parameters === undefined ? {} : { parameters }),
+    ...(clients === undefined ? {} : { clients }),
   };
 }
 

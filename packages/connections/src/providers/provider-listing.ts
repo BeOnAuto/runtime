@@ -12,7 +12,7 @@ import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { hostRefusalOf } from '../policy/policy-rules.ts';
-import type { ListedPlaceholder, ListedProvider, ListedWay } from './listed-providers.ts';
+import { listedWayOf, type ListedPlaceholder, type ListedProvider, type ListedWay } from './listed-providers.ts';
 
 export interface Listing {
   readonly providers: ProviderList;
@@ -91,14 +91,12 @@ function placeholdersOf({ entry }: Provider): readonly ListedPlaceholder[] {
   );
 }
 
-function listedWayOf(way: CredentialWay, offering: Pick<ListedWay, 'offered' | 'because'>): ListedWay {
-  return { ...way, ...offering };
-}
-
 function listedProviderOf(provider: Provider, { policy, providerValues }: Listing): readonly ListedProvider[] {
   const { name, title, description, website, type, credentials } = provider.entry;
   const offering = offeringOf(provider, providerValues);
-  const ways = credentials.filter((way) => isListed(provider, way, policy)).map((way) => listedWayOf(way, offering));
+  const ways = credentials
+    .filter((way) => isListed(provider, way, policy))
+    .map((way) => listedWayOf({ ...way, ...offering }));
   return ways.length === 0
     ? []
     : [{ name, title, description, website, type, credentials: ways, placeholders: placeholdersOf(provider) }];
