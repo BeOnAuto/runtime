@@ -1,8 +1,8 @@
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Predicate, Result, Schema, SchemaIssue } from 'effect';
 
-import { defineCapability } from '../index.ts';
-import { TriggerSchema } from '../registry/definition-triggers.ts';
+import { defineCapability } from '../../index.ts';
+import { TriggerSchema } from '../../registry/definition-triggers.ts';
 
 const decodeDocument = Schema.decodeUnknownEffect(
   Schema.fromJsonString(

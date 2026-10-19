@@ -2,6 +2,7 @@ import { Result, type Schema } from 'effect';
 import type { Emitter } from 'liquidjs';
 
 import { engineFailureOf } from './engine-failure.ts';
+import { platformClock, renderTimeExceeded, type RenderClock } from './render-clock.ts';
 import type { TemplateEngine } from './template-engine.ts';
 import type { ParsedTemplate } from './template-parsing.ts';
 
@@ -14,11 +15,12 @@ export interface TemplateRender<Refusal> {
   readonly variables: Readonly<Record<string, Schema.Json>>;
   readonly emitter: Readonly<Emitter>;
   readonly refusalOf: (cause: unknown, line: number) => Refusal | undefined;
+  readonly clock?: RenderClock;
 }
 
 const exceededLimits: ReadonlyMap<string, 'memory' | 'time'> = new Map([
   ['memory alloc limit exceeded', 'memory'],
-  ['template render limit exceeded', 'time'],
+  [renderTimeExceeded, 'time'],
 ]);
 
 function failureOf<Refusal>(
@@ -41,10 +43,10 @@ function failureOf<Refusal>(
 export function renderedTemplate<Refusal>(
   engine: TemplateEngine,
   { templates, firstLine }: ParsedTemplate,
-  { variables, emitter, refusalOf }: TemplateRender<Refusal>,
+  { variables, emitter, refusalOf, clock = platformClock }: TemplateRender<Refusal>,
 ): Result.Result<void, RenderFailure | Refusal> {
   try {
-    engine.render(templates, variables, emitter);
+    engine.render(templates, variables, emitter, clock);
   } catch (error) {
     return Result.fail(failureOf(error, firstLine, refusalOf));
   }

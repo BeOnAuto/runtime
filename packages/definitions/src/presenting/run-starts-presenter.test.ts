@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import type { RunEvent } from '../runs/run-events.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 
 const { present } = presentationOf(makeDefinitionPresenters([echo]));

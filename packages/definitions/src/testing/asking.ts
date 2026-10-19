@@ -8,7 +8,7 @@ import {
   definePublishEvent,
   type RequestRecord,
 } from '../index.ts';
-import { echo } from './echo.ts';
+import { echo } from './capabilities/echo.ts';
 
 const NudgeSentSchema = factOf('nudge_sent', Schema.Struct({ number: Schema.Int }), RunContextSchema);
 

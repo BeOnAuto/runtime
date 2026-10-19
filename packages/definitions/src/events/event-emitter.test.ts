@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { publishedEventPresenter } from '../presenting/published-event-presenter.ts';
 import { asking } from '../testing/asking.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { emittedEventsOf, eventEmitter as eventEmitterOf, type Emission } from './event-emitter.ts';
 import { publishedEventOf } from './published-events.ts';
 import { playbookOwnNamesOf } from './reserved-attributes.ts';

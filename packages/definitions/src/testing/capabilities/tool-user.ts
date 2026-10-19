@@ -8,7 +8,7 @@ import {
   type CapabilityRejection,
   type Capability,
   type ToolCallJournal,
-} from '../index.ts';
+} from '../../index.ts';
 
 type Ending = 'succeed' | 'unavailable' | 'conflict' | 'stall';
 

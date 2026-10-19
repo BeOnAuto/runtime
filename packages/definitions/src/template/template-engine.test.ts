@@ -10,6 +10,7 @@ import {
   type RenderFailure,
   type TemplateEngine,
 } from '../template.ts';
+import { standingRenderClock } from '../testing/time/stepping-clock.ts';
 
 function noRefusal(): undefined {
   return undefined;
@@ -39,8 +40,9 @@ function rendering(
 ): Result.Result<string, RenderFailure | undefined> {
   const parsed = Result.getOrThrow(parsedTemplate(engine, body, 1));
   const emitter = textEmitter();
-  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf: noRefusal }), () =>
-    emitter.text(),
+  return Result.map(
+    renderedTemplate(engine, parsed, { variables, emitter, refusalOf: noRefusal, clock: standingRenderClock }),
+    () => emitter.text(),
   );
 }
 

@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { mostInputBytes } from '../runs/recorded-size.ts';
 import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { relay } from '../testing/capabilities/relay.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { echo } from '../testing/echo.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
-import { relay } from '../testing/relay.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

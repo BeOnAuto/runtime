@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { defineCancelRun } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { firstMoment, toPlaybook } from '../testing/harness.ts';
 import { cancelledAt, relayedId, withHandOn } from '../testing/relaying.ts';
 

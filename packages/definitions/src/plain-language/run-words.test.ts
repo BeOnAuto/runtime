@@ -2,9 +2,9 @@ import type { RouteRegistration } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionOperations } from '../index.ts';
-import { echo } from '../testing/echo.ts';
-import { probe } from '../testing/probe.ts';
-import { relay } from '../testing/relay.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { probe } from '../testing/capabilities/probe.ts';
+import { relay } from '../testing/capabilities/relay.ts';
 
 const relaying = relay().capability;
 

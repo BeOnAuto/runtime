@@ -12,9 +12,9 @@ import {
 } from '../index.ts';
 import { asking } from '../testing/asking.ts';
 import { acmeAdmin } from '../testing/callers.ts';
+import { relay } from '../testing/capabilities/relay.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
-import { relay } from '../testing/relay.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
 
 const relayed = { org: 'acme', playbook: 'alpha', id: relayedId };

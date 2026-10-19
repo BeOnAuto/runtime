@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { defineCapability, type Capability, type StandingRequest } from '../index.ts';
 import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { acmeAdmin } from '../testing/callers.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
-import { probe } from '../testing/probe.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

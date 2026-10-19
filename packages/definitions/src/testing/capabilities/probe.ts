@@ -10,7 +10,7 @@ import {
   type RunContext,
   type Capability,
   type CapabilityRejection,
-} from '../index.ts';
+} from '../../index.ts';
 
 type Mishap =
   | 'stall'

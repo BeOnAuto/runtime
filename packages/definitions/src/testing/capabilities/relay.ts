@@ -2,7 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import { Effect, Predicate } from 'effect';
 
-import { defineCapability, type FinishesLater, type Capability } from '../index.ts';
+import { defineCapability, type FinishesLater, type Capability } from '../../index.ts';
 
 export interface Relay {
   readonly capability: Capability;

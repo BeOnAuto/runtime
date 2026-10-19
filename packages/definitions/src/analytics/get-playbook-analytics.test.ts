@@ -6,7 +6,7 @@ import { defineGetPlaybookAnalytics } from '../index.ts';
 import { RunEventSchema, type RecordedRunEvent, type RunEvent } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
 import { acmeReader } from '../testing/callers.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { asQueryString, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
 const getPlaybookAnalytics = defineGetPlaybookAnalytics([

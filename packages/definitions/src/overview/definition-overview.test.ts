@@ -11,7 +11,7 @@ import {
   sectionOf,
   type Overview,
 } from '../index.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { sectionIn } from '../testing/index.ts';
 
 function overviewOf(source: string, name = 'greet'): string {

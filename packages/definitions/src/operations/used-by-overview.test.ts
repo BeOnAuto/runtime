@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { defineCapability, type Capability } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
+import { overviewOfAProbe, probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
-import { overviewOfAProbe, probe } from '../testing/probe.ts';
 
 const decodeDetails = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.JsonObject));
 

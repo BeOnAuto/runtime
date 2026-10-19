@@ -11,10 +11,10 @@ import { describe, expect, it } from 'vitest';
 
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { acmeAdmin } from '../testing/callers.ts';
+import { answerOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
-import { answerOfCall, toolUser } from '../testing/tool-user.ts';
 import { toolCallJournal } from './tool-call-journal.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');

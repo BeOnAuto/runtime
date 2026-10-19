@@ -10,6 +10,8 @@ import {
   type Template,
 } from 'liquidjs';
 
+import { renderDeadlineOn, type RenderClock } from './render-clock.ts';
+
 export const templateLimits = {
   characters: 65_536,
   names: 1000,
@@ -107,6 +109,7 @@ export interface TemplateEngine {
     templates: () => Template[],
     variables: Readonly<Record<string, Schema.Json>>,
     emitter: Readonly<Emitter>,
+    clock: RenderClock,
   ) => void;
 }
 
@@ -126,14 +129,29 @@ function namesOf(liquid: () => Liquid, body: string): number {
   return names;
 }
 
+function tagsRemovedFrom(liquid: () => Liquid): void {
+  for (const name of removedTags) {
+    Reflect.deleteProperty(liquid().tags, name);
+  }
+}
+
+function contextLimitedBy(
+  clock: RenderClock,
+  liquid: () => Liquid,
+  variables: Readonly<Record<string, Schema.Json>>,
+): Context {
+  const context = new Context({ ...variables }, liquid().options, { sync: true }, { liquid: liquid() });
+  Reflect.set(context, 'renderLimit', renderDeadlineOn(clock, templateLimits.renderMilliseconds));
+  return context;
+}
+
 function engineOver(liquid: () => Liquid): TemplateEngine {
   return {
     parse: (body) => liquid().parse(body),
     namesIn: (body) => namesOf(liquid, body),
     analyze: (templates) => liquid().analyzeSync(templates(), { partials: false }),
-    render: (templates, variables, emitter) => {
-      const context = new Context({ ...variables }, liquid().options, { sync: true }, { liquid: liquid() });
-      toValueSync(liquid().renderer.renderTemplates(templates(), context, emitter));
+    render: (templates, variables, emitter, clock) => {
+      toValueSync(liquid().renderer.renderTemplates(templates(), contextLimitedBy(clock, liquid, variables), emitter));
     },
   };
 }
@@ -147,15 +165,12 @@ export function templateEngine(registrations: () => EngineRegistrations = noRegi
     lenientIf: true,
     ownPropertyOnly: true,
     parseLimit: templateLimits.characters,
-    renderLimit: templateLimits.renderMilliseconds,
     memoryLimit: templateLimits.memory,
   });
   for (const name of Object.keys(liquid.filters).filter((filter) => !keptFilters.has(filter))) {
     liquid.unregisterFilter(name);
   }
-  for (const name of removedTags) {
-    Reflect.deleteProperty(liquid.tags, name);
-  }
+  tagsRemovedFrom(() => liquid);
   for (const [name, filter] of Object.entries(filters)) {
     liquid.registerFilter(name, filter);
   }

@@ -2,9 +2,9 @@ import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
+import { probe, spentUsage } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
-import { probe, spentUsage } from '../testing/probe.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

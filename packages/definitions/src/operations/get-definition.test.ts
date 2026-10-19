@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { overviewOfAProbe, probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { echo } from '../testing/echo.ts';
 import { asQueryString, firstMoment, harness, toPlaybook } from '../testing/harness.ts';
-import { overviewOfAProbe, probe } from '../testing/probe.ts';
 
 const { createDefinition, getDefinition, retireDefinition } = definitionOperationsFor([echo, probe().capability]);
 

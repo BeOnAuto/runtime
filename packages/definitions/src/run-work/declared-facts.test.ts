@@ -5,7 +5,7 @@ import { composedFactsOf, declaredFactsOf, makeDefinitionPresenters } from '../i
 import { RunEventSchema } from '../runs/run-events.ts';
 import { askedRunId, askingFacts } from '../testing/asked-runs.ts';
 import { asking, nudgesPresenter } from '../testing/asking.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { playbookStreamKinds } from './declared-facts.ts';
 
 const context = {
