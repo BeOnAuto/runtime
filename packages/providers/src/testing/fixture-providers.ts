@@ -145,6 +145,25 @@ export const adverts: ProviderEntry = decodeEntry({
   ],
 });
 
+export const audiences: ProviderEntry = decodeEntry({
+  name: 'audiences',
+  title: 'Audiences',
+  description: 'Read the audiences of an advertising account.',
+  website: 'https://developer.audiences.example.com',
+  type: 'openapi',
+  document: 'https://audiences.example.com/openapi.json',
+  base_url: 'https://api.audiences.example.com/v1',
+  headers: { 'X-Client': '{client_id}' },
+  credentials: [
+    {
+      kind: 'authorization',
+      issuer: 'https://accounts.audiences.example.com',
+      scope: 'audiences.read',
+      description: 'Sign in to Audiences and allow Auto to read your audiences.',
+    },
+  ],
+});
+
 function regionOf(value: string, title: string) {
   return {
     value,
