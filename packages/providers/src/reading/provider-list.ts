@@ -1,5 +1,5 @@
 import type { Issue } from '@on.auto/operations';
-import { Option, Result } from 'effect';
+import { Option, Order, Result } from 'effect';
 
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress } from '../entry/templates.ts';
@@ -29,6 +29,15 @@ export function addressOf(entry: ProviderEntry, documentServer?: string): string
 export function documentServerOf({ entry, address }: Provider): string | undefined {
   const { document, base_url: baseUrl } = entry;
   return document === undefined || baseUrl !== undefined || isAddress(document) ? undefined : address;
+}
+
+export const byName: Order.Order<Provider> = Order.mapInput(Order.String, ({ entry }: Provider) => entry.name);
+
+export function joinedProviders({ providers, documents }: ProviderList, added: readonly ProviderEntry[]): ProviderList {
+  const named = new Set(added.map(({ name }) => name));
+  const ofWhoeverRunsIt = added.map((entry): Provider => ({ entry, address: addressOf(entry) }));
+  const shipped = providers.filter(({ entry }) => !named.has(entry.name));
+  return { providers: [...ofWhoeverRunsIt, ...shipped].toSorted(byName), documents };
 }
 
 export function providerNamed({ providers }: ProviderList, name: string): Result.Result<Provider, readonly Issue[]> {

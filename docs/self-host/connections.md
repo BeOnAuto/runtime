@@ -28,6 +28,49 @@ Auto reads the providers when it starts, and nothing is fetched from anywhere to
 
 None of the providers this version ships needs a value of yours. A provider whose entry sends a value of your own registration at the vendor, such as a developer token, names it as an environment variable: set it in Auto's environment and start Auto again, and Auto sends it to that provider's server alone, in the header or the query parameter the provider names, and scrubs it from what it records. Until it is set, `list_providers` shows the provider's ways as ones you set up first, `search` leaves the provider out of the providers it lists to an agent, and `add_connection` refuses it. The variable is one Auto reads for itself, so `variables` may not name it.
 
+## Add providers of your own
+
+You can add providers of your own beside those Auto ships, under `providers` in the `connections` section of `auto-runtime.yaml`. A person then connects one by its name as they connect a provider Auto ships: `list_providers` lists it for Studio's page, `search` offers it to an agent, and an entry of the settings file may name it, as [Add a tool server](tool-servers.md#name-a-provider) shows. A provider of yours named as one Auto ships takes its place, so you can point that provider at a proxy of your own.
+
+```yaml
+connections:
+  providers:
+    - name: crm
+      title: CRM
+      description: Read and change the accounts and contacts of your CRM.
+      website: https://developer.crm.example.com
+      type: mcp
+      url: https://{tenant}.crm.example.com/mcp
+      placeholders:
+        tenant:
+          description: The tenant of your CRM, as in https://<tenant>.crm.example.com
+          pattern: '^[a-z0-9-]{1,63}$'
+          example: acme
+      credentials:
+        - kind: secret
+          in: header
+          name: Authorization
+          scheme: Bearer
+          description: An API token from the settings of your CRM.
+```
+
+| Field          | What it holds                                                                                                                                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`         | The provider's name, and the name a connection to it takes unless the person gives another: 1 to 32 lowercase letters, digits and hyphens, starting with a letter                                                                                                                                |
+| `title`        | What a person reads                                                                                                                                                                                                                                                                              |
+| `description`  | What a function may do through it, in at most 300 characters                                                                                                                                                                                                                                     |
+| `website`      | The `https` page where a person reads about the server and makes a credential                                                                                                                                                                                                                    |
+| `type`         | `mcp` for an MCP server, `openapi` for an HTTP API described by an OpenAPI document                                                                                                                                                                                                              |
+| `url`          | For `mcp`, the `https` URL of the server, each `{name}` in it a placeholder                                                                                                                                                                                                                      |
+| `document`     | For `openapi`, the `https` URL of the OpenAPI document. A document beside the entries is one Auto ships, so a provider of yours names its document by its address                                                                                                                                |
+| `base_url`     | For `openapi`, where the calls go when the document names no server                                                                                                                                                                                                                              |
+| `headers`      | Headers sent with every request, never a credential; `query_params`, for `openapi`, the same for the query. A value of your own registration at the vendor, such as a developer token, is written `${NAME}`: Auto keeps the reference and sends that provider's server the value of the variable |
+| `request_id`   | The response header in which the server returns its own id of a request                                                                                                                                                                                                                          |
+| `placeholders` | The values that differ from one connection to the next, by name: each a `description`, a `pattern` anchored with `^` and `$` and an `example`, or a `description` and its `choices`; `required: false` for one a person may leave out                                                            |
+| `credentials`  | The ways a credential reaches the server, in the order a person is offered them, the first the default: `secret` with `in`, `name` and, for a header, `scheme`; `client_credentials` with `issuer` and `scope`; or `none`; each with a `description` a person reads                              |
+
+Auto reads them when it starts, and an entry it cannot take stops it, naming the line and the key: one whose address is neither `https` nor on a loopback address, a name another of your providers has, or a way `add_connection` would always refuse, such as one that sends its credential in a header the entry sends already, in any case. A value of yours that an entry refers to, such as `${NOTES_WORKSPACE}`, stops Auto at start while its variable is not set where the section comes from `auto-runtime.yaml`, as every reference of the file does, and where it comes from `CONNECTIONS` in the environment, the provider is listed with its ways as ones you set up first, as a provider Auto ships is. The `title`, the `description` and a way's `description` are prose, which the settings file's check for a credential written out does not judge; Auto judges the rest of an entry as it judges a provider it ships. The rules below apply to a provider of yours as to any: it is listed where its hosts pass `allowed_hosts` and its ways `credential_kinds`.
+
 ## How a function uses a connection
 
 A connected connection is a tool server of its org, for every playbook of the org or the playbooks its entry names. A function names its tools as it names those of any tool server, by the connection's name and the tool, as in `crm/search` or `crm/*`, and calls them in the same way, with the same bounds and the same scrubbing of its credential from everything Auto records. `search` lists it beside the tool servers of the settings file, with `connection`, its id, and `introspect`, `dry_run` and `execute` reach it. Each call it records, a run's, one made by hand with `execute` and one an interaction function makes in a conversation, names the connection's id beside the server's name as `connection_id`, so the history stays plain once another connection takes the name.
@@ -110,6 +153,7 @@ connections:
 | `allowed_hosts`    | The hosts a connection may reach. A pattern is a host, or `*.` and a host for every host under it, so `*.example.com` takes `crm.example.com` and not `example.com`. Auto checks the host of an `mcp` connection's `url`, of an `openapi` connection's `document` and `base_url`, or of the server named by a document Auto ships with a provider that gives no `base_url`, and of the `issuer` of client credentials, where the client secret or the key's assertion goes, and then every request a call makes before it is sent | Every host, addresses inside your network such as `localhost` or `10.0.0.5` among them, so set it wherever a connection must not reach those |
 | `credential_kinds` | The kinds of credential a connection may take, of the four above                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Every kind                                                                                                                                   |
 | `variables`        | The environment variables a `reference` may name. A reference sends the value of a variable of Auto to the server the person names, so you list each one a connection may send; Auto refuses to start on a list that names a variable it reads for itself, such as `SECRETS_KEY`, `API_KEYS` or a provider's key                                                                                                                                                                                                                  | None, so every `reference` is refused                                                                                                        |
+| `providers`        | Providers of your own beside those Auto ships, as [Add providers of your own](#add-providers-of-your-own) shows                                                                                                                                                                                                                                                                                                                                                                                                                   | None                                                                                                                                         |
 
 `add_connection` refuses a connection a rule does not take with `403`, saying which rule, such as `A connection may not reach the host api.billing.example.org on this runtime, which allows *.example.com and crm.example.com`. A connection added before a rule changed is refused the same way when it is first used after Auto starts again, `connection_not_allowed` with the same sentence. A rule the file gives that Auto cannot read stops it at start, naming the line. `CONNECTIONS`, the same rules as JSON, wins over the file. The [configuration reference](configuration.md#connections) lists the section.
 

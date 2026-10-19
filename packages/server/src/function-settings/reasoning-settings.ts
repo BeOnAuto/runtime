@@ -14,6 +14,7 @@ import {
   ToolServerSettingsInvalid,
   readToolServerSettings,
   toolServersSetting,
+  type ProviderResolver,
   type ToolServerSettings,
 } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
@@ -72,7 +73,11 @@ function modelProvidersOf(models: ModelSettings): readonly string[] {
   return [...configured, ...unconfigured.map(({ provider }) => provider)];
 }
 
-export function readReasoningSettings(environment: Environment, file: FileUse | undefined): ReasoningSettings {
+export function readReasoningSettings(
+  environment: Environment,
+  file: FileUse | undefined,
+  providers: ProviderResolver,
+): ReasoningSettings {
   const models = Effect.runSync(
     readModelSettings(environment).pipe(Effect.mapError((invalid: Problems) => modelsPlaced(invalid, file))),
   );
@@ -80,6 +85,7 @@ export function readReasoningSettings(environment: Environment, file: FileUse | 
   const toolServers = Effect.runSync(
     readToolServerSettings(environment, {
       modelProviders,
+      providers,
       ...(file === undefined ? {} : { documentsDirectory: dirname(file.path) }),
     }).pipe(Effect.mapError((invalid: Problems) => serversPlaced(invalid, file))),
   );

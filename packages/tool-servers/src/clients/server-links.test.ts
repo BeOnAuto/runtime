@@ -46,6 +46,7 @@ function httpSettings(url: string, changes: Partial<McpServerSettings> = {}): Mc
     request_id: null,
     secrets: [],
     connection: null,
+    provider: null,
     ...changes,
   };
 }

@@ -1,3 +1,4 @@
+import { givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from '../registry/connection-entry.ts';
@@ -42,7 +43,7 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
     ...(type === undefined ? [] : [{ path: ['type'], issue: 'Expected no type: the provider gives it' }]),
     ...serverFields
       .filter((field) => entry[field] !== undefined)
-      .map((field) => ({ path: ['entry', field], issue: `Expected no ${field}: the provider gives the server` })),
+      .map((field) => ({ path: ['entry', field], issue: givenByTheProvider(field) })),
     ...placementFields
       .filter((field) => credential?.[field] !== undefined)
       .map((field) => ({

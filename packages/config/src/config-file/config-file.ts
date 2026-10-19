@@ -4,7 +4,7 @@ import { Data, Result, type Schema } from 'effect';
 
 import type { Environment } from '../server-config.ts';
 import { readYaml, type Position, type YamlDocument, type YamlKind } from '../yaml/yaml-reading.ts';
-import { credentialProblems } from './credentials.ts';
+import { settingCredentialProblems } from './credentials.ts';
 import { below, entriesOf, type FileProblem } from './file-problem.ts';
 import type { FileSetting } from './file-setting.ts';
 import { placeIn } from './places.ts';
@@ -73,7 +73,7 @@ function invalid(path: string, problems: readonly Located[]): ConfigFileInvalid 
 
 function settingReading(fileSetting: FileSetting, raw: Schema.Json, environment: Environment): SettingReading {
   const pointer = below('', fileSetting.key);
-  const refused = credentialProblems(fileSetting.key, raw, pointer, fileSetting.sortsOfCredential);
+  const refused = settingCredentialProblems(fileSetting.key, raw, fileSetting);
   if (refused.length > 0) {
     return { written: [], problems: refused };
   }

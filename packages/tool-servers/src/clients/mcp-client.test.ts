@@ -18,6 +18,7 @@ function httpSettings(url: string): McpServerSettings {
     request_id: null,
     secrets: [],
     connection: null,
+    provider: null,
   };
 }
 

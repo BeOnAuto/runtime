@@ -120,6 +120,52 @@ const servedFields = {
   ),
 };
 
+const CredentialFieldsSchema = Schema.Struct({
+  kind: Schema.optionalKey(
+    Schema.String.annotate({ description: 'The way of the provider the credential takes, when not its first' }),
+  ),
+  value: Schema.optionalKey(
+    Schema.String.annotate({ description: 'For a secret, a reference such as ${TRACKER_TOKEN}' }),
+  ),
+  client_id: Schema.optionalKey(
+    Schema.String.annotate({ description: 'For client credentials, the client id, written out' }),
+  ),
+  client_secret: Schema.optionalKey(
+    Schema.String.annotate({ description: 'For client credentials, a reference such as ${LEDGERS_CLIENT_SECRET}' }),
+  ),
+  private_key: Schema.optionalKey(
+    Schema.String.annotate({
+      description: 'For client credentials, a private key in PEM as a reference such as ${LEDGERS_PRIVATE_KEY}',
+    }),
+  ),
+  algorithm: Schema.optionalKey(
+    Schema.String.annotate({ description: 'The signing algorithm of private_key, such as RS256 or ES256' }),
+  ),
+});
+
+const providerFields = {
+  provider: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'A provider the runtime knows, by its name, which gives the server and where its credential goes: the entry then gives placeholders, credential, org, playbooks, allowed and record_content, and no field of the server',
+    }),
+  ),
+  placeholders: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.String).annotate({
+      description: "With provider, the value of each of the provider's placeholders, by name, never a reference",
+    }),
+  ),
+  credential: Schema.optionalKey(
+    Schema.Union([
+      Schema.String.annotate({ description: 'For a secret, a reference such as ${TRACKER_TOKEN}' }),
+      CredentialFieldsSchema,
+    ]).annotate({
+      description:
+        'With provider, the credential of its first way, or of the way kind names: a secret as a reference such as ${TRACKER_TOKEN}, or client credentials as the client id written out with client_secret, or with private_key and its algorithm, each key a reference; nothing for a way that takes none',
+    }),
+  ),
+};
+
 export const ServerEntrySchema = Schema.Struct({
   type: Schema.optionalKey(
     Schema.Literals(['mcp', 'stdio', 'openapi']).annotate({
@@ -132,6 +178,7 @@ export const ServerEntrySchema = Schema.Struct({
   ...stdioFields,
   ...openApiFields,
   ...servedFields,
+  ...providerFields,
 });
 
 export type ServerEntryFields = typeof ServerEntrySchema.Type;

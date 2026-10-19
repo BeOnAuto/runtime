@@ -33,7 +33,7 @@ const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 type Placed = ReadonlyMap<string, string>;
 
-function localDocumentOf(name: string): string {
+export function localDocumentOf(name: string): string {
   return `documents/${name}.openapi.json`;
 }
 

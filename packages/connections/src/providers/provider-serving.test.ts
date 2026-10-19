@@ -255,4 +255,21 @@ describe('a connection added by a provider, as a tool server', () => {
       [pending.id, 'tracker', { status: 'unready', unready: { because: 'connection_pending' } }],
     ]);
   });
+
+  it('is served by settings that carry the name of its provider, as its serving does, and one given by hand by none', async () => {
+    const h = harness();
+    const tracked = await added(h, {
+      provider: 'tracker',
+      placeholders: { site: 'acme' },
+      credential: { kind: 'none' },
+    });
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: tracked.id, token: tracked.token });
+    const byHand = await added(h, notes);
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: byHand.id, token: byHand.token });
+
+    expect([await settingsOf(h, tracked.id), await settingsOf(h, byHand.id)]).toMatchObject([
+      { name: 'tracker', provider: 'tracker' },
+      { name: 'notes', provider: null },
+    ]);
+  });
 });

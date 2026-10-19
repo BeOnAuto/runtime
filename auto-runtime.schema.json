@@ -265,6 +265,56 @@
           "request_id": {
             "type": "string",
             "description": "The response header, or for an MCP server the key of the metadata of a result, in which the server carries its own id of a request, recorded with each call"
+          },
+          "provider": {
+            "type": "string",
+            "description": "A provider the runtime knows, by its name, which gives the server and where its credential goes: the entry then gives placeholders, credential, org, playbooks, allowed and record_content, and no field of the server"
+          },
+          "placeholders": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "With provider, the value of each of the provider's placeholders, by name, never a reference"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "For a secret, a reference such as ${TRACKER_TOKEN}"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "description": "The way of the provider the credential takes, when not its first"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "For a secret, a reference such as ${TRACKER_TOKEN}"
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "description": "For client credentials, the client id, written out"
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "description": "For client credentials, a reference such as ${LEDGERS_CLIENT_SECRET}"
+                  },
+                  "private_key": {
+                    "type": "string",
+                    "description": "For client credentials, a private key in PEM as a reference such as ${LEDGERS_PRIVATE_KEY}"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "The signing algorithm of private_key, such as RS256 or ES256"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ],
+            "description": "With provider, the credential of its first way, or of the way kind names: a secret as a reference such as ${TRACKER_TOKEN}, or client credentials as the client id written out with client_secret, or with private_key and its algorithm, each key a reference; nothing for a way that takes none"
           }
         },
         "additionalProperties": false
@@ -343,10 +393,162 @@
             "additionalProperties": false
           },
           "description": "The clients whoever runs the runtime registered at authorization servers, each with the issuers it is registered at, its client_id, and its client_secret, or its private_key with its algorithm, as a reference, or neither for a public client"
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the provider and of a connection to it by default: 1 to 32 lowercase letters, digits and hyphens, starting with a letter"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "What a person reads as its name"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300,
+                "description": "What a function may do through it, in one or two sentences of at most 300 characters"
+              },
+              "website": {
+                "type": "string",
+                "description": "The https page where a person reads about the server and makes a credential"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["mcp", "openapi"],
+                "description": "mcp for an MCP server, given url; openapi for an HTTP API"
+              },
+              "url": {
+                "type": "string",
+                "description": "For mcp, the https URL of the server, {name} standing for the placeholder name"
+              },
+              "document": {
+                "type": "string",
+                "description": "For openapi, the https URL of its OpenAPI document, {name} standing for the placeholder name"
+              },
+              "base_url": {
+                "type": "string",
+                "description": "For openapi, the https URL its calls go to where the document names no server, {name} standing for the placeholder name"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Headers sent with every request, never a credential; a reference such as ${ADS_DEVELOPER_TOKEN} stands for a value of whoever runs the runtime"
+              },
+              "query_params": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "For openapi, query parameters sent with every call, never a credential; a reference such as ${ADS_DEVELOPER_TOKEN} stands for a value of whoever runs the runtime"
+              },
+              "request_id": {
+                "type": "string",
+                "description": "The response header, or for an MCP server the key of the metadata of a result, in which the server carries its own id of a request, recorded with each call"
+              },
+              "placeholders": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "pattern": {
+                      "type": "string"
+                    },
+                    "example": {
+                      "type": "string"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "choices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "sets": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": ["value", "title"],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": ["description"],
+                  "additionalProperties": false
+                },
+                "description": "The values that differ from one connection to the next, by name: each a description with a pattern and an example, or with choices"
+              },
+              "credentials": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["secret", "client_credentials", "none"]
+                    },
+                    "in": {
+                      "type": "string",
+                      "enum": ["header", "query", "security"]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "scheme": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "issuer": {
+                      "type": "string"
+                    },
+                    "scope": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": ["kind"],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials or none"
+              }
+            },
+            "required": ["name", "title", "description", "website", "type", "credentials"],
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false,
-      "description": "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use, and the clients whoever runs the runtime registered at authorization servers. CONNECTIONS wins over it"
+      "description": "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it"
     }
   },
   "additionalProperties": false,

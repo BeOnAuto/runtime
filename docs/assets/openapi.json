@@ -1086,7 +1086,7 @@
                                     "type": "null"
                                   }
                                 ],
-                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                                "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
                               },
                               "playbooks": {
                                 "type": "array",
@@ -1143,7 +1143,7 @@
                                     "type": "null"
                                   }
                                 ],
-                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                                "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
                               },
                               "playbooks": {
                                 "type": "array",
@@ -8863,7 +8863,7 @@
                                     "type": "null"
                                   }
                                 ],
-                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                                "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
                               },
                               "tool_count": {
                                 "type": "integer",
@@ -8912,7 +8912,7 @@
                                     "type": "null"
                                   }
                                 ],
-                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                                "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
                               },
                               "unavailable": {
                                 "type": "string",

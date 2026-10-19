@@ -2,17 +2,20 @@ import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { registeredClientSecrets } from '../registered-clients/registered-clients.ts';
-import { readConnectionsSetting } from './connection-policy.ts';
+import { namingNoOwnVariable, readConnectionsSetting } from './connection-policy.ts';
 
 const ownVariables: ReadonlySet<string> = new Set(['SECRETS_KEY', 'GRAPH_API_KEY']);
 
+function settingRead(environment: Readonly<Record<string, string>>) {
+  return Effect.flatMap(readConnectionsSetting(environment), (setting) => namingNoOwnVariable(setting, ownVariables));
+}
+
 function policyOf(environment: Readonly<Record<string, string>>) {
-  return Effect.runSync(readConnectionsSetting(environment, ownVariables)).policy;
+  return Effect.runSync(settingRead(environment)).policy;
 }
 
 function refusalOf(text: string, environment: Readonly<Record<string, string>> = {}) {
-  return Effect.runSync(Effect.flip(readConnectionsSetting({ ...environment, CONNECTIONS: text }, ownVariables)))
-    .message;
+  return Effect.runSync(Effect.flip(settingRead({ ...environment, CONNECTIONS: text }))).message;
 }
 
 const aRegisteredClient = {
@@ -22,6 +25,12 @@ const aRegisteredClient = {
 };
 
 const environment = { EXAMPLE_CLIENT_SECRET: 'example-client-secret-5f2a' };
+
+const misplacedInThePolicy =
+  'Holds a reference to an environment variable, which only the client_secret and the private_key of a registered client, and a header or a query value of a provider, may hold';
+
+const misplacedInAClient =
+  'Holds a reference to an environment variable, which only the client_secret and the private_key of a registered client may hold';
 
 describe('the policy of connections', () => {
   it('lets people add any connection when CONNECTIONS is left out or empty', () => {
@@ -64,15 +73,62 @@ describe('the policy of connections', () => {
   });
 });
 
+const notes = {
+  name: 'notes',
+  title: 'Notes',
+  description: 'Read and write the notes of a team.',
+  website: 'https://developer.notes.example.com',
+  type: 'mcp',
+  url: 'https://notes.example.com/mcp',
+  headers: { 'X-Workspace': '${NOTES_WORKSPACE}' },
+  credentials: [{ kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer' }],
+};
+
+describe('the providers of CONNECTIONS', () => {
+  it('are none when it names none, and each entry it gives, its reference kept as it is written, beside the policy', () => {
+    const { providers, policy } = Effect.runSync(settingRead({ CONNECTIONS: JSON.stringify({ providers: [notes] }) }));
+
+    expect([Effect.runSync(settingRead({ CONNECTIONS: '{}' })).providers, providers, policy]).toEqual([
+      [],
+      [notes],
+      { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] },
+    ]);
+  });
+
+  it('stop the start at an entry the schema of a provider refuses, at its place, a document beside the entries among them', () => {
+    const local = {
+      ...notes,
+      name: 'Notes',
+      type: 'openapi',
+      url: undefined,
+      document: 'documents/Notes.openapi.json',
+    };
+
+    expect(refusalOf(JSON.stringify({ providers: [local] }))).toBe(
+      "The connection settings are invalid. CONNECTIONS: /providers/0/name: Expected a name of 1 to 32 lowercase letters, digits and hyphens, starting with a letter; CONNECTIONS: /providers/0/document: Expected the https URL of the OpenAPI document, or an http URL on a loopback address: a provider whoever runs the runtime adds names its document by its address, since the documents beside the entries are the runtime's own",
+    );
+  });
+
+  it('stop the start at a name given twice, and at a way add_connection would refuse, in its words', () => {
+    const colliding = {
+      ...notes,
+      name: 'pages',
+      headers: { authorization: '${PAGES_HEADER}' },
+      credentials: [{ kind: 'secret', in: 'header', name: 'Authorization' }, { kind: 'none' }],
+    };
+
+    expect(refusalOf(JSON.stringify({ providers: [notes, colliding, notes] }))).toBe(
+      'The connection settings are invalid. CONNECTIONS: /providers/2/name: Expected a name no other provider of the setting has; CONNECTIONS: /providers/1/credentials/0/name: The entry sends this header already, so the credential cannot go in it',
+    );
+  });
+});
+
 describe('the registered clients of CONNECTIONS', () => {
   it('are read apart from the policy, their references substituted from the environment and the policy as it is written', () => {
     const connections = JSON.stringify({ allowed_hosts: ['*.example.com'], registered_clients: [aRegisteredClient] });
 
     const { policy, registeredClients } = Effect.runSync(
-      readConnectionsSetting(
-        { CONNECTIONS: connections, EXAMPLE_CLIENT_SECRET: 'example-client-secret-5f2a' },
-        ownVariables,
-      ),
+      settingRead({ CONNECTIONS: connections, EXAMPLE_CLIENT_SECRET: 'example-client-secret-5f2a' }),
     );
 
     expect(policy).toEqual({
@@ -90,7 +146,7 @@ describe('the registered clients of CONNECTIONS', () => {
   });
 
   it('are none where CONNECTIONS names none', () => {
-    expect(Effect.runSync(readConnectionsSetting({ CONNECTIONS: '{}' }, ownVariables)).registeredClients).toEqual([]);
+    expect(Effect.runSync(settingRead({ CONNECTIONS: '{}' })).registeredClients).toEqual([]);
   });
 });
 
@@ -138,9 +194,7 @@ describe('the empty default of a reference in a registered client', () => {
     const withAnEmptyDefault = { ...aRegisteredClient, client_secret: '${EXAMPLE_CLIENT_SECRET:-}' };
     const connections = JSON.stringify({ registered_clients: [withAnEmptyDefault] });
 
-    const { registeredClients } = Effect.runSync(
-      readConnectionsSetting({ ...environment, CONNECTIONS: connections }, ownVariables),
-    );
+    const { registeredClients } = Effect.runSync(settingRead({ ...environment, CONNECTIONS: connections }));
 
     expect(registeredClientSecrets(registeredClients).map((secret) => Redacted.value(secret))).toEqual([
       environment.EXAMPLE_CLIENT_SECRET,
@@ -158,15 +212,13 @@ describe('the references in CONNECTIONS that stop the start', () => {
       variables: ['${CRM_VARIABLE}'],
       registered_clients: [{ ...aRegisteredClient, issuers: ['${EXAMPLE_ISSUER}'], client_id: '${EXAMPLE_CLIENT_ID}' }],
     };
-    const misplaced =
-      'Holds a reference to an environment variable, which only the client_secret and the private_key of a registered client may hold';
 
     expect(refusalOf(JSON.stringify(elsewhere), { ...environment, CRM_HOST: 'crm.example.com' })).toBe(
       [
-        `The connection settings are invalid. CONNECTIONS: /allowed_hosts/1: ${misplaced}`,
-        `CONNECTIONS: /variables/0: ${misplaced}`,
-        `CONNECTIONS: /registered_clients/0/issuers/0: ${misplaced}`,
-        `CONNECTIONS: /registered_clients/0/client_id: ${misplaced}`,
+        `The connection settings are invalid. CONNECTIONS: /allowed_hosts/1: ${misplacedInThePolicy}`,
+        `CONNECTIONS: /variables/0: ${misplacedInThePolicy}`,
+        `CONNECTIONS: /registered_clients/0/issuers/0: ${misplacedInAClient}`,
+        `CONNECTIONS: /registered_clients/0/client_id: ${misplacedInAClient}`,
       ].join('; '),
     );
   });

@@ -1,8 +1,19 @@
 export { WayKindSchema, wayFields, type CredentialWay, type WayKind } from './entry/credential-ways.ts';
 export { clientIdPlaceholder, type Choice, type Placeholder } from './entry/placeholders.ts';
-export { ProviderEntrySchema, type ProviderEntry } from './entry/provider-entry.ts';
+export {
+  AddedProviderEntrySchema,
+  ProviderEntrySchema,
+  entryProse,
+  type ProviderEntry,
+} from './entry/provider-entry.ts';
 export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts';
-export { documentServerOf, providerNamed, type Provider, type ProviderList } from './reading/provider-list.ts';
+export {
+  documentServerOf,
+  joinedProviders,
+  providerNamed,
+  type Provider,
+  type ProviderList,
+} from './reading/provider-list.ts';
 export {
   hostAlternativesOf,
   operatorValuesIn,

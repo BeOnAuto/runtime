@@ -16,7 +16,7 @@ import { Data, Option, Result, Schema, SchemaIssue, type StandardSchema } from '
 
 import { ProviderEntrySchema, type ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress } from '../entry/templates.ts';
-import { addressOf, type Provider, type ProviderList } from './provider-list.ts';
+import { addressOf, byName, type Provider, type ProviderList } from './provider-list.ts';
 
 export class ProvidersInvalid extends Data.TaggedError('providers_invalid')<{ readonly message: string }> {}
 
@@ -135,10 +135,6 @@ function readProvider(folder: string, file: string): Result.Result<Provider, rea
   return Result.mapError(read, (problems) => problems.map((problem) => located(problem)));
 }
 
-function byName({ entry: { name } }: Provider, { entry: { name: other } }: Provider): number {
-  return Number(name > other) - Number(name < other);
-}
-
 function invalid(located: readonly Located[]): ProvidersInvalid {
   const listed = located.map(({ place, detail }) => `${place}: ${detail}`).join('; ');
   return new ProvidersInvalid({ message: `The entries of the providers are invalid: ${listed}` });
@@ -157,6 +153,6 @@ export function readProviders(entries: Readonly<URL> = shippedEntries): Result.R
   return Result.match(Result.all(read), {
     onFailure: () => Result.fail(invalid(located)),
     onSuccess: (providers: readonly Provider[]) =>
-      Result.succeed({ providers: providers.toSorted((one, other) => byName(one, other)), documents: folder }),
+      Result.succeed({ providers: providers.toSorted(byName), documents: folder }),
   });
 }

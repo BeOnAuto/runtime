@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { clientIdWrittenOut, credentialProblems } from '../index.ts';
 import { configured, problemsIn } from '../testing/config-files.ts';
 
 const secret = 'sk-proj-0123456789abcdefghijklmnop';
@@ -21,6 +22,77 @@ describe('a key that names a sort of credential', () => {
     expect(problemsIn('example_servers: { graph: { headers: { X-Token-Type: bearer } } }\n')).toBe(
       `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:54 example_servers.graph.headers.X-Token-Type: ${writtenOut}`,
     );
+  });
+});
+
+const described =
+  "example_rules: { credential_kinds: [secret], ways: [{ name: X-Token, description: 'Token from the settings of your account' }] }\n";
+
+describe('a key that names prose', () => {
+  it('is judged neither by its name nor by its shape in the setting that names it, while a key beside it is', () => {
+    const { environment } = configured(described);
+
+    expect(environment['EXAMPLE_RULES']).toBe(
+      JSON.stringify({
+        credential_kinds: ['secret'],
+        ways: [{ name: 'X-Token', description: 'Token from the settings of your account' }],
+      }),
+    );
+    expect(problemsIn(described.replace('X-Token', `'Bearer ${secret}'`))).toBe(
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:61 example_rules.ways[0].name: ${writtenOut}`,
+    );
+  });
+
+  it('is judged in any other setting', () => {
+    expect(
+      problemsIn("example_gateways: [{ name: gateway, headers: { description: 'Token from your account' } }]\n"),
+    ).toBe(
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:61 example_gateways[0].headers.description: ${writtenOut}`,
+    );
+  });
+});
+
+describe('a key whose values its setting judges by their shape alone', () => {
+  it('holds values judged by their shape and never by the names they are given, which another setting judges', () => {
+    const { environment } = configured('example_rules: { credential_kinds: [secret], placeholders: { key: acme } }\n');
+
+    expect(environment['EXAMPLE_RULES']).toBe(
+      JSON.stringify({ credential_kinds: ['secret'], placeholders: { key: 'acme' } }),
+    );
+    expect([
+      problemsIn(`example_rules: { credential_kinds: [secret], placeholders: { key: ${secret} } }\n`),
+      problemsIn('example_gateways: [{ name: gateway, headers: { key: acme } }]\n'),
+    ]).toEqual([
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:67 example_rules.placeholders.key: ${writtenOut}`,
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:53 example_gateways[0].headers.key: ${writtenOut}`,
+    ]);
+  });
+});
+
+describe('a client id in the shape of a credential', () => {
+  it('is refused in words that say a client id never is one, and where its secret or key goes', () => {
+    expect(
+      problemsIn(`example_rules: { credential_kinds: [secret], ways: [{ name: x, client_id: ${secret} }] }\n`),
+    ).toBe(
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:75 example_rules.ways[0].client_id: ${clientIdWrittenOut}`,
+    );
+  });
+});
+
+describe('the credential check a package runs over a value of its own', () => {
+  it('judges every key by its name and its value by its shape, but the sorts of credential it is given', () => {
+    const value = { headers: { 'X-Token-Type': 'bearer', Authorization: `Bearer ${secret}` } };
+
+    expect([
+      credentialProblems('servers', value, '/servers'),
+      credentialProblems('servers', value, '/servers', ['X-Token-Type']),
+    ]).toEqual([
+      [
+        { pointer: '/servers/headers/X-Token-Type', detail: writtenOut },
+        { pointer: '/servers/headers/Authorization', detail: writtenOut },
+      ],
+      [{ pointer: '/servers/headers/Authorization', detail: writtenOut }],
+    ]);
   });
 });
 

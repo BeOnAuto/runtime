@@ -13,6 +13,7 @@ import { Data, Effect, Option, Result, Schema } from 'effect';
 
 import { checkedEntry } from './entry-checks.ts';
 import { misplacedReferencesOfEntry, secretsOfEntry, unreferencedSecurity } from './entry-references.ts';
+import { entryToRead, type EntryToRead, type ProviderResolver } from './provider-entries.ts';
 import { ServerEntrySchema, ToolServersSchema, toolServersSetting, type ServerEntryFields } from './server-entries.ts';
 import type { ServerSettings, ToolServerSettings } from './server-settings.ts';
 
@@ -22,6 +23,7 @@ export interface ToolServerSettingsContext {
   readonly modelProviders: readonly string[];
   readonly documentsDirectory?: string;
   readonly placedValues?: ReadonlyMap<string, string>;
+  readonly providers?: ProviderResolver;
 }
 
 export class ToolServerSettingsInvalid extends Data.TaggedError('tool_server_settings_invalid')<{
@@ -54,11 +56,11 @@ function withValuesPlaced(fields: ServerEntryFields, placed: PlacedValues): Serv
   };
 }
 
-export function readEntry(
+function readWritten(
   name: string,
-  written: ServerEntryFields,
+  { written, placedValues, documentsDirectory, provider }: EntryToRead,
   environment: Environment,
-  context: ToolServerSettingsContext,
+  { modelProviders }: ToolServerSettingsContext,
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
   const pointer = pointerOf([name]);
   const resolved = substituted(written, pointer, environment);
@@ -72,12 +74,29 @@ export function readEntry(
   if (problems.length > 0) {
     return Result.fail(problems);
   }
-  const fields = withValuesPlaced(decodeEntry(resolved.value), context.placedValues ?? new Map());
+  const fields = withValuesPlaced(decodeEntry(resolved.value), placedValues);
   return checkedEntry(name, fields, {
-    modelProviders: context.modelProviders,
-    directory: context.documentsDirectory ?? process.cwd(),
+    modelProviders,
+    directory: documentsDirectory,
     secrets: secretsOfEntry(name, fields, resolved.references),
+    provider,
   });
+}
+
+export function readEntry(
+  name: string,
+  written: ServerEntryFields,
+  environment: Environment,
+  context: ToolServerSettingsContext,
+): Result.Result<ServerSettings, readonly SettingProblem[]> {
+  const reading = {
+    placedValues: context.placedValues,
+    documentsDirectory: context.documentsDirectory,
+    providers: context.providers,
+  };
+  return Result.flatMap(entryToRead(name, written, reading), (entry) =>
+    Result.mapError(readWritten(name, entry, environment, context), entry.placed),
+  );
 }
 
 function serversOf(

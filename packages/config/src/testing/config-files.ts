@@ -33,9 +33,21 @@ export const exampleSettings = [
   ),
   fileSetting(
     'EXAMPLE_RULES',
-    Schema.Struct({ credential_kinds: Schema.Array(Schema.String) }),
+    Schema.Struct({
+      credential_kinds: Schema.Array(Schema.String),
+      ways: Schema.optionalKey(
+        Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            description: Schema.optionalKey(Schema.String),
+            client_id: Schema.optionalKey(Schema.String),
+          }),
+        ),
+      ),
+      placeholders: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    }),
     (rules) => JSON.stringify(rules),
-    { sortsOfCredential: ['credential_kinds'] },
+    { sortsOfCredential: ['credential_kinds'], prose: ['description'], judgedByShape: ['placeholders'] },
   ),
 ];
 

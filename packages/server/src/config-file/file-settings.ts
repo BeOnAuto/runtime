@@ -1,6 +1,7 @@
 import { fileSetting, type FileSetting } from '@on.auto/config';
 import { connectionsSortsOfCredential, ConnectionsSettingSchema } from '@on.auto/connections';
 import { ApiKeysSchema } from '@on.auto/identity';
+import { entryProse } from '@on.auto/providers';
 import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGatewaysSchema } from '@on.auto/reasoning';
 import { ToolServersSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
@@ -65,10 +66,12 @@ export const fileSettings: readonly FileSetting[] = [
         'The tool servers whose tools a function may name, each bound to an org and optionally its playbooks: url for a remote MCP server, command for an MCP server run as a process, document for an HTTP API described by an OpenAPI document. Secrets are references such as ${GRAPH_API_KEY}. TOOL_SERVERS wins over it',
     }),
     asJson,
-    { references: 'kept' },
+    { references: 'kept', judgedByShape: ['placeholders'] },
   ),
   fileSetting('CONNECTIONS', ConnectionsSettingSchema, asJson, {
     references: 'kept',
     sortsOfCredential: connectionsSortsOfCredential,
+    prose: entryProse,
+    judgedByShape: ['placeholders'],
   }),
 ];

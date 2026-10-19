@@ -11,7 +11,18 @@ import type { McpServerSettings, ServerSettings, ServerType, StdioServerSettings
 import { toolListProblems } from './tool-lists.ts';
 
 type Transport<S extends ServerSettings> = S extends ServerSettings
-  ? Omit<S, 'name' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'secrets' | 'connection'>
+  ? Omit<
+      S,
+      | 'name'
+      | 'orgs'
+      | 'playbooks'
+      | 'allowed'
+      | 'record_content'
+      | 'request_id'
+      | 'secrets'
+      | 'connection'
+      | 'provider'
+    >
   : never;
 
 const serverKinds: Readonly<Record<ServerType, string>> = {
@@ -164,12 +175,13 @@ interface EntryContext {
   readonly modelProviders: readonly string[];
   readonly directory: string;
   readonly secrets: readonly Redacted.Redacted[];
+  readonly provider: string | null;
 }
 
 export function checkedEntry(
   name: string,
   fields: ServerEntryFields,
-  { modelProviders, directory, secrets }: EntryContext,
+  { modelProviders, directory, secrets, provider }: EntryContext,
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
   const named = checkedName(name, modelProviders);
   const scope = servedScopeOf(toolServersSetting, name, fields, 'server');
@@ -190,5 +202,6 @@ export function checkedEntry(
     ...servedFieldsOf(fields),
     secrets,
     connection: null,
+    provider,
   });
 }
