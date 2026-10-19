@@ -21,7 +21,6 @@ export { datasetFolder, type DatasetFolding } from './dataset/dataset-folder.ts'
 export { datasetsPortOn, type DatasetsPort } from './dataset/datasets-port.ts';
 export { uploadDataset } from './upload/upload-dataset.ts';
 export type { FileCache } from './model-cache/model-files.ts';
-export { cacheFolderProblem } from './model-cache/cache-folder.ts';
 export { modelDeadlines, modelProcessModule, type ModelProcesses } from './model-processes/model-processes.ts';
 export { cacheDirectory, modelPorts, type ModelPorts, type ModelPortSettings } from './model-processes/model-ports.ts';
 export type { ScoringPermits } from './model-processes/scoring-permits.ts';
