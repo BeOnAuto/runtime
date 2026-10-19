@@ -4,13 +4,14 @@ import {
   type CallingStep,
   type DefinitionSummary,
 } from '@on.auto/definitions';
-import { field, type JsonObject, objectField, textField } from '@on.auto/workflow-engine';
+import { field, type JsonObject, textField } from '@on.auto/workflow-engine';
 
 import { numberedTasksOf, type NumberedTask } from '../steps/placed-tasks.ts';
 import { inlineSchemaOf } from './workflow-document.ts';
 import { definitionCallOf, namesItsDefinition } from './workflow-functions.ts';
 import { outputShapeOf } from './workflow-output.ts';
 import { triggersOfDocument } from './workflow-schedule.ts';
+import { aboutOf, descriptionOf, headerOf } from './workflow-texts.ts';
 
 interface CallingTask {
   readonly type: string;
@@ -48,13 +49,15 @@ function detailsOf(document: JsonObject, title: string | undefined): JsonObject 
 }
 
 export function summaryOf(document: JsonObject): DefinitionSummary {
-  const header = objectField(document, 'document') ?? {};
+  const header = headerOf(document);
   const title = textField(header, 'title');
-  const description = textField(header, 'summary') ?? title;
+  const description = descriptionOf(header)?.text;
+  const about = aboutOf(header)?.text;
   const inputSchema = inlineSchemaOf(document, 'input');
   const triggers = triggersOfDocument(document);
   return {
     ...(description === undefined ? {} : { description }),
+    ...(about === undefined ? {} : { about }),
     ...(inputSchema === undefined ? {} : { inputSchema }),
     ...publishedOutputOf({
       schema: inlineSchemaOf(document, 'output'),
