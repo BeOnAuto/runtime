@@ -8,7 +8,7 @@ const placesOtherwise =
 
 const setByTheRuntime = 'which the runtime sets in every authorization request itself';
 
-const together = 'since a way gives its endpoints together';
+const together = 'since a way gives its authorization and token endpoints together';
 
 const inOrder =
   'Expected at least one client source, each once, in the order the runtime takes them: registered, metadata_document, and dynamic';
@@ -37,7 +37,7 @@ describe('the way of consent of an entry', () => {
 });
 
 describe('the refusals of a way of consent', () => {
-  it('refuses an endpoint given without the others, a scope not separated by single spaces, and client sources twice, none or out of the runtime’s order', () => {
+  it('refuses an endpoint given without the other, a scope not separated by single spaces, and client sources twice, none or out of the runtime’s order', () => {
     const way = {
       scope: 'files.read  files.write',
       token_endpoint: 'https://accounts.drive.example.com/token',
@@ -47,12 +47,28 @@ describe('the refusals of a way of consent', () => {
     expect(consentAs(way)).toEqual([
       ['/credentials/0/scope', 'Expected scopes separated by single spaces, such as files.read mail.send'],
       ['/credentials/0/authorization_endpoint', `Expected authorization_endpoint beside token_endpoint, ${together}`],
-      ['/credentials/0/revocation_endpoint', `Expected revocation_endpoint beside token_endpoint, ${together}`],
       ['/credentials/0/clients', inOrder],
     ]);
     expect([consentAs({ clients: [] }), consentAs({ clients: ['dynamic', 'registered'] })]).toEqual([
       [['/credentials/0/clients', inOrder]],
       [['/credentials/0/clients', inOrder]],
+    ]);
+  });
+
+  it('takes the authorization and token endpoints without a revocation endpoint, which a server may not have, and refuses one alone', () => {
+    const signedIn = {
+      authorization_endpoint: 'https://accounts.drive.example.com/authorize',
+      token_endpoint: 'https://accounts.drive.example.com/token',
+    };
+    const revocation = { revocation_endpoint: 'https://accounts.drive.example.com/revoke' };
+    const alone = `beside revocation_endpoint, ${together}`;
+
+    expect([consentAs(signedIn), consentAs(revocation)]).toEqual([
+      [],
+      [
+        ['/credentials/0/authorization_endpoint', `Expected authorization_endpoint ${alone}`],
+        ['/credentials/0/token_endpoint', `Expected token_endpoint ${alone}`],
+      ],
     ]);
   });
 });

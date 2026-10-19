@@ -139,15 +139,17 @@ function parameterIssuesOf({ parameters = {} }: ConsentFields): readonly WayIssu
     }));
 }
 
+const endpointsGivenTogether: readonly ConsentEndpoint[] = ['authorization_endpoint', 'token_endpoint'];
+
 function endpointIssuesOf(fields: ConsentFields): readonly WayIssue[] {
   const given = consentEndpoints.filter((endpoint) => fields[endpoint] !== undefined);
   return given.length === 0
     ? []
-    : consentEndpoints
+    : endpointsGivenTogether
         .filter((endpoint) => fields[endpoint] === undefined)
         .map((endpoint) => ({
           path: [endpoint],
-          issue: `Expected ${endpoint} beside ${listed(given)}, since a way gives its endpoints together`,
+          issue: `Expected ${endpoint} beside ${listed(given)}, since a way gives its authorization and token endpoints together`,
         }));
 }
 

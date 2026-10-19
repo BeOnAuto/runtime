@@ -76,11 +76,13 @@ export const CredentialFieldsSchema = Schema.Struct({
     }),
   ),
   token_endpoint: Schema.optionalKey(
-    wayFields.token_endpoint.annotate({ description: 'For authorization, the token endpoint, beside the other two' }),
+    wayFields.token_endpoint.annotate({
+      description: 'For authorization, the token endpoint, beside the authorization endpoint',
+    }),
   ),
   revocation_endpoint: Schema.optionalKey(
     wayFields.revocation_endpoint.annotate({
-      description: 'For authorization, the revocation endpoint, beside the other two',
+      description: 'For authorization, the revocation endpoint, beside them where the server has one',
     }),
   ),
   clients: Schema.optionalKey(
