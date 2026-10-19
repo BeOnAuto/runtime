@@ -18,6 +18,15 @@ interface FakeConnections {
   readonly ended: () => number;
 }
 
+function rowsAnswering(text: string, kept: readonly unknown[]): readonly unknown[] {
+  if (text.startsWith('SELECT sealed')) {
+    return kept.map((sealed) => ({ sealed, version: 1, claimed_until: null }));
+  }
+  return text.startsWith('SELECT id, sealed, version')
+    ? kept.map((sealed) => ({ id: 'secret-1', sealed, version: 2 }))
+    : [];
+}
+
 function connectionsKeepingWhatTheyAreGiven(): FakeConnections {
   const asked: Asked[] = [];
   const bounds: number[] = [];
@@ -28,7 +37,7 @@ function connectionsKeepingWhatTheyAreGiven(): FakeConnections {
     query: (text, values) => {
       asked.push({ text, values });
       kept.push(...(text.startsWith('INSERT') ? [values[2]] : []));
-      return Promise.resolve({ rows: text.startsWith('SELECT sealed') ? kept.map((sealed) => ({ sealed })) : [] });
+      return Promise.resolve({ rows: rowsAnswering(text, kept) });
     },
     on: (_event, listener) => {
       listeners.push(listener);
@@ -60,8 +69,8 @@ function revealed(read: Redacted.Redacted | undefined): string | undefined {
   return read === undefined ? read : Redacted.value(read);
 }
 
-function wordsOf(asked: readonly Asked[]): readonly string[] {
-  return asked.map(({ text }) => text.replaceAll(/\s+/gu, ' ').split(' (')[0] ?? '');
+function statementsOf(asked: readonly Asked[]): readonly string[] {
+  return asked.map(({ text }) => text.replaceAll(/\s+/gu, ' '));
 }
 
 describe('the secret store on PostgreSQL, without a database', () => {
@@ -75,13 +84,13 @@ describe('the secret store on PostgreSQL, without a database', () => {
     await store.close();
 
     expect(fake.bounds).toEqual([2]);
-    expect(revealed(read)).toBe('pasted-key');
-    expect(wordsOf(fake.asked)).toEqual([
-      'INSERT INTO sealed_secrets',
-      'SELECT sealed FROM sealed_secrets WHERE id = $1',
+    expect(revealed(read?.value)).toBe('pasted-key');
+    expect(statementsOf(fake.asked)).toEqual([
+      'INSERT INTO sealed_secrets (id, kid, sealed, version, kept_at, ends_with) VALUES ($1, $2, $3, $4, $5, $6)',
+      'SELECT sealed, version, CASE WHEN claimed_until IS NOT NULL AND claimed_until > $1 THEN claimed_until END AS claimed_until FROM sealed_secrets WHERE id = $2',
       'DELETE FROM sealed_secrets WHERE id = $1',
     ]);
-    expect(fake.asked[0]?.values).toEqual([id, store.kid, expect.any(String), expect.any(String), null]);
+    expect(fake.asked[0]?.values).toEqual([id, store.kid, expect.any(String), 1, expect.any(String), null]);
     expect(decodeProtectedHeader(String(fake.asked[0]?.values[2]))).toMatchObject({ kid: store.kid });
     expect(JSON.stringify(fake.asked)).not.toContain('pasted-key');
     expect(fake.ended()).toBe(1);
@@ -107,5 +116,44 @@ describe('the secret store on PostgreSQL, without a database', () => {
       ]);
     });
     expect(logged[0]).toContain('"annotations":{"error":"terminating connection due to administrator command"}');
+  });
+});
+
+describe('a row of the secret store on PostgreSQL, without a database', () => {
+  it('is replaced and claimed in one conditional update each, binding every value', async () => {
+    const fake = connectionsKeepingWhatTheyAreGiven();
+
+    const store = await Effect.runPromise(postgresqlSecretStore({ pools: fake.pools, keys }));
+    const replaced = await Effect.runPromise(store.replace('secret-1', 1, Redacted.make('replacing-key')));
+    const claimed = await Effect.runPromise(store.claim('secret-1', 1, 30_000));
+    await store.close();
+
+    expect({ replaced, claimed }).toEqual({ replaced: { replaced: false }, claimed: { claimed: false } });
+    expect(statementsOf(fake.asked)).toEqual([
+      'UPDATE sealed_secrets SET kid = $1, sealed = $2, version = version + 1, kept_at = $3, claimed_until = NULL, ends_with = NULL WHERE id = $4 AND version = $5 RETURNING version',
+      'UPDATE sealed_secrets SET claimed_until = $1 WHERE id = $2 AND version = $3 AND NOT (claimed_until IS NOT NULL AND claimed_until > $4) RETURNING id',
+    ]);
+    expect(fake.asked.map(({ values }) => values)).toEqual([
+      [store.kid, expect.any(String), expect.any(String), 'secret-1', 1],
+      [expect.any(String), 'secret-1', 1, expect.any(String)],
+    ]);
+    expect(JSON.stringify(fake.asked)).not.toContain('replacing-key');
+  });
+
+  it('is sealed again under the current key only while it holds the version the rotation read', async () => {
+    const previous = Redacted.make(new Uint8Array(32).fill(6));
+    const fake = connectionsKeepingWhatTheyAreGiven();
+    const sealing = await Effect.runPromise(postgresqlSecretStore({ pools: fake.pools, keys: { current: previous } }));
+    await Effect.runPromise(sealing.keep(Redacted.make('pasted-key')));
+    const rotating = await Effect.runPromise(postgresqlSecretStore({ pools: fake.pools, keys: { ...keys, previous } }));
+
+    const resealed = await Effect.runPromise(rotating.rotated());
+
+    expect(resealed).toBe(0);
+    expect(statementsOf(fake.asked.slice(1))).toEqual([
+      'SELECT id, sealed, version FROM sealed_secrets WHERE kid = $1 ORDER BY id LIMIT $2',
+      'UPDATE sealed_secrets SET kid = $1, sealed = $2 WHERE id = $3 AND kid = $4 AND version = $5 RETURNING id',
+    ]);
+    expect(fake.asked[2]?.values).toEqual([rotating.kid, expect.any(String), 'secret-1', sealing.kid, 2]);
   });
 });
