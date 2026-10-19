@@ -1,10 +1,20 @@
-export type UserRelation = 'calls' | 'sends-builds' | 'asks-approval' | 'remembers-runs' | 'remembers-changes';
+import type { PhrasedDefinition } from '../overview/overview.ts';
+import type { CallingStep, UserRelation } from './called-definitions.ts';
 
-export interface NamedDefinition {
-  readonly type: string;
-  readonly name: string;
+interface CallingUser extends PhrasedDefinition {
+  readonly relation: 'calls';
+  readonly steps: readonly CallingStep[];
 }
 
-export interface DefinitionUser extends NamedDefinition {
-  readonly relation: UserRelation;
+interface NamingUser extends PhrasedDefinition {
+  readonly relation: Exclude<UserRelation, 'calls'>;
+}
+
+export type DefinitionUser = CallingUser | NamingUser;
+
+export type CalledStanding = 'active' | 'retired' | 'missing';
+
+export interface DefinitionCalled extends PhrasedDefinition {
+  readonly standing: CalledStanding;
+  readonly description?: string;
 }

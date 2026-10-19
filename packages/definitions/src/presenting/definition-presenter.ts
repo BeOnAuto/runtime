@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import type { Presenter } from '@on.auto/operations';
 
+import { markdownOfKept } from '../overview/markdown-writer.ts';
 import { firstCharacters } from '../plain-language/characters.ts';
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
 import { definitionCreated, definitionRetired, definitionUpdated } from '../plain-language/event-words.ts';
@@ -24,7 +25,7 @@ function contentShown({
 }: DefinitionContent) {
   return {
     source_bytes: Buffer.byteLength(source, 'utf8'),
-    overview_bytes: Buffer.byteLength(overview, 'utf8'),
+    overview_bytes: Buffer.byteLength(markdownOfKept(overview), 'utf8'),
     ...(description === undefined ? {} : { description: firstCharacters(description, mostDescriptionCharacters) }),
     ...(input_schema === undefined ? {} : { input_schema_bytes: jsonBytesOf(input_schema) }),
     ...(output_schema === undefined ? {} : { output_schema_bytes: jsonBytesOf(output_schema) }),

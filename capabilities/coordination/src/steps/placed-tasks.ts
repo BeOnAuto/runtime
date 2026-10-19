@@ -13,17 +13,22 @@ import { objectAt } from './task-reading.ts';
 
 export type LabelOf = (kind: TaskKind | undefined, task: JsonObject, name: string) => string;
 
-export interface PlacedTask {
+export interface NumberedTask {
   readonly name: string;
   readonly task: JsonObject;
   readonly kind: TaskKind | undefined;
   readonly step: number;
+  readonly body: readonly NumberedTask[];
+  readonly recovery: readonly NumberedTask[];
+  readonly bodyLast: number;
+  readonly last: number;
+}
+
+export interface PlacedTask extends NumberedTask {
   readonly node?: number;
   readonly group?: number;
   readonly body: readonly PlacedTask[];
   readonly recovery: readonly PlacedTask[];
-  readonly bodyLast: number;
-  readonly last: number;
 }
 
 export interface Placement {
@@ -63,39 +68,51 @@ function groupOf({ label, within }: GroupDraft, nodes: readonly number[]): Diagr
   return within === undefined ? { label, nodes } : { label, nodes, within };
 }
 
+export function numberedTasksOf(list: Json | undefined): readonly NumberedTask[] {
+  let steps = 0;
+
+  function numberedList(tasks: Json | undefined): readonly NumberedTask[] {
+    return taskEntries(tasks, '').map((entry) => numberedTask(entry));
+  }
+
+  function numberedTask({ name, task }: TaskEntry): NumberedTask {
+    steps += 1;
+    const step = steps;
+    const kind = kindOf(task);
+    if (!groupedKinds.has(kind)) {
+      return { name, task, kind, step, body: [], recovery: [], bodyLast: step, last: step };
+    }
+    const body = numberedList(bodyOf(kind, task));
+    const bodyLast = steps;
+    const recovery = numberedList(recoveryOf(kind, task));
+    return { name, task, kind, step, body, recovery, bodyLast, last: steps };
+  }
+
+  return numberedList(list);
+}
+
 export function placedTasksOf(list: Json | undefined, entries: number, labelOf: LabelOf): Placement {
   const nodes: DiagramNode[] = [];
   const nodeGroups: (number | undefined)[] = [];
   const drafts: GroupDraft[] = [];
-  let steps = 0;
 
-  function placedList(tasks: Json | undefined, within?: number): readonly PlacedTask[] {
-    return taskEntries(tasks, '').map((entry) => placedTask(entry, within));
-  }
-
-  function placedGroup(entry: TaskEntry, kind: TaskKind | undefined, step: number, within: number | undefined) {
-    const group = drafts.length;
-    drafts.push({ label: `${step}. ${labelOf(kind, entry.task, entry.name)}`, within });
-    const body = placedList(bodyOf(kind, entry.task), group);
-    const bodyLast = steps;
-    const recovery = placedList(recoveryOf(kind, entry.task), within);
-    return { ...entry, kind, step, group, body, recovery, bodyLast, last: steps };
-  }
-
-  function placedTask(entry: TaskEntry, within?: number): PlacedTask {
-    steps += 1;
-    const step = steps;
-    const kind = kindOf(entry.task);
-    if (groupedKinds.has(kind)) {
-      return placedGroup(entry, kind, step, within);
+  function placedTask(numbered: NumberedTask, within?: number): PlacedTask {
+    const { name, task, kind, step } = numbered;
+    const label = `${step}. ${labelOf(kind, task, name)}`;
+    if (!groupedKinds.has(kind)) {
+      const node = entries + nodes.length;
+      nodes.push(nodeOf(label, kind));
+      nodeGroups.push(within);
+      return { ...numbered, node, body: [], recovery: [] };
     }
-    const node = entries + nodes.length;
-    nodes.push(nodeOf(`${step}. ${labelOf(kind, entry.task, entry.name)}`, kind));
-    nodeGroups.push(within);
-    return { ...entry, kind, step, node, body: [], recovery: [], bodyLast: step, last: step };
+    const group = drafts.length;
+    drafts.push({ label, within });
+    const body = numbered.body.map((inner) => placedTask(inner, group));
+    const recovery = numbered.recovery.map((inner) => placedTask(inner, within));
+    return { ...numbered, group, body, recovery };
   }
 
-  const tasks = placedList(list);
+  const tasks = numberedTasksOf(list).map((numbered) => placedTask(numbered));
   const groups = drafts.map((draft, group) =>
     groupOf(
       draft,

@@ -596,7 +596,7 @@ These are refused when a document is saved, each for the reason given:
 2. What starts it: each trigger of its `schedule` in words, and a call of `run_definition`, which can always start it. A `cron` reads as a time in UTC and its days where it reads plainly, and as written otherwise.
 3. What it needs and produces: each field of `input.schema.document` and `output.schema.document`, with its type and its `examples` unless its `description` gives one, or the shape `output.shape` names, in a sentence.
 4. What it does: a flowchart of its tasks, with the same steps beneath it as a numbered list in words.
-5. What it calls: each definition a `call: run_definition` names, with its type.
+5. What it calls: each definition a `call: run_definition` names, with its type and its description, read each time it is returned, and left out when the workflow names no definition.
 6. **Used by**: the active definitions of the playbook that use this workflow, read each time it is returned, and left out when there are none.
 
 In the flowchart:
@@ -606,7 +606,7 @@ In the flowchart:
 - A `for`, `do`, `fork` or `try` is a group around its tasks. A `for` draws an edge back for the next item. A `fork` starts each branch at once, and its group says when the first to finish wins. A `try` draws its `catch` as a dashed edge from each of its steps to the steps of `catch.do`, or to the step after it when `catch.do` names none.
 - Edges follow document order and each `then`, and pass around a task whose `if` may not hold.
 
-The overview is written from the document when it is saved, so it says only what the document says. Write the `summary`, and each schema field's `description`, for the person who will read it. Name each task for what it does, since the steps carry those names.
+The overview is composed from the document when it is saved, and each read adds the definitions the workflow calls and those that use it, so the rest says only what the document says. Write the `summary`, and each schema field's `description`, for the person who will read it. Name each task for what it does, since the steps carry those names.
 
 ## How a run ends
 

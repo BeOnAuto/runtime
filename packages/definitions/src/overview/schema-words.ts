@@ -4,7 +4,7 @@ import type { Schema } from 'effect';
 
 import { firstCharacters } from '../plain-language/characters.ts';
 import { inWords } from '../plain-language/in-words.ts';
-import { named, paragraph, type OverviewBlock, type Phrase, type Phrases } from './overview.ts';
+import { fieldTable, named, paragraph, type OverviewBlock, type Phrase, type Phrases } from './overview.ts';
 import { amountOf, countedIn, entry, entryBound, item, itemBound, trailingWords, type Bound } from './schema-bounds.ts';
 import { anyValue, countOf, eachOf, forms, list, nouns, record, text, values, type Count } from './schema-nouns.ts';
 import {
@@ -281,7 +281,7 @@ export function describedSchemaBlocks(schema: JsonSchema): readonly OverviewBloc
     required: required.has(name),
     words: fieldWords(property, deeper(within)),
   }));
-  return [...opening, { kind: 'fields', rows }];
+  return [...opening, fieldTable(rows)];
 }
 
 export function schemaBlocks(schema: JsonSchema | undefined, unknown: string): readonly OverviewBlock[] {

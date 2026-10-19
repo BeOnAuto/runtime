@@ -1,5 +1,4 @@
-import { randomUUID } from 'node:crypto';
-
+import { overviewTitled } from '@on.auto/definitions/testing';
 import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { someFolder, type DatabaseSettings } from '@on.auto/workflow-host';
 import { projectedFolders, type ProjectedFolders } from '@on.auto/workflow-host/testing';
@@ -53,7 +52,11 @@ function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'save
       const document = documentOf(source);
       const version = (versions.get(name) ?? 0) + 1;
       versions.set(name, version);
-      const content = { source, overview: `# ${name}\n`, details: datasetDetailsOf(document) };
+      const content = {
+        source,
+        overview: overviewTitled(name),
+        details: datasetDetailsOf(document),
+      };
       const type = version === 1 ? 'definition_created' : 'definition_updated';
       await folders.append(stream, [{ type, data: { content } }], contextOf(name, version));
       return document;
@@ -108,10 +111,14 @@ export async function projectedDatasets(
       await firsts.reduce<Promise<unknown>>(
         (before, first) =>
           before.then(() =>
-            folders.append(`${alphaKey}events/${randomUUID()}`, published.slice(first, first + eventsInAnAppend), {
-              by: 'acme-admin',
-              at: savedAt,
-            }),
+            folders.append(
+              `${alphaKey}events/${crypto.randomUUID()}`,
+              published.slice(first, first + eventsInAnAppend),
+              {
+                by: 'acme-admin',
+                at: savedAt,
+              },
+            ),
           ),
         Promise.resolve(),
       );

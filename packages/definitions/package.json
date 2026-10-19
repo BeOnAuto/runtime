@@ -13,6 +13,7 @@
   },
   "scripts": {
     "measure:checks": "node measure/measure-checks.ts",
+    "measure:loads": "node measure/measure-loads.ts",
     "measure:outcomes": "node measure/measure-outcomes.ts",
     "sandbox-lib": "node write-sandbox-lib.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",

@@ -1,112 +1,141 @@
-import type { NamedDefinition } from '../used-by/user-relations.ts';
+import { Schema } from 'effect';
 
-interface Name {
-  readonly name: string;
-}
+const NameSchema = Schema.Struct({ name: Schema.String });
 
-interface Emphasis {
-  readonly emphasis: string;
-}
+const EmphasisSchema = Schema.Struct({ emphasis: Schema.String });
 
-interface Code {
-  readonly code: string;
-}
+const CodeSchema = Schema.Struct({ code: Schema.String });
 
-interface TitledDefinition extends NamedDefinition {
-  readonly title?: string;
-}
+const PhrasedDefinitionSchema = Schema.Struct({
+  type: Schema.String,
+  name: Schema.String,
+  title: Schema.optionalKey(Schema.String),
+});
 
-interface DefinitionPhrase {
-  readonly definition: TitledDefinition;
-}
+const DefinitionPhraseSchema = Schema.Struct({ definition: PhrasedDefinitionSchema });
 
-interface ServerPhrase {
-  readonly server: string;
-}
+const ServerPhraseSchema = Schema.Struct({ server: Schema.String });
 
-export type Phrase = string | Name | Emphasis | Code | DefinitionPhrase | ServerPhrase;
+const PhraseSchema = Schema.Union([
+  Schema.String,
+  NameSchema,
+  EmphasisSchema,
+  CodeSchema,
+  DefinitionPhraseSchema,
+  ServerPhraseSchema,
+]);
 
-export type Phrases = readonly Phrase[];
+const PhrasesSchema = Schema.Array(PhraseSchema);
 
-export interface Paragraph {
-  readonly kind: 'paragraph';
-  readonly phrases: Phrases;
-}
+const ParagraphSchema = Schema.Struct({ kind: Schema.Literal('paragraph'), phrases: PhrasesSchema });
 
-export interface BulletList {
-  readonly kind: 'list';
-  readonly items: readonly Phrases[];
-}
+const BulletListSchema = Schema.Struct({ kind: Schema.Literal('list'), items: Schema.Array(PhrasesSchema) });
 
-export interface NumberedList {
-  readonly kind: 'numbered';
-  readonly items: readonly Phrases[];
-}
+const NumberedListSchema = Schema.Struct({ kind: Schema.Literal('numbered'), items: Schema.Array(PhrasesSchema) });
 
-export interface FieldRow {
-  readonly name: string;
-  readonly required: boolean;
-  readonly words: Phrases;
-}
+const FieldRowSchema = Schema.Struct({ name: Schema.String, required: Schema.Boolean, words: PhrasesSchema });
 
-export interface FieldTable {
-  readonly kind: 'fields';
-  readonly rows: readonly FieldRow[];
-}
+const FieldTableSchema = Schema.Struct({
+  kind: Schema.Literal('fields'),
+  rows: Schema.Array(FieldRowSchema),
+  more: Schema.optionalKey(Schema.Int),
+});
 
-export type NodeShape = 'step' | 'decision' | 'terminal' | 'cylinder';
+const NodeShapeSchema = Schema.Literals(['step', 'decision', 'terminal', 'cylinder']);
 
-export interface DiagramNode {
-  readonly label: string;
-  readonly shape?: NodeShape;
-}
+const DiagramNodeSchema = Schema.Struct({ label: Schema.String, shape: Schema.optionalKey(NodeShapeSchema) });
 
-export interface DiagramEdge {
-  readonly from: number;
-  readonly to: number;
-  readonly label?: string;
-  readonly dashed?: boolean;
-}
+const DiagramEdgeSchema = Schema.Struct({
+  from: Schema.Int,
+  to: Schema.Int,
+  label: Schema.optionalKey(Schema.String),
+  dashed: Schema.optionalKey(Schema.Boolean),
+});
 
-export interface DiagramGroup {
-  readonly label: string;
-  readonly nodes: readonly number[];
-  readonly within?: number;
-}
+const DiagramGroupSchema = Schema.Struct({
+  label: Schema.String,
+  nodes: Schema.Array(Schema.Int),
+  within: Schema.optionalKey(Schema.Int),
+});
 
-export interface Diagram {
-  readonly kind: 'diagram';
-  readonly nodes: readonly DiagramNode[];
-  readonly edges: readonly DiagramEdge[];
-  readonly groups?: readonly DiagramGroup[];
-}
+const DiagramSchema = Schema.Struct({
+  kind: Schema.Literal('diagram'),
+  nodes: Schema.Array(DiagramNodeSchema),
+  edges: Schema.Array(DiagramEdgeSchema),
+  groups: Schema.optionalKey(Schema.Array(DiagramGroupSchema)),
+});
 
-export interface Quote {
-  readonly kind: 'quote';
-  readonly lines: readonly Phrases[];
-}
+const QuoteSchema = Schema.Struct({ kind: Schema.Literal('quote'), lines: Schema.Array(PhrasesSchema) });
 
-export type OverviewBlock = Paragraph | BulletList | NumberedList | FieldTable | Diagram | Quote;
+const OverviewBlockSchema = Schema.Union([
+  ParagraphSchema,
+  BulletListSchema,
+  NumberedListSchema,
+  FieldTableSchema,
+  DiagramSchema,
+  QuoteSchema,
+]);
 
-export interface OverviewSection {
-  readonly heading: string;
-  readonly blocks: readonly OverviewBlock[];
-}
+const OverviewSectionSchema = Schema.Struct({ heading: Schema.String, blocks: Schema.Array(OverviewBlockSchema) });
 
-export interface Overview {
-  readonly title: string;
-  readonly opening: Phrases;
-  readonly body: readonly OverviewBlock[];
-  readonly sections: readonly OverviewSection[];
-  readonly appendix: readonly OverviewSection[];
-}
+const OverviewSchema = Schema.Struct({
+  title: Schema.String,
+  opening: PhrasesSchema,
+  body: Schema.Array(OverviewBlockSchema),
+  sections: Schema.Array(OverviewSectionSchema),
+  appendix: Schema.Array(OverviewSectionSchema),
+});
+
+export type PhrasedDefinition = typeof PhrasedDefinitionSchema.Type;
+
+export type Phrase = typeof PhraseSchema.Type;
+
+export type Phrases = typeof PhrasesSchema.Type;
+
+export type Paragraph = typeof ParagraphSchema.Type;
+
+export type BulletList = typeof BulletListSchema.Type;
+
+export type NumberedList = typeof NumberedListSchema.Type;
+
+export type FieldRow = typeof FieldRowSchema.Type;
+
+export type FieldTable = typeof FieldTableSchema.Type;
+
+export type NodeShape = typeof NodeShapeSchema.Type;
+
+export type DiagramNode = typeof DiagramNodeSchema.Type;
+
+export type DiagramEdge = typeof DiagramEdgeSchema.Type;
+
+export type DiagramGroup = typeof DiagramGroupSchema.Type;
+
+export type Diagram = typeof DiagramSchema.Type;
+
+export type Quote = typeof QuoteSchema.Type;
+
+export type OverviewBlock = typeof OverviewBlockSchema.Type;
+
+export type OverviewSection = typeof OverviewSectionSchema.Type;
+
+export type Overview = typeof OverviewSchema.Type;
+
+export const encodedOverview = Schema.encodeSync(OverviewSchema);
+
+export const decodedOverview = Schema.decodeUnknownSync(OverviewSchema);
+
+export const mostTableRows = 50;
 
 const conjunction = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });
 
 const disjunction = new Intl.ListFormat('en', { style: 'long', type: 'disjunction' });
 
-export function named(name: string): Name {
+export function named(name: string): typeof NameSchema.Type {
   return { name };
+}
+
+export function definitionPhrase({ type, name, title }: PhrasedDefinition): typeof DefinitionPhraseSchema.Type {
+  return { definition: title === undefined ? { type, name } : { type, name, title } };
 }
 
 export function paragraph(...phrases: Phrases): Paragraph {
@@ -121,13 +150,37 @@ export function numberedList(items: readonly Phrases[]): NumberedList {
   return { kind: 'numbered', items };
 }
 
-export function listedPhrases(items: readonly Phrases[], joiner: 'and' | 'or'): Phrases {
+type Joiner = 'and' | 'or';
+
+type Separation = 'as-listed' | 'serial-when-items-hold-commas';
+
+function holdsAComma(item: Phrases): boolean {
+  return item.some((phrase) => typeof phrase === 'string' && phrase.includes(','));
+}
+
+function separatorOf(value: string, joiner: Joiner, serial: boolean): string {
+  return serial && value === ` ${joiner} ` ? `, ${joiner} ` : value;
+}
+
+export function listedPhrases(
+  items: readonly Phrases[],
+  joiner: Joiner,
+  separation: Separation = 'as-listed',
+): Phrases {
   const format = joiner === 'and' ? conjunction : disjunction;
+  const serial = separation === 'serial-when-items-hold-commas' && items.some((item) => holdsAComma(item));
   return format
     .formatToParts(items.map((_, index) => String(index)))
     .flatMap(({ type, value }: { readonly type: string; readonly value: string }) =>
-      type === 'element' ? items.filter((_, index) => String(index) === value).flat() : [value],
+      type === 'element'
+        ? items.filter((_, index) => String(index) === value).flat()
+        : [separatorOf(value, joiner, serial)],
     );
+}
+
+export function fieldTable(rows: readonly FieldRow[]): FieldTable {
+  const more = rows.length - mostTableRows;
+  return more > 0 ? { kind: 'fields', rows: rows.slice(0, mostTableRows), more } : { kind: 'fields', rows };
 }
 
 export function sectionOf(heading: string, ...blocks: readonly OverviewBlock[]): OverviewSection {

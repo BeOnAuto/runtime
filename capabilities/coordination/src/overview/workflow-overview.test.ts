@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { markdownOf } from '@on.auto/definitions';
-import { sectionIn } from '@on.auto/definitions/testing';
+import { overviewAsRead, sectionIn, type HeldDefinition } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -14,27 +14,44 @@ const workflows = recordingWorkflows(recordingStarts().recording);
 
 const header = "document:\n  dsl: '1.0.3'\n  namespace: acme\n  name: flow\n  version: '1.0.0'\n";
 
-function yamlBlocksOf(page: string): readonly string[] {
+function blocksOf(page: string, language: string): readonly string[] {
   const text = readFileSync(new URL(`../../../../docs/reference/${page}`, import.meta.url), 'utf8');
-  return [...text.matchAll(/```yaml\n([\s\S]*?)```/gu)].map(([, body = '']: readonly string[]) => body);
+  return [...text.matchAll(new RegExp(`\`\`\`${language}\\n([\\s\\S]*?)\`\`\``, 'gu'))].map(
+    ([, body = '']: readonly string[]) => body,
+  );
 }
+
+function descriptionIn(page: string, block: number): string {
+  return (
+    /^description: (?<description>.*)$/mu.exec(blocksOf(page, 'markdown')[block] ?? '')?.groups?.['description'] ?? ''
+  );
+}
+
+const heldByTheReferences: readonly HeldDefinition[] = [
+  { type: 'reasoning', name: 'review-campaign-brief', description: descriptionIn('workflow-format.md', 0) },
+  { type: 'interaction', name: 'approve-campaign-brief', description: descriptionIn('workflow-format.md', 1) },
+  { type: 'prediction', name: 'weekly-orders', description: descriptionIn('prediction-format.md', 0) },
+  { type: 'computation', name: 'campaign-pace', description: descriptionIn('computation-format.md', 0) },
+];
 
 function goldenOf(name: string): string {
   return readFileSync(new URL(name, import.meta.url), 'utf8');
 }
 
 function overviewOf(source: string, name = 'flow'): string {
-  return Effect.runSync(workflows.prepare(source)).overview(name);
+  const { summary, overview } = Effect.runSync(workflows.prepare(source));
+  const details = summary.details === undefined ? {} : { details: summary.details };
+  return overviewAsRead({ type: 'workflow', name, overview: overview(name), ...details }, heldByTheReferences);
 }
 
-const [reviewAndApprove = '', schedule = ''] = yamlBlocksOf('workflow-format.md');
+const [reviewAndApprove = '', schedule = ''] = blocksOf('workflow-format.md', 'yaml');
 
-const [, nextWeekOrders = ''] = yamlBlocksOf('prediction-format.md');
+const [, nextWeekOrders = ''] = blocksOf('prediction-format.md', 'yaml');
 
-const [, campaignPaceTable = ''] = yamlBlocksOf('output-shapes.md');
+const [, campaignPaceTable = ''] = blocksOf('output-shapes.md', 'yaml');
 
 describe('the overview of the examples of the references of workflows, prediction functions and output shapes', () => {
-  it('is, byte for byte, the overview pinned beside this test for each', () => {
+  it('is, byte for byte, the overview pinned beside this test for each, as read beside the functions the references save', () => {
     expect(overviewOf(reviewAndApprove, 'review-and-approve')).toBe(goldenOf('reference-example.overview.md'));
     expect(overviewOf(nextWeekOrders, 'next-week-orders')).toBe(goldenOf('prediction-example.overview.md'));
     expect(overviewOf(campaignPaceTable, 'campaign-pace-table')).toBe(goldenOf('shaped-example.overview.md'));
@@ -63,7 +80,7 @@ describe('the overview of a workflow with a schedule', () => {
     );
   });
 
-  it('enters its first step from each trigger, and says it calls no function or workflow', () => {
+  it('enters its first step from each trigger, and says nothing of what it calls, since it calls nothing', () => {
     expect(sectionIn(overview, 'What it does').split('\n').slice(2, 11)).toEqual([
       '  n1(["On com.example.brief.submitted"])',
       '  n2(["At 09:00 UTC from Monday to Friday"])',
@@ -75,34 +92,44 @@ describe('the overview of a workflow with a schedule', () => {
       '  n3 --> n5',
       '  n4 --> n5',
     ]);
-    expect(sectionIn(overview, 'What it calls')).toBe('It calls no function or workflow.\n');
+    expect(overview).not.toContain('## What it calls');
   });
 });
 
 describe('the overview of a workflow that calls definitions', () => {
-  it('names each definition its steps run once, with its type, and a definition named when a step runs', () => {
-    const overview = overviewOf(
-      [
-        `${header}output:`,
-        '  schema:',
-        '    document: { type: object, properties: { review: { type: string } }, required: [review] }',
-        'do:',
-        '  - first: { call: run_definition, with: { type: reasoning, name: review-brief } }',
-        '  - again: { call: run_definition, with: { type: reasoning, name: review-brief } }',
-        "  - chosen: { call: run_definition, with: { type: '${ $data.type }', name: review-brief } }",
-        '  - pace: { call: run_definition, with: { type: computation, name: campaign-pace } }',
-      ].join('\n'),
-    );
+  const source = [
+    `${header}output:`,
+    '  schema:',
+    '    document: { type: object, properties: { review: { type: string } }, required: [review] }',
+    'do:',
+    '  - first: { call: run_definition, with: { type: reasoning, name: review-brief } }',
+    '  - again: { call: run_definition, with: { type: reasoning, name: review-brief } }',
+    "  - chosen: { call: run_definition, with: { type: '${ $data.type }', name: review-brief } }",
+    '  - pace: { call: run_definition, with: { type: computation, name: campaign-pace } }',
+  ].join('\n');
+
+  it('says, as read, each definition its steps run once, with its type, and leaves a definition named when a step runs to that step', () => {
+    const overview = overviewOf(source);
 
     expect(sectionIn(overview, 'What it produces')).toBe(
       '| Field | Required | What it is |\n| --- | --- | --- |\n| **review** | yes | Text. |',
     );
     expect(sectionIn(overview, 'What it calls')).toBe(
       [
-        'Its steps call:',
-        '- the reasoning function **review-brief**\n- the definition that its step **chosen** names when it runs\n- the computation function **campaign-pace**\n',
+        'It calls the reasoning function **Review brief**, which the playbook does not have yet.',
+        'It calls the computation function **Campaign pace**: Spend, pace and projection per campaign, in cents, for a reporting period.',
       ].join('\n\n'),
     );
+    expect(overview.split('\n\n## Details\n\n')[1]).toBe(
+      '### What it calls\n\n- `review-brief`, a reasoning function\n- `campaign-pace`, a computation function\n',
+    );
+    expect(sectionIn(overview, 'What it does')).toContain(
+      '3. **chosen** runs the definition its call names when it runs.',
+    );
+  });
+
+  it('composes nothing of what it calls itself, since the read says it', () => {
+    expect(markdownOf(Effect.runSync(workflows.prepare(source)).overview('flow'))).not.toContain('What it calls');
   });
 });
 
@@ -114,6 +141,6 @@ describe('the overview of a workflow without steps', () => {
     });
     const written = markdownOf({ title: 'idle', opening: [], ...parts });
 
-    expect(sectionIn(written, 'What it does')).toBe('It has no steps, so a run ends as it starts.');
+    expect(written.endsWith('## What it does\n\nIt has no steps, so a run ends as it starts.\n')).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { Conflict, NotFound, type Context, type DefinitionContext } from '@on.au
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { overviewTitled } from '../testing/overview-sections.ts';
 import type { DefinitionCommand } from './definition-commands.ts';
 import type { DefinitionContent, RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionsDecider, definitionTypeStreamOf } from './definitions-decider.ts';
@@ -14,13 +15,13 @@ const change = { by: 'acme-editor', at: '2026-10-02T10:30:00.000Z' };
 
 const hello: DefinitionContent = {
   source: '{"greeting": "Hello"}',
-  overview: '# greet\n\nGreets\n',
+  overview: overviewTitled('greet', 'Greets'),
   description: 'Greets',
   input_schema: { type: 'object' },
   output_schema: { type: 'object' },
 };
 
-const howdy: DefinitionContent = { source: '{"greeting": "Howdy"}', overview: '# greet\n\nHowdy\n' };
+const howdy: DefinitionContent = { source: '{"greeting": "Howdy"}', overview: overviewTitled('greet', 'Howdy') };
 
 type RecordedDefinition = RecordedDefinitionEvent;
 
@@ -166,7 +167,7 @@ describe('the definitions of a capability', () => {
         version: 2,
         status: 'retired',
         source: '{"greeting": "Howdy"}',
-        overview: '# greet\n\nHowdy\n',
+        overview: overviewTitled('greet', 'Howdy'),
         created_at: '2026-10-01T09:00:00.000Z',
         created_by: 'acme-admin',
         updated_at: '2026-10-03T08:00:00.000Z',
@@ -177,7 +178,7 @@ describe('the definitions of a capability', () => {
         version: 1,
         status: 'active',
         source: '{"greeting": "Howdy"}',
-        overview: '# greet\n\nHowdy\n',
+        overview: overviewTitled('greet', 'Howdy'),
         created_at: '2026-10-01T09:00:00.000Z',
         created_by: 'acme-admin',
         updated_at: '2026-10-01T09:00:00.000Z',
@@ -216,7 +217,7 @@ const threeTriggers: DefinitionContent['triggers'] = [
 
 const reacting: DefinitionContent = {
   source: '{"greeting": "Hello", "triggers": "three"}',
-  overview: '# reacting\n',
+  overview: overviewTitled('reacting'),
   triggers: threeTriggers,
 };
 

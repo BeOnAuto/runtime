@@ -2,12 +2,10 @@ import {
   definitionResourceLabel,
   emittedEventsOf,
   isReservedSource,
-  type CalledDefinition,
   type PlaybookOwnNames,
 } from '@on.auto/definitions';
 import { InvalidInputKindSchema, refusalInWords, type RejectedCall } from '@on.auto/operations';
 import {
-  allTaskEntries,
   type CallFunctions,
   enclosedBody,
   field,
@@ -57,16 +55,6 @@ export function definitionCallOf(task: JsonObject): RunDefinitionCall | undefine
 
 export function namesItsDefinition(call: RunDefinitionCall | undefined): call is NamedRunDefinitionCall {
   return call?.type !== undefined && call.name !== undefined;
-}
-
-export function definitionsCalledIn(document: JsonObject): readonly CalledDefinition[] {
-  const calls: readonly CalledDefinition[] = allTaskEntries(field(document, 'do'), '/do').flatMap(({ task }) => {
-    const call = definitionCallOf(task);
-    return namesItsDefinition(call) ? [{ type: call.type, name: call.name }] : [];
-  });
-  return calls.filter(
-    ({ type, name }, index) => calls.findIndex((call) => call.type === type && call.name === name) === index,
-  );
 }
 
 function runDefinitionRejections(arguments_: Json | undefined, pointer: string): readonly Rejection[] {

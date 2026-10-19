@@ -140,9 +140,10 @@ The `source` is a [reasoning function document](reasoning-format.md). These rule
 `create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`; `list_definitions` leaves it out. The overview describes the definition in plain words, for a person who does not read its document:
 
 - It is Markdown with headings, lists, tables of its fields and, where one helps, a diagram. It says what the definition needs, what it produces and what it does, as its type has it. For a reasoning function, it also gives the model, the tools and what the model is told.
-- The runtime writes it from the document when it saves the version.
-- It ends with **Used by**, a line for each active definition of the playbook that uses this one: a workflow whose `run_definition` calls it, a prediction function that sends it builds to train or asks it to approve a version, or a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`).
-- **Used by** is read each time the definition is returned, so it is as current as the playbook. It is left out when nothing uses the definition.
+- The runtime composes it from the document when it saves the version, and writes it each time the definition is returned.
+- A workflow's overview then says **What it calls**: each definition its `run_definition` steps name, with the first paragraph of its description, or that it is retired or not in the playbook yet.
+- **Used by** follows, a line for each active definition of the playbook that uses this one: a workflow whose `run_definition` calls it, with the number and the name of each step that does, a prediction function that sends it builds to train or asks it to approve a version, or a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`).
+- Both are read each time the definition is returned, so they are as current as the playbook, and each is left out when it has nothing to say. Their exact names, each with its type, close the overview under **Details**.
 
 ## Interaction functions
 

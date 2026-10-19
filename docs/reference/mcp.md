@@ -116,7 +116,7 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 | `update_definition` | `PUT /definitions/{type}/{name}`         | Save a new version from a changed document                           |
 | `retire_definition` | `POST /definitions/{type}/{name}/retire` | Retire a definition for good                                         |
 
-The `overview` describes a definition in plain words, so an agent can show a person what it does without its source. `get_definition`, `create_definition`, `update_definition` and `retire_definition` return it. It ends with **Used by**: the active definitions of the playbook that use this one, read each time it is returned. [Reasoning functions](http.md#reasoning-functions) gives the rules every type of definition follows, and the section of each type adds its own.
+The `overview` describes a definition in plain words, so an agent can show a person what it does without its source. `get_definition`, `create_definition`, `update_definition` and `retire_definition` return it. It is written each time it is returned, from what the version's document says and what the playbook holds then: for a workflow, **What it calls**, each definition it names with its description; then **Used by**, the active definitions of the playbook that use this one, a workflow with the steps that call it; and last, under **Details**, their exact names with their types. [Reasoning functions](http.md#reasoning-functions) gives the rules every type of definition follows, and the section of each type adds its own.
 
 ### Runs
 

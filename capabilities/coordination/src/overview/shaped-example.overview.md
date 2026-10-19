@@ -32,6 +32,10 @@ Its steps, numbered as in the diagram:
 
 ## What it calls
 
-Its steps call:
+It calls the computation function **Campaign pace**: Spend, pace and projection per campaign, in cents, for a reporting period.
 
-- the computation function **campaign-pace**
+## Details
+
+### What it calls
+
+- `campaign-pace`, a computation function

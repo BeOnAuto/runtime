@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  appendedSection,
-  bulletList,
-  markdownOf,
-  mostOverviewBytes,
-  mostTableRows,
-  named,
-  paragraph,
-  sectionOf,
-} from '../index.ts';
+import { bulletList, markdownOf, mostOverviewBytes, mostTableRows, named, paragraph, sectionOf } from '../index.ts';
 import type { FieldRow, Overview, OverviewBlock } from '../index.ts';
 
 const utf8 = new TextEncoder();
@@ -115,18 +106,16 @@ describe('the table of fields of an overview', () => {
     );
   });
 
-  it(`shows ${mostTableRows} rows and says how many more there are`, () => {
+  it('writes the rows it is given, and the count of the rest of a table its composition cut as a last row', () => {
     const rows = Array.from({ length: mostTableRows + 3 }, (_, index) => row(`field-${index}`));
-    const lines = writtenBlocks({ kind: 'fields', rows }).trimEnd().split('\n');
+    const lines = writtenBlocks({ kind: 'fields', rows: rows.slice(0, mostTableRows), more: 3 })
+      .trimEnd()
+      .split('\n');
 
     expect(lines).toHaveLength(2 + mostTableRows + 1);
     expect(lines.at(-2)).toBe(`| **field-${mostTableRows - 1}** | yes | Text. |`);
     expect(lines.at(-1)).toBe('| and 3 more |  |  |');
-    expect(
-      writtenBlocks({ kind: 'fields', rows: rows.slice(0, mostTableRows) })
-        .trimEnd()
-        .split('\n'),
-    ).toHaveLength(2 + mostTableRows);
+    expect(writtenBlocks({ kind: 'fields', rows }).trimEnd().split('\n')).toHaveLength(2 + mostTableRows + 3);
   });
 });
 
@@ -218,34 +207,5 @@ describe(`an overview past ${mostOverviewBytes} bytes`, () => {
     expect(utf8.encode(exactly).byteLength).toBe(mostOverviewBytes);
     expect(exactly.endsWith(`${'x'.repeat(room)}\n`)).toBe(true);
     expect(markdownOf(overviewWith(paragraph('x'.repeat(room + 1)))).endsWith('under Source.*\n')).toBe(true);
-  });
-});
-
-describe('a section appended to the Markdown of an overview', () => {
-  const usedBy = sectionOf('Used by', bulletList([['The workflow ', named('weekly-review'), ' calls it.']]));
-
-  it('ends it as it would end had the section been written with it', () => {
-    const overview = overviewWith(paragraph('A brief.'));
-
-    expect(appendedSection(markdownOf(overview), usedBy)).toBe(
-      markdownOf({ ...overview, sections: [...overview.sections, usedBy] }),
-    );
-  });
-
-  it(`keeps the ${mostOverviewBytes} bytes, cutting the section with the line that says so`, () => {
-    const stored = markdownOf(overviewWith(...Array.from({ length: 15 }, () => paragraphOf(4000))));
-    const appended = appendedSection(stored, sectionOf('Used by', bulletList([['é'.repeat(5000)]])));
-
-    expect(utf8.encode(appended).byteLength).toBeLessThanOrEqual(mostOverviewBytes);
-    expect(appended).toBe(`${stored}\n## Used by\n\n${cutLine}\n`);
-  });
-
-  it('leaves the overview as it is when the line would not fit after it, or when it was cut already', () => {
-    const whole = markdownOf(overviewWith(paragraph('')));
-    const full = markdownOf(overviewWith(paragraph('x'.repeat(mostOverviewBytes - utf8.encode(whole).byteLength))));
-    const cut = markdownOf(overviewWith(...Array.from({ length: 2 }, () => paragraphOf(40_000))));
-
-    expect(cut.endsWith(`${cutLine}\n`)).toBe(true);
-    expect([appendedSection(full, usedBy), appendedSection(cut, usedBy)]).toEqual([full, cut]);
   });
 });

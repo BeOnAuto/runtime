@@ -1,4 +1,5 @@
 import type { Trigger } from '@on.auto/definitions';
+import { overviewTitled } from '@on.auto/definitions/testing';
 import { eventAppenderOf, type EventStore } from '@on.auto/ledger';
 import { ContextSchema, messageIdOf, noLineage, type Context, type Decided, type Lineage } from '@on.auto/operations';
 import { playbooksStreamOfOrg } from '@on.auto/playbooks';
@@ -91,7 +92,7 @@ export function definitionRecorded(
   { name, version, triggers, when = at }: DefinitionVersion,
   playbookKey = alpha,
 ) {
-  const overview = `# ${name}\n`;
+  const overview = overviewTitled(name);
   const content =
     triggers.length === 0 ? { source: 'do: []', overview } : { source: 'schedule: {}', overview, triggers };
   return recorded(

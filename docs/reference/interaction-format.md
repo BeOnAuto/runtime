@@ -568,7 +568,7 @@ For a function that asks a person, it says:
 
 Either kind ends with **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
 
-The overview is written from the document when it is saved, so it says only what the document says. Write the `description` for the person who will read it, and give each field of the schemas a `description`, so the overview can say it. A function without them still has an overview, with the types alone.
+The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it, and give each field of the schemas a `description`, so the overview can say it. A function without them still has an overview, with the types alone.
 
 ## Availability
 

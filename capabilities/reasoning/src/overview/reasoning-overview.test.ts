@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { markdownOf } from '@on.auto/definitions';
 import { mostReadCharacters } from '@on.auto/definitions/template';
 import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
@@ -23,7 +24,7 @@ const { prepared } = reasoningWith();
 const counted = new Intl.NumberFormat('en');
 
 function overviewOf(...lines: readonly string[]): string {
-  return prepared(lines.join('\n')).overview('review-brief');
+  return markdownOf(prepared(lines.join('\n')).overview('review-brief'));
 }
 
 function goldenOf(file: string): string {
@@ -37,14 +38,16 @@ function modelAndToolsOf(...tools: readonly string[]): string {
 
 describe('the overviews of the example of the reference of reasoning functions', () => {
   it('are, byte for byte, the overviews pinned beside this test, without tools and with the tools of the reference', () => {
-    expect(prepared(example).overview('review-brief')).toBe(goldenOf('reference-example.overview.md'));
-    expect(prepared(exampleWithTools).overview('review-brief')).toBe(goldenOf('reference-tools.overview.md'));
+    expect(markdownOf(prepared(example).overview('review-brief'))).toBe(goldenOf('reference-example.overview.md'));
+    expect(markdownOf(prepared(exampleWithTools).overview('review-brief'))).toBe(
+      goldenOf('reference-tools.overview.md'),
+    );
   });
 });
 
 describe('the overview of the reasoning function of the reference of output shapes', () => {
   it('is, byte for byte, the overview pinned beside this test', () => {
-    expect(prepared(shapedExample).overview('queue-hours')).toBe(
+    expect(markdownOf(prepared(shapedExample).overview('queue-hours'))).toBe(
       readFileSync(new URL('shaped-example.overview.md', import.meta.url), 'utf8'),
     );
   });

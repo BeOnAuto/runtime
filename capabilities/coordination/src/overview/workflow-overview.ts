@@ -14,7 +14,6 @@ import { field, type JsonObject } from '@on.auto/workflow-engine';
 import type { ReadWorkflow } from '../document/workflow-document.ts';
 import { outputShapeOf } from '../document/workflow-output.ts';
 import { taskDiagramOf } from '../steps/task-diagram.ts';
-import { calledSection } from './called-definitions.ts';
 import { startsOf } from './trigger-words.ts';
 
 function doneSection(document: JsonObject, entries: readonly string[]): OverviewSection {
@@ -41,7 +40,6 @@ export function workflowOverview(
         document,
         starts.map(({ label }) => label),
       ),
-      calledSection(document),
     ],
     appendix: [],
   };

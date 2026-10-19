@@ -2,11 +2,11 @@ import type { NotFound, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { overviewWithUsers } from '../overview/definition-overview.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import type { Definition, StoredDefinition } from '../registry/definition.ts';
 import { findDefinition } from '../registry/registry-lookup.ts';
-import { usersOf, type PlaybookRegistries } from '../used-by/definition-users.ts';
+import type { PlaybookRegistries } from '../used-by/definition-users.ts';
+import { overviewReadFrom } from '../used-by/overview-at-read.ts';
 import { definitionOf } from './definition-views.ts';
 import { loadRegistry, type DefinitionInRegistry } from './registry-access.ts';
 
@@ -34,11 +34,9 @@ export function answeredDefinition(
   types: readonly string[],
   { registry, stored }: DefinitionInRegistry,
 ): Effect.Effect<Definition, never, PlaybookReader> {
-  return Effect.map(registriesWith(types, capability.type, registry), (registries) => {
-    const definition = definitionOf(capability, stored);
-    const users = usersOf(registries, { type: capability.type, name: stored.name });
-    return { ...definition, overview: overviewWithUsers(definition.overview, users) };
-  });
+  return Effect.map(registriesWith(types, capability.type, registry), (registries) =>
+    definitionOf(capability, stored, overviewReadFrom(registries, capability.type, stored)),
+  );
 }
 
 export function readDefinition(

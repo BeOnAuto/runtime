@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { markdownOf } from '@on.auto/definitions';
 import { sectionIn } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -18,7 +19,7 @@ function goldenOf(file: string): string {
 }
 
 function overviewOf(source: string, name = 'read-thread'): string {
-  return Effect.runSync(capability.prepare(source)).overview(name);
+  return markdownOf(Effect.runSync(capability.prepare(source)).overview(name));
 }
 
 const [inboxExample = '', chatExample = ''] = examplesOf('interaction-format.md');

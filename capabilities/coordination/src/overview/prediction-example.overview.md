@@ -38,6 +38,10 @@ Its steps, numbered as in the diagram:
 
 ## What it calls
 
-Its steps call:
+It calls the prediction function **Weekly orders**: Predicts the orders of each region one and four weeks ahead.
 
-- the prediction function **weekly-orders**
+## Details
+
+### What it calls
+
+- `weekly-orders`, a prediction function

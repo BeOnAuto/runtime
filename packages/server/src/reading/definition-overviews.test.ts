@@ -74,10 +74,25 @@ const namingSendBuild: readonly Saved[] = [
 const usedBySendBuild = [
   '## Used by',
   [
-    '- The prediction function **weekly-orders** sends it builds to train.',
-    '- The recall function **build-answers** remembers its runs.',
-    '- The workflow **weekly-build** calls it.\n',
+    '- The prediction function **Weekly orders** sends it builds to train.',
+    '- The recall function **Build answers** remembers its runs.',
+    '- The workflow **Weekly build** calls it in step 1, **Send**.',
   ].join('\n'),
+  '## Details',
+  '### Used by',
+  [
+    '- `weekly-orders`, a prediction function',
+    '- `build-answers`, a recall function',
+    '- `weekly-build`, a workflow\n',
+  ].join('\n'),
+].join('\n\n');
+
+const callsOfWeeklyBuild = [
+  '## What it calls',
+  'It calls the interaction function **Send build**: Sends a build of a prediction function to its trainer and takes the candidates back.',
+  '## Details',
+  '### What it calls',
+  '- `send-build`, an interaction function\n',
 ].join('\n\n');
 
 const decodeOverview = Schema.decodeUnknownSync(Schema.Struct({ overview: Schema.String }));
@@ -155,7 +170,7 @@ describe('the overview of every type of definition', () => {
 
     expect(overviews.map((overview) => headingsOf(overview))).toEqual([
       ['What it predicts', 'What it learns from', 'Who trains it', 'How a version goes live', 'Rules'],
-      ['What starts it', 'What it needs', 'What it produces', 'What it does', 'What it calls'],
+      ['What starts it', 'What it needs', 'What it produces', 'What it does'],
     ]);
   });
 
@@ -167,7 +182,7 @@ describe('the overview of every type of definition', () => {
 });
 
 describe('the overview of a definition that others of its playbook name', () => {
-  it('ends with each of them, over HTTP and over MCP alike, and a definition nobody names has no such section', async () => {
+  it('ends with each of them, a workflow with its step, over HTTP and over MCP alike, and the workflow says what it calls', async () => {
     await server.call('POST', '/v1/orgs/acme/playbooks', { key: admin.key, body: { playbook: 'beta', name: 'Beta' } });
     const statuses = [
       await created(beta, sendBuild),
@@ -180,6 +195,7 @@ describe('the overview of a definition that others of its playbook name', () => 
     expect(named?.startsWith('# send-build\n\n')).toBe(true);
     expect(named?.slice(named.indexOf('## Used by'))).toBe(usedBySendBuild);
     expect(unnamed).not.toContain('## Used by');
+    expect(unnamed?.slice(unnamed.indexOf('## What it calls'))).toBe(callsOfWeeklyBuild);
     expect(await overviewsOverMcp('beta', [sendBuild, weeklyBuild])).toEqual(overHttp);
   });
 });
