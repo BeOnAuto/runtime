@@ -65,3 +65,26 @@ describe('the overview of an interaction function that asks a system', () => {
     expect(sectionIn(overview, 'What it reads')).toMatch(/^It answers with the whole of what the tool answered:\n\n/u);
   });
 });
+
+describe('the overview of an interaction function whose document has an about', () => {
+  it('writes the about as its author wrote it, after the description and before whom it asks', () => {
+    const about = [
+      'about: |',
+      '  The campaign team reads what a thread said before it plans the next brief.',
+      '',
+      '  A workflow asks it once a thread is closed.',
+    ];
+
+    expect(
+      overviewOf(callDocument({ front: about }))
+        .split('\n\n')
+        .slice(0, 5),
+    ).toEqual([
+      '# read-thread',
+      'Read the replies of a thread in the team chat, oldest first',
+      'The campaign team reads what a thread said before it plans the next brief.',
+      'A workflow asks it once a thread is closed.',
+      '## Who it asks',
+    ]);
+  });
+});

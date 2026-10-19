@@ -35,9 +35,10 @@ function detailsOf(document: InteractionFunctionDefinitionDocument): Schema.Json
 }
 
 export function summarize(document: InteractionFunctionDefinitionDocument): DefinitionSummary {
-  const { description, input, output } = document;
+  const { description, about, input, output } = document;
   return {
     ...(description === undefined ? {} : { description }),
+    ...(about === undefined ? {} : { about }),
     ...(input.schema === undefined ? {} : { inputSchema: input.schema.document }),
     ...(output.schema === undefined ? {} : { outputSchema: output.schema.document }),
     details: detailsOf(document),

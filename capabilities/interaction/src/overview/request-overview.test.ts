@@ -108,6 +108,17 @@ describe('who a request asks, in the overview', () => {
       ].join('\n\n'),
     );
   });
+
+  it('shows a party of more than one line under the sentence, with a fence it leaves open closed after it', () => {
+    const fence = '`'.repeat(3);
+    const source = approvalDocument().replace("to: '{{ input.owner }}'", `to: "{{ input.owner }}\\n${fence}"`);
+
+    expect(sectionIn(overviewOf(source), 'Who it asks')).toBe(
+      ['It asks a person, and each request goes to the party this names:', `**owner**\n${fence}\n${fence}`].join(
+        '\n\n',
+      ),
+    );
+  });
 });
 
 describe('the replies of a request, in the overview', () => {

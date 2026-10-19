@@ -1,4 +1,9 @@
-import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
+import {
+  AboutSchema,
+  DescriptionSchema,
+  type FrontMatterSection,
+  type FrontMatterShape,
+} from '@on.auto/definitions/document';
 import { Schema } from 'effect';
 
 import { WrittenRuleSchema } from '../replies/reply-rule.ts';
@@ -16,6 +21,7 @@ const SectionSchema = Schema.Struct({ schema: Schema.optionalKey(Schema.JsonObje
 
 const FrontMatterSchema = Schema.Struct({
   description: Schema.optionalKey(DescriptionSchema),
+  about: Schema.optionalKey(AboutSchema),
   call: Schema.optionalKey(CallBlockSchema),
   to: Schema.optionalKey(Schema.String),
   from: Schema.optionalKey(Schema.String),
