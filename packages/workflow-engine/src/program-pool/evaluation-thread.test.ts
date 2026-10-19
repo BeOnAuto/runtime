@@ -102,7 +102,8 @@ describe('the evaluation worker of a pool, given a stack or a memory to exhaust'
     const { machine } = poolOf().evaluations;
     await Effect.runPromise(machine.reserve);
 
-    const ended = decidedOnce(machine, `do:\n  - fill: { set: { filled: '\${ ${filling} }' } }`, evaluatedAt);
+    const filled = `do:\n  - fill: { set: { filled: '\${ ${filling} }' } }`;
+    const ended = decidedOnce(machine, filled, evaluatedAt, 30_000);
 
     expect(ended.outcome).toMatchObject({ kind: 'raised', error: { type: runtimeError, status: 500 } });
     expect(JSON.stringify(ended.outcome)).toContain(

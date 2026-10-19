@@ -1,4 +1,5 @@
 import type { CallFunctions } from '../dsl/call-functions.ts';
+import { mostInputMs } from '../dsl/evaluation.ts';
 import { isObject, type Json, type JsonObject } from '../dsl/json.ts';
 import { rejection } from '../dsl/policy-checks.ts';
 import type { CancelOrder, RunLimits, Started } from '../machine/run-input.ts';
@@ -42,6 +43,10 @@ export const testSettings: MachineSettings = {
 
 export function testMachineOf(sandbox: MachineSandbox, settings: MachineSettings = testSettings): MachineOptions {
   return { ...settings, sandbox };
+}
+
+export function decidingWithin(sandbox: MachineSandbox, milliseconds: number): MachineSandbox {
+  return { ...sandbox, clock: () => sandbox.clock() + milliseconds - mostInputMs };
 }
 
 export const defaultLimits: RunLimits = { mostDurationMs: 2_592_000_000, longestCallMs: 600_000 };

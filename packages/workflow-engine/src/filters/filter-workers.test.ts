@@ -7,6 +7,8 @@ import {
   churningFilter,
   closed,
   evaluatedAt,
+  filteringWithin,
+  filteringWithinOnceReplaced,
   plainFilter,
   replacementOf,
 } from '../pool-testing/evaluation-workers.ts';
@@ -40,9 +42,10 @@ describe('the filter worker of a pool, given native work that no checkpoint inte
   it('ends a trigger filter at its own deadline of 200 ms, stopped, and matches the filter after it on a fresh worker', async () => {
     const { filters } = poolOf({ evaluationWorker: announcingEvaluations }).evaluations;
     await filterVerdictsOf([plainFilter], closed, filters, evaluatedAt);
+    const patientOnceReplaced = filteringWithinOnceReplaced(filters, 30_000);
 
     const { answer, ...replaced } = await replacementOf('test', mostFilterMs, () =>
-      filterVerdictsOf([churningFilter, plainFilter], closed, filters, evaluatedAt),
+      filterVerdictsOf([churningFilter, plainFilter], closed, patientOnceReplaced, evaluatedAt),
     );
 
     expect(answer).toMatchObject([{ error: { status: 500, instance: '/churn' }, stopped: true }, true]);
@@ -78,13 +81,14 @@ describe('the filter worker of a pool, given native work that no checkpoint inte
 describe('the filter worker of a pool, matching groups at the same time', () => {
   it('prepares again on the fresh worker the groups prepared on the worker a churning filter ended, so groups matched at the same time still match', async () => {
     const { filters } = poolOf().evaluations;
+    const patient = filteringWithin(filters, 30_000);
     await filterVerdictsOf([plainFilter], closed, filters, evaluatedAt);
 
     const verdicts = await Promise.all([
       filterVerdictsOf([churningFilter], closed, filters, evaluatedAt),
-      filterVerdictsOf([european('/first')], closed, filters, evaluatedAt),
-      filterVerdictsOf([european('/second')], closed, filters, evaluatedAt),
-      filterVerdictsOf([european('/third')], closed, filters, evaluatedAt),
+      filterVerdictsOf([european('/first')], closed, patient, evaluatedAt),
+      filterVerdictsOf([european('/second')], closed, patient, evaluatedAt),
+      filterVerdictsOf([european('/third')], closed, patient, evaluatedAt),
     ]);
 
     expect(verdicts).toMatchObject([[{ stopped: true }], [true], [true], [true]]);
