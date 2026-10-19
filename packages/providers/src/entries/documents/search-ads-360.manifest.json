@@ -1,0 +1,13 @@
+{
+  "discovery": "https://searchads360.googleapis.com/$discovery/rest?version=v0",
+  "revision": "20260820",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "searchads360.customers.searchAds360.search",
+    "searchads360.customers.listAccessibleCustomers",
+    "searchads360.searchAds360Fields.search",
+    "searchads360.searchAds360Fields.get",
+    "searchads360.customers.customColumns.list",
+    "searchads360.customers.customColumns.get"
+  ]
+}

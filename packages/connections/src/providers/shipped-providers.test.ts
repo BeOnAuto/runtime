@@ -59,6 +59,7 @@ function operationsIn(document = ''): number {
 
 function documentsBesideTheEntries(): readonly string[] {
   return readdirSync(join(shipped.documents, 'documents'))
+    .filter((file) => file.endsWith('.openapi.json'))
     .map((file) => `documents/${file}`)
     .toSorted();
 }

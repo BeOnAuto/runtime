@@ -1,10 +1,12 @@
-const readScope = 'https://tracker.example.com/auth/read';
+export const trackerReadScope = 'https://tracker.example.com/auth/read';
 
-const writeScope = 'https://tracker.example.com/auth/write';
+export const trackerWriteScope = 'https://tracker.example.com/auth/write';
 
 const singleSegmentPath = { type: 'string', location: 'path', required: true, pattern: '^[^/]+$' };
 
 const issuePath = { type: 'string', location: 'path', required: true, pattern: '^projects/[^/]+/issues/[^/]+$' };
+
+const projectPath = { type: 'string', location: 'path', required: true, description: 'The project.' };
 
 export const trackerAuthorizationServer = {
   issuer: 'https://auth.tracker.example.com',
@@ -16,6 +18,7 @@ export const trackerDiscovery = {
   kind: 'discovery#restDescription',
   name: 'tracker',
   version: 'v1',
+  revision: '20261019',
   title: 'Tracker API',
   description: 'Reads and changes issues.',
   documentationLink: 'https://developers.example.com/tracker',
@@ -27,7 +30,12 @@ export const trackerDiscovery = {
     key: { type: 'string', location: 'query', description: 'API key.' },
   },
   auth: {
-    oauth2: { scopes: { [readScope]: { description: 'Read issues' }, [writeScope]: { description: 'Change issues' } } },
+    oauth2: {
+      scopes: {
+        [trackerWriteScope]: { description: 'Change issues' },
+        [trackerReadScope]: { description: 'Read issues' },
+      },
+    },
   },
   schemas: {
     Issue: {
@@ -46,6 +54,33 @@ export const trackerDiscovery = {
       type: 'object',
       properties: { issues: { type: 'array', items: { $ref: 'Issue' } }, nextPageToken: { type: 'string' } },
     },
+    IssueOperation: {
+      id: 'IssueOperation',
+      type: 'object',
+      description: 'A change of an issue.',
+      properties: {
+        create: { $ref: 'Issue', description: 'The issue to create.' },
+        update: { $ref: 'Issue' },
+        remove: { type: 'string' },
+      },
+    },
+    LabelOperation: { id: 'LabelOperation', type: 'object', properties: { create: { $ref: 'Label' } } },
+    MutateOperation: {
+      id: 'MutateOperation',
+      type: 'object',
+      description: 'One change.',
+      properties: { labelOperation: { $ref: 'LabelOperation' }, issueOperation: { $ref: 'IssueOperation' } },
+    },
+    MutateIssuesRequest: {
+      id: 'MutateIssuesRequest',
+      type: 'object',
+      properties: { operations: { type: 'array', items: { $ref: 'MutateOperation' } } },
+    },
+    MutateIssuesResponse: {
+      id: 'MutateIssuesResponse',
+      type: 'object',
+      properties: { issues: { type: 'array', items: { $ref: 'Issue' } } },
+    },
     Unused: { id: 'Unused', type: 'object' },
   },
   methods: {
@@ -57,6 +92,7 @@ export const trackerDiscovery = {
         version: { type: 'string', location: 'path', required: true, description: 'The version.' },
         fields: { type: 'string', location: 'query', description: 'Its own fields.' },
       },
+      scopes: [trackerReadScope],
     },
   },
   resources: {
@@ -72,13 +108,13 @@ export const trackerDiscovery = {
               description: 'Lists issues.',
               parameterOrder: ['parent'],
               parameters: {
-                parent: { type: 'string', location: 'path', required: true, description: 'The project.' },
+                parent: projectPath,
+                query: { type: 'string', location: 'query', required: true, description: 'What to match.' },
                 pageSize: { type: 'integer', format: 'int32', location: 'query', minimum: '1', maximum: '100' },
                 labels: { type: 'string', location: 'query', repeated: true, description: 'Labels to match.' },
-                query: { type: 'string', location: 'query', required: true, description: 'What to match.' },
               },
               response: { $ref: 'ListIssuesResponse' },
-              scopes: [readScope, writeScope],
+              scopes: [trackerReadScope, trackerWriteScope],
             },
             patch: {
               id: 'tracker.projects.issues.patch',
@@ -91,7 +127,7 @@ export const trackerDiscovery = {
               },
               request: { $ref: 'Issue' },
               response: { $ref: 'Issue' },
-              scopes: [writeScope],
+              scopes: [trackerWriteScope],
             },
             delete: {
               id: 'tracker.projects.issues.delete',
@@ -100,7 +136,7 @@ export const trackerDiscovery = {
               httpMethod: 'DELETE',
               deprecated: true,
               parameters: { name: issuePath },
-              scopes: [writeScope],
+              scopes: [trackerWriteScope],
             },
             attach: {
               id: 'tracker.projects.issues.attach',
@@ -115,144 +151,22 @@ export const trackerDiscovery = {
                 projectId: { ...singleSegmentPath, description: 'The project.' },
                 issueId: { ...singleSegmentPath, description: 'The issue.' },
               },
-              scopes: [writeScope],
+              scopes: [trackerWriteScope],
+            },
+            mutate: {
+              id: 'tracker.projects.issues.mutate',
+              path: 'v1/{+parent}/issues:mutate',
+              flatPath: 'v1/projects/{projectsId}/issues:mutate',
+              httpMethod: 'POST',
+              parameters: { parent: projectPath },
+              request: { $ref: 'MutateIssuesRequest' },
+              response: { $ref: 'MutateIssuesResponse' },
+              scopes: [trackerWriteScope],
             },
           },
         },
       },
     },
-  },
-};
-
-export const fieldsParameter = {
-  name: 'fields',
-  in: 'query',
-  description: 'Selector specifying which fields to include.',
-  schema: { type: 'string' },
-};
-
-const projectAndIssue = [
-  { name: 'projectsId', in: 'path', required: true, schema: { type: 'string' } },
-  { name: 'issuesId', in: 'path', required: true, schema: { type: 'string' } },
-];
-
-const onlyWrite = [{ oauth2: [writeScope] }];
-
-export const trackerCurated = {
-  openapi: '3.1.0',
-  info: { title: 'Tracker API', version: 'v1', description: 'Reads and changes issues.' },
-  externalDocs: { url: 'https://developers.example.com/tracker' },
-  servers: [{ url: 'https://tracker.example.com/tracker' }],
-  paths: {
-    '/v1/projects/{projectsId}/issues': {
-      get: {
-        operationId: 'tracker.projects.issues.list',
-        description: 'Lists issues.',
-        parameters: [
-          { name: 'projectsId', in: 'path', required: true, schema: { type: 'string' } },
-          { name: 'pageSize', in: 'query', schema: { type: 'integer', format: 'int32', minimum: 1, maximum: 100 } },
-          {
-            name: 'labels',
-            in: 'query',
-            description: 'Labels to match.',
-            schema: { type: 'array', items: { type: 'string' } },
-          },
-          { name: 'query', in: 'query', required: true, description: 'What to match.', schema: { type: 'string' } },
-          fieldsParameter,
-        ],
-        responses: {
-          '2XX': {
-            description: 'ListIssuesResponse',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/ListIssuesResponse' } } },
-          },
-        },
-        security: [{ oauth2: [readScope] }, { oauth2: [writeScope] }],
-      },
-    },
-    '/v1/projects/{projectsId}/issues/{issuesId}': {
-      patch: {
-        operationId: 'tracker.projects.issues.patch',
-        parameters: [
-          ...projectAndIssue,
-          { name: 'updateMask', in: 'query', schema: { type: 'string', format: 'field-mask' } },
-          fieldsParameter,
-        ],
-        requestBody: {
-          required: true,
-          content: { 'application/json': { schema: { $ref: '#/components/schemas/Issue' } } },
-        },
-        responses: {
-          '2XX': {
-            description: 'Issue',
-            content: { 'application/json': { schema: { $ref: '#/components/schemas/Issue' } } },
-          },
-        },
-        security: onlyWrite,
-      },
-      delete: {
-        operationId: 'tracker.projects.issues.delete',
-        deprecated: true,
-        parameters: [...projectAndIssue, fieldsParameter],
-        responses: { '2XX': { description: 'An empty body' } },
-        security: onlyWrite,
-      },
-    },
-    '/v1/projects/{projectsId}/issues/{issuesId}:attach': {
-      post: {
-        operationId: 'tracker.projects.issues.attach',
-        parameters: [
-          {
-            name: 'projectsId',
-            in: 'path',
-            required: true,
-            description: 'The project.',
-            schema: { type: 'string' },
-          },
-          {
-            name: 'issuesId',
-            in: 'path',
-            required: true,
-            description: 'The issue.',
-            schema: { type: 'string' },
-          },
-          fieldsParameter,
-        ],
-        responses: { '2XX': { description: 'An empty body' } },
-        security: onlyWrite,
-      },
-    },
-    '/v1/about/{version}': {
-      get: {
-        operationId: 'tracker.about.get',
-        parameters: [
-          { name: 'version', in: 'path', required: true, description: 'The version.', schema: { type: 'string' } },
-          { name: 'fields', in: 'query', description: 'Its own fields.', schema: { type: 'string' } },
-        ],
-        responses: { '2XX': { description: 'An empty body' } },
-      },
-    },
-  },
-  components: {
-    schemas: {
-      Issue: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', readOnly: true },
-          state: { type: 'string', enum: ['OPEN', 'CLOSED'] },
-          labels: { type: 'array', items: { $ref: '#/components/schemas/Label' } },
-          extra: { description: 'Anything.' },
-        },
-      },
-      Label: { type: 'object', properties: { title: { type: 'string' } }, additionalProperties: false },
-      ListIssuesResponse: {
-        type: 'object',
-        properties: {
-          issues: { type: 'array', items: { $ref: '#/components/schemas/Issue' } },
-          nextPageToken: { type: 'string' },
-        },
-      },
-    },
-    securitySchemes: trackerSecuritySchemes({ [readScope]: 'Read issues', [writeScope]: 'Change issues' }),
   },
 };
 
@@ -264,17 +178,27 @@ export const trackerMethodIds = [
   'tracker.about.get',
 ];
 
-export function trackerSecuritySchemes(scopes: Readonly<Record<string, string>>): Readonly<Record<string, unknown>> {
-  return {
-    oauth2: {
-      type: 'oauth2',
-      flows: {
-        authorizationCode: {
-          authorizationUrl: trackerAuthorizationServer.authorization_endpoint,
-          tokenUrl: trackerAuthorizationServer.token_endpoint,
-          scopes,
-        },
-      },
-    },
-  };
-}
+export const trackerMutateId = 'tracker.projects.issues.mutate';
+
+const trackerCuts = [
+  {
+    schema: 'Issue',
+    writable_in: { IssueOperation: ['create', 'update'] },
+    leaves_out: ['extra'],
+    because: 'what anything holds',
+  },
+  { schema: 'Label', writable_in: { LabelOperation: ['create'] }, leaves_out: [] },
+  {
+    schema: 'MutateOperation',
+    keeps: ['issueOperation', 'labelOperation'],
+    holds: 'the changes of issues and labels',
+  },
+];
+
+export const trackerManifest = {
+  discovery: 'https://tracker.example.com/$discovery/rest?version=v1',
+  revision: '20261001',
+  authorization_server: 'https://auth.tracker.example.com/.well-known/oauth-authorization-server',
+  methods: [...trackerMethodIds, trackerMutateId],
+  cuts: trackerCuts,
+};

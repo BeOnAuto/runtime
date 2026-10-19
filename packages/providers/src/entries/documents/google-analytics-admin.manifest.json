@@ -1,0 +1,18 @@
+{
+  "discovery": "https://analyticsadmin.googleapis.com/$discovery/rest?version=v1beta",
+  "revision": "20261014",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "analyticsadmin.accountSummaries.list",
+    "analyticsadmin.accounts.list",
+    "analyticsadmin.properties.list",
+    "analyticsadmin.properties.get",
+    "analyticsadmin.properties.dataStreams.list",
+    "analyticsadmin.properties.customDimensions.list",
+    "analyticsadmin.properties.customDimensions.create",
+    "analyticsadmin.properties.customMetrics.list",
+    "analyticsadmin.properties.keyEvents.list",
+    "analyticsadmin.properties.keyEvents.create",
+    "analyticsadmin.properties.runAccessReport"
+  ]
+}

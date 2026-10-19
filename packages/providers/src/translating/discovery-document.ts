@@ -1,10 +1,15 @@
-import { JsonPointer, Predicate, Schema } from 'effect';
+import { JsonPointer, Order, Predicate, Schema } from 'effect';
 
 export type Json = Schema.Json;
 
 export type JsonObject = Schema.JsonObject;
 
 type Keyword = readonly [string, Json];
+
+export const byName: Order.Order<readonly [string, unknown]> = Order.mapInput(
+  Order.String,
+  ([name]: readonly [string, unknown]) => name,
+);
 
 const ReferenceSchema = Schema.Struct({ $ref: Schema.String });
 
@@ -43,6 +48,7 @@ const ScopesSchema = Schema.Record(Schema.String, Schema.Struct({ description: S
 const DiscoveryDocumentSchema = Schema.Struct({
   name: Schema.String,
   version: Schema.String,
+  revision: Schema.String,
   title: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
   documentationLink: Schema.optionalKey(Schema.String),
@@ -112,7 +118,9 @@ function boundOf(written: string): number | undefined {
 
 function translatedProperties(properties: JsonObject): JsonObject {
   return Object.fromEntries(
-    Object.entries(properties).map(([name, schema]: Keyword): Keyword => [name, translatedSchema(schema)]),
+    Object.entries(properties)
+      .toSorted(byName)
+      .map(([name, schema]: Keyword): Keyword => [name, translatedSchema(schema)]),
   );
 }
 
@@ -136,7 +144,11 @@ function translatedKeyword([keyword, value]: Keyword): readonly Keyword[] {
 
 export function translatedSchema(schema: Json): Json {
   return isJsonObject(schema)
-    ? Object.fromEntries(Object.entries(schema).flatMap((each: Keyword) => translatedKeyword(each)))
+    ? Object.fromEntries(
+        Object.entries(schema)
+          .toSorted(byName)
+          .flatMap((each: Keyword) => translatedKeyword(each)),
+      )
     : schema;
 }
 
