@@ -1,4 +1,5 @@
-import { cacheFolderProblem, modelPorts, type ModelPorts } from '@on.auto/prediction';
+import { cacheFolderProblem } from '@on.auto/operations';
+import { modelPorts, type ModelPorts } from '@on.auto/prediction';
 import { processPool, type ProcessPool } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 

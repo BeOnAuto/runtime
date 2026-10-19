@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { authenticatorFor, createApiKey, studioOrigin, type ApiKey, type IdentityService } from '../index.ts';
+import { authenticatorFor, createApiKey, defaultStudioOrigin, type ApiKey, type IdentityService } from '../index.ts';
 import { fakeIssuer, principalIn } from '../testing/index.ts';
 
 const reader = createApiKey({ id: 'acme-reader', org: 'acme', permissions: ['playbook:read'], playbooks: ['alpha'] });
@@ -68,12 +68,28 @@ describe('authenticatorFor on a loopback address with neither sign-in nor API ke
   });
 });
 
+describe('authenticatorFor where its operator declares local mode', () => {
+  it.each(otherHosts)('is in local mode on %s, admitting every request as the local developer', async (host) => {
+    const authenticator = authenticatorFor({ host, apiKeys: undefined, accessMode: 'local' });
+    const developer = principalIn(await authenticator.authenticate(undefined, anyPath));
+
+    expect([authenticator.mode, developer?.own.org]).toEqual(['local', 'local']);
+  });
+
+  it('takes the credentials it is given over the declaration', () => {
+    expect([
+      authenticatorFor({ host: '0.0.0.0', apiKeys: keys, accessMode: 'local' }).mode,
+      authenticatorFor({ host: '0.0.0.0', apiKeys: undefined, identityService, accessMode: 'local' }).mode,
+    ]).toEqual(['credentials', 'credentials']);
+  });
+});
+
 describe('authenticatorFor beyond loopback with neither sign-in nor API keys', () => {
   it.each(otherHosts)('stops start-up on %s with a named error that says what the server needs', (host) => {
     expect(() => authenticatorFor({ host, apiKeys: undefined })).toThrow(
       expect.objectContaining({
         name: 'ReachableWithoutCredentialsError',
-        message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}`,
+        message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead`,
       }),
     );
   });
@@ -81,7 +97,10 @@ describe('authenticatorFor beyond loopback with neither sign-in nor API keys', (
 
 describe('authenticatorFor in local mode, with a credential presented', () => {
   it.each([
-    ['the session a page signed in to Auto sends', () => fakeIssuer('https://login.example').session(studioOrigin)],
+    [
+      'the session a page signed in to Auto sends',
+      () => fakeIssuer('https://login.example').session(defaultStudioOrigin),
+    ],
     ['a key, where no key is set', () => Promise.resolve(admin.key)],
     ['a key that is not valid', () => Promise.resolve(wrongSecret)],
   ])('ignores %s and admits the request as the local developer', async (_case, presented) => {
@@ -159,7 +178,7 @@ describe('authenticatorFor with the identity service', () => {
     tokensSeen.length = 0;
     const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys, identityService });
 
-    expect(await authenticator.authenticate('a.token.of-ada', '/mcp', studioOrigin)).toBe(signedInAda);
+    expect(await authenticator.authenticate('a.token.of-ada', '/mcp', defaultStudioOrigin)).toBe(signedInAda);
     expect(await authenticator.authenticate('an.opaque.token', '/mcp')).toEqual({ because: 'ERR_JWS_INVALID' });
     expect(tokensSeen).toEqual([
       'a.token.of-ada at /mcp from https://studio.on.auto',

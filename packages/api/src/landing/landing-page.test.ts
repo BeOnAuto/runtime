@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { ApiHandler } from '../index.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
 import { operationServer } from '../testing/operation-server.ts';
+import { servedStudio } from '../testing/studios.ts';
 
 const fromABrowser = { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' };
 
@@ -37,6 +38,12 @@ describe('the root of the server, opened in a browser', () => {
     const page = await (await open(createTestHandler().handler)).text();
 
     expect(page).toContain('href="https://studio.on.auto/?server=http%3A%2F%2Flocalhost%3A5555"');
+  });
+
+  it('opens the Studio this server serves, where it serves one', async () => {
+    const page = await (await open(createTestHandler({ studio: servedStudio }).handler)).text();
+
+    expect(page).toContain('href="http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555"');
   });
 
   it('is served without a key', async () => {

@@ -14,8 +14,6 @@ export interface WrittenFile {
   readonly bytes: number;
 }
 
-export const folderMode = 0o700;
-
 const digestName = /^[0-9a-f]{64}$/u;
 
 export async function written(stream: ReadableStream<Uint8Array>, path: string): Promise<WrittenFile> {

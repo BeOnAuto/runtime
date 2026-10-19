@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { fetchWithin } from './fetch-within.ts';
+import { fetchWithin } from '../index.ts';
 
 const SentInitSchema = Schema.Struct({
   redirect: Schema.optional(Schema.String),
@@ -26,9 +26,9 @@ function everywhere(): string | undefined {
   return undefined;
 }
 
-const rule = 'A connection may not reach the host elsewhere.example.org on this runtime, which allows *.example.com';
+const rule = 'This fetch may not reach the host elsewhere.example.org, since it reaches *.example.com alone';
 
-describe('a fetch held within the hosts of a connection', () => {
+describe('a fetch held within the hosts it may reach', () => {
   it('sends to the address of a string or a URL, with the fields given, and follows no redirect', async () => {
     const { sent, fetch } = recording();
     const within = fetchWithin(fetch, everywhere);

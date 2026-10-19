@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { identityServiceOf, type IssuerFetch } from '../index.ts';
 import {
   fakeIssuer,
+  hostedStudio,
   principalIn,
   signedTokens,
   testPublicUrl,
@@ -238,7 +239,7 @@ describe('the identity service of the protected resource', () => {
   it('is its one authorization server, with the public URL', async () => {
     const fake = fakeIssuer('https://login.example');
     const identityService = await identityServiceOf(
-      { issuer: fake.issuer, publicUrl: testPublicUrl, allowedOrigins: [] },
+      { issuer: fake.issuer, publicUrl: testPublicUrl, studio: hostedStudio, allowedOrigins: [] },
       { fetch: fake.answer, ...atStart },
     );
 
@@ -251,7 +252,7 @@ describe('the identity service of the protected resource', () => {
   it('stops the server at start, naming the service, when it cannot be read', async () => {
     await expect(
       identityServiceOf(
-        { issuer: 'https://login.example', publicUrl: testPublicUrl, allowedOrigins: [] },
+        { issuer: 'https://login.example', publicUrl: testPublicUrl, studio: hostedStudio, allowedOrigins: [] },
         { fetch: answeringNothing, now: Date.now },
       ),
     ).rejects.toMatchObject({

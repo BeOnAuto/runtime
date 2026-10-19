@@ -1,6 +1,8 @@
+import { boundedAnswerOf } from '@on.auto/outbound';
+
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { decodeToolResult } from '../bounds/tool-results.ts';
-import { counted, retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
+import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { AnsweredStatus } from './answered-status.ts';
 
@@ -109,7 +111,7 @@ export async function settledOf(response: Readonly<Response>, answering: Answeri
   }
   let tooLarge = false;
   try {
-    const text = await counted(response, toolBounds.httpAnswerBytes, () => {
+    const text = await boundedAnswerOf(response, toolBounds.httpAnswerBytes, () => {
       tooLarge = true;
     }).text();
     return settled(shownAnswer(response.status, mediaType, text), observedOf(response, answering, false));

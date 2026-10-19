@@ -48,7 +48,7 @@ echo 'IMAGE=onauto/runtime:0.9.1' > .env
 
 Replace `0.9.1` with the newest version on the [releases page](https://github.com/BeOnAuto/runtime/releases). Every command below takes the image from this line, so an upgrade changes only this line.
 
-People sign in through the Auto identity service. Auto needs the address at which people reach it, `PUBLIC_URL`, and a key to seal the secrets it keeps under, `SECRETS_KEY`, 32 random bytes in base64. Put both in `auto-runtime.env`, the file that holds Auto's own settings, one `NAME=value` per line. Later steps add to it. A container needs `PUBLIC_URL` or `API_KEYS`: it listens on every interface, so without either it stops at start ([Who can call a server](security.md#who-can-call-a-server)). Then create a volume for the ledger:
+People sign in through the Auto identity service. Auto needs the address at which people reach it, `PUBLIC_URL`, and a key to seal the secrets it keeps under, `SECRETS_KEY`, 32 random bytes in base64. Put both in `auto-runtime.env`, the file that holds Auto's own settings, one `NAME=value` per line. Later steps add to it. A container needs `PUBLIC_URL` or `API_KEYS`: it listens on every interface, so without either it stops at start ([Who can call a server](security.md#who-can-call-a-server)), unless you declare local mode for yourself alone, beside a `PUBLIC_URL` on `localhost` ([On your own machine](#on-your-own-machine)). Then create a volume for the ledger:
 
 ```bash
 echo 'PUBLIC_URL=http://localhost:5555' > auto-runtime.env
@@ -82,6 +82,21 @@ What the script does:
 - `--env-file auto-runtime.env` passes the settings and secrets. Docker reads the file when it creates the container, so `docker restart auto-runtime` does not pick up a change to it. Run `./start-runtime.sh` instead.
 
 `SECRETS_KEY` stays out of the volume, so a copy of the volume holds no secret anyone can read without it. Without `SECRETS_KEY`, Auto would make a key itself, in `secrets.key` on the volume beside the ledger, where a copy of the volume would carry it. Keep a copy of the key with your other secrets: a secret sealed under a lost key cannot be read again. Where there is no `openssl`, `. ./.env && docker run --rm "$IMAGE" node --print "require('node:crypto').randomBytes(32).toString('base64')"` makes one too.
+
+### On your own machine, without sign-in {#on-your-own-machine}
+
+To run Auto in a container for yourself alone, as `npx @on.auto/runtime` runs it on your computer, declare local mode instead of signing in. `ACCESS_MODE=local` takes the place of the sign-in. In a container it needs `PUBLIC_URL=http://localhost:5555`, the address your browser reaches Auto at, which Auto's links point at: the container listens on `0.0.0.0`, which a request may not name in local mode. Beside the declaration, `PUBLIC_URL` signs no one in. Keep the `--publish 127.0.0.1:5555:5555` of the script:
+
+```bash
+echo 'ACCESS_MODE=local' > auto-runtime.env
+echo 'PUBLIC_URL=http://localhost:5555' >> auto-runtime.env
+echo "SECRETS_KEY=$(openssl rand -base64 32)" >> auto-runtime.env
+./start-runtime.sh
+```
+
+`ACCESS_MODE=local` trusts that Docker publishes the port on `127.0.0.1` alone, so never use it with a wider `--publish`, such as `5555:5555`, which would let every machine that reaches this one act as you. The publish does not hold back the other containers on the same Docker network as Auto's: they reach its port whatever the publish says, and act as you too, so run none there that you would not let act as you.
+
+Auto then runs in [local mode](security.md#local-mode): every request acts as you, with no credential, in the org `local`, so the second check of step 2 answers `200` and step 3 needs no sign-in. Open Studio at `http://localhost:5555/studio/`, which Auto serves itself ([Studio served by the runtime](security.md#studio-served-by-the-runtime)). `ACCESS_MODE=local` stops the start beside `API_KEYS`, beside a `PUBLIC_URL` that is not on `localhost`, `127.0.0.1` or `[::1]`, and in a container without a `PUBLIC_URL`.
 
 ## 2. Check that it responds {#check-that-it-answers}
 

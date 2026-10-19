@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=./auto-runtime.schema.json
 #
-# The settings of Auto Runtime that are lists or maps. Copy this file to
-# auto-runtime.yaml at the root of the repository, which git ignores, and pnpm dev
-# passes it to the server. In a container, mount it and set CONFIG_FILE to its
-# path inside the container.
+# The settings of Auto Runtime that are lists or maps, and where Studio comes
+# from. Copy this file to auto-runtime.yaml at the root of the repository, which
+# git ignores, and pnpm dev passes it to the server. In a container, mount it and
+# set CONFIG_FILE to its path inside the container.
 #
 # Each key stands for the environment variable of the same name in upper case,
 # which wins over the key when both are set. Secrets never go in this file:
@@ -126,6 +126,20 @@ model_aliases:
 # The origins a page in a browser may call the API from.
 allowed_origins:
   - http://localhost:5173
+
+# Where Studio comes from. A page on a public address may not reach an address
+# on this machine, so a runtime in local mode serves Studio itself at /studio/
+# on its own address, fetched from studio_origin and kept beside the ledger.
+# Elsewhere it serves none unless serve_studio is true, and the Studio it serves
+# there signs no one in yet, so it works in local mode alone.
+# studio_origin: https://studio.on.auto
+# serve_studio: true
+
+# Local mode, declared for a runtime whose port only this computer reaches,
+# such as a container whose port Docker publishes on 127.0.0.1 alone; never
+# with a wider publish. It takes no api_keys, and a runtime that listens beyond
+# the loopback needs PUBLIC_URL=http://localhost:5555 beside it.
+# access_mode: local
 
 # The API keys the server accepts, each as pnpm key prints it. With the list
 # set, even empty, local mode is off and every request needs a key, or, where

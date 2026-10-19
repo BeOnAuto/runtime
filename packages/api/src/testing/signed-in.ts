@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 
 import { getRequestListener } from '@hono/node-server';
 import { authenticatorFor, identityServiceOf, signInScopes, type IssuerRequests } from '@on.auto/identity';
-import { fakeIssuer, type Claims, type FakeClient, type FakeIssuer } from '@on.auto/identity/testing';
+import { fakeIssuer, hostedStudio, type Claims, type FakeClient, type FakeIssuer } from '@on.auto/identity/testing';
 import { Schema } from 'effect';
 
 import type { ApiHandler } from '../index.ts';
@@ -25,7 +25,7 @@ export interface SignedIn {
 async function serverOf(issuer: FakeIssuer, resource: string, requests: IssuerRequests): Promise<OperationServer> {
   const allowedOrigins = [allowedOrigin];
   const identityService = await identityServiceOf(
-    { issuer: issuer.issuer, publicUrl: resource, allowedOrigins },
+    { issuer: issuer.issuer, publicUrl: resource, studio: hostedStudio, allowedOrigins },
     requests,
   );
   return operationServer({

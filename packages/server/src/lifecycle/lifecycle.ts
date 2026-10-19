@@ -1,6 +1,7 @@
 import {
   createApiHandler,
   makeAppRuntime,
+  type ApiHandler,
   type RegisterRoutes,
   type AppRuntime,
   type RuntimeControl,
@@ -12,27 +13,35 @@ import {
   type AccessMode,
   type Authenticator,
   type SignInSettings,
+  type StudioSettings,
 } from '@on.auto/identity';
-import { Effect, Layer } from 'effect';
+import { Data, Effect, Layer } from 'effect';
 
 import {
   logAccessMode,
   logConfigFile,
   logIncident,
+  logServedStudio,
+  logStudioKeptInMemory,
   logTelemetry,
   serverLogs,
   type LogSettings,
 } from '../logging/logging.ts';
 import { readSettings, type Settings } from '../settings/settings.ts';
+import { servedStudioOf } from '../studio/served-studio.ts';
 import { startTelemetry, type Telemetry } from '../telemetry/start-telemetry.ts';
 import { createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts';
 import { exitDeadlineMs, shutDown, shutdownTimeoutMs } from './shutdown.ts';
-import { StartupError } from './startup-error.ts';
+
+class StartupError extends Data.TaggedError('StartupError')<{
+  readonly message: string;
+}> {}
 
 export interface RunningServer {
   readonly port: number;
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
+  readonly studio: StudioSettings;
   stop(): Promise<void>;
 }
 
@@ -120,25 +129,48 @@ function telemetryServing(telemetry: Telemetry, local: LocalServing | undefined)
   };
 }
 
-async function started<R>({ settings, authenticator, telemetry, options }: Starting<R>): Promise<RunningServer> {
-  const local = options.localServingIn?.(authenticator.mode);
-  const composed = options.composed(settingsServing(settings, local), telemetryServing(telemetry, local));
-  const runtime = await startRuntime(composed.services, settings, telemetry.layer);
-  await runtime.run(logAccessMode({ ...settings, mode: authenticator.mode }));
-  await runtime.run(logConfigFile(settings.configFile));
-  await runtime.run(logTelemetry(settings.telemetry));
-  const listening = { port: settings.port };
-  const served = await servedOf(composed, runtime, () => ownOriginOf(settings.host, listening.port));
-  const api = createApiHandler({
+interface Answering<R> {
+  readonly settings: Settings;
+  readonly authenticator: Authenticator;
+  readonly routes: readonly RegisterRoutes[];
+  readonly runtime: AppRuntime<R>;
+  readonly telemetry: Telemetry;
+  readonly local: LocalServing | undefined;
+}
+
+function apiOf<R>({ settings, authenticator, routes, runtime, telemetry, local }: Answering<R>): ApiHandler {
+  return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
+    studio: servedStudioOf(settings, {
+      report: (problem) => {
+        void runtime.run(logStudioKeptInMemory(problem));
+      },
+    }),
     authenticator,
-    routes: served.routes,
+    routes,
     reportIncident: (id, error, requestId, call) => {
       void runtime.run(logIncident({ id, original: error, call }).pipe(Effect.annotateLogs({ requestId })));
     },
     ...(telemetry.requests === undefined ? {} : { requests: telemetry.requests }),
     ...(local?.runtimeControl === undefined ? {} : { runtimeControl: local.runtimeControl }),
   });
+}
+
+async function started<R>({ settings, authenticator, telemetry, options }: Starting<R>): Promise<RunningServer> {
+  const local = options.localServingIn?.(authenticator.mode);
+  const composed = options.composed(settingsServing(settings, local), telemetryServing(telemetry, local));
+  const runtime = await startRuntime(composed.services, settings, telemetry.layer);
+  await runtime.run(logAccessMode({ ...settings, mode: authenticator.mode }));
+  await runtime.run(logServedStudio({ ...settings, mode: authenticator.mode }));
+  await runtime.run(logConfigFile(settings.configFile));
+  await runtime.run(logTelemetry(settings.telemetry));
+  const listening = { port: settings.port };
+  const served = await servedOf(
+    composed,
+    runtime,
+    () => settings.publicUrl ?? ownOriginOf(settings.host, listening.port),
+  );
+  const api = apiOf({ settings, authenticator, routes: served.routes, runtime, telemetry, local });
   const server = createHttpServer(api.listener);
   try {
     await listen(server, settings.port, settings.host);
@@ -154,6 +186,7 @@ async function started<R>({ settings, authenticator, telemetry, options }: Start
     port: listening.port,
     mode: authenticator.mode,
     signIn: settings.signIn,
+    studio: settings.studio,
     stop: async () => {
       stopping ??= shutDown(
         server,
@@ -175,7 +208,11 @@ export async function startServer<R>(environment: Environment, options: ServerOp
   const identityService =
     settings.signIn === undefined
       ? undefined
-      : await identityServiceOf({ ...settings.signIn, allowedOrigins: settings.allowedOrigins });
+      : await identityServiceOf({
+          ...settings.signIn,
+          studio: settings.studio,
+          allowedOrigins: settings.allowedOrigins,
+        });
   const authenticator = authenticatorFor({ ...settings, identityService });
   const telemetry = startTelemetry(settings.telemetry);
   try {

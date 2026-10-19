@@ -1,10 +1,18 @@
-import { chmodSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { scratchDirectory } from '../testing/scratch.ts';
-import { cacheFolderProblem } from './cache-folder.ts';
+import { cacheFolderProblem } from '../index.ts';
+
+function scratchDirectory(): string {
+  const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-cache-folder-'));
+  onTestFinished(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+  return directory;
+}
 
 function folderWithMode(mode: number): string {
   const folder = join(scratchDirectory(), 'cache');
@@ -13,7 +21,7 @@ function folderWithMode(mode: number): string {
   return folder;
 }
 
-describe('the folder the model processes keep their files in', () => {
+describe('the folder a cache of the server keeps its files in', () => {
   it('is made readable by its owner alone when it is not there yet, and taken when its owner alone may write to it', async () => {
     const notYet = join(scratchDirectory(), 'not-yet', 'cache');
 

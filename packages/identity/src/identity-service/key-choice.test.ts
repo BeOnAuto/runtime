@@ -4,7 +4,7 @@ import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
 
 import { identityServiceOf, type IdentityService, type IssuerFetch } from '../index.ts';
-import { fakeIssuer, signedTokens, testPublicUrl } from '../testing/index.ts';
+import { fakeIssuer, hostedStudio, signedTokens, testPublicUrl } from '../testing/index.ts';
 
 const issuer = 'https://keys.example';
 
@@ -39,7 +39,7 @@ function answeringKeys(keys: readonly Jwk[]): IssuerFetch {
 
 function serviceAnswering(keys: readonly Jwk[]): Promise<IdentityService> {
   return identityServiceOf(
-    { issuer, publicUrl: testPublicUrl, allowedOrigins: [] },
+    { issuer, publicUrl: testPublicUrl, studio: hostedStudio, allowedOrigins: [] },
     { fetch: answeringKeys(keys), now: Date.now },
   );
 }

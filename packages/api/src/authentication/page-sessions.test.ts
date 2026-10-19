@@ -1,4 +1,4 @@
-import { studioOrigin } from '@on.auto/identity';
+import { defaultStudioOrigin } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
@@ -9,7 +9,7 @@ const asJson = { 'content-type': 'application/json' };
 
 describe('a page at an allowed origin, sending the session the identity service gave it', () => {
   it.each([
-    ['the studio', studioOrigin],
+    ['the studio', defaultStudioOrigin],
     ['an origin of ALLOWED_ORIGINS', allowedOrigin],
   ])(
     'acts at %s as the signed-in person, with every permission in their org, over every playbook',
@@ -39,7 +39,7 @@ describe('a page at an allowed origin, sending the session the identity service 
     const { server, fromPage } = await signedInServer();
 
     const answer = await call(server.handler, '/v1/orgs/globex/playbook-labels', {
-      headers: await fromPage(studioOrigin),
+      headers: await fromPage(defaultStudioOrigin),
     });
 
     expect(answer).toMatchObject({ status: 403, body: { reason: 'forbidden' } });
@@ -52,7 +52,7 @@ describe('a session the runtime refuses', () => {
     const { authorization = '' } = await fromPage('https://elsewhere.example');
 
     const answer = await call(server.handler, '/v1/orgs/acme/playbook-labels', {
-      headers: { origin: studioOrigin, authorization },
+      headers: { origin: defaultStudioOrigin, authorization },
     });
 
     expect(answer).toMatchObject({
@@ -69,7 +69,7 @@ describe('a session the runtime refuses', () => {
     const { server, fromPage } = await signedInServer();
 
     const answer = await call(server.handler, '/v1/orgs/acme/playbook-labels', {
-      headers: await fromPage(studioOrigin, { o: undefined }),
+      headers: await fromPage(defaultStudioOrigin, { o: undefined }),
     });
 
     expect(answer).toMatchObject({
@@ -99,7 +99,7 @@ const presentedElsewhere: ReadonlyArray<readonly [string, Readonly<Record<string
 describe('a session presented by any other than its own page', () => {
   it.each(presentedElsewhere)('is answered 401 invalid_token over HTTP %s, naming no value', async (_case, origin) => {
     const { server, fromPage } = await signedInServer();
-    const { authorization = '' } = await fromPage(studioOrigin);
+    const { authorization = '' } = await fromPage(defaultStudioOrigin);
 
     const answer = await call(server.handler, '/v1/orgs/acme/playbook-labels', {
       headers: { ...origin, authorization },
@@ -111,9 +111,9 @@ describe('a session presented by any other than its own page', () => {
 
   it('serves its page on an MCP endpoint, and is refused there to a client that sends no Origin, as an agent', async () => {
     const { server, fromPage } = await signedInServer();
-    const { authorization = '' } = await fromPage(studioOrigin);
+    const { authorization = '' } = await fromPage(defaultStudioOrigin);
 
-    const fromThePage = await postMcp(server.handler, '/mcp', { origin: studioOrigin, authorization });
+    const fromThePage = await postMcp(server.handler, '/mcp', { origin: defaultStudioOrigin, authorization });
     const fromAnAgent = await postMcp(server.handler, '/mcp', { authorization });
 
     expect([fromThePage.status, fromAnAgent.status]).toEqual([200, 401]);

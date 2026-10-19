@@ -27,6 +27,7 @@ function stoppable(count: () => void, signIn?: SignInSettings): ReturnType<Local
     port: 5600,
     mode: signIn === undefined ? 'local' : 'credentials',
     signIn,
+    studio: { origin: 'https://studio.on.auto', served: signIn === undefined },
     stop: () => {
       count();
       return Promise.resolve();
@@ -90,7 +91,7 @@ describe('serving the runtime on this computer', () => {
     expect(local.written[1]).toContain('     Server   http://localhost:5600\n');
     expect(local.written[1]).not.toContain('Sign-in');
     expect(local.written[1]).toContain(
-      '  Local mode: anyone on this computer acts as you, with no sign-in.\n  Set PUBLIC_URL=http://localhost:5600 to sign people in.\n',
+      '  Local mode: anyone on this computer acts as you, with no sign-in.\n  Set PUBLIC_URL=http://localhost:5600, and no ACCESS_MODE, to sign people in.\n',
     );
     expect(local.written.slice(2)).toEqual(['\n  Stopping…\n', '  ✔ Stopped\n']);
     expect(local.stops()).toBe(1);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { identityServiceOf, type IssuerFetch } from '../index.ts';
-import { fakeIssuer } from '../testing/index.ts';
+import { fakeIssuer, hostedStudio } from '../testing/index.ts';
 import { metadataAddressesOf } from './issuer-metadata.ts';
 
 const publicUrl = 'https://runtime.example';
@@ -32,7 +32,7 @@ function json(body: unknown): Response {
 
 async function refusalOf(issuer: string, fetch: IssuerFetch): Promise<string> {
   try {
-    await identityServiceOf({ issuer, publicUrl, allowedOrigins: [] }, { fetch, now: Date.now });
+    await identityServiceOf({ issuer, publicUrl, studio: hostedStudio, allowedOrigins: [] }, { fetch, now: Date.now });
   } catch (error) {
     return String(error);
   }

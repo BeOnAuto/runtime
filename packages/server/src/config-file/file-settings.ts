@@ -6,7 +6,7 @@ import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGat
 import { ToolServersSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { Origin } from '../settings/origin.ts';
+import { Origin, StudioOrigin } from '../settings/origin.ts';
 
 function asJson(value: unknown): string {
   return JSON.stringify(value);
@@ -21,12 +21,29 @@ export const fileSettings: readonly FileSetting[] = [
     }),
     (origins) => origins.join(','),
   ),
+  fileSetting('STUDIO_ORIGIN', StudioOrigin, (origin) => origin),
+  fileSetting(
+    'SERVE_STUDIO',
+    Schema.Boolean.annotate({
+      description:
+        'Whether the runtime serves Studio itself at /studio/ on its own address, fetched from the Studio host and kept, since a page on a public address may not reach an address on the machine. On in local mode and off otherwise when left out. SERVE_STUDIO wins over it',
+    }),
+    String,
+  ),
   fileSetting(
     'API_KEYS',
     ApiKeysSchema.annotate({
       description: 'The API keys the server accepts, each as the key command prints it. API_KEYS wins over it',
     }),
     asJson,
+  ),
+  fileSetting(
+    'ACCESS_MODE',
+    Schema.Literal('local').annotate({
+      description:
+        'local declares local mode, where every request acts as the local developer with no credential, for a runtime whose port only this computer reaches, such as a container whose port is published on 127.0.0.1 alone. It takes no API_KEYS, and a PUBLIC_URL only on localhost, 127.0.0.1 or [::1], which names the address of the runtime and signs no one in; a runtime that listens beyond the loopback needs that PUBLIC_URL. ACCESS_MODE wins over it',
+    }),
+    (mode) => mode,
   ),
   fileSetting(
     'MODEL_GATEWAYS',

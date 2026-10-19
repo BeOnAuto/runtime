@@ -1,11 +1,9 @@
-import { dirname, join } from 'node:path';
-
 import type { Environment } from '@on.auto/config';
 import { secretKeyBytes, type SecretKeys } from '@on.auto/ledger';
 import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
 
 import { InvalidSettingsError } from './invalid-settings-error.ts';
-import { readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
+import { besideTheLedgerFile, readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
 
 export type SecretsSettings =
   | { readonly key: 'set'; readonly keys: SecretKeys }
@@ -23,8 +21,6 @@ const sources = Config.all({
   current: Config.option(Config.Redacted('SECRETS_KEY')),
   previous: Config.option(Config.Redacted('SECRETS_KEY_PREVIOUS')),
 });
-
-const privateMemory = ':memory:';
 
 const keyFileName = 'secrets.key';
 
@@ -58,11 +54,8 @@ function withoutAKey(ledger: LedgerSettings): Effect.Effect<SecretsSettings, Inv
       ),
     );
   }
-  return Effect.succeed(
-    ledger.file === privateMemory
-      ? { key: 'made-at-start' }
-      : { key: 'in-a-file', file: join(dirname(ledger.file), keyFileName) },
-  );
+  const file = besideTheLedgerFile(ledger, keyFileName);
+  return Effect.succeed(file === undefined ? { key: 'made-at-start' } : { key: 'in-a-file', file });
 }
 
 function readSecretsSettings(

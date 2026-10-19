@@ -1,7 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import { registeredClientSecrets } from '@on.auto/connections';
 import type { DispatcherServices } from '@on.auto/operations';
-import { withUserAgent } from '@on.auto/outbound';
 import {
   describedToolServers,
   makeToolAccess,
@@ -15,6 +14,7 @@ import { Effect } from 'effect';
 
 import { logLeftOutOperation, logServerMessage } from '../logging/tool-server-logging.ts';
 import type { Settings } from '../settings/settings.ts';
+import { outboundFetch } from './outbound-fetch.ts';
 import { release } from './release.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
 
@@ -35,7 +35,6 @@ export async function toolAccessOf(
   { toolTiming, connections, telemetry }: ToolAccessWiring & ServedConnections,
 ): Promise<ToolAccess> {
   const traceMeta = telemetry?.traceMeta;
-  const outboundFetch = withUserAgent(globalThis.fetch, `auto-runtime/${release.version}`);
   const reportLeftOut: Describing['reportLeftOut'] = (server, leftOut) => {
     void runtime.run(logLeftOutOperation(server, leftOut));
   };

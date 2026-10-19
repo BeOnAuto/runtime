@@ -41,7 +41,7 @@ const invalidSettings: ReadonlyArray<readonly [Readonly<Record<string, string>>,
   ],
   [
     { HOST: '0.0.0.0' },
-    'ReachableWithoutCredentialsError: A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0',
+    'ReachableWithoutCredentialsError: A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead',
   ],
   [
     { WORKFLOW_SWEEP_INTERVAL: 'PT2M' },

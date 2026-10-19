@@ -1,6 +1,13 @@
-import { identityServiceOf, signInScopes, type IdentityService, type IssuerRequests } from '../index.ts';
+import {
+  identityServiceOf,
+  signInScopes,
+  type IdentityService,
+  type IssuerRequests,
+  type StudioSettings,
+} from '../index.ts';
 import type { Claims, FakeIssuer, Signing } from './fake-issuer.ts';
 import { principalIn } from './principals.ts';
+import { hostedStudio } from './studios.ts';
 
 export const testPublicUrl = 'https://runtime.example';
 
@@ -13,10 +20,14 @@ export interface SignedTokens {
   readonly callerOf: (token: string, resourcePath?: string, org?: string) => Promise<string | undefined>;
 }
 
-export async function signedTokens(fake: FakeIssuer, requests: Partial<IssuerRequests> = {}): Promise<SignedTokens> {
+export async function signedTokens(
+  fake: FakeIssuer,
+  requests: Partial<IssuerRequests> = {},
+  studio: StudioSettings = hostedStudio,
+): Promise<SignedTokens> {
   const now = requests.now ?? Date.now;
   const identityService = await identityServiceOf(
-    { issuer: fake.issuer, publicUrl: testPublicUrl, allowedOrigins: [testAllowedOrigin] },
+    { issuer: fake.issuer, publicUrl: testPublicUrl, studio, allowedOrigins: [testAllowedOrigin] },
     { fetch: fake.answer, now, ...requests },
   );
   return {

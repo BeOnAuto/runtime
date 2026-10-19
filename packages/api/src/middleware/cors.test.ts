@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
 import { acmeAdmin, operationServer } from '../testing/operation-server.ts';
+import { servedStudio } from '../testing/studios.ts';
 
 const allowed = 'https://app.example';
 
@@ -124,5 +125,31 @@ describe('the studio', () => {
       answer: answer.status,
       answerAllows: answer.headers.get('access-control-allow-origin'),
     }).toEqual({ preflight: 204, preflightAllows: studio, answer: 200, answerAllows: studio });
+  });
+});
+
+describe('a page at the origin of the runtime itself', () => {
+  const own = 'http://localhost';
+
+  it('is answered as a page of an allowed origin where the runtime serves Studio', async () => {
+    const { handler } = await operationServer({ studio: servedStudio });
+
+    const preflight = await call(handler, notes, { method: 'OPTIONS', headers: preflightFrom(own) });
+    const answer = await call(handler, notes, { headers: { origin: own, ...asAdmin } });
+
+    expect([preflight.status, preflight.headers.get('access-control-allow-origin'), answer.status]).toEqual([
+      204,
+      own,
+      200,
+    ]);
+    expect(corsHeadersOf(answer.headers)).toMatchObject({ allowOrigin: own });
+  });
+
+  it('is refused where the runtime serves no Studio', async () => {
+    const { handler } = await operationServer();
+
+    const preflight = await call(handler, notes, { method: 'OPTIONS', headers: preflightFrom(own) });
+
+    expect(preflight).toMatchObject({ status: 403, body: { reason: 'origin_not_allowed' } });
   });
 });

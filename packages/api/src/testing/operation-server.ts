@@ -18,6 +18,7 @@ import {
   openApiDocumentRoutes,
   operationRoutes,
   type ApiHandler,
+  type ApiStudio,
   type AppRuntime,
   type RetryStateKeys,
 } from '../index.ts';
@@ -78,6 +79,7 @@ const keyHolders = authenticatorFor({
 export interface OperationServerOptions {
   readonly authenticator?: Authenticator;
   readonly allowedOrigins?: readonly string[];
+  readonly studio?: ApiStudio;
   readonly operations?: Parameters<typeof makeCatalog>[0];
   readonly requests?: MiddlewareHandler<ApiEnv>;
   readonly tracer?: Tracer.Tracer;
@@ -91,6 +93,7 @@ function tracingWith(tracer: Tracer.Tracer | undefined): Layer.Layer<never> {
 export async function operationServer({
   authenticator = keyHolders,
   allowedOrigins = [],
+  studio,
   operations = notebookOperations,
   requests,
   tracer,
@@ -124,6 +127,7 @@ export async function operationServer({
   const { handler, reported } = createTestHandler({
     authenticator,
     allowedOrigins,
+    ...(studio === undefined ? {} : { studio }),
     routes,
     ...(requests === undefined ? {} : { requests }),
   });

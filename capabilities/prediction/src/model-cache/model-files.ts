@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rename, rm, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import { notTheBytesOfItsDigest, type StreamedContent } from '@on.auto/operations';
+import { cacheFolderMode, notTheBytesOfItsDigest, type StreamedContent } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { folderMode, verifiedFilesIn, written, type WrittenFile } from './cached-files.ts';
+import { verifiedFilesIn, written, type WrittenFile } from './cached-files.ts';
 
 export interface CachedFile extends WrittenFile {
   readonly path: string;
@@ -95,9 +95,9 @@ export function fileCache({ directory, fileName, mostBytes }: FileCacheSettings)
   };
   const receivedInto = async (stream: ReadableStream<Uint8Array>): Promise<CachedFile> => {
     await ready();
-    await mkdir(directory, { recursive: true, mode: folderMode });
+    await mkdir(directory, { recursive: true, mode: cacheFolderMode });
     const partial = join(directory, `.${randomUUID()}`);
-    await mkdir(partial, { mode: folderMode });
+    await mkdir(partial, { mode: cacheFolderMode });
     try {
       return await kept(await written(stream, join(partial, fileName)), partial);
     } finally {

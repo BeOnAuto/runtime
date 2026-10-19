@@ -1,4 +1,4 @@
-import { studioOrigin, type AccessMode } from '@on.auto/identity';
+import { studioBaseOf, type AccessMode, type StudioSettings } from '@on.auto/identity';
 
 import { defaultRuntimePort } from '../local-runtime/local-control.ts';
 import { linkerFor, painterFor, type ColorDepth } from '../logging/terminal.ts';
@@ -10,6 +10,7 @@ export interface Ready {
   readonly readyInMs: number;
   readonly mode: AccessMode;
   readonly identityService: string | undefined;
+  readonly studio: StudioSettings;
 }
 
 const tagline = 'Runs the playbooks your agent builds';
@@ -58,7 +59,7 @@ function localModeNotice(url: string, depth: ColorDepth): readonly string[] {
   return [
     '',
     `  ${paint('dim', 'Local mode: anyone on this computer acts as you, with no sign-in.')}`,
-    `  ${paint('dim', `Set PUBLIC_URL=${url} to sign people in.`)}`,
+    `  ${paint('dim', `Set PUBLIC_URL=${url}, and no ACCESS_MODE, to sign people in.`)}`,
   ];
 }
 
@@ -68,8 +69,9 @@ export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
   const link = linkerFor(depth);
   const url = `http://localhost:${port}`;
   const mcp = `${url}/mcp`;
-  const studio = `${studioOrigin}/?server=${encodeURIComponent(url)}`;
-  const studioShown = port === defaultRuntimePort ? studioOrigin : `${studioOrigin}/?server=${url}`;
+  const studioBase = studioBaseOf(ready.studio, url);
+  const studio = `${studioBase}?server=${encodeURIComponent(url)}`;
+  const studioShown = port === defaultRuntimePort ? studioBase : `${studioBase}?server=${url}`;
   const entry = (label: string, value: string): string => `     ${paint('dim', label.padEnd(8))} ${link(value, value)}`;
   const agent = (label: string, command: string): string => `    ${label.padEnd(13)} ${paint('dim', command)}`;
   const signIn = identityService === undefined ? [] : [entry('Sign-in', identityService)];

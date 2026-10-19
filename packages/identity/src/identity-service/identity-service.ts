@@ -1,7 +1,7 @@
 import { allPermissions } from '@on.auto/operations';
 import { Result } from 'effect';
 
-import { pageOriginsOf } from '../access/page-origins.ts';
+import { pageOriginsOf, type PageSettings } from '../access/page-origins.ts';
 import { signedInPersonOf, type Authentication } from '../access/principal.ts';
 import { verifiedPerson } from '../tokens/token-verification.ts';
 import { keysOfIssuer } from './issuer-keys.ts';
@@ -29,16 +29,14 @@ export interface SignInSettings {
   readonly publicUrl: string;
 }
 
-export interface IdentityServiceSettings extends SignInSettings {
-  readonly allowedOrigins: readonly string[];
-}
+export interface IdentityServiceSettings extends SignInSettings, PageSettings {}
 
 function audiencesOf(publicUrl: string, resourcePath: string): readonly string[] {
   return [publicUrl, `${publicUrl}/`, ...(resourcePath === '' ? [] : [`${publicUrl}${resourcePath}`])];
 }
 
 export async function identityServiceOf(
-  { issuer, publicUrl, allowedOrigins }: IdentityServiceSettings,
+  { issuer, publicUrl, studio, allowedOrigins }: IdentityServiceSettings,
   requests: IssuerRequests = issuerRequestsOverTheNetwork,
 ): Promise<IdentityService> {
   const keys = await keysOfIssuer(issuer, requests);
@@ -47,7 +45,7 @@ export async function identityServiceOf(
       message: `The identity service at ${issuer} cannot be used: ${keys.failure}`,
     });
   }
-  const pageOrigins = pageOriginsOf(allowedOrigins);
+  const pageOrigins = pageOriginsOf({ studio, allowedOrigins }, publicUrl);
   return {
     resource: { publicUrl, authorizationServers: [issuer] },
     personOf: async (token, resourcePath, requestOrigin) => {

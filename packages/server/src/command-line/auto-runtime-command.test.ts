@@ -72,7 +72,7 @@ describe('the auto-runtime command', () => {
     expect(runtime.output().stdout).toContain(`     MCP      ${runtime.url}/mcp\n`);
     expect(runtime.output().stdout).toContain('     Docs     https://on.auto/docs/\n');
     expect(runtime.output().stdout).toContain(
-      `  Local mode: anyone on this computer acts as you, with no sign-in.\n  Set PUBLIC_URL=${runtime.url} to sign people in.\n`,
+      `  Local mode: anyone on this computer acts as you, with no sign-in.\n  Set PUBLIC_URL=${runtime.url}, and no ACCESS_MODE, to sign people in.\n`,
     );
     expect(runtime.output().stderr).toBe('');
     runtime.interrupt();

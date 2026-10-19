@@ -3,9 +3,9 @@ import { readFile, stat } from 'node:fs/promises';
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { problem, readYaml, type SettingProblem, type YamlKind } from '@on.auto/config';
 import { nestedDeeperThan } from '@on.auto/json-schema';
+import { boundedAnswerOf } from '@on.auto/outbound';
 import { Data, Result } from 'effect';
 
-import { counted } from '../clients/observed-requests.ts';
 import { at } from '../settings/checked.ts';
 import { toolServersSetting } from '../settings/server-entries.ts';
 import type { ApiDocumentSource } from '../settings/server-settings.ts';
@@ -91,7 +91,7 @@ async function textAt(url: string, { entry, fetch, readMs }: DocumentReading): P
       await response.body?.cancel();
       return Result.fail(unread(entry, unreadAnswer(response.status)));
     }
-    const text = await counted(response, documentBounds.bytes, () => {
+    const text = await boundedAnswerOf(response, documentBounds.bytes, () => {
       overflowed = true;
     }).text();
     return Result.succeed(text);

@@ -66,7 +66,9 @@ describe('add_connection over MCP', () => {
         url,
       },
     ]);
-    expect(url).toMatch(/^https:\/\/studio\.on\.auto\/connect\?server=http%3A%2F%2F127\.0\.0\.1%3A\d+&org=local&/u);
+    expect(url).toMatch(
+      /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?server=http%3A%2F%2F127\.0\.0\.1%3A\d+&org=local&/u,
+    );
   });
 
   it('asks nothing of a client that does not declare it opens links, or speaks 2025-11-25, and answers the link', async () => {
@@ -77,7 +79,7 @@ describe('add_connection over MCP', () => {
       ({ answer }) => Schema.decodeUnknownSync(AddedSchema)(answer.structuredContent).connect.url,
     );
     expect([formsAlone.elicited, legacy.elicited]).toEqual([[], []]);
-    expect(urls.filter((url) => url.startsWith('https://studio.on.auto/connect?server='))).toHaveLength(2);
+    expect(urls.filter((url) => /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?server=/u.test(url))).toHaveLength(2);
   });
 });
 

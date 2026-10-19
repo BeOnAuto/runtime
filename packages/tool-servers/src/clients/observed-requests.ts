@@ -1,3 +1,4 @@
+import { boundedAnswerOf } from '@on.auto/outbound';
 import { Option, Schema } from 'effect';
 
 import { headerNamePattern } from '../settings/checked.ts';
@@ -31,31 +32,6 @@ export interface Observations {
   readonly take: (marker: Marker) => Observed;
   readonly lastRetryAfterMs: () => number | null;
 }
-
-class AnswerTooLarge extends Error {}
-
-type Counting = (response: Readonly<Response>, mostBytes: number, tooLarge: () => void) => Response;
-
-export const counted: Counting = (response, mostBytes, tooLarge) => {
-  if (response.body === null) {
-    return response;
-  }
-  let read = 0;
-  const counting = new TransformStream<Uint8Array, Uint8Array>({
-    transform: (chunk: Readonly<Uint8Array>, controller: Readonly<TransformStreamDefaultController<Uint8Array>>) => {
-      read += chunk.byteLength;
-      if (read > mostBytes) {
-        tooLarge();
-        controller.error(
-          new AnswerTooLarge(`The tool server answered more than the ${mostBytes} bytes a call may take`),
-        );
-        return;
-      }
-      controller.enqueue(chunk);
-    },
-  });
-  return new Response(response.body.pipeThrough(counting), response);
-};
 
 const MessageSchema = Schema.Struct({
   id: Schema.optionalKey(Schema.Union([Schema.String, Schema.Number])),
@@ -137,10 +113,10 @@ export function observations(requestId: string | null, mostAnswerBytes: number):
       latest.retryAfterMs = observed.retryAfterMs;
       const id = idIn(body);
       if (id === undefined || !answered.has(id)) {
-        return counted(response, mostAnswerBytes, ignored);
+        return boundedAnswerOf(response, mostAnswerBytes, ignored);
       }
       answered.set(id, observed);
-      return counted(response, mostAnswerBytes, () => {
+      return boundedAnswerOf(response, mostAnswerBytes, () => {
         answered.set(id, { ...observed, tooLarge: true });
         stopOf(id)?.();
       });
