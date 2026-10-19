@@ -1,7 +1,7 @@
 import { variableNamePattern } from '@on.auto/config';
 import { listed } from '@on.auto/operations';
 import { wayFields } from '@on.auto/providers';
-import { headerNamePattern, isPinnableUrl } from '@on.auto/tool-servers';
+import { headerNamePattern, isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 const credentialKinds = ['none', 'reference', 'secret', 'client_credentials'] as const;
@@ -146,7 +146,7 @@ function schemeIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
 function issuerIssuesOf({ kind, issuer }: CredentialFields): readonly FieldIssue[] {
   return kind !== 'client_credentials' || issuer === undefined || isPinnableUrl(issuer)
     ? []
-    : [{ path: ['issuer'], issue: 'Expected an https URL, or an http URL on a loopback address' }];
+    : [{ path: ['issuer'], issue: pinnedUrlShape }];
 }
 
 export const credentialDescription =

@@ -61,6 +61,7 @@ describe('readSettings', () => {
       recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
       connections: { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] },
+      registeredClients: [],
       connectionVariables: new Map(),
       providers: shippedList,
       providerValues: new Map(),
@@ -130,6 +131,7 @@ describe('readSettings given every setting', () => {
       recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
       connections: { peopleMayAdd: false, allowedHosts: ['*.example.com'], credentialKinds: ['none'], variables: [] },
+      registeredClients: [],
       connectionVariables: new Map(),
       providers: shippedList,
       providerValues: new Map(),
@@ -220,7 +222,7 @@ describe('readSettings rejects invalid settings of other packages', () => {
 
   it('stops at connection settings it cannot read, naming the setting', () => {
     expect(String(errorFrom({ CONNECTIONS: '{"people_may_add": "yes"}' }))).toBe(
-      'connection_policy_invalid: The connection settings are invalid. CONNECTIONS: /people_may_add: Expected boolean',
+      'connections_setting_invalid: The connection settings are invalid. CONNECTIONS: /people_may_add: Expected boolean',
     );
   });
 

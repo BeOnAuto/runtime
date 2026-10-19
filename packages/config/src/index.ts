@@ -11,7 +11,7 @@ export {
 export { ConfigFileInvalid } from './config-file/config-file.ts';
 export { configFileVariable, configurationOf, type Configuration, type FileUse } from './config-file/configuration.ts';
 export { fileSetting, type FileSetting, type FileSettingOptions, type References } from './config-file/file-setting.ts';
-export { credentialProblems } from './config-file/credentials.ts';
+export { credentialAsDefault, credentialProblems } from './config-file/credentials.ts';
 export { placeIn } from './config-file/places.ts';
 export type { FileProblem } from './config-file/file-problem.ts';
 export {
@@ -27,6 +27,7 @@ export {
 export {
   decodedJsonSetting,
   decodedJsonSettingWith,
+  decodedSettingValue,
   pointerOf,
   problem,
   settingProblemText,
@@ -43,5 +44,9 @@ export {
   type ServedScope,
   type WrittenScope,
 } from './json-settings/served-scope.ts';
-export { misplacedReferences, secretsOfEntry, type ReferencePlacement } from './json-settings/placed-references.ts';
+export {
+  misplacedReferences,
+  secretsReferencedIn,
+  type ReferencePlacement,
+} from './json-settings/placed-references.ts';
 export { withoutTrailingSlashes } from './json-settings/base-urls.ts';

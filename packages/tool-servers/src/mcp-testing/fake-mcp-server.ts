@@ -1,8 +1,9 @@
 import { OAuthError, OAuthErrorCode, requireBearerAuth } from '@modelcontextprotocol/server';
 import { Option, Schema } from 'effect';
 
+import { fakeAuthorization, type FakeAuthorization } from '../authorization-testing/fake-authorization.ts';
+import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import { serveOnLoopback, type FetchHandler, type LoopbackServer } from '../testing/loopback-server.ts';
-import { fakeAuthorization, type ClientRegistration, type FakeAuthorization } from './fake-authorization.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions } from './fake-sessions.ts';
 import type { FakeHints, ReceivedCall } from './fake-tools.ts';

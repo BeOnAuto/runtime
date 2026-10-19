@@ -68,3 +68,31 @@ describe('a key that names a credential, holding a placeholder', () => {
     ]);
   });
 });
+
+describe('the default of a reference', () => {
+  it('passes empty, or where it looks like no credential, under a key that names one or any other', () => {
+    const { environment } = configured(
+      "example_servers: { graph: { headers: { X-Region: '${GRAPH_REGION:-eu}', x-api-key: '${GRAPH_KEY:-}' } } }\n",
+      { GRAPH_KEY: 'graph-key-0f3c9a71' },
+    );
+
+    expect(environment['EXAMPLE_SERVERS']).toBe(
+      JSON.stringify({ graph: { headers: { 'X-Region': '${GRAPH_REGION:-eu}', 'x-api-key': '${GRAPH_KEY:-}' } } }),
+    );
+  });
+
+  it('is refused where it looks like a credential, by its key or by its shape, in words that say to set the variable', () => {
+    const asDefault =
+      'Holds a reference whose default looks like a credential, which this file never holds; set the variable the reference names instead of writing a default';
+
+    expect([
+      problemsIn("example_servers: { graph: { headers: { x-api-key: '${UNSET:-written-key}' } } }\n"),
+      problemsIn(`example_servers: { graph: { headers: { link: '\${UNSET:-${secret}}' } } }\n`),
+      problemsIn(`example_servers: { graph: { headers: { link: '${secret} \${UNSET:-${secret}}' } } }\n`),
+    ]).toEqual([
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:51 example_servers.graph.headers.x-api-key: ${asDefault}`,
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:46 example_servers.graph.headers.link: ${asDefault}`,
+      `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:46 example_servers.graph.headers.link: ${writtenOut}`,
+    ]);
+  });
+});

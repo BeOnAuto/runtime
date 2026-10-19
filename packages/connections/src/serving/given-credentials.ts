@@ -54,10 +54,10 @@ function keptSecretOf(serving: Serving): Given {
   return services.secrets.read(secretId).pipe(
     Effect.matchEffect({
       onFailure: ({ detail }) => broken(serving, servingWords.unreadable(name, detail)),
-      onSuccess: (value) =>
-        value === undefined
+      onSuccess: (stored) =>
+        stored === undefined
           ? broken(serving, servingWords.gone(name))
-          : Effect.succeed({ value, algorithm: kept.algorithm }),
+          : Effect.succeed({ value: stored.value, algorithm: kept.algorithm }),
     }),
   );
 }

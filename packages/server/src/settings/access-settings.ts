@@ -1,10 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { autoIdentityService, readApiKeys, type ApiKey, type SignInSettings } from '@on.auto/identity';
+import { alternatives, loopbackNames, namesTheLoopback } from '@on.auto/operations';
 import { Config, ConfigProvider, Effect, Option } from 'effect';
 
 import type { LogFormat, LogLevelSetting } from '../logging/log-formats.ts';
 import { InvalidSettingsError } from './invalid-settings-error.ts';
-import { IssuerOrigin, namesALoopbackHost, Origin, PublicOrigin } from './origin.ts';
+import { IssuerOrigin, Origin, PublicOrigin } from './origin.ts';
 
 export const accessVariables: readonly string[] = [
   'ALLOWED_ORIGINS',
@@ -47,11 +48,10 @@ const signInSettings = Config.all({
   issuer: Config.schema(IssuerOrigin, 'IDENTITY_ISSUER').pipe(Config.withDefault(autoIdentityService)),
 });
 
-const httpOffLoopback =
-  'PUBLIC_URL: Expected an https URL; an http URL is taken only for localhost, 127.0.0.1 or [::1]';
+const httpOffLoopback = `PUBLIC_URL: Expected an https URL; an http URL is taken only for ${alternatives(loopbackNames)}`;
 
 function isUsable(publicUrl: string): boolean {
-  return publicUrl.startsWith('https://') || namesALoopbackHost(publicUrl);
+  return publicUrl.startsWith('https://') || namesTheLoopback(new URL(publicUrl).hostname);
 }
 
 export function readCredentialSettings(environment: Environment): CredentialSettings {

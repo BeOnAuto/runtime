@@ -1,7 +1,7 @@
 import type { Schema } from 'effect';
 
 import { below, entriesOf, type FileProblem } from './file-problem.ts';
-import { holdsReference, literalTextOf, placeholdersIn, placeholdersReplaced } from './references.ts';
+import { fallbacksIn, holdsReference, literalTextOf, placeholdersIn, placeholdersReplaced } from './references.ts';
 
 const credentialWords: ReadonlySet<string> = new Set([
   'apikey',
@@ -32,6 +32,9 @@ const credentialShapes: readonly RegExp[] = [
 
 const advice =
   'Looks like a credential, which this file never holds; write a reference to the environment variable that holds it instead, such as ${GATEWAY_API_KEY}';
+
+export const credentialAsDefault =
+  'Holds a reference whose default looks like a credential, which this file never holds; set the variable the reference names instead of writing a default';
 
 function namesCredential(name: string): boolean {
   const words = name.toLowerCase().split(/[^a-z0-9]+/u);
@@ -85,13 +88,24 @@ function assignsCredential(text: string): boolean {
   return equals >= 0 && looksLikeCredential(text.slice(equals + 1));
 }
 
-function textProblems(name: string, text: string, pointer: string, sorts: readonly string[]): readonly FileProblem[] {
-  const refused =
+function isWrittenOutCredential(name: string, text: string, sorts: readonly string[]): boolean {
+  return (
     (!sorts.includes(name) && namedAsCredential(name, text)) ||
     looksLikeCredential(text) ||
     urlHoldsCredential(text) ||
-    assignsCredential(text);
-  return refused ? [{ pointer, detail: advice }] : [];
+    assignsCredential(text)
+  );
+}
+
+function holdsCredentialAsDefault(name: string, text: string, sorts: readonly string[]): boolean {
+  return fallbacksIn(text).some((fallback) => fallback !== '' && isWrittenOutCredential(name, fallback, sorts));
+}
+
+function textProblems(name: string, text: string, pointer: string, sorts: readonly string[]): readonly FileProblem[] {
+  if (isWrittenOutCredential(name, text, sorts)) {
+    return [{ pointer, detail: advice }];
+  }
+  return holdsCredentialAsDefault(name, text, sorts) ? [{ pointer, detail: credentialAsDefault }] : [];
 }
 
 export function credentialProblems(

@@ -2,12 +2,14 @@ export { makeConnectionOperations, type ConnectionOperations } from './operation
 export type { ConnectionServices, SecretKeeping } from './operations/connection-services.ts';
 export type { ConnectPages } from './links/connect-page.ts';
 export {
-  ConnectionPolicyInvalid,
-  ConnectionPolicySchema,
+  ConnectionsSettingInvalid,
+  ConnectionsSettingSchema,
   connectionsSetting,
-  readConnectionPolicy,
+  connectionsSortsOfCredential,
+  readConnectionsSetting,
   type ConnectionPolicy,
 } from './policy/connection-policy.ts';
+export { registeredClientSecrets, type RegisteredClient } from './registered-clients/registered-clients.ts';
 export type { RuntimeAccess } from './policy/policy-rules.ts';
 export { ConnectionSchema, type Connection } from './registry/connection.ts';
 export { makeConnectionSource } from './serving/connection-source.ts';

@@ -1,95 +1,48 @@
-import { randomBytes } from 'node:crypto';
-
-import { randomUUIDv7, sha256Of } from '@on.auto/operations';
-import { Effect, Redacted, Schema } from 'effect';
+import { randomUUIDv7 } from '@on.auto/operations';
+import { Effect, Redacted } from 'effect';
 import { decodeProtectedHeader } from 'jose';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
-import type { SecretKeys } from './secret-keys.ts';
-import type { SecretStore } from './secret-store.ts';
-
-export interface SecretsEntry extends LedgerEntry {
-  readonly secretStoreOn: (database: string, keys: SecretKeys) => Effect.Effect<SecretStore>;
-}
-
-type Key = Redacted.Redacted<Uint8Array>;
-
-const SealedRows = Schema.Array(
-  Schema.Struct({ id: Schema.String, kid: Schema.String, sealed: Schema.String, kept_at: Schema.String }),
-);
+import { aLedger } from '../testing/ledger-entry.ts';
+import { leaseBehaviour } from './lease-behaviour.ts';
+import {
+  aDatabaseWithItsLedger,
+  aKey,
+  aStoreOn,
+  at,
+  firstMoment,
+  isoOf,
+  kept,
+  keptEach,
+  kidOf,
+  kidsIn,
+  readBack,
+  rowsIn,
+  type SecretsEntry,
+} from './secret-store-entry.ts';
 
 const uuidV7 = /^[\da-f]{8}-[\da-f]{4}-7[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/u;
 
-function aKey(): Key {
-  return Redacted.make(new Uint8Array(randomBytes(32)));
-}
-
-function kidOf(key: Key): string {
-  return sha256Of(Redacted.value(key)).slice(0, 16);
-}
-
-async function aDatabaseWithItsLedger(entry: SecretsEntry): Promise<string> {
-  const database = await entry.aDatabase();
-  await aLedger(entry, database);
-  return database;
-}
-
-async function aStoreOn(entry: SecretsEntry, database: string, keys: SecretKeys): Promise<SecretStore> {
-  const store = await Effect.runPromise(entry.secretStoreOn(database, keys));
-  onTestFinished(() => store.close());
-  return store;
-}
-
-function kept(store: SecretStore, value: string): Promise<string> {
-  return Effect.runPromise(store.keep(Redacted.make(value)));
-}
-
-function keptEach(store: SecretStore, values: readonly string[]): Promise<readonly string[]> {
-  return Effect.runPromise(Effect.forEach(values, (value) => store.keep(Redacted.make(value))));
-}
-
-async function readBack(store: SecretStore, id: string): Promise<string | undefined> {
-  const read = await Effect.runPromise(store.read(id));
-  return read === undefined ? undefined : Redacted.value(read);
-}
-
-async function rowsIn(entry: SecretsEntry, database: string) {
-  return Schema.decodeUnknownSync(SealedRows)(
-    await entry.queried(database, 'SELECT id, kid, sealed, kept_at FROM sealed_secrets ORDER BY id'),
-  );
-}
-
-async function kidsIn(entry: SecretsEntry, database: string): Promise<Readonly<Record<string, number>>> {
-  const counted: Record<string, number> = {};
-  for (const { kid } of await rowsIn(entry, database)) {
-    counted[kid] = (counted[kid] ?? 0) + 1;
-  }
-  return counted;
-}
-
 function keepingBehaviour(entry: SecretsEntry): void {
-  it('keeps a value under an id of its own, a UUIDv7, and reads it back redacted', async () => {
+  it('keeps a value under an id of its own, a UUIDv7, at its first version, and reads it back redacted', async () => {
     const database = await aDatabaseWithItsLedger(entry);
     const store = await aStoreOn(entry, database, { current: aKey() });
-    const before = new Date().toISOString();
 
-    const ids = await keptEach(store, ['pasted-key', 'pasted-key']);
+    const ids = await at(
+      firstMoment,
+      Effect.forEach(['pasted-key', 'pasted-key'], (value) => store.keep(Redacted.make(value))),
+    );
     const read = await Effect.runPromise(store.read(String(ids[0])));
-    const after = new Date().toISOString();
     const rows = await rowsIn(entry, database);
 
     expect(ids).toEqual([expect.stringMatching(uuidV7), expect.stringMatching(uuidV7)]);
     expect(new Set(ids).size).toBe(2);
-    expect(JSON.stringify({ read })).toBe('{"read":"<redacted>"}');
+    expect(JSON.stringify({ read })).toBe('{"read":{"value":"<redacted>","version":1}}');
     expect(await Promise.all(ids.map((id) => readBack(store, id)))).toEqual(['pasted-key', 'pasted-key']);
     expect(rows.map(({ id }) => id)).toEqual(ids.toSorted());
     expect(rows.map(({ sealed }) => sealed.includes('pasted-key'))).toEqual([false, false]);
     expect(rows[0]?.sealed).not.toBe(rows[1]?.sealed);
-    expect(rows.map(({ kept_at }) => [kept_at >= before, kept_at <= after])).toEqual([
-      [true, true],
-      [true, true],
-    ]);
+    expect(rows.map(({ kept_at }) => kept_at)).toEqual([isoOf(firstMoment), isoOf(firstMoment)]);
   });
 
   it('seals each value as one JWE whose protected header names the key that wrapped it', async () => {
@@ -224,11 +177,27 @@ function rotationBehaviour(entry: SecretsEntry): void {
   });
 }
 
+function olderShapeBehaviour(entry: SecretsEntry): void {
+  it('refuses a database whose table of secrets has an older shape when the ledger opens, with words that say to delete it', async () => {
+    const database = await entry.aDatabase();
+    await entry.queried(
+      database,
+      'CREATE TABLE sealed_secrets (id TEXT PRIMARY KEY, kid TEXT NOT NULL, sealed TEXT NOT NULL, kept_at TEXT NOT NULL, ends_with TEXT)',
+    );
+
+    await expect(aLedger(entry, database)).rejects.toThrow(
+      "The ledger's database keeps secrets in a shape this server no longer reads: sealed_secrets has the columns ends_with, id, kept_at, kid, sealed, where this server keeps claimed_until, ends_with, id, kept_at, kid, sealed, version. Nothing stored before launch is carried over, so delete the local database and start the server again",
+    );
+  });
+}
+
 export function secretsBehaviour(entry: SecretsEntry): void {
   describe('the secrets it keeps sealed', () => {
     keepingBehaviour(entry);
     endingBehaviour(entry);
     refusalBehaviour(entry);
     rotationBehaviour(entry);
+    leaseBehaviour(entry);
+    olderShapeBehaviour(entry);
   });
 }

@@ -8,7 +8,7 @@ import {
   problemsOf,
   refused,
   rejected,
-  secretsOf,
+  redactedValuesOf,
   type Checked,
 } from './checked.ts';
 import { headersTheRuntimeSets, type RemoteServerType } from './reserved-headers.ts';
@@ -33,7 +33,7 @@ export function checkedHeaders(
         : accepted(header);
     }),
   );
-  return problems.length === 0 ? accepted(secretsOf(headers)) : rejected(problems);
+  return problems.length === 0 ? accepted(redactedValuesOf(headers)) : rejected(problems);
 }
 
 function checkedCredential(name: string, { client_secret, private_key, algorithm }: Auth): Checked<AuthCredential> {

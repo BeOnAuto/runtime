@@ -95,7 +95,7 @@ export const contentTables: readonly ContentTable[] = [
   unstagedRunsTable,
 ];
 
-const contentTableNames: readonly string[] = contentTables.map(({ name }) => name);
+export const contentTableNames: readonly string[] = contentTables.map(({ name }) => name);
 
 function uploadIndexOf({ heads, placeColumns }: Shelf): PlaybookIndex {
   const name = `${heads}_by_upload`;
@@ -110,7 +110,7 @@ const contentIndexes: readonly PlaybookIndex[] = shelves.map((shelf) => uploadIn
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
-async function namesFound(execute: StatementExecutor, sql: SQL): Promise<readonly string[]> {
+export async function namesFound(execute: StatementExecutor, sql: SQL): Promise<readonly string[]> {
   const { rows } = await execute.query(sql);
   return Schema.decodeUnknownSync(NameRows)(rows).map(({ name }) => name);
 }
@@ -119,15 +119,21 @@ function listed(columns: readonly string[]): string {
   return columns.toSorted().join(', ');
 }
 
-async function requireTheShapeKept(
+export interface KeptTable {
+  readonly name: string;
+  readonly columns: readonly string[];
+  readonly holds: string;
+}
+
+export async function requireTheShapeKept(
   execute: StatementExecutor,
   dialect: ContentDialect,
-  { name, columns }: ContentTable,
+  { name, columns, holds }: KeptTable,
 ): Promise<void> {
   const found = await namesFound(execute, dialect.columnsOf(name));
   if (listed(found) !== listed(columns)) {
     throw new Error(
-      `The ledger's database keeps recorded content in a shape this server no longer reads: ${name} has the columns ${listed(found)}, where this server keeps ${listed(columns)}. Nothing stored before launch is carried over, so delete the local database and start the server again`,
+      `The ledger's database keeps ${holds} in a shape this server no longer reads: ${name} has the columns ${listed(found)}, where this server keeps ${listed(columns)}. Nothing stored before launch is carried over, so delete the local database and start the server again`,
     );
   }
 }
@@ -136,7 +142,7 @@ export async function createdContentTables(execute: StatementExecutor, dialect: 
   const existing = new Set(await namesFound(execute, dialect.relationsAmong('table', contentTableNames)));
   await inTurn(
     contentTables.filter(({ name }) => existing.has(name)),
-    (table) => requireTheShapeKept(execute, dialect, table),
+    (table) => requireTheShapeKept(execute, dialect, { ...table, holds: 'recorded content' }),
   );
   await createMissingIndexes(
     execute,

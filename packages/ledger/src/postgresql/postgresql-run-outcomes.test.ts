@@ -3,10 +3,10 @@ import { pgFormatter } from '@event-driven-io/dumbo/pg';
 import { runTallies, type RunFact } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { contentTables } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { aRecordedFillOf, mebibyte, runIdsOf, type RecordedFill } from '../outcomes/recorded-fill.ts';
 import type { Query } from '../postgresql-reads/postgresql-recorded.ts';
+import { columnsOrNames } from '../secrets/kept-table-columns.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
 import {
   emmettsMigrationLock,
@@ -59,8 +59,7 @@ const indexes = [
 const contentIndexesAndSecrets = ['recorded_content_heads_by_upload', 'staged_content_by_upload', 'sealed_secrets'];
 
 function contentAnswering(statement: string): readonly { readonly name: string }[] {
-  const table = contentTables.find(({ name }) => statement.includes(`to_regclass("${name}")`));
-  return (table === undefined ? contentTables.map(({ name }) => name) : table.columns).map((name) => ({ name }));
+  return columnsOrNames(statement);
 }
 
 function aLedgerWithOneRun(tables: readonly string[]): Answers {

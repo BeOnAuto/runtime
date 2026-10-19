@@ -88,7 +88,7 @@ export {
   type ServerEntryFields,
 } from './settings/server-entries.ts';
 export { servedFieldsOf, serverNameProblems } from './settings/entry-checks.ts';
-export { headerNamePattern, isPinnableUrl, pinnedUrlShape } from './settings/checked.ts';
+export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } from './settings/checked.ts';
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';
 export type { ServerSettings, ToolServerSettings } from './settings/server-settings.ts';

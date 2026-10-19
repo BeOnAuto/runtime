@@ -1,9 +1,10 @@
+import { loopbackNames } from '@on.auto/operations';
 import type { MiddlewareHandler } from 'hono';
 
 import type { ApiEnv } from '../api-env.ts';
 import { problemOf, problemResponse } from '../problem/problem.ts';
 
-const localHost = /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/iu;
+const localHost = new RegExp(`^(?:${loopbackNames.map((name) => RegExp.escape(name)).join('|')})(?::\\d+)?$`, 'iu');
 
 const foreignHost = problemOf('forbidden', 'Local mode accepts only a localhost Host header');
 

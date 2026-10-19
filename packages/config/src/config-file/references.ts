@@ -140,6 +140,13 @@ export function referencedVariablesOf(value: Schema.Json): readonly string[] {
   return entriesOf(value).flatMap(([, item]) => referencedVariablesOf(item));
 }
 
+export function fallbacksIn(text: string): readonly string[] {
+  return piecesOf(text).flatMap((piece) => {
+    const [, , fallback] = environmentReference.exec(piece.text) ?? [];
+    return fallback === undefined ? [] : [fallback];
+  });
+}
+
 export function placeholdersIn(text: string): readonly string[] {
   return [...text.matchAll(placeholder)].map(([, name]: readonly string[]) => String(name));
 }

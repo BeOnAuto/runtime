@@ -1,7 +1,7 @@
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { misplacedReferences, secretsOfEntry, substituted, type ReferencePlacement } from '../index.ts';
+import { misplacedReferences, secretsReferencedIn, substituted, type ReferencePlacement } from '../index.ts';
 
 const placement: ReferencePlacement = {
   setting: 'EXAMPLE_ENDPOINTS',
@@ -36,11 +36,11 @@ describe('the references of an entry', () => {
       environment,
     );
 
-    expect(secretsOfEntry(placement, references).map((secret) => Redacted.value(secret))).toEqual([
+    expect(secretsReferencedIn(placement, references).map((secret) => Redacted.value(secret))).toEqual([
       'partner-key-1234',
       'partner-secret-5678',
     ]);
-    expect(secretsOfEntry(placement, withFallback).map((secret) => Redacted.value(secret))).toEqual([
+    expect(secretsReferencedIn(placement, withFallback).map((secret) => Redacted.value(secret))).toEqual([
       'partner-secret-5678',
     ]);
   });

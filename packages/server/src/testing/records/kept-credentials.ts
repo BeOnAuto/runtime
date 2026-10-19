@@ -23,8 +23,8 @@ export async function keptSecretOf(fileName: string, id: string): Promise<KeptSe
   const store = await Effect.runPromise(
     sqliteSecretStore({ fileName, keys: { current: Redacted.make(Uint8Array.from(secretsKey)) } }),
   );
-  const value = await Effect.runPromise(store.read(id));
+  const stored = await Effect.runPromise(store.read(id));
   const endings = await Effect.runPromise(store.endingsOf([id]));
   await store.close();
-  return { value: value === undefined ? undefined : Redacted.value(value), endsWith: endings.get(id) };
+  return { value: stored === undefined ? undefined : Redacted.value(stored.value), endsWith: endings.get(id) };
 }

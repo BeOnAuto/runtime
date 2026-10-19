@@ -1,4 +1,5 @@
 import { decodedJsonSettingWith, strictly, withoutTrailingSlashes } from '@on.auto/config';
+import { redactedValuesOf } from '@on.auto/tool-servers';
 import { Effect, Redacted, Result, Schema } from 'effect';
 
 import { allowedOptionProblems } from './allowed-provider-options.ts';
@@ -131,12 +132,6 @@ function nameProblems(name: string, index: number, names: readonly string[]): re
   return names.indexOf(name) < index ? problemAt(setting, `/${index}/name`, `${name} is used twice`) : [];
 }
 
-function secretsOf(values: Readonly<Record<string, string>> = {}): ReadonlyMap<string, Redacted.Redacted> {
-  return new Map(
-    Object.entries(values).map(([name, value]: readonly [string, string]) => [name, Redacted.make(value)]),
-  );
-}
-
 const apiKeyOf = Effect.fnUntraced(function* (environment: Environment, name: string | undefined) {
   return name === undefined
     ? undefined
@@ -170,8 +165,8 @@ const gatewayFrom = Effect.fnUntraced(function* (environment: Environment, entry
       base_url: withoutTrailingSlashes(entry.base_url),
       api_key: api_key ?? null,
       api_key_env: entry.api_key_env ?? null,
-      headers: secretsOf(entry.headers),
-      query_params: secretsOf(entry.query_params),
+      headers: redactedValuesOf(entry.headers ?? {}),
+      query_params: redactedValuesOf(entry.query_params ?? {}),
       structured_outputs: entry.structured_outputs ?? false,
       include_usage: entry.include_usage ?? false,
       expose_provider_messages: entry.expose_provider_messages ?? false,

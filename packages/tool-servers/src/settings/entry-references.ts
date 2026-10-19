@@ -1,6 +1,6 @@
 import {
-  misplacedReferences as misplacedIn,
-  secretsOfEntry as secretsIn,
+  misplacedReferences,
+  secretsReferencedIn,
   type Reference,
   type ReferencePlacement,
   type SettingProblem,
@@ -21,8 +21,8 @@ function placementOf(entry: string): ReferencePlacement {
   };
 }
 
-export function misplacedReferences(entry: string, references: readonly Reference[]): readonly SettingProblem[] {
-  return misplacedIn(placementOf(entry), references);
+export function misplacedReferencesOfEntry(entry: string, references: readonly Reference[]): readonly SettingProblem[] {
+  return misplacedReferences(placementOf(entry), references);
 }
 
 export function unreferencedSecurity(
@@ -51,8 +51,8 @@ export function secretsOfEntry(
   const headers = `/${JsonPointer.escapeToken(entry)}/headers/`;
   const afterTheirScheme = references.flatMap((reference) => credentialAfterItsScheme(headers, reference));
   const wholeValues = Object.values(fields.security ?? {}).map((value) => Redacted.make(value));
-  const values = [...secretsIn(placementOf(entry), references), ...afterTheirScheme, ...wholeValues].map((secret) =>
-    Redacted.value(secret),
+  const values = [...secretsReferencedIn(placementOf(entry), references), ...afterTheirScheme, ...wholeValues].map(
+    (secret) => Redacted.value(secret),
   );
   return [...new Set(values)].map((value) => Redacted.make(value));
 }

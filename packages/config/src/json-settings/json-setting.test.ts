@@ -1,7 +1,7 @@
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { decodedJsonSetting, pointerOf, problem, settingProblemText } from '../index.ts';
+import { decodedJsonSetting, decodedSettingValue, pointerOf, problem, settingProblemText } from '../index.ts';
 
 const EntriesSchema = Schema.Record(Schema.String, Schema.Struct({ url: Schema.String }));
 
@@ -24,6 +24,15 @@ describe('a setting that holds JSON', () => {
   it('is refused at its root when it is not JSON', () => {
     expect(decodedJsonSetting('EXAMPLE_SERVERS', '{graph', EntriesSchema)).toEqual(
       Result.fail([{ setting: 'EXAMPLE_SERVERS', pointer: '', detail: 'Expected JSON' }]),
+    );
+  });
+
+  it('decodes a value already parsed, its problems named as those of its text', () => {
+    expect(decodedSettingValue('EXAMPLE_SERVERS', { graph: { url: 'https://example.com' } }, EntriesSchema)).toEqual(
+      Result.succeed({ graph: { url: 'https://example.com' } }),
+    );
+    expect(decodedSettingValue('EXAMPLE_SERVERS', { graph: { url: 1 } }, EntriesSchema)).toEqual(
+      Result.fail([{ setting: 'EXAMPLE_SERVERS', pointer: '/graph/url', detail: 'Expected string' }]),
     );
   });
 });

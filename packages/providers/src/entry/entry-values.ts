@@ -1,5 +1,5 @@
 import { credentialProblems, referencedVariablesOf, substituted } from '@on.auto/config';
-import { isPinnableUrl } from '@on.auto/tool-servers';
+import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Schema } from 'effect';
 
 import { setCombinationsOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
@@ -25,8 +25,7 @@ const heldCredential =
 const misplacedReference =
   "Holds a reference, which only a header or a query value of a provider's entry holds, for a value whoever runs Auto sets";
 
-const unpinned =
-  'Expected an https URL, or an http URL on a loopback address, written out up to its host, with each placeholder in its place';
+export const pinnedTemplateShape = `${pinnedUrlShape}, written out up to its host, with each placeholder in its place`;
 
 const startsWithItsScheme = /^[a-z][a-z0-9+.-]*:\/\//iu;
 
@@ -39,7 +38,7 @@ function localDocumentOf(name: string): string {
 }
 
 function documentElsewhere(name: string): string {
-  return `${unpinned}, or ${localDocumentOf(name)}, the document beside the entries named for the provider`;
+  return `${pinnedTemplateShape}, or ${localDocumentOf(name)}, the document beside the entries named for the provider`;
 }
 
 function pathOf(pointer: string): readonly string[] {
@@ -113,6 +112,10 @@ function isWrittenOutUpToItsHost(template: string, placed: Placed): boolean {
   );
 }
 
+export function isPinnableTemplate(template: string): boolean {
+  return isWrittenOutUpToItsHost(template, new Map());
+}
+
 function isTheLocalDocument({ name }: Written, { path, text }: TemplatedField): boolean {
   return path[0] === 'document' && text === localDocumentOf(name);
 }
@@ -122,7 +125,10 @@ function addressIssuesOf(written: Written): readonly EntryIssue[] {
   return templatedFieldsOf(written)
     .filter((field) => field.holds === 'address' && !isTheLocalDocument(written, field))
     .filter(({ text }) => !combinations.every((placed) => isWrittenOutUpToItsHost(text, placed)))
-    .map(({ path }) => ({ path, issue: path[0] === 'document' ? documentElsewhere(written.name) : unpinned }));
+    .map(({ path }) => ({
+      path,
+      issue: path[0] === 'document' ? documentElsewhere(written.name) : pinnedTemplateShape,
+    }));
 }
 
 export function writtenIssuesOf(written: Written): readonly EntryIssue[] {

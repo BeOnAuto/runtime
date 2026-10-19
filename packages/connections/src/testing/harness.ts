@@ -59,7 +59,11 @@ function keptSecrets(beforeKeeping: () => Promise<unknown> = () => Promise.resol
         return Effect.succeed(id);
       }),
     read: (id) =>
-      Effect.sync(() => Option.getOrUndefined(Option.map(Option.fromNullishOr(values.get(id)), Redacted.make))),
+      Effect.sync(() =>
+        Option.getOrUndefined(
+          Option.map(Option.fromNullishOr(values.get(id)), (text) => ({ value: Redacted.make(text) })),
+        ),
+      ),
     endingsOf: (ids) =>
       Effect.sync(() => new Map([...endings].filter(([id]: readonly [string, string]) => ids.includes(id)))),
     forget: (id) =>

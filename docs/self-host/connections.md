@@ -2,7 +2,7 @@
 
 A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.
 
-This page is for whoever runs Auto. It says how a connection is added, the providers a person may connect by name, what a connection holds, how a function uses it, and the rules you set for it in `auto-runtime.yaml`. A tool server you set up yourself is still added as [Add a tool server](tool-servers.md) shows.
+This page is for whoever runs Auto. It says how a connection is added, the providers a person may connect by name, what a connection holds, how a function uses it, the rules you set for it in `auto-runtime.yaml`, and the clients you register there. A tool server you set up yourself is still added as [Add a tool server](tool-servers.md) shows.
 
 ## How a person adds a connection
 
@@ -114,3 +114,31 @@ connections:
 `add_connection` refuses a connection a rule does not take with `403`, saying which rule, such as `A connection may not reach the host api.billing.example.org on this runtime, which allows *.example.com and crm.example.com`. A connection added before a rule changed is refused the same way when it is first used after Auto starts again, `connection_not_allowed` with the same sentence. A rule the file gives that Auto cannot read stops it at start, naming the line. `CONNECTIONS`, the same rules as JSON, wins over the file. The [configuration reference](configuration.md#connections) lists the section.
 
 `allowed_hosts` holds more than the addresses a connection names: the server an HTTP API's document names, where `base_url` is left out, is checked once Auto reads the document, and every request a call makes is checked before it is sent, those to an authorization server and those a redirect leads to among them. A call of an HTTP API follows no redirect, and the MCP client follows one only within the origin it asked.
+
+## Register your clients
+
+A registered client is the client identity you registered with a service's authorization server: a client id with a secret, a private key, or nothing for a public client. `registered_clients`, in the `connections` section of `auto-runtime.yaml`, lists the clients you registered, one entry for each client, with the issuers it is registered at:
+
+```yaml
+connections:
+  registered_clients:
+    - issuers: [https://accounts.example.com]
+      client_id: 1234.apps.example.com
+      client_secret: ${EXAMPLE_CLIENT_SECRET}
+    - issuers: ['https://login.example.net/{tenant}/v2.0', https://login.example.net/common/v2.0]
+      client_id: 9f1c0d2e-example
+      private_key: ${EXAMPLE_PRIVATE_KEY}
+      algorithm: RS256
+    - issuers: [https://public.example.org]
+      client_id: auto-runtime
+```
+
+| Field                        | What it holds                                                                                                                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `issuers`                    | The issuers the client is registered at, one at least, each an `https` URL or an `http` URL on a loopback address. One written with a placeholder, such as `{tenant}`, is kept as it is written |
+| `client_id`                  | The client id the service issued                                                                                                                                                                |
+| `client_secret`              | The client secret, as a reference to the variable that holds it, such as `${EXAMPLE_CLIENT_SECRET}`                                                                                             |
+| `private_key`                | A private key in PEM that signs the client's assertion, as a reference, with `algorithm`, such as `RS256` or `ES256`, in place of a secret                                                      |
+| `token_endpoint_auth_method` | Where the service's metadata leaves the choice, how the client authenticates: `client_secret_basic` or `client_secret_post` with a secret, `private_key_jwt` with a key, `none` without either  |
+
+A client that gives neither a secret nor a key is a public client. Each issuer belongs to one client: two clients whose issuers are the same but for a trailing slash stop Auto at start, as a secret written out instead of referenced and a variable that is not set do, and the [configuration reference](configuration.md#connections) lists every check. `client_secret` and `private_key` are the only fields that hold a reference: one anywhere else in the section, such as in an issuer or a `client_id`, stops Auto at start too. Auto keeps the references as they are written, so no secret of a client reaches `CONNECTIONS`, reads the values when it starts, and scrubs each secret and key from everything it records and answers, as it scrubs the secrets of its tool servers. The variables they name are ones Auto reads for itself, so `variables` may not name them.
