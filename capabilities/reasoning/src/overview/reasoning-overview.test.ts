@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { markdownOf } from '@on.auto/definitions';
+import { markdownOf, overviewAtRead, type DefinitionUser } from '@on.auto/definitions';
 import { mostReadCharacters } from '@on.auto/definitions/template';
 import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
@@ -56,6 +56,31 @@ describe('the overview of the reasoning function of the reference of output shap
 describe('the reference of reasoning functions', () => {
   it('gives the bound of the instructions and the message an overview shows', () => {
     expect(page).toContain(`each cut past ${counted.format(mostReadCharacters)} characters`);
+  });
+});
+
+describe('the overview of a reasoning function whose document has an about', () => {
+  it('writes the about as its author wrote it, after the description and before what the function needs', () => {
+    const overview = overviewOf(
+      '---',
+      'description: Reviews a campaign brief',
+      'model: openai/gpt-5',
+      'about: |',
+      '  The **campaign team** uses it to check each brief before it goes to a client.',
+      '',
+      '  - It runs when someone asks for a review.',
+      '  - It answers with the evidence the brief lacks.',
+      '---',
+      'Review {{ input.brief }}',
+    );
+
+    expect(overview.split('\n\n').slice(0, 5)).toEqual([
+      '# review-brief',
+      'Reviews a campaign brief',
+      'The **campaign team** uses it to check each brief before it goes to a client.',
+      '- It runs when someone asks for a review.\n- It answers with the evidence the brief lacks.',
+      '## What it needs',
+    ]);
   });
 });
 
@@ -127,6 +152,40 @@ describe('the model and tools of a reasoning function in its overview', () => {
     expect(howItCalls).toBe(
       "The model may call these tools before it answers, several in one step and over several steps, within a run's limits on calls, time and failures.",
     );
+  });
+});
+
+describe('the overview a read writes of a reasoning function whose prompt holds what an overview reads as its own', () => {
+  const fence = '`'.repeat(3);
+  const lead = 'Its message, with the values of each run in place of the names in bold:';
+  const users: readonly DefinitionUser[] = [
+    { type: 'workflow', name: 'weekly-review', relation: 'calls', steps: [{ number: 2, name: 'review' }] },
+  ];
+
+  function partsOf(...prompt: readonly string[]): readonly unknown[] {
+    const overview = prepared(['---', 'model: openai/gpt-5', '---', ...prompt].join('\n')).overview('review-brief');
+    const [story = '', ...details] = overviewAtRead(overview, { users, called: [] }).split('\n## Details\n');
+    return [sectionIn(story, 'What it is told'), sectionIn(story, 'Used by'), details];
+  }
+
+  const usedBy = '- The workflow **Weekly review** calls it in step 2, **Review**.\n';
+
+  const detailsOfUsedBy = ['\n### Used by\n\n- `weekly-review`, a workflow\n'];
+
+  it('writes a line ## Details of the prompt with its first character escaped, so the page splits it at its own alone', () => {
+    expect(partsOf('Review the brief.', '## Details', 'Name what it lacks.')).toEqual([
+      `${lead}\n\nReview the brief.\n\\## Details\nName what it lacks.`,
+      usedBy,
+      detailsOfUsedBy,
+    ]);
+  });
+
+  it('closes a fence the prompt leaves open at its end, so what follows is read as the overview', () => {
+    expect(partsOf('Review the brief as in:', fence, 'an example')).toEqual([
+      `${lead}\n\nReview the brief as in:\n${fence}\nan example\n${fence}`,
+      usedBy,
+      detailsOfUsedBy,
+    ]);
   });
 });
 

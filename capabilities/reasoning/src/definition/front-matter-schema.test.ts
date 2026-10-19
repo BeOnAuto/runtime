@@ -11,7 +11,7 @@ describe('the keys of the front matter', () => {
         ),
       ),
     ).toEqual([
-      'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools',
+      'Line 3, /prompt: prompt is not a key of the front matter; it takes description, about, model, config, input, output, provider_options, tools',
       'Line 5, /config/top_k: top_k is not a key of config; it takes max_output_tokens, temperature, top_p, seed, stop_sequences, reasoning',
       'Line 7, /input/example: example is not a key of input; it takes schema, default',
       'Line 9, /output/strict: strict is not a key of output; it takes format, schema, shape',
@@ -68,5 +68,33 @@ describe('the values of the front matter keys', () => {
       parsed(documentOf('model: openai/gpt-5\nprovider_options:\n  openai: {textVerbosity: low, reasoningMode: pro}'))
         .provider_options,
     ).toEqual({ openai: { textVerbosity: 'low', reasoningMode: 'pro' } });
+  });
+});
+
+describe('the about of the front matter', () => {
+  it('takes 1 to 4000 characters', () => {
+    expect(issuesIn(documentOf('model: openai/gpt-5\nabout: ""'))).toEqual([
+      'Line 3, /about: Expected a value with a length of at least 1',
+    ]);
+    expect(issuesIn(documentOf(`model: openai/gpt-5\nabout: ${'x'.repeat(4001)}`))).toEqual([
+      'Line 3, /about: Expected a value with a length of at most 4000',
+    ]);
+    expect(parsed(documentOf(`model: openai/gpt-5\nabout: ${'x'.repeat(4000)}`)).about).toHaveLength(4000);
+  });
+
+  it('takes no heading, nor does the description, each refused at its line', () => {
+    const frontMatter = [
+      'model: openai/gpt-5',
+      "description: '## Reviews a brief'",
+      'about: |',
+      '  The campaign team uses it.',
+      '',
+      '  # When it runs',
+    ];
+
+    expect(issuesIn(documentOf(frontMatter.join('\n')))).toEqual([
+      'Line 3, /description: description takes no heading, since an overview writes its own: the line that begins “## Reviews a brief” makes one, with # before its words or as a line of = or - under the words above it',
+      'Line 7, /about: about takes no heading, since an overview writes its own: this line makes one, with # before its words or as a line of = or - under the words above it',
+    ]);
   });
 });

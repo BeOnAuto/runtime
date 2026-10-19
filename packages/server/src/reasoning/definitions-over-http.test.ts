@@ -106,7 +106,7 @@ const invalidDocuments: readonly (readonly [string, string, string])[] = [
   [
     'with an unknown key',
     '---\nmodel: openai/gpt-5\nprompt: hi\n---\nHi',
-    'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools',
+    'Line 3, /prompt: prompt is not a key of the front matter; it takes description, about, model, config, input, output, provider_options, tools',
   ],
   [
     'with a model not written provider/model',
