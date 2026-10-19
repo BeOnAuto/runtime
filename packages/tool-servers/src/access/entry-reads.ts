@@ -1,5 +1,5 @@
 import { sha256Of, textToKeep, type RecordedContent } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Effect, type Redacted } from 'effect';
 
 import { secretsOfServers, type Secrets } from '../bounds/secrets.ts';
 import { recordingOf, startedFields, type KeepIn, type StartedFields } from '../calls/recorded-calls.ts';
@@ -24,13 +24,19 @@ function keepingIn(content: ContentStore): KeepIn {
       );
 }
 
+export type SecretValues = readonly Redacted.Redacted[];
+
 export interface RecordingParts {
   readonly keepIn: KeepIn;
   readonly secrets: Secrets;
 }
 
-export function recordingPartsOf(servers: readonly ServerSettings[], content: ContentStore): RecordingParts {
-  return { keepIn: keepingIn(content), secrets: secretsOfServers(servers) };
+export function recordingPartsOf(
+  servers: readonly ServerSettings[],
+  content: ContentStore,
+  besides: SecretValues,
+): RecordingParts {
+  return { keepIn: keepingIn(content), secrets: secretsOfServers(servers, besides) };
 }
 
 const nothingKept: Pick<Served, 'record_content' | 'connection'> = { record_content: false, connection: null };

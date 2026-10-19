@@ -1,4 +1,5 @@
 import type { AppRuntime } from '@on.auto/api';
+import { registeredClientSecrets } from '@on.auto/connections';
 import type { DispatcherServices } from '@on.auto/operations';
 import { withUserAgent } from '@on.auto/outbound';
 import {
@@ -30,7 +31,7 @@ export interface ServedConnections {
 
 export async function toolAccessOf(
   runtime: AppRuntime<DispatcherServices>,
-  { toolServers }: Pick<Settings, 'toolServers'>,
+  { toolServers, registeredClients }: Pick<Settings, 'toolServers' | 'registeredClients'>,
   { toolTiming, connections, telemetry }: ToolAccessWiring & ServedConnections,
 ): Promise<ToolAccess> {
   const traceMeta = telemetry?.traceMeta;
@@ -47,6 +48,7 @@ export async function toolAccessOf(
     ...(toolTiming === undefined ? {} : { timing: toolTiming }),
     ...(traceMeta === undefined ? {} : { traceMeta }),
     content: runtimeLedger(runtime).content,
+    runtimeSecrets: registeredClientSecrets(registeredClients),
     reportServerMessage: (report) => {
       void runtime.run(logServerMessage(report));
     },

@@ -5,7 +5,7 @@ import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { noConnections, type ConnectionSource } from '../org-servers/connection-source.ts';
 import { orgAccessOf } from '../org-servers/org-access.ts';
 import type { ServerMessage } from './caller-context.ts';
-import { recordingPartsOf, type ContentStore, type RecordingParts } from './entry-reads.ts';
+import { recordingPartsOf, type ContentStore, type RecordingParts, type SecretValues } from './entry-reads.ts';
 import type { LinkedAccess } from './linked-access.ts';
 import { runWaysOf, type RunWays } from './run-ways.ts';
 
@@ -13,6 +13,7 @@ export interface ToolAccessOptions {
   readonly clientInfo: LinkOptions['clientInfo'];
   readonly content: ContentStore;
   readonly reportServerMessage: (report: ServerMessage) => void;
+  readonly runtimeSecrets?: SecretValues;
   readonly connections?: ConnectionSource;
   readonly reportLeftOut?: Describing['reportLeftOut'];
   readonly fetch?: LinkOptions['fetch'];
@@ -38,7 +39,7 @@ async function linked(settings: ToolServers, options: LinkedOptions): Promise<Li
 
 export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions): ToolAccess {
   const loading: { access?: Promise<LinkedAccess> } = {};
-  const recording = recordingPartsOf(settings.servers, options.content);
+  const recording = recordingPartsOf(settings.servers, options.content, options.runtimeSecrets ?? []);
   const source = options.connections ?? noConnections;
   const linkedOnUse = (): Promise<LinkedAccess> => {
     loading.access ??= linked(settings, { ...options, ...recording, reportLeftOut: options.reportLeftOut ?? ignored });

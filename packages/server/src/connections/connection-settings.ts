@@ -1,5 +1,10 @@
 import type { Environment, FileUse, SettingProblem } from '@on.auto/config';
-import { ConnectionsSettingInvalid, readConnectionsSetting, type ConnectionPolicy } from '@on.auto/connections';
+import {
+  ConnectionsSettingInvalid,
+  readConnectionsSetting,
+  type ConnectionPolicy,
+  type RegisteredClient,
+} from '@on.auto/connections';
 import { operatorValuesIn, operatorVariablesIn, type ProviderList } from '@on.auto/providers';
 import { Effect, Redacted } from 'effect';
 
@@ -9,6 +14,7 @@ import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';
 
 export interface ConnectionSettings {
   readonly connections: ConnectionPolicy;
+  readonly registeredClients: readonly RegisteredClient[];
   readonly connectionVariables: ReadonlyMap<string, Redacted.Redacted>;
   readonly providers: ProviderList;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
@@ -59,11 +65,12 @@ export function readConnectionSettings(
   providers: ProviderList,
 ): ConnectionSettings {
   const setting = readConnectionsSetting(environment, ownVariablesOf(functions, file, providers));
-  const { policy: connections } = Effect.runSync(
+  const { policy: connections, registeredClients } = Effect.runSync(
     setting.pipe(Effect.mapError((invalid: Problems) => placed(invalid, file))),
   );
   return {
     connections,
+    registeredClients,
     connectionVariables: valuesOf(environment, connections),
     providers,
     providerValues: operatorValuesIn(providers, environment),

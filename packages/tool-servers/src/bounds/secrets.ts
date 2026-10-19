@@ -108,6 +108,9 @@ export function secretsOfServer(server: ServerSettings): readonly Redacted.Redac
   return [...server.secrets, ...credentialOf(authOf(server))];
 }
 
-export function secretsOfServers(servers: readonly ServerSettings[]): Secrets {
-  return secretsOf(servers.flatMap((server) => secretsOfServer(server)));
+export function secretsOfServers(
+  servers: readonly ServerSettings[],
+  besides: readonly Redacted.Redacted[] = [],
+): Secrets {
+  return secretsOf([...servers.flatMap((server) => secretsOfServer(server)), ...besides]);
 }
