@@ -1,4 +1,4 @@
-import { authenticatorFor, createApiKey, studioOrigin } from '@on.auto/identity';
+import { authenticatorFor, createApiKey, defaultStudioOrigin } from '@on.auto/identity';
 import { fakeIssuer } from '@on.auto/identity/testing';
 import { describe, expect, it } from 'vitest';
 
@@ -177,7 +177,7 @@ describe('authentication without API keys', () => {
 
 describe('a credential presented in local mode', () => {
   it.each([
-    ['the session of a page signed in to Auto', () => fakeIssuer('https://login.example').session(studioOrigin)],
+    ['the session of a page signed in to Auto', () => fakeIssuer('https://login.example').session(defaultStudioOrigin)],
     ['a key, where no key is set', () => Promise.resolve(acme.key)],
   ])('is ignored: a request that presents %s acts as the local developer', async (_case, presented) => {
     const { handler } = createTestHandler({
@@ -186,7 +186,7 @@ describe('a credential presented in local mode', () => {
     });
 
     const answer = await call(handler, '/v1/orgs/globex/whoami', {
-      headers: { host: 'localhost:5555', origin: studioOrigin, authorization: `Bearer ${await presented()}` },
+      headers: { host: 'localhost:5555', origin: defaultStudioOrigin, authorization: `Bearer ${await presented()}` },
     });
 
     expect(answer).toMatchObject({ status: 200, body: { id: 'local', org: 'globex', playbooks: '*' } });

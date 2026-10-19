@@ -1,5 +1,10 @@
-export const studioOrigin = 'https://studio.on.auto';
+import type { StudioSettings } from './studio.ts';
 
-export function pageOriginsOf(allowedOrigins: readonly string[]): readonly string[] {
-  return [studioOrigin, ...allowedOrigins];
+export interface PageSettings {
+  readonly studio: StudioSettings;
+  readonly allowedOrigins: readonly string[];
+}
+
+export function pageOriginsOf({ studio, allowedOrigins }: PageSettings, ownOrigin: string): readonly string[] {
+  return [studio.origin, ...(studio.served ? [ownOrigin] : []), ...allowedOrigins];
 }

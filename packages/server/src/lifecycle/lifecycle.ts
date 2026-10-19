@@ -8,10 +8,12 @@ import {
 import type { Environment } from '@on.auto/config';
 import {
   authenticatorFor,
+  defaultStudioOrigin,
   identityServiceOf,
   type AccessMode,
   type Authenticator,
   type SignInSettings,
+  type StudioSettings,
 } from '@on.auto/identity';
 import { Effect, Layer } from 'effect';
 
@@ -28,6 +30,8 @@ import { startTelemetry, type Telemetry } from '../telemetry/start-telemetry.ts'
 import { createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts';
 import { exitDeadlineMs, shutDown, shutdownTimeoutMs } from './shutdown.ts';
 import { StartupError } from './startup-error.ts';
+
+const hostedStudio: StudioSettings = { origin: defaultStudioOrigin, served: false };
 
 export interface RunningServer {
   readonly port: number;
@@ -131,6 +135,7 @@ async function started<R>({ settings, authenticator, telemetry, options }: Start
   const served = await servedOf(composed, runtime, () => ownOriginOf(settings.host, listening.port));
   const api = createApiHandler({
     allowedOrigins: settings.allowedOrigins,
+    studio: hostedStudio,
     authenticator,
     routes: served.routes,
     reportIncident: (id, error, requestId, call) => {
@@ -175,7 +180,7 @@ export async function startServer<R>(environment: Environment, options: ServerOp
   const identityService =
     settings.signIn === undefined
       ? undefined
-      : await identityServiceOf({ ...settings.signIn, allowedOrigins: settings.allowedOrigins });
+      : await identityServiceOf({ ...settings.signIn, studio: hostedStudio, allowedOrigins: settings.allowedOrigins });
   const authenticator = authenticatorFor({ ...settings, identityService });
   const telemetry = startTelemetry(settings.telemetry);
   try {

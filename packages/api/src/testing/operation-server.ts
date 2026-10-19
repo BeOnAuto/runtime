@@ -1,4 +1,4 @@
-import { authenticatorFor, createApiKey, type Authenticator } from '@on.auto/identity';
+import { authenticatorFor, createApiKey, type Authenticator, type StudioSettings } from '@on.auto/identity';
 import { allPermissions, makeCatalog, makeDispatcher, type DispatcherServices } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
@@ -78,6 +78,7 @@ const keyHolders = authenticatorFor({
 export interface OperationServerOptions {
   readonly authenticator?: Authenticator;
   readonly allowedOrigins?: readonly string[];
+  readonly studio?: StudioSettings;
   readonly operations?: Parameters<typeof makeCatalog>[0];
   readonly requests?: MiddlewareHandler<ApiEnv>;
   readonly tracer?: Tracer.Tracer;
@@ -91,6 +92,7 @@ function tracingWith(tracer: Tracer.Tracer | undefined): Layer.Layer<never> {
 export async function operationServer({
   authenticator = keyHolders,
   allowedOrigins = [],
+  studio,
   operations = notebookOperations,
   requests,
   tracer,
@@ -124,6 +126,7 @@ export async function operationServer({
   const { handler, reported } = createTestHandler({
     authenticator,
     allowedOrigins,
+    ...(studio === undefined ? {} : { studio }),
     routes,
     ...(requests === undefined ? {} : { requests }),
   });

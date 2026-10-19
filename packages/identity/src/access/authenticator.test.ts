@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { authenticatorFor, createApiKey, studioOrigin, type ApiKey, type IdentityService } from '../index.ts';
+import { authenticatorFor, createApiKey, defaultStudioOrigin, type ApiKey, type IdentityService } from '../index.ts';
 import { fakeIssuer, principalIn } from '../testing/index.ts';
 
 const reader = createApiKey({ id: 'acme-reader', org: 'acme', permissions: ['playbook:read'], playbooks: ['alpha'] });
@@ -81,7 +81,10 @@ describe('authenticatorFor beyond loopback with neither sign-in nor API keys', (
 
 describe('authenticatorFor in local mode, with a credential presented', () => {
   it.each([
-    ['the session a page signed in to Auto sends', () => fakeIssuer('https://login.example').session(studioOrigin)],
+    [
+      'the session a page signed in to Auto sends',
+      () => fakeIssuer('https://login.example').session(defaultStudioOrigin),
+    ],
     ['a key, where no key is set', () => Promise.resolve(admin.key)],
     ['a key that is not valid', () => Promise.resolve(wrongSecret)],
   ])('ignores %s and admits the request as the local developer', async (_case, presented) => {
@@ -159,7 +162,7 @@ describe('authenticatorFor with the identity service', () => {
     tokensSeen.length = 0;
     const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys, identityService });
 
-    expect(await authenticator.authenticate('a.token.of-ada', '/mcp', studioOrigin)).toBe(signedInAda);
+    expect(await authenticator.authenticate('a.token.of-ada', '/mcp', defaultStudioOrigin)).toBe(signedInAda);
     expect(await authenticator.authenticate('an.opaque.token', '/mcp')).toEqual({ because: 'ERR_JWS_INVALID' });
     expect(tokensSeen).toEqual([
       'a.token.of-ada at /mcp from https://studio.on.auto',

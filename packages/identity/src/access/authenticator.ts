@@ -1,11 +1,9 @@
 import type { IdentityService, ProtectedResource } from '../identity-service/identity-service.ts';
 import { keyPrefix, type ApiKey } from '../keys/api-key.ts';
 import { verifyKey } from '../keys/verify-key.ts';
-import { listensOnlyOnLoopback } from './loopback.ts';
+import { accessModeOf, type AccessMode } from './access-mode.ts';
 import { localDeveloper, principalOf, unexplained, type Authentication } from './principal.ts';
 import { ReachableWithoutCredentialsError } from './reachable-without-credentials-error.ts';
-
-export type AccessMode = 'local' | 'credentials' | 'closed';
 
 export interface Authenticator {
   readonly mode: AccessMode;
@@ -44,9 +42,6 @@ const localAccess: Authenticator = {
 const closedAccess: Authenticator = { mode: 'closed', resource: undefined, authenticate: credentialHolderOf([]) };
 
 function credentialAccessOf(keys: readonly ApiKey[], identityService: IdentityService | undefined): Authenticator {
-  if (keys.length === 0 && identityService === undefined) {
-    return closedAccess;
-  }
   return {
     mode: 'credentials',
     resource: identityService?.resource,
@@ -54,14 +49,20 @@ function credentialAccessOf(keys: readonly ApiKey[], identityService: IdentitySe
   };
 }
 
-export function authenticatorFor({ host, apiKeys, identityService }: AccessSettings): Authenticator {
-  if (apiKeys !== undefined || identityService !== undefined) {
-    return credentialAccessOf(apiKeys ?? [], identityService);
+function accessOf(mode: AccessMode, { apiKeys, identityService }: AccessSettings): Authenticator {
+  if (mode === 'local') {
+    return localAccess;
   }
-  if (!listensOnlyOnLoopback(host)) {
+  return mode === 'closed' ? closedAccess : credentialAccessOf(apiKeys ?? [], identityService);
+}
+
+export function authenticatorFor(settings: AccessSettings): Authenticator {
+  const { host, apiKeys, identityService } = settings;
+  const mode = accessModeOf({ host, apiKeys, signsIn: identityService !== undefined });
+  if (mode === undefined) {
     throw new ReachableWithoutCredentialsError({
       message: `A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST ${host}`,
     });
   }
-  return localAccess;
+  return accessOf(mode, settings);
 }

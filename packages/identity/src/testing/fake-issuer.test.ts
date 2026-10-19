@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { identityServiceOf } from '../index.ts';
 import { fakeIssuer } from './fake-issuer.ts';
 import { principalIn } from './principals.ts';
+import { hostedStudio } from './studios.ts';
 
 const clients = { 'ada-agent': { secret: 'a-long-secret', claims: { sub: 'ada', org_id: 'acme' } } };
 
@@ -23,7 +24,7 @@ describe('the fake issuer', () => {
   it('mints a token for a client by its credentials, for the resource and the scopes asked, that the runtime verifies', async () => {
     const fake = fakeIssuer('https://login.example', { clients });
     const identityService = await identityServiceOf(
-      { issuer: fake.issuer, publicUrl: 'https://runtime.example', allowedOrigins: [] },
+      { issuer: fake.issuer, publicUrl: 'https://runtime.example', studio: hostedStudio, allowedOrigins: [] },
       { fetch: fake.answer, now: Date.now },
     );
 

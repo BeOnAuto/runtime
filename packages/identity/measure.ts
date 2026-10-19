@@ -2,7 +2,7 @@ import { availableParallelism } from 'node:os';
 import { performance } from 'node:perf_hooks';
 
 import { identityServiceOf, type IdentityService } from './src/index.ts';
-import { fakeIssuer, principalIn, type FakeIssuer, type FakeSigner } from './src/testing/index.ts';
+import { fakeIssuer, hostedStudio, principalIn, type FakeIssuer, type FakeSigner } from './src/testing/index.ts';
 
 const publicUrl = 'https://runtime.example';
 
@@ -18,7 +18,7 @@ function write(line: string): void {
 
 function startOf(fake: FakeIssuer): Promise<IdentityService> {
   return identityServiceOf(
-    { issuer: fake.issuer, publicUrl, allowedOrigins: [] },
+    { issuer: fake.issuer, publicUrl, studio: hostedStudio, allowedOrigins: [] },
     { fetch: fake.answer, now: Date.now },
   );
 }

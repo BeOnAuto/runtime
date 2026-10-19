@@ -1,7 +1,8 @@
-import { pageOriginsOf } from '@on.auto/identity';
-import type { MiddlewareHandler } from 'hono';
+import { pageOriginsOf, type PageSettings, type ProtectedResource } from '@on.auto/identity';
+import type { Context, MiddlewareHandler } from 'hono';
 
 import type { ApiEnv } from '../api-env.ts';
+import { publicOriginOf } from '../discovery/public-addresses.ts';
 
 const allowedMethods = 'GET, HEAD, POST, PUT, DELETE';
 
@@ -11,11 +12,13 @@ const exposedHeaders = 'x-request-id, x-trace-id, www-authenticate';
 
 const preflightCacheSeconds = '600';
 
-function answerPreflight(pageOrigins: readonly string[]): MiddlewareHandler<ApiEnv> {
+type PageOriginsOf = (c: Context<ApiEnv>) => readonly string[];
+
+function answerPreflight(pageOrigins: PageOriginsOf): MiddlewareHandler<ApiEnv> {
   return (c, next) => {
     const origin = c.req.header('origin') ?? '';
     const isPreflight = c.req.method === 'OPTIONS' && c.req.header('access-control-request-method') !== undefined;
-    return isPreflight && pageOrigins.includes(origin)
+    return isPreflight && pageOrigins(c).includes(origin)
       ? Promise.resolve(
           c.body(null, 204, {
             'access-control-allow-origin': origin,
@@ -29,19 +32,22 @@ function answerPreflight(pageOrigins: readonly string[]): MiddlewareHandler<ApiE
   };
 }
 
-function allowOrigin(pageOrigins: readonly string[]): MiddlewareHandler<ApiEnv> {
+function allowOrigin(pageOrigins: PageOriginsOf): MiddlewareHandler<ApiEnv> {
   return async (c, next) => {
     await next();
     const origin = c.req.header('origin') ?? '';
     c.res.headers.append('vary', 'Origin');
-    if (pageOrigins.includes(origin)) {
+    if (pageOrigins(c).includes(origin)) {
       c.res.headers.set('access-control-allow-origin', origin);
       c.res.headers.set('access-control-expose-headers', exposedHeaders);
     }
   };
 }
 
-export function corsFor(allowedOrigins: readonly string[]): readonly MiddlewareHandler<ApiEnv>[] {
-  const pageOrigins = pageOriginsOf(allowedOrigins);
+export function corsFor(
+  pages: PageSettings,
+  resource: ProtectedResource | undefined,
+): readonly MiddlewareHandler<ApiEnv>[] {
+  const pageOrigins: PageOriginsOf = (c) => pageOriginsOf(pages, publicOriginOf(c, resource));
   return [answerPreflight(pageOrigins), allowOrigin(pageOrigins)];
 }

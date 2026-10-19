@@ -7,7 +7,7 @@ import {
   type ConnectionServices,
   type RuntimeAccess,
 } from '@on.auto/connections';
-import { studioOrigin } from '@on.auto/identity';
+import { defaultStudioOrigin } from '@on.auto/identity';
 import type { SecretStore } from '@on.auto/ledger';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ProviderOffering } from '@on.auto/tool-servers';
@@ -56,7 +56,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: { studio: studioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
+    pages: { studio: defaultStudioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
   };
 }

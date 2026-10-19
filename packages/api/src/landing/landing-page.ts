@@ -1,4 +1,4 @@
-import { studioOrigin } from '@on.auto/identity';
+import { studioBaseOf, type StudioSettings } from '@on.auto/identity';
 import type { Context, MiddlewareHandler } from 'hono';
 import { html, raw } from 'hono/html';
 
@@ -25,8 +25,8 @@ const head = headOf('');
 
 type Page = ReturnType<typeof html>;
 
-function studioOn(server: Readonly<URL>): string {
-  return `${studioOrigin}/?server=${encodeURIComponent(server.origin)}`;
+function studioOn(studio: StudioSettings, server: Readonly<URL>): string {
+  return `${studioBaseOf(studio, server.origin)}?server=${encodeURIComponent(server.origin)}`;
 }
 
 function factsOf(status: RuntimeStatus): Page {
@@ -52,7 +52,7 @@ function factsOf(status: RuntimeStatus): Page {
     </div>`;
 }
 
-function pageOf(server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
+function pageOf(studio: StudioSettings, server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
   return html`<!doctype html>
     <html lang="en">
       <head>
@@ -64,7 +64,7 @@ function pageOf(server: Readonly<URL>, status: RuntimeStatus | undefined): Page 
           <h1>Auto Runtime is running</h1>
           <p>Create and manage your playbooks in the studio.</p>
           <span class="address">${server.host}</span>
-          <a class="open" href="${studioOn(server)}">Open studio ${raw(arrow)}</a>
+          <a class="open" href="${studioOn(studio, server)}">Open studio ${raw(arrow)}</a>
           ${status === undefined ? '' : factsOf(status)}
         </main>
       </body>
@@ -118,10 +118,10 @@ function guarded(answer: Answer): Answer {
     }) ?? answer(c);
 }
 
-function landingAnswerOf(control: RuntimeControl | undefined): Answer {
+function landingAnswerOf(control: RuntimeControl | undefined, studio: StudioSettings): Answer {
   return (c) =>
     c.html(
-      pageOf(new URL(c.req.url), control?.status()),
+      pageOf(studio, new URL(c.req.url), control?.status()),
       200,
       control === undefined ? readOnlyPageHeaders : controlPageHeaders,
     );
@@ -144,21 +144,24 @@ function controlAnswersOf(control: RuntimeControl): ReadonlyMap<string, Answer> 
   ]);
 }
 
-function answerFor(
-  c: Context<ApiEnv>,
-  control: RuntimeControl | undefined,
-  controls: ReadonlyMap<string, Answer>,
-): Answer | undefined {
+interface Landing {
+  readonly control: RuntimeControl | undefined;
+  readonly studio: StudioSettings;
+  readonly controls: ReadonlyMap<string, Answer>;
+}
+
+function answerFor(c: Context<ApiEnv>, { control, studio, controls }: Landing): Answer | undefined {
   if (c.req.method === 'GET' && c.req.path === '/' && asksForAPage(c)) {
-    return landingAnswerOf(control);
+    return landingAnswerOf(control, studio);
   }
   return controls.get(`${c.req.method} ${c.req.path}`);
 }
 
-export function landingPageFor(control: RuntimeControl | undefined): MiddlewareHandler<ApiEnv> {
+export function landingPageFor(control: RuntimeControl | undefined, studio: StudioSettings): MiddlewareHandler<ApiEnv> {
   const controls = control === undefined ? new Map<string, Answer>() : controlAnswersOf(control);
+  const landing = { control, studio, controls };
   return (c, next) => {
-    const answer = answerFor(c, control, controls);
+    const answer = answerFor(c, landing);
     return answer === undefined ? next() : Promise.resolve(answer(c));
   };
 }

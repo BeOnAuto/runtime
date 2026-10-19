@@ -1,4 +1,4 @@
-import { studioOrigin, type AccessMode } from '@on.auto/identity';
+import { defaultStudioOrigin, type AccessMode } from '@on.auto/identity';
 
 import { defaultRuntimePort } from '../local-runtime/local-control.ts';
 import { linkerFor, painterFor, type ColorDepth } from '../logging/terminal.ts';
@@ -68,8 +68,8 @@ export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
   const link = linkerFor(depth);
   const url = `http://localhost:${port}`;
   const mcp = `${url}/mcp`;
-  const studio = `${studioOrigin}/?server=${encodeURIComponent(url)}`;
-  const studioShown = port === defaultRuntimePort ? studioOrigin : `${studioOrigin}/?server=${url}`;
+  const studio = `${defaultStudioOrigin}/?server=${encodeURIComponent(url)}`;
+  const studioShown = port === defaultRuntimePort ? defaultStudioOrigin : `${defaultStudioOrigin}/?server=${url}`;
   const entry = (label: string, value: string): string => `     ${paint('dim', label.padEnd(8))} ${link(value, value)}`;
   const agent = (label: string, command: string): string => `    ${label.padEnd(13)} ${paint('dim', command)}`;
   const signIn = identityService === undefined ? [] : [entry('Sign-in', identityService)];

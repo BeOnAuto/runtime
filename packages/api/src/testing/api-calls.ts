@@ -1,4 +1,5 @@
 import type { Authenticator } from '@on.auto/identity';
+import { hostedStudio } from '@on.auto/identity/testing';
 import { allPermissions, type CallSummary } from '@on.auto/operations';
 
 import { createApiHandler, type ApiHandler, type ApiOptions, type RegisterRoutes } from '../index.ts';
@@ -41,6 +42,7 @@ export function createTestHandler(options: Partial<ApiOptions> = {}): {
   const reported: ReportedThrown[] = [];
   const handler = createApiHandler({
     allowedOrigins: [],
+    studio: hostedStudio,
     authenticator: admitEveryone,
     routes: [],
     reportIncident: (incident, error, requestId, summary) => {

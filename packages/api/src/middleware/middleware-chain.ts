@@ -21,17 +21,20 @@ function exceptOn(isPublic: IsPublic, middleware: MiddlewareHandler<ApiEnv>): Mi
 }
 
 export function middlewareFor(
-  { allowedOrigins, authenticator, requests, runtimeControl }: ApiOptions,
+  { allowedOrigins, studio, authenticator, requests, runtimeControl }: ApiOptions,
   publicPaths: ReadonlySet<string>,
 ): readonly MiddlewareHandler<ApiEnv>[] {
   const isPublic = publicPathsOf(authenticator, publicPaths);
   const hostValidation = authenticator.mode === 'local' ? [validateHost] : [];
+  const pages = { studio, allowedOrigins };
   return [
     ...(requests === undefined ? [] : [requests]),
-    landingPageFor(runtimeControl),
+    landingPageFor(runtimeControl, studio),
     ...requestIdAndSecurityHeaders,
-    ...[validateOrigin(allowedOrigins), ...hostValidation].map((middleware) => exceptOn(isPublic, middleware)),
-    ...corsFor(allowedOrigins),
+    ...[validateOrigin(pages, authenticator.resource), ...hostValidation].map((middleware) =>
+      exceptOn(isPublic, middleware),
+    ),
+    ...corsFor(pages, authenticator.resource),
     exceptOn(isPublic, authenticate(authenticator)),
   ];
 }
