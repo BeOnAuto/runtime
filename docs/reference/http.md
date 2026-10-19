@@ -853,11 +853,12 @@ Authorization: Bearer <key>
 ```json
 {
   "servers": [
-    { "name": "billing", "type": "openapi", "record_content": true, "tool_count": 5 },
+    { "name": "billing", "type": "openapi", "record_content": true, "provider": null, "tool_count": 5 },
     {
       "name": "notes",
       "type": "stdio",
       "record_content": true,
+      "provider": null,
       "unavailable": "The tool server notes could not be used: The tool server could not be reached",
       "because": "unreachable"
     }
@@ -875,11 +876,12 @@ Authorization: Bearer <key>
 }
 ```
 
-| Field     | Contents                             |
-| --------- | ------------------------------------ |
-| `servers` | The servers searched, sorted by name |
-| `tools`   | The tools found                      |
-| `scopes`  | The names of the servers searched    |
+| Field       | Contents                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `servers`   | The servers searched, sorted by name                                                                                      |
+| `tools`     | The tools found                                                                                                           |
+| `scopes`    | The names of the servers searched                                                                                         |
+| `providers` | On the org route, where the caller may add a connection: the providers it may connect that no server serves yet, as below |
 
 Each server has these fields:
 
@@ -887,6 +889,7 @@ Each server has these fields:
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`           | The name a function writes before the slash                                                                                                                                                                                                                                                                                                       |
 | `connection`     | For a connection a person added, its id; absent for a server of the configuration. A connection whose name the configuration now sets up is listed beside that server, unavailable                                                                                                                                                                |
+| `provider`       | The name of the [provider](#providers) a connection was added from, or `null` for a server given by hand; a server of the configuration carries `null`                                                                                                                                                                                            |
 | `type`           | `mcp` for a remote MCP server, `stdio` for an MCP server the runtime starts as a process, or `openapi` for an HTTP API described by an OpenAPI document                                                                                                                                                                                           |
 | `record_content` | Whether the content of its calls is kept                                                                                                                                                                                                                                                                                                          |
 | `tool_count`     | How many tools of the server the operator allows, of those `only` keeps                                                                                                                                                                                                                                                                           |
@@ -916,6 +919,15 @@ On the org route, `search` covers the org's playbooks. So you can see what the o
 - A key limited to some playbooks must pass `playbook`, and sees in `playbooks` only the playbooks it may access. Without `playbook` it is refused with `forbidden`, whose detail says to name one of its playbooks in `playbook`.
 - A `playbook` the org does not have returns `not_found`, as the playbook's own route does, and no server is asked.
 - A `server` that no server of the org, or of the playbook given, has returns `invalid_input` at `/server`.
+
+On the org route, `search` also returns `providers`: the [providers](#providers) the caller may connect here that no server of the org serves yet, each with its `name`, which `add_connection` takes as `provider`, its `title` and its `description`. So an agent asked for a service that no server serves can offer to connect one.
+
+- A provider is served, and left out, while a connection made from it is pending, connected or broken. That connection is in `servers`, with `provider` set and, while it is not ready, its `because`.
+- A provider none of whose ways is offered is left out too, as while a value whoever runs Auto sets for it is not set. `list_providers` still lists it, each way `offered: false`.
+- Without `terms`, it lists every such provider, sorted by name, while there are 100 or fewer, and none when there are more.
+- With `terms`, it lists the providers whose name, title or description holds a word, scored as tools are, a word of the title counting as a word of the name. They come best first, those with the same score by name, at most 100.
+- It covers the whole org, whatever `playbook` narrows the servers to, and is left out with `server`.
+- It is present exactly where the caller may add a connection, as `may_add` of `list_providers` says: a signed-in person, or the local developer in local mode, with `org:write`, on a runtime whose `connections.people_may_add` is not `false`. It is then empty when every provider listed is served or left out. A key, a caller who may only read and a runtime where nobody may add get no `providers`. The playbook route never returns it.
 
 ### Reading one tool
 
@@ -1077,7 +1089,7 @@ Every operation answers the connection: `id`, a UUIDv7; `name`; `type`, `mcp` or
 | Case                                                                                                                                                                                        | Response                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | An entry that holds a value that looks like a credential, a reference such as `${NAME}`, or a field another entry would refuse                                                              | `invalid_input`                            |
-| A `provider` the runtime does not have, at `/provider`: `There is no provider named crm here`                                                                                               | `invalid_input`                            |
+| A `provider` the runtime does not have, at `/provider`: `There is no provider named crm here; search lists the providers a person may connect`                                              | `invalid_input`                            |
 | A placeholder the provider does not take, one missing, or a value its pattern or its choices refuse, that looks like a credential or that would move the address, at `/placeholders/<name>` | `invalid_input`                            |
 | A `credential.kind` the provider does not offer, at `/credential/kind`                                                                                                                      | `invalid_input`                            |
 | What the checks of an entry refuse in what the provider resolved, at `/provider`, or in a `name` the caller gave, at `/name`                                                                | `invalid_input`                            |
@@ -1094,7 +1106,7 @@ Every operation answers the connection: `id`, a UUIDv7; `name`; `type`, `mcp` or
 
 ### Providers
 
-A provider is a service Auto knows by its name, an MCP server or an HTTP API with how a credential reaches it, which a person connects by its name and the values its placeholders take. `list_providers` lists those a person may connect here; [Let people add connections](../self-host/connections.md#the-providers-auto-ships) lists those Auto ships. The route is relative to `/v1/orgs/{org}` and served over HTTP alone, for a page to read:
+A provider is a service Auto knows by its name, an MCP server or an HTTP API with how a credential reaches it, which a person connects by its name and the values its placeholders take. `list_providers` lists those a person may connect here, and [`search`](#searching-the-tools) on the org route lists to a caller who may add a connection those that no server serves yet; [Let people add connections](../self-host/connections.md#the-providers-auto-ships) lists those Auto ships. The route is relative to `/v1/orgs/{org}` and served over HTTP alone, for a page to read:
 
 | Operation        | Method and route | Permission | Input |
 | ---------------- | ---------------- | ---------- | ----- |
@@ -1113,7 +1125,7 @@ It answers `providers`, sorted by name, `may_add` and `refusal`. A provider hold
 | `placeholders` | The values a person gives: `name`, `description`, `pattern` and `example`, or `choices`, each a `value` and a `title`, and `required`                                                                                                                                                                                                                                               |
 
 - A provider is listed where the operator's rules could allow it: a way is listed where `credential_kinds` takes its kind and the hosts it reaches could pass `allowed_hosts`, a host that holds a placeholder judged by its shape, and a provider with no way left is not listed. Whether a connection is allowed is still checked when it is added and on every request it makes.
-- A way is `offered: false` while a value whoever runs Auto sets for it is not set, and `because` says so.
+- A way is `offered: false` while a value whoever runs Auto sets for it is not set, and `because` says so. [Searching the tools](#searching-the-tools) says what `search` does with a provider none of whose ways is offered.
 - `may_add` says whether this caller may add a connection here, and `refusal` why not, in the sentence the first rule that refuses gives, in the order `add_connection` refuses: a caller without `org:write`; a key where people sign in, or every caller where the runtime signs nobody in; `connections.people_may_add` set to `false`. It is `null` where the caller may add. The providers are listed whatever `may_add` says.
 
 ### A connection that is not ready

@@ -6,7 +6,7 @@ description: Find the tools your Auto offers a playbook, try one, name it in a r
 
 Let a reasoning function call tools while it runs, such as tools that read files, search the news or look up records in a business system. Tools come from a tool server: a service or program that offers tools for a function to call. Whoever runs Auto adds tool servers, and one server can serve many playbooks; a person can also add one to the org as a connection, through their agent. This guide uses the servers your Auto already has, and needs only your agent.
 
-If no server offers the tools you need, [ask for one](#ask-for-a-tool-server). If you run Auto yourself, [Add a tool server](../self-host/tool-servers.md) shows how to add it.
+If no server offers the tools you need, [connect a provider](#connect-a-provider) that does, or [ask for a tool server](#ask-for-a-tool-server). If you run Auto yourself, [Add a tool server](../self-host/tool-servers.md) shows how to add it.
 
 ## Before you start
 
@@ -25,7 +25,7 @@ tool takes.
 
 Check that the agent reports the server with its tools, and which have `read_only: true`. Auto counts a tool as read-only only when its server marks it so. Where a server offers many tools, ask the agent to search with a few words of what you want done; it passes them to `search` as `terms`.
 
-If the agent finds no server, or none with the tool you need, [ask for a tool server](#ask-for-a-tool-server). A server that cannot be used is shown as unavailable, with a `because` field that says why; see [If something goes wrong](#if-something-goes-wrong).
+If the agent finds no server, or none with the tool you need, [connect a provider](#connect-a-provider) that offers it, or [ask for a tool server](#ask-for-a-tool-server). A server that cannot be used is shown as unavailable, with a `because` field that says why; see [If something goes wrong](#if-something-goes-wrong).
 
 To show a tool's arguments, the agent uses Auto's `introspect` tool. It returns one tool whole: its description, the JSON Schema of its arguments (`input_schema`, which names each argument and its type) and the hints its server gives it.
 
@@ -128,6 +128,19 @@ File: {{ input.file }}
 
 Its `tools` names one tool, so it cannot list the folder. Run it with the input `{"file": "autumn-reporting-trial.txt"}`, and its history shows a `tool_call_started` event with the arguments `{"path": "autumn-reporting-trial.txt"}`. With a file name that does not exist, the tool returns an error such as `ENOENT: no such file or directory`. The model reads that error, and the review says it could not read the file, as the prompt asks.
 
+## Connect a provider
+
+Where whoever runs your Auto lets people add connections, `search` also lists the providers you may connect that nothing serves yet: services Auto knows by name, each with a title and a description. It lists them to an agent signed in as you, where you may change the org, or to any agent in local mode; an agent connected with a key, or as someone who may only read, sees none. Ask your agent:
+
+```text
+Connect the "<provider title>" provider to Auto, so that the functions in my
+"<playbook name>" playbook can call its tools.
+```
+
+The agent adds the connection by the provider's name and gives you a link to Studio's page. There you approve it and give its credential, such as a key, which never goes through your agent. When it is connected, start again at [Find the tools](#find-the-tools).
+
+If `search` lists no provider for the service, the agent can add its server by hand instead: its address and how it takes its key, never the key itself. If your Auto does not let people add connections, `search` lists no providers, and you [ask for a tool server](#ask-for-a-tool-server).
+
 ## Ask for a tool server
 
 Whoever runs Auto adds tool servers. Send them a message like this one, with your details in place of the parts in angle brackets. If the service needs a key, send the key separately, never through a prompt or a chat with your agent.
@@ -147,7 +160,7 @@ When they confirm, start again at [Find the tools](#find-the-tools).
 
 ## If something goes wrong
 
-- **`search` lists no server.** No tool server serves your playbook yet. Send the request in [Ask for a tool server](#ask-for-a-tool-server).
+- **`search` lists no server.** No tool server serves your playbook yet. [Connect a provider](#connect-a-provider) it lists, or send the request in [Ask for a tool server](#ask-for-a-tool-server).
 - **`search` shows a server as unavailable.** Its `because` says why. `unreachable`, `failing` or `rate_limited` may pass, so try again later. `key_refused` means the server did not accept Auto's key. If it does not pass, send the `because` to whoever runs Auto; [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the fixes.
 - **A tool is missing.** The server's entry does not allow it, or the server does not list it. Ask whoever runs Auto to add it to the entry's `allowed`.
 - **A call returns an error.** The model reads it as a tool error and may recover. Check the arguments with `dry_run`, or call the tool once with `execute`. With the filesystem server, `ENOENT` means no such file: give the file name alone, as `list_directory` shows it. A name that starts with `briefs/` points to a folder inside `briefs`.

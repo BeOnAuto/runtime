@@ -197,7 +197,7 @@ describe('the recipes that give a playbook tools', () => {
     expect([
       Buffer.byteLength(String(texts['give-tools'])),
       Buffer.byteLength(String(texts['first-playbook'])),
-    ]).toEqual([2594, 1898]);
+    ]).toEqual([2716, 1898]);
   });
 });
 
@@ -215,8 +215,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(everyType), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [1988, 2327, 3155, 1294],
-      [1898, 2327, 2594, 1294],
+      [1988, 2327, 3277, 1294],
+      [1898, 2327, 2716, 1294],
     ]);
   });
 
@@ -250,7 +250,7 @@ describe('the tools a recipe calls', () => {
     );
     expect(recipes[0]?.text).toContain('list_models where this connection has it');
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toContain(
-      'and your tools include add_connection, call it with',
+      'and search answers `providers`, call add_connection with the name of a provider there',
     );
   });
 });
