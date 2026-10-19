@@ -6,9 +6,9 @@ import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { connectedByConsent, linkAddedBy, servedStudioReturn } from '../testing/servers/consents-over-http.ts';
 import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
@@ -30,8 +30,6 @@ const byHand = {
 const consentByHand =
   'Expected another kind: consent is offered through a provider alone, so name the provider, as search lists it, in provider';
 
-const AddedSchema = Schema.Struct({ id: Schema.String, connect: Schema.Struct({ url: Schema.String }) });
-
 let server: ReasoningServer;
 
 beforeAll(async () => {
@@ -43,10 +41,7 @@ afterAll(async () => {
 });
 
 async function addedCrm() {
-  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(
-    (await server.call('POST', connections, { body: crm })).body,
-  );
-  return { id, token: String(new URL(connect.url).searchParams.get('token')) };
+  return linkAddedBy(await server.call('POST', connections, { body: crm }));
 }
 
 describe('the start and the finish of a consent over HTTP', () => {
@@ -103,14 +98,8 @@ describe('a connection of consent given by hand', () => {
 
 const anHour = 3_600_000;
 
-function servedStudioReturnOn(port: number): string {
-  return `http://127.0.0.1:${port}/studio/connect-return`;
-}
-
 const consentEnded =
   'The consent of the connection files was revoked or has ended, so the person who added it removes it and adds it again';
-
-const StartedSchema = Schema.Struct({ authorize: Schema.Struct({ url: Schema.String }) });
 
 const KeptTokensSchema = Schema.fromJsonString(
   Schema.Struct({ access_token: Schema.String, refresh_token: Schema.String }),
@@ -138,20 +127,6 @@ function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> 
   };
 }
 
-async function connectedByConsent(served: ReasoningServer): Promise<string> {
-  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(
-    (await served.call('POST', connections, { body: { provider: 'files' } })).body,
-  );
-  const token = String(new URL(connect.url).searchParams.get('token'));
-  const { authorize } = Schema.decodeUnknownSync(StartedSchema)(
-    (await served.call('POST', `${connections}/${id}/consent`, { body: { token } })).body,
-  );
-  const back = new URL(String((await fetch(authorize.url, { redirect: 'manual' })).headers.get('location')));
-  const [code, state, iss] = ['code', 'state', 'iss'].map((name) => String(back.searchParams.get(name)));
-  await served.call('POST', `${connections}/${id}/consent/code`, { body: { token, code, state, iss } });
-  return id;
-}
-
 async function tokensKeptFor(fileName: string, id: string) {
   const secretId = String(await secretIdOf(fileName, 'local', id));
   return Schema.decodeUnknownSync(KeptTokensSchema)(String((await keptSecretOf(fileName, secretId)).value));
@@ -176,8 +151,8 @@ function echoing(served: ReasoningServer) {
 
 describe('a connection connected by consent over HTTP', () => {
   it('calls a tool with its access token, is renewed once it is due and broken once its grant is revoked', async () => {
-    const port = await aPortNothingListensOn();
-    const fake = await serveFakeMcp({ client: consentRegistration({ redirectUris: [servedStudioReturnOn(port)] }) });
+    const { port, returnAddress } = await servedStudioReturn();
+    const fake = await serveFakeMcp({ client: consentRegistration({ redirectUris: [returnAddress] }) });
     const ledger = temporaryLedger();
     const clock = movedClock(Date.now());
     const served = await servingReasoning(

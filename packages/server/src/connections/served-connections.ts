@@ -1,4 +1,4 @@
-import type { AppRuntime } from '@on.auto/api';
+import { clientMetadataRoutes, type AppRuntime, type RegisterRoutes } from '@on.auto/api';
 import {
   makeConnectionOperations,
   makeConnectionSource,
@@ -13,7 +13,7 @@ import type { DispatcherServices } from '@on.auto/operations';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
-import { consentClientOf } from '../composition/served-consent.ts';
+import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/served-consent.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
 import type { Settings } from '../settings/settings.ts';
 
@@ -23,6 +23,7 @@ export interface StoresAndConnections {
   readonly connections: ConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
   readonly offering: ReturnType<typeof makeProviderOffering>;
+  readonly clientMetadata: RegisterRoutes;
 }
 
 type ServingSettings = Pick<
@@ -51,17 +52,10 @@ function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): Runti
 interface Composed {
   readonly secrets: SecretStore;
   readonly consent: ReturnType<typeof consentClientOf>;
-  readonly ownOrigin: () => string;
+  readonly pages: ConnectionServices['pages'];
 }
 
-function pagesOf({ studio }: ServingSettings, ownOrigin: () => string): ConnectionServices['pages'] {
-  return { studio, runtime: ownOrigin };
-}
-
-function connectionServicesOf(
-  settings: ServingSettings,
-  { secrets, consent, ownOrigin }: Composed,
-): ConnectionServices {
+function connectionServicesOf(settings: ServingSettings, { secrets, consent, pages }: Composed): ConnectionServices {
   return {
     consent,
     secrets,
@@ -70,7 +64,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: pagesOf(settings, ownOrigin),
+    pages,
     access: accessOf(settings),
   };
 }
@@ -78,13 +72,13 @@ function connectionServicesOf(
 function sourceServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: ServingSettings,
-  { secrets, ownOrigin }: Omit<Composed, 'consent'>,
+  { secrets, pages }: Omit<Composed, 'consent'>,
 ): ReturnType<typeof makeConnectionSource> {
   return makeConnectionSource({
     registry: runtimeLedger(runtime),
     secrets,
     policy: settings.connections,
-    pages: pagesOf(settings, ownOrigin),
+    pages,
     variables: settings.connectionVariables,
     modelProviders: settings.modelProviders,
     providers: settings.providers,
@@ -100,12 +94,14 @@ export async function storesAndConnectionsOf(
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
   const consent = consentClientOf(runtime, settings, stores.secrets);
-  const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, ownOrigin });
+  const pages = { studio: settings.studio, runtime: ownOrigin };
+  const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages });
   return {
     stores,
     consent,
     connections: makeConnectionOperations(services),
-    source: sourceServedBy(runtime, settings, { secrets: stores.secrets, ownOrigin }),
+    source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),
     offering: makeProviderOffering(services),
+    clientMetadata: clientMetadataRoutes(servedClientMetadataDocumentOf(settings, pages)),
   };
 }
