@@ -39,18 +39,32 @@ function parsedJson(setting: string, text: string): Result.Result<unknown, reado
   }
 }
 
+function decodedValueWith<A>(
+  setting: string,
+  value: unknown,
+  decode: SettingDecoder<A>,
+): Result.Result<A, readonly SettingProblem[]> {
+  return Result.mapError(decode(value), ({ issue }: { readonly issue: SchemaIssue.Issue }) =>
+    formatIssues(issue).issues.map(({ message, path = [] }) =>
+      problem(setting, pointerOf(path.filter((segment) => isPropertyKey(segment))), message),
+    ),
+  );
+}
+
 export function decodedJsonSettingWith<A>(
   setting: string,
   text: string,
   decode: SettingDecoder<A>,
 ): Result.Result<A, readonly SettingProblem[]> {
-  return Result.flatMap(parsedJson(setting, text), (parsed) =>
-    Result.mapError(decode(parsed), ({ issue }: { readonly issue: SchemaIssue.Issue }) =>
-      formatIssues(issue).issues.map(({ message, path = [] }) =>
-        problem(setting, pointerOf(path.filter((segment) => isPropertyKey(segment))), message),
-      ),
-    ),
-  );
+  return Result.flatMap(parsedJson(setting, text), (parsed) => decodedValueWith(setting, parsed, decode));
+}
+
+export function decodedSettingValue<S extends Schema.Codec<unknown, unknown>>(
+  setting: string,
+  value: unknown,
+  schema: S,
+): Result.Result<S['Type'], readonly SettingProblem[]> {
+  return decodedValueWith(setting, value, Schema.decodeUnknownResult(schema, strictly));
 }
 
 export function decodedJsonSetting<S extends Schema.Codec<unknown, unknown>>(
