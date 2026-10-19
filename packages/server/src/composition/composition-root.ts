@@ -33,6 +33,7 @@ export function compositionRootWith(
           );
           const functions = await functionsServedBy(runtime, settings, database, {
             ...wiring,
+            ...(clock === undefined ? {} : { now: clock.now }),
             telemetry,
             consent,
             connections: source,

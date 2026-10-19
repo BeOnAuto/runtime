@@ -1,14 +1,14 @@
 import { Buffer } from 'node:buffer';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
 import { consentRegistration, consentSecret, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
 
@@ -100,6 +100,8 @@ describe('a connection of consent given by hand', () => {
   });
 });
 
+const anHour = 3_600_000;
+
 const studioReturn = 'https://studio.on.auto/connect/return';
 
 const consentEnded =
@@ -170,16 +172,16 @@ function echoing(served: ReasoningServer) {
 }
 
 describe('a connection connected by consent over HTTP', () => {
-  it('calls a tool with its access token, is renewed once it expires and broken once its grant is revoked', async () => {
-    const fake = await serveFakeMcp({
-      client: consentRegistration({ redirectUris: [studioReturn], expiresInSeconds: 1 }),
-    });
+  it('calls a tool with its access token, is renewed once it is due and broken once its grant is revoked', async () => {
+    const fake = await serveFakeMcp({ client: consentRegistration({ redirectUris: [studioReturn] }) });
     const ledger = temporaryLedger();
-    const served = await servingReasoning([], {
-      LEDGER_FILE: ledger.fileName,
-      SECRETS_KEY: secretsKey.toString('base64'),
-      ...filesProvidedBy(fake),
-    });
+    const clock = movedClock(Date.now());
+    const served = await servingReasoning(
+      [],
+      { LEDGER_FILE: ledger.fileName, SECRETS_KEY: secretsKey.toString('base64'), ...filesProvidedBy(fake) },
+      noNetwork,
+      { clock },
+    );
     onTestFinished(async () => {
       await served.stop();
       await fake.close();
@@ -190,7 +192,7 @@ describe('a connection connected by consent over HTTP', () => {
     const first = await tokensKeptFor(ledger.fileName, id);
 
     const called = await echoing(served);
-    await delay(1100);
+    clock.moveTo(clock.now() + anHour);
     const renewedCall = await echoing(served);
     const renewed = await tokensKeptFor(ledger.fileName, id);
     await revokedAt(fake, renewed.refresh_token);
