@@ -202,7 +202,7 @@ function kindWords(kind: string, schema: JsonSchema, reading: SchemaReading, cou
   }
 }
 
-function kindsOf(schema: JsonSchema): readonly [string, ...string[]] {
+export function kindsOf(schema: JsonSchema): readonly [string, ...string[]] {
   const [first, ...rest] = typesOf(schema);
   if (first !== undefined) {
     return [first, ...rest];

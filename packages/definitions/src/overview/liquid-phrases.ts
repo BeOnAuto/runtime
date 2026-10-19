@@ -1,5 +1,6 @@
 import { Tokenizer, TypeGuards } from 'liquidjs';
 
+import type { VariableSegment } from '../template/template-parsing.ts';
 import { named, paragraph, type Paragraph, type Phrase, type Phrases } from './overview.ts';
 
 export interface TextPiece {
@@ -9,12 +10,13 @@ export interface TextPiece {
   readonly end: number;
 }
 
-interface OutputPiece {
+export interface OutputPiece {
   readonly kind: 'output';
   readonly content: string;
   readonly written: string;
   readonly begin: number;
   readonly end: number;
+  readonly read: Phrase;
 }
 
 export interface TagPiece {
@@ -54,20 +56,27 @@ const endsOfReadBlocks: ReadonlySet<string> = new Set(['endif', 'endunless', 'en
 
 const loop = /^\s*(?<item>[\w-]+)\s+in\s+(?<list>\S[\s\S]*)$/u;
 
-function lastNameIn(content: string): string | undefined {
+export function pathIn(content: string): readonly VariableSegment[] | undefined {
   const value = new Tokenizer(content).readValue();
   if (!TypeGuards.isPropertyAccessToken(value) || value.variable !== undefined) {
     return undefined;
   }
-  let last: string | undefined;
+  const path: VariableSegment[] = [];
   for (const segment of value.props) {
     if (TypeGuards.isWordToken(segment)) {
-      last = segment.getText();
+      path.push(segment.getText());
     } else if (TypeGuards.isQuotedToken(segment)) {
-      last = segment.content;
+      path.push(segment.content);
+    } else {
+      path.push(TypeGuards.isNumberToken(segment) ? Number(segment.getText()) : null);
     }
   }
-  return last;
+  return path;
+}
+
+export function boldValue(content: string, written: string): Phrase {
+  const name = pathIn(content)?.findLast((segment) => typeof segment === 'string');
+  return name === undefined ? { code: written } : named(name);
 }
 
 export function writtenOf(piece: Piece): string {
@@ -116,17 +125,12 @@ function tagUnits(piece: TagPiece): readonly Unit[] {
   }
 }
 
-function outputPhrase({ content, written }: OutputPiece): Phrase {
-  const name = lastNameIn(content);
-  return name === undefined ? { code: written } : named(name);
-}
-
 export function phrasesOf(piece: ReadPiece): Phrases {
   if (piece.kind === 'text') {
     return [piece.text];
   }
   if (piece.kind === 'output') {
-    return [outputPhrase(piece)];
+    return [piece.read];
   }
   return piece.kind === 'tag' ? tagPhrases(piece) : piece.phrases;
 }

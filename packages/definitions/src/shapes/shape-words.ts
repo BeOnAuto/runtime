@@ -80,6 +80,13 @@ const shapeWords: Readonly<Record<OutputShape['name'], Phrases>> = {
   text: textWords,
 };
 
+export const shapeNouns: Readonly<Record<OutputShape['name'], string>> = {
+  series: 'a series over time',
+  categories: 'values by category',
+  table: 'rows under named columns',
+  text: 'a text of Markdown',
+};
+
 export function shapeBlocks({ name }: OutputShape): readonly OverviewBlock[] {
   return [paragraph(...shapeWords[name])];
 }

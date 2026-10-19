@@ -20,6 +20,7 @@ export { renderedTemplate, type RenderFailure, type TemplateRender } from './tem
 export { inputVariableIssues } from './template/template-variables.ts';
 export {
   mostReadCharacters,
+  quotedTemplate,
   readableParts,
   readableTemplate,
   type ReadParts,
