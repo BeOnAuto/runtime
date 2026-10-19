@@ -1,11 +1,23 @@
 import { Tokenizer, TypeGuards } from 'liquidjs';
 
+import { valueMeaning } from '../overview-words/field-meanings.ts';
+import { inBrackets } from '../overview-words/template-words.ts';
 import { charactersIn, firstCharacters } from '../plain-language/characters.ts';
 import { linesOf, type LineOfOffset } from '../template/engine-failure.ts';
 import { withInlineConstructs } from './inline-constructs.ts';
-import { blocksOf, writtenOf, type Piece, type TextPiece } from './liquid-phrases.ts';
+import {
+  blocksOf,
+  boldValue,
+  loopOf,
+  pathIn,
+  writtenOf,
+  type OutputPiece,
+  type Piece,
+  type TextPiece,
+} from './liquid-phrases.ts';
 import { paragraphsAsWritten } from './markdown-text.ts';
-import { paragraph, type OverviewBlock } from './overview.ts';
+import { paragraph, type OverviewBlock, type Paragraph, type Phrase, type Quote } from './overview.ts';
+import type { JsonSchema } from './schema-reading.ts';
 
 export const mostReadCharacters = 8192;
 
@@ -24,6 +36,11 @@ interface Bounded {
   readonly cutAt: number | undefined;
 }
 
+interface Read {
+  readonly paragraphs: readonly Paragraph[];
+  readonly cut: readonly OverviewBlock[];
+}
+
 function piecesOf(text: string): readonly Piece[] {
   const pieces: Piece[] = [];
   for (const token of new Tokenizer(text).readTopLevelTokens()) {
@@ -32,7 +49,8 @@ function piecesOf(text: string): readonly Piece[] {
     if (TypeGuards.isTagToken(token)) {
       pieces.push({ kind: 'tag', name: token.name, args: token.args, written, begin, end });
     } else if (TypeGuards.isOutputToken(token)) {
-      pieces.push({ kind: 'output', content: token.content, written, begin, end });
+      const { content } = token;
+      pieces.push({ kind: 'output', content, written, begin, end, read: boldValue(content, written) });
     } else {
       pieces.push({
         kind: 'text',
@@ -114,20 +132,65 @@ function withinBound(pieces: readonly Piece[]): Bounded {
   return { kept, cutAt: undefined };
 }
 
-function readOf(pieces: readonly Piece[], lineOf: LineOfOffset): readonly OverviewBlock[] {
+function readOf(pieces: readonly Piece[], lineOf: LineOfOffset): Read {
   const { kept, cutAt } = withinBound(pieces);
-  const blocks = paragraphsAsWritten(blocksOf(withInlineConstructs(kept, lineOf)));
-  return cutAt === undefined
-    ? blocks
-    : [...blocks, paragraph(`… The rest is in the source, from line ${lineOf(cutAt)}.`)];
+  return {
+    paragraphs: paragraphsAsWritten(blocksOf(withInlineConstructs(kept, lineOf))),
+    cut: cutAt === undefined ? [] : [paragraph(`… The rest is in the source, from line ${lineOf(cutAt)}.`)],
+  };
+}
+
+function blocksOfRead({ paragraphs, cut }: Read): readonly OverviewBlock[] {
+  return [...paragraphs, ...cut];
+}
+
+function quotedRead({ paragraphs, cut }: Read): readonly OverviewBlock[] {
+  const quote: Quote = {
+    kind: 'quote',
+    lines: paragraphs.flatMap(({ phrases }, index) => (index === 0 ? [phrases] : [[], phrases])),
+  };
+  return [...(paragraphs.length === 0 ? [] : [quote]), ...cut];
+}
+
+function loopVariablesOf(pieces: readonly Piece[]): ReadonlySet<string> {
+  return new Set(
+    pieces.flatMap((piece) => {
+      const item = piece.kind === 'tag' && piece.name === 'for' ? loopOf(piece.args)?.item : undefined;
+      return item === undefined ? [] : [item];
+    }),
+  );
+}
+
+function bracketedValue(
+  { content, written }: OutputPiece,
+  inputSchema: JsonSchema | undefined,
+  loops: ReadonlySet<string>,
+): Phrase {
+  const path = pathIn(content);
+  return path === undefined ? { code: written } : inBrackets(valueMeaning(path, inputSchema, loops));
+}
+
+function withValuesInBrackets(pieces: readonly Piece[], inputSchema: JsonSchema | undefined): readonly Piece[] {
+  const loops = loopVariablesOf(pieces);
+  return pieces.map((piece) =>
+    piece.kind === 'output' ? { ...piece, read: bracketedValue(piece, inputSchema, loops) } : piece,
+  );
 }
 
 export function readableParts({ text, firstLine }: TemplateText, apart: string): ReadParts {
   const { inside, outside } = routed(withoutComments(piecesOf(text)), apart);
   const lineOf = linesOf(text, firstLine);
-  return { inside: readOf(inside, lineOf), outside: readOf(outside, lineOf) };
+  return { inside: blocksOfRead(readOf(inside, lineOf)), outside: blocksOfRead(readOf(outside, lineOf)) };
 }
 
 export function readableTemplate({ text, firstLine }: TemplateText): readonly OverviewBlock[] {
-  return readOf(withoutComments(piecesOf(text)), linesOf(text, firstLine));
+  return blocksOfRead(readOf(withoutComments(piecesOf(text)), linesOf(text, firstLine)));
+}
+
+export function quotedTemplate(
+  { text, firstLine }: TemplateText,
+  inputSchema: JsonSchema | undefined,
+): readonly OverviewBlock[] {
+  const pieces = withValuesInBrackets(withoutComments(piecesOf(text)), inputSchema);
+  return quotedRead(readOf(pieces, linesOf(text, firstLine)));
 }

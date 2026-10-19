@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest';
 import {
   composedOverview,
   defineCapability,
+  inputDetails,
   inputSection,
   markdownOf,
   named,
+  outputDetails,
   paragraph,
   sectionOf,
   type Overview,
@@ -208,5 +210,57 @@ describe('the overview of a capability of its own', () => {
       ],
       appendix: [sectionOf('Input', paragraph('A record.'))],
     });
+  });
+});
+
+function toldOverview(description: string | undefined): string {
+  return markdownOf(
+    composedOverview({
+      name: 'month-window',
+      noun: { one: 'computation function', other: 'computation functions' },
+      summary: description === undefined ? {} : { description },
+      parts: { body: [paragraph('It is given the month.')], appendix: [inputDetails({ type: 'string' })] },
+    }),
+  );
+}
+
+describe('the overview of a definition told as what happens', () => {
+  it('opens with its description as a sentence, then its body, and holds its tables under Details alone', () => {
+    expect(toldOverview('  Turns a month into its date range  ')).toBe(
+      [
+        '# month-window',
+        'Turns a month into its date range.',
+        'It is given the month.',
+        '## Details',
+        '### Input',
+        'Text.\n',
+      ].join('\n\n'),
+    );
+  });
+
+  it('opens with a description of more paragraphs, or one that ends in a block, as written, and with none as one that has none', () => {
+    const fence = '`'.repeat(3);
+
+    expect(
+      [
+        'Turns a month\n\ninto its date range',
+        `Turns a month:\n${fence}\n2026-04\n${fence}`,
+        'Turns a month?',
+        undefined,
+      ].map((description) => toldOverview(description).split('\n\n').slice(1, -4).join('\n\n')),
+    ).toEqual([
+      'Turns a month\n\ninto its date range',
+      `Turns a month:\n${fence}\n2026-04\n${fence}`,
+      'Turns a month?',
+      'This computation function has no description yet.',
+    ]);
+  });
+
+  it('says what it is given and gives under the headings of Details', () => {
+    expect([inputDetails(), outputDetails({ type: 'string' }), outputDetails()]).toEqual([
+      sectionOf('Input', paragraph('It takes any input, which its document does not describe.')),
+      sectionOf('Output', paragraph('Text', '.')),
+      sectionOf('Output', paragraph('It produces any output, which its document does not describe.')),
+    ]);
   });
 });

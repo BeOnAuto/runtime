@@ -12,7 +12,7 @@ import type {
 import type { CallEnded, CallStarted } from '@on.auto/tool-servers';
 import { Effect, type Schema } from 'effect';
 
-import { composedOverview, type OverviewParts } from '../overview/definition-overview.ts';
+import { composedOverview, type OverviewParts, type ToldParts } from '../overview/definition-overview.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
@@ -117,7 +117,7 @@ export type AnswerIssues = (answer: Schema.Json, run: AnsweringRun) => readonly 
 
 export type OverviewContext = Readonly<{ summary: DefinitionSummary }>;
 
-export type OverviewOf<Parsed> = (parsed: Parsed, name: string, context: OverviewContext) => OverviewParts;
+export type OverviewOf<Parsed> = (parsed: Parsed, name: string, context: OverviewContext) => OverviewParts | ToldParts;
 
 const defaultLongestAnyRunMs = 600_000;
 

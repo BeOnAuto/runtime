@@ -167,8 +167,15 @@ function holdsAComma(item: Phrases): boolean {
   return item.some((phrase) => typeof phrase === 'string' && phrase.includes(','));
 }
 
-function separatorOf(value: string, joiner: Joiner, serial: boolean): string {
-  return serial && value === ` ${joiner} ` ? `, ${joiner} ` : value;
+function isBeforeTheLast(value: string, joiner: Joiner): boolean {
+  return value === ` ${joiner} ` || value === `, ${joiner} `;
+}
+
+function separatorOf(value: string, joiner: Joiner, serial: boolean | undefined): string {
+  if (serial === undefined || !isBeforeTheLast(value, joiner)) {
+    return value;
+  }
+  return serial ? `, ${joiner} ` : ` ${joiner} `;
 }
 
 export function listedPhrases(
@@ -177,7 +184,7 @@ export function listedPhrases(
   separation: Separation = 'as-listed',
 ): Phrases {
   const format = joiner === 'and' ? conjunction : disjunction;
-  const serial = separation === 'serial-when-items-hold-commas' && items.some((item) => holdsAComma(item));
+  const serial = separation === 'as-listed' ? undefined : items.some((item) => holdsAComma(item));
   return format
     .formatToParts(items.map((_, index) => String(index)))
     .flatMap(({ type, value }: { readonly type: string; readonly value: string }) =>

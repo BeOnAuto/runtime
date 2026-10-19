@@ -240,6 +240,25 @@ export { markdownOf, mostOverviewBytes } from './overview/markdown-writer.ts';
 export { describedSchemaBlocks, mostFieldDescriptionCharacters, schemaBlocks } from './overview/schema-words.ts';
 export { plainTextOf } from './overview/markdown-text.ts';
 export { isJsonSchema } from './overview/schema-reading.ts';
+export { callSection, callSentence } from './overview-words/call-words.ts';
+export { computedSentence, programSection } from './overview-words/computation-words.ts';
+export { valueMeaning } from './overview-words/field-meanings.ts';
+export {
+  answerSection,
+  answerSentence,
+  answerWaitSentence,
+  inboxSentence,
+  messageLead,
+  notTakenSentence,
+  notificationSentence,
+  partyNamedUnderDetails,
+  replyRuleSentence,
+  replyWaitSentence,
+  unansweredSentence,
+  whereSection,
+  type ReplyParts,
+} from './overview-words/request-words.ts';
+export { replyDiagram } from './overview-words/reply-diagram-words.ts';
 export { shownUnderSource } from './overview-words/source-words.ts';
 export { templateLead } from './overview-words/template-words.ts';
 export { theToolOf } from './overview-words/tool-words.ts';
@@ -252,7 +271,15 @@ export { publishedOutputOf } from './shapes/published-output.ts';
 export { seriesBounds, seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { periodNouns, seriesPathBlocks } from './shapes/shape-words.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
-export { composedOverview, inputSection, outputSection, type OverviewParts } from './overview/definition-overview.ts';
+export {
+  composedOverview,
+  inputDetails,
+  inputSection,
+  outputDetails,
+  outputSection,
+  type OverviewParts,
+  type ToldParts,
+} from './overview/definition-overview.ts';
 export { overviewAtRead, type ReadKnowledge } from './used-by/overview-at-read.ts';
 export type { DefinitionCalled, DefinitionUser } from './used-by/user-relations.ts';
 export {

@@ -78,7 +78,9 @@ const usedBySendBuild = [
     '- The recall function **Build answers** remembers its runs.',
     '- The workflow **Weekly build** calls it in step 1, **Send**.',
   ].join('\n'),
-  '## Details',
+].join('\n\n');
+
+const namesUsingSendBuild = [
   '### Used by',
   [
     '- `weekly-orders`, a prediction function',
@@ -94,6 +96,11 @@ const callsOfWeeklyBuild = [
   '### What it calls',
   '- `send-build`, an interaction function\n',
 ].join('\n\n');
+
+function usersIn(overview: string): readonly string[] {
+  const [story = '', details = ''] = overview.split('\n\n## Details\n\n');
+  return [story.slice(story.indexOf('## Used by')), details.slice(details.indexOf('### Used by'))];
+}
 
 const decodeOverview = Schema.decodeUnknownSync(Schema.Struct({ overview: Schema.String }));
 
@@ -156,7 +163,7 @@ describe('the overview of every type of definition', () => {
     );
     expect(overviews.every((overview) => overview.split('\n\n').length > 2)).toBe(true);
     expect(overviews[1]).toContain(
-      '\n\n## Who it asks\n\nIt asks a system: each run calls the tool **campaign-costs**',
+      '\n\nIt is given the month and asks **ads** with its tool campaign-costs, once per run.',
     );
     expect(overviews[3]).toContain('\n\n## What it remembers\n\n');
     expect(listed).toMatchObject({ status: 200, body: { definitions: [{ name: 'review-brief' }] } });
@@ -193,7 +200,7 @@ describe('the overview of a definition that others of its playbook name', () => 
 
     expect(statuses).toEqual([201, 201, 201, 201]);
     expect(named?.startsWith('# send-build\n\n')).toBe(true);
-    expect(named?.slice(named.indexOf('## Used by'))).toBe(usedBySendBuild);
+    expect(usersIn(String(named))).toEqual([usedBySendBuild, namesUsingSendBuild]);
     expect(unnamed).not.toContain('## Used by');
     expect(unnamed?.slice(unnamed.indexOf('## What it calls'))).toBe(callsOfWeeklyBuild);
     expect(await overviewsOverMcp('beta', [sendBuild, weeklyBuild])).toEqual(overHttp);
