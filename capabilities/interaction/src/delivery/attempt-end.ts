@@ -1,3 +1,4 @@
+import type { RenderClock } from '@on.auto/definitions/template';
 import type { AnsweredOnce, CallAnswered, CallFailed, CalledOnce } from '@on.auto/tool-servers';
 import { Struct } from 'effect';
 
@@ -34,10 +35,13 @@ function failureFieldsOf(fields: CallAnswered | CallFailed) {
   return 'result_bytes' in fields ? answerFieldsOf(fields) : Struct.omit(fields, ['because', 'detail', 'duration_ms']);
 }
 
-function endOfAnswer(called: AnsweredOnce, record: DeliveringRecord): AttemptEnd {
+function endOfAnswer(called: AnsweredOnce, record: DeliveringRecord, clock: RenderClock): AttemptEnd {
   const end = endOfCall(called);
   if ('answered' in end) {
-    return { type: 'delivery_succeeded', data: { ...answerFieldsOf(end.fields), ...keptOf(record, end.answered) } };
+    return {
+      type: 'delivery_succeeded',
+      data: { ...answerFieldsOf(end.fields), ...keptOf(record, end.answered, clock) },
+    };
   }
   const { because, retryAfterMs, detail, fields } = end.failed;
   return {
@@ -51,9 +55,9 @@ function endOfAnswer(called: AnsweredOnce, record: DeliveringRecord): AttemptEnd
   };
 }
 
-export function endOf(called: CalledOnce, record: DeliveringRecord): AttemptEnd {
+export function endOf(called: CalledOnce, record: DeliveringRecord, clock: RenderClock): AttemptEnd {
   if (called.kind === 'answered') {
-    return endOfAnswer(called, record);
+    return endOfAnswer(called, record, clock);
   }
   const { refused, detail } = called;
   return {

@@ -1,3 +1,4 @@
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -13,7 +14,7 @@ const asksNoParty = 'A function with call answers at once and asks no party, so 
 
 describe('an interaction function that asks a system', () => {
   it('reads its call as written, and is summarised with the tool it calls', () => {
-    const parsed = Result.getOrThrow(parseInteractionDocument(callDocument()));
+    const parsed = Result.getOrThrow(parseInteractionDocument(callDocument(), standingRenderClock));
 
     expect(parsed).toMatchObject({
       shape: 'call',

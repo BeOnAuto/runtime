@@ -1,5 +1,5 @@
 import { refusingForbiddenCharacters } from '@on.auto/definitions';
-import type { ParsedTemplate } from '@on.auto/definitions/template';
+import { renderClock, type ParsedTemplate } from '@on.auto/definitions/template';
 import { Conflict, InvalidInput } from '@on.auto/operations';
 import { Effect, JsonPointer, Result, Schema } from 'effect';
 
@@ -69,10 +69,12 @@ export function renderedPart(
   part: RenderedPart,
   variables: Readonly<Record<string, Schema.Json>>,
 ): Effect.Effect<string, Conflict | InvalidInput> {
-  return Result.match(renderedText(part.template, variables, part.mostBytes), {
-    onSuccess: Effect.succeed,
-    onFailure: (failure) => Effect.fail(rejectionOf(part, failure)),
-  });
+  return Effect.flatMap(renderClock, (clock) =>
+    Result.match(renderedText(part.template, variables, part.mostBytes, clock), {
+      onSuccess: Effect.succeed,
+      onFailure: (failure) => Effect.fail(rejectionOf(part, failure)),
+    }),
+  );
 }
 
 export function checkedParty(party: string): Effect.Effect<string, Conflict> {

@@ -1,4 +1,5 @@
-import { Result } from 'effect';
+import { renderClock, type RenderClock } from '@on.auto/definitions/template';
+import { Effect, Result } from 'effect';
 
 import type { ReadingRoute } from '../conversations/conversation-parts.ts';
 import type { ConversationRow } from '../conversations/conversation-rows.ts';
@@ -23,9 +24,9 @@ export const nothingRead: ReadingState = {
 
 export const replyBoundsOfAReading = { told: 3, issues: 16 } as const;
 
-export function tellingInput({ replies }: ReadingRoute, request: KeptRequest, message: string) {
+export function tellingInput({ replies }: ReadingRoute, request: KeptRequest, message: string, clock: RenderClock) {
   const variables = { to: request.row.party, sent: { ...request.sent }, message };
-  const rendered = replies.tell === undefined ? undefined : renderedArguments(replies.tell.with, variables);
+  const rendered = replies.tell === undefined ? undefined : renderedArguments(replies.tell.with, variables, clock);
   return rendered !== undefined && Result.isSuccess(rendered) ? rendered.success.input : undefined;
 }
 
@@ -34,10 +35,11 @@ export function mayTell(state: ReadingState, request: KeptRequest): boolean {
 }
 
 export function readArguments({ replies }: ReadingRoute, row: ConversationRow, oldest: KeptRequest) {
-  return renderedArguments(replies.with, {
+  const variables = {
     to: oldest.row.party,
     sent: { ...oldest.sent },
     conversation: row.conversation,
     since: row.since ?? '',
-  });
+  };
+  return Effect.map(renderClock, (clock) => renderedArguments(replies.with, variables, clock));
 }

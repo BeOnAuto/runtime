@@ -1,7 +1,7 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
 import { Result, type Schema } from 'effect';
 
-import { compiledToolBlock, type WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
+import { compiledToolBlock, type DocumentReading, type WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;
@@ -23,15 +23,16 @@ function readingIssues({ deliver, output }: InteractionFrontMatter, lines: Sourc
 
 export function routeIn(
   written: InteractionFrontMatter,
-  lines: SourceLines,
+  reading: DocumentReading,
   inputSchema: Schema.JsonObject | undefined,
 ): Checked<WrittenRoute | null> {
+  const { lines } = reading;
   const { deliver, replies } = written;
   if (deliver === undefined) {
     return replies === undefined ? Result.succeed(null) : Result.fail([issueAt(lines, '/replies', inboxReadsNothing)]);
   }
   const shape = replies === undefined ? [] : readingIssues(written, lines);
-  const compiled = compiledToolBlock({ deliver, replies }, lines, inputSchema);
+  const compiled = compiledToolBlock({ deliver, replies }, reading, inputSchema);
   if (shape.length > 0) {
     return Result.fail([...shape, ...(Result.isFailure(compiled) ? compiled.failure : [])]);
   }

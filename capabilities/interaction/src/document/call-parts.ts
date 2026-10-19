@@ -1,7 +1,7 @@
 import { issueAt, type DocumentIssue, type DocumentParts, type SourceLines } from '@on.auto/definitions/document';
 import { Predicate, Result } from 'effect';
 
-import { compiledCallBlock } from '../tool-blocks/compiled-tool-block.ts';
+import { compiledCallBlock, type DocumentReading } from '../tool-blocks/compiled-tool-block.ts';
 import type { CallBlock } from '../tool-blocks/tool-block-schemas.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { CallDocument } from './interaction-document.ts';
@@ -40,12 +40,17 @@ function bodyIssues({ body, bodyLine }: DocumentParts): readonly DocumentIssue[]
 export function callFrom(
   written: InteractionFrontMatter,
   call: CallBlock,
-  lines: SourceLines,
+  reading: DocumentReading,
   parts: DocumentParts,
 ): Checked<CallDocument> {
+  const { lines } = reading;
   const input = contractOf(written.input, 'input', lines);
   const output = contractOf(written.output, 'output', lines);
-  const compiled = compiledCallBlock(call, lines, Result.isSuccess(input) ? input.success.schema?.document : undefined);
+  const compiled = compiledCallBlock(
+    call,
+    reading,
+    Result.isSuccess(input) ? input.success.schema?.document : undefined,
+  );
   const answered = Result.flatMap(output, ({ schema }) =>
     schema === undefined ? Result.fail([issueAt(lines, '/call', outputNeeded)]) : Result.succeed({ schema }),
   );

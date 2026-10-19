@@ -1,4 +1,5 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
+import type { RenderClock } from '@on.auto/definitions/template';
 import { isServerName, isToolName, serverNameShape, toolNameShape } from '@on.auto/tool-servers/policy';
 import { readDuration } from '@on.auto/workflow-engine/dsl';
 import { JsonPointer, Result, type Schema } from 'effect';
@@ -31,6 +32,11 @@ const pointerWords =
   'Expected a JSON Pointer such as /messages: it starts with a slash, writes ~ as ~0 and a slash within a name as ~1';
 
 const waitWords = 'Expected an ISO 8601 duration from PT5S to PT1H, such as PT1M';
+
+export interface DocumentReading {
+  readonly lines: SourceLines;
+  readonly clock: RenderClock;
+}
 
 function placeOf(...path: readonly string[]): string {
   return path.map((segment) => `/${JsonPointer.escapeToken(segment)}`).join('');
@@ -88,7 +94,7 @@ function readArgumentIssues(replies: Replies, place: TemplatePlace): readonly Do
   if (written.length > 0) {
     return written;
   }
-  return Result.match(renderedArguments(replies.with, readingTemplates.sample), {
+  return Result.match(renderedArguments(replies.with, readingTemplates.sample, place.clock), {
     onSuccess: () => [],
     onFailure: (failure) => [
       issueAt(
@@ -132,10 +138,10 @@ function readingIssues(replies: Replies, place: TemplatePlace): readonly Documen
 
 export function compiledToolBlock(
   written: WrittenRoute,
-  lines: SourceLines,
+  { lines, clock }: DocumentReading,
   inputSchema: Schema.JsonObject | undefined,
 ): Result.Result<WrittenRoute, readonly DocumentIssue[]> {
-  const place = { lines, pointer: '', inputSchema };
+  const place = { lines, pointer: '', inputSchema, clock };
   const issues = [
     ...deliveryIssues(written, place),
     ...(written.replies === undefined ? [] : readingIssues(written.replies, place)),
@@ -153,7 +159,7 @@ function callArgumentIssues(written: Templates, place: TemplatePlace): readonly 
   if (issues.length > 0) {
     return issues;
   }
-  const rendered = renderedArguments(written, callTemplates.sample);
+  const rendered = renderedArguments(written, callTemplates.sample, place.clock);
   if (Result.isSuccess(rendered) || !isOversized(rendered.failure)) {
     return [];
   }
@@ -164,13 +170,13 @@ function callArgumentIssues(written: Templates, place: TemplatePlace): readonly 
 
 export function compiledCallBlock(
   call: CallBlock,
-  lines: SourceLines,
+  { lines, clock }: DocumentReading,
   inputSchema: Schema.JsonObject | undefined,
 ): Result.Result<CallBlock, readonly DocumentIssue[]> {
   const issues = [
     ...nameIssues(lines, [[placeOf('call', 'server'), call.server]], isServerName, serverNameShape),
     ...nameIssues(lines, [[placeOf('call', 'tool'), call.tool]], isToolName, toolNameShape),
-    ...callArgumentIssues(call.with ?? {}, { lines, pointer: '', inputSchema }),
+    ...callArgumentIssues(call.with ?? {}, { lines, pointer: '', inputSchema, clock }),
     ...pointerIssues(lines, [[placeOf('call', 'read'), call.read]]),
   ];
   return issues.length > 0 ? Result.fail(issues) : Result.succeed(call);

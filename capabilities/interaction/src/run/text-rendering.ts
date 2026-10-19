@@ -1,6 +1,12 @@
 import { Buffer } from 'node:buffer';
 
-import { outputText, renderedTemplate, type ParsedTemplate, type RenderFailure } from '@on.auto/definitions/template';
+import {
+  outputText,
+  renderedTemplate,
+  type ParsedTemplate,
+  type RenderClock,
+  type RenderFailure,
+} from '@on.auto/definitions/template';
 import { Predicate, Result, type Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
@@ -51,10 +57,11 @@ export function renderedText(
   parsed: ParsedTemplate,
   variables: Readonly<Record<string, Schema.Json>>,
   mostBytes: number,
+  clock: RenderClock,
 ): Result.Result<string, TextFailure> {
   const emitter = textEmitter(mostBytes);
   return Result.map(
-    renderedTemplate(interactionEngine, parsed, { variables, emitter, refusalOf }),
+    renderedTemplate(interactionEngine, parsed, { variables, emitter, refusalOf, clock }),
     () => emitter.buffer,
   );
 }

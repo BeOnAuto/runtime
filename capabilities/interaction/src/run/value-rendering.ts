@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import { renderedTemplate, type ParsedTemplate } from '@on.auto/definitions/template';
+import { renderedTemplate, type ParsedTemplate, type RenderClock } from '@on.auto/definitions/template';
 import { Result, Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
@@ -49,10 +49,11 @@ export function renderedValue(
   parsed: ParsedTemplate,
   variables: Readonly<Record<string, Schema.Json>>,
   mostBytes: number,
+  clock: RenderClock,
 ): Result.Result<Schema.Json, TextFailure> {
   const emitter = valueEmitter();
   return Result.flatMap(
-    renderedTemplate<never>(interactionEngine, parsed, { variables, emitter, refusalOf: noRefusal }),
+    renderedTemplate<never>(interactionEngine, parsed, { variables, emitter, refusalOf: noRefusal, clock }),
     () => checkedValue(emitter.values[0], mostBytes, parsed.firstLine),
   );
 }

@@ -1,3 +1,4 @@
+import { renderClock } from '@on.auto/definitions/template';
 import type { Issue } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
@@ -57,8 +58,9 @@ interface Refusal {
 
 function refusedReply(reading: Reading, state: ReadingState, { request, reply, because, issues }: Refusal) {
   return Effect.gen(function* () {
+    const clock = yield* renderClock;
     const input = mayTell(state, request)
-      ? tellingInput(reading.route, request, tellingWords(request.rule, because, issues))
+      ? tellingInput(reading.route, request, tellingWords(request.rule, because, issues), clock)
       : undefined;
     const kept = issues.slice(0, replyBoundsOfAReading.issues);
     const fact: ReplyRefused = {

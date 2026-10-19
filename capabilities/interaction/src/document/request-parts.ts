@@ -1,15 +1,9 @@
-import {
-  issueAt,
-  type DocumentParts,
-  type ReadFrontMatter,
-  type SourceLines,
-  type ValueContract,
-} from '@on.auto/definitions/document';
+import { issueAt, type DocumentParts, type ValueContract } from '@on.auto/definitions/document';
 import type { ParsedTemplate } from '@on.auto/definitions/template';
 import { Result } from 'effect';
 
 import type { ReplyRule } from '../replies/reply-rule.ts';
-import type { WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
+import type { DocumentReading, WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { RequestDocument } from './interaction-document.ts';
 import { fromOf, replyOf } from './reply-parts.ts';
@@ -35,14 +29,15 @@ type CheckedParts = {
 function partsOf(
   written: InteractionFrontMatter,
   asked: Asked,
-  lines: SourceLines,
+  reading: DocumentReading,
   parts: DocumentParts,
 ): CheckedParts {
+  const { lines } = reading;
   const input = contractOf(written.input, 'input', lines);
   const output = contractOf(written.output, 'output', lines);
   const inputSchema = Result.isSuccess(input) ? input.success.schema?.document : undefined;
   return {
-    route: routeIn(written, lines, inputSchema),
+    route: routeIn(written, reading, inputSchema),
     expires: expiresOf(asked.expires, lines),
     input,
     output,
@@ -88,9 +83,10 @@ const unaskedWords = {
 
 export function requestFrom(
   written: InteractionFrontMatter,
-  { lines }: Pick<ReadFrontMatter, 'lines'>,
+  reading: DocumentReading,
   parts: DocumentParts,
 ): Checked<RequestDocument> {
+  const { lines } = reading;
   const { to, expires } = written;
   if (to === undefined || expires === undefined) {
     const unasked = (['to', 'expires'] as const).filter((key) => written[key] === undefined);
@@ -99,7 +95,7 @@ export function requestFrom(
       ...issuesOf(() => messageOf(parts)),
     ]);
   }
-  const checked = partsOf(written, { to, expires }, lines, parts);
+  const checked = partsOf(written, { to, expires }, reading, parts);
   const found = [
     ...issuesOf(() => checked.route),
     ...issuesOf(() => checked.expires),

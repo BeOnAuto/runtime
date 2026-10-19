@@ -140,10 +140,14 @@ describe('a run whose call was sent and could not finish', () => {
   });
 
   it('keeps the wait a 429 asked for past the longest a run waits, and ends a call that took too long', async () => {
-    const { fake, run } = await callRuns({ timing: { ...patientTiming, callMs: 300 } });
-    fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '20' });
+    const throttled = await callRuns({ timing: patientTiming });
+    const hurried = await callRuns({ timing: { ...patientTiming, callMs: 300 } });
+    throttled.fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '20' });
 
-    expect([await run(asking('search', ['    query: acme'])), await run(asking('sleep', ['    ms: 5000']))]).toEqual([
+    expect([
+      await throttled.run(asking('search', ['    query: acme'])),
+      await hurried.run(asking('sleep', ['    ms: 5000'])),
+    ]).toEqual([
       rejectedWith({ kind: 'tools_unfinished', because: 'server_failed', record: { retry_after_ms: 20_000 } }),
       rejectedWith({
         kind: 'tools_unfinished',

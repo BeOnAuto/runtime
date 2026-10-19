@@ -1,5 +1,10 @@
 import type { CapabilityAnswer, CapabilityRejection, RunContext } from '@on.auto/definitions';
-import { noLongestRuns, recordingJournal, type RecordingJournal } from '@on.auto/definitions/testing';
+import {
+  noLongestRuns,
+  onTheStandingClock,
+  recordingJournal,
+  type RecordingJournal,
+} from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
 import type { Timing } from '@on.auto/tool-servers';
 import { reportingAccess, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/testing';
@@ -62,6 +67,8 @@ export async function callRuns(options: CallRunOptions = {}): Promise<CallRuns> 
     fake,
     journal,
     run: (source, input = threadInput) =>
-      Effect.runPromiseExit(Effect.flatMap(capability.prepare(source), (prepared) => prepared.run(input, context))),
+      Effect.runPromiseExit(
+        onTheStandingClock(Effect.flatMap(capability.prepare(source), (prepared) => prepared.run(input, context))),
+      ),
   };
 }

@@ -5,6 +5,7 @@ import {
   type CapabilityRejection,
   type RunContext,
 } from '@on.auto/definitions';
+import { renderClock } from '@on.auto/definitions/template';
 import type { Conflict, InvalidInput } from '@on.auto/operations';
 import { toolBounds, type ToolAccess } from '@on.auto/tool-servers';
 import { runIdKey } from '@on.auto/tool-servers/policy';
@@ -40,10 +41,12 @@ function argumentsOf(
   { call }: CallDocument,
   variables: Readonly<Record<string, Schema.Json>>,
 ): Effect.Effect<Readonly<Record<string, Schema.Json>>, Conflict | InvalidInput> {
-  return Result.match(renderedArguments(call.with ?? {}, variables), {
-    onSuccess: ({ input }) => Effect.succeed(input),
-    onFailure: (failure) => Effect.fail(argumentsRejection(failure)),
-  });
+  return Effect.flatMap(renderClock, (clock) =>
+    Result.match(renderedArguments(call.with ?? {}, variables, clock), {
+      onSuccess: ({ input }) => Effect.succeed(input),
+      onFailure: (failure) => Effect.fail(argumentsRejection(failure)),
+    }),
+  );
 }
 
 export function callRun(ports: CallPorts) {
