@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import { usersOf } from './definition-users.ts';
+import { overviewTitled } from '../testing/overview-sections.ts';
+import { definitionsCalled, usersOf } from './definition-users.ts';
 
 const at = '2026-10-01T09:00:00.000Z';
 
@@ -13,7 +14,7 @@ function saved(name: string, details?: Schema.JsonObject, status: 'active' | 're
     version: 1,
     status,
     source: '',
-    overview: `# ${name}\n`,
+    overview: overviewTitled(name),
     created_at: at,
     created_by: 'acme-admin',
     updated_at: at,
@@ -115,5 +116,82 @@ describe('the users of a definition', () => {
       usersOf(registries, { type: 'workflow', name: 'again' }),
       usersOf(new Map(), reviewBrief),
     ]).toEqual([[], [], []]);
+  });
+});
+
+const steppedRegistries = new Map([
+  [
+    'workflow',
+    registryOf(
+      saved('monthly-report', {
+        title: 'Monthly website report',
+        calls: [
+          {
+            ...reviewBrief,
+            steps: [
+              { number: 3, name: 'review' },
+              { number: 6, name: 'review-again' },
+            ],
+          },
+          { type: 'interaction', name: 'send-draft', steps: [{ number: 4, name: 'send' }] },
+          { type: 'computation', name: 'month-window', steps: [{ number: 1, name: 'window' }] },
+          { type: 'workflow', name: 'weekly-review', steps: [{ number: 7, name: 'weekly' }] },
+          { ...sendBuild, role: 'trainer' },
+          { type: 'reasoning', name: 'unstepped' },
+        ],
+      }),
+      saved('weekly-review', { title: 7, calls: [reviewBrief] }),
+    ),
+  ],
+  ['reasoning', registryOf({ ...saved('review-brief'), description: 'Reviews a brief' }, saved('unstepped'))],
+  ['interaction', registryOf(saved('send-draft', undefined, 'retired'))],
+]);
+
+describe('the users of a definition that a workflow calls by its steps', () => {
+  it('are the workflow once, with the steps that call it, each its number and its name, and the title of the workflow', () => {
+    expect(usersOf(steppedRegistries, reviewBrief)).toEqual([
+      {
+        type: 'workflow',
+        name: 'monthly-report',
+        title: 'Monthly website report',
+        relation: 'calls',
+        steps: [
+          { number: 3, name: 'review' },
+          { number: 6, name: 'review-again' },
+        ],
+      },
+      { type: 'workflow', name: 'weekly-review', relation: 'calls' },
+    ]);
+  });
+});
+
+describe('the definitions a definition calls', () => {
+  it('are those its calls name with the steps that call them, in their order, each as the playbook holds it', () => {
+    expect(
+      definitionsCalled(steppedRegistries, steppedRegistries.get('workflow')?.get('monthly-report')?.details),
+    ).toEqual([
+      { type: 'reasoning', name: 'review-brief', standing: 'active', description: 'Reviews a brief' },
+      { type: 'interaction', name: 'send-draft', standing: 'retired' },
+      { type: 'computation', name: 'month-window', standing: 'missing' },
+      { type: 'workflow', name: 'weekly-review', standing: 'active' },
+    ]);
+  });
+
+  it('are none for a definition whose calls say no step, or whose details name none', () => {
+    expect([
+      definitionsCalled(registries, registries.get('workflow')?.get('weekly-review')?.details),
+      definitionsCalled(registries, registries.get('workflow')?.get('every-call')?.details),
+      definitionsCalled(registries),
+    ]).toEqual([[], [], []]);
+  });
+
+  it('carry the title a called workflow records', () => {
+    const titled = new Map([['workflow', registryOf(saved('weekly-review', { title: 'The weekly review' }))]]);
+
+    expect(
+      definitionsCalled(titled, {
+        calls: [{ type: 'workflow', name: 'weekly-review', steps: [{ number: 1, name: 'go' }] }],
+      }),
+    ).toEqual([{ type: 'workflow', name: 'weekly-review', title: 'The weekly review', standing: 'active' }]);
   });
 });

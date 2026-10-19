@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionPresenters } from '../index.ts';
 import type { DefinitionEvent } from '../registry/definition-events.ts';
 import { echo } from '../testing/echo.ts';
+import { overviewTitled } from '../testing/overview-sections.ts';
 
 const { present } = presentationOf(makeDefinitionPresenters([echo]));
 
@@ -38,10 +39,10 @@ function presented(event: DefinitionEvent, version?: number, type = 'echo') {
 }
 
 describe('the presenter of the definitions of a capability', () => {
-  it('presents a definition created with the size of its document, of its overview and what its capability said of it', () => {
+  it('presents a definition created with the size of its document, of its overview as written and what its capability said of it', () => {
     const content = {
       source: '{"greeting":"Hé"}',
-      overview: '# greet\n\nGreets é\n',
+      overview: overviewTitled('greet', 'Greets é'),
       description: 'Greets',
       input_schema: { type: 'object' },
       output_schema: { type: 'string' },
@@ -67,11 +68,14 @@ describe('the presenter of the definitions of a capability', () => {
 describe('the presenter of the changes to a definition', () => {
   it('presents an update with its version, and a document its capability said little of', () => {
     expect(
-      presented({ type: 'definition_updated', data: { content: { source: 'Hi', overview: '# greet\n' } } }, 150),
+      presented(
+        { type: 'definition_updated', data: { content: { source: 'Hi', overview: overviewTitled('greet') } } },
+        150,
+      ),
     ).toMatchObject({
       type: 'definition_updated',
       summary: 'The greeting “greet” was updated to version one hundred and fifty.',
-      data: { source_bytes: 2, overview_bytes: 8, warning_count: 0 },
+      data: { source_bytes: 2, overview_bytes: 10, warning_count: 0 },
     });
   });
 
@@ -89,7 +93,10 @@ describe('the presenter of the changes to a definition', () => {
 
     expect(
       presented(
-        { type: 'definition_created', data: { content: { source: 'Hi', overview: '# greet\n', description } } },
+        {
+          type: 'definition_created',
+          data: { content: { source: 'Hi', overview: overviewTitled('greet'), description } },
+        },
         1,
       ),
     ).toMatchObject({ data: { description: `${'😀'.repeat(299)}a` } });
@@ -97,7 +104,7 @@ describe('the presenter of the changes to a definition', () => {
 
   it('fails on an update recorded without its version, which a presenter never hides', () => {
     expect(() =>
-      presented({ type: 'definition_updated', data: { content: { source: 'Hi', overview: '# greet\n' } } }),
+      presented({ type: 'definition_updated', data: { content: { source: 'Hi', overview: overviewTitled('greet') } } }),
     ).toThrow('definitionVersion');
   });
 });

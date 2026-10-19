@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { overviewTitled } from '@on.auto/definitions/testing';
 import type { AppendSignal, EncodedEvent, EventStore } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
 import type { Schema } from 'effect';
@@ -18,7 +19,7 @@ type Ran = (subject: string, output: Schema.Json, more?: RunOf) => Promise<strin
 
 export interface PlaybookAppends {
   readonly append: Append;
-  readonly saved: (name: string, details: ViewDetails, playbook?: Playbook) => Promise<void>;
+  readonly saved: (name: string, details?: ViewDetails, playbook?: Playbook) => Promise<void>;
   readonly retired: (name: string) => Promise<void>;
   readonly ran: Ran;
   readonly ranEach: (subject: string, outputs: readonly Schema.Json[]) => Promise<unknown>;
@@ -68,7 +69,11 @@ function savedBy(append: Append, definitions: Map<string, number>): PlaybookAppe
     const version = (definitions.get(key) ?? 0) + 1;
     definitions.set(key, version);
     const type = version === 1 ? 'definition_created' : 'definition_updated';
-    const content = { source: `the ${name} document, version ${version}`, overview: `# ${name}\n`, details };
+    const content = {
+      source: `the ${name} document, version ${version}`,
+      overview: overviewTitled(name),
+      ...(details === undefined ? {} : { details }),
+    };
     await append(`${streamPrefixOfPlaybook(playbook)}definitions/recall`, [{ type, data: { content } }], {
       by: 'acme-admin',
       at: savedAt,

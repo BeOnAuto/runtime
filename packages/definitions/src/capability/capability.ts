@@ -12,7 +12,7 @@ import type {
 import type { CallEnded, CallStarted } from '@on.auto/tool-servers';
 import { Effect, type Schema } from 'effect';
 
-import { writtenOverview, type OverviewParts } from '../overview/definition-overview.ts';
+import { composedOverview, type OverviewParts } from '../overview/definition-overview.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
@@ -161,7 +161,7 @@ export interface CapabilityDeclaration<Parsed> {
 
 export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
-  readonly overview: (name: string) => string;
+  readonly overview: (name: string) => ReturnType<typeof composedOverview>;
   readonly check: (saved: SavedDefinitions) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
@@ -283,7 +283,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
           const summary = summarize(parsed);
           return {
             summary,
-            overview: (name) => writtenOverview({ name, noun, summary, parts: overview?.(parsed, name, { summary }) }),
+            overview: (name) => composedOverview({ name, noun, summary, parts: overview?.(parsed, name, { summary }) }),
             check: (saved) => Effect.suspend(() => check(parsed, source, saved)),
             run: (input, context) => run(parsed, input, context, stripped),
             whenCancelled,

@@ -2,13 +2,17 @@ import type { Context, RecordedFact } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { DefinitionEvent } from '../registry/definition-events.ts';
-import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import {
+  CloudEventSchema,
+  definitionTypeStreamOf,
+  playbookEventOf,
+  playbookFactOf,
+  type DefinitionEvent,
+  type RunEvent,
+} from '../index.ts';
 import { runStreamNameOf } from '../runs/run-decider.ts';
-import type { RunEvent } from '../runs/run-events.ts';
+import { overviewTitled } from '../testing/overview-sections.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
-import { CloudEventSchema } from './cloud-event.ts';
-import { playbookEventOf, playbookFactOf } from './playbook-facts.ts';
 
 const recordId = '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3';
 
@@ -121,7 +125,10 @@ describe('the records of a run that are no facts', () => {
   });
 });
 
-const content = { source: '---\nmodel: anthropic/claude-sonnet-4-5\n---\nSummarize.', overview: '# summary\n' };
+const content = {
+  source: '---\nmodel: anthropic/claude-sonnet-4-5\n---\nSummarize.',
+  overview: overviewTitled('summary'),
+};
 
 describe('the facts of a definition as events', () => {
   it('are its creation, its changes and its retirement, about the definition and its version, with no subject and no data', () => {

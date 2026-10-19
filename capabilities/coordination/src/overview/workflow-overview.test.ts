@@ -24,7 +24,7 @@ function goldenOf(name: string): string {
 }
 
 function overviewOf(source: string, name = 'flow'): string {
-  return Effect.runSync(workflows.prepare(source)).overview(name);
+  return markdownOf(Effect.runSync(workflows.prepare(source)).overview(name));
 }
 
 const [reviewAndApprove = '', schedule = ''] = yamlBlocksOf('workflow-format.md');

@@ -9,7 +9,7 @@ import { openWorkflowStore } from '../src/host/workflow-store.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
 import { reviewsFold } from '../src/views-testing/campaign-reviews.ts';
-import { measuredViewOf, measuredViews } from './measured-views.ts';
+import { measuredViewOf, measuredViews, recallContentOf } from './measured-views.ts';
 
 export interface Rebuild {
   readonly events: number;
@@ -68,7 +68,12 @@ async function recorded(database: HostDatabase, events: number): Promise<void> {
   };
   await database.store.append(
     `${playbook}definitions/recall`,
-    [{ type: 'definition_created', data: { content: { source: 'reviews', overview: '# reviews\n', details } } }],
+    [
+      {
+        type: 'definition_created',
+        data: { content: recallContentOf('reviews', details) },
+      },
+    ],
     { expectedVersion: 0, context },
   );
 }

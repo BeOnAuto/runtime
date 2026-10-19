@@ -1,6 +1,7 @@
 import { blockQuoted, escapedInline, oneLine, phrasesText, type Part } from './markdown-text.ts';
 import { mermaidOf } from './mermaid-diagram.ts';
 import {
+  decodedOverview,
   named,
   type FieldRow,
   type FieldTable,
@@ -13,8 +14,6 @@ import {
 
 export const mostOverviewBytes = 65_536;
 
-export const mostTableRows = 50;
-
 const counted = new Intl.NumberFormat('en');
 
 const cutLine = `*The overview stops here, at the ${counted.format(mostOverviewBytes)} bytes an overview may take; the whole definition is under Source.*`;
@@ -22,8 +21,6 @@ const cutLine = `*The overview stops here, at the ${counted.format(mostOverviewB
 const detailsHeading = '## Details';
 
 const blockSeparator = '\n\n';
-
-const finalLineBreak = /\n$/u;
 
 const utf8 = new TextEncoder();
 
@@ -48,13 +45,12 @@ function fieldRow({ name, required, words }: FieldRow, part: Part): string {
   ]);
 }
 
-function fieldTableText({ rows }: FieldTable, part: Part): string {
-  const more = rows.length - mostTableRows;
+function fieldTableText({ rows, more }: FieldTable, part: Part): string {
   return [
     tableRow(['Field', 'Required', 'What it is']),
     tableRow(['---', '---', '---']),
-    ...rows.slice(0, mostTableRows).map((row) => fieldRow(row, part)),
-    ...(more > 0 ? [tableRow([`and ${more} more`, '', ''])] : []),
+    ...rows.map((row) => fieldRow(row, part)),
+    ...(more === undefined ? [] : [tableRow([`and ${more} more`, '', ''])]),
   ].join('\n');
 }
 
@@ -147,10 +143,6 @@ export function markdownOf({ title, opening, body, sections, appendix }: Overvie
   return `${withCutLine(detailsWithin(story, appendix)).join(blockSeparator)}\n`;
 }
 
-export function appendedSection(markdown: string, section: OverviewSection): string {
-  const written = markdown.replace(finalLineBreak, '');
-  const { kept, cut } = blocksWithin([written, ...sectionText(section, '##', 'body')]);
-  return written.endsWith(cutLine) || kept[0] !== written
-    ? markdown
-    : `${withCutLine({ kept, cut }).join(blockSeparator)}\n`;
+export function markdownOfKept(kept: unknown): string {
+  return markdownOf(decodedOverview(kept));
 }

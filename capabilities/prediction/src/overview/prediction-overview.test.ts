@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { markdownOf } from '@on.auto/definitions';
 import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
@@ -20,7 +21,7 @@ function goldenOf(name: string): string {
 }
 
 function overviewOf(source: string): string {
-  return predictionRuns().prepared(source).overview('weekly-orders');
+  return markdownOf(predictionRuns().prepared(source).overview('weekly-orders'));
 }
 
 function withDataPart(data: string): string {

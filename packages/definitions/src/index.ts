@@ -209,7 +209,9 @@ export { checkedInput, refusedByTheInputSchema, refusedInput, wordedIssuesOf } f
 export { checkedWorker } from './checking/worker-url.ts';
 export {
   bulletList,
+  definitionPhrase,
   listedPhrases,
+  mostTableRows,
   named,
   numberedList,
   paragraph,
@@ -228,12 +230,13 @@ export {
   type OverviewSection,
   type Paragraph,
   type Phrase,
+  type PhrasedDefinition,
   type Phrases,
   type Quote,
 } from './overview/overview.ts';
 export { durationInWords } from './overview/duration-words.ts';
 export { eventFilterPhrases, type EventFilter } from './overview/event-filter-words.ts';
-export { appendedSection, markdownOf, mostOverviewBytes, mostTableRows } from './overview/markdown-writer.ts';
+export { markdownOf, mostOverviewBytes } from './overview/markdown-writer.ts';
 export { describedSchemaBlocks, mostFieldDescriptionCharacters, schemaBlocks } from './overview/schema-words.ts';
 export { plainTextOf } from './overview/markdown-text.ts';
 export { isJsonSchema } from './overview/schema-reading.ts';
@@ -249,12 +252,13 @@ export { publishedOutputOf } from './shapes/published-output.ts';
 export { seriesBounds, seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { periodNouns, seriesPathBlocks } from './shapes/shape-words.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
+export { composedOverview, inputSection, outputSection, type OverviewParts } from './overview/definition-overview.ts';
+export { overviewAtRead, type ReadKnowledge } from './used-by/overview-at-read.ts';
+export type { DefinitionCalled, DefinitionUser } from './used-by/user-relations.ts';
 export {
-  inputSection,
-  outputSection,
-  usedBySection,
-  writtenOverview,
-  type OverviewParts,
-} from './overview/definition-overview.ts';
-export { CalledDefinitionSchema, type CalledDefinition } from './used-by/called-definitions.ts';
-export type { DefinitionUser, NamedDefinition, UserRelation } from './used-by/user-relations.ts';
+  CalledDefinitionSchema,
+  type CalledDefinition,
+  type CallingStep,
+  type NamedDefinition,
+  type UserRelation,
+} from './used-by/called-definitions.ts';

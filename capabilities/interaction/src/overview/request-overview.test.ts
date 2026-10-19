@@ -1,3 +1,4 @@
+import { markdownOf } from '@on.auto/definitions';
 import { sectionIn } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -14,7 +15,7 @@ import {
 const { capability } = interactionHarness();
 
 function overviewOf(source: string): string {
-  return Effect.runSync(capability.prepare(source)).overview('approve-brief');
+  return markdownOf(Effect.runSync(capability.prepare(source)).overview('approve-brief'));
 }
 
 function waitOf(expires: string): string {

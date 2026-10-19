@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { markdownOf } from '@on.auto/definitions';
 import { sectionIn } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
@@ -26,7 +27,7 @@ function goldenOf(file: string): string {
 
 function overviewOf(frontMatter: readonly string[], answer?: string): string {
   const source = recallDocument(foldOf('return view;', answer), frontMatter.join('\n'));
-  return recallWith().prepared(source).overview('reviews');
+  return markdownOf(recallWith().prepared(source).overview('reviews'));
 }
 
 function rememberedOf(...filters: readonly string[]): readonly string[] {
@@ -49,8 +50,10 @@ describe('the overviews of the examples of the reference of recall functions', (
   it('are, byte for byte, the overviews pinned beside this test', () => {
     const { prepared } = recallWith();
 
-    expect(prepared(reviewsExample).overview('campaign-reviews')).toBe(goldenOf('reference-example.overview.md'));
-    expect(prepared(announcementsExample).overview('announcements')).toBe(
+    expect(markdownOf(prepared(reviewsExample).overview('campaign-reviews'))).toBe(
+      goldenOf('reference-example.overview.md'),
+    );
+    expect(markdownOf(prepared(announcementsExample).overview('announcements'))).toBe(
       goldenOf('reference-common-case.overview.md'),
     );
   });

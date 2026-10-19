@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   listedPhrases,
   markdownOf,
+  mostTableRows,
   named,
   numberedList,
   paragraph,
@@ -11,6 +12,7 @@ import {
   type Diagram,
   type OverviewBlock,
 } from '../index.ts';
+import { fieldTable } from './overview.ts';
 
 function writtenBlock(block: OverviewBlock): string {
   return String(
@@ -178,5 +180,50 @@ describe('phrases listed in an overview', () => {
       listedPhrases([[named('a')], ['b']], 'and'),
       listedPhrases([[named('a')], ['b', { code: 'c' }], ['d']], 'or'),
     ]).toEqual([[], [named('a')], [named('a'), ' and ', 'b'], [named('a'), ', ', 'b', { code: 'c' }, ', or ', 'd']]);
+  });
+});
+
+describe('a table of fields an overview composes', () => {
+  it(`keeps ${mostTableRows} rows and the count of the rest, so what a fact keeps is bounded as what is written`, () => {
+    const rows = Array.from({ length: mostTableRows + 3 }, (_, index) => ({
+      name: `field-${index}`,
+      required: false,
+      words: ['Text.'],
+    }));
+
+    expect([fieldTable(rows), fieldTable(rows.slice(0, mostTableRows))]).toEqual([
+      { kind: 'fields', rows: rows.slice(0, mostTableRows), more: 3 },
+      { kind: 'fields', rows: rows.slice(0, mostTableRows) },
+    ]);
+  });
+});
+
+describe('phrases listed in an overview whose items hold commas', () => {
+  it('separate two items with a serial comma when asked and an item holds one, and three as English lists them', () => {
+    const steps = [
+      ['in step 3, ', named('Review')],
+      ['in step 6, ', named('Review again')],
+    ];
+
+    expect([
+      listedPhrases(steps, 'and', 'serial-when-items-hold-commas'),
+      listedPhrases(steps, 'and'),
+      listedPhrases([['a'], ['b']], 'or', 'serial-when-items-hold-commas'),
+      listedPhrases([...steps, ['in step 7, ', named('Send')]], 'and', 'serial-when-items-hold-commas'),
+    ]).toEqual([
+      ['in step 3, ', named('Review'), ', and ', 'in step 6, ', named('Review again')],
+      ['in step 3, ', named('Review'), ' and ', 'in step 6, ', named('Review again')],
+      ['a', ' or ', 'b'],
+      [
+        'in step 3, ',
+        named('Review'),
+        ', ',
+        'in step 6, ',
+        named('Review again'),
+        ', and ',
+        'in step 7, ',
+        named('Send'),
+      ],
+    ]);
   });
 });

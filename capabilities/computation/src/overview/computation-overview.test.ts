@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { markdownOf } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import { computationWith } from '../testing/computation-runs.ts';
@@ -16,13 +17,13 @@ const [, shapedExample = ''] = [...shapesPage.matchAll(/```markdown\n([\s\S]*?)`
 
 describe('the overview of the example of the reference of computation functions', () => {
   it('is, byte for byte, the overview pinned beside this test', () => {
-    expect(computationWith().prepared(example).overview('campaign-pace')).toBe(golden);
+    expect(markdownOf(computationWith().prepared(example).overview('campaign-pace'))).toBe(golden);
   });
 });
 
 describe('the overview of the computation function of the reference of output shapes', () => {
   it('is, byte for byte, the overview pinned beside this test', () => {
-    expect(computationWith().prepared(shapedExample).overview('monthly-sign-ups')).toBe(
+    expect(markdownOf(computationWith().prepared(shapedExample).overview('monthly-sign-ups'))).toBe(
       readFileSync(new URL('shaped-example.overview.md', import.meta.url), 'utf8'),
     );
   });
@@ -39,7 +40,7 @@ describe('the overview of a computation function', () => {
       '}',
     ];
 
-    expect(computationWith().prepared(source.join('\n')).overview('echo')).toBe(
+    expect(markdownOf(computationWith().prepared(source.join('\n')).overview('echo'))).toBe(
       [
         '# echo',
         'This computation function has no description yet.',

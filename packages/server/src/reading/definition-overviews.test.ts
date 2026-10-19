@@ -74,9 +74,16 @@ const namingSendBuild: readonly Saved[] = [
 const usedBySendBuild = [
   '## Used by',
   [
-    '- The prediction function **weekly-orders** sends it builds to train.',
-    '- The recall function **build-answers** remembers its runs.',
-    '- The workflow **weekly-build** calls it.\n',
+    '- The prediction function **Weekly orders** sends it builds to train.',
+    '- The recall function **Build answers** remembers its runs.',
+    '- The workflow **Weekly build** calls it.',
+  ].join('\n'),
+  '## Details',
+  '### Used by',
+  [
+    '- `weekly-orders`, a prediction function',
+    '- `build-answers`, a recall function',
+    '- `weekly-build`, a workflow\n',
   ].join('\n'),
 ].join('\n\n');
 

@@ -92,16 +92,7 @@ function slotTests(settingsOf: SettingsOf): void {
 
   it('keep none for a version whose details it cannot read', async () => {
     const views = await viewHarness(await settingsOf());
-    const content = { source: 'a document saved before views were kept', overview: '# older\n' };
-    const event = {
-      type: 'definition_created',
-      name: 'older',
-      version: 1,
-      content,
-      by: 'acme-admin',
-      at: '2026-10-06T09:00:00.000Z',
-    };
-    await views.append(`${alphaKey}definitions/recall`, [{ type: 'definition_created', data: event }]);
+    await views.saved('older');
     await views.saved('runs', counting);
 
     const rows = await reconciling(views, 4)();

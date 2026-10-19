@@ -1,5 +1,4 @@
-import { randomUUID } from 'node:crypto';
-
+import { overviewTitled } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -21,7 +20,7 @@ const saved = {
   definitionVersion: 1,
 };
 
-const [firstRun, secondRun] = [randomUUID(), randomUUID()];
+const [firstRun, secondRun] = [crypto.randomUUID(), crypto.randomUUID()];
 
 function ranBy(runId: string) {
   return {
@@ -46,7 +45,13 @@ async function projected() {
     [
       {
         type: 'definition_created',
-        data: { content: { source: 'runs', overview: '# runs\n', details: { counts: 'run_succeeded' } } },
+        data: {
+          content: {
+            source: 'runs',
+            overview: overviewTitled('runs'),
+            details: { counts: 'run_succeeded' },
+          },
+        },
       },
     ],
     saved,

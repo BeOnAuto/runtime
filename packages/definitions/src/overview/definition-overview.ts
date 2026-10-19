@@ -1,13 +1,10 @@
 import type { Noun } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
-import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { undescribedSentence } from '../overview-words/value-words.ts';
 import type { OutputShape } from '../shapes/output-shape.ts';
 import { shapeBlocks } from '../shapes/shape-words.ts';
-import type { DefinitionUser, UserRelation } from '../used-by/user-relations.ts';
-import { appendedSection, markdownOf } from './markdown-writer.ts';
-import { bulletList, named, sectionOf, type Overview, type OverviewSection } from './overview.ts';
+import { sectionOf, type Overview, type OverviewSection } from './overview.ts';
 import { schemaBlocks } from './schema-words.ts';
 
 export type OverviewParts = Pick<Overview, 'body' | 'sections' | 'appendix'>;
@@ -36,27 +33,6 @@ export function outputSection(schema?: Schema.JsonObject, shape?: OutputShape): 
   );
 }
 
-const relationWords: Readonly<Record<UserRelation, string>> = {
-  calls: 'calls it',
-  'sends-builds': 'sends it builds to train',
-  'asks-approval': 'asks it to approve a version',
-  'remembers-runs': 'remembers its runs',
-  'remembers-changes': 'remembers its changes',
-};
-
-export function usedBySection(users: readonly DefinitionUser[]): OverviewSection {
-  return sectionOf(
-    'Used by',
-    bulletList(
-      users.map(({ type, name, relation }) => [
-        `The ${definitionResourceLabel(type)} `,
-        named(name),
-        ` ${relationWords[relation]}.`,
-      ]),
-    ),
-  );
-}
-
 function openingOf(description: string | undefined, noun: Noun): string {
   return description === undefined || description.trim() === ''
     ? `This ${noun.one} has no description yet.`
@@ -67,18 +43,10 @@ function typeWideParts({ inputSchema, outputSchema }: OverviewSubject): Overview
   return { body: [], sections: [inputSection(inputSchema), outputSection(outputSchema)], appendix: [] };
 }
 
-function overviewOf({ name, noun, summary, parts }: OverviewRequest): Overview {
+export function composedOverview({ name, noun, summary, parts }: OverviewRequest): Overview {
   return {
     title: name,
     opening: [openingOf(summary.description, noun)],
     ...(parts ?? typeWideParts(summary)),
   };
-}
-
-export function writtenOverview(request: OverviewRequest): string {
-  return markdownOf(overviewOf(request));
-}
-
-export function overviewWithUsers(overview: string, users: readonly DefinitionUser[]): string {
-  return users.length === 0 ? overview : appendedSection(overview, usedBySection(users));
 }

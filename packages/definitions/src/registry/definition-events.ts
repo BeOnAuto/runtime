@@ -6,7 +6,7 @@ import { TriggerSchema } from './definition-triggers.ts';
 
 const DefinitionContentSchema = Schema.Struct({
   source: Schema.String,
-  overview: Schema.String,
+  overview: Schema.Unknown,
   description: Schema.optionalKey(Schema.String),
   input_schema: Schema.optionalKey(Schema.JsonObject),
   output_schema: Schema.optionalKey(Schema.JsonObject),

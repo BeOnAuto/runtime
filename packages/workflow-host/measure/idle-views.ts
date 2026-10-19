@@ -8,7 +8,7 @@ import { statement } from '../src/database/statement.ts';
 import { openWorkflowStore, type WorkflowStore } from '../src/host/workflow-store.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
-import { measuredViewOf, measuredViews } from './measured-views.ts';
+import { measuredViewOf, measuredViews, recallContentOf } from './measured-views.ts';
 
 export interface IdleViews {
   readonly views: number;
@@ -38,7 +38,7 @@ async function saved(store: WorkflowStore, index: number): Promise<void> {
   };
   await store.database.store.append(
     `${playbook}definitions/recall`,
-    [{ type: 'definition_created', data: { content: { source: name, overview: `# ${name}\n`, details } } }],
+    [{ type: 'definition_created', data: { content: recallContentOf(name, details) } }],
     { expectedVersion: index, context },
   );
 }
