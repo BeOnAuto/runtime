@@ -1,4 +1,5 @@
 import { ActedContextSchema, factOf, type Decided } from '@on.auto/operations';
+import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
@@ -25,6 +26,18 @@ export const ConnectionEventSchema = Schema.Union([
     Schema.Struct({ ...ofTheConnection, token_sha256: Schema.String, expires_at: Schema.String }),
     ActedContextSchema,
   ),
+  factOf(
+    'connection_consent_started',
+    Schema.Struct({
+      ...ofTheConnection,
+      state_sha256: Schema.String,
+      verifier_secret_id: Schema.String,
+      client_id: Schema.String,
+      client_source: ClientSourceSchema,
+      expires_at: Schema.String,
+    }),
+    ActedContextSchema,
+  ),
   factOf('connection_approved', Schema.Struct(ofTheConnection), ActedContextSchema),
   factOf(
     'connection_connected',
@@ -33,6 +46,8 @@ export const ConnectionEventSchema = Schema.Union([
       secret_id: Schema.optionalKey(Schema.String),
       algorithm: Schema.optionalKey(Schema.String),
       client_id: Schema.optionalKey(Schema.String),
+      client_source: Schema.optionalKey(ClientSourceSchema),
+      scope: Schema.optionalKey(Schema.String),
     }),
     ActedContextSchema,
   ),
@@ -47,6 +62,8 @@ export type ConnectionEvent = Decided<RecordedConnectionEvent>;
 export type ConnectionAdded = Extract<RecordedConnectionEvent, { readonly type: 'connection_added' }>;
 
 export type LinkIssued = Extract<RecordedConnectionEvent, { readonly type: 'connection_link_issued' }>;
+
+export type ConsentStarted = Extract<RecordedConnectionEvent, { readonly type: 'connection_consent_started' }>;
 
 export type ConnectionConnected = Extract<RecordedConnectionEvent, { readonly type: 'connection_connected' }>;
 

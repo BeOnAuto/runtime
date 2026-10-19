@@ -40,6 +40,10 @@ export function hostRefusalOf(allowedHosts: readonly string[] | null, host: stri
       });
 }
 
+export function reachesUnder({ allowedHosts }: ConnectionPolicy): (url: string) => string | undefined {
+  return (url) => hostRefusalOf(allowedHosts, new URL(url).hostname)?.detail;
+}
+
 function hostRefusal(
   allowedHosts: readonly string[] | null,
   addition: Addition,

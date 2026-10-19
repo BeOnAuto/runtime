@@ -5,7 +5,7 @@ import { DateTime, Effect, Option, type Redacted } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
-import { connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
+import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 import type { GivenValue } from './placed-credentials.ts';
 import { servingWords } from './serving-words.ts';
@@ -28,8 +28,6 @@ export interface Serving {
 
 export type Given = Effect.Effect<GivenValue | undefined, ConnectionUnready>;
 
-const theRuntime = 'runtime';
-
 export function notAllowed(detail: string): ConnectionUnready {
   return { because: 'connection_not_allowed', detail };
 }
@@ -37,7 +35,7 @@ export function notAllowed(detail: string): ConnectionUnready {
 function broken({ org, kept, services }: Serving, reason: string): Given {
   return Effect.gen(function* () {
     const at = DateTime.formatIso(yield* DateTime.now);
-    const breaking = { type: 'break', connection: kept.connection.id, reason, by: theRuntime, at } as const;
+    const breaking = { type: 'break', connection: kept.connection.id, reason, by: byTheRuntime, at } as const;
     yield* services.registry.execute(connectionsStreamOfOrg(org), registryDecider, breaking).pipe(
       Effect.orDie,
       Effect.catchCause((cause) => Effect.logError(servingWords.unrecorded(kept.connection.name), cause)),

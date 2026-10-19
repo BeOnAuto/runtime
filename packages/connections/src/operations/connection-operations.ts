@@ -1,5 +1,6 @@
 import type { RouteRegistration } from '@on.auto/operations';
 
+import { consentOperationsOf } from '../page/consent-operations.ts';
 import { defineGiveCredential } from '../page/give-credential.ts';
 import { defineApprove, readLink } from '../page/link-operations.ts';
 import { bindsPerson } from '../policy/policy-rules.ts';
@@ -25,6 +26,7 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     readLink,
     defineApprove(binding),
     defineGiveCredential({ ...services, ...binding }),
+    ...consentOperationsOf({ ...services, ...binding }),
     defineListProviders(services),
   ];
 }

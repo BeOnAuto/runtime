@@ -20,3 +20,7 @@ export function connectPageOf({ studio, runtime }: ConnectPages, { org, connecti
   page.searchParams.set('token', token);
   return page.href;
 }
+
+export function returnAddressOf({ studio }: ConnectPages): string {
+  return new URL('/connect/return', studio.origin).href;
+}

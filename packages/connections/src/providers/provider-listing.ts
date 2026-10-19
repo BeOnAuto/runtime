@@ -12,13 +12,17 @@ import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { hostRefusalOf } from '../policy/policy-rules.ts';
+import { consentUnsetUp, isConsentUnsetUp, type ClientSourcesHad } from './consent-offered.ts';
 import { listedWayOf, type ListedPlaceholder, type ListedProvider, type ListedWay } from './listed-providers.ts';
 
 export interface Listing {
   readonly providers: ProviderList;
   readonly policy: ConnectionPolicy;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
+  readonly consent: ClientSourcesHad;
 }
+
+type Offering = Pick<ListedWay, 'offered' | 'because'>;
 
 const placedHostCharacters = '[a-z0-9-]+';
 
@@ -60,10 +64,7 @@ function isListed(
   );
 }
 
-function offeringOf(
-  { entry }: Provider,
-  providerValues: ReadonlyMap<string, Redacted.Redacted>,
-): Pick<ListedWay, 'offered' | 'because'> {
+function offeringOf({ entry }: Provider, providerValues: ReadonlyMap<string, Redacted.Redacted>): Offering {
   const unset = operatorVariablesOf(entry).filter((variable) => !providerValues.has(variable));
   return unset.length === 0
     ? { offered: true }
@@ -91,12 +92,18 @@ function placeholdersOf({ entry }: Provider): readonly ListedPlaceholder[] {
   );
 }
 
-function listedProviderOf(provider: Provider, { policy, providerValues }: Listing): readonly ListedProvider[] {
+function wayOfferingOf(way: CredentialWay, offering: Offering, { entry }: Provider, listing: Listing): Offering {
+  return offering.offered && isConsentUnsetUp(way, listing.consent)
+    ? { offered: false, because: consentUnsetUp(entry.name) }
+    : offering;
+}
+
+function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
   const { name, title, description, website, type, credentials } = provider.entry;
-  const offering = offeringOf(provider, providerValues);
+  const offering = offeringOf(provider, listing.providerValues);
   const ways = credentials
-    .filter((way) => isListed(provider, way, policy))
-    .map((way) => listedWayOf({ ...way, ...offering }));
+    .filter((way) => isListed(provider, way, listing.policy))
+    .map((way) => listedWayOf({ ...way, ...wayOfferingOf(way, offering, provider, listing) }));
   return ways.length === 0
     ? []
     : [{ name, title, description, website, type, credentials: ways, placeholders: placeholdersOf(provider) }];

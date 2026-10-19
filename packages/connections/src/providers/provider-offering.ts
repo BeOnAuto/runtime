@@ -6,7 +6,10 @@ import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
 import type { ListedProvider } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
 
-export type OfferingServices = Pick<ConnectionServices, 'providers' | 'providerValues' | 'policy' | 'access'>;
+export type OfferingServices = Pick<
+  ConnectionServices,
+  'providers' | 'providerValues' | 'policy' | 'access' | 'consent'
+>;
 
 const addingPermissions = [permissionFor('command', 'org')];
 

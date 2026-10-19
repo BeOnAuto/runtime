@@ -23,7 +23,7 @@ export const AddedSchema = Schema.Struct({
 const { variable, name, in: placement, scheme, issuer, client_id: clientId, scope } = CredentialFieldsSchema.fields;
 
 const AddedCredentialSchema = Schema.Struct({
-  kind: CredentialKindSchema.pick(['none', 'reference', 'secret', 'client_credentials']),
+  kind: CredentialKindSchema,
   variable,
   name,
   in: placement,
@@ -87,6 +87,18 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
   ];
 }
 
+const consentByHand =
+  'Expected another kind: consent is offered through a provider alone, so name the provider, as search lists it, in provider';
+
+function credentialIssuesOf(credential: AdditionGiven['credential']): readonly ModeIssue[] {
+  if (credential === undefined) {
+    return [];
+  }
+  return credential.kind === 'authorization'
+    ? [{ path: ['credential', 'kind'], issue: consentByHand }]
+    : credentialFieldIssuesOf(credential).map(({ path, issue }) => ({ path: ['credential', ...path], issue }));
+}
+
 function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
   const { placeholders, credential } = given;
   return [
@@ -96,9 +108,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...(placeholders === undefined
       ? []
       : [{ path: ['placeholders'], issue: 'Expected no placeholders without provider' }]),
-    ...(credential === undefined
-      ? []
-      : credentialFieldIssuesOf(credential).map(({ path, issue }) => ({ path: ['credential', ...path], issue }))),
+    ...credentialIssuesOf(credential),
   ];
 }
 

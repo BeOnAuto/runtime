@@ -1,17 +1,23 @@
 import { alternatives } from '@on.auto/operations';
 import { isPinnableTemplate, pinnedTemplateShape } from '@on.auto/providers';
+import {
+  isSameIssuer,
+  type RegisteredClient,
+  type RegisteredCredential,
+  type TokenEndpointAuthMethod,
+} from '@on.auto/tool-servers';
 import { Option, Redacted, Schema } from 'effect';
 
 import { holdsAReference, isReferenceHoldingField, misplacedReference } from './reference-fields.ts';
 
-const TokenEndpointAuthMethodSchema = Schema.Literals([
+const tokenEndpointAuthMethods: readonly TokenEndpointAuthMethod[] = [
   'client_secret_basic',
   'client_secret_post',
   'private_key_jwt',
   'none',
-]);
+];
 
-type TokenEndpointAuthMethod = typeof TokenEndpointAuthMethodSchema.Type;
+const TokenEndpointAuthMethodSchema = Schema.Literals(tokenEndpointAuthMethods);
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
@@ -50,18 +56,6 @@ const RegisteredClientFieldsSchema = Schema.Struct({
 type RegisteredClientFields = typeof RegisteredClientFieldsSchema.Type;
 
 type CredentialKind = 'client_secret' | 'private_key' | 'public';
-
-type ClientCredential =
-  | { readonly kind: 'client_secret'; readonly clientSecret: Redacted.Redacted }
-  | { readonly kind: 'private_key'; readonly privateKey: Redacted.Redacted; readonly algorithm: string }
-  | { readonly kind: 'public' };
-
-export interface RegisteredClient {
-  readonly issuers: readonly string[];
-  readonly clientId: string;
-  readonly credential: ClientCredential;
-  readonly tokenEndpointAuthMethod: TokenEndpointAuthMethod | null;
-}
 
 interface ClientIssue {
   readonly path: readonly PropertyKey[];
@@ -159,10 +153,6 @@ function writtenClientIssuesOf(client: RegisteredClientFields): readonly ClientI
 const sharedIssuer =
   'Names an issuer an earlier registered client names too, a trailing slash aside; register each issuer under one client';
 
-function isSameIssuer(one: string, other: string): boolean {
-  return one === other || one === `${other}/` || other === `${one}/`;
-}
-
 function sharedIssuerIssuesOf(clients: readonly RegisteredClientFields[]): readonly ClientIssue[] {
   return clients.flatMap((client, position) =>
     client.issuers.flatMap((issuer, index) =>
@@ -186,7 +176,7 @@ function credentialOf({
   client_secret: clientSecret,
   private_key: privateKey,
   algorithm,
-}: RegisteredClientFields): ClientCredential {
+}: RegisteredClientFields): RegisteredCredential {
   if (clientSecret !== undefined) {
     return { kind: 'client_secret', clientSecret: Redacted.make(clientSecret) };
   }
@@ -208,7 +198,7 @@ export function registeredClientsOf(clients: readonly RegisteredClientFields[]):
   }));
 }
 
-function secretOf(credential: ClientCredential): readonly Redacted.Redacted[] {
+function secretOf(credential: RegisteredCredential): readonly Redacted.Redacted[] {
   if (credential.kind === 'client_secret') {
     return [credential.clientSecret];
   }

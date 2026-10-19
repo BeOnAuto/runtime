@@ -1,7 +1,10 @@
+import type { ClientSource } from '@on.auto/tool-servers';
+
 import type {
   ConnectionAdded,
   ConnectionBroken,
   ConnectionConnected,
+  ConsentStarted,
   LinkIssued,
   RecordedConnectionEvent,
 } from './connection-events.ts';
@@ -13,9 +16,19 @@ export interface OpenLink {
   readonly expires_at: string;
 }
 
+export interface StartedConsent {
+  readonly state_sha256: string;
+  readonly verifier_secret_id: string;
+  readonly client_id: string;
+  readonly client_source: ClientSource;
+  readonly started_at: string;
+  readonly expires_at: string;
+}
+
 export interface KeptConnection {
   readonly connection: RecordedConnection;
   readonly link: OpenLink | undefined;
+  readonly consent: StartedConsent | undefined;
   readonly secretId: string | undefined;
   readonly algorithm: string | undefined;
 }
@@ -43,8 +56,17 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       broken: null,
     },
     link: undefined,
+    consent: undefined,
     secretId: undefined,
     algorithm: undefined,
+  };
+}
+
+function withConsent(kept: KeptConnection, { data, context }: ConsentStarted): KeptConnection {
+  const { state_sha256, verifier_secret_id, client_id, client_source, expires_at } = data;
+  return {
+    ...kept,
+    consent: { state_sha256, verifier_secret_id, client_id, client_source, started_at: context.at, expires_at },
   };
 }
 
@@ -53,7 +75,13 @@ function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
 }
 
 function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnected): Credential {
-  return data.client_id === undefined ? connection.credential : { ...connection.credential, client_id: data.client_id };
+  const { client_id: clientId, client_source: clientSource, scope } = data;
+  return {
+    ...connection.credential,
+    ...(clientId === undefined ? {} : { client_id: clientId }),
+    ...(clientSource === undefined ? {} : { client_source: clientSource }),
+    ...(scope === undefined ? {} : { scope }),
+  };
 }
 
 function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnection {
@@ -68,6 +96,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       broken: null,
     },
     link: undefined,
+    consent: undefined,
     secretId: data.secret_id,
     algorithm: data.algorithm,
   };
@@ -87,6 +116,9 @@ function evolvedConnection(
 ): KeptConnection {
   if (event.type === 'connection_link_issued') {
     return withLink(kept, event);
+  }
+  if (event.type === 'connection_consent_started') {
+    return withConsent(kept, event);
   }
   if (event.type === 'connection_approved') {
     return kept;

@@ -1,14 +1,26 @@
 import { adverts, drive, providersOf } from '@on.auto/providers/testing';
+import type { RegisteredClient } from '@on.auto/tool-servers';
+import { consentClientWith, registeredAt } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
+import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, adding } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const consentProviders = providersOf(adverts, drive);
 
+const registeredClients = [
+  registeredAt('https://accounts.drive.example.com'),
+  registeredAt('https://login.adverts.example.com/{tenant}/v2.0'),
+];
+
 function consentHarness(policy: ConnectionPolicyFields = {}): Harness {
-  return harness({ providers: consentProviders, policy: connectionPolicyOf(policy) });
+  return harness({
+    providers: consentProviders,
+    policy: connectionPolicyOf(policy),
+    consenting: { registeredClients },
+  });
 }
 
 const driveConsent = {
@@ -120,5 +132,82 @@ describe('a provider whose way is consent, as the page lists it', () => {
     const listed = await h.call(operationNamed(h.operations, 'list_providers'), ada);
 
     expect(listed).toMatchObject({ output: { providers: [{ name: 'adverts', credentials: [{ kind: 'secret' }] }] } });
+  });
+});
+
+const unsetUp =
+  'The provider drive takes consent through a client whoever runs Auto registers, which is not set up here';
+
+describe('a provider whose way is consent where whoever runs Auto registered no client the way takes', () => {
+  it('is refused an addition at the kind of its credential', async () => {
+    const h = harness({ providers: consentProviders });
+
+    expect(await adding(h, { provider: 'drive' })).toMatchObject({
+      status: 'rejected',
+      reason: 'invalid_input',
+      issues: [{ pointer: '/credential/kind', detail: unsetUp }],
+    });
+  });
+
+  it('is listed with the way not offered, because whoever runs Auto sets it up, and a way that registers dynamically offered', async () => {
+    const h = harness({ providers: consentProviders });
+
+    const listed = await h.call(operationNamed(h.operations, 'list_providers'), ada);
+
+    expect(listed).toMatchObject({
+      output: {
+        providers: [
+          {
+            name: 'adverts',
+            credentials: [
+              { kind: 'authorization', offered: true },
+              { kind: 'secret', offered: true },
+            ],
+          },
+          { name: 'drive', credentials: [{ kind: 'authorization', offered: false, because: unsetUp }] },
+        ],
+      },
+    });
+  });
+});
+
+describe('a connection of consent given by hand', () => {
+  it('is refused at the kind of its credential, in words that say consent is a provider’s way and how to name one', async () => {
+    const byHand = {
+      name: 'files',
+      type: 'mcp',
+      entry: { url: 'https://files.example.com/mcp' },
+      credential: { kind: 'authorization', issuer: 'https://accounts.files.example.com' },
+    };
+
+    expect(await adding(harness(), byHand)).toMatchObject({
+      reason: 'invalid_input',
+      issues: [
+        {
+          pointer: '/credential/kind',
+          detail:
+            'Expected another kind: consent is offered through a provider alone, so name the provider, as search lists it, in provider',
+        },
+      ],
+    });
+  });
+});
+
+function offeredWith(clients: readonly RegisteredClient[]) {
+  return makeProviderOffering({
+    providers: providersOf(drive),
+    providerValues: new Map(),
+    policy: connectionPolicyOf({}),
+    access: 'people',
+    consent: consentClientWith({ registeredClients: clients }),
+  })(ada);
+}
+
+describe('the providers search offers a caller who may add', () => {
+  it('leave out a provider whose way of consent takes no client the runtime has, and take it in once one is registered', () => {
+    expect([offeredWith([]), offeredWith(registeredClients)]).toEqual([
+      [],
+      [{ name: 'drive', title: 'Drive', description: 'Read and change the files of an account.' }],
+    ]);
   });
 });

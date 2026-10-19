@@ -13,6 +13,7 @@ import {
   type SettingProblem,
   type Substituted,
 } from '@on.auto/config';
+import type { RegisteredClient } from '@on.auto/tool-servers';
 import { Data, Effect, Option, Result, Schema } from 'effect';
 
 import {
@@ -20,11 +21,7 @@ import {
   referenceHoldingFields,
   type ReferenceHoldingField,
 } from '../registered-clients/reference-fields.ts';
-import {
-  registeredClientsOf,
-  RegisteredClientsSchema,
-  type RegisteredClient,
-} from '../registered-clients/registered-clients.ts';
+import { registeredClientsOf, RegisteredClientsSchema } from '../registered-clients/registered-clients.ts';
 import { CredentialKindSchema, type CredentialKind } from '../registry/credential.ts';
 import { AddedProvidersSchema, type AddedProviders } from './added-providers.ts';
 

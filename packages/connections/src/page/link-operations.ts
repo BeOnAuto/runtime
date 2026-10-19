@@ -5,15 +5,21 @@ import { tokenSha256Of } from '../links/link-token.ts';
 import { ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
-import { linkedConnectionOf } from '../registry/registry-lookup.ts';
+import { isOpenConsent, linkedConnectionOf } from '../registry/registry-lookup.ts';
 
-const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
+export const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
 const answeringTheRecord = { kind: 'json', outputSchema: ConnectionSchema } as const;
 
 const LinkedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
   link: Schema.Struct({ expires_at: ExpiresAtField }),
+  consent: Schema.optionalKey(
+    Schema.Struct({
+      started_at: Schema.String.annotate({ description: 'When the consent was started, in ISO 8601 UTC' }),
+      expires_at: Schema.String.annotate({ description: 'When the consent must be finished by, in ISO 8601 UTC' }),
+    }).annotate({ description: 'The consent started and not finished, while it is open' }),
+  ),
 }).annotate({
   identifier: 'LinkedConnection',
   description: 'The connection an open link names, and when the link expires',
@@ -36,10 +42,14 @@ export const readLink = defineHttpOperation('org', 'query', {
   handle: Effect.fnUntraced(function* ({ id, token }) {
     const registry = yield* loadRegistry;
     const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };
-    const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, yield* actedNow)).pipe(
+    const acted = yield* actedNow;
+    const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, acted)).pipe(
       Effect.catchTag('forbidden', Effect.die),
     );
-    return { ...connectionShown(kept.connection, null), link: { expires_at: kept.link.expires_at } };
+    const consent = isOpenConsent(kept, acted.at)
+      ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
+      : {};
+    return { ...connectionShown(kept.connection, null), link: { expires_at: kept.link.expires_at }, ...consent };
   }),
 });
 
@@ -60,7 +70,9 @@ export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }
     reasons: ['not_found', 'forbidden', 'conflict'],
     handle: ({ id, token }) =>
       Effect.map(
-        recordInRegistry({ type: 'approve', connection: id, token_sha256: tokenSha256Of(token), bindsPerson }),
+        recordInRegistry({ type: 'approve', connection: id, token_sha256: tokenSha256Of(token), bindsPerson }).pipe(
+          Effect.catchTag('invalid_input', Effect.die),
+        ),
         ({ connection }) => connectionShown(connection, null),
       ),
   });

@@ -5,9 +5,9 @@ import {
   readConnectionsSetting,
   type ConnectionPolicy,
   type ConnectionsSetting,
-  type RegisteredClient,
 } from '@on.auto/connections';
 import { joinedProviders, operatorValuesIn, operatorVariablesIn, type ProviderList } from '@on.auto/providers';
+import type { RegisteredClient } from '@on.auto/tool-servers';
 import { Effect, Redacted } from 'effect';
 
 import { problemsListed } from '../config-file/placed-problems.ts';

@@ -1,3 +1,5 @@
+import type { ClientSource } from '@on.auto/tool-servers';
+
 import type { ConnectionEntry, ConnectionType } from './connection-entry.ts';
 import type { Credential } from './credential.ts';
 import type { OpenLink } from './registry.ts';
@@ -31,6 +33,24 @@ export interface CredentialGiving extends LinkUse {
   readonly client_id?: string;
 }
 
+export interface ConsentStart extends LinkUse {
+  readonly type: 'start';
+  readonly state_sha256: string;
+  readonly verifier_secret_id: string;
+  readonly client_id: string;
+  readonly client_source: ClientSource;
+  readonly expires_at: string;
+}
+
+export interface ConsentFinish extends LinkUse {
+  readonly type: 'finish';
+  readonly state_sha256: string;
+  readonly secret_id: string;
+  readonly client_id: string;
+  readonly client_source: ClientSource;
+  readonly scope?: string;
+}
+
 export interface ConnectionRemoval {
   readonly type: 'remove';
   readonly connection: string;
@@ -46,6 +66,8 @@ export type ConnectionCommandData =
   | ConnectionAddition
   | ConnectionApproval
   | CredentialGiving
+  | ConsentStart
+  | ConsentFinish
   | ConnectionRemoval
   | ConnectionBreaking;
 
