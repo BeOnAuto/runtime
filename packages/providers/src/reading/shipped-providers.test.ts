@@ -66,7 +66,8 @@ describe('the shipped providers', () => {
   it('are the entries of the folder, each named as its file, sorted by name and so each named once', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
-    expect(names).toEqual([...googleProviders, 'github', 'profound', 'slack', 'slack-api'].toSorted());
+    expect(names).toEqual([...googleProviders, 'github', 'profound', 'slack', 'slack-api', 'zoom'].toSorted());
+    expect(names).toHaveLength(18);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -109,6 +110,7 @@ describe('the ways of the shipped providers', () => {
       ['search-ads-360', ['authorization'], []],
       ['slack', ['authorization'], []],
       ['slack-api', ['secret'], []],
+      ['zoom', ['authorization'], []],
     ]);
   });
 });
@@ -133,6 +135,7 @@ describe('the servers of the shipped providers', () => {
       ['search-ads-360', 'https://searchads360.googleapis.com'],
       ['slack', 'https://mcp.slack.com/mcp'],
       ['slack-api', 'https://slack.com/api'],
+      ['zoom', 'https://api.zoom.us/v2'],
     ]);
     expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual(
       shipped.providers.map((provider) => documentServerExpectedOf(provider)),
@@ -163,6 +166,7 @@ describe('the hosts of the shipped providers', () => {
       [[['searchads360.googleapis.com', 'accounts.google.com']]],
       [[['mcp.slack.com', 'mcp.slack.com']]],
       [[['slack.com']]],
+      [[['api.zoom.us', 'zoom.us', 'zoom.us', 'zoom.us', 'zoom.us']]],
     ]);
   });
 });

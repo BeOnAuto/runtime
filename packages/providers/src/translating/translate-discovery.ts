@@ -1,15 +1,23 @@
+import { discoveryCut, type Cut } from './discovery-cuts.ts';
 import {
   byName,
   componentReferenceOf,
+  discoveryDocumentOf,
   methodsOf,
   referencesIn,
   translatedSchema,
-  type AuthorizationServer,
   type DiscoveryDocument,
   type DiscoveryMethod,
   type Json,
   type JsonObject,
 } from './discovery-document.ts';
+import {
+  authorizationServerOf,
+  requirementsOf,
+  rootRequirementOf,
+  securitySchemesOf,
+  type AuthorizationServer,
+} from './oauth2-scheme.ts';
 
 interface Described {
   readonly description?: string;
@@ -169,10 +177,6 @@ function responsesOf({ response }: DiscoveryMethod): JsonObject {
   };
 }
 
-function securityOf({ scopes }: KeptMethod): readonly JsonObject[] {
-  return scopes.map((scope) => ({ [securitySchemeName]: [scope] }));
-}
-
 function operationOf(method: KeptMethod, fields: readonly JsonObject[]): JsonObject {
   return {
     operationId: method.id,
@@ -181,7 +185,7 @@ function operationOf(method: KeptMethod, fields: readonly JsonObject[]): JsonObj
     parameters: parametersOf(method, fields),
     ...requestBodyOf(method),
     responses: responsesOf(method),
-    security: securityOf(method),
+    security: requirementsOf(securitySchemeName, method.scopes),
   };
 }
 
@@ -238,21 +242,6 @@ function infoOf({ name, title, version, description }: DiscoveryDocument): JsonO
   return { title: title ?? name, version, ...(description === undefined ? {} : { description }) };
 }
 
-function securitySchemesOf(discovery: DiscoveryDocument, server: AuthorizationServer): JsonObject {
-  return {
-    [securitySchemeName]: {
-      type: 'oauth2',
-      flows: {
-        authorizationCode: {
-          authorizationUrl: server.authorization_endpoint,
-          tokenUrl: server.token_endpoint,
-          scopes: scopesOf(discovery),
-        },
-      },
-    },
-  };
-}
-
 export function curatedDocumentOf(
   discovery: DiscoveryDocument,
   server: AuthorizationServer,
@@ -264,11 +253,31 @@ export function curatedDocumentOf(
     info: infoOf(discovery),
     ...(discovery.documentationLink === undefined ? {} : { externalDocs: { url: discovery.documentationLink } }),
     servers: [{ url: `${discovery.rootUrl}${discovery.servicePath}`.replace(/\/+$/u, '') }],
-    security: [{ [securitySchemeName]: [] }],
+    security: rootRequirementOf(securitySchemeName),
     paths: pathsOf(methods, fieldsParameterOf(discovery)),
     components: {
       schemas: componentSchemasOf(discovery, methods),
-      securitySchemes: securitySchemesOf(discovery, server),
+      securitySchemes: securitySchemesOf(securitySchemeName, server, scopesOf(discovery)),
     },
   };
+}
+
+export interface DiscoveryTranslation {
+  readonly methods: readonly string[];
+  readonly cuts?: readonly Cut[];
+}
+
+export interface TranslatedDiscovery {
+  readonly document: JsonObject;
+  readonly revision: string;
+}
+
+export function translatedDiscoveryOf(
+  read: unknown,
+  metadata: unknown,
+  { methods, cuts = [] }: DiscoveryTranslation,
+): TranslatedDiscovery {
+  const discovery = discoveryDocumentOf(read);
+  const document = curatedDocumentOf(discoveryCut(discovery, cuts), authorizationServerOf(metadata), methods);
+  return { document, revision: discovery.revision };
 }

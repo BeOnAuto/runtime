@@ -8,16 +8,32 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { trackerTranslated } from '../testing/curated-documents.ts';
 import { trackerAuthorizationServer, trackerDiscovery, trackerManifest } from '../testing/discovery-documents.ts';
 import {
+  aboutAddress,
+  aboutManifest,
+  aboutSource,
+  aboutTranslated,
+  issuesAddress,
+  issuesSource,
+  peopleAddress,
+  peopleSource,
+  trackerOpenApiManifest,
+  trackerOpenApiTranslated,
+} from '../testing/openapi-documents.ts';
+import {
   documentsBesideTheEntries,
   manifestIn,
   manifestNamesIn,
   translatedDocuments,
+  type DocumentManifest,
   type Fetching,
 } from './document-manifests.ts';
 
 const answers: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   [trackerManifest.discovery, trackerDiscovery],
   [trackerManifest.authorization_server, trackerAuthorizationServer],
+  [peopleAddress, peopleSource],
+  [issuesAddress, issuesSource],
+  [aboutAddress, aboutSource],
 ]);
 
 const fetched: string[] = [];
@@ -42,19 +58,49 @@ function folderWith(files: Readonly<Record<string, unknown>>): string {
   return folder;
 }
 
+const RequirementsSchema = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
+
+const OperationSchema = Schema.Struct({ operationId: Schema.String, security: RequirementsSchema });
+
 const decodeOperations = Schema.decodeUnknownSync(
   Schema.fromJsonString(
     Schema.Struct({
-      paths: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Struct({ operationId: Schema.String }))),
+      security: RequirementsSchema,
+      paths: Schema.Record(Schema.String, Schema.Record(Schema.String, OperationSchema)),
+      components: Schema.Struct({ securitySchemes: Schema.Record(Schema.String, Schema.Unknown) }),
     }),
   ),
 );
 
-function operationIdsOf(name: string): readonly string[] {
-  const { paths } = decodeOperations(readFileSync(join(documentsBesideTheEntries, `${name}.openapi.json`), 'utf8'));
-  return Object.values(paths)
-    .flatMap((operations) => Object.values(operations).map(({ operationId }) => operationId))
-    .toSorted();
+type Held = ReturnType<typeof heldBy>;
+
+function heldBy(name: string) {
+  const { security, paths, components } = decodeOperations(
+    readFileSync(join(documentsBesideTheEntries, `${name}.openapi.json`), 'utf8'),
+  );
+  const operations = Object.values(paths).flatMap((methods) => Object.values(methods));
+  const requirements = [...security, ...operations.flatMap((operation) => operation.security)];
+  return {
+    operations: operations.map(({ operationId }) => operationId).toSorted(),
+    schemes: Object.keys(components.securitySchemes),
+    required: [...new Set(requirements.flatMap((requirement) => Object.keys(requirement)))],
+  };
+}
+
+function schemeOf(manifest: DocumentManifest): string {
+  return manifest.type === 'discovery' ? 'oauth2' : manifest.scheme.name;
+}
+
+function namedBy(name: string): Held {
+  const manifest = manifestIn(documentsBesideTheEntries, name);
+  const kept = manifest.type === 'discovery' ? manifest.methods : manifest.operations;
+  return { operations: kept.toSorted(), schemes: [schemeOf(manifest)], required: [schemeOf(manifest)] };
+}
+
+function addressesOf(manifest: DocumentManifest): readonly string[] {
+  return manifest.type === 'discovery'
+    ? [manifest.discovery, manifest.authorization_server]
+    : [...manifest.sources, manifest.authorization_server];
 }
 
 function parsed(text: string): unknown {
@@ -188,26 +234,65 @@ describe('a cut a manifest does not take', () => {
 });
 
 describe('the manifests beside the entries', () => {
-  it('are each one the command reads, keeping each method once', () => {
+  it('are each one the command reads, of either kind, keeping each operation once, at https addresses', () => {
     const names = manifestNamesIn(documentsBesideTheEntries);
-    const manifests = names.map((name) => manifestIn(documentsBesideTheEntries, name));
+    const kept: readonly (readonly string[])[] = names.map((name) => namedBy(name).operations);
 
-    expect(manifests.map(({ methods }) => methods.length)).toEqual(
-      manifests.map(({ methods }) => new Set(methods).size),
-    );
+    expect(kept.map(({ length }) => length)).toEqual(kept.map((operations) => new Set(operations).size));
     expect(
-      manifests
-        .flatMap(({ discovery, authorization_server: metadata }) => [discovery, metadata])
+      names
+        .flatMap((name) => addressesOf(manifestIn(documentsBesideTheEntries, name)))
         .filter((address) => !address.startsWith('https://')),
     ).toEqual([]);
-    expect(names.length).toBeGreaterThan(0);
+    expect(names.map((name) => manifestIn(documentsBesideTheEntries, name).type).toSorted()).toEqual([
+      ...Array.from({ length: names.length - 1 }, () => 'discovery'),
+      'openapi',
+    ]);
   });
 
-  it('each have their document beside them, whose operations are the methods they keep', () => {
+  it('each have their document beside them, whose operations are those they keep, all requiring the one scheme they name', () => {
     const names = manifestNamesIn(documentsBesideTheEntries);
 
-    expect(names.map((name) => operationIdsOf(name))).toEqual(
-      names.map((name) => manifestIn(documentsBesideTheEntries, name).methods.toSorted()),
+    expect(names.map((name) => heldBy(name))).toEqual(names.map((name) => namedBy(name)));
+  });
+});
+
+describe('the documents translated from the manifests of OpenAPI documents', () => {
+  it('are each the document of the operations its manifest keeps, from the documents it names, fetched, with no manifest written', async () => {
+    const folder = folderWith({
+      'tracker.manifest.json': trackerOpenApiManifest,
+      'about.manifest.json': aboutManifest,
+    });
+
+    const written = await translatedIn(folder);
+
+    const read = written.map(({ text }) => parsed(text));
+    expect(written.map(({ path }) => path)).toEqual([
+      join(folder, 'about.openapi.json'),
+      join(folder, 'tracker.openapi.json'),
+    ]);
+    expect(read).toEqual([aboutTranslated, trackerOpenApiTranslated]);
+    expect(written.map(({ text }) => text)).toEqual(read.map((value) => textOf(value)));
+    expect(fetched.toSorted()).toEqual(
+      [
+        aboutAddress,
+        peopleAddress,
+        issuesAddress,
+        ...Array.from({ length: 2 }, () => trackerManifest.authorization_server),
+      ].toSorted(),
     );
+  });
+
+  it('are refused a file given in place of their documents, and a document that does not answer, in the words of the command', async () => {
+    const gone = 'https://developers.tracker.example.com/api/gone/';
+    const folder = folderWith({ 'tracker.manifest.json': trackerOpenApiManifest });
+    const unanswered = folderWith({
+      'tracker.manifest.json': { ...trackerOpenApiManifest, sources: [peopleAddress, gone] },
+    });
+
+    await expect(translatedIn(folder, ['tracker=tracker-people.json'])).rejects.toThrow(
+      'The manifest tracker is of OpenAPI documents, which the command fetches at the addresses it names, so no file is given in place of one. Usage: pnpm --filter @on.auto/providers documents:translate',
+    );
+    await expect(translatedIn(unanswered)).rejects.toThrow(`${gone} answered 404, so nothing is translated from it`);
   });
 });

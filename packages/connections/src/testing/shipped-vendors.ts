@@ -47,6 +47,24 @@ const googleApi: VendorOfTheWay = {
   parameters: offlineWithConsent,
 };
 
+const zoomScopes = [
+  'user:read:user',
+  'meeting:read:list_meetings',
+  'meeting:read:meeting',
+  'meeting:read:past_meeting',
+  'meeting:read:list_past_participants',
+  'cloud_recording:read:list_user_recordings',
+  'cloud_recording:read:list_recording_files',
+  'cloud_recording:read:meeting_transcript',
+  'meeting:read:summary',
+  'team_chat:read:list_user_channels',
+  'team_chat:read:list_user_messages',
+  'team_chat:read:thread_message',
+  'meeting:write:meeting',
+  'meeting:update:meeting',
+  'team_chat:write:user_message',
+];
+
 export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> = {
   'campaign-manager-360': googleApi,
   'display-video-360': googleApi,
@@ -124,5 +142,15 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     protectedResourceAt: 'https://mcp.slack.com/.well-known/oauth-protected-resource',
     authorizationServerAt: 'https://mcp.slack.com/.well-known/oauth-authorization-server',
     resource: 'https://mcp.slack.com',
+  },
+  zoom: {
+    metadata: { issuer: 'https://zoom.us', grantedScope: zoomScopes.join(' ') },
+    authorizationServerAt: 'https://zoom.us/.well-known/oauth-authorization-server',
+    endpointsAt: {
+      authorization: 'https://zoom.us/oauth/authorize',
+      token: 'https://zoom.us/oauth/token',
+      revocation: 'https://zoom.us/oauth/revoke',
+    },
+    resource: null,
   },
 };

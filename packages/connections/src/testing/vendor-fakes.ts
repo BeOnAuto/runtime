@@ -6,11 +6,23 @@ import { added } from './additions.ts';
 import { consentFake, consentHarnessAt, finishing, startedAt } from './consents.ts';
 import type { Harness, HarnessOptions } from './harness.ts';
 
+interface EndpointsAt {
+  readonly authorization: string;
+  readonly token: string;
+  readonly revocation: string;
+}
+
 export interface Vendor {
   readonly metadata: Partial<ClientRegistration>;
   readonly protectedResourceAt?: string;
   readonly authorizationServerAt?: string;
   readonly openIdConfigurationAt?: string;
+  readonly endpointsAt?: EndpointsAt;
+}
+
+export interface TheVendor {
+  readonly fake: FakeMcpServer;
+  readonly vendor: Vendor;
 }
 
 export interface AtTheVendor {
@@ -31,11 +43,14 @@ function pathsAtTheFakeOf({
   protectedResourceAt,
   authorizationServerAt,
   openIdConfigurationAt,
+  endpointsAt,
 }: Vendor): ReadonlyMap<string, string> {
   const answered: readonly (readonly [string | undefined, string])[] = [
     [protectedResourceAt, '/.well-known/oauth-protected-resource/mcp'],
     [authorizationServerAt, '/.well-known/oauth-authorization-server'],
     [openIdConfigurationAt, '/.well-known/openid-configuration'],
+    [endpointsAt?.token, '/token'],
+    [endpointsAt?.revocation, '/revoke'],
   ];
   return new Map(
     answered.flatMap(([address, path]): readonly AnsweredAt[] => (address === undefined ? [] : [[address, path]])),
@@ -74,9 +89,19 @@ export function harnessAtTheVendor(
   });
 }
 
-export async function consentedAtTheVendor(h: Harness, provider: string): Promise<ConsentedAtTheVendor> {
+function authorizedAtTheFake(asked: Readonly<URL>, { fake, vendor }: TheVendor): string {
+  return `${asked.origin}${asked.pathname}` === vendor.endpointsAt?.authorization
+    ? `${fake.origin}/authorize${asked.search}`
+    : asked.href;
+}
+
+export async function consentedAtTheVendor(
+  h: Harness,
+  provider: string,
+  theVendor: TheVendor,
+): Promise<ConsentedAtTheVendor> {
   const link = await added(h, { provider });
-  const { url } = await startedAt(h, link);
-  const finished = await finishing(h, link, await consentedAt(url));
-  return { asked: new URL(url), finished };
+  const asked = new URL((await startedAt(h, link)).url);
+  const finished = await finishing(h, link, await consentedAt(authorizedAtTheFake(asked, theVendor)));
+  return { asked, finished };
 }

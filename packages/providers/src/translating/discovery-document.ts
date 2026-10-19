@@ -63,13 +63,6 @@ const DiscoveryDocumentSchema = Schema.Struct({
 
 export type DiscoveryDocument = typeof DiscoveryDocumentSchema.Type;
 
-const AuthorizationServerSchema = Schema.Struct({
-  authorization_endpoint: Schema.String,
-  token_endpoint: Schema.String,
-});
-
-export type AuthorizationServer = typeof AuthorizationServerSchema.Type;
-
 const discoveryKeywords: ReadonlySet<string> = new Set(['id', 'enumDescriptions', 'enumDeprecated', 'annotations']);
 
 const childSchemaKeywords: ReadonlySet<string> = new Set(['items', 'additionalProperties']);
@@ -78,14 +71,8 @@ const boundKeywords: ReadonlySet<string> = new Set(['minimum', 'maximum']);
 
 const decodeDiscoveryDocument = Schema.decodeUnknownSync(DiscoveryDocumentSchema);
 
-const decodeAuthorizationServer = Schema.decodeUnknownSync(AuthorizationServerSchema);
-
 export function discoveryDocumentOf(value: unknown): DiscoveryDocument {
   return decodeDiscoveryDocument(value);
-}
-
-export function authorizationServerOf(value: unknown): AuthorizationServer {
-  return decodeAuthorizationServer(value);
 }
 
 export function methodsOf(resource: DiscoveryResource): readonly DiscoveryMethod[] {

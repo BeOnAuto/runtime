@@ -1,4 +1,5 @@
 {
+  "type": "discovery",
   "discovery": "https://googleads.googleapis.com/$discovery/rest?version=v26",
   "revision": "20261014",
   "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
