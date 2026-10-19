@@ -36,22 +36,34 @@ interface Adding {
   readonly where: 'playbook' | 'org';
 }
 
+type Offered = Pick<OrgFound, 'providers'>;
+
+const withAddConnection = ', with add_connection where your tools include it';
+
 const addedWhere: Readonly<Record<Adding['where'], string>> = {
   playbook: ', or a person adds one to the org as a connection',
-  org: ', or a person adds one as a connection, with add_connection where your tools include it',
+  org: `, or a person adds one as a connection${withAddConnection}`,
 };
 
-function untilOneIsSetUp({ takesConnections, where }: Adding): string {
-  const added = takesConnections ? addedWhere[where] : '';
-  return `until whoever runs this server sets one up${added}; the give-tools guide says how.`;
+const providerConnected = `, or a person connects a provider this search lists${withAddConnection}`;
+
+function addedOf({ takesConnections, where }: Adding, { providers = [] }: Offered): string {
+  if (providers.length > 0) {
+    return providerConnected;
+  }
+  return takesConnections ? addedWhere[where] : '';
 }
 
-function noServer(adding: Adding): string {
-  return `No tool server serves this playbook, so its functions can call no tools ${untilOneIsSetUp(adding)}`;
+function untilOneIsSetUp(adding: Adding, offered: Offered): string {
+  return `until whoever runs this server sets one up${addedOf(adding, offered)}; the give-tools guide says how.`;
 }
 
-function noServerInOrg(adding: Adding): string {
-  return `No tool server serves this org, so the functions of its playbooks can call no tools ${untilOneIsSetUp(adding)}`;
+function noServer(adding: Adding, offered: Offered): string {
+  return `No tool server serves this playbook, so its functions can call no tools ${untilOneIsSetUp(adding, offered)}`;
+}
+
+function noServerInOrg(adding: Adding, offered: Offered): string {
+  return `No tool server serves this org, so the functions of its playbooks can call no tools ${untilOneIsSetUp(adding, offered)}`;
 }
 
 function unavailableInWords(server: Extract<SearchedServer, { readonly unavailable: string }>, named: string): string {
@@ -90,7 +102,7 @@ function toolCountOf(server: SearchedServer): number {
 
 function tooManyInWords(spoken: readonly Spoken[], tools: FoundTools): readonly string[] {
   const offered = spoken.reduce((total, { server }) => total + toolCountOf(server), 0);
-  return tools.length === 0 && offered > searchBounds.tools
+  return tools.length === 0 && offered > searchBounds.found
     ? [`They offer ${counted(offered, toolNoun)} in all, too many to list at once, so search them by terms.`]
     : [];
 }
@@ -127,9 +139,10 @@ function spokenInThePlaybook(server: SearchedServer): Spoken {
   return { server, named: quoted(server.name), user: 'this playbook' };
 }
 
-export function searched({ servers, tools }: Found, { terms }: SearchAsked, adding: Adding): string {
+export function searched(found: Found & Offered, { terms }: SearchAsked, adding: Adding): string {
+  const { servers, tools } = found;
   if (servers.length === 0) {
-    return noServer(adding);
+    return noServer(adding, found);
   }
   return answerInWords(
     servers.map((server) => spokenInThePlaybook(server)),
@@ -166,7 +179,7 @@ export function orgSearched(answer: OrgFound, asked: OrgSearchAsked, adding: Add
   }
   const { servers, tools } = answer;
   if (servers.length === 0) {
-    return noServerInOrg(adding);
+    return noServerInOrg(adding, answer);
   }
   return answerInWords(
     servers.map((server) => spokenInTheOrg(server)),

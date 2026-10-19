@@ -3,6 +3,7 @@ import { internalTermsIn } from '@on.auto/operations/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { offeredByTheServer } from '../testing/servers/connected-servers.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -53,12 +54,13 @@ async function serving(): Promise<Serving> {
   return { server, graph, others };
 }
 
-const graphOfAlpha = { name: 'graph', type: 'mcp', record_content: true, tool_count: 2 };
+const graphOfAlpha = { name: 'graph', type: 'mcp', record_content: true, provider: null, tool_count: 2 };
 
 const wikiOfAlpha = {
   name: 'wiki',
   type: 'mcp',
   record_content: false,
+  provider: null,
   unavailable: 'The tool server wiki could not be used: The tool server could not be reached',
   because: 'unreachable',
 };
@@ -231,7 +233,11 @@ describe('search on the org endpoint, without a playbook and with one', () => {
     );
 
     expect(inOrg.structuredContent).toMatchObject({ servers: [graphInTheOrg, salesInTheOrg, wikiInTheOrg] });
-    expect(inAlpha.structuredContent).toEqual({ ...foundForAlpha, servers: [graphInTheOrg, wikiInTheOrg] });
+    expect(inAlpha.structuredContent).toEqual({
+      ...foundForAlpha,
+      servers: [graphInTheOrg, wikiInTheOrg],
+      providers: offeredByTheServer,
+    });
     expect(plainTextIn(inAlpha)).toBe(foundInWords);
     expect(plainTextIn(inOrg)).toMatch(
       /^The playbooks of this org may use 3 tool servers\. “graph”, for every playbook, offers 2 tools: search and echo\./u,

@@ -93,31 +93,11 @@ describe('the connections of an org as tool servers', () => {
 
     const listed = await listedBy(sourceOf(h));
 
+    const servedByHand = { type: 'mcp', provider: null, orgs: ['acme'], record_content: true, request_id: null };
+
     expect(listed.map(({ serving, state }) => [serving, state.status])).toEqual([
-      [
-        {
-          name: 'notes',
-          type: 'mcp',
-          orgs: ['acme'],
-          playbooks: null,
-          allowed: null,
-          record_content: true,
-          request_id: null,
-        },
-        'connected',
-      ],
-      [
-        {
-          name: 'crm',
-          type: 'mcp',
-          orgs: ['acme'],
-          playbooks: ['sales'],
-          allowed: ['search'],
-          record_content: true,
-          request_id: null,
-        },
-        'unready',
-      ],
+      [{ ...servedByHand, name: 'notes', playbooks: null, allowed: null }, 'connected'],
+      [{ ...servedByHand, name: 'crm', playbooks: ['sales'], allowed: ['search'] }, 'unready'],
     ]);
     expect(listed[1]?.state).toEqual({
       status: 'unready',

@@ -74,6 +74,12 @@ function keptSecrets(beforeKeeping: () => Promise<unknown> = () => Promise.resol
 
 export const fixtureServing = { providers: fixtureProviders, providerValues: new Map<string, Redacted.Redacted>() };
 
+export const developerToken = 'metrics-developer-token-0123';
+
+export const developerTokenSet: ReadonlyMap<string, Redacted.Redacted> = new Map([
+  ['METRICS_DEVELOPER_TOKEN', Redacted.make(developerToken)],
+]);
+
 export interface Harness {
   readonly ledger: MemoryLedger;
   readonly facts: () => Promise<readonly RecordedConnectionEvent[]>;

@@ -22,6 +22,7 @@ export interface ServerFields {
   readonly record_content: boolean;
   readonly playbooks: readonly string[];
   readonly connection?: string;
+  readonly provider: string | null;
 }
 
 export interface AvailableServer extends ServerFields {

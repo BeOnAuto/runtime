@@ -1,25 +1,20 @@
 import { calledOpeningLinks } from '@on.auto/api/testing';
-import { hostAlternativesOf, operatorVariablesIn, readProviders, type Provider } from '@on.auto/providers';
-import { Option, Result, Schema } from 'effect';
+import { hostAlternativesOf, operatorVariablesIn, type Provider } from '@on.auto/providers';
+import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { readSettings } from '../settings/settings.ts';
+import { required, shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';
 
-const shipped = Result.getOrThrow(readProviders());
-
-const names = shipped.providers.map(({ entry }) => entry.name);
+const names = shippedProviders.map(({ entry }) => entry.name);
 
 const ListedSchema = Schema.Struct({
   providers: Schema.Array(Schema.Struct({ name: Schema.String })),
   may_add: Schema.Boolean,
   refusal: Schema.NullOr(Schema.String),
 });
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function hostsOf(provider: Provider): readonly (readonly string[])[] {
   return provider.entry.credentials.flatMap((way) => hostAlternativesOf(provider, way));
@@ -30,9 +25,11 @@ function placementOf({ entry }: Provider) {
   return { kind, in: placedIn, name, scheme };
 }
 
-const addedByName = shipped.providers.filter(
+const addedByName = shippedProviders.filter(
   ({ entry }) => entry.type === 'mcp' && entry.placeholders === undefined && entry.credentials[0]?.kind === 'secret',
 );
+
+const refusedName = 'There is no provider named crm here; search lists the providers a person may connect';
 
 let server: ReasoningServer;
 
@@ -59,8 +56,8 @@ describe('the providers a server lists over HTTP', () => {
   });
 
   it('are those the rules of its operator could allow', async () => {
-    const allowed = required(hostsOf(required(shipped.providers[0]))[0]);
-    const reached = shipped.providers.filter((provider) =>
+    const allowed = required(hostsOf(required(shippedProviders[0]))[0]);
+    const reached = shippedProviders.filter((provider) =>
       hostsOf(provider).some((hosts) => hosts.every((host) => allowed.includes(host))),
     );
     const served = await servingReasoning([], { CONNECTIONS: JSON.stringify({ allowed_hosts: allowed }) });
@@ -78,7 +75,7 @@ describe('the providers a server lists over HTTP', () => {
   });
 
   it('refer to no variable the runtime reads for itself, whose value a connection would send to the vendor', () => {
-    expect(operatorVariablesIn(shipped).filter((name) => variablesTheRuntimeReads.includes(name))).toEqual([]);
+    expect(operatorVariablesIn(shippedList).filter((name) => variablesTheRuntimeReads.includes(name))).toEqual([]);
     expect(variablesTheRuntimeReads.length).toBeGreaterThan(10);
   });
 });
@@ -124,7 +121,7 @@ describe('a connection added by a provider', () => {
       status: 422,
       body: {
         reason: 'invalid_input',
-        errors: [{ pointer: '/provider', detail: 'There is no provider named crm here' }],
+        errors: [{ pointer: '/provider', detail: refusedName }],
       },
     });
   });

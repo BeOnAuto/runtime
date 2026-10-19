@@ -215,7 +215,7 @@ describe('episode 6: a tool server that refuses its key, and a playbook with no 
       'Could not run the reasoning function “post-notes”: a tool server it needs could not be used, because the tool server did not accept the key this server gives it. Nothing was changed. Trying again will not help until whoever runs the server checks the key it gives that tool server.',
     );
     expect(plainTextIn(outcome.empty)).toBe(
-      'No tool server serves this playbook, so its functions can call no tools until whoever runs this server sets one up, or a person adds one as a connection, with add_connection where your tools include it; the give-tools guide says how.',
+      'No tool server serves this playbook, so its functions can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools guide says how.',
     );
   });
 });

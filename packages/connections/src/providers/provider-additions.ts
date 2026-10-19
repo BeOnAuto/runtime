@@ -1,5 +1,11 @@
 import type { Conflict, Forbidden, InvalidInput, Issue } from '@on.auto/operations';
-import { additionOfProvider, documentServerOf, providerNamed, type ProviderList } from '@on.auto/providers';
+import {
+  additionOfProvider,
+  documentServerOf,
+  providerNamed,
+  type Provider,
+  type ProviderList,
+} from '@on.auto/providers';
 import { Option, Result, type Redacted } from 'effect';
 
 import {
@@ -23,6 +29,8 @@ type Checking = Omit<EntryChecking, 'providing'>;
 
 const theProvider = '/provider';
 
+const whereProvidersAreListed = 'search lists the providers a person may connect';
+
 const writtenByTheCaller: readonly string[] = ['/entry/playbooks', '/entry/allowed', '/entry/record_content'];
 
 function required<A>(value: A | undefined): A {
@@ -40,13 +48,19 @@ function givenByHand(given: AdditionGiven): GivenAddition {
   };
 }
 
+function namedHere(providers: ProviderList, provider: string): Result.Result<Provider, readonly Issue[]> {
+  return Result.mapError(providerNamed(providers, provider), (issues) =>
+    issues.map(({ pointer, detail }): Issue => ({ pointer, detail: `${detail}; ${whereProvidersAreListed}` })),
+  );
+}
+
 function givenToProvider(
   provider: string,
   given: AdditionGiven,
   providers: ProviderList,
 ): Result.Result<GivenAddition, readonly Issue[]> {
   const { name, placeholders, entry = {}, credential } = given;
-  return Result.flatMap(providerNamed(providers, provider), ({ entry: written }) =>
+  return Result.flatMap(namedHere(providers, provider), ({ entry: written }) =>
     additionOfProvider(written, {
       name,
       placeholders,

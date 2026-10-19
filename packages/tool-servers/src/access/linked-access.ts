@@ -16,7 +16,7 @@ export interface LinkedAccess {
   readonly connectionLink: LinkConnection;
   readonly open: (opened: Opened) => ReturnType<typeof openedRun>;
   readonly callOnce: (call: OneCall, server: OrgServer, runCall?: RunCall) => ReturnType<typeof oneCall>;
-  readonly listed: (link: ServerLink) => ReturnType<typeof listedServer>;
+  readonly listed: (served: OrgServer['settings'], link: ServerLink) => ReturnType<typeof listedServer>;
   readonly close: () => Promise<void>;
 }
 
@@ -42,7 +42,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     connectionLink: (id, server) => connectionLinkOf(id, server, linking),
     open: (opened) => openedRun({ ...opened, secrets, keepIn, timing, report }),
     callOnce: (call, server, runCall) => oneCall(call, server, { secrets, keepIn, timing }, runCall),
-    listed: (link) => listedServer(link, { secrets, timing }),
+    listed: (served, link) => listedServer(served, link, { secrets, timing }),
     close: async () => {
       await Promise.all([...fileLinks.values()].map((link) => link.stop()));
     },

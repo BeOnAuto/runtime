@@ -8,10 +8,12 @@ import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import type { ConnectionUnready } from './connection-source.ts';
 import { refusalOf, type Unusable } from './server-refusals.ts';
 
-export type Served = Pick<
+export interface Served extends Pick<
   LinkedServerSettings,
   'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'connection'
->;
+> {
+  readonly provider: string | null;
+}
 
 export type Linked = { readonly link: ServerLink } | { readonly refused: Unusable };
 
@@ -68,9 +70,13 @@ function isOfTheFile({ settings }: OrgServer): boolean {
   return settings.connection === null;
 }
 
+export function servingOrg(servers: readonly OrgServer[], org: string): readonly OrgServer[] {
+  return servers.filter(({ settings }) => servesOrg(settings, org));
+}
+
 export function namedIn(org: string, servers: readonly OrgServer[]): ReadonlyMap<string, OrgServer> {
   const files = servers.filter((server) => isOfTheFile(server));
-  const servingTheOrg = files.filter(({ settings }) => servesOrg(settings, org));
+  const servingTheOrg = servingOrg(files, org);
   const connections = servers.filter((server) => !isOfTheFile(server));
   const named = new Map<string, OrgServer>();
   for (const server of [...servingTheOrg, ...connections, ...files]) {

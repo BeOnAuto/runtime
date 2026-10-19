@@ -171,11 +171,11 @@ The bound on a listing is bytes because a listing is what an agent's client load
 
 | Endpoint                                    | Tools | Bytes on the wire | Bound  |
 | ------------------------------------------- | ----- | ----------------- | ------ |
-| `POST /mcp`                                 | 28    | 43,412            | 48,000 |
-| `POST /orgs/{org}/mcp`                      | 10    | 12,869            | 13,000 |
+| `POST /mcp`                                 | 28    | 43,497            | 48,000 |
+| `POST /orgs/{org}/mcp`                      | 10    | 12,954            | 13,000 |
 | `POST /orgs/{org}/playbooks/{playbook}/mcp` | 20    | 30,767            | 40,000 |
 
-The bound of the org endpoint moved from 12,000 bytes to 13,000 with the tools of connections, the least that held them, since its listing took 12,767 with every tool at its shortest; `add_connection`'s way in by a provider's name took it to 12,869. A listing takes 3.9 to 4.2 bytes a token, as two open byte-pair vocabularies of 100,000 and 200,000 count it, so the 48,000 bytes of `/mcp` come to about 11,400 to 12,300 tokens (the rate counted on 2026-10-13 over the `tools/list` answer as it is sent, the server-sent event's framing included). A model's own tokenizer counts differently, by a few percent either way.
+The bound of the org endpoint moved from 12,000 bytes to 13,000 with the tools of connections, the least that held them, since its listing took 12,767 with every tool at its shortest; `add_connection`'s way in by a provider's name took it to 12,869, and the sentence of `search` that names its `providers`, with `add_connection`'s words that `search` lists them, to 12,954. A listing takes 3.9 to 4.2 bytes a token, as two open byte-pair vocabularies of 100,000 and 200,000 count it, so the 48,000 bytes of `/mcp` come to about 11,400 to 12,300 tokens (the rate counted on 2026-10-13 over the `tools/list` answer as it is sent, the server-sent event's framing included). A model's own tokenizer counts differently, by a few percent either way.
 
 **Which errors look how.** An MCP endpoint answers in three shapes:
 

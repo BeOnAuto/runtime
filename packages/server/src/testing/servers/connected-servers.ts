@@ -1,8 +1,30 @@
-import { Schema } from 'effect';
+import { readProviders } from '@on.auto/providers';
+import type { OfferedProvider } from '@on.auto/tool-servers';
+import { Option, Result, Schema } from 'effect';
 
 import type { ReasoningServer } from './reasoning-server.ts';
 
 export const connectionsOfAcme = '/v1/orgs/acme/connections';
+
+export const shippedList = Result.getOrThrow(readProviders());
+
+export const shippedProviders = shippedList.providers;
+
+export function required<A>(value: A | undefined): A {
+  return Option.getOrThrow(Option.fromNullishOr(value));
+}
+
+export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders.map(({ entry }) => ({
+  name: entry.name,
+  title: entry.title,
+  description: entry.description,
+}));
+
+const AnswerSchema = Schema.Record(Schema.String, Schema.Unknown);
+
+export function answerFieldsOf(body: unknown): readonly string[] {
+  return Object.keys(Schema.decodeUnknownSync(AnswerSchema)(body));
+}
 
 const AddedSchema = Schema.Struct({ id: Schema.String, connect: Schema.Struct({ url: Schema.String }) });
 

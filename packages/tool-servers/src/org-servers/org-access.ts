@@ -23,7 +23,7 @@ export interface OrgAccessParts {
 
 function fileServer(settings: LinkedServerSettings, loaded: Load): OrgServer {
   return {
-    settings,
+    settings: { ...settings, provider: null },
     checked: () => Promise.resolve([]),
     linked: async () => {
       const { fileLinks } = await loaded();

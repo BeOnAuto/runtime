@@ -5,18 +5,24 @@ import type { ToolNotOffered } from '../access/tool-not-offered.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { Load, OrgAccess } from '../org-servers/org-access.ts';
 import { readyAmong } from '../org-servers/org-naming.ts';
-import { byNameFileFirst, type OrgServer } from '../org-servers/org-servers.ts';
+import { byNameFileFirst, servingOrg, type OrgServer } from '../org-servers/org-servers.ts';
 import { isListedFor, type ServersScope } from '../settings/server-settings.ts';
-import { unavailableServer } from './server-fields.ts';
-import type { ToolServer } from './tool-server.ts';
+import { serverFieldsOf, unavailableServer } from './server-fields.ts';
+import type { ServerFields, ToolServer } from './tool-server.ts';
 
 interface LookedUp {
   readonly naming: Result.Result<void, ToolNotOffered>;
   readonly listed: Effect.Effect<ToolServer>;
 }
 
+export interface OrgListing {
+  readonly servers: readonly ToolServer[];
+  readonly settings: readonly ServerFields[];
+}
+
 export interface ListingWays {
   readonly listServers: (scope: ServersScope, named?: string) => Effect.Effect<readonly ToolServer[]>;
+  readonly listServersInOrg: (scope: ServersScope, named?: string) => Effect.Effect<OrgListing>;
   readonly lookUp: (address: PlaybookAddress, reference: ToolReference) => Effect.Effect<LookedUp>;
 }
 
@@ -24,7 +30,7 @@ async function listedOn(server: OrgServer, loaded: Load): Promise<ToolServer> {
   const linked = await server.linked();
   return 'refused' in linked
     ? unavailableServer(server.settings, linked.refused)
-    : (await loaded()).listed(linked.link);
+    : (await loaded()).listed(server.settings, linked.link);
 }
 
 function listedAmong(servers: readonly OrgServer[], scope: ServersScope, named: string | undefined, loaded: Load) {
@@ -32,10 +38,23 @@ function listedAmong(servers: readonly OrgServer[], scope: ServersScope, named: 
   return Effect.promise(() => Promise.all(asked.map((server) => listedOn(server, loaded))));
 }
 
+function settingsAmong(servers: readonly OrgServer[], org: string): readonly ServerFields[] {
+  return servingOrg(servers, org).map(({ settings }) => serverFieldsOf(settings));
+}
+
+function listingIn(access: OrgAccess, scope: ServersScope, named: string | undefined): Effect.Effect<OrgListing> {
+  return Effect.flatMap(access.serversOf(scope.org), (servers) =>
+    Effect.map(listedAmong(servers, scope, named, access.loaded), (listed: readonly ToolServer[]) => ({
+      servers: listed,
+      settings: settingsAmong(servers, scope.org),
+    })),
+  );
+}
+
 export function listingWaysOf(access: OrgAccess): ListingWays {
   return {
-    listServers: (scope, named) =>
-      Effect.flatMap(access.serversOf(scope.org), (servers) => listedAmong(servers, scope, named, access.loaded)),
+    listServers: (scope, named) => Effect.map(listingIn(access, scope, named), ({ servers }) => servers),
+    listServersInOrg: (scope, named) => listingIn(access, scope, named),
     lookUp: (address, reference) =>
       Effect.gen(function* () {
         const servers = yield* access.serversOf(address.org);

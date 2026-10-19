@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import { defineSearch, defineSearchInOrg } from '../index.ts';
 
-const listing = { listServers: () => Effect.succeed([]), takesConnections: false };
+const listing = {
+  listServers: () => Effect.succeed([]),
+  listServersInOrg: () => Effect.succeed({ servers: [], settings: [] }),
+  takesConnections: false,
+};
 
 const words = defineSearch(listing).registration.plainLanguage;
 
@@ -12,11 +16,18 @@ const inOrg = defineSearchInOrg(listing, () => Effect.void).registration.plainLa
 const takingConnections = { ...listing, takesConnections: true };
 
 function available(name: string, toolCount: number) {
-  return { name, type: 'mcp', record_content: true, tool_count: toolCount };
+  return { name, type: 'mcp', record_content: true, provider: null, tool_count: toolCount };
 }
 
 function unavailable(name: string, because: string) {
-  return { name, type: 'mcp', record_content: true, unavailable: `The tool server ${name} could not be used`, because };
+  return {
+    name,
+    type: 'mcp',
+    record_content: true,
+    provider: null,
+    unavailable: `The tool server ${name} could not be used`,
+    because,
+  };
 }
 
 function tool(server: string, name: string) {
@@ -139,6 +150,22 @@ describe('the plain words of search for the org', () => {
       taking?.outcome({ servers: [], tools: [], scopes: [] }, {}),
     ]).toEqual([
       'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up; the give-tools guide says how.',
+      'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person adds one as a connection, with add_connection where your tools include it; the give-tools guide says how.',
+    ]);
+  });
+
+  it('say that a person may connect a provider where the search lists one, and otherwise what they say without it', () => {
+    const taking = defineSearchInOrg(takingConnections, () => Effect.void).registration.plainLanguage;
+    const tracker = { name: 'tracker', title: 'Tracker', description: 'Reads and changes issues.' };
+    const offering = { servers: [], tools: [], scopes: [], providers: [tracker] };
+
+    expect([
+      taking?.outcome(offering, {}),
+      taking?.outcome(offering, { playbook: 'alpha' }),
+      taking?.outcome({ ...offering, providers: [] }, {}),
+    ]).toEqual([
+      'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools guide says how.',
+      'No tool server serves this playbook, so its functions can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools guide says how.',
       'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person adds one as a connection, with add_connection where your tools include it; the give-tools guide says how.',
     ]);
   });
