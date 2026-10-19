@@ -129,9 +129,9 @@ describe('what a request is given and whom it asks, in the overview', () => {
     ]);
   });
 
-  it('writes the party and the answerer as their document writes them under Details', () => {
+  it('writes the party and the answerer as their document writes them under Details, with whose reply alone counts', () => {
     expect(detailsIn(overviewOf(threadDocument()), 'Where')).toBe(
-      'To `#approvals-{{ input.team }}`, answered by `{{ input.owner }}`. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**, at least `PT1M` apart; expires after `P2D`.\n',
+      'To `#approvals-{{ input.team }}`; answered by `{{ input.owner }}`, whose reply alone counts. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**, at least `PT1M` apart; expires after `P2D`.\n',
     );
   });
 });
@@ -153,11 +153,17 @@ describe('the replies of a request, in the overview', () => {
     expect(overviewOf(source)).toContain('  n4 -.->|"any other word"| n3\n');
   });
 
-  it('draw no reply and refuse no word of a rule that reads no first word', () => {
-    const overview = overviewOf(threadDocument({ rule: ['reply:', '  note: text'] }));
+  it('draw no reply of a rule that reads no first word, and say a reply it cannot read is not taken, the person told where tell is written', () => {
+    const rule = ['reply:', '  note: text'];
+    const told = overviewOf(threadDocument({ rule }));
+    const untold = overviewOf(threadDocument({ rule, replies: threadReplies.slice(0, -5) }));
 
-    expect(overview).not.toContain('mermaid');
-    expect(overview).not.toContain('not taken');
-    expect(overview).toContain('reading the replies at least 1 minute apart. The whole reply is the note. If nobody');
+    expect([told.includes('mermaid'), untold.includes('mermaid')]).toEqual([false, false]);
+    expect(told).toContain(
+      'reading the replies at least 1 minute apart. The whole reply is the note. A reply it cannot read is not taken, and the person is told how to answer. If nobody',
+    );
+    expect(untold).toContain(
+      'reading the replies at least 1 minute apart. The whole reply is the note. A reply it cannot read is not taken. If nobody',
+    );
   });
 });

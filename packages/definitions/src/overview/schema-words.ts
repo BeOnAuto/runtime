@@ -30,7 +30,7 @@ const boundsWithin: Readonly<Record<string, Bound>> = { array: itemBound, object
 
 export const mostFieldDescriptionCharacters = 300;
 
-const mostNamedValues = 12;
+export const mostNamedValues = 12;
 
 const mostNamedFields = 12;
 

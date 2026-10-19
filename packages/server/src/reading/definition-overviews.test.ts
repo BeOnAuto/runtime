@@ -163,7 +163,7 @@ describe('the overview of every type of definition', () => {
     );
     expect(overviews.every((overview) => overview.split('\n\n').length > 2)).toBe(true);
     expect(overviews[1]).toContain(
-      '\n\nIt is given the month and asks **ads** with its tool campaign-costs, once per run.',
+      '\n\nIt is given the month and asks **ads** with its tool `campaign-costs`, once per run.',
     );
     expect(overviews[3]).toContain('\n\n## What it remembers\n\n');
     expect(listed).toMatchObject({ status: 200, body: { definitions: [{ name: 'review-brief' }] } });

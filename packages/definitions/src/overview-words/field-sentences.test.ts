@@ -61,15 +61,29 @@ describe('the fields a definition is given, told as a sentence', () => {
       ),
     ).toBe('the decision, one of approve, revise and skip, and the limit, else its default');
   });
+});
 
-  it('are any input, or the input as its schema describes it, for an input of no fields', () => {
+describe('the input a definition is given, where it has no fields', () => {
+  it('is the input as its schema describes it, its values or its kind, or any input where it says nothing', () => {
     expect([
       givenWords(),
+      givenWords({}),
+      givenWords({ description: 'Free text' }),
       givenWords({ type: 'string' }),
       givenWords({ type: 'string', description: 'The text to read' }),
       givenWords({ type: 'string', description: 'Free text' }),
+      givenWords({ type: 'string', enum: ['draft', 'final'] }),
       givenWords({ $ref: '#/$defs/text', $defs: { text: { type: 'string', description: 'The text to read' } } }),
-    ]).toEqual([['any input'], ['any input'], ['the text to read'], ['any input'], ['the text to read']]);
+    ]).toEqual([
+      ['any input'],
+      ['any input'],
+      ['any input'],
+      ['text'],
+      ['the text to read'],
+      ['text'],
+      ['one of ', 'draft', ' and ', 'final'],
+      ['the text to read'],
+    ]);
   });
 });
 

@@ -50,4 +50,4 @@ It answers with the verdict, one of approve and revise, and the note, when there
 
 ### Where
 
-To `{{ input.owner }}`. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**, at least `PT1M` apart; expires after `P2D`.
+To `{{ input.owner }}`, whose reply alone answers it. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**, at least `PT1M` apart; expires after `P2D`.

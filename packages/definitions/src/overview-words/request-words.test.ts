@@ -101,12 +101,14 @@ describe('how a request takes a reply', () => {
   it('opens with the part it reads first, and says a reply of another first word is not taken, and the person told', () => {
     expect([
       replyRuleSentence({ note: { from: 'rest' }, verdict: { from: 'word', words: { approve: [] } } }, answer),
-      notTakenSentence(true),
-      notTakenSentence(false),
+      notTakenSentence('another-first-word', true),
+      notTakenSentence('another-first-word', false),
+      notTakenSentence('unread', true),
     ]).toEqual([
       'Whatever follows the first word is what the approver adds; a reply whose first word is approve gives the verdict approve.',
       'A reply that begins with any other word is not taken, and the person is told how to answer.',
       'A reply that begins with any other word is not taken.',
+      'A reply it cannot read is not taken, and the person is told how to answer.',
     ]);
   });
 });
@@ -129,7 +131,7 @@ describe('the answer of a request, under Details', () => {
 });
 
 describe('where a request goes, under Details', () => {
-  it('says its party and its answerer as written, the tools and servers it is sent and read through, and its expiry', () => {
+  it('says its party and its answerer as written, whose reply alone answers where it reads replies, the tools and servers it is sent and read through, and its expiry', () => {
     expect([
       writtenOf(
         [paragraph('Asked.')],
@@ -157,11 +159,13 @@ describe('where a request goes, under Details', () => {
         [whereSection({ to: '{{ input.owner }}', route: { server: 'chat', tool: 'post' }, expires: 'P1D' })],
       ),
       writtenOf([], [whereSection({ to: '{{ input.owner }}', expires: 'PT1H' })]),
+      writtenOf([], [whereSection({ to: '#approvals', from: '{{ input.owner }}', expires: 'PT1H' })]),
     ]).toEqual([
-      'Asked.\n\n## Details\n\n### Where\n\nTo `{{ input.approver }}`. Sent through the tool `execute` of the server **gas**; the replies read with the tool `execute` of the server **gas**, at least `PT15S` apart; expires after `P7D`.\n',
-      '## Details\n\n### Where\n\nTo `#approvals`, answered by `{{ input.owner }}`. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**; expires after `P2D`.\n',
+      'Asked.\n\n## Details\n\n### Where\n\nTo `{{ input.approver }}`, whose reply alone answers it. Sent through the tool `execute` of the server **gas**; the replies read with the tool `execute` of the server **gas**, at least `PT15S` apart; expires after `P7D`.\n',
+      '## Details\n\n### Where\n\nTo `#approvals`; answered by `{{ input.owner }}`, whose reply alone counts. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**; expires after `P2D`.\n',
       '## Details\n\n### Where\n\nTo `{{ input.owner }}`. Sent through the tool `post` of the server **chat**; expires after `P1D`.\n',
       "## Details\n\n### Where\n\nTo `{{ input.owner }}`. Left in the playbook's inbox; expires after `PT1H`.\n",
+      "## Details\n\n### Where\n\nTo `#approvals`; its answerer `{{ input.owner }}`. Left in the playbook's inbox; expires after `PT1H`.\n",
     ]);
   });
 });

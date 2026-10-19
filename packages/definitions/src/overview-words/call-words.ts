@@ -1,7 +1,14 @@
 import { JsonPointer, type Schema } from 'effect';
 
-import { bulletList, paragraph, sectionOf, type OverviewSection, type Paragraph } from '../overview/overview.ts';
-import type { JsonSchema } from '../overview/schema-reading.ts';
+import {
+  bulletList,
+  paragraph,
+  sectionOf,
+  type OverviewSection,
+  type Paragraph,
+  type Phrases,
+} from '../overview/overview.ts';
+import { valueText, type JsonSchema } from '../overview/schema-reading.ts';
 import { answeredWords, givenClause } from './field-sentences.ts';
 import { theToolAsWritten } from './tool-words.ts';
 
@@ -20,14 +27,18 @@ interface CallWritten extends ToolCalled {
   readonly arguments?: Readonly<Record<string, Schema.Json>> | undefined;
 }
 
-function readWords(read: string | undefined): string {
+function readWords(read: string | undefined): Phrases {
   const segments = (read ?? '')
     .split('/')
     .slice(1)
     .map((segment) => JsonPointer.unescapeToken(segment));
-  return segments.length === 0
-    ? 'the whole of what the tool answered'
-    : `what it answered under ${segments.join(', then ')}`;
+  if (segments.length === 0) {
+    return ['the whole of what the tool answered'];
+  }
+  const under = segments.flatMap((segment, index): Phrases =>
+    index === 0 ? [{ code: segment }] : [', then ', { code: segment }],
+  );
+  return ['what it answered under ', ...under];
 }
 
 export function callSentence({ input, server, tool, read, output }: SystemAsked): Paragraph {
@@ -35,14 +46,14 @@ export function callSentence({ input, server, tool, read, output }: SystemAsked)
     ...givenClause(input),
     ' and asks ',
     { server },
-    ` with its tool ${tool}, once per run. It answers with ${readWords(read)}: `,
+    ' with its tool ',
+    { code: tool },
+    ', once per run. It answers with ',
+    ...readWords(read),
+    ': ',
     ...answeredWords(output),
     '.',
   );
-}
-
-function writtenValue(value: Schema.Json): string {
-  return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
 export function callSection({ server, tool, read, arguments: written = {} }: CallWritten): OverviewSection {
@@ -62,7 +73,7 @@ export function callSection({ server, tool, read, arguments: written = {} }: Cal
             given.map(([name, value]: readonly [string, Schema.Json]) => [
               { code: name },
               ': ',
-              { code: writtenValue(value) },
+              { code: valueText(value) },
             ]),
           ),
         ]),

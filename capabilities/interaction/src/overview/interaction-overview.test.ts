@@ -119,7 +119,7 @@ describe('the overview of an interaction function that asks a system', () => {
 
     expect(composedOf(source, 'read-thread').body).toHaveLength(1);
     expect(overviewOf(source).split('\n\n')[2]).toBe(
-      'It is given the channel and the thread and asks **chat** with its tool thread, once per run. It answers with what it answered under data, then items/all~x: a list of records.',
+      'It is given the channel and the thread and asks **chat** with its tool `thread`, once per run. It answers with what it answered under `data`, then `items/all~x`: a list of records.',
     );
   });
 
@@ -127,7 +127,7 @@ describe('the overview of an interaction function that asks a system', () => {
     const overview = overviewOf(callDocument({ read: null, input: [], with: ['    limit: 100'] }));
 
     expect(overview).toContain(
-      'It is given any input and asks **chat** with its tool thread, once per run. It answers with the whole of what the tool answered:',
+      'It is given any input and asks **chat** with its tool `thread`, once per run. It answers with the whole of what the tool answered:',
     );
     expect(overview).toContain(
       '### Call\n\nIt calls the tool `thread` of the server **chat**, its whole answer read, with these arguments, as written:\n\n- `limit`: `100`\n',
