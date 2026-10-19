@@ -9,7 +9,7 @@ import { scratchDirectory } from '../testing/scratch.ts';
 export type Script =
   | 'real'
   | 'shifted'
-  | 'slow'
+  | 'held'
   | 'sleeps'
   | 'exits'
   | 'allocates'
@@ -56,8 +56,9 @@ function sourceOf(): string {
     '    const answer = await real[kind](payload);',
     "    return kind === 'walk' ? { series: answer.series, q: answer.q.map((q) => q.map((value) => value + 100)) } : answer;",
     '  },',
-    '  slow: async (kind, payload) => {',
-    '    await new Promise((resolve) => setTimeout(resolve, 300));',
+    '  held: async (kind, payload) => {',
+    "    appendFileSync(sleepingFile, kind + '\\n');",
+    "    while (scriptOf() === 'held') await new Promise((resolve) => setTimeout(resolve, 10));",
     '    return real[kind](payload);',
     '  },',
     '  sleeps: (kind) => {',

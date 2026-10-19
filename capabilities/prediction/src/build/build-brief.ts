@@ -1,3 +1,4 @@
+import { renderClock } from '@on.auto/definitions/template';
 import { Conflict, textToKeep, type PlaybookAddress, type RecordedContent } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
@@ -33,19 +34,21 @@ export function keptBrief(
     firstPeriod: files.firstPeriod,
     lastPeriod: trainingLastOf(document, files),
   });
-  const rendered = renderedBrief(document.brief, variables);
-  if (Result.isFailure(rendered)) {
-    return Effect.fail(
-      new Conflict({
-        detail: `The brief does not render over this dataset within the ${figure(predictionBounds.mostBriefBytes)} bytes a brief may; shorten it or loop over less`,
-        kind: 'unworkable',
-      }),
-    );
-  }
-  const text = rendered.success;
-  return Effect.map(Effect.orDie(content.put(playbook, textToKeep(text, 'text/markdown'))), (kept) => ({
-    text,
-    sha256: kept.sha256,
-    bytes: kept.bytes,
-  }));
+  return Effect.flatMap(renderClock, (clock) => {
+    const rendered = renderedBrief(document.brief, variables, clock);
+    if (Result.isFailure(rendered)) {
+      return Effect.fail(
+        new Conflict({
+          detail: `The brief does not render over this dataset within the ${figure(predictionBounds.mostBriefBytes)} bytes a brief may; shorten it or loop over less`,
+          kind: 'unworkable',
+        }),
+      );
+    }
+    const text = rendered.success;
+    return Effect.map(Effect.orDie(content.put(playbook, textToKeep(text, 'text/markdown'))), (kept) => ({
+      text,
+      sha256: kept.sha256,
+      bytes: kept.bytes,
+    }));
+  });
 }

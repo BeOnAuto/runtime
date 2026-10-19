@@ -7,7 +7,7 @@ import type {
   SavedDefinition,
   SavedDefinitions,
 } from '@on.auto/definitions';
-import { noLongestRuns, recordingJournal } from '@on.auto/definitions/testing';
+import { checkingWithin, noLongestRuns, onTheStandingClock, recordingJournal } from '@on.auto/definitions/testing';
 import { allPermissions, contentOfText } from '@on.auto/operations';
 import { programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Exit, type Schema } from 'effect';
@@ -33,7 +33,7 @@ const measured: Readonly<Record<string, string>> = Object.fromEntries(
 export function poolOf(): ProgramPool {
   const pool = programPool({ workers: 1, heapMegabytes: 256, environment: measured });
   pools.push(pool);
-  return pool;
+  return checkingWithin(pool);
 }
 
 const forecastRun: RunContext = {
@@ -90,6 +90,14 @@ export interface PredictionRuns {
   readonly refusing: (source: string, input: Schema.Json) => Promise<CapabilityRejection>;
 }
 
+function preparedOnTheStandingClock(definition: PreparedDefinition): PreparedDefinition {
+  return {
+    ...definition,
+    check: (saved) => onTheStandingClock(definition.check(saved)),
+    run: (input, context) => onTheStandingClock(definition.run(input, context)),
+  };
+}
+
 export function predictionRuns(pool: ProgramPool = poolOf(), mostFunctions?: number): PredictionRuns {
   const datasets = keptDatasets();
   const capability = makePredictionFunctionAdapter({
@@ -98,7 +106,7 @@ export function predictionRuns(pool: ProgramPool = poolOf(), mostFunctions?: num
     ports: testPorts().ports,
     ...(mostFunctions === undefined ? {} : { mostFunctions }),
   });
-  const prepared = (source: string) => Effect.runSync(capability.prepare(source));
+  const prepared = (source: string) => preparedOnTheStandingClock(Effect.runSync(capability.prepare(source)));
   return {
     capability,
     datasets,

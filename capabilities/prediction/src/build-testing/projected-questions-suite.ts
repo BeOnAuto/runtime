@@ -1,5 +1,3 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -71,7 +69,7 @@ function busy(settingsOf: SettingsOf): void {
     for (const held of ['first', 'second']) {
       void Effect.runPromise(models.walk({ sha256: held, path: `/${held}.onnx` }, walk));
     }
-    await sleep(100);
+    await projected.scripted.untilSleeping(['walk', 'walk']);
 
     expect(await asked(projected.playbook, { series: 'north', horizon: 1 })).toMatchObject({
       status: 'rejected',

@@ -1,4 +1,5 @@
 import { parsedTemplate, templateEngine } from '@on.auto/definitions/template';
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -17,7 +18,9 @@ describe('the brief rendered for a trainer', () => {
       parsedTemplate(templateEngine(), 'Fit {{ function.name }} over {{ dataset.rows }} rows', 1),
     );
 
-    expect(renderedBrief(parsed, variables)).toEqual(Result.succeed('Fit weekly-orders over 3 rows'));
+    expect(renderedBrief(parsed, variables, standingRenderClock)).toEqual(
+      Result.succeed('Fit weekly-orders over 3 rows'),
+    );
   });
 
   it('is refused with the engine’s own words when the engine fails to render it', () => {
@@ -30,7 +33,7 @@ describe('the brief rendered for a trainer', () => {
     }));
     const parsed = Result.getOrThrow(parsedTemplate(refusing, 'Fit\n{{ dataset.rows | refuse }}', 28));
 
-    expect(briefRenderIssues(parsed, variables, refusing)).toEqual([
+    expect(briefRenderIssues(parsed, variables, standingRenderClock, refusing)).toEqual([
       { line: 29, pointer: '', detail: 'The brief does not render: the filter refused its value' },
     ]);
   });

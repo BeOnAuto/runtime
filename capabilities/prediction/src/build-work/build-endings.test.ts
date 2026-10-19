@@ -1,5 +1,3 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -15,6 +13,7 @@ import {
 } from '../build-testing/built-versions.ts';
 import { candidateSha256, performedOnce, performedUntilQuiet } from '../build-testing/due-driving.ts';
 import { scriptedModels } from '../build-testing/scripted-models.ts';
+import { clockRunningFrom } from '../build-testing/suite-clock.ts';
 import { buildsDue } from '../builds/builds-due.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -53,25 +52,20 @@ describe('a build that is cancelled', () => {
     expect(staged).toBeUndefined();
   });
 
-  it('ends cancelled while a candidate is scored, the walk ended and its permit let go well before its deadline', async () => {
+  it('ends cancelled while a candidate is scored, the walk ended by the cancel and its permit let go, on a walk deadline longer than the test', async () => {
     const scripted = scriptedModels();
-    const playbook = buildPlaybook({
-      module: scripted.module,
-      deadlines: { check: 30_000, run: 10_000, walk: 30_000, baselines: 30_000 },
-    });
+    const playbook = buildPlaybook({ module: scripted.module });
     await savedFunction(playbook);
     const build = await askedBuild(playbook);
     await uploaded(playbook, build, ['visits-mean']);
     await answered(playbook, build, { candidates: [candidateSha256('visits-mean')] });
     scripted.next('sleeps');
-    const started = performance.now();
     const scoring = performedOnce(playbook.due, Date.now());
-    await sleep(300);
+    await scripted.untilSleeping(['walk']);
     await playbook.cancelled(build);
     await scoring;
-    const scoredFor = performance.now() - started;
 
-    expect([scoredFor < 10_000, playbook.test.ports.permits.taken()]).toEqual([true, 0]);
+    expect(playbook.test.ports.permits.taken()).toBe(0);
 
     expect((await workOf(playbook, build)).map(({ type }) => type)).toEqual([
       'dataset_assembled',
@@ -110,15 +104,17 @@ describe('a build that was scored and has ended', () => {
 describe('a build cancelled as the walk of its candidate ends', () => {
   it('takes the end of its run as done, and records nothing of the candidate', async () => {
     const scripted = scriptedModels();
-    const playbook = buildPlaybook({ module: scripted.module });
+    const unwatched = clockRunningFrom(Date.now(), () => Effect.never);
+    const playbook = buildPlaybook({ module: scripted.module, clock: unwatched });
     await savedFunction(playbook);
     const build = await askedBuild(playbook);
     await uploaded(playbook, build, ['visits-mean']);
     await answered(playbook, build, { candidates: [candidateSha256('visits-mean')] });
-    scripted.next('slow');
+    scripted.next('held');
     const scoring = performedOnce(playbook.due, Date.now());
-    await sleep(100);
+    await scripted.untilSleeping(['walk']);
     await playbook.cancelled(build);
+    scripted.next('real');
     await scoring;
 
     expect((await workOf(playbook, build)).map(({ type }) => type)).toEqual([

@@ -1,6 +1,5 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -163,18 +162,19 @@ describe('a candidate scored while every model process is taken', { timeout: tes
     const scripted = scriptedModels();
     const playbook = buildPlaybook({
       module: scripted.module,
-      deadlines: { check: 3000, run: 10_000, walk: 1500, baselines: 30_000 },
+      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000 },
     });
     const build = await answeredWith(playbook, ['visits-mean']);
     const { models } = playbook.test.ports;
-    scripted.next('sleeps');
-    for (const held of ['first', 'second', 'third', 'fourth']) {
-      void Effect.runPromise(models.check({ sha256: held, path: `/${held}.onnx` }));
-    }
+    scripted.next('held');
+    const held = ['first', 'second'].map((sha256) =>
+      Effect.runPromiseExit(models.check({ sha256, path: `/${sha256}.onnx` })),
+    );
+    await scripted.untilSleeping(['check', 'check']);
     await performedOnce(playbook.due, Date.now());
     const waited = await workOf(playbook, build);
-    await sleep(3500);
     scripted.next('real');
+    await Promise.all(held);
     await performedOnce(playbook.due, Date.now() + 61_000);
 
     expect(waited).toHaveLength(2);

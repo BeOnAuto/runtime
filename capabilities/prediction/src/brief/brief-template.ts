@@ -7,6 +7,7 @@ import {
   renderedTemplate,
   templateEngine,
   type ParsedTemplate,
+  type RenderClock,
   type RenderFailure,
   type TemplateEngine,
 } from '@on.auto/definitions/template';
@@ -68,10 +69,11 @@ function refusalOf(cause: unknown, line: number): BriefRefusal | undefined {
 export function renderedBrief(
   parsed: ParsedTemplate,
   variables: BriefVariables,
+  clock: RenderClock,
   engine: TemplateEngine = briefEngine,
 ): Result.Result<string, BriefFailure> {
   const emitter = briefEmitter(predictionBounds.mostBriefBytes);
-  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf }), () => emitter.buffer);
+  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf, clock }), () => emitter.buffer);
 }
 
 const failureWords: {
@@ -117,9 +119,10 @@ export function compiledBrief({ body, bodyLine }: DocumentParts): Checked<Parsed
 export function briefRenderIssues(
   parsed: ParsedTemplate,
   largest: BriefVariables,
+  clock: RenderClock,
   engine: TemplateEngine = briefEngine,
 ): readonly DocumentIssue[] {
-  const rendered = renderedBrief(parsed, largest, engine);
+  const rendered = renderedBrief(parsed, largest, clock, engine);
   return Result.isSuccess(rendered)
     ? []
     : [{ line: rendered.failure.line, pointer: '', detail: wordsOf(rendered.failure) }];

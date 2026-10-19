@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -78,7 +77,7 @@ describe('a candidate uploaded while every model process is taken', () => {
     const { models } = playbook.test.ports;
     void Effect.runPromise(models.run({ sha256: 'held', path: '/held.onnx' }, question));
     void Effect.runPromise(models.run({ sha256: 'held', path: '/held.onnx' }, question));
-    await sleep(100);
+    await scripted.untilSleeping(['run', 'run']);
 
     expect(await sent(playbook, build, 'visits-mean')).toMatchObject({
       status: 'rejected',

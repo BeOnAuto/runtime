@@ -1,6 +1,5 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -146,15 +145,17 @@ function shadowWaits(settingsOf: SettingsOf): void {
   it('waits while every model process is taken, grades with no truth while its dataset is not made, and decides only at a later close that has one', async () => {
     const projected = await challenged(settingsOf, {
       ...visits,
-      deadlines: { check: 3000, run: 10_000, walk: 1500, baselines: 30_000 },
+      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000 },
     });
     const { models } = projected.playbook.test.ports;
-    projected.scripted.next('sleeps');
-    for (const held of ['first', 'second', 'third', 'fourth']) {
-      void Effect.runPromise(models.check({ sha256: held, path: `/${held}.onnx` }));
-    }
-    await performedIn(projected, ['sleeps']);
-    await sleep(3500);
+    projected.scripted.next('held');
+    const held = ['first', 'second'].map((sha256) =>
+      Effect.runPromiseExit(models.check({ sha256, path: `/${sha256}.onnx` })),
+    );
+    await projected.scripted.untilSleeping(['check', 'check']);
+    await performedIn(projected, ['held']);
+    projected.scripted.next('real');
+    await Promise.all(held);
     await performedIn(projected, ['real', 'real', 'real', 'real'], 1);
     projected.read('empty');
     await performedUntilQuiet(projected.playbook, 4 * day);
