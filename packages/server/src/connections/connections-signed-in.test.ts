@@ -5,6 +5,7 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { answerFieldsOf } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const publicUrl = 'http://localhost:5555';
@@ -97,5 +98,29 @@ describe('a connection on a runtime of keys alone', () => {
           'This runtime signs nobody in, so no person can approve a connection: set PUBLIC_URL, or add the server to the configuration',
       },
     });
+  });
+});
+
+describe('the providers the search of an org lists on a runtime that signs people in', () => {
+  it('are left out for a key and for a person who may only read, and listed to a person who may add', async () => {
+    const issuer = await issuerOverHttps();
+    const served = await servingReasoning([], {
+      IDENTITY_ISSUER: issuer.issuer,
+      PUBLIC_URL: publicUrl,
+      API_KEYS: JSON.stringify([builder.entry]),
+    });
+    server = served;
+    const reader = await accessTokenOf(issuer, publicUrl, ['user:org:read', 'org:read'].join(' '));
+    const adder = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+
+    const answers = await Promise.all(
+      [builder.key, reader, adder].map((key) => served.call('GET', '/v1/orgs/acme/tool-servers/search', { key })),
+    );
+
+    expect(answers.map(({ status, body }) => [status, answerFieldsOf(body)])).toEqual([
+      [200, ['servers', 'tools', 'scopes']],
+      [200, ['servers', 'tools', 'scopes']],
+      [200, ['servers', 'tools', 'scopes', 'providers']],
+    ]);
   });
 });

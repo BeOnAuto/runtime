@@ -127,6 +127,16 @@ describe('the descriptions of the tools of /mcp', () => {
   });
 });
 
+describe('the descriptions of the tools that find and connect a provider', () => {
+  it('name providers in search, at 761 of its 800 characters, and say in add_connection that search lists them', () => {
+    const [searching, adding] = [descriptionOf('search'), descriptionOf('add_connection')];
+
+    expect(searching).toContain('`providers` lists what a person may connect that no server serves yet.');
+    expect(adding).toContain('a provider search lists, by its name and placeholders');
+    expect([searching.length, adding.length]).toEqual([761, 345]);
+  });
+});
+
 function everyArgument(): readonly Argument[] {
   return tools.flatMap((tool) => argumentsOf(tool));
 }

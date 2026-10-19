@@ -1,9 +1,8 @@
 import { InvalidPortError, type Environment } from '@on.auto/config';
 import { createApiKey } from '@on.auto/identity';
-import { readProviders } from '@on.auto/providers';
-import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { shippedList } from '../testing/servers/connected-servers.ts';
 import { readSettings } from './settings.ts';
 
 function errorFrom(environment: Environment): unknown {
@@ -16,8 +15,6 @@ function errorFrom(environment: Environment): unknown {
 }
 
 const { entry } = createApiKey({ id: 'ci-1', org: 'acme', permissions: ['org:read'], playbooks: '*' });
-
-const shippedProviders = Result.getOrThrow(readProviders());
 
 const defaultPrediction = {
   processes: 4,
@@ -65,7 +62,7 @@ describe('readSettings', () => {
       prediction: defaultPrediction,
       connections: { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] },
       connectionVariables: new Map(),
-      providers: shippedProviders,
+      providers: shippedList,
       providerValues: new Map(),
       telemetry: undefined,
       configFile: undefined,
@@ -134,7 +131,7 @@ describe('readSettings given every setting', () => {
       prediction: defaultPrediction,
       connections: { peopleMayAdd: false, allowedHosts: ['*.example.com'], credentialKinds: ['none'], variables: [] },
       connectionVariables: new Map(),
-      providers: shippedProviders,
+      providers: shippedList,
       providerValues: new Map(),
       telemetry: undefined,
       configFile: undefined,
