@@ -1,10 +1,7 @@
 import { Buffer } from 'node:buffer';
 
-import {
-  fakeAuthorization,
-  type ClientRegistration,
-  type FakeAuthorization,
-} from '../mcp-testing/fake-authorization.ts';
+import { fakeAuthorization, type FakeAuthorization } from '../authorization-testing/fake-authorization.ts';
+import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import { deniedText } from '../mcp-testing/fake-tools.ts';
 import { serveOnLoopback, type FetchHandler, type LoopbackServer } from '../testing/loopback-server.ts';
 import { fakeApiDocument, type FakeApiVersion } from './fake-api-document.ts';

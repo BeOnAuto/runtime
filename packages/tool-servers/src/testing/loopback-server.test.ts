@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
 import { serveOnLoopback } from './loopback-server.ts';
 
+const aSchemaError: unknown = expect.stringMatching(/^SchemaError/u);
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -29,13 +31,13 @@ describe('a loopback server whose handler fails', () => {
     });
     closing.push(fake.close);
 
+    const claims = Buffer.from('not json').toString('base64url');
     const answer = await fetch(`${fake.origin}/token`, {
       method: 'POST',
-      headers: { authorization: `Basic ${Buffer.from('%E0%A4%A').toString('base64')}` },
-      body: 'grant_type=client_credentials',
+      body: `grant_type=client_credentials&client_assertion=header.${claims}.signature`,
     });
 
     expect(answer.status).toBe(500);
-    expect(fake.failures()).toEqual([{ method: 'POST', path: '/token', error: 'URIError: URI malformed' }]);
+    expect(fake.failures()).toEqual([{ method: 'POST', path: '/token', error: aSchemaError }]);
   });
 });
