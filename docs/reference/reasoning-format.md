@@ -374,7 +374,7 @@ In the instructions and the message:
 - Comments are left out, a `raw` block keeps its text, and any other tag stays as it is written.
 - The instructions and the message are each cut past 8,192 characters, with the line of the document where they continue.
 
-The overview is written from the document when it is saved, so it says only what the document says. Write the `description` for the person who will read it. Give each field of the schemas a `description`, and put each field's default value in `input.default`, so the overview can show it. A function without them still has an overview, with only the types.
+The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it. Give each field of the schemas a `description`, and put each field's default value in `input.default`, so the overview can show it. A function without them still has an overview, with only the types.
 
 ## Provider options
 

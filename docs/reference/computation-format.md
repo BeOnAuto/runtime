@@ -403,7 +403,7 @@ When the computation function's run is `unavailable`, the `compute` task retries
 3. In one line, that the program is TypeScript and is shown under Source. The program itself is not described.
 4. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
 
-The overview is written from the document when it is saved, so it says only what the document says. Write the `description` for the person who will read it, and give each field of the schemas a `description`. The program may give a field a value of its own where the input leaves it out. Write that value as the field's `default` in `input.schema`, so the overview can say it. A function without them still has an overview, with the types alone.
+The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it, and give each field of the schemas a `description`. The program may give a field a value of its own where the input leaves it out. Write that value as the field's `default` in `input.schema`, so the overview can say it. A function without them still has an overview, with the types alone.
 
 ## Availability
 

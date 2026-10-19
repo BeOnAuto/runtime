@@ -700,7 +700,7 @@ A workflow on a [schedule](workflow-format.md#triggers) can ask for a build on t
 6. The rules, when there are any.
 7. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
 
-The overview is written from the document when it is saved, so it says only what the document says. Write the `description` for the person who will read it, and the brief for the trainer, whose words the overview shows as they are.
+The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it, and the brief for the trainer, whose words the overview shows as they are.
 
 ## Availability
 
