@@ -33,6 +33,11 @@ const credentialShapes: readonly RegExp[] = [
 const advice =
   'Looks like a credential, which this file never holds; write a reference to the environment variable that holds it instead, such as ${GATEWAY_API_KEY}';
 
+const clientIdKey = 'client_id';
+
+export const clientIdWrittenOut =
+  'Looks like a credential, which a client id never is: the secret or the key of the client goes in its client_secret or its private_key, as a reference';
+
 export const credentialAsDefault =
   'Holds a reference whose default looks like a credential, which this file never holds; set the variable the reference names instead of writing a default';
 
@@ -103,9 +108,46 @@ function holdsCredentialAsDefault(name: string, text: string, sorts: readonly st
 
 function textProblems(name: string, text: string, pointer: string, sorts: readonly string[]): readonly FileProblem[] {
   if (isWrittenOutCredential(name, text, sorts)) {
-    return [{ pointer, detail: advice }];
+    return [{ pointer, detail: name === clientIdKey ? clientIdWrittenOut : advice }];
   }
   return holdsCredentialAsDefault(name, text, sorts) ? [{ pointer, detail: credentialAsDefault }] : [];
+}
+
+export interface CredentialJudging {
+  readonly sortsOfCredential: readonly string[];
+  readonly prose: readonly string[];
+  readonly judgedByShape: readonly string[];
+}
+
+interface Judged {
+  readonly name: string;
+  readonly pointer: string;
+  readonly byShape: boolean;
+}
+
+function judgedProblems({ name, pointer, byShape }: Judged, value: Schema.Json, judging: CredentialJudging) {
+  if (typeof value === 'string') {
+    return textProblems(name, value, pointer, byShape ? [name] : judging.sortsOfCredential);
+  }
+  const isList = Array.isArray(value);
+  return entriesOf(value)
+    .filter(([key]) => isList || !judging.prose.includes(key))
+    .flatMap(([key, item]): readonly FileProblem[] => {
+      const nested = {
+        name: isList ? name : key,
+        pointer: below(pointer, key),
+        byShape: byShape || (!isList && judging.judgedByShape.includes(key)),
+      };
+      return judgedProblems(nested, item, judging);
+    });
+}
+
+export function settingCredentialProblems(
+  name: string,
+  value: Schema.Json,
+  judging: CredentialJudging,
+): readonly FileProblem[] {
+  return judgedProblems({ name, pointer: below('', name), byShape: false }, value, judging);
 }
 
 export function credentialProblems(
@@ -114,11 +156,5 @@ export function credentialProblems(
   pointer: string,
   sortsOfCredential: readonly string[] = [],
 ): readonly FileProblem[] {
-  if (typeof value === 'string') {
-    return textProblems(name, value, pointer, sortsOfCredential);
-  }
-  const isList = Array.isArray(value);
-  return entriesOf(value).flatMap(([key, item]) =>
-    credentialProblems(isList ? name : key, item, below(pointer, key), sortsOfCredential),
-  );
+  return judgedProblems({ name, pointer, byShape: false }, value, { sortsOfCredential, prose: [], judgedByShape: [] });
 }
