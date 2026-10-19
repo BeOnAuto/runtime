@@ -11,7 +11,7 @@ import type {
 } from '../consent/consent-client.ts';
 import { isInvalidGrant } from '../consent/consent-failures.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
-import { heldAmongSecrets, keptTokensOf, keptValueOf, type KeptTokens } from './kept-tokens.ts';
+import { heldAmongSecrets, keptValueOf, type KeptTokens } from './kept-tokens.ts';
 import { renewalWords } from './renewal-words.ts';
 
 export interface Refreshing {
@@ -32,7 +32,6 @@ export interface Renewal {
 
 export interface Sourced {
   readonly served: ConsentServed;
-  readonly kept: KeptTokens;
   readonly heldAt: number;
   readonly serving: TokenServing;
 }
@@ -125,7 +124,7 @@ function refusedWith(refusal: ConsentRefusal, renewing: Renewing): Effect.Effect
 }
 
 function takenFrom(row: HeldTokens, renewing: Renewing): Held {
-  return heldOf(keptTokensOf(row.value), row.version, renewing);
+  return heldOf(row.tokens, row.version, renewing);
 }
 
 function afterRefusedGrant(held: Held, renewing: Renewing): Effect.Effect<Held, Error> {
@@ -203,9 +202,9 @@ function underItsFailedClaim(failed: FailedClaim, held: Held, refused: boolean, 
 }
 
 export function renewedTokens(sourced: Sourced, renewal: Renewal): TokenSource {
-  const { served, kept, heldAt, serving } = sourced;
+  const { served, heldAt, serving } = sourced;
   const holding: Holding = {
-    held: heldFrom(kept, served.held.version, heldAt, renewal),
+    held: heldFrom(served.held.tokens, served.held.version, heldAt, renewal),
     renewing: undefined,
     failed: undefined,
   };

@@ -1,10 +1,9 @@
 import { selectClientAuthMethod, type ClientAuthMethod, type FetchLike } from '@modelcontextprotocol/client';
-import { Effect, Redacted } from 'effect';
+import { Effect } from 'effect';
 
-import { secretsOf } from '../bounds/secrets.ts';
-import { failureOf } from '../clients/server-failures.ts';
 import { libraryClientOf, type ActingClient, type ClientIdentity } from './acting-clients.ts';
 import type { RevocationFailure } from './consent-client.ts';
+import { refusalOf } from './consent-failures.ts';
 import { libraryMetadataOf, type AuthorizationServer } from './server-metadata.ts';
 
 interface RevokedTokens {
@@ -19,7 +18,7 @@ export interface Revoking {
   readonly fetch: FetchLike;
 }
 
-export type RevocationRefused = Extract<RevocationFailure, { readonly refused: 'not_revoked' }>;
+export type RevocationRefused = Extract<RevocationFailure, { readonly refused: 'not_revoked' | 'host' | 'unanswered' }>;
 
 interface ClientAuthentication {
   readonly headers: Readonly<Record<string, string>>;
@@ -65,31 +64,21 @@ async function revocationRequestOf(revoking: Revoking, endpoint: string): Promis
   return { method: 'POST', headers: formHeaders, body: asserted };
 }
 
-function scrubbedOf({ tokens, client }: Revoking): (text: string) => string {
-  const held = [tokens.access_token, tokens.refresh_token, client.identity.client_secret];
-  return secretsOf(held.flatMap((secret) => (secret === undefined ? [] : [Redacted.make(secret)]))).scrub;
-}
-
-function notRevoked(detail: string): RevocationRefused {
-  return { refused: 'not_revoked', detail };
-}
-
 export function revocationOf(revoking: Revoking): Effect.Effect<void, RevocationRefused> {
   const endpoint = revoking.server.revocation_endpoint;
   if (endpoint === undefined) {
     return Effect.void;
   }
-  const scrubbed = scrubbedOf(revoking);
   return Effect.tryPromise({
     try: async () => {
       const answer = await revoking.fetch(endpoint, await revocationRequestOf(revoking, endpoint));
       await answer.text();
       return answer.status;
     },
-    catch: (error) => notRevoked(scrubbed(failureOf(error).message)),
+    catch: (error): RevocationRefused => refusalOf(error),
   }).pipe(
     Effect.flatMap((status) =>
-      status >= 200 && status < 300 ? Effect.void : Effect.fail(notRevoked(`it answered HTTP ${status}`)),
+      status >= 200 && status < 300 ? Effect.void : Effect.fail<RevocationRefused>({ refused: 'not_revoked', status }),
     ),
   );
 }

@@ -1,4 +1,4 @@
-import { Effect, type Redacted } from 'effect';
+import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted } from '../authorization-testing/authorization-requests.ts';
@@ -15,7 +15,6 @@ import {
   clockAt,
 } from '../testing/index.ts';
 import { until } from '../testing/until.ts';
-import { keptTokensOf } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -37,10 +36,6 @@ async function twoProcessesOverOneRow() {
 
 function heardAt(fake: FakeMcpServer, path: string): number {
   return fake.heard().filter((heard) => heard.path === path).length;
-}
-
-function accessTokenOf(value: Redacted.Redacted): string {
-  return keptTokensOf(value).access_token;
 }
 
 function cuttingTimeouts() {
@@ -229,7 +224,7 @@ describe('a renewal whose row moved before it replaces it', () => {
     const taken = await renewing;
     const [got = ''] = gate.answered();
 
-    expect(taken).toBe(accessTokenOf(other.tokens));
+    expect(taken).toBe(other.kept.access_token);
     expect(heardAt(fake, '/revoke')).toBe(0);
     expect([await admitted(fake, taken), await admitted(fake, got)]).toEqual([true, true]);
   });

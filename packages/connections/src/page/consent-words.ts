@@ -86,7 +86,14 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
     : conflictOf(named, refusal);
 }
 
-export function unrevokedWordsOf(named: ConsentNamed, failure: RevocationFailure): string {
-  const why = failure.refused === 'not_revoked' ? failure.detail : consentRefusalOf(named, failure).detail;
-  return `The tokens of the connection ${named.name} were not revoked at its authorization server, so they end on their own: ${why}`;
+export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFailure): string {
+  if (failure.refused === 'not_revoked') {
+    return `The authorization server of the connection ${name} refused to revoke its tokens, answering HTTP ${failure.status}, so they end on their own`;
+  }
+  if (failure.refused === 'host') {
+    return `The tokens of the connection ${name} were not revoked, so they end on their own: ${failure.rule}`;
+  }
+  return failure.refused === 'unanswered'
+    ? `The authorization server of the connection ${name} did not answer the revocation of its tokens, so they end on their own`
+    : `The tokens of the connection ${name} could not be revoked with the client and at the authorization server it was made with, so they end on their own`;
 }

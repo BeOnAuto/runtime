@@ -1,6 +1,6 @@
-import { Effect } from 'effect';
+import { Effect, Option } from 'effect';
 
-import { keptTokensOf } from '../consent-tokens/kept-tokens.ts';
+import { keptTokensIn } from '../consent-tokens/kept-tokens.ts';
 import type {
   ClientRegistrations,
   ConsentClient,
@@ -31,7 +31,7 @@ export async function consentedAt(url: string): Promise<Consented> {
 }
 
 export function tokensKeptBy({ tokens }: FinishedConsent) {
-  return keptTokensOf(tokens);
+  return Option.getOrThrow(keptTokensIn(tokens));
 }
 
 export async function finishAskedOf(client: ConsentClient, asked: StartAsked): Promise<FinishAsked> {

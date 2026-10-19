@@ -3,11 +3,13 @@ import { IssuerMismatchError, OAuthError, OAuthErrorCode } from '@modelcontextpr
 import { failureOf } from '../clients/server-failures.ts';
 import type { ConsentRefusal } from './consent-client.ts';
 
-export const unanswered: ConsentRefusal = { refused: 'unanswered' };
+type RequestRefusal = Extract<ConsentRefusal, { readonly refused: 'host' | 'unanswered' }>;
+
+export const unanswered: RequestRefusal = { refused: 'unanswered' };
 
 const invalidGrant: string = OAuthErrorCode.InvalidGrant;
 
-export function refusalOf(error: unknown): ConsentRefusal {
+export function refusalOf(error: unknown): RequestRefusal {
   const failure = failureOf(error);
   return failure.kind === 'not_allowed' ? { refused: 'host', rule: failure.message } : unanswered;
 }

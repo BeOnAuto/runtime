@@ -7,6 +7,7 @@ import {
   connectedByConsent,
   consentClientAt,
   everyHost,
+  hostRefusedAt,
   registeredAt,
   returnAddress,
   servedForConsent,
@@ -14,7 +15,6 @@ import {
   type ConsentConnected,
   type FakeMcpServer,
 } from '../testing/index.ts';
-import { keptTokensOf } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -28,7 +28,7 @@ async function connectedAt(changes: Partial<ClientRegistration> = {}): Promise<C
   return connectedByConsent(fake);
 }
 
-function revokeAskedOf({ fake, client, tokens }: ConsentConnected): RevokeAsked {
+function revokeAskedOf({ fake, client, kept: tokens }: ConsentConnected): RevokeAsked {
   return {
     server: { type: 'mcp', url: fake.url },
     way: { issuer: fake.origin, scope: 'files.read' },
@@ -61,7 +61,7 @@ describe('the revocation a removal asks for', () => {
     const answered = await revoked(consentClientAt(connected.fake), connected);
 
     expect(answered).toMatchObject({ _tag: 'Success' });
-    expect(await admitted(connected.fake, keptTokensOf(connected.tokens).access_token)).toBe(false);
+    expect(await admitted(connected.fake, connected.kept.access_token)).toBe(false);
   });
 
   it('revokes the access token where the server gave no refresh token', async () => {
@@ -69,14 +69,14 @@ describe('the revocation a removal asks for', () => {
 
     await revoked(consentClientAt(connected.fake), connected);
 
-    expect(await admitted(connected.fake, keptTokensOf(connected.tokens).access_token)).toBe(false);
+    expect(await admitted(connected.fake, connected.kept.access_token)).toBe(false);
   });
 });
 
 describe('a revocation that does not happen', () => {
-  it('is refused in the status the server answered, or in the words of a request that failed, scrubbed', async () => {
+  it('is refused in the status the server answered, as unanswered where the request failed, and in the rule of a host refused', async () => {
     const connected = await connectedAt();
-    const { refresh_token: refreshToken = '' } = keptTokensOf(connected.tokens);
+    const rule = 'The rules of whoever runs Auto do not allow the host 127.0.0.1';
     const wrongSecret = consentClientAt(connected.fake, {
       registeredClients: [
         registeredAt(connected.fake.origin, {
@@ -84,18 +84,19 @@ describe('a revocation that does not happen', () => {
         }),
       ],
     });
-    const failing = consentClientAt(connected.fake, {
-      fetch: failingRevocations(new Error(`The connection reset while it sent ${refreshToken}`)),
-    });
+    const failing = consentClientAt(connected.fake, { fetch: failingRevocations(new Error('The connection reset')) });
+    const refusing = consentClientAt(connected.fake, { fetch: hostRefusedAt('/revoke', rule) });
 
     const refused = await revoked(wrongSecret, connected);
     const failed = await revoked(failing, connected);
+    const refusedItsHost = await revoked(refusing, connected);
 
-    expect([refused, failed]).toMatchObject([
-      { failure: { refused: 'not_revoked', detail: 'it answered HTTP 401' } },
-      { failure: { refused: 'not_revoked', detail: 'The connection reset while it sent [redacted]' } },
+    expect([refused, failed, refusedItsHost]).toMatchObject([
+      { failure: { refused: 'not_revoked', status: 401 } },
+      { failure: { refused: 'unanswered' } },
+      { failure: { refused: 'host', rule } },
     ]);
-    expect(await admitted(connected.fake, keptTokensOf(connected.tokens).access_token)).toBe(true);
+    expect(await admitted(connected.fake, connected.kept.access_token)).toBe(true);
   });
 
   it('is refused as gone where the client of the connection is no longer registered, and sends nothing', async () => {

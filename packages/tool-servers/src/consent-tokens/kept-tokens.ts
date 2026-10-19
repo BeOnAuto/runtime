@@ -22,7 +22,7 @@ export type AnsweredTokens = typeof AnsweredTokensSchema.Type;
 
 const KeptValueSchema = Schema.fromJsonString(KeptTokensSchema);
 
-const decodeValue = Schema.decodeUnknownSync(KeptValueSchema);
+const decodeValue = Schema.decodeUnknownOption(KeptValueSchema);
 
 const encodeValue = Schema.encodeSync(KeptValueSchema);
 
@@ -35,7 +35,7 @@ export interface TokenHolding {
   readonly hold: (source: string, token: string) => void;
 }
 
-export function keptTokensOf(value: Redacted.Redacted): KeptTokens {
+export function keptTokensIn(value: Redacted.Redacted): Option.Option<KeptTokens> {
   return decodeValue(Redacted.value(value));
 }
 
