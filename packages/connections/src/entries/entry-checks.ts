@@ -10,7 +10,7 @@ import {
 import { JsonPointer, Redacted, Result, Schema } from 'effect';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
-import type { Credential } from '../registry/credential.ts';
+import { placesNoValue, type Credential } from '../registry/credential.ts';
 import { placedCredential, readPlaced, type GivenValue, type Providing } from '../serving/placed-credentials.ts';
 import { credentialIssuesOf } from './credential-checks.ts';
 
@@ -59,8 +59,6 @@ const fileOnly = `${pinnedUrlShape}: a connection reads its document from the ne
 const anyValue: GivenValue = { value: Redacted.make('a value the person gives'), algorithm: undefined };
 
 const anyClientId = 'a client id the person gives';
-
-const kindsPlacingNoValue: ReadonlySet<string> = new Set(['none', 'authorization']);
 
 const asJson = Schema.decodeUnknownSync(Schema.Json);
 
@@ -137,7 +135,7 @@ function withAnyClientId(credential: Credential): Credential {
 }
 
 function readingIssuesOf(input: AdditionInput, checking: EntryChecking): readonly Issue[] {
-  const given = kindsPlacingNoValue.has(input.credential.kind) ? undefined : anyValue;
+  const given = placesNoValue(input.credential.kind) ? undefined : anyValue;
   return Result.match(readAddition(input, checking, given), { onSuccess: () => [], onFailure: (read) => read });
 }
 

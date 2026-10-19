@@ -35,7 +35,10 @@ function serverOf({ type, entry }: RecordedConnection): ConsentServer {
   return type === 'mcp' ? { type, url: required(entry.url) } : { type };
 }
 
-export function consentAskedOf(connection: RecordedConnection, services: ConsentServices): ConsentAsked {
+export function consentAskedOf(
+  connection: RecordedConnection,
+  services: Pick<ConnectionServices, 'policy' | 'pages'>,
+): ConsentAsked {
   const { credential } = connection;
   return {
     server: serverOf(connection),

@@ -1,4 +1,3 @@
-import type { Issue } from '@on.auto/operations';
 import {
   isConnectionServerSettings,
   servedFieldsOf,
@@ -15,14 +14,15 @@ import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst, type KeptConnection } from '../registry/registry.ts';
-import { givenOf, notAllowed, type Serving, type ServingServices } from './given-credentials.ts';
+import { consentAuthOf, givenOf, notAllowed } from './given-credentials.ts';
+import type { Serving, ServingServices } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
 function servingOf(org: string, { name, type, provider, entry }: KeptConnection['connection']): ConnectionServing {
   return { name, type, provider, orgs: [org], ...servedFieldsOf(entry) };
 }
 
-function unchecked(name: string, issues: readonly Issue[]): ConnectionUnready {
+function unchecked(name: string, issues: ReturnType<typeof entryIssuesOf>): ConnectionUnready {
   return notAllowed(
     servingWords.unchecked(
       name,
@@ -36,9 +36,6 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
   const { connection } = serving.kept;
   const checking = { org: serving.org, modelProviders, providing: providingOf(connection, serving.services) };
   return Effect.gen(function* () {
-    if (connection.credential.kind === 'authorization') {
-      return yield* Effect.fail(notAllowed(servingWords.unserved(connection.name)));
-    }
     const refusal = useRefusalOf(policy, connection, checking.providing?.documentServer);
     if (refusal !== undefined) {
       return yield* Effect.fail(notAllowed(refusal.detail));
@@ -47,12 +44,14 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
     if (issues.length > 0) {
       return yield* Effect.fail(unchecked(connection.name, issues));
     }
-    const read = readAddition(connection, checking, yield* givenOf(serving));
+    const given = yield* givenOf(serving);
+    const auth = yield* consentAuthOf(serving);
+    const read = readAddition(connection, checking, given);
     if (Result.isFailure(read)) {
       return yield* Effect.fail(unchecked(connection.name, read.failure));
     }
     const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionServerSettings));
-    return { settings, reaches: reachesUnder(policy) };
+    return { settings: auth === undefined ? settings : { ...settings, auth }, reaches: reachesUnder(policy) };
   });
 }
 

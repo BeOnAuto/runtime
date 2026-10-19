@@ -1,38 +1,30 @@
-import type { StreamReader, StreamWriter } from '@on.auto/operations';
-import type { ProviderList } from '@on.auto/providers';
-import type { ConnectionUnready } from '@on.auto/tool-servers';
-import { DateTime, Effect, Option, type Redacted } from 'effect';
+import type { ConnectionTokens, ConnectionUnready, ConsentAuth, TokensEnded } from '@on.auto/tool-servers';
+import { DateTime, Effect, Option, type Context } from 'effect';
 
-import type { SecretKeeping } from '../operations/connection-services.ts';
-import type { ConnectionPolicy } from '../policy/connection-policy.ts';
+import type { KeptSecret } from '../operations/connection-services.ts';
+import { consentAskedOf } from '../page/consent-asking.ts';
+import { placesNoValue } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
-import type { KeptConnection } from '../registry/registry.ts';
 import type { GivenValue } from './placed-credentials.ts';
+import type { Serving } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
-export interface ServingServices {
-  readonly registry: StreamReader & StreamWriter;
-  readonly secrets: Pick<SecretKeeping, 'read'>;
-  readonly policy: ConnectionPolicy;
-  readonly variables: ReadonlyMap<string, Redacted.Redacted>;
-  readonly modelProviders: readonly string[];
-  readonly providers: ProviderList;
-  readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
-}
-
-export interface Serving {
-  readonly org: string;
-  readonly kept: KeptConnection;
-  readonly services: ServingServices;
-}
-
 export type Given = Effect.Effect<GivenValue | undefined, ConnectionUnready>;
+
+const endedWords: Readonly<Record<TokensEnded, (name: string) => string>> = {
+  consent_ended: servingWords.consentEnded,
+  client_gone: servingWords.clientGone,
+};
+
+function required<A>(value: A | undefined): A {
+  return Option.getOrThrow(Option.fromNullishOr(value));
+}
 
 export function notAllowed(detail: string): ConnectionUnready {
   return { because: 'connection_not_allowed', detail };
 }
 
-function broken({ org, kept, services }: Serving, reason: string): Given {
+function brokenWith({ org, kept, services }: Serving, reason: string): Effect.Effect<never, ConnectionUnready> {
   return Effect.gen(function* () {
     const at = DateTime.formatIso(yield* DateTime.now);
     const breaking = { type: 'break', connection: kept.connection.id, reason, by: byTheRuntime, at } as const;
@@ -45,24 +37,20 @@ function broken({ org, kept, services }: Serving, reason: string): Given {
   });
 }
 
-function keptSecretOf(serving: Serving): Given {
-  const { kept, services } = serving;
-  const { name } = kept.connection;
-  const secretId = Option.getOrThrow(Option.fromNullishOr(kept.secretId));
-  return services.secrets.read(secretId).pipe(
+function keptSecretOf(serving: Serving): Effect.Effect<KeptSecret, ConnectionUnready> {
+  const { name } = serving.kept.connection;
+  return serving.services.secrets.read(required(serving.kept.secretId)).pipe(
     Effect.matchEffect({
-      onFailure: ({ detail }) => broken(serving, servingWords.unreadable(name, detail)),
+      onFailure: ({ detail }) => brokenWith(serving, servingWords.unreadable(name, detail)),
       onSuccess: (stored) =>
-        stored === undefined
-          ? broken(serving, servingWords.gone(name))
-          : Effect.succeed({ value: stored.value, algorithm: kept.algorithm }),
+        stored === undefined ? brokenWith(serving, servingWords.gone(name)) : Effect.succeed(stored),
     }),
   );
 }
 
 function referencedOf({ kept, services }: Serving): Given {
   const { credential, name } = kept.connection;
-  const variable = Option.getOrThrow(Option.fromNullishOr(credential.variable));
+  const variable = required(credential.variable);
   const value = services.variables.get(variable);
   return value === undefined
     ? Effect.fail(notAllowed(servingWords.unset(name, variable)))
@@ -71,8 +59,42 @@ function referencedOf({ kept, services }: Serving): Given {
 
 export function givenOf(serving: Serving): Given {
   const { kind } = serving.kept.connection.credential;
-  if (kind === 'none') {
+  if (placesNoValue(kind)) {
     return Effect.undefined;
   }
-  return kind === 'reference' ? referencedOf(serving) : keptSecretOf(serving);
+  return kind === 'reference'
+    ? referencedOf(serving)
+    : Effect.map(keptSecretOf(serving), ({ value }) => ({ value, algorithm: serving.kept.algorithm }));
+}
+
+function tokensOfTheRow(serving: Serving, context: Context.Context<never>): ConnectionTokens {
+  const secretId = required(serving.kept.secretId);
+  const { secrets } = serving.services;
+  const { name } = serving.kept.connection;
+  return {
+    read: Effect.provideContext(keptSecretOf(serving), context),
+    replace: (version, value) => Effect.provideContext(secrets.replace(secretId, version, value), context),
+    claim: (version, lastingMs) => Effect.provideContext(secrets.claim(secretId, version, lastingMs), context),
+    broken: (ended) => Effect.provideContext(brokenWith(serving, endedWords[ended](name)), context),
+  };
+}
+
+export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | undefined, ConnectionUnready> {
+  const { connection } = serving.kept;
+  const { credential } = connection;
+  if (credential.kind !== 'authorization') {
+    return Effect.undefined;
+  }
+  return Effect.gen(function* () {
+    const held = yield* keptSecretOf(serving);
+    const context = yield* Effect.context();
+    const asked = consentAskedOf(connection, serving.services);
+    const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+    return {
+      issuer: asked.way.issuer,
+      client_id: client.client_id,
+      scope: credential.scope ?? null,
+      credential: { kind: 'consent', ...asked, client, held, tokens: tokensOfTheRow(serving, context) },
+    };
+  });
 }

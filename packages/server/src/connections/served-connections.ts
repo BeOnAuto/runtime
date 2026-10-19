@@ -54,11 +54,14 @@ interface Composed {
   readonly ownOrigin: () => string;
 }
 
+function pagesOf({ studio }: ServingSettings, ownOrigin: () => string): ConnectionServices['pages'] {
+  return { studio, runtime: ownOrigin };
+}
+
 function connectionServicesOf(
   settings: ServingSettings,
   { secrets, consent, ownOrigin }: Composed,
 ): ConnectionServices {
-  const { studio } = settings;
   return {
     consent,
     secrets,
@@ -67,7 +70,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: { studio, runtime: ownOrigin },
+    pages: pagesOf(settings, ownOrigin),
     access: accessOf(settings),
   };
 }
@@ -75,12 +78,13 @@ function connectionServicesOf(
 function sourceServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: ServingSettings,
-  secrets: SecretStore,
+  { secrets, ownOrigin }: Omit<Composed, 'consent'>,
 ): ReturnType<typeof makeConnectionSource> {
   return makeConnectionSource({
     registry: runtimeLedger(runtime),
     secrets,
     policy: settings.connections,
+    pages: pagesOf(settings, ownOrigin),
     variables: settings.connectionVariables,
     modelProviders: settings.modelProviders,
     providers: settings.providers,
@@ -101,7 +105,7 @@ export async function storesAndConnectionsOf(
     stores,
     consent,
     connections: makeConnectionOperations(services),
-    source: sourceServedBy(runtime, settings, stores.secrets),
+    source: sourceServedBy(runtime, settings, { secrets: stores.secrets, ownOrigin }),
     offering: makeProviderOffering(services),
   };
 }

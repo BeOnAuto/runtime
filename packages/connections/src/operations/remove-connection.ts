@@ -1,13 +1,40 @@
 import { defineCommand, quoted } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { Effect, Function, Option, Schema } from 'effect';
 
+import { consentAskedOf, namedOf } from '../page/consent-asking.ts';
+import { unrevokedWordsOf } from '../page/consent-words.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
+import type { KeptConnection } from '../registry/registry.ts';
 import { ConnectionIdField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed } from './connection-words.ts';
 import { recordInRegistry } from './registry-access.ts';
 
-export function defineRemoveConnection({ secrets }: Pick<ConnectionServices, 'secrets'>) {
+type RemovalServices = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages'>;
+
+function required<A>(value: A | undefined): A {
+  return Option.getOrThrow(Option.fromNullishOr(value));
+}
+
+function revokedTokensOf({ connection, secretId }: KeptConnection, services: RemovalServices): Effect.Effect<void> {
+  const { credential } = connection;
+  if (credential.kind !== 'authorization' || secretId === undefined) {
+    return Effect.void;
+  }
+  const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+  return services.secrets.read(secretId).pipe(
+    Effect.orElseSucceed(Function.constUndefined),
+    Effect.flatMap((row) =>
+      row === undefined
+        ? Effect.void
+        : services.consent.revoke({ ...consentAskedOf(connection, services), client, tokens: row.value }),
+    ),
+    Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure))),
+  );
+}
+
+export function defineRemoveConnection(services: RemovalServices) {
+  const { secrets } = services;
   return defineCommand('org', {
     name: 'remove_connection',
     title: 'Remove connection',
@@ -26,6 +53,7 @@ export function defineRemoveConnection({ secrets }: Pick<ConnectionServices, 'se
       const kept = yield* recordInRegistry({ type: 'remove', connection: id }).pipe(
         Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
       );
+      yield* revokedTokensOf(kept, services);
       if (kept.secretId !== undefined) {
         yield* secrets.forget(kept.secretId);
       }

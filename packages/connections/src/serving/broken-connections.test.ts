@@ -7,7 +7,7 @@ import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/conne
 import { added, crm, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
-import type { ServingServices } from './given-credentials.ts';
+import type { ServingServices } from './serving-services.ts';
 
 const sealedElsewhere = 'The secret is sealed under the key k2, which is neither the current key nor the previous one';
 
