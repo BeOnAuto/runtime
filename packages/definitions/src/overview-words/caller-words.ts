@@ -16,17 +16,15 @@ function stepWords({ number, name }: CallingStep): Phrases {
   return [`in step ${number}, `, named(readableName(name))];
 }
 
-function stepsWords(steps: readonly CallingStep[] | undefined): Phrases {
-  return steps === undefined
-    ? []
-    : [
-        ' ',
-        ...listedPhrases(
-          steps.map((step) => stepWords(step)),
-          'and',
-          'serial-when-items-hold-commas',
-        ),
-      ];
+function stepsWords(steps: readonly CallingStep[]): Phrases {
+  return [
+    ' ',
+    ...listedPhrases(
+      steps.map((step) => stepWords(step)),
+      'and',
+      'serial-when-items-hold-commas',
+    ),
+  ];
 }
 
 export function callerSentence(user: DefinitionUser): Phrases {
@@ -34,7 +32,7 @@ export function callerSentence(user: DefinitionUser): Phrases {
     `The ${definitionResourceLabel(user.type)} `,
     definitionPhrase(user),
     ` ${relationWords[user.relation]}`,
-    ...stepsWords(user.steps),
+    ...('steps' in user ? stepsWords(user.steps) : []),
     '.',
   ];
 }

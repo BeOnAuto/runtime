@@ -259,6 +259,7 @@ export {
   CalledDefinitionSchema,
   type CalledDefinition,
   type CallingStep,
+  type CallRole,
   type NamedDefinition,
   type UserRelation,
 } from './used-by/called-definitions.ts';

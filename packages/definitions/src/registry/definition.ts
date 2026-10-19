@@ -70,7 +70,7 @@ export const DefinitionSchema = Schema.Struct({
   source: Schema.String.annotate({ description: 'The definition document' }),
   overview: Schema.String.annotate({
     description:
-      'The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the active definitions of the playbook that use this one, and their exact names under Details at the end',
+      'The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the definitions a workflow calls, each with its description, and the active definitions of the playbook that use this one, a workflow with the steps that call it, and their exact names under Details at the end',
   }),
   triggers_since: Schema.optionalKey(
     Schema.String.annotate({

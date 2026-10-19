@@ -1,10 +1,16 @@
 import type { PhrasedDefinition } from '../overview/overview.ts';
 import type { CallingStep, UserRelation } from './called-definitions.ts';
 
-export interface DefinitionUser extends PhrasedDefinition {
-  readonly relation: UserRelation;
-  readonly steps?: readonly CallingStep[];
+interface CallingUser extends PhrasedDefinition {
+  readonly relation: 'calls';
+  readonly steps: readonly CallingStep[];
 }
+
+interface NamingUser extends PhrasedDefinition {
+  readonly relation: Exclude<UserRelation, 'calls'>;
+}
+
+export type DefinitionUser = CallingUser | NamingUser;
 
 export type CalledStanding = 'active' | 'retired' | 'missing';
 

@@ -34,8 +34,12 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 const plain = { type: 'probe', name: 'plain' };
 
-function callingPlain(name: string) {
-  return { type: 'workflow', name, source: JSON.stringify({ calls: [plain] }) };
+function checkingPlain(name: string) {
+  return {
+    type: 'workflow',
+    name,
+    source: JSON.stringify({ calls: [{ ...plain, steps: [{ number: 1, name: 'check-plain' }] }] }),
+  };
 }
 
 function rememberingPlain(name: string) {
@@ -57,19 +61,19 @@ function endedWith(lines: readonly string[], names: readonly string[]): string {
 }
 
 const calledByWeeklyReview = endedWith(
-  ['- The workflow **Weekly review** calls it.'],
+  ['- The workflow **Weekly review** calls it in step 1, **Check plain**.'],
   ['- `weekly-review`, a workflow'],
 );
 
 describe('the overview get_definition answers', () => {
-  it('ends with the active definitions of its playbook that name it, and lists nothing for one nobody names', async () => {
+  it('ends with the active definitions of its playbook that name it, and the workflow with what it calls', async () => {
     const { call } = harness();
     await call(createDefinition, toAlpha(acmeAdmin, { ...plain, source: 'x' }));
-    await call(createDefinition, toAlpha(acmeAdmin, callingPlain('weekly-review')));
-    await call(createDefinition, toAlpha(acmeAdmin, callingPlain('stale')));
+    await call(createDefinition, toAlpha(acmeAdmin, checkingPlain('weekly-review')));
+    await call(createDefinition, toAlpha(acmeAdmin, checkingPlain('stale')));
     await call(retireDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: 'stale' }));
     await call(createDefinition, toAlpha(acmeAdmin, rememberingPlain('review-history')));
-    await call(createDefinition, toPlaybook('acme', 'beta')(acmeAdmin, callingPlain('elsewhere')));
+    await call(createDefinition, toPlaybook('acme', 'beta')(acmeAdmin, checkingPlain('elsewhere')));
 
     expect(await call(getDefinition, toAlpha(acmeAdmin, plain))).toMatchObject({
       status: 'succeeded',
@@ -77,14 +81,24 @@ describe('the overview get_definition answers', () => {
         overview: endedWith(
           [
             '- The recall function **Review history** remembers its runs.',
-            '- The workflow **Weekly review** calls it.',
+            '- The workflow **Weekly review** calls it in step 1, **Check plain**.',
           ],
           ['- `review-history`, a recall function', '- `weekly-review`, a workflow'],
         ),
       },
     });
     expect(await call(getDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: 'weekly-review' }))).toMatchObject({
-      output: { overview: '# weekly-review\n\nDetails calls\n' },
+      output: {
+        overview: [
+          '# weekly-review',
+          'Details calls',
+          '## What it calls',
+          'It calls the probe definition **Plain**.',
+          '## Details',
+          '### What it calls',
+          '- `plain`, a probe definition\n',
+        ].join('\n\n'),
+      },
     });
   });
 });
@@ -92,7 +106,7 @@ describe('the overview get_definition answers', () => {
 describe('the overview a saved definition is answered with', () => {
   it('ends with a workflow saved before it that calls it, on create, on update and on retire alike', async () => {
     const { call } = harness();
-    await call(createDefinition, toAlpha(acmeAdmin, callingPlain('weekly-review')));
+    await call(createDefinition, toAlpha(acmeAdmin, checkingPlain('weekly-review')));
     const created = await call(createDefinition, toAlpha(acmeAdmin, { ...plain, source: 'x' }));
     const updated = await call(updateDefinition, toAlpha(acmeAdmin, { ...plain, source: 'y' }));
     const retired = await call(retireDefinition, toAlpha(acmeAdmin, plain));

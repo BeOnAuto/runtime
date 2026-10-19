@@ -10,6 +10,7 @@ import {
   CalledDefinitionSchema,
   type CalledDefinition,
   type CallingStep,
+  type CallRole,
   type NamedDefinition,
   type UserRelation,
 } from './called-definitions.ts';
@@ -36,12 +37,13 @@ const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
 
 const decodeTitle = Schema.decodeUnknownOption(Schema.Struct({ title: Schema.String }));
 
-interface Use {
-  readonly relation: UserRelation;
-  readonly steps?: readonly CallingStep[];
-}
+type NamingRelation = Exclude<UserRelation, 'calls'>;
 
-const relationsOfRoles: Readonly<Record<NonNullable<CalledDefinition['role']>, UserRelation>> = {
+type Use =
+  | { readonly relation: 'calls'; readonly steps: readonly CallingStep[] }
+  | { readonly relation: NamingRelation };
+
+const relationsOfRoles: Readonly<Record<CallRole, NamingRelation>> = {
   trainer: 'sends-builds',
   approver: 'asks-approval',
 };
@@ -64,17 +66,14 @@ function namingDetailsOf(details: StoredDefinition['details']): NamingDetails {
 }
 
 function usesOfCalls(calls: readonly CalledDefinition[]): readonly Use[] {
-  const plain = calls.filter(({ role }) => role === undefined);
-  const steps = plain.flatMap((call) => call.steps ?? []);
-  const calling: readonly Use[] =
-    plain.length === 0 ? [] : [steps.length === 0 ? { relation: 'calls' } : { relation: 'calls', steps }];
-  return [
-    ...calls.flatMap(({ role }) => (role === undefined ? [] : [{ relation: relationsOfRoles[role] }])),
-    ...calling,
-  ];
+  const steps = calls.flatMap((call) => ('steps' in call ? call.steps : []));
+  const roles: readonly Use[] = calls.flatMap((call) =>
+    'role' in call ? [{ relation: relationsOfRoles[call.role] }] : [],
+  );
+  return steps.length === 0 ? roles : [...roles, { relation: 'calls', steps }];
 }
 
-function relationsOfFilter({ type, subject, source }: NamingFilter, used: NamedDefinition): readonly UserRelation[] {
+function relationsOfFilter({ type, subject, source }: NamingFilter, used: NamedDefinition): readonly NamingRelation[] {
   const named = `${used.type}/${used.name}`;
   if (isPlaybookRunEventType(type)) {
     return subject === named ? ['remembers-runs'] : [];
@@ -103,8 +102,8 @@ function phrasedOf(type: string, name: string, details: StoredDefinition['detail
   });
 }
 
-function userOf(phrased: Phrased, { relation, steps }: Use): DefinitionUser {
-  return steps === undefined ? { ...phrased, relation } : { ...phrased, relation, steps };
+function userOf(phrased: Phrased, use: Use): DefinitionUser {
+  return { ...phrased, ...use };
 }
 
 function usersIn(type: string, registry: DefinitionRegistry, used: NamedDefinition): readonly DefinitionUser[] {
@@ -144,7 +143,5 @@ export function definitionsCalled(
   details?: StoredDefinition['details'],
 ): readonly DefinitionCalled[] {
   const { calls = [] } = namingDetailsOf(details);
-  return calls
-    .filter(({ role, steps }) => role === undefined && steps !== undefined)
-    .map((call) => calledAsHeld(registries, call));
+  return calls.filter((call) => 'steps' in call).map((call) => calledAsHeld(registries, call));
 }

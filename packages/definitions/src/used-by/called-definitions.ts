@@ -11,11 +11,18 @@ const CallingStepSchema = Schema.Struct({ number: Schema.Int, name: Schema.Strin
 
 export type CallingStep = typeof CallingStepSchema.Type;
 
-export const CalledDefinitionSchema = Schema.Struct({
+const CallRoleSchema = Schema.Literals(['trainer', 'approver']);
+
+export type CallRole = typeof CallRoleSchema.Type;
+
+const CallByRoleSchema = Schema.Struct({ type: Schema.String, name: Schema.String, role: CallRoleSchema });
+
+const CallByStepsSchema = Schema.Struct({
   type: Schema.String,
   name: Schema.String,
-  role: Schema.optionalKey(Schema.Literals(['trainer', 'approver'])),
-  steps: Schema.optionalKey(Schema.Array(CallingStepSchema)),
+  steps: Schema.Array(CallingStepSchema),
 });
+
+export const CalledDefinitionSchema = Schema.Union([CallByRoleSchema, CallByStepsSchema]);
 
 export type CalledDefinition = typeof CalledDefinitionSchema.Type;

@@ -29,7 +29,7 @@ describe('the overview a read writes', () => {
 
   it('lists the exact name and the type of each user once under Details, after the facts the stored overview keeps there', () => {
     const users: readonly DefinitionUser[] = [
-      { type: 'interaction', name: 'approve-version', relation: 'calls' },
+      { type: 'interaction', name: 'approve-version', relation: 'calls', steps: [{ number: 1, name: 'approve' }] },
       { type: 'recall', name: 'review-history', relation: 'remembers-runs' },
       { type: 'recall', name: 'review-history', relation: 'remembers-changes' },
     ];
@@ -47,7 +47,7 @@ describe('the overview a read writes', () => {
 
   it('writes what it calls before who uses it, after the sections of the body, and their exact names in the same order under Details', () => {
     const written = overviewAtRead(sendBuild, {
-      users: [{ type: 'workflow', name: 'weekly-review', relation: 'calls' }],
+      users: [{ type: 'workflow', name: 'weekly-review', relation: 'calls', steps: [{ number: 2, name: 'send' }] }],
       called: [{ type: 'reasoning', name: 'review-brief', standing: 'missing' }],
     });
 

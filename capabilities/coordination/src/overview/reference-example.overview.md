@@ -47,7 +47,13 @@ Its steps, numbered as in the diagram:
 
 ## What it calls
 
-Its steps call:
+It calls the reasoning function **Review campaign brief**: Reviews a campaign brief against four criteria and recommends Ready or Revise.
 
-- the reasoning function **review-campaign-brief**
-- the interaction function **approve-campaign-brief**
+It calls the interaction function **Approve campaign brief**: Asks the campaign owner to approve a reviewed brief.
+
+## Details
+
+### What it calls
+
+- `review-campaign-brief`, a reasoning function
+- `approve-campaign-brief`, an interaction function

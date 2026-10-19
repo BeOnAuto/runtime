@@ -2,6 +2,7 @@ import {
   publishedOutputOf,
   seriesShape,
   type CalledDefinition,
+  type CallRole,
   type DefinitionSummary,
   type SavedDefinitions,
   type StrippedForms,
@@ -40,10 +41,7 @@ export function datasetDetailsOf({ data, dataSha256, predicts }: PredictionFunct
   return { data_sha256: dataSha256, data: dataJsonOf(data, predicts.period) };
 }
 
-function interactionCalled(
-  name: string | undefined,
-  role: NonNullable<CalledDefinition['role']>,
-): readonly CalledDefinition[] {
+function interactionCalled(name: string | undefined, role: CallRole): readonly CalledDefinition[] {
   return name === undefined ? [] : [{ type: 'interaction', name, role }];
 }
 

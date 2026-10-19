@@ -23,8 +23,14 @@ describe('the sentence of a definition that uses another', () => {
       { type: 'prediction', name: 'demand', relation: 'asks-approval' },
       { type: 'recall', name: 'review-history', relation: 'remembers-runs' },
       { type: 'recall', name: 'brief-changes', relation: 'remembers-changes' },
-      { type: 'workflow', name: 'weekly-review', title: 'The weekly review', relation: 'calls' },
-      { type: 'echo', name: 'greets', relation: 'calls' },
+      {
+        type: 'workflow',
+        name: 'weekly-review',
+        title: 'The weekly review',
+        relation: 'calls',
+        steps: [{ number: 2, name: 'review' }],
+      },
+      { type: 'echo', name: 'greets', relation: 'calls', steps: [{ number: 1, name: 'greet' }] },
     ];
 
     expect(users.map((user) => writtenOf(user))).toEqual([
@@ -32,8 +38,8 @@ describe('the sentence of a definition that uses another', () => {
       'The prediction function **Demand** asks it to approve a version.',
       'The recall function **Review history** remembers its runs.',
       'The recall function **Brief changes** remembers its changes.',
-      'The workflow **The weekly review** calls it.',
-      'The echo definition **Greets** calls it.',
+      'The workflow **The weekly review** calls it in step 2, **Review**.',
+      'The echo definition **Greets** calls it in step 1, **Greet**.',
     ]);
   });
 });
