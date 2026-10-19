@@ -12,6 +12,7 @@ import { Effect } from 'effect';
 import type { ToolAccess } from '../access/tool-access.ts';
 import type { ToolServer } from '../listing/tool-server.ts';
 import { everyPlaybook } from '../settings/server-settings.ts';
+import { offersNoProvider, providersOf, type ProviderOffering } from './found-providers.ts';
 import { foundIn, searchedServer } from './found-tools.ts';
 import { OrgFoundSchema, OrgSearchInputSchema, type OrgSearchAsked, type OrgSearchedServer } from './search-schemas.ts';
 import { orgSearchAttempted, orgSearched, searchTask } from './search-words.ts';
@@ -20,6 +21,7 @@ import { noServerNamed, searchSentences } from './search.ts';
 const description = [
   ...searchSentences,
   'Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves.',
+  '`providers` lists what a person may connect that no server serves yet.',
 ].join(' ');
 
 export type PlaybookLookup = (playbook: string) => Effect.Effect<unknown, NotFound, OrgReader>;
@@ -33,8 +35,9 @@ function withServedPlaybooks(server: ToolServer, asked: OrgSearchAsked, access: 
 }
 
 export function defineSearchInOrg(
-  tools: Pick<ToolAccess, 'listServers' | 'takesConnections'>,
+  tools: Pick<ToolAccess, 'listServersInOrg' | 'takesConnections'>,
   lookUpPlaybook: PlaybookLookup,
+  offering: ProviderOffering = offersNoProvider,
 ) {
   return defineQuery('org', {
     name: 'search',
@@ -52,13 +55,17 @@ export function defineSearchInOrg(
         yield* lookUpPlaybook(playbook);
       }
       const { org } = yield* OrgContext;
-      const { playbooks: access } = yield* Caller;
-      const servers = yield* tools.listServers({ org, playbook }, server);
+      const caller = yield* Caller;
+      const listing = yield* tools.listServersInOrg({ org, playbook }, server);
+      const { servers } = listing;
       if (server !== undefined && servers.length === 0) {
         return yield* noServerNamed(server, playbook === undefined ? 'This org' : 'This playbook');
       }
-      const found = foundIn(servers, asked);
-      return { ...found, servers: servers.map((listed) => withServedPlaybooks(listed, asked, access)) };
+      return {
+        ...foundIn(servers, asked),
+        servers: servers.map((listed) => withServedPlaybooks(listed, asked, caller.playbooks)),
+        ...providersOf(offering(caller), listing, asked),
+      };
     }),
     plainLanguage: {
       task: searchTask,

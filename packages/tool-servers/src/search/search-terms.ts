@@ -2,7 +2,7 @@ export const searchBounds = {
   termWords: 8,
   termCharacters: 64,
   termsCharacters: 1024,
-  tools: 100,
+  found: 100,
   summaryCharacters: 300,
 } as const;
 

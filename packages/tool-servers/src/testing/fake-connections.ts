@@ -13,6 +13,7 @@ import { readToolServerSettings, type Environment } from '../settings/settings-r
 export interface FakeConnection {
   readonly id: string;
   readonly name: string;
+  readonly provider?: string;
   readonly entry: Readonly<Record<string, unknown>>;
   readonly environment?: Environment;
   readonly reaches?: ConnectionServer['reaches'];
@@ -102,9 +103,9 @@ function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<C
 }
 
 function listedOf(held: Held, kept: Kept): OrgConnection {
-  const { id, name } = kept.connection;
+  const { id, name, provider = null } = kept.connection;
   const { type, orgs, playbooks, allowed, record_content, request_id } = kept.settings;
-  const serving = { name, type, orgs, playbooks, allowed, record_content, request_id };
+  const serving = { name, type, provider, orgs, playbooks, allowed, record_content, request_id };
   const unready = unreadyOf(name, standingOf(held, id));
   return unready === undefined
     ? { id, serving, state: { status: 'connected', server: preparedOf(held, kept) } }

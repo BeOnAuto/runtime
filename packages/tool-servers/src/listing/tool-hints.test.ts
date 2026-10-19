@@ -43,6 +43,7 @@ describe('the hints a listing shows of each tool', () => {
         name: 'graph',
         type: 'mcp',
         record_content: true,
+        provider: null,
         playbooks: ['*'],
         tools: [
           {

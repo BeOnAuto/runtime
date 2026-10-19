@@ -54,6 +54,10 @@ const serverFields = {
         'The id of the connection, for a tool server a person added to the org as one; absent for one whoever runs this server set up',
     }),
   ),
+  provider: Schema.NullOr(Schema.String).annotate({
+    description:
+      'The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up',
+  }),
 };
 
 const searchedFields = {
@@ -105,6 +109,12 @@ export const FoundSchema = Schema.Struct({
   ...foundFields,
 });
 
+const FoundProviderSchema = Schema.Struct({
+  name: Schema.String.annotate({ description: "The provider's name, which add_connection takes as provider" }),
+  title: Schema.String.annotate({ description: 'What a person reads' }),
+  description: Schema.String.annotate({ description: 'What a function may do with it' }),
+});
+
 export const OrgFoundSchema = Schema.Struct({
   servers: Schema.Array(
     Schema.Union([
@@ -116,6 +126,12 @@ export const OrgFoundSchema = Schema.Struct({
       'The tool servers searched, of the org or of the playbook asked for, sorted by name; empty when none is set up',
   }),
   ...foundFields,
+  providers: Schema.optionalKey(
+    Schema.Array(FoundProviderSchema).annotate({
+      description:
+        'The providers this caller may connect here that no server of the org serves yet, best first with terms and by name without; at most 100, and none without terms when there are more. Present only where this caller may add a connection, and never with server',
+    }),
+  ),
 });
 
 export type Found = typeof FoundSchema.Type;

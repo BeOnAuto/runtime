@@ -167,6 +167,7 @@ describe('a tool whose input schema names no argument', () => {
       type: 'stdio',
       record_content: true,
       playbooks: ['*'],
+      provider: null,
       tools: [{ name: 'note_count', description: 'Counts the notes.', input_schema: { type: 'object' } }],
     };
     const { call } = playbookToolCalls({ ...access, listServers: () => Effect.succeed([listed]) });
@@ -210,7 +211,7 @@ describe('search without terms', () => {
     expect(await search({})).toEqual({
       status: 'succeeded',
       output: {
-        servers: [{ name: 'billing', type: 'openapi', record_content: true, tool_count: 101 }],
+        servers: [{ name: 'billing', type: 'openapi', record_content: true, provider: null, tool_count: 101 }],
         tools: [],
         scopes: ['billing'],
       },

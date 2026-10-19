@@ -18,8 +18,8 @@ import { newestFirst, type KeptConnection } from '../registry/registry.ts';
 import { givenOf, notAllowed, type Serving, type ServingServices } from './given-credentials.ts';
 import { servingWords } from './serving-words.ts';
 
-function servingOf(org: string, { name, type, entry }: KeptConnection['connection']): ConnectionServing {
-  return { name, type, orgs: [org], ...servedFieldsOf(entry) };
+function servingOf(org: string, { name, type, provider, entry }: KeptConnection['connection']): ConnectionServing {
+  return { name, type, provider, orgs: [org], ...servedFieldsOf(entry) };
 }
 
 function unchecked(name: string, issues: readonly Issue[]): ConnectionUnready {

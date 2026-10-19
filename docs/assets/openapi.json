@@ -987,7 +987,7 @@
       "get": {
         "operationId": "search_in_org",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first. Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole. Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first. Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole. Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves. `providers` lists what a person may connect that no server serves yet.",
         "tags": [
           "tool-servers"
         ],
@@ -1077,6 +1077,17 @@
                                 "type": "string",
                                 "description": "The id of the connection, for a tool server a person added to the org as one; absent for one whoever runs this server set up"
                               },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                              },
                               "playbooks": {
                                 "type": "array",
                                 "items": {
@@ -1093,6 +1104,7 @@
                               "name",
                               "type",
                               "record_content",
+                              "provider",
                               "playbooks",
                               "tool_count"
                             ],
@@ -1121,6 +1133,17 @@
                               "connection": {
                                 "type": "string",
                                 "description": "The id of the connection, for a tool server a person added to the org as one; absent for one whoever runs this server set up"
+                              },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
                               },
                               "playbooks": {
                                 "type": "array",
@@ -1151,6 +1174,7 @@
                               "name",
                               "type",
                               "record_content",
+                              "provider",
                               "playbooks",
                               "unavailable",
                               "because"
@@ -1199,6 +1223,33 @@
                         "type": "string"
                       },
                       "description": "The names of the tool servers searched"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The provider's name, which add_connection takes as provider"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "What a person reads"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "What a function may do with it"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "title",
+                          "description"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The providers this caller may connect here that no server of the org serves yet, best first with terms and by name without; at most 100, and none without terms when there are more. Present only where this caller may add a connection, and never with server"
                     }
                   },
                   "required": [
@@ -8803,6 +8854,17 @@
                                 "type": "string",
                                 "description": "The id of the connection, for a tool server a person added to the org as one; absent for one whoever runs this server set up"
                               },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                              },
                               "tool_count": {
                                 "type": "integer",
                                 "description": "How many of its tools the operator allows that this search considered, after only"
@@ -8812,6 +8874,7 @@
                               "name",
                               "type",
                               "record_content",
+                              "provider",
                               "tool_count"
                             ],
                             "additionalProperties": false
@@ -8840,6 +8903,17 @@
                                 "type": "string",
                                 "description": "The id of the connection, for a tool server a person added to the org as one; absent for one whoever runs this server set up"
                               },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The name of the provider a person connected the server from; null for a server given by hand or one whoever runs this server set up"
+                              },
                               "unavailable": {
                                 "type": "string",
                                 "description": "Why the server could not be asked for its tools, in words"
@@ -8862,6 +8936,7 @@
                               "name",
                               "type",
                               "record_content",
+                              "provider",
                               "unavailable",
                               "because"
                             ],

@@ -64,6 +64,7 @@ export {
 } from './own-calls/conversation-calls.ts';
 export { defineSearch } from './search/search.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
+export type { OfferedProvider, ProviderOffering } from './search/found-providers.ts';
 export { defineIntrospect } from './tool-reads/introspect.ts';
 export { defineValidate } from './tool-reads/validate.ts';
 export { defineDryRun } from './tool-reads/dry-run.ts';

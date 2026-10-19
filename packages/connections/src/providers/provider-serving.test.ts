@@ -1,12 +1,12 @@
 import type { ProviderList } from '@on.auto/providers';
 import { fixtureProviders, providerListOf, providerOf, providersOf } from '@on.auto/providers/testing';
-import type { ConnectionServerSettings, ConnectionUnready } from '@on.auto/tool-servers';
+import type { ConnectionServerSettings, ConnectionUnready, OrgConnection } from '@on.auto/tool-servers';
 import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
-import { added, adding, issuesIn } from '../testing/additions.ts';
+import { added, adding, issuesIn, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const acmeLedgers = { provider: 'ledgers', placeholders: { tenant: 'acme', manager: '1234567890' } };
@@ -27,11 +27,10 @@ interface Serving {
   readonly providers?: ProviderList;
 }
 
-async function settingsOf(
+function listedBy(
   h: Harness,
-  id: string,
   { providerValues = operatorValues, allowedHosts, providers = fixtureProviders }: Serving = {},
-): Promise<ConnectionServerSettings | ConnectionUnready> {
+): Promise<readonly OrgConnection[]> {
   const source = makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
@@ -41,7 +40,15 @@ async function settingsOf(
     providers,
     providerValues,
   });
-  const listed = await Effect.runPromise(source.connectionsOf('acme'));
+  return Effect.runPromise(source.connectionsOf('acme'));
+}
+
+async function settingsOf(
+  h: Harness,
+  id: string,
+  serving: Serving = {},
+): Promise<ConnectionServerSettings | ConnectionUnready> {
+  const listed = await listedBy(h, serving);
   const { state } = Option.getOrThrow(Option.fromNullishOr(listed.find((each) => each.id === id)));
   return state.status === 'connected'
     ? Effect.runPromise(
@@ -225,5 +232,33 @@ describe('a provider that sends a value of the operator in its query', () => {
       status: 'succeeded',
       output: { entry: { query_params: { developer_token: '${REPORTS_DEVELOPER_TOKEN}', format: 'json' } } },
     });
+  });
+});
+
+describe('a connection added by a provider, as a tool server', () => {
+  it('is served with the name of its provider, pending, connected and broken, and one given by hand with none', async () => {
+    const h = harness();
+    const tracked = { provider: 'tracker', placeholders: { site: 'acme' } };
+    const pending = await added(h, { ...tracked, name: 'issues' });
+    const approved = await added(h, { ...tracked, name: 'board', credential: { kind: 'none' } });
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: approved.id, token: approved.token });
+    const broken = await added(h, { ...tracked, name: 'tasks' });
+    await h.call(operationNamed(h.operations, 'give_credential'), ada, {
+      id: broken.id,
+      token: broken.token,
+      value: 'tracker-token-0f3c9a71',
+    });
+    await Effect.runPromise(h.secrets.forget('secret-1'));
+    await settingsOf(h, broken.id);
+    const byHand = await added(h, notes);
+
+    const listed = await listedBy(h);
+
+    expect(listed.map(({ id, serving, state }) => [id, serving.provider, state])).toMatchObject([
+      [byHand.id, null, { status: 'unready', unready: { because: 'connection_pending' } }],
+      [broken.id, 'tracker', { status: 'unready', unready: { because: 'connection_broken' } }],
+      [approved.id, 'tracker', { status: 'connected' }],
+      [pending.id, 'tracker', { status: 'unready', unready: { because: 'connection_pending' } }],
+    ]);
   });
 });

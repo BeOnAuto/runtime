@@ -36,9 +36,9 @@ async function twoServers() {
   return { fake, ...calls };
 }
 
-const graph = { name: 'graph', type: 'mcp', record_content: true, tool_count: 2 };
+const graph = { name: 'graph', type: 'mcp', record_content: true, provider: null, tool_count: 2 };
 
-const wiki = { name: 'wiki', type: 'mcp', record_content: true, tool_count: 1 };
+const wiki = { name: 'wiki', type: 'mcp', record_content: true, provider: null, tool_count: 1 };
 
 const searchOf = (server: string) => ({
   server,

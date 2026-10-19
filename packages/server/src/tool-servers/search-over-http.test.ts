@@ -53,12 +53,13 @@ async function serving(): Promise<Serving> {
   return { server, graph, others };
 }
 
-const graphOfAlpha = { name: 'graph', type: 'mcp', record_content: true, tool_count: 2 };
+const graphOfAlpha = { name: 'graph', type: 'mcp', record_content: true, provider: null, tool_count: 2 };
 
 const wikiOfAlpha = {
   name: 'wiki',
   type: 'mcp',
   record_content: false,
+  provider: null,
   unavailable: 'The tool server wiki could not be used: The tool server could not be reached',
   because: 'unreachable',
 };
