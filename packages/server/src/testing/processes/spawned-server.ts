@@ -1,9 +1,9 @@
-import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { onTestFinished } from 'vitest';
 
 import { callInFlightFileVariable } from '../entries/calls-in-flight.ts';
@@ -37,7 +37,7 @@ function folderOfTheTest(prefix: string): string {
 }
 
 export function spawnServer(entry: string, env: Readonly<Record<string, string>>): SpawnedServer {
-  const child = spawn(process.execPath, [entry], {
+  const child = spawnForTheTest(process.execPath, [entry], {
     env: {
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
       PREDICTION_CACHE_DIR: folderOfTheTest('auto-runtime-test-cache-'),
@@ -47,17 +47,14 @@ export function spawnServer(entry: string, env: Readonly<Record<string, string>>
   });
   const output = { stdout: '', stderr: '' };
   const { promise: port, resolve: announce } = Promise.withResolvers<number>();
-  child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stdout += chunk;
     announce(Number(/port (\d+)/u.exec(output.stdout)?.[1]));
   });
-  child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stderr?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stderr += chunk;
   });
   const exited = once(child, 'close').then(([code]: readonly unknown[]) => code);
-  onTestFinished(() => {
-    child.kill('SIGKILL');
-  });
   return {
     port,
     exited,

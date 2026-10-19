@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -6,7 +5,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createApiKey } from '@on.auto/identity';
-import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
+import { spawnForTheTest } from '@on.auto/operations/testing';
+import { afterAll, describe, expect, it } from 'vitest';
 
 const command = fileURLToPath(new URL('../../auto-runtime.ts', import.meta.url));
 
@@ -26,7 +26,7 @@ interface Started {
 }
 
 async function started(settings: Readonly<Record<string, string>> = {}): Promise<Started> {
-  const child = spawn(process.execPath, [command], {
+  const child = spawnForTheTest(process.execPath, [command], {
     cwd: home,
     env: {
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
@@ -37,18 +37,15 @@ async function started(settings: Readonly<Record<string, string>> = {}): Promise
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  onTestFinished(() => {
-    child.kill('SIGKILL');
-  });
   const output = { stdout: '', stderr: '' };
   const { promise: ready, resolve } = Promise.withResolvers<string>();
-  child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stdout += chunk;
     if (output.stdout.includes('Press Ctrl+C')) {
       resolve(output.stdout);
     }
   });
-  child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stderr?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stderr += chunk;
   });
   const exited = once(child, 'exit').then(([code]: readonly unknown[]) => code);

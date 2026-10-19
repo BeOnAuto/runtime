@@ -1,24 +1,15 @@
-import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createApiKey } from '@on.auto/identity';
 import { Schema } from 'effect';
-import { afterEach, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
-import { spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
+import { homeOfTheTest, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
 import { until } from '../testing/waiting/until.ts';
 
-let home: string;
-
-beforeEach(() => {
-  home = realpathSync(mkdtempSync(join(tmpdir(), 'auto-runtime-terminal-')));
-});
-
-afterEach(() => {
-  rmSync(home, { recursive: true, force: true });
-});
+const homePrefix = 'auto-runtime-terminal-';
 
 const statusOf = Schema.decodeUnknownSync(
   Schema.Struct({ pid: Schema.Number, started_at: Schema.String, started_by: Schema.String, directory: Schema.String }),
@@ -34,9 +25,9 @@ function readiesIn(text: string): number {
 
 describe('a runtime started in a terminal', () => {
   it('restarts in the same process when asked, and stops when asked', async () => {
+    const home = homeOfTheTest(homePrefix);
     const port = await aPortNothingListensOn();
     const runtime = spawnRuntimeCommand([], { home, port });
-    onTestFinished(runtime.kill);
     await until(() => {
       expect(readiesIn(runtime.stdout())).toBe(1);
     });
@@ -57,6 +48,7 @@ describe('a runtime started in a terminal', () => {
   });
 
   it('offers no control, and asks for a credential there as anywhere, when it listens where other computers reach it', async () => {
+    const home = homeOfTheTest(homePrefix);
     const port = await aPortNothingListensOn();
     const { entry } = createApiKey({ id: 'ci-1', org: 'acme', permissions: ['org:read'], playbooks: '*' });
     const runtime = spawnRuntimeCommand([], {
@@ -64,7 +56,6 @@ describe('a runtime started in a terminal', () => {
       port,
       settings: { HOST: '0.0.0.0', API_KEYS: JSON.stringify([entry]) },
     });
-    onTestFinished(runtime.kill);
     await until(() => {
       expect(readiesIn(runtime.stdout())).toBe(1);
     });
@@ -79,9 +70,9 @@ describe('a runtime started in a terminal', () => {
 
 describe('a runtime started in a terminal on a taken port', () => {
   it('says why it could not start, and exits', async () => {
+    const home = homeOfTheTest(homePrefix);
     const port = await aPortNothingListensOn();
     const first = spawnRuntimeCommand([], { home, port });
-    onTestFinished(first.kill);
     await until(() => {
       expect(readiesIn(first.stdout())).toBe(1);
     });
