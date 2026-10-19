@@ -1,10 +1,10 @@
-import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
-import { expect, onTestFinished } from 'vitest';
+import { spawnForTheTest } from '@on.auto/operations/testing';
+import { expect } from 'vitest';
 
 import type { DatabaseSettings } from '../database/host-databases.ts';
 import { onPostgreSQLAt } from './host-files.ts';
@@ -31,21 +31,18 @@ export function databaseSettingsOf(database: ProcessDatabase): DatabaseSettings 
 }
 
 export function hostIn(database: ProcessDatabase, mode: Mode, settlements: string, sweepEveryMs = 20): HostProcess {
-  const child = spawn(
+  const child = spawnForTheTest(
     process.execPath,
     [hostProcess, JSON.stringify(database), mode, settlements, String(sweepEveryMs)],
     { stdio: ['ignore', 'pipe', 'inherit'] },
   );
   const output = { said: '' };
   const heard = Promise.withResolvers<void>();
-  child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     output.said += chunk;
     heard.resolve();
   });
   const exited = once(child, 'exit').then(([code]: readonly unknown[]) => code);
-  onTestFinished(() => {
-    child.kill('SIGKILL');
-  });
   return {
     said: async (line) => {
       await heard.promise;
