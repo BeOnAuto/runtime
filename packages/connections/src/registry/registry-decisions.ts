@@ -8,13 +8,26 @@ import type {
   ConnectionBreaking,
   ConnectionCommand,
   ConnectionRemoval,
+  ConsentFinish,
+  ConsentStart,
   CredentialGiving,
+  LinkUse,
 } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
-import { keptConnectionOf, linkedConnectionOf } from './registry-lookup.ts';
+import {
+  finishableConnectionOf,
+  isOpenConsent,
+  keptConnectionOf,
+  linkedConnectionOf,
+  noOpenConsent,
+  stateIssueOf,
+  type KeptWithLink,
+} from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 
-type Decision = Result.Result<readonly ConnectionEvent[], Rejection<'not_found' | 'conflict' | 'forbidden'>>;
+export type RegistryRefusal = 'not_found' | 'conflict' | 'forbidden' | 'invalid_input';
+
+type Decision = Result.Result<readonly ConnectionEvent[], Rejection<RegistryRefusal>>;
 
 const nothingToRecord: Decision = Result.succeed([]);
 
@@ -28,6 +41,69 @@ function takesAValue({ connection }: KeptConnection): boolean {
 
 export function takesNoCredential(name: string): Conflict {
   return new Conflict({ detail: `The connection ${name} takes no credential to give, so it is approved as it is` });
+}
+
+export function connectedByConsent(name: string): Conflict {
+  return new Conflict({
+    detail: `The connection ${name} is connected by signing in to its provider and allowing Auto, which its page starts`,
+  });
+}
+
+function takesConsent({ connection }: KeptConnection): boolean {
+  return connection.credential.kind === 'authorization';
+}
+
+function takesNoConsent(name: string): Conflict {
+  return new Conflict({
+    detail: `The connection ${name} is not connected by signing in to its provider, so it has no consent to start or finish`,
+  });
+}
+
+function takingConsent(kept: KeptWithLink): Result.Result<KeptWithLink, Conflict> {
+  return takesConsent(kept) ? Result.succeed(kept) : Result.fail(takesNoConsent(kept.connection.name));
+}
+
+export function startableConnectionOf(
+  registry: Registry,
+  use: LinkUse,
+  acted: CommandMetadata,
+): Result.Result<KeptWithLink, Rejection<RegistryRefusal>> {
+  return Result.flatMap(linkedConnectionOf(registry, use, acted), takingConsent);
+}
+
+export function finishedConnectionOf(
+  registry: Registry,
+  use: LinkUse,
+  acted: CommandMetadata,
+): Result.Result<KeptWithLink, Rejection<RegistryRefusal>> {
+  return Result.flatMap(finishableConnectionOf(registry, use, acted), takingConsent);
+}
+
+function decideStart(command: ConsentStart & CommandMetadata, registry: Registry): Decision {
+  const { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at } = command;
+  return Result.map(startableConnectionOf(registry, command, command), () => [
+    {
+      type: 'connection_consent_started',
+      data: { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at },
+    },
+  ]);
+}
+
+function decideFinish(command: ConsentFinish & CommandMetadata, registry: Registry): Decision {
+  const { connection, secret_id, client_id, client_source, scope } = command;
+  const granted = scope === undefined ? {} : { scope };
+  return Result.flatMap(finishedConnectionOf(registry, command, command), (kept): Decision => {
+    if (!isOpenConsent(kept, command.at)) {
+      return Result.fail(noOpenConsent(kept.connection.name));
+    }
+    const stateIssue = stateIssueOf(kept, command.state_sha256);
+    return stateIssue === undefined
+      ? Result.succeed([
+          { type: 'connection_approved', data: { connection } },
+          { type: 'connection_connected', data: { connection, secret_id, client_id, client_source, ...granted } },
+        ])
+      : Result.fail(stateIssue);
+  });
 }
 
 function decideAddition({ link, ...added }: ConnectionAddition, registry: Registry): Decision {
@@ -62,8 +138,11 @@ function addedData({
 }
 
 function decideApproval(command: ConnectionApproval & CommandMetadata, registry: Registry): Decision {
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
-    takesAValue(kept)
+  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
+    if (takesConsent(kept)) {
+      return Result.fail(connectedByConsent(kept.connection.name));
+    }
+    return takesAValue(kept)
       ? Result.fail(
           new Conflict({
             detail: `The connection ${kept.connection.name} takes a credential, so it is approved by giving its credential`,
@@ -72,22 +151,25 @@ function decideApproval(command: ConnectionApproval & CommandMetadata, registry:
       : Result.succeed([
           { type: 'connection_approved', data: { connection: command.connection } },
           { type: 'connection_connected', data: { connection: command.connection } },
-        ]),
-  );
+        ]);
+  });
 }
 
 function decideGiving(command: CredentialGiving & CommandMetadata, registry: Registry): Decision {
   const { connection, secret_id: secretId, algorithm, client_id: clientId } = command;
   const signing = algorithm === undefined ? {} : { algorithm };
   const client = clientId === undefined ? {} : { client_id: clientId };
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
-    takesAValue(kept)
+  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
+    if (takesConsent(kept)) {
+      return Result.fail(connectedByConsent(kept.connection.name));
+    }
+    return takesAValue(kept)
       ? Result.succeed([
           { type: 'connection_approved', data: { connection } },
           { type: 'connection_connected', data: { connection, secret_id: secretId, ...signing, ...client } },
         ])
-      : Result.fail(takesNoCredential(kept.connection.name)),
-  );
+      : Result.fail(takesNoCredential(kept.connection.name));
+  });
 }
 
 function decideRemoval({ connection }: ConnectionRemoval, registry: Registry): Decision {
@@ -119,6 +201,12 @@ export function decideOnRegistry(command: ConnectionCommand, registry: Registry)
   }
   if (command.type === 'give') {
     return decideGiving(command, registry);
+  }
+  if (command.type === 'start') {
+    return decideStart(command, registry);
+  }
+  if (command.type === 'finish') {
+    return decideFinish(command, registry);
   }
   return command.type === 'break' ? decideBreaking(command, registry) : decideRemoval(command, registry);
 }

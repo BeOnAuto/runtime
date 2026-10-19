@@ -20,6 +20,7 @@ import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
+import { consentUnsetUp, isConsentUnsetUp, type ClientSourcesHad } from './consent-offered.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
@@ -77,6 +78,10 @@ export interface ProviderServices {
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
 }
 
+interface AdditionServices extends ProviderServices {
+  readonly consent: ClientSourcesHad;
+}
+
 export function providingOf(
   { provider }: Pick<AdditionInput, 'provider'>,
   { providers, providerValues }: ProviderServices,
@@ -106,31 +111,48 @@ function placedIssuesOf(issues: readonly Issue[], given: AdditionGiven): readonl
   ];
 }
 
-function providerIssuesOf(addition: GivenAddition, given: AdditionGiven, checking: EntryChecking): readonly Issue[] {
+interface Checked {
+  readonly given: AdditionGiven;
+  readonly checking: EntryChecking;
+  readonly consent: ClientSourcesHad;
+}
+
+function consentIssuesOf({ provider, credential }: GivenAddition, consent: ClientSourcesHad): readonly Issue[] {
+  return isConsentUnsetUp(credential, consent)
+    ? [{ pointer: '/credential/kind', detail: consentUnsetUp(String(provider)) }]
+    : [];
+}
+
+function providerIssuesOf(addition: GivenAddition, { given, checking, consent }: Checked): readonly Issue[] {
   const credential = credentialFieldIssuesOf(addition.credential).map(({ path, issue }): Issue => ({
     pointer: `/credential/${path.join('/')}`,
     detail: issue,
   }));
-  return placedIssuesOf(credential.length > 0 ? credential : additionIssuesOf(addition, checking), given);
+  if (credential.length > 0) {
+    return placedIssuesOf(credential, given);
+  }
+  const unsetUp = consentIssuesOf(addition, consent);
+  return unsetUp.length > 0 ? unsetUp : placedIssuesOf(additionIssuesOf(addition, checking), given);
 }
 
-function issuesOf(addition: GivenAddition, given: AdditionGiven, checking: EntryChecking): readonly Issue[] {
+function issuesOf(addition: GivenAddition, checked: Checked): readonly Issue[] {
   return addition.provider === null
-    ? additionIssuesOf(addition, checking)
-    : providerIssuesOf(addition, given, checking);
+    ? additionIssuesOf(addition, checked.checking)
+    : providerIssuesOf(addition, checked);
 }
 
 export function checkedAdditionOf(
   given: AdditionGiven,
   checking: Checking,
-  services: ProviderServices,
+  services: AdditionServices,
 ): Result.Result<GivenAddition, InvalidInput> {
   const resolved =
     given.provider === undefined
       ? Result.succeed(givenByHand(given))
       : givenToProvider(given.provider, given, services.providers);
   return Result.flatMap(Result.mapError(resolved, invalidAddition), (addition) => {
-    const issues = issuesOf(addition, given, { ...checking, providing: providingOf(addition, services) });
+    const providing = providingOf(addition, services);
+    const issues = issuesOf(addition, { given, checking: { ...checking, providing }, consent: services.consent });
     return issues.length > 0 ? Result.fail(invalidAddition(issues)) : Result.succeed(addition);
   });
 }

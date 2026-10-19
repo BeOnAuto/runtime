@@ -59,9 +59,11 @@ interface Granting {
 interface GrantStore {
   readonly issuer: string;
   readonly rotates: boolean;
+  readonly refreshes: boolean;
+  readonly grantedScope: string | undefined;
   readonly tokens: FakeTokens;
   readonly codes: Map<string, Code>;
-  readonly refreshes: Map<string, Refresh>;
+  readonly refreshTokens: Map<string, Refresh>;
   readonly retired: Map<string, string>;
 }
 
@@ -127,16 +129,16 @@ export function fakeTokens({ expiresInSeconds }: ClientRegistration): FakeTokens
 
 function endGrant(store: GrantStore, grant: string): void {
   store.tokens.revokeGrant(grant);
-  for (const [token, held] of store.refreshes) {
+  for (const [token, held] of store.refreshTokens) {
     if (held.grant === grant) {
-      store.refreshes.delete(token);
+      store.refreshTokens.delete(token);
     }
   }
 }
 
 function refreshTokenOf(store: GrantStore, held: Refresh): string {
   const token = `refresh-${crypto.randomUUID()}`;
-  store.refreshes.set(token, held);
+  store.refreshTokens.set(token, held);
   return token;
 }
 
@@ -155,7 +157,7 @@ function codeOf(store: GrantStore, { client, redirectUri, asked }: Authorizing &
     clientId: client.clientId,
     redirectUri,
     challenge: String(asked.get('code_challenge')),
-    scope: asked.get('scope') ?? undefined,
+    scope: store.grantedScope ?? asked.get('scope') ?? undefined,
   });
   return code;
 }
@@ -203,7 +205,9 @@ function exchanged(store: GrantStore, asked: TokenRequest): Response {
     return invalidGrant();
   }
   const grant = crypto.randomUUID();
-  const refreshToken = refreshTokenOf(store, { grant, clientId: asked.client.clientId, scope: code.scope });
+  const refreshToken = store.refreshes
+    ? refreshTokenOf(store, { grant, clientId: asked.client.clientId, scope: code.scope })
+    : undefined;
   return granted(store, asked, { grant, refreshToken, scope: code.scope });
 }
 
@@ -213,14 +217,14 @@ function refreshed(store: GrantStore, asked: TokenRequest): Response {
   if (reused !== undefined) {
     endGrant(store, reused);
   }
-  const held = store.refreshes.get(presented);
+  const held = store.refreshTokens.get(presented);
   if (held === undefined || held.clientId !== asked.client.clientId) {
     return invalidGrant();
   }
   if (!store.rotates) {
     return granted(store, asked, { grant: held.grant, refreshToken: undefined, scope: held.scope });
   }
-  store.refreshes.delete(presented);
+  store.refreshTokens.delete(presented);
   store.retired.set(presented, held.grant);
   return granted(store, asked, { grant: held.grant, refreshToken: refreshTokenOf(store, held), scope: held.scope });
 }
@@ -233,7 +237,7 @@ function clientCredentialsGranted(store: GrantStore, { client, requested }: Toke
 
 function revoked(store: GrantStore, { form, client }: TokenRequest): Response {
   const token = form.get('token') ?? '';
-  const held = store.refreshes.get(token);
+  const held = store.refreshTokens.get(token);
   if (held === undefined) {
     store.tokens.revokeToken(token, client.clientId);
   } else if (held.clientId === client.clientId) {
@@ -251,9 +255,11 @@ export function fakeGrants(
   const store: GrantStore = {
     issuer,
     rotates: registration.rotatesRefreshTokens === true,
+    refreshes: registration.issuesRefreshTokens !== false,
+    grantedScope: registration.grantedScope,
     tokens,
     codes: new Map(),
-    refreshes: new Map(),
+    refreshTokens: new Map(),
     retired: new Map(),
   };
   return {

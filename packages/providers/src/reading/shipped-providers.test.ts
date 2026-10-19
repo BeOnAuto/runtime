@@ -129,7 +129,7 @@ describe('a folder of entries', () => {
 describe('a folder of entries the runtime refuses', () => {
   it('is refused with the file, the line and the key of each problem, as a settings file is', () => {
     const refused = entryFolderWith({
-      'tracker.yaml': tracker.replace('  - kind: none', '  - kind: authorization'),
+      'tracker.yaml': tracker.replace('  - kind: none', '  - kind: reference'),
       'notes.yaml': notes.replace('name: notes', 'name: notebook').replace('/notes.', '/notebook.'),
       'broken.yaml': 'name: [broken\n',
       'anchored.yaml': 'name: &name tracker\n',
@@ -139,7 +139,7 @@ describe('a folder of entries the runtime refuses', () => {
       `${invalid}<entries>/anchored.yaml:1:13: Anchors are not allowed in a provider's entry`,
       '<entries>/broken.yaml:2:1: Flow sequence in block collection must be sufficiently indented and end with a ]',
       '<entries>/notes.yaml:1:7 name: Expected the name the file is named for, as in notebook.yaml',
-      '<entries>/tracker.yaml:8:11 credentials[0].kind: Expected "secret" | "client_credentials" | "none"',
+      '<entries>/tracker.yaml:8:11 credentials[0].kind: Expected "secret" | "client_credentials" | "none" | "authorization"',
     ]);
   });
 

@@ -1,0 +1,80 @@
+import { Redacted } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import {
+  isSameIssuer,
+  metadataDocumentOf,
+  registeredClientAt,
+  sourcesHad,
+  type RegisteredClient,
+  type WayOfClients,
+} from './client-sources.ts';
+
+const accounts: RegisteredClient = {
+  issuers: ['https://accounts.example.com/'],
+  clientId: '1234.apps.example.com',
+  credential: { kind: 'client_secret', clientSecret: Redacted.make('registered-client-secret-7e1d') },
+  tokenEndpointAuthMethod: null,
+};
+
+const tenants: RegisteredClient = {
+  issuers: ['https://login.example.net/{tenant}/v2.0'],
+  clientId: '9f1c0d2e-example',
+  credential: { kind: 'public' },
+  tokenEndpointAuthMethod: 'none',
+};
+
+describe('the issuers of the clients whoever runs the runtime registered', () => {
+  it('are the same issuer a trailing slash aside, and nothing else', () => {
+    expect([
+      isSameIssuer('https://accounts.example.com', 'https://accounts.example.com/'),
+      isSameIssuer('https://accounts.example.com/', 'https://accounts.example.com'),
+      isSameIssuer('https://accounts.example.com', 'https://accounts.example.com/v2'),
+    ]).toEqual([true, true, false]);
+  });
+
+  it('find a client by an issuer it names, or by the issuer its template takes with a value in each place', () => {
+    const clients = [accounts, tenants];
+
+    expect([
+      registeredClientAt(clients, 'https://accounts.example.com')?.clientId,
+      registeredClientAt(clients, 'https://login.example.net/acme.example.org/v2.0/')?.clientId,
+      registeredClientAt(clients, 'https://login.example.net/{tenant}/v2.0')?.clientId,
+      registeredClientAt(clients, 'https://login.example.net/a/b/v2.0'),
+      registeredClientAt(clients, 'https://elsewhere.example.com'),
+    ]).toEqual(['1234.apps.example.com', '9f1c0d2e-example', '9f1c0d2e-example', undefined, undefined]);
+  });
+});
+
+describe('the client sources a runtime has for a way', () => {
+  const issuer = 'https://accounts.example.com';
+
+  it('are the registered client alone when the way names none, where one is registered at its issuer', () => {
+    expect([
+      sourcesHad({ issuer }, { registeredClients: [accounts], publicUrl: undefined }),
+      sourcesHad({ issuer }, { registeredClients: [tenants], publicUrl: undefined }),
+    ]).toEqual([['registered'], []]);
+  });
+
+  it('take the metadata document only under an https public address, and dynamic registration always, in the runtime’s order', () => {
+    const way: WayOfClients = { issuer, clients: ['registered', 'metadata_document', 'dynamic'] };
+    const reversed: WayOfClients = { issuer, clients: ['dynamic', 'registered'] };
+
+    expect([
+      sourcesHad(way, { registeredClients: [], publicUrl: 'https://runtime.example.com' }),
+      sourcesHad(way, { registeredClients: [accounts], publicUrl: 'http://127.0.0.1:5555' }),
+      sourcesHad(reversed, { registeredClients: [accounts], publicUrl: undefined }),
+    ]).toEqual([
+      ['metadata_document', 'dynamic'],
+      ['registered', 'dynamic'],
+      ['registered', 'dynamic'],
+    ]);
+  });
+
+  it('give the metadata document at the public address, where it is https', () => {
+    expect([metadataDocumentOf('https://runtime.example.com'), metadataDocumentOf('http://127.0.0.1:5555')]).toEqual([
+      'https://runtime.example.com/oauth/client.json',
+      undefined,
+    ]);
+  });
+});

@@ -24,10 +24,13 @@ export function defineRemoveConnection({ secrets }: Pick<ConnectionServices, 'se
     reasons: ['not_found', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id }) {
       const kept = yield* recordInRegistry({ type: 'remove', connection: id }).pipe(
-        Effect.catchTag('forbidden', Effect.die),
+        Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
       );
       if (kept.secretId !== undefined) {
         yield* secrets.forget(kept.secretId);
+      }
+      if (kept.consent !== undefined) {
+        yield* secrets.forget(kept.consent.verifier_secret_id);
       }
       return connectionShown(kept.connection, null);
     }),

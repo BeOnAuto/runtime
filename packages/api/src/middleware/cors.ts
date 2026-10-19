@@ -8,11 +8,15 @@ const allowedMethods = 'GET, HEAD, POST, PUT, DELETE';
 
 const allowedHeaders = 'authorization, content-type, traceparent, tracestate, baggage';
 
-const exposedHeaders = 'x-request-id, x-trace-id, www-authenticate';
+const exposedHeaders = 'x-request-id, x-trace-id, www-authenticate, date';
 
 const preflightCacheSeconds = '600';
 
 type PageOriginsOf = (c: Context<ApiEnv>) => readonly string[];
+
+function privateNetworkOf(asked: string | undefined): Readonly<Record<string, string>> {
+  return asked === 'true' ? { 'access-control-allow-private-network': 'true' } : {};
+}
 
 function answerPreflight(pageOrigins: PageOriginsOf): MiddlewareHandler<ApiEnv> {
   return (c, next) => {
@@ -25,6 +29,7 @@ function answerPreflight(pageOrigins: PageOriginsOf): MiddlewareHandler<ApiEnv> 
             'access-control-allow-methods': allowedMethods,
             'access-control-allow-headers': allowedHeaders,
             'access-control-max-age': preflightCacheSeconds,
+            ...privateNetworkOf(c.req.header('access-control-request-private-network')),
             vary: 'Origin',
           }),
         )

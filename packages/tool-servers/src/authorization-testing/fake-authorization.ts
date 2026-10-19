@@ -29,27 +29,62 @@ function openIdFields(origin: string) {
   };
 }
 
+function endpointsOriginOf(origin: string, { endpointHost }: ClientRegistration): string {
+  if (endpointHost === undefined) {
+    return origin;
+  }
+  const moved = new URL(origin);
+  moved.hostname = endpointHost;
+  return moved.origin;
+}
+
+function methodsOf({ takesBasicSecrets }: ClientRegistration): readonly string[] {
+  return takesBasicSecrets === false
+    ? methodsOfAuthentication.filter((method) => method !== 'client_secret_basic')
+    : methodsOfAuthentication;
+}
+
 function metadataOf(origin: string, registration: ClientRegistration) {
+  const at = endpointsOriginOf(origin, registration);
+  const methods = methodsOf(registration);
   return {
     issuer: registration.issuer ?? origin,
-    authorization_endpoint: `${origin}/authorize`,
-    token_endpoint: `${origin}/token`,
-    revocation_endpoint: `${origin}/revoke`,
-    ...(registration.dynamicRegistration === true ? { registration_endpoint: `${origin}/register` } : {}),
+    authorization_endpoint: `${at}/authorize`,
+    token_endpoint: `${at}/token`,
+    revocation_endpoint: `${at}/revoke`,
+    ...(registration.dynamicRegistration === true ? { registration_endpoint: `${at}/register` } : {}),
     response_types_supported: ['code'],
     grant_types_supported: ['client_credentials', 'authorization_code', 'refresh_token'],
-    code_challenge_methods_supported: ['S256'],
-    token_endpoint_auth_methods_supported: methodsOfAuthentication,
+    code_challenge_methods_supported: registration.challengeMethods ?? ['S256'],
+    token_endpoint_auth_methods_supported: methods,
     token_endpoint_auth_signing_alg_values_supported: ['RS256'],
-    revocation_endpoint_auth_methods_supported: methodsOfAuthentication,
+    ...(registration.listsRevocationMethods === false ? {} : { revocation_endpoint_auth_methods_supported: methods }),
     authorization_response_iss_parameter_supported: true,
     ...(registration.clientMetadataDocuments === true ? { client_id_metadata_document_supported: true } : {}),
+    ...(registration.scopesSupported === undefined ? {} : { scopes_supported: registration.scopesSupported }),
   };
 }
 
+const metadataPaths = [
+  '/.well-known/oauth-protected-resource/mcp',
+  '/.well-known/oauth-protected-resource',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/openid-configuration',
+];
+
+function unpublished(): Promise<Response> {
+  return Promise.resolve(new Response(null, { status: 404 }));
+}
+
 function documentRoutesOf(origin: string, registration: ClientRegistration): readonly Route[] {
+  if (registration.publishesMetadata === false) {
+    return metadataPaths.map((path): Route => [path, unpublished]);
+  }
   const metadata = metadataOf(origin, registration);
-  const resource = { resource: `${origin}/mcp`, authorization_servers: [registration.authorizationServer ?? origin] };
+  const resource = {
+    resource: registration.protectedResource ?? `${origin}/mcp`,
+    authorization_servers: [registration.authorizationServer ?? origin],
+  };
   return [
     ['/.well-known/oauth-protected-resource/mcp', () => Promise.resolve(json(resource))],
     registration.openIdConnect === true

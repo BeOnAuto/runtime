@@ -47,7 +47,7 @@ export function defineAddConnection({
       const { token, ...link } = yield* issuedLink;
       const addition = additionOf(given, link);
       const kept = yield* recordInRegistry(addition).pipe(
-        Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die }),
+        Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die, invalid_input: Effect.die }),
       );
       const url = connectPageOf(pages, { org, connection: addition.connection, token });
       return { ...kept.connection, credential_ends_with: null, connect: { url, expires_at: link.expires_at } };

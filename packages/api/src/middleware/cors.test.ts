@@ -78,7 +78,7 @@ const answeredRequests: ReadonlyArray<readonly [string, Readonly<Record<string, 
 
 describe('a request from an allowed origin', () => {
   it.each(answeredRequests)(
-    'carries that origin, Vary: Origin and x-request-id and x-trace-id exposed on %s',
+    'carries that origin, Vary: Origin and x-request-id, x-trace-id, www-authenticate and Date exposed on %s',
     async (_case, headers, status) => {
       const { handler } = await operationServer({ allowedOrigins: [allowed] });
 
@@ -87,7 +87,7 @@ describe('a request from an allowed origin', () => {
       expect(answer.status).toBe(status);
       expect(corsHeadersOf(answer.headers)).toEqual({
         allowOrigin: allowed,
-        exposeHeaders: 'x-request-id, x-trace-id, www-authenticate',
+        exposeHeaders: 'x-request-id, x-trace-id, www-authenticate, date',
         allowCredentials: null,
         vary: 'Origin',
       });

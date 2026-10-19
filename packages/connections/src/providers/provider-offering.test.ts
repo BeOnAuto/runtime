@@ -1,5 +1,6 @@
 import type { CallerIdentity } from '@on.auto/operations';
 import { fixtureProviders } from '@on.auto/providers/testing';
+import { consentClientWith } from '@on.auto/tool-servers/testing';
 import type { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -23,6 +24,7 @@ function offeredBy(access: RuntimeAccess, { policy = {}, providerValues = new Ma
     providerValues,
     policy: connectionPolicyOf(policy),
     access,
+    consent: consentClientWith(),
   });
 }
 

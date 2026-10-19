@@ -5,7 +5,7 @@ import { clientIdReadingIssuesOf, type EntryChecking } from '../entries/entry-ch
 import { givenFieldsOf, wordsOfThePage, type Given } from '../entries/given-values.ts';
 import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
-import { takesNoCredential } from '../registry/registry-decisions.ts';
+import { connectedByConsent, takesNoCredential } from '../registry/registry-decisions.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
 
@@ -50,6 +50,9 @@ export function givenOf(
   checking: EntryChecking,
 ): Result.Result<Given, InvalidInput | Conflict> {
   const { name, credential } = connection;
+  if (credential.kind === 'authorization') {
+    return Result.fail(connectedByConsent(name));
+  }
   if (credential.kind !== 'secret' && credential.kind !== 'client_credentials') {
     return Result.fail(takesNoCredential(name));
   }

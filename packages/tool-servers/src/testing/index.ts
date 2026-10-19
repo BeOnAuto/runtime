@@ -55,6 +55,24 @@ export {
   type RecordingCallJournal,
 } from './tool-runs.ts';
 
+export {
+  consentedAt,
+  finishAskedOf,
+  memoryRegistrations,
+  tokensKeptBy,
+  type Consented,
+  type MemoryRegistrations,
+} from '../consent-testing/given-consents.ts';
+export {
+  consentClientWith,
+  consentRegistration,
+  consentSecret,
+  everyHost,
+  registeredAt,
+  returnAddress,
+  servedForConsent,
+  startAskedAt,
+} from '../consent-testing/consent-fakes.ts';
 export { toolAccessBehaviour } from '../access-testing/tool-access-behaviour.ts';
 export {
   behaviourKey,

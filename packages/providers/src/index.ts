@@ -1,4 +1,13 @@
-export { WayKindSchema, wayFields, type CredentialWay, type WayKind } from './entry/credential-ways.ts';
+export {
+  WayKindSchema,
+  consentEndpoints,
+  consentIssuesOf,
+  wayFields,
+  type ConsentFields,
+  type CredentialWay,
+  type WayKind,
+} from './entry/credential-ways.ts';
+export { wayAddresses, type WayAddress } from './entry/templates.ts';
 export { clientIdPlaceholder, type Choice, type Placeholder } from './entry/placeholders.ts';
 export {
   AddedProviderEntrySchema,

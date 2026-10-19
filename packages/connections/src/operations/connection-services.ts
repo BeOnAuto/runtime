@@ -1,4 +1,5 @@
 import type { ProviderList } from '@on.auto/providers';
+import type { ConsentClient } from '@on.auto/tool-servers';
 import type { Effect, Redacted } from 'effect';
 
 import type { ConnectPages } from '../links/connect-page.ts';
@@ -23,4 +24,5 @@ export interface ConnectionServices {
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
   readonly pages: ConnectPages;
   readonly access: RuntimeAccess;
+  readonly consent: ConsentClient;
 }

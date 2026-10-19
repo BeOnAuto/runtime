@@ -11,7 +11,7 @@ import {
 import { Effect, Option, Result } from 'effect';
 
 import { entryIssuesOf, readAddition } from '../entries/entry-checks.ts';
-import { hostRefusalOf, useRefusalOf } from '../policy/policy-rules.ts';
+import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst, type KeptConnection } from '../registry/registry.ts';
@@ -36,6 +36,9 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
   const { connection } = serving.kept;
   const checking = { org: serving.org, modelProviders, providing: providingOf(connection, serving.services) };
   return Effect.gen(function* () {
+    if (connection.credential.kind === 'authorization') {
+      return yield* Effect.fail(notAllowed(servingWords.unserved(connection.name)));
+    }
     const refusal = useRefusalOf(policy, connection, checking.providing?.documentServer);
     if (refusal !== undefined) {
       return yield* Effect.fail(notAllowed(refusal.detail));
@@ -49,9 +52,7 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
       return yield* Effect.fail(unchecked(connection.name, read.failure));
     }
     const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionServerSettings));
-    const reaches = (url: string): string | undefined =>
-      hostRefusalOf(policy.allowedHosts, new URL(url).hostname)?.detail;
-    return { settings, reaches };
+    return { settings, reaches: reachesUnder(policy) };
   });
 }
 

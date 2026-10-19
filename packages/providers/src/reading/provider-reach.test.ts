@@ -11,6 +11,8 @@ import {
   type Provider,
 } from '../index.ts';
 import {
+  adverts,
+  campaigns,
   fixtureProviders,
   ledgers,
   metrics,
@@ -47,8 +49,34 @@ describe('the hosts a way of a provider reaches', () => {
     ]);
   });
 
+  it('are the issuer and the endpoints of a way of consent', () => {
+    expect(waysOf(providerOf(adverts))).toEqual([
+      [
+        [
+          'api.adverts.example.com',
+          'login.adverts.example.com',
+          'login.adverts.example.com',
+          'login.adverts.example.com',
+          'login.adverts.example.com',
+        ],
+      ],
+      [['api.adverts.example.com']],
+    ]);
+  });
+
   it('are one set for each choice of a placeholder whose choices set the host', () => {
     expect(waysOf(named('regions'))).toEqual([[['api-na.regions.example.com'], ['api-eu.regions.example.com']]]);
+  });
+
+  it('take the host of a token endpoint from the choice that sets it, beside the host of the API it sets', () => {
+    const fixed = 'auth.campaigns.example.com';
+
+    expect(waysOf(providerOf(campaigns))).toEqual([
+      [
+        ['api-na.campaigns.example.com', fixed, fixed, 'auth-na.campaigns.example.com', fixed],
+        ['api-eu.campaigns.example.com', fixed, fixed, 'auth-eu.campaigns.example.com', fixed],
+      ],
+    ]);
   });
 });
 

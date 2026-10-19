@@ -14,7 +14,7 @@ interface ServerPart {
   readonly base_url?: string;
   readonly headers?: Readonly<Record<string, string>>;
   readonly query_params?: Readonly<Record<string, string>>;
-  readonly credentials?: readonly { readonly issuer?: string }[];
+  readonly credentials?: readonly WayAddresses[];
 }
 
 export interface Marked {
@@ -24,15 +24,24 @@ export interface Marked {
 
 const addresses = ['url', 'document', 'base_url'] as const;
 
+export const wayAddresses = ['issuer', 'authorization_endpoint', 'token_endpoint', 'revocation_endpoint'] as const;
+
+export type WayAddress = (typeof wayAddresses)[number];
+
+export type WayAddresses = Partial<Readonly<Record<WayAddress, string>>>;
+
 const valueFields = ['headers', 'query_params'] as const;
 
 function markerOf(position: number): string {
   return `placeholder${String(position)}marker`;
 }
 
-function issuersOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
-  return credentials.flatMap(({ issuer }, index): readonly TemplatedField[] =>
-    issuer === undefined ? [] : [{ path: ['credentials', String(index), 'issuer'], text: issuer, holds: 'address' }],
+function wayAddressesOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
+  return credentials.flatMap((way, index) =>
+    wayAddresses.flatMap((field): readonly TemplatedField[] => {
+      const text = way[field];
+      return text === undefined ? [] : [{ path: ['credentials', String(index), field], text, holds: 'address' }];
+    }),
   );
 }
 
@@ -42,7 +51,7 @@ export function templatedFieldsOf(entry: ServerPart): readonly TemplatedField[] 
       const text = entry[field];
       return text === undefined ? [] : [{ path: [field], text, holds: 'address' }];
     }),
-    ...issuersOf(entry),
+    ...wayAddressesOf(entry),
     ...valueFields.flatMap((field) =>
       Object.entries(entry[field] ?? {}).map(([key, text]: readonly [string, string]): TemplatedField => ({
         path: [field, key],

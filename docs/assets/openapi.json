@@ -1420,7 +1420,8 @@
                           "none",
                           "reference",
                           "secret",
-                          "client_credentials"
+                          "client_credentials",
+                          "authorization"
                         ]
                       },
                       "variable": {
@@ -1587,7 +1588,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -1616,16 +1618,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -1934,7 +1976,8 @@
                                 "none",
                                 "reference",
                                 "secret",
-                                "client_credentials"
+                                "client_credentials",
+                                "authorization"
                               ]
                             },
                             "variable": {
@@ -1963,16 +2006,56 @@
                             },
                             "issuer": {
                               "type": "string",
-                              "description": "For client_credentials, the https URL of the authorization server"
+                              "description": "For client_credentials and authorization, the https URL of the authorization server"
                             },
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client, else given on the page"
+                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                             },
                             "scope": {
                               "type": "string",
-                              "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                              "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                            },
+                            "parameters": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                            },
+                            "authorization_endpoint": {
+                              "type": "string",
+                              "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                            },
+                            "token_endpoint": {
+                              "type": "string",
+                              "description": "For authorization, the token endpoint, beside the other two"
+                            },
+                            "revocation_endpoint": {
+                              "type": "string",
+                              "description": "For authorization, the revocation endpoint, beside the other two"
+                            },
+                            "clients": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "registered",
+                                  "metadata_document",
+                                  "dynamic"
+                                ]
+                              },
+                              "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                            },
+                            "client_source": {
+                              "type": "string",
+                              "enum": [
+                                "registered",
+                                "metadata_document",
+                                "dynamic"
+                              ],
+                              "description": "For authorization, the source of the client the connection was made with, once connected"
                             }
                           },
                           "required": [
@@ -2249,7 +2332,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -2278,16 +2362,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -2560,7 +2684,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -2589,16 +2714,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -2887,7 +3052,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -2916,16 +3082,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -3008,6 +3214,25 @@
                         "expires_at"
                       ],
                       "additionalProperties": false
+                    },
+                    "consent": {
+                      "type": "object",
+                      "properties": {
+                        "started_at": {
+                          "type": "string",
+                          "description": "When the consent was started, in ISO 8601 UTC"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "description": "When the consent must be finished by, in ISO 8601 UTC"
+                        }
+                      },
+                      "required": [
+                        "started_at",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The consent started and not finished, while it is open"
                     }
                   },
                   "required": [
@@ -3253,7 +3478,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -3282,16 +3508,56 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -3632,7 +3898,8 @@
                             "none",
                             "reference",
                             "secret",
-                            "client_credentials"
+                            "client_credentials",
+                            "authorization"
                           ]
                         },
                         "variable": {
@@ -3661,16 +3928,615 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials, the https URL of the authorization server"
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "connected",
+                        "broken",
+                        "removed"
+                      ],
+                      "description": "pending until it is approved and its credential given, connected, broken or removed"
+                    },
+                    "added_by": {
+                      "type": "string",
+                      "description": "The id of the caller who added it"
+                    },
+                    "added_at": {
+                      "type": "string",
+                      "description": "When it was added, in ISO 8601 UTC"
+                    },
+                    "connected_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was connected, in ISO 8601 UTC"
+                    },
+                    "connected_by": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                    },
+                    "credential_ends_with": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value"
+                    },
+                    "broken": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why it is broken, while it is"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "provider",
+                    "placeholders",
+                    "entry",
+                    "credential",
+                    "status",
+                    "added_by",
+                    "added_at",
+                    "connected_at",
+                    "connected_by",
+                    "credential_ends_with",
+                    "broken"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A tool server the org added, shared by its playbooks"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/connections/{id}/consent": {
+      "post": {
+        "operationId": "start",
+        "summary": "Start consent",
+        "description": "Starts the consent of a connection whose provider a person connects by signing in to it and allowing Auto, through the connection's open link, and answers the page of the provider's authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. On a runtime that signs people in, only the person who added the connection may start it.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/start/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "The token of the link add_connection gave"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/start/output",
+                  "type": "object",
+                  "properties": {
+                    "authorize": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The page of the provider's authorization server, where the person signs in and allows Auto"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "description": "When the consent must be finished by, ten minutes on, in ISO 8601 UTC"
+                        }
+                      },
+                      "required": [
+                        "url",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "authorize"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Where the person signs in to the provider and allows Auto"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/connections/{id}/consent/code": {
+      "post": {
+        "operationId": "finish",
+        "summary": "Finish consent",
+        "description": "Finishes the consent of a connection with the code and the state its authorization server sent the person back with, which connects it, and answers it connected. The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them. On a runtime that signs people in, only the person who added the connection may finish it.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/finish/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "The token of the link add_connection gave"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The code the authorization server sent the person back with"
+                  },
+                  "state": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The state the authorization server sent the person back with"
+                  },
+                  "iss": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The issuer the authorization server sent the person back with, where it sent one"
+                  }
+                },
+                "required": [
+                  "token",
+                  "code",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/finish/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name a function gives the connection in server/tool"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mcp",
+                        "openapi"
+                      ],
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL of the MCP server"
+                        },
+                        "document": {
+                          "type": "string",
+                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                        },
+                        "base_url": {
+                          "type": "string",
+                          "description": "The https URL the API's calls go to, in place of its document's"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Headers sent with each request, never a secret or a reference"
+                        },
+                        "query_params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Query parameters sent with each call, never a secret or a reference"
+                        },
+                        "allowed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The tools a function may name; every tool when left out"
+                        },
+                        "playbooks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The playbooks that may use it, by id; every one when left out"
+                        },
+                        "record_content": {
+                          "type": "boolean",
+                          "description": "Whether calls are kept whole in the playbook's history; true when left out"
+                        },
+                        "request_id": {
+                          "type": "string",
+                          "description": "The header or result metadata key of the server's id of a call"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The tool server, without its credential"
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "reference",
+                            "secret",
+                            "client_credentials",
+                            "authorization"
+                          ]
+                        },
+                        "variable": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For secret and reference, the header, query parameter or security scheme the value is sent as"
+                        },
+                        "in": {
+                          "type": "string",
+                          "enum": [
+                            "header",
+                            "query",
+                            "security"
+                          ],
+                          "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
+                        },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                        },
+                        "client_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the other two"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside the other two"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
                         }
                       },
                       "required": [
@@ -3913,7 +4779,8 @@
                                 "enum": [
                                   "secret",
                                   "client_credentials",
-                                  "none"
+                                  "none",
+                                  "authorization"
                                 ]
                               },
                               "in": {

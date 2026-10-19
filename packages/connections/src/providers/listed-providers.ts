@@ -17,6 +17,8 @@ const ListedWaySchema = Schema.Struct({
 
 export type ListedWay = typeof ListedWaySchema.Type;
 
+export const listedWayOf = Schema.decodeUnknownSync(ListedWaySchema);
+
 const ListedPlaceholderSchema = Schema.Struct({
   name: Schema.String,
   description: Schema.String,
