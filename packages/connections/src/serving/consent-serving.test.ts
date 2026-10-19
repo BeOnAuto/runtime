@@ -2,6 +2,7 @@ import { providerListOf } from '@on.auto/providers/testing';
 import type {
   AuthSettings,
   ConnectionServer,
+  ConnectionServerSettings,
   ConnectionUnready,
   ConsentCredential,
   OrgConnection,
@@ -12,7 +13,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added } from '../testing/additions.ts';
-import { consentedOf, consentFake, consentHarnessAt, finishing, studioReturn } from '../testing/consents.ts';
+import {
+  audiencesAt,
+  consentedOf,
+  consentFake,
+  consentHarnessAt,
+  finishing,
+  studioReturn,
+} from '../testing/consents.ts';
 import { harnessPages, type Harness } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
@@ -142,6 +150,52 @@ describe('a connection connected by consent whose row cannot be served', () => {
     const refused = await Effect.runPromise(Effect.flip(await preparedIn(h)));
 
     expect(refused).toEqual({ because: 'connection_broken', detail: gone });
+  });
+});
+
+function headersOf(settings: ConnectionServerSettings): Readonly<Record<string, string>> {
+  return 'headers' in settings
+    ? Object.fromEntries(
+        [...settings.headers].map(([name, value]: readonly [string, Redacted.Redacted]) => [
+          name,
+          Redacted.value(value),
+        ]),
+      )
+    : {};
+}
+
+describe('a connection connected by consent from a provider that writes {client_id}', () => {
+  it('records {client_id} as the provider writes it, and is served with the client it was made with in its place', async () => {
+    const fake = await served();
+    const h = consentHarnessAt(fake, { providers: providerListOf(audiencesAt(fake)) });
+    const link = await added(h, { provider: 'audiences' });
+
+    const finished = await finishing(h, link, await consentedOf(h, link));
+    const headers = headersOf((await Effect.runPromise(await preparedIn(h))).settings);
+
+    expect(finished).toMatchObject({
+      status: 'succeeded',
+      output: {
+        entry: { headers: { 'X-Client': '{client_id}' } },
+        credential: { kind: 'authorization', client_id: 'auto-runtime', client_source: 'registered' },
+        status: 'connected',
+      },
+    });
+    expect(headers).toEqual({ 'X-Client': 'auto-runtime' });
+  });
+
+  it('holds neither the stand-in the addition read it with nor the placeholder, in its facts or its header', async () => {
+    const fake = await served();
+    const h = consentHarnessAt(fake, { providers: providerListOf(audiencesAt(fake)) });
+    const link = await added(h, { provider: 'audiences' });
+    await finishing(h, link, await consentedOf(h, link));
+
+    const headers = headersOf((await Effect.runPromise(await preparedIn(h))).settings);
+    const kept = JSON.stringify(await h.facts());
+
+    expect(kept).not.toContain('a client id the person gives');
+    expect(Object.values(headers)).not.toContain('{client_id}');
+    expect(Object.values(headers)).not.toContain('a client id the person gives');
   });
 });
 

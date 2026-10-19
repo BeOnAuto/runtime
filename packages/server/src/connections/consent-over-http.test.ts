@@ -6,6 +6,7 @@ import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
+import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
@@ -102,7 +103,9 @@ describe('a connection of consent given by hand', () => {
 
 const anHour = 3_600_000;
 
-const studioReturn = 'https://studio.on.auto/connect/return';
+function servedStudioReturnOn(port: number): string {
+  return `http://127.0.0.1:${port}/studio/connect-return`;
+}
 
 const consentEnded =
   'The consent of the connection files was revoked or has ended, so the person who added it removes it and adds it again';
@@ -173,12 +176,18 @@ function echoing(served: ReasoningServer) {
 
 describe('a connection connected by consent over HTTP', () => {
   it('calls a tool with its access token, is renewed once it is due and broken once its grant is revoked', async () => {
-    const fake = await serveFakeMcp({ client: consentRegistration({ redirectUris: [studioReturn] }) });
+    const port = await aPortNothingListensOn();
+    const fake = await serveFakeMcp({ client: consentRegistration({ redirectUris: [servedStudioReturnOn(port)] }) });
     const ledger = temporaryLedger();
     const clock = movedClock(Date.now());
     const served = await servingReasoning(
       [],
-      { LEDGER_FILE: ledger.fileName, SECRETS_KEY: secretsKey.toString('base64'), ...filesProvidedBy(fake) },
+      {
+        PORT: String(port),
+        LEDGER_FILE: ledger.fileName,
+        SECRETS_KEY: secretsKey.toString('base64'),
+        ...filesProvidedBy(fake),
+      },
       noNetwork,
       { clock },
     );

@@ -10,7 +10,7 @@ import {
 import { JsonPointer, Redacted, Result, Schema } from 'effect';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
-import { placesNoValue, type Credential } from '../registry/credential.ts';
+import { placesNoValue, takesAClientId, type Credential } from '../registry/credential.ts';
 import { placedCredential, readPlaced, type GivenValue, type Providing } from '../serving/placed-credentials.ts';
 import { credentialIssuesOf } from './credential-checks.ts';
 
@@ -129,7 +129,7 @@ export function readAddition(
 }
 
 function withAnyClientId(credential: Credential): Credential {
-  return credential.kind === 'client_credentials' && credential.client_id === undefined
+  return takesAClientId(credential.kind) && credential.client_id === undefined
     ? { ...credential, client_id: anyClientId }
     : credential;
 }

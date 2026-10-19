@@ -1,6 +1,6 @@
 export { makeConnectionOperations, type ConnectionOperations } from './operations/connection-operations.ts';
 export type { ConnectionServices, SecretKeeping } from './operations/connection-services.ts';
-export type { ConnectPages } from './links/connect-page.ts';
+export { returnAddressOf, type ConnectPages } from './links/connect-page.ts';
 export {
   ConnectionsSettingInvalid,
   ConnectionsSettingSchema,
