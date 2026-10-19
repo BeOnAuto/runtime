@@ -75,6 +75,17 @@ describe(`an overview whose appendix passes ${mostOverviewBytes} bytes`, () => {
     expect(utf8.encode(written).byteLength).toBeLessThanOrEqual(mostOverviewBytes);
   });
 
+  it('cuts the text of its author whole as it cuts any block of its body, before the first that does not fit', () => {
+    const written = markdownOf({
+      ...withAppendix(),
+      body: [...body, { kind: 'authored', text: 'é'.repeat(3000) }, paragraph('After it.')],
+    });
+    const blocks = written.trimEnd().split('\n\n');
+
+    expect(blocks).toHaveLength(2 + 15 + 1);
+    expect(blocks.slice(-2)).toEqual(['é'.repeat(2000), cutLine]);
+  });
+
   it('cuts its body before its appendix, writing no Details, when the body alone passes the bound', () => {
     const written = markdownOf({
       ...withAppendix(sectionOf('Input', paragraph('A record.'))),

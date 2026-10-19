@@ -136,8 +136,11 @@ describe('the text of the guides of a server', () => {
 describe('the size and the words of the guides of a server', () => {
   const { guides, recipes } = servedGuidesOf(everyType);
 
-  it('stay under 64 KiB each, and each recipe under 4 KiB', () => {
-    expect(guides.filter(({ text }) => Buffer.byteLength(text, 'utf8') > mostGuideBytes)).toEqual([]);
+  it('stay under 64 KiB each, the guide of interaction functions among them, and each recipe under 4 KiB', () => {
+    const everyGuide = servedGuidesOf([...everyType, interaction]).guides;
+
+    expect(everyGuide.map(({ name }) => name)).toContain('interaction-function');
+    expect(everyGuide.filter(({ text }) => Buffer.byteLength(text, 'utf8') > mostGuideBytes)).toEqual([]);
     expect(recipes.filter(({ text }) => Buffer.byteLength(text, 'utf8') > mostRecipeBytes)).toEqual([]);
   });
 

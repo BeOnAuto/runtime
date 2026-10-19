@@ -37,6 +37,7 @@ A function document contains instructions, never model credentials. Each change 
 | Field                      | Required    | Value                                                                                                                                                                           |
 | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `description`              | No          | Text of 1 to 1,000 characters. `list_definitions`, `get_definition` and the [overview](#the-overview) show it                                                                   |
+| `about`                    | No          | Markdown of 1 to 4,000 characters, without headings, for a business reader; the [overview](#the-overview) shows it after the `description`                                      |
 | `model`                    | Yes         | A model reference in `provider/model` form, such as `anthropic/claude-sonnet-4-5`                                                                                               |
 | `config.max_output_tokens` | No          | A whole number from 1 to 64,000; 1,024 when left out. The most tokens the answer may use                                                                                        |
 | `config.temperature`       | No          | A finite number: the sampling temperature. Each provider accepts its own range                                                                                                  |
@@ -359,7 +360,7 @@ More rules:
 
 `get_definition` returns a saved function with its `overview`: a plain-words description for a person who does not read Liquid or YAML. Auto Studio shows it before the document. The overview says, in order:
 
-1. The `description`, or that the function has none yet.
+1. The `description`, or that the function has none yet, then the `about` as it is written.
 2. What the function needs: each field of `input.schema`, with its type, its bounds and the value `input.default` gives it.
 3. What it produces: text, each field of `output.schema`, or the shape `output.shape` names, in a sentence.
 4. The model, and each tool it may call. When the function names any tools, a diagram draws the function, its model and those tools.
@@ -374,7 +375,15 @@ In the instructions and the message:
 - Comments are left out, a `raw` block keeps its text, and any other tag stays as it is written.
 - The instructions and the message are each cut past 8,192 characters, with the line of the document where they continue.
 
-The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it. Give each field of the schemas a `description`, and put each field's default value in `input.default`, so the overview can show it. A function without them still has an overview, with only the types.
+The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences. Give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The brief to review`, and put each field's default value in `input.default`, so the overview can show it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
+
+```yaml
+about: |
+  The campaign team uses it to check each brief before it goes to a client.
+  It runs when someone asks for a review, and answers with the evidence the brief lacks.
+```
+
+A function without them still has an overview, with only the types.
 
 ## Provider options
 

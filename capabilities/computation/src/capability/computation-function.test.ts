@@ -166,7 +166,7 @@ describe('a computation function definition that is refused', () => {
         {
           pointer: '',
           detail:
-            'Line 3, /model: model is not a key of the front matter; it takes description, language, input, output',
+            'Line 3, /model: model is not a key of the front matter; it takes description, about, language, input, output',
         },
         { pointer: '', detail: 'Line 5: The definition has no program: write it after the front matter' },
       ],

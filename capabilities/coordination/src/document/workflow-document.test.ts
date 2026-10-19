@@ -123,6 +123,12 @@ describe('a workflow document that nests too deeply', () => {
 });
 
 describe('the summary of a workflow definition', () => {
+  it('carries the about of the metadata of the document, which its overview writes', () => {
+    expect(
+      summaryOf({ document: { summary: 'Greets', metadata: { about: 'It serves the front desk.' } }, do: [] }),
+    ).toEqual({ description: 'Greets', about: 'It serves the front desk.' });
+  });
+
   it('is the summary or title of the document, its inline input and output schemas, and its title in its details', () => {
     expect(
       summaryOf({
@@ -151,5 +157,67 @@ describe('the summary of a workflow definition', () => {
         { kind: 'cron', reference: '/schedule/cron', expression: '0 9 * * *' },
       ],
     });
+  });
+});
+
+const greeting = 'do:\n  - greet: { set: { a: 1 } }\n';
+
+const notRun = 'The workflow document is not a workflow this runtime runs';
+
+function withAbout(about: string): string {
+  return `${header}  metadata:\n    about: ${about}\n${greeting}`;
+}
+
+describe('the about of a workflow document', () => {
+  it('is text of 1 to 4000 characters under the metadata of the document, refused at its line otherwise', async () => {
+    expect(await parsed(withAbout('5'))).toMatchObject(
+      rejected(notRun, ['Line 7, column 12: at /document/metadata/about: Expected string']),
+    );
+    expect(await parsed(withAbout('x'.repeat(4001)))).toMatchObject(
+      rejected(notRun, [
+        'Line 7, column 12: at /document/metadata/about: Expected a value with a length of at most 4000',
+      ]),
+    );
+    expect(await parsed(withAbout('x'.repeat(4000)))).toMatchObject({ _tag: 'Success' });
+  });
+});
+
+describe('the summary, the title and the about of a workflow document', () => {
+  it('take no heading, each refused at its line in a literal block and at the line its value opens in any other style', async () => {
+    const about = ['    about: |', '      It serves the front desk.', '', '      ## When it runs'].join('\n');
+    const source = `${header}  summary: '# Greets a guest'\n  metadata:\n${about}\n${greeting}`;
+
+    expect(await parsed(source)).toMatchObject(
+      rejected(notRun, [
+        'Line 6, column 12: at /document/summary: summary takes no heading, since an overview writes its own: the line that begins “# Greets a guest” makes one, with # before its words or as a line of = or - under the words above it',
+        'Line 11, column 7: at /document/metadata/about: about takes no heading, since an overview writes its own: this line makes one, with # before its words or as a line of = or - under the words above it',
+      ]),
+    );
+  });
+
+  it('refuse a heading in the title where it is the description, and take one where the summary is', async () => {
+    const titled = `${header}  title: '# Greeting'\n`;
+
+    expect(await parsed(`${titled}${greeting}`)).toMatchObject(
+      rejected(notRun, [
+        'Line 6, column 10: at /document/title: title takes no heading, since an overview writes its own: the line that begins “# Greeting” makes one, with # before its words or as a line of = or - under the words above it',
+      ]),
+    );
+    expect(await parsed(`${titled}  summary: Greets a guest\n${greeting}`)).toMatchObject({ _tag: 'Success' });
+  });
+
+  it('leave no block open and hold no line of the overview, at the line of the text in a literal block or of the value', async () => {
+    const about = ['    about: |', '      It serves the front desk.', '      <!-- a note'].join('\n');
+
+    expect(await parsed(`${header}  metadata:\n${about}\n${greeting}`)).toMatchObject(
+      rejected(notRun, [
+        'Line 9, column 7: at /document/metadata/about: about leaves open the HTML block that this line opens, so the rest of the overview would be read inside it: close it',
+      ]),
+    );
+    expect(await parsed(withAbout('"It serves the front desk.\\n## Details"'))).toMatchObject(
+      rejected(notRun, [
+        "Line 7, column 12: at /document/metadata/about: about may not hold the line ## Details, which is the overview's own, since the page that shows an overview splits it at that text: the line that begins “## Details” is one",
+      ]),
+    );
   });
 });

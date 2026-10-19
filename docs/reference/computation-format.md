@@ -115,6 +115,7 @@ the run succeeds with this output, and its record shows that it spent 0 checkpoi
 | Field           | Required | Value                                                                                                                                                             |
 | --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `description`   | No       | Text of 1 to 1,000 characters                                                                                                                                     |
+| `about`         | No       | Markdown of 1 to 4,000 characters, without headings, for a business reader; see [The overview](#the-overview)                                                     |
 | `language`      | Yes      | `typescript`, the playbook's one language                                                                                                                         |
 | `input.schema`  | No       | A JSON Schema of the input. The input may be any JSON value it allows                                                                                             |
 | `output.schema` | No       | A JSON Schema of the output. An output that does not match it ends the run as a conflict                                                                          |
@@ -398,12 +399,21 @@ When the computation function's run is `unavailable`, the `compute` task retries
 
 `get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read TypeScript. Auto Studio shows it before the document. The overview says:
 
-1. The `description`, or that the function has none yet.
+1. The `description`, or that the function has none yet, then the `about` as it is written.
 2. What the function needs and what it produces: each field of `input.schema` and `output.schema` with its type, bounds and default, or the shape `output.shape` names, in a sentence. A record one level down is shown with its fields.
 3. In one line, that the program is TypeScript and is shown under Source. The program itself is not described.
 4. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
 
-The overview is composed from the document when it is saved, and each read adds the definitions that use the function, so the rest says only what the document says. Write the `description` for the person who will read it, and give each field of the schemas a `description`. The program may give a field a value of its own where the input leaves it out. Write that value as the field's `default` in `input.schema`, so the overview can say it. A function without them still has an overview, with the types alone.
+The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences, and give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The reporting period`. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
+
+```yaml
+about: |
+  The finance team reads it to see whether each campaign spends to plan.
+  A workflow runs it at the end of each reporting period, and gets back
+  the spend, the pace and the projection of every campaign.
+```
+
+The program may give a field a value of its own where the input leaves it out. Write that value as the field's `default` in `input.schema`, so the overview can say it. A function without them still has an overview, with the types alone.
 
 ## Availability
 

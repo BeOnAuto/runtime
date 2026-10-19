@@ -8,6 +8,7 @@ import type { CallBlock } from '../tool-blocks/tool-block-schemas.ts';
 
 interface WrittenFunction {
   readonly description?: string;
+  readonly about?: string;
   readonly input: ValueContract;
 }
 

@@ -4,6 +4,7 @@ import { charactersIn, firstCharacters } from '../plain-language/characters.ts';
 import { linesOf, type LineOfOffset } from '../template/engine-failure.ts';
 import { withInlineConstructs } from './inline-constructs.ts';
 import { blocksOf, writtenOf, type Piece, type TextPiece } from './liquid-phrases.ts';
+import { paragraphsAsWritten } from './markdown-text.ts';
 import { paragraph, type OverviewBlock } from './overview.ts';
 
 export const mostReadCharacters = 8192;
@@ -115,7 +116,7 @@ function withinBound(pieces: readonly Piece[]): Bounded {
 
 function readOf(pieces: readonly Piece[], lineOf: LineOfOffset): readonly OverviewBlock[] {
   const { kept, cutAt } = withinBound(pieces);
-  const blocks = blocksOf(withInlineConstructs(kept, lineOf));
+  const blocks = paragraphsAsWritten(blocksOf(withInlineConstructs(kept, lineOf)));
   return cutAt === undefined
     ? blocks
     : [...blocks, paragraph(`… The rest is in the source, from line ${lineOf(cutAt)}.`)];

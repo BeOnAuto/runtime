@@ -22,6 +22,7 @@ import { noStrippedForms, type StrippedForms } from './stripped-forms.ts';
 
 export interface DefinitionSummary {
   readonly description?: string;
+  readonly about?: string;
   readonly inputSchema?: Schema.JsonObject;
   readonly outputSchema?: Schema.JsonObject;
   readonly warnings?: readonly string[];

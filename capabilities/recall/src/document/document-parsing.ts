@@ -116,13 +116,14 @@ function filterExpressionsOf(filters: readonly ViewFilter[], lines: SourceLines)
 }
 
 function assembled(
-  description: string | undefined,
+  { description, about }: Pick<RecallFrontMatter, 'description' | 'about'>,
   parts: Parts,
   lines: SourceLines,
 ): RecallFunctionDefinitionDocument {
   const { input, output, view, filters, fold } = parts;
   return {
     ...(description === undefined ? {} : { description }),
+    ...(about === undefined ? {} : { about }),
     language,
     input,
     output,
@@ -165,7 +166,7 @@ function documentFrom(
   ];
   return found.length > 0
     ? Result.fail(found)
-    : Result.map(Result.all(parts), (checked) => assembled(front.description, checked, lines));
+    : Result.map(Result.all(parts), (checked) => assembled(front, checked, lines));
 }
 
 function documentOf(parts: DocumentParts): Checked<RecallFunctionDefinitionDocument> {

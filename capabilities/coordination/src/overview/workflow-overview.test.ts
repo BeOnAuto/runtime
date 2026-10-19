@@ -144,3 +144,18 @@ describe('the overview of a workflow without steps', () => {
     expect(written.endsWith('## What it does\n\nIt has no steps, so a run ends as it starts.\n')).toBe(true);
   });
 });
+
+describe('the overview of a workflow whose document has an about', () => {
+  it('writes the about as its author wrote it, after the summary and before what starts it', () => {
+    const about = ['    about: |', '      It serves the front desk.', '', '      It runs on each arrival.'];
+    const source = `${header}  summary: Greets a guest\n  metadata:\n${about.join('\n')}\ndo:\n  - greet: { set: { a: 1 } }\n`;
+
+    expect(overviewOf(source).split('\n\n').slice(0, 5)).toEqual([
+      '# flow',
+      'Greets a guest',
+      'It serves the front desk.',
+      'It runs on each arrival.',
+      '## What starts it',
+    ]);
+  });
+});

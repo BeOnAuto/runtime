@@ -194,7 +194,7 @@ describe('the definitions and inputs of computation functions, over HTTP', () =>
           {
             pointer: '/source',
             detail:
-              'Line 3, /model: model is not a key of the front matter; it takes description, language, input, output',
+              'Line 3, /model: model is not a key of the front matter; it takes description, about, language, input, output',
           },
         ],
       },

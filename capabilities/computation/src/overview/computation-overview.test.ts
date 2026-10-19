@@ -54,3 +54,33 @@ describe('the overview of a computation function', () => {
     );
   });
 });
+
+describe('the overview of a computation function whose document has an about', () => {
+  it('writes the about as its author wrote it, after the description and before what it needs', () => {
+    const source = [
+      '---',
+      'description: Adds one',
+      'about: |',
+      '  The finance team reads it to see *how many* campaigns there are.',
+      '',
+      '  A workflow runs it at the end of each period.',
+      'language: typescript',
+      '---',
+      'export default function (input: Input): Output {',
+      '  return input;',
+      '}',
+    ];
+
+    expect(
+      markdownOf(computationWith().prepared(source.join('\n')).overview('count'))
+        .split('\n\n')
+        .slice(0, 5),
+    ).toEqual([
+      '# count',
+      'Adds one',
+      'The finance team reads it to see *how many* campaigns there are.',
+      'A workflow runs it at the end of each period.',
+      '## What it needs',
+    ]);
+  });
+});
