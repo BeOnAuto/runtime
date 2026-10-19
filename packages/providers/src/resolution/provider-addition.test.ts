@@ -158,6 +158,19 @@ describe('the values a caller gives a provider', () => {
       ],
     ]);
   });
+
+  it('are refused for a $ before their pattern or their choices are asked, whatever those take', () => {
+    const heldDollar =
+      'Holds a $, which a placeholder never holds, since a reference to an environment variable begins with it';
+
+    expect([
+      refused(tracker, { placeholders: { site: '${TRACKER_SITE}' } }),
+      refused(regions, { placeholders: { region: '${REGION}', account: 'acme1' } }),
+    ]).toEqual([
+      [{ pointer: '/placeholders/site', detail: heldDollar }],
+      [{ pointer: '/placeholders/region', detail: heldDollar }],
+    ]);
+  });
 });
 
 describe('the place of a value a caller gives', () => {

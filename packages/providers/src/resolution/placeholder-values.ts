@@ -40,14 +40,14 @@ function patternIssueOf(name: string, { pattern, example }: Placeholder, value: 
   if (!required(patternOf(written)).test(value)) {
     return `Expected a value that matches ${written}, such as ${required(example)}`;
   }
-  if (credentialProblems(name, value, '', [name]).length > 0) {
-    return heldCredential;
-  }
-  return value.includes('$') ? heldDollar : undefined;
+  return credentialProblems(name, value, '', [name]).length > 0 ? heldCredential : undefined;
 }
 
 function valueIssueOf(name: string, placeholder: Placeholder, value: string): string | undefined {
   const { choices } = placeholder;
+  if (value.includes('$')) {
+    return heldDollar;
+  }
   if (choices === undefined) {
     return patternIssueOf(name, placeholder, value);
   }
