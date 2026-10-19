@@ -5,7 +5,18 @@ import { describe, expect, it } from 'vitest';
 import { headerOf, readyNoticeOf, stoppedNotice, stoppingNotice } from './local-banner.ts';
 import { logoHeight, logoWidth } from './logo.ts';
 
-const ready = { version: '0.9.1', port: 5555, readyInMs: 640, mode: 'local', identityService: undefined } as const;
+const servedStudio = { origin: 'https://studio.on.auto', served: true };
+
+const hostedStudio = { origin: 'https://studio.on.auto', served: false };
+
+const ready = {
+  version: '0.9.1',
+  port: 5555,
+  readyInMs: 640,
+  mode: 'local',
+  identityService: undefined,
+  studio: servedStudio,
+} as const;
 
 describe('the header of the auto-runtime command', () => {
   it('names the runtime and its version in plain text where there are no colors', () => {
@@ -28,7 +39,7 @@ describe('the notice that the server is ready', () => {
   it('gives the addresses, says that it is in local mode and how to sign people in, and how to connect an agent', () => {
     expect(readyNoticeOf(ready, 1).split('\n')).toEqual([
       '  ✔ Ready in 640 ms',
-      '  ➜  Studio   https://studio.on.auto',
+      '  ➜  Studio   http://localhost:5555/studio/',
       '     Server   http://localhost:5555',
       '     MCP      http://localhost:5555/mcp',
       '     Docs     https://on.auto/docs/',
@@ -54,19 +65,29 @@ describe('the notice that the server is ready', () => {
 });
 
 describe('the Studio entry of the notice that the server is ready', () => {
-  it('shows Studio by its address alone for the default server, and links to it with the server', () => {
+  it('shows the Studio the server serves by its address alone for the default server, and links to it with the server', () => {
     const notice = readyNoticeOf(ready, 24);
 
     expect(notice).toContain(
-      '\u001B]8;;https://studio.on.auto/?server=http%3A%2F%2Flocalhost%3A5555\u001B\\https://studio.on.auto\u001B]8;;\u001B\\',
+      '\u001B]8;;http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555\u001B\\http://localhost:5555/studio/\u001B]8;;\u001B\\',
     );
+  });
+
+  it('shows the Studio host where the server serves no Studio, by its root alone or with the server', () => {
+    expect([
+      readyNoticeOf({ ...ready, studio: hostedStudio }, 1).split('\n')[1],
+      readyNoticeOf({ ...ready, port: 6000, studio: hostedStudio }, 1).split('\n')[1],
+    ]).toEqual([
+      '  ➜  Studio   https://studio.on.auto/',
+      '  ➜  Studio   https://studio.on.auto/?server=http://localhost:6000',
+    ]);
   });
 });
 
 describe('how the notice shows Studio', () => {
   it('shows the server in the Studio address when it is not the default one', () => {
     expect(readyNoticeOf({ ...ready, port: 6000 }, 1)).toContain(
-      '  ➜  Studio   https://studio.on.auto/?server=http://localhost:6000\n',
+      '  ➜  Studio   http://localhost:6000/studio/?server=http://localhost:6000\n',
     );
   });
 
@@ -75,7 +96,7 @@ describe('how the notice shows Studio', () => {
     const studio = String(lines.find((line) => line.includes('Studio')));
     const server = String(lines.find((line) => line.includes('Server')));
 
-    expect(studio).toContain('\u001B[36m\u001B[1m\u001B]8;;https://studio.on.auto/');
+    expect(studio).toContain('\u001B[36m\u001B[1m\u001B]8;;http://localhost:5555/studio/');
     expect(server).toContain('\u001B[2mServer  \u001B[22m');
     expect(server).not.toContain('\u001B[1m');
   });

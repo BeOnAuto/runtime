@@ -1,3 +1,5 @@
+import { defaultStudioOrigin } from '@on.auto/identity';
+import { alternatives, loopbackNames, namesTheLoopback } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 function isOriginOf(text: string, protocols: readonly string[]): boolean {
@@ -19,10 +21,22 @@ export const IssuerOrigin = Schema.String.check(
   ),
 );
 
-export const PublicOrigin = Schema.String.check(
-  Schema.makeFilter(
+function aWebOriginSuchAs(example: string) {
+  return Schema.makeFilter(
     (text: string) =>
       isOriginOf(text, ['https:', 'http:']) ||
-      'Expected an https URL with no path, query or fragment, such as https://runtime.example.com',
-  ),
-);
+      `Expected an https URL with no path, query or fragment, such as ${example}`,
+  );
+}
+
+export const PublicOrigin = Schema.String.check(aWebOriginSuchAs('https://runtime.example.com'));
+
+export const StudioOrigin = Schema.String.annotate({
+  description: `The origin Studio is served from, an https URL, or an http URL on localhost, 127.0.0.1 or [::1], with no path; a page there may call the API, and the runtime fetches Studio from it when it serves Studio. ${defaultStudioOrigin} when left out. STUDIO_ORIGIN wins over it`,
+}).check(aWebOriginSuchAs(defaultStudioOrigin));
+
+export function httpOffTheLoopbackIn(setting: string, origin: string): string | undefined {
+  return origin.startsWith('https://') || namesTheLoopback(new URL(origin).hostname)
+    ? undefined
+    : `${setting}: Expected an https URL; an http URL is taken only for ${alternatives(loopbackNames)}`;
+}

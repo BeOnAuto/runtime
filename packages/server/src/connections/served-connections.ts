@@ -7,7 +7,7 @@ import {
   type ConnectionServices,
   type RuntimeAccess,
 } from '@on.auto/connections';
-import { defaultStudioOrigin, type StudioSettings } from '@on.auto/identity';
+import { accessModeOf } from '@on.auto/identity';
 import type { SecretStore } from '@on.auto/ledger';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ProviderOffering } from '@on.auto/tool-servers';
@@ -24,8 +24,6 @@ export interface StoresAndConnections {
   readonly offering: ProviderOffering;
 }
 
-const hostedStudio: StudioSettings = { origin: defaultStudioOrigin, served: false };
-
 type ServingSettings = Pick<
   Settings,
   | 'connections'
@@ -36,13 +34,15 @@ type ServingSettings = Pick<
   | 'modelProviders'
   | 'signIn'
   | 'apiKeys'
+  | 'host'
+  | 'studio'
 >;
 
-function accessOf({ signIn, apiKeys }: ServingSettings): RuntimeAccess {
-  if (signIn !== undefined) {
-    return 'people';
+function accessOf({ host, signIn, apiKeys }: ServingSettings): RuntimeAccess {
+  if (accessModeOf({ host, apiKeys, signsIn: signIn !== undefined }) === 'local') {
+    return 'local';
   }
-  return apiKeys === undefined ? 'local' : 'keys';
+  return signIn === undefined ? 'keys' : 'people';
 }
 
 function connectionServicesOf(
@@ -50,7 +50,7 @@ function connectionServicesOf(
   secrets: SecretStore,
   ownOrigin: () => string,
 ): ConnectionServices {
-  const { signIn } = settings;
+  const { signIn, studio } = settings;
   return {
     secrets,
     policy: settings.connections,
@@ -58,7 +58,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: { studio: hostedStudio, runtime: () => signIn?.publicUrl ?? ownOrigin() },
+    pages: { studio, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
   };
 }

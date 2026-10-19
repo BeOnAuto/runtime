@@ -1,11 +1,11 @@
 import { resolve } from 'node:path';
 
-import type { AccessMode, SignInSettings } from '@on.auto/identity';
+import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
 import type { Incident } from '@on.auto/operations';
 import { Cause, Effect, Layer } from 'effect';
 
 import type { ContentSettings } from '../settings/content-settings.ts';
-import type { LedgerSettings, PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
+import { privateMemory, type LedgerSettings, type PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
 import type { SignalExport, TelemetrySettings } from '../telemetry/telemetry-settings.ts';
 import { logsFrom, logsToStderr, type LogFormat, type LogLevelSetting } from './log-formats.ts';
 
@@ -49,6 +49,23 @@ export function logAccessMode({ mode, signIn }: AccessReport): Effect.Effect<voi
   return mode === 'closed' ? closedNotice : signInNotice(signIn);
 }
 
+export interface StudioReport {
+  readonly mode: AccessMode;
+  readonly studio: StudioSettings;
+}
+
+const servedOutsideLocalMode = Effect.logWarning(
+  'SERVE_STUDIO is on outside local mode, where the Studio this runtime serves at /studio/ cannot work yet: its policy loads no script of the identity service, so it signs no one in, and it sends no key',
+);
+
+export function logServedStudio({ mode, studio }: StudioReport): Effect.Effect<void> {
+  return studio.served && mode !== 'local' ? servedOutsideLocalMode : Effect.void;
+}
+
+export function logStudioKeptInMemory(problem: string): Effect.Effect<void> {
+  return Effect.logWarning(`The Studio this runtime serves is kept in memory alone, since ${problem}`);
+}
+
 export interface ConfigFileReport {
   readonly path: string;
   readonly fromFile: readonly string[];
@@ -81,8 +98,6 @@ export function logConfigFile(report?: ConfigFileReport): Effect.Effect<void> {
     { discard: true },
   );
 }
-
-const privateMemory = ':memory:';
 
 function ledgerFileLine(file: string): Effect.Effect<void> {
   return Effect.logInfo(`The ledger is kept in the file ${file}`).pipe(Effect.annotateLogs({ ledger_file: file }));

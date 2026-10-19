@@ -33,7 +33,7 @@ claude mcp add --transport http auto-runtime http://localhost:5555/mcp
 
 To sign people in through the Auto identity service instead, set `PUBLIC_URL=http://localhost:5555`: the first time it connects, your agent then opens the sign-in page in your browser.
 
-In local mode, `http://localhost:5555` shows which release runs, in which process, since when and from which directory, with buttons that restart and stop it.
+In local mode, `http://localhost:5555` shows which release runs, in which process, since when and from which directory, with buttons that restart and stop it, and `http://localhost:5555/studio/` is Studio, which the runtime serves itself, since a page on a public address may not reach an address on your machine: it fetches Studio from Auto's Studio host, `STUDIO_ORIGIN`, and keeps its files in `~/.auto-runtime/auto-runtime-studio`. `SERVE_STUDIO=false` turns it off.
 
 ## Configure it
 

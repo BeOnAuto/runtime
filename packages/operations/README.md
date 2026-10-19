@@ -206,7 +206,7 @@ The digest is Node's, behind the one module of the repository for it: the digest
 
 ## The folder of a cache
 
-`cacheFolderProblem(directory, owner?)` (`src/folders/cache-folder.ts`) is the one rule of a folder the server keeps files of its own in, which it later trusts: it makes the folder when it is not there, with `cacheFolderMode`, `0700`, and answers what is wrong with it, that it could not be made, is not a folder, belongs to another user than the server's, or may be written by other users, or nothing. The model cache of prediction functions reads it, so no other user can make or change the files it serves from.
+`cacheFolderProblem(directory, owner?)` (`src/folders/cache-folder.ts`) is the one rule of a folder the server keeps files of its own in, which it later trusts: it makes the folder when it is not there, with `cacheFolderMode`, `0700`, and answers what is wrong with it, that it could not be made, is not a folder, belongs to another user than the server's, or may be written by other users, or nothing. The model cache of prediction functions and the Studio the server serves read it, so no other user can make or change the files either serves from.
 
 ## Testing
 

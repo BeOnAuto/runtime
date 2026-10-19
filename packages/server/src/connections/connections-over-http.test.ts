@@ -48,7 +48,7 @@ async function added(served: ReasoningServer, body: unknown = crm) {
 }
 
 describe('adding a connection over HTTP in local mode', () => {
-  it("answers 201 with the record and a link to Studio's page that names the server's own address", async () => {
+  it("answers 201 with the record and a link to the page of the Studio the server serves, under the server's own address", async () => {
     const served = await serving();
 
     const { answer, id, page } = await added(served);
@@ -59,7 +59,7 @@ describe('adding a connection over HTTP in local mode', () => {
       org: 'local',
       connection: id,
     });
-    expect(`${page.origin}${page.pathname}`).toBe('https://studio.on.auto/connect');
+    expect(`${page.origin}${page.pathname}`).toBe(`${served.origin}/studio/connect`);
   });
 
   it('lists the connection and reads it, and reads it through its link with when the link expires', async () => {

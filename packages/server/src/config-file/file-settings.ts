@@ -6,7 +6,7 @@ import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGat
 import { ToolServersSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { Origin } from '../settings/origin.ts';
+import { Origin, StudioOrigin } from '../settings/origin.ts';
 
 function asJson(value: unknown): string {
   return JSON.stringify(value);
@@ -20,6 +20,15 @@ export const fileSettings: readonly FileSetting[] = [
         'The origins a page in a browser may call the API from, such as https://app.example.com. ALLOWED_ORIGINS wins over it',
     }),
     (origins) => origins.join(','),
+  ),
+  fileSetting('STUDIO_ORIGIN', StudioOrigin, (origin) => origin),
+  fileSetting(
+    'SERVE_STUDIO',
+    Schema.Boolean.annotate({
+      description:
+        'Whether the runtime serves Studio itself at /studio/ on its own address, fetched from the Studio host and kept, since a page on a public address may not reach an address on the machine. On in local mode and off otherwise when left out. SERVE_STUDIO wins over it',
+    }),
+    String,
   ),
   fileSetting(
     'API_KEYS',

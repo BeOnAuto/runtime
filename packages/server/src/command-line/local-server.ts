@@ -1,4 +1,4 @@
-import type { AccessMode, SignInSettings } from '@on.auto/identity';
+import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
 
 import { release } from '../composition/release.ts';
 import type { ColorDepth } from '../logging/terminal.ts';
@@ -8,6 +8,7 @@ interface LocalServer {
   readonly port: number;
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
+  readonly studio: StudioSettings;
   stop(): Promise<void>;
 }
 
@@ -49,6 +50,7 @@ export async function servedLocally(host: LocalServerHost): Promise<void> {
         readyInMs: Math.round(host.clock() - startedAt),
         mode: server.mode,
         identityService: server.signIn?.issuer,
+        studio: server.studio,
       },
       host.depth,
     ),

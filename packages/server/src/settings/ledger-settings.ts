@@ -1,3 +1,5 @@
+import { dirname, join } from 'node:path';
+
 import type { Environment } from '@on.auto/config';
 import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
 
@@ -20,6 +22,12 @@ export interface PostgreSQLLedgerSettings {
 export type LedgerSettings = { readonly store: 'sqlite'; readonly file: string } | PostgreSQLLedgerSettings;
 
 const defaultFile = 'data/ledger.db';
+
+export const privateMemory = ':memory:';
+
+export function besideTheLedgerFile(ledger: LedgerSettings, name: string): string | undefined {
+  return ledger.store === 'sqlite' && ledger.file !== privateMemory ? join(dirname(ledger.file), name) : undefined;
+}
 
 const postgresqlSchemes: ReadonlySet<string> = new Set(['postgres:', 'postgresql:']);
 

@@ -51,7 +51,7 @@ describe('a configuration file the server cannot read as settings', () => {
     [
       'holds the URL of the ledger database, which only the environment holds',
       `database_url: postgresql://playbooks:${secret}@db.example.com/playbooks\n`,
-      `${invalid} auto-runtime.yaml:1:15 database_url: Not a setting this file holds; it holds allowed_origins, api_keys, model_gateways, model_aliases, declared_models, allowed_models, tool_servers, connections\n`,
+      `${invalid} auto-runtime.yaml:1:15 database_url: Not a setting this file holds; it holds allowed_origins, studio_origin, serve_studio, api_keys, model_gateways, model_aliases, declared_models, allowed_models, tool_servers, connections\n`,
     ],
   ])('stops the start when it %s, naming the line and the key and never a value', async (_, text, line) => {
     await expect(startupLine(text)).resolves.toBe(line);

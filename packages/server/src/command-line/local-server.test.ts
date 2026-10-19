@@ -27,6 +27,7 @@ function stoppable(count: () => void, signIn?: SignInSettings): ReturnType<Local
     port: 5600,
     mode: signIn === undefined ? 'local' : 'credentials',
     signIn,
+    studio: { origin: 'https://studio.on.auto', served: signIn === undefined },
     stop: () => {
       count();
       return Promise.resolve();

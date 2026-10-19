@@ -1,11 +1,17 @@
 import type { Environment } from '@on.auto/config';
-import { autoIdentityService, readApiKeys, type ApiKey, type SignInSettings } from '@on.auto/identity';
-import { alternatives, loopbackNames, namesTheLoopback } from '@on.auto/operations';
+import {
+  autoIdentityService,
+  readApiKeys,
+  type ApiKey,
+  type SignInSettings,
+  type StudioSettings,
+} from '@on.auto/identity';
 import { Config, ConfigProvider, Effect, Option } from 'effect';
 
 import type { LogFormat, LogLevelSetting } from '../logging/log-formats.ts';
-import { InvalidSettingsError } from './invalid-settings-error.ts';
-import { IssuerOrigin, Origin, PublicOrigin } from './origin.ts';
+import { readStudioSettings } from '../studio/studio-settings.ts';
+import { asInvalidSettings, InvalidSettingsError } from './invalid-settings-error.ts';
+import { httpOffTheLoopbackIn, IssuerOrigin, Origin, PublicOrigin } from './origin.ts';
 
 export const accessVariables: readonly string[] = [
   'ALLOWED_ORIGINS',
@@ -27,12 +33,6 @@ const accessSettings = Config.all({
   logLevel: Config.Literals(['debug', 'info', 'warn', 'error'], 'LOG_LEVEL').pipe(Config.withDefault('info')),
 });
 
-function asInvalidSettings<A>(
-  parsing: Effect.Effect<A, { readonly message: string }>,
-): Effect.Effect<A, InvalidSettingsError> {
-  return parsing.pipe(Effect.mapError(({ message }) => new InvalidSettingsError({ message })));
-}
-
 export function readAccessSettings(environment: Environment): Effect.Effect<AccessSettings, InvalidSettingsError> {
   return asInvalidSettings(accessSettings.parse(ConfigProvider.fromEnvRecord(environment)));
 }
@@ -41,6 +41,7 @@ export interface CredentialSettings {
   readonly apiKeys: readonly ApiKey[] | undefined;
   readonly identityIssuer: string;
   readonly signIn: SignInSettings | undefined;
+  readonly studio: StudioSettings;
 }
 
 const signInSettings = Config.all({
@@ -48,22 +49,16 @@ const signInSettings = Config.all({
   issuer: Config.schema(IssuerOrigin, 'IDENTITY_ISSUER').pipe(Config.withDefault(autoIdentityService)),
 });
 
-const httpOffLoopback = `PUBLIC_URL: Expected an https URL; an http URL is taken only for ${alternatives(loopbackNames)}`;
-
-function isUsable(publicUrl: string): boolean {
-  return publicUrl.startsWith('https://') || namesTheLoopback(new URL(publicUrl).hostname);
-}
-
-export function readCredentialSettings(environment: Environment): CredentialSettings {
+export function readCredentialSettings(environment: Environment, host: string): CredentialSettings {
   const { publicUrl, issuer } = Effect.runSync(
     asInvalidSettings(signInSettings.parse(ConfigProvider.fromEnvRecord(environment))),
   );
-  if (Option.isSome(publicUrl) && !isUsable(publicUrl.value)) {
-    throw new InvalidSettingsError({ message: httpOffLoopback });
+  const refusal = Option.isSome(publicUrl) ? httpOffTheLoopbackIn('PUBLIC_URL', publicUrl.value) : undefined;
+  if (refusal !== undefined) {
+    throw new InvalidSettingsError({ message: refusal });
   }
-  return {
-    apiKeys: readApiKeys(environment),
-    identityIssuer: issuer,
-    signIn: Option.isSome(publicUrl) ? { issuer, publicUrl: publicUrl.value } : undefined,
-  };
+  const apiKeys = readApiKeys(environment);
+  const signIn = Option.isSome(publicUrl) ? { issuer, publicUrl: publicUrl.value } : undefined;
+  const studio = readStudioSettings(environment, { host, apiKeys, signIn });
+  return { apiKeys, identityIssuer: issuer, signIn, studio };
 }
