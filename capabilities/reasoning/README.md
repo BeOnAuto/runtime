@@ -62,11 +62,15 @@ Some rejections come after the model answered, and so after it spent tokens: `ou
 
 ## Testing
 
-`makeReasoningFunctionAdapter({ languageModel, offered, clock, tools })` makes the runtime adapter for `makeDefinitionOperations`; the server gives it the language model and offered-model configuration from `makeModelAccess`, plus its `ToolAccess`, and a test the scripted model below. `ReasoningFunctionAdapterOptions` names its options. `clock` is optional: without it, `today` and `now` come from Effect's `Clock`.
+`makeReasoningFunctionAdapter({ languageModel, offered, clock, tools })` makes the runtime adapter for `makeDefinitionOperations`; the server gives it the language model and offered-model configuration from `makeModelAccess`, plus its `ToolAccess`, and a test the scripted model below. `ReasoningFunctionAdapterOptions` names its options. `clock` is optional: without it, `today` and `now` come from Effect's `Clock`. The 200 ms a render of the prompt may take are counted on the monotonic time of the same clock, the one given or Effect's. A template's tests render it on `standingRenderClock` of `@on.auto/definitions/testing`, which stands still, or on `steppingClock`, moving a millisecond each time it is read, so a render is stopped for its time by that clock and never by a slow machine.
 
 `@on.auto/reasoning/testing` exports a fake for the tests of other packages. `callingTools(calls, then)` scripts a model that calls tools before its reply, as the adapter does, with a signal that aborts when the call is interrupted. `scriptedLanguageModel(...replies)` answers with its replies in order, admits and rejects an invalid request as the real one does, records every request (`requests()`), and provides itself as a `layer`. A reply is a function of the request; `answers(textResult('Hello'))` and `answers(jsonResult({ verdict: 'approve' }))` build the usual ones, and `() => Effect.fail(new RateLimited({ ... }))` scripts a failure.
 
 No test in this package calls a model: the adapter is tested with the AI SDK's mock model and with the real provider packages against a fake `fetch` that answers with each provider's documented response shape.
+
+Two tests wait on real time on purpose, where a slow machine only lengthens the wait: `src/tools/tool-stops.test.ts` sleeps the 1 s of a step's deadline after a model call failed, to show the deadline ended with the call and aborts nothing, and gives a run 100 ms against a tool that sleeps 1 s, so the run times out however slow the machine.
+
+`src/listing/gateway-listing.test.ts` counts the reads a listing makes of an answer that arrives in 80,000 pieces of one byte, one for each piece and one for its end, which shows each piece read once; that the cost stays linear in the pieces is the reader's construction, which keeps the pieces and joins them once at the end (`src/listing/listing-request.ts`), not something the test measures. `src/definition/definition-parsing.test.ts` holds the parse of a document of 5,900 names to 400 ms of the process's CPU, a measure of work rather than of the wall clock, which a busy machine changes little, to show the parse stops counting names past its bound.
 
 ## Source
 

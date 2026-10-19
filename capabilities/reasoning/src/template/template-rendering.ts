@@ -1,4 +1,10 @@
-import { outputText, renderedTemplate, templateLimits, type ParsedTemplate } from '@on.auto/definitions/template';
+import {
+  outputText,
+  renderedTemplate,
+  templateLimits,
+  type ParsedTemplate,
+  type RenderClock,
+} from '@on.auto/definitions/template';
 import { Result } from 'effect';
 import { toValue, type Emitter } from 'liquidjs';
 
@@ -39,10 +45,11 @@ export function renderTemplate(
   parsed: ParsedTemplate,
   hasInstructions: boolean,
   scope: TemplateScope,
+  clock: RenderClock,
 ): Result.Result<RenderedPrompt, RenderFailure> {
   const emitter = promptEmitter(hasInstructions);
   const variables = { input: scope.input, today: scope.today, now: scope.now };
-  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf: tooLongOf }), () =>
+  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf: tooLongOf, clock }), () =>
     emitter.prompt(),
   );
 }

@@ -1,3 +1,4 @@
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { sha256Of } from '@on.auto/operations';
 import { Result } from 'effect';
 
@@ -21,7 +22,7 @@ function renderingOf({ body, input, firstLine }: CorpusCase): unknown {
   return Result.match(compileTemplate(body, firstLine), {
     onFailure: (issues) => ({ issues }),
     onSuccess: (template) =>
-      Result.match(template.render({ input, ...moment }), {
+      Result.match(template.render({ input, ...moment }, standingRenderClock), {
         onSuccess: (rendered) => ({ rendered: kept(rendered) }),
         onFailure: (failure) => ({ failure }),
       }),

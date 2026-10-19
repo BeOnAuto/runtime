@@ -1,6 +1,6 @@
 import type { RunContext, Finished } from '@on.auto/definitions';
 import type { ToolAccess } from '@on.auto/tool-servers';
-import { Clock, Effect, type Schema } from 'effect';
+import { Effect, type Clock, type Schema } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import type { LanguageModel } from '../model/language-model.ts';
@@ -31,15 +31,17 @@ export function definitionRun({
   input: Schema.Json,
   run: RunContext,
 ) => Effect.Effect<Finished, DefinitionRejection> {
-  const currentTime = clock === undefined ? Clock.currentTimeMillis : clock.currentTimeMillis;
+  const runClock = clock === undefined ? Effect.clockWith(Effect.succeed) : Effect.succeed(clock);
   return Effect.fnUntraced(function* (
     definition: ReasoningFunctionDefinitionDocument,
     input: Schema.Json,
     run: RunContext,
   ) {
     const fields = yield* preparedInput(input, definition.input);
-    const now = new Date(yield* currentTime).toISOString();
-    const prompt = yield* renderedPrompt(definition.template, { input: fields, today: now.slice(0, 10), now });
+    const current = yield* runClock;
+    const now = new Date(yield* current.currentTimeMillis).toISOString();
+    const scope = { input: fields, today: now.slice(0, 10), now };
+    const prompt = yield* renderedPrompt(definition.template, scope, current);
     const result = yield* answerOf({ languageModel, access, reading, definition, prompt, run });
     return yield* finishedWith(outputOf(result), {
       prompt,
