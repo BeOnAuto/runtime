@@ -1,85 +1,125 @@
 import {
-  bulletList,
-  durationInWords,
-  inputSection,
+  answerSection,
+  answerSentence,
+  answerWaitSentence,
+  inboxSentence,
+  inputDetails,
+  messageLead,
+  notTakenSentence,
+  notificationSentence,
   paragraph,
-  schemaBlocks,
-  sectionOf,
-  templateLead,
-  theToolOf,
-  type OverviewSection,
+  replyDiagram,
+  replyRuleSentence,
+  replyWaitSentence,
+  unansweredSentence,
+  whereSection,
+  type OverviewBlock,
+  type Phrases,
+  type ToldParts,
 } from '@on.auto/definitions';
-import { readableTemplate } from '@on.auto/definitions/template';
+import { quotedTemplate } from '@on.auto/definitions/template';
+import type { Schema } from 'effect';
 
+import { replyWaitMsOf } from '../conversations/cadence.ts';
 import type { RequestDocument } from '../document/interaction-document.ts';
-import { partyBlocks, replyRuleItems } from './request-words.ts';
+import type { ReplyRule } from '../replies/reply-rule.ts';
+import type { WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
+import type { Replies } from '../tool-blocks/tool-block-schemas.ts';
+import { partyOf } from './request-party.ts';
 
-const notification = 'None: it is a notification, which takes no answer and succeeds once its request is delivered.';
+type Words = Readonly<Record<string, readonly string[]>>;
 
-function whoSection({ to, from }: RequestDocument): OverviewSection {
-  const answerer =
-    from === undefined ? [] : partyBlocks('Its answerer, whose reply counts, is', readableTemplate(from));
-  return sectionOf(
-    'Who it asks',
-    ...partyBlocks('It asks a person, and each request goes to', readableTemplate(to)),
-    ...answerer,
-  );
+interface ReadReplies {
+  readonly route: WrittenRoute;
+  readonly replies: Replies;
+  readonly reply: ReplyRule;
+  readonly answer: Schema.JsonObject;
 }
 
-function whereSection({ route, output }: RequestDocument): OverviewSection {
-  if (route === undefined) {
-    const reads = output.schema === undefined ? 'reads it' : 'reads and answers it';
-    return sectionOf(
-      'Where',
-      paragraph(
-        `It leaves the request in the playbook's inbox, where a caller who may write to the playbook ${reads}.`,
-      ),
-    );
+function verdictsOf(reply: ReplyRule): Words | undefined {
+  for (const part of Object.values(reply)) {
+    if (part.from === 'word') {
+      return part.words;
+    }
   }
-  return sectionOf('Where', paragraph('It sends the request through ', ...theToolOf(route.deliver), '.'));
+  return undefined;
 }
 
-function waitSection({ expiresMs, output }: RequestDocument): OverviewSection {
-  const duration = durationInWords(expiresMs);
-  return sectionOf(
-    'How long it waits',
-    paragraph(
-      output.schema === undefined
-        ? `Its request expires after ${duration}.`
-        : `It waits up to ${duration} for the answer; a request nobody answers by then ends unanswered.`,
-    ),
-  );
+function readRepliesOf({ route, reply, output }: RequestDocument): ReadReplies | undefined {
+  const answer = output.schema?.document;
+  return route?.replies === undefined || reply === undefined || answer === undefined
+    ? undefined
+    : { route, replies: route.replies, reply, answer };
 }
 
-function repliesSections({ route, reply, from }: RequestDocument): readonly OverviewSection[] {
-  if (route?.replies === undefined || reply === undefined) {
+function readingSentences({ replies, reply, answer }: ReadReplies, expiresMs: number): readonly string[] {
+  return [
+    replyWaitSentence(expiresMs, replyWaitMsOf(replies)),
+    replyRuleSentence(reply, answer),
+    ...(verdictsOf(reply) === undefined ? [] : [notTakenSentence(replies.tell !== undefined)]),
+    unansweredSentence(expiresMs),
+  ];
+}
+
+function waitingSentences(document: RequestDocument): readonly string[] {
+  const { route, output, expiresMs } = document;
+  const read = readRepliesOf(document);
+  if (read !== undefined) {
+    return readingSentences(read, expiresMs);
+  }
+  if (output.schema === undefined) {
+    return [route === undefined ? inboxSentence('nothing') : notificationSentence];
+  }
+  return [route === undefined ? inboxSentence('answer') : answerWaitSentence(expiresMs), unansweredSentence(expiresMs)];
+}
+
+function diagramOf(document: RequestDocument, party: Phrases): readonly OverviewBlock[] {
+  const read = readRepliesOf(document);
+  const verdicts = read === undefined ? undefined : verdictsOf(read.reply);
+  if (read === undefined || verdicts === undefined) {
     return [];
   }
-  const { tool, tell } = route.replies;
-  const answerer = from === undefined ? 'the party it goes to' : 'its answerer';
-  const told = tell === undefined ? '' : ', and the party is told how to answer';
   return [
-    sectionOf(
-      'Replies',
-      paragraph(
-        'It reads the replies to its message with ',
-        ...theToolOf({ server: route.deliver.server, tool }),
-        `, and a reply from ${answerer} answers it when its reply rule reads it:`,
-      ),
-      bulletList(replyRuleItems(reply)),
-      paragraph(`A reply the rule cannot read is refused${told}.`),
-    ),
+    replyDiagram({
+      input: document.input.schema?.document,
+      party,
+      server: read.route.deliver.server,
+      expiresMs: document.expiresMs,
+      verdicts,
+      told: read.replies.tell !== undefined,
+    }),
   ];
 }
 
-export function requestSections(document: RequestDocument): readonly OverviewSection[] {
-  return [
-    inputSection(document.input.schema?.document),
-    whoSection(document),
-    sectionOf('What it sends', templateLead('Its message', 'run'), ...readableTemplate(document.message)),
-    whereSection(document),
-    waitSection(document),
-    sectionOf('What answer it expects', ...schemaBlocks(document.output.schema?.document, notification)),
-    ...repliesSections(document),
-  ];
+function whereOf({ to, from, route, expires }: RequestDocument): ReturnType<typeof whereSection> {
+  const replies = route?.replies;
+  return whereSection({
+    to: to.text,
+    from: from?.text,
+    route:
+      route === undefined
+        ? undefined
+        : {
+            server: route.deliver.server,
+            tool: route.deliver.tool,
+            replies: replies === undefined ? undefined : { tool: replies.tool, wait: replies.wait },
+          },
+    expires,
+  });
+}
+
+export function requestOverview(document: RequestDocument): ToldParts {
+  const input = document.input.schema?.document;
+  const answer = document.output.schema?.document;
+  const party = partyOf(document.to, input);
+  return {
+    body: [
+      ...diagramOf(document, party),
+      messageLead({ input, party, server: document.route?.deliver.server }),
+      ...quotedTemplate(document.message, input),
+      paragraph(waitingSentences(document).join(' ')),
+      ...(answer === undefined ? [] : [answerSentence(answer)]),
+    ],
+    appendix: [inputDetails(input), answerSection(answer), whereOf(document)],
+  };
 }

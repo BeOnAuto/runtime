@@ -1,39 +1,35 @@
 # approve-brief
 
-Asks the campaign owner to approve a reviewed brief
+Asks the campaign owner to approve a reviewed brief.
 
-## What it needs
+It is given the owner and the review. It sends the owner this message, with the run's values in place of the words in brackets:
+
+> The review of your campaign brief is ready:
+>
+> \[the review\]
+>
+> Approve the brief as it stands, or ask for a revision.
+
+It leaves the message in the playbook's inbox, where whoever may write to the playbook answers it. If nobody answers within 2 days, the request ends unanswered.
+
+It answers with the verdict, one of approve and revise, and the note, when there is one.
+
+## Details
+
+### Input
 
 | Field | Required | What it is |
 | --- | --- | --- |
 | **owner** | yes | Text. |
 | **review** | yes | Text. |
 
-## Who it asks
-
-It asks a person, and each request goes to **owner**.
-
-## What it sends
-
-Its message, with the values of each run in place of the names in bold:
-
-The review of your campaign brief is ready:
-
-**review**
-
-Approve the brief as it stands, or ask for a revision.
-
-## Where
-
-It leaves the request in the playbook's inbox, where a caller who may write to the playbook reads and answers it.
-
-## How long it waits
-
-It waits up to 2 days for the answer; a request nobody answers by then ends unanswered.
-
-## What answer it expects
+### Answer
 
 | Field | Required | What it is |
 | --- | --- | --- |
 | **verdict** | yes | One of: approve, revise. |
 | **note** | no | Text, at most 2,000 characters. |
+
+### Where
+
+To `{{ input.owner }}`. Left in the playbook's inbox; expires after `P2D`.

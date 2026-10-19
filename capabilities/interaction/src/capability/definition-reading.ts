@@ -1,4 +1,4 @@
-import type { DefinitionSummary, OverviewParts } from '@on.auto/definitions';
+import type { DefinitionSummary, ToldParts } from '@on.auto/definitions';
 import { issueText } from '@on.auto/definitions/document';
 import { renderClock } from '@on.auto/definitions/template';
 import { InvalidInput } from '@on.auto/operations';
@@ -6,8 +6,8 @@ import { Effect, Result, type Schema } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
-import { callSections } from '../overview/call-overview.ts';
-import { requestSections } from '../overview/request-overview.ts';
+import { callOverview } from '../overview/call-overview.ts';
+import { requestOverview } from '../overview/request-overview.ts';
 
 export function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
@@ -45,10 +45,6 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
   };
 }
 
-export function overview(document: InteractionFunctionDefinitionDocument): OverviewParts {
-  return {
-    body: [],
-    sections: document.shape === 'call' ? callSections(document) : requestSections(document),
-    appendix: [],
-  };
+export function overview(document: InteractionFunctionDefinitionDocument): ToldParts {
+  return document.shape === 'call' ? callOverview(document) : requestOverview(document);
 }

@@ -1,48 +1,53 @@
 # approve-draft
 
-Send the draft to its owner in the chat and take their approval
+Send the draft to its owner in the chat and take their approval.
 
-## What it needs
+```mermaid
+flowchart LR
+  n1["The owner and the draft"]
+  n2["A message to the owner through chat"]
+  n3["Waits up to 2 days for a reply"]
+  n4{"The first word of the reply"}
+  n5(["approve"])
+  n6(["revise"])
+  n7(["unanswered"])
+  n1 --> n2
+  n2 --> n3
+  n3 --> n4
+  n4 -->|"approve"| n5
+  n4 -->|"revise"| n6
+  n4 -.->|"any other word, told how to answer"| n3
+  n3 -.->|"no reply"| n7
+```
+
+It is given the owner and the draft. It sends the owner this message through **chat**, with the run's values in place of the words in brackets:
+
+> Here is the draft:
+>
+> \[the draft\]
+>
+> Reply **approve**, or **revise** with a note of what to change.
+
+It waits up to 2 days for a reply to that message, reading the replies at least 1 minute apart. A reply whose first word is approve gives the verdict approve; one whose first word is revise gives revise; whatever follows the first word is the note. A reply that begins with any other word is not taken, and the person is told how to answer. If nobody answers within 2 days, the request ends unanswered.
+
+It answers with the verdict, one of approve and revise, and the note, when there is one.
+
+## Details
+
+### Input
 
 | Field | Required | What it is |
 | --- | --- | --- |
 | **owner** | yes | Text. |
 | **draft** | yes | Text, at most 4,000 characters. |
 
-## Who it asks
-
-It asks a person, and each request goes to **owner**.
-
-## What it sends
-
-Its message, with the values of each run in place of the names in bold:
-
-Here is the draft:
-
-**draft**
-
-Reply **approve**, or **revise** with a note of what to change.
-
-## Where
-
-It sends the request through the tool **post_message** of **chat**.
-
-## How long it waits
-
-It waits up to 2 days for the answer; a request nobody answers by then ends unanswered.
-
-## What answer it expects
+### Answer
 
 | Field | Required | What it is |
 | --- | --- | --- |
 | **verdict** | yes | One of: approve, revise. |
 | **note** | no | Text, at most 2,000 characters. |
 
-## Replies
+### Where
 
-It reads the replies to its message with the tool **thread_replies** of **chat**, and a reply from the party it goes to answers it when its reply rule reads it:
-
-- **verdict**, from the first word of the reply: `approve` or `revise`
-- **note**, from the words that follow the first
-
-A reply the rule cannot read is refused, and the party is told how to answer.
+To `{{ input.owner }}`. Sent through the tool `post_message` of the server **chat**; the replies read with the tool `thread_replies` of the server **chat**, at least `PT1M` apart; expires after `P2D`.

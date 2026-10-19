@@ -1,21 +1,23 @@
 # read-campaign-costs
 
-Reads the cost rows of every campaign for a month
+Reads the cost rows of every campaign for a month.
 
-## Who it asks
+It is given the month and asks **ads** with its tool campaign-costs, once per run. It answers with what it answered under rows: a list of records.
 
-It asks a system: each run calls the tool **campaign-costs** of **ads** once.
+## Details
 
-## What it sends
-
-It sends the tool the arguments its document writes, from each run's input:
+### Input
 
 | Field | Required | What it is |
 | --- | --- | --- |
 | **month** | yes | Text. |
 
-## What it reads
-
-It answers with what the tool answered under **rows**:
+### Output
 
 A list of records with: **campaign** (text), **cost_cents** (a whole number), **budget_cents** (a whole number).
+
+### Call
+
+It calls the tool `campaign-costs` of the server **ads**, its answer read at `/rows`, with these arguments, as written:
+
+- `month`: `{{ input.month }}`
