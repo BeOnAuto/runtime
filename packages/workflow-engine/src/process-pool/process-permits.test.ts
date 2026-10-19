@@ -1,5 +1,6 @@
-import { execFile } from 'node:child_process';
+import { once } from 'node:events';
 
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
@@ -52,21 +53,18 @@ async function echoed(pool: ProcessPool, key: string): Promise<Ran> {
   return ranOf(await run(pool, 'echo', { key }));
 }
 
-function executed(script: string): Promise<string> {
-  const { promise, resolve, reject } = Promise.withResolvers<string>();
-  execFile(
-    process.execPath,
-    ['--eval', script],
-    { timeout: 20_000 },
-    (error: Readonly<Error> | null, stdout: string) => {
-      if (error === null) {
-        resolve(stdout);
-      } else {
-        reject(error);
-      }
-    },
-  );
-  return promise;
+async function executed(script: string): Promise<string> {
+  const child = spawnForTheTest(process.execPath, ['--eval', script], {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    timeout: 20_000,
+  });
+  const printed = { text: '' };
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
+    printed.text += chunk;
+  });
+  const ended: readonly unknown[] = await once(child, 'close');
+  expect(ended).toEqual([0, null]);
+  return printed.text;
 }
 
 describe('the processes of a pool and its permits', () => {

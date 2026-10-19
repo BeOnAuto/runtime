@@ -1,10 +1,10 @@
-import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
@@ -62,12 +62,9 @@ function temporaryDirectory(): string {
 }
 
 async function printedBy(nodeArguments: readonly string[]): Promise<string> {
-  const child = spawn(process.execPath, nodeArguments, { stdio: ['ignore', 'pipe', 'inherit'] });
-  onTestFinished(() => {
-    child.kill('SIGKILL');
-  });
+  const child = spawnForTheTest(process.execPath, nodeArguments, { stdio: ['ignore', 'pipe', 'inherit'] });
   const printed = { text: '' };
-  child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     printed.text += chunk;
   });
   await once(child, 'close');
