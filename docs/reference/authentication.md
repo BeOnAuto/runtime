@@ -195,6 +195,22 @@ With sign-in on, `GET /.well-known/oauth-protected-resource` returns the protect
 
 Without sign-in, the server is not an OAuth resource server, and serves no metadata. Where keys are enforced, the metadata's path needs a key, as every path does.
 
+### Client metadata document
+
+Where the runtime signs people in at an `https` `PUBLIC_URL`, `GET /oauth/client.json` returns without a key the client ID metadata document by which Auto names its own client at a provider's authorization server, when a person [connects the provider by consent](../self-host/connections.md#let-people-connect-by-consent) and that server takes such a client. The authorization server reads it when a consent starts, so the answer may be kept for five minutes.
+
+| Field                        | Value                                                                                                                                                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `client_id`                  | The document's own address, `PUBLIC_URL` followed by `/oauth/client.json`                                                                                                                                                                                                      |
+| `client_name`                | `Auto Runtime`                                                                                                                                                                                                                                                                 |
+| `redirect_uris`              | The one return address a consent sends the person back to: the Studio host's `/connect-return`, `STUDIO_ORIGIN` followed by it, `https://studio.on.auto/connect-return` unless it is set, or `PUBLIC_URL` followed by `/studio/connect-return` where the runtime serves Studio |
+| `grant_types`                | `["authorization_code", "refresh_token"]`                                                                                                                                                                                                                                      |
+| `response_types`             | `["code"]`                                                                                                                                                                                                                                                                     |
+| `application_type`           | `web`                                                                                                                                                                                                                                                                          |
+| `token_endpoint_auth_method` | `none`                                                                                                                                                                                                                                                                         |
+
+Where the runtime signs nobody in, as in local mode even at an `https` loopback address, or its `PUBLIC_URL` is `http`, it serves no document. Where keys are enforced, its path then needs a key, as every path does.
+
 ### Status codes and challenges
 
 Where credentials are enforced, the runtime responds to a refused request as [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) sets out. Where sign-in is on, the challenge says more:
