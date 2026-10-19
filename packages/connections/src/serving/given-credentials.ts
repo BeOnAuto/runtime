@@ -1,7 +1,14 @@
-import type { ConnectionTokens, ConnectionUnready, ConsentAuth, TokensEnded } from '@on.auto/tool-servers';
+import {
+  keptTokensIn,
+  type ConnectionTokens,
+  type ConnectionUnready,
+  type ConsentAuth,
+  type HeldTokens,
+  type KeptRow,
+  type TokensEnded,
+} from '@on.auto/tool-servers';
 import { DateTime, Effect, Option, type Context } from 'effect';
 
-import type { KeptSecret } from '../operations/connection-services.ts';
 import { consentAskedOf } from '../page/consent-asking.ts';
 import { placesNoValue } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
@@ -37,7 +44,7 @@ function brokenWith({ org, kept, services }: Serving, reason: string): Effect.Ef
   });
 }
 
-function keptSecretOf(serving: Serving): Effect.Effect<KeptSecret, ConnectionUnready> {
+function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnready> {
   const { name } = serving.kept.connection;
   return serving.services.secrets.read(required(serving.kept.secretId)).pipe(
     Effect.matchEffect({
@@ -67,12 +74,22 @@ export function givenOf(serving: Serving): Given {
     : Effect.map(keptSecretOf(serving), ({ value }) => ({ value, algorithm: serving.kept.algorithm }));
 }
 
+function heldTokensOf(serving: Serving): Effect.Effect<HeldTokens, ConnectionUnready> {
+  const { name } = serving.kept.connection;
+  return Effect.flatMap(keptSecretOf(serving), ({ value, version, claimedUntil }) =>
+    Option.match(keptTokensIn(value), {
+      onNone: () => brokenWith(serving, servingWords.unreadable(name, servingWords.notTokens)),
+      onSome: (tokens) => Effect.succeed({ tokens, version, claimedUntil }),
+    }),
+  );
+}
+
 function tokensOfTheRow(serving: Serving, context: Context.Context<never>): ConnectionTokens {
   const secretId = required(serving.kept.secretId);
   const { secrets } = serving.services;
   const { name } = serving.kept.connection;
   return {
-    read: Effect.provideContext(keptSecretOf(serving), context),
+    read: Effect.provideContext(heldTokensOf(serving), context),
     replace: (version, value) => Effect.provideContext(secrets.replace(secretId, version, value), context),
     claim: (version, lastingMs) => Effect.provideContext(secrets.claim(secretId, version, lastingMs), context),
     broken: (ended) => Effect.provideContext(brokenWith(serving, endedWords[ended](name)), context),
@@ -86,7 +103,7 @@ export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | und
     return Effect.undefined;
   }
   return Effect.gen(function* () {
-    const held = yield* keptSecretOf(serving);
+    const held = yield* heldTokensOf(serving);
     const context = yield* Effect.context();
     const asked = consentAskedOf(connection, serving.services);
     const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };

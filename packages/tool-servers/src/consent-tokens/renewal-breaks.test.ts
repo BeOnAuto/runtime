@@ -1,5 +1,5 @@
 import { HostRefused } from '@on.auto/outbound';
-import { Effect, Option } from 'effect';
+import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted, postedTo } from '../authorization-testing/authorization-requests.ts';
@@ -22,7 +22,7 @@ import {
   type MemoryTokens,
 } from '../testing/index.ts';
 import { until } from '../testing/until.ts';
-import { keptTokensOf, type KeptTokens } from './kept-tokens.ts';
+import { keptValueOf, type KeptTokens } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -41,14 +41,14 @@ interface Connected {
   readonly first: KeptTokens;
 }
 
-async function connectedAt(changes: Partial<ClientRegistration> = {}, mostCharacters?: number): Promise<Connected> {
+async function connectedAt(changes: Partial<ClientRegistration> = {}): Promise<Connected> {
   const fake = await servedForConsent(changes);
   closing.push(fake.close);
   const connected = await connectedByConsent(fake);
   const clock = clockAt(0);
-  const row = rowOf(connected, clock.now, mostCharacters);
+  const row = rowOf(connected, clock.now);
   const served = servedOf(connected, row);
-  return { fake, connected, clock, row, served, first: keptTokensOf(connected.tokens) };
+  return { fake, connected, clock, row, served, first: connected.kept };
 }
 
 function sourceOf({ fake, clock, served }: Connected, consent: ConsentClient = consentClientAt(fake)) {
@@ -64,11 +64,16 @@ function revokedGrantOf(fake: FakeMcpServer, { refresh_token: refreshToken }: Ke
   return postedTo(fake, '/revoke', { token: Option.getOrThrow(Option.fromNullishOr(refreshToken)) });
 }
 
-function failingTokens(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
+interface Failing {
+  still: boolean;
+}
+
+function tokensFailingWhile(failing: Readonly<Failing>) {
   const answer = { error: 'temporarily_unavailable', error_description: 'The token service is down for a moment' };
-  return String(address).endsWith('/token')
-    ? Promise.resolve(Response.json(answer, { status: 503 }))
-    : globalThis.fetch(String(address), Object.assign({}, init));
+  return (...[address, init]: readonly [unknown, unknown?]): Promise<Response> =>
+    failing.still && String(address).endsWith('/token')
+      ? Promise.resolve(Response.json(answer, { status: 503 }))
+      : globalThis.fetch(String(address), Object.assign({}, init));
 }
 
 const unauthorized = (fake: FakeMcpServer) => ({
@@ -101,7 +106,7 @@ describe('a refresh the server refuses as invalid_grant', () => {
     Effect.runSync(connected.row.replace(1, other.tokens));
     gate.release();
 
-    expect(await renewing).toBe(keptTokensOf(other.tokens).access_token);
+    expect(await renewing).toBe(other.kept.access_token);
     expect(connected.row.ends()).toEqual([]);
   });
 });
@@ -142,7 +147,7 @@ describe('a renewal that fails otherwise', () => {
 
     const failed = await renewed(
       connected,
-      sourceOf(connected, consentClientAt(connected.fake, { fetch: failingTokens })),
+      sourceOf(connected, consentClientAt(connected.fake, { fetch: tokensFailingWhile({ still: true }) })),
     );
 
     expect(failed).toMatchObject({ message: 'The token service is down for a moment' });
@@ -185,18 +190,53 @@ describe('a renewal that fails otherwise', () => {
   });
 });
 
+describe('a renewal that failed under its own claim', () => {
+  it('serves the access token it holds while it lasts, then fails at once in the same words, until the claim ends', async () => {
+    const connected = await connectedAt({ expiresInSeconds: 60 });
+    const failing: Failing = { still: true };
+    const consent = consentClientAt(connected.fake, { fetch: tokensFailingWhile(failing) });
+    const { source, timer } = servedTokensOf(connected.served, connected.clock.now, consent);
+
+    connected.clock.setTo(30_000);
+    const failed = await source.token().catch((error: unknown) => error);
+    connected.clock.setTo(30_001);
+    const whileItLasts = await source.token();
+    const refused = await source.onUnauthorized(unauthorized(connected.fake)).catch((error: unknown) => error);
+    connected.clock.setTo(60_000);
+    const pastItsEnd = await source.token().catch((error: unknown) => error);
+    failing.still = false;
+    connected.clock.setTo(75_000);
+    const renewedOnceTheClaimEnds = await source.token();
+
+    expect(failed).toMatchObject({ message: 'The token service is down for a moment' });
+    expect(whileItLasts).toBe(connected.first.access_token);
+    expect([refused, pastItsEnd]).toEqual([failed, failed]);
+    expect(timer.waits()).toEqual([]);
+    expect(connected.row.claims()).toEqual([45_000, 45_000]);
+    expect(renewedOnceTheClaimEnds).not.toBe(connected.first.access_token);
+  });
+});
+
 describe('renewed tokens the store refuses to keep', () => {
   it('are revoked, and the call fails in the words of the store', async () => {
-    const connected = await connectedAt({}, 10);
+    const { fake, connected, clock } = await connectedAt();
+    const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = connected.kept;
+    const lean = keptValueOf({ access_token: accessToken, refresh_token: String(refreshToken), token_type: tokenType });
+    const mostCharacters = Redacted.value(lean).length;
+    const row = rowOf({ ...connected, tokens: lean }, clock.now, mostCharacters);
     const gate = gatedRequests();
-    const source = sourceOf(connected, consentClientAt(connected.fake, { fetch: gate.fetch }));
+    const { source } = servedTokensOf(
+      servedOf(connected, row),
+      clock.now,
+      consentClientAt(fake, { fetch: gate.fetch }),
+    );
     gate.release();
 
-    const failed = await renewed(connected, source);
+    const failed = await source.onUnauthorized(unauthorized(fake)).catch((error: unknown) => error);
     const [got = ''] = gate.answered();
 
-    expect(failed).toEqual(new Error('A secret to keep holds more than 10 characters'));
-    expect(await admitted(connected.fake, got)).toBe(false);
-    expect(connected.row.version()).toBe(1);
+    expect(failed).toEqual(new Error(`A secret to keep holds more than ${mostCharacters} characters`));
+    expect(await admitted(fake, got)).toBe(false);
+    expect(row.version()).toBe(1);
   });
 });

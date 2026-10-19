@@ -28,6 +28,9 @@ const consentEnded =
 const clientGone =
   'The client the connection files was made with is no longer registered, so the person who added it removes it and adds it again';
 
+const notTokens =
+  'The credential of the connection files cannot be read, so the person who added it removes it and adds it again: its value is not the tokens of a consent the runtime keeps';
+
 const gone =
   'The credential of the connection files is no longer in the secret store, so the person who added it removes it and adds it again';
 
@@ -106,7 +109,7 @@ describe('a connection connected by consent', () => {
       client: { client_id: 'auto-runtime', client_source: 'registered' },
       held: { version: 1, claimedUntil: undefined },
     });
-    expect(Redacted.value(consent.held.value)).toBe(value);
+    expect(JSON.stringify(consent.held.tokens)).toBe(value);
   });
 
   it('is served with no scope where its consent was given none', async () => {
@@ -115,6 +118,20 @@ describe('a connection connected by consent', () => {
     const { settings } = await Effect.runPromise(await preparedIn(h));
 
     expect(settings.auth?.scope).toBeNull();
+  });
+});
+
+describe('a connection connected by consent whose row cannot be served', () => {
+  it('is broken at first use in the words of a credential unreadable where its row holds no tokens', async () => {
+    const { h } = await connectedByConsent();
+    const [secretId] = onlyRowOf(h);
+    await Effect.runPromise(h.secrets.replace(secretId, 1, Redacted.make('not the tokens of a consent')));
+
+    const refused = await Effect.runPromise(Effect.flip(await preparedIn(h)));
+    const breaks = (await h.facts()).filter(({ type }) => type === 'connection_broken');
+
+    expect(refused).toEqual({ because: 'connection_broken', detail: notTokens });
+    expect(breaks).toMatchObject([{ data: { reason: notTokens } }]);
   });
 
   it('is broken at first use in the words of a credential gone where its row is gone', async () => {
@@ -132,12 +149,12 @@ describe('the store of the tokens of a connection connected by consent', () => {
   it('claims its row once until the claim ends, and replaces its value under the version read', async () => {
     const { h } = await connectedByConsent();
     const { tokens } = await consentOf(h);
-    const renewed = Redacted.make('{"access_token":"renewed","token_type":"Bearer"}');
+    const renewed = { access_token: 'renewed', token_type: 'Bearer' };
 
     const claims = [await Effect.runPromise(tokens.claim(1, 30_000)), await Effect.runPromise(tokens.claim(1, 30_000))];
     const whileClaimed = await Effect.runPromise(tokens.read);
-    const replaced = await Effect.runPromise(tokens.replace(1, renewed));
-    const moved = await Effect.runPromise(tokens.replace(1, renewed));
+    const replaced = await Effect.runPromise(tokens.replace(1, Redacted.make(JSON.stringify(renewed))));
+    const moved = await Effect.runPromise(tokens.replace(1, Redacted.make(JSON.stringify(renewed))));
     const read = await Effect.runPromise(tokens.read);
 
     const refused = await Effect.runPromise(Effect.flip(tokens.replace(2, Redacted.make('x'.repeat(4097)))));
@@ -145,11 +162,7 @@ describe('the store of the tokens of a connection connected by consent', () => {
     expect(claims).toEqual([{ claimed: true, until: whileClaimed.claimedUntil }, { claimed: false }]);
     expect(refused).toEqual({ detail: 'A secret to keep holds more than 4096 characters' });
     expect([replaced, moved]).toEqual([{ replaced: true, version: 2 }, { replaced: false }]);
-    expect({ ...read, value: Redacted.value(read.value) }).toEqual({
-      value: Redacted.value(renewed),
-      version: 2,
-      claimedUntil: undefined,
-    });
+    expect(read).toEqual({ tokens: renewed, version: 2, claimedUntil: undefined });
   });
 
   it('breaks the connection in the words of an ended consent or of a client gone, recording the break once', async () => {
@@ -192,7 +205,7 @@ describe('the tokens of a connection connected by consent, served by the consent
     const read = await Effect.runPromise(consent.tokens.read);
 
     expect(first).not.toContain(renewed);
-    expect(Redacted.value(read.value)).toContain(renewed);
+    expect(read.tokens.access_token).toBe(renewed);
     expect(read.version).toBe(2);
     expect(fake.tokenRequests()).toBe(2);
   });

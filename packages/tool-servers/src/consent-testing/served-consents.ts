@@ -3,6 +3,7 @@ import { TestClock } from 'effect/testing';
 
 import { secretsOf, type Secrets } from '../bounds/secrets.ts';
 import type { TokenSource } from '../clients/token-source.ts';
+import type { KeptTokens } from '../consent-tokens/kept-tokens.ts';
 import type {
   ChosenClient,
   ConsentClient,
@@ -12,13 +13,14 @@ import type {
 } from '../consent/consent-client.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import { consentClientWith, registeredAt, startAskedAt } from './consent-fakes.ts';
-import { finishAskedOf } from './given-consents.ts';
+import { finishAskedOf, tokensKeptBy } from './given-consents.ts';
 import { manualTimer, memoryTokens, servedAt, type ManualTimer, type MemoryTokens } from './memory-tokens.ts';
 
 export interface ConsentConnected {
   readonly fake: FakeMcpServer;
   readonly client: ChosenClient;
   readonly tokens: Redacted.Redacted;
+  readonly kept: KeptTokens;
 }
 
 export interface ManualClock {
@@ -50,7 +52,7 @@ export async function connectedByConsent(
   const consent = consentClientAt(fake, options);
   const asked = await finishAskedOf(consent, startAskedAt(fake, way));
   const finished = await Effect.runPromise(consent.finish(asked).pipe(Effect.provide(TestClock.layer())));
-  return { fake, client: asked.client, tokens: finished.tokens };
+  return { fake, client: asked.client, tokens: finished.tokens, kept: tokensKeptBy(finished) };
 }
 
 export function clockAt(start: number): ManualClock {

@@ -1,4 +1,5 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
+import { HostRefused } from '@on.auto/outbound';
 import { Option, Schema } from 'effect';
 
 export interface GatedRequests {
@@ -32,4 +33,11 @@ export function gatedRequests(path = '/token'): GatedRequests {
     holding: () => held.requests,
     answered: () => [...answered],
   };
+}
+
+export function hostRefusedAt(path: string, rule: string): FetchLike {
+  return (...[address, init]: readonly [unknown, unknown?]) =>
+    String(address).endsWith(path)
+      ? Promise.reject(new HostRefused({ rule }))
+      : globalThis.fetch(String(address), Object.assign({}, init));
 }

@@ -1,5 +1,5 @@
 import { HostRefused } from '@on.auto/outbound';
-import { Effect } from 'effect';
+import { Data, Effect } from 'effect';
 
 import { renewalTimeOf, type TokenSource } from '../clients/token-source.ts';
 import type {
@@ -11,7 +11,7 @@ import type {
 } from '../consent/consent-client.ts';
 import { isInvalidGrant } from '../consent/consent-failures.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
-import { heldAmongSecrets, keptTokensOf, keptValueOf, type KeptTokens } from './kept-tokens.ts';
+import { heldAmongSecrets, keptValueOf, type KeptTokens } from './kept-tokens.ts';
 import { renewalWords } from './renewal-words.ts';
 
 export interface Refreshing {
@@ -32,7 +32,6 @@ export interface Renewal {
 
 export interface Sourced {
   readonly served: ConsentServed;
-  readonly kept: KeptTokens;
   readonly heldAt: number;
   readonly serving: TokenServing;
 }
@@ -41,6 +40,7 @@ interface Held {
   readonly tokens: KeptTokens;
   readonly version: number;
   readonly renewAt: number;
+  readonly endsAt: number;
 }
 
 interface Renewing extends Sourced {
@@ -49,15 +49,36 @@ interface Renewing extends Sourced {
   readonly deadline: number;
 }
 
-function renewalOf(tokens: KeptTokens, heldAt: number, { spreadMs }: Renewal): number {
-  return tokens.expires_at === undefined || tokens.refresh_token === undefined
-    ? Number.POSITIVE_INFINITY
-    : renewalTimeOf(heldAt, Date.parse(tokens.expires_at), spreadMs);
+interface Claimed {
+  readonly held: Held;
+  readonly refreshToken: string;
+  readonly refreshing: Refreshing;
+  readonly until: number;
+}
+
+interface FailedClaim {
+  readonly failure: unknown;
+  readonly until: number;
+}
+
+interface Holding {
+  held: Held;
+  renewing: Promise<string> | undefined;
+  failed: FailedClaim | undefined;
+}
+
+class FailedUnderItsClaim extends Data.TaggedError('failed_under_its_claim')<FailedClaim> {}
+
+function heldFrom(tokens: KeptTokens, version: number, heldAt: number, { spreadMs }: Renewal): Held {
+  const endsAt = tokens.expires_at === undefined ? Number.POSITIVE_INFINITY : Date.parse(tokens.expires_at);
+  const renewAt =
+    tokens.refresh_token === undefined ? Number.POSITIVE_INFINITY : renewalTimeOf(heldAt, endsAt, spreadMs);
+  return { tokens, version, renewAt, endsAt };
 }
 
 function heldOf(tokens: KeptTokens, version: number, { serving, renewal }: Renewing): Held {
   heldAmongSecrets(tokens, serving);
-  return { tokens, version, renewAt: renewalOf(tokens, serving.now(), renewal) };
+  return heldFrom(tokens, version, serving.now(), renewal);
 }
 
 function failedWith({ detail }: ConnectionUnready): Error {
@@ -103,7 +124,7 @@ function refusedWith(refusal: ConsentRefusal, renewing: Renewing): Effect.Effect
 }
 
 function takenFrom(row: HeldTokens, renewing: Renewing): Held {
-  return heldOf(keptTokensOf(row.value), row.version, renewing);
+  return heldOf(row.tokens, row.version, renewing);
 }
 
 function afterRefusedGrant(held: Held, renewing: Renewing): Effect.Effect<Held, Error> {
@@ -112,25 +133,37 @@ function afterRefusedGrant(held: Held, renewing: Renewing): Effect.Effect<Held, 
   );
 }
 
-function keptIn(held: Held, refreshing: Refreshing, renewed: KeptTokens, renewing: Renewing) {
-  return Effect.gen(function* () {
-    const replacing = renewing.served.tokens.replace(held.version, keptValueOf(renewed));
-    const replaced = yield* replacing.pipe(
-      Effect.catch(({ detail }) => Effect.andThen(refreshing.revoked(renewed), Effect.fail(new Error(detail)))),
-    );
-    if (!replaced.replaced) {
-      yield* refreshing.revoked(renewed);
-      return yield* renewedFrom(held, renewing);
-    }
-    return heldOf(renewed, replaced.version, renewing);
-  });
+function failedUnder({ until }: Claimed, failure: unknown): Effect.Effect<never, FailedUnderItsClaim> {
+  return Effect.fail(new FailedUnderItsClaim({ failure, until }));
 }
 
-function exchangedFor(held: Held, refreshToken: string, refreshing: Refreshing, renewing: Renewing) {
+function movedFrom(row: HeldTokens, renewing: Renewing): Effect.Effect<Held, unknown> {
+  const taken = takenFrom(row, renewing);
+  return isServable(taken, renewing) ? Effect.succeed(taken) : renewedFrom(taken, renewing);
+}
+
+function keptIn(claimed: Claimed, renewed: KeptTokens, renewing: Renewing): Effect.Effect<Held, unknown> {
+  const { held, refreshing } = claimed;
+  return renewing.served.tokens.replace(held.version, keptValueOf(renewed)).pipe(
+    Effect.catch(({ detail }) => Effect.andThen(refreshing.revoked(renewed), failedUnder(claimed, new Error(detail)))),
+    Effect.flatMap((replaced) =>
+      replaced.replaced
+        ? Effect.succeed(heldOf(renewed, replaced.version, renewing))
+        : readOf(renewing).pipe(
+            Effect.tapError(() => refreshing.revoked(renewed)),
+            Effect.flatMap((row) => movedFrom(row, renewing)),
+          ),
+    ),
+  );
+}
+
+function exchangedFor(claimed: Claimed, renewing: Renewing): Effect.Effect<Held, unknown> {
+  const { held, refreshToken, refreshing } = claimed;
   return refreshing.refreshed(refreshToken, held.tokens, renewing.serving.now()).pipe(
     Effect.matchEffect({
-      onFailure: (failure) => (isInvalidGrant(failure) ? afterRefusedGrant(held, renewing) : Effect.fail(failure)),
-      onSuccess: (renewed) => keptIn(held, refreshing, renewed, renewing),
+      onFailure: (failure) =>
+        isInvalidGrant(failure) ? afterRefusedGrant(held, renewing) : failedUnder(claimed, failure),
+      onSuccess: (renewed) => keptIn(claimed, renewed, renewing),
     }),
   );
 }
@@ -146,42 +179,61 @@ function refreshedFrom(held: Held, renewing: Renewing): Effect.Effect<Held, unkn
       .pipe(Effect.catch((refusal) => refusedWith(refusal, renewing)));
     const claim = yield* renewing.served.tokens.claim(held.version, renewing.renewal.leaseMs);
     return claim.claimed
-      ? yield* exchangedFor(held, refreshToken, refreshing, renewing)
+      ? yield* exchangedFor({ held, refreshToken, refreshing, until: Date.parse(claim.until) }, renewing)
       : yield* renewedFrom(held, renewing);
   });
 }
 
+function fromRow(held: Held, row: HeldTokens, renewing: Renewing): Effect.Effect<Held, unknown> {
+  if (row.version !== held.version) {
+    return movedFrom(row, renewing);
+  }
+  return row.claimedUntil === undefined
+    ? refreshedFrom(held, renewing)
+    : Effect.andThen(waitedFor(row.claimedUntil, renewing), renewedFrom(held, renewing));
+}
+
 function renewedFrom(held: Held, renewing: Renewing): Effect.Effect<Held, unknown> {
-  return Effect.gen(function* () {
-    const row = yield* readOf(renewing);
-    if (row.version !== held.version) {
-      const taken = takenFrom(row, renewing);
-      return isServable(taken, renewing) ? taken : yield* renewedFrom(taken, renewing);
-    }
-    if (row.claimedUntil !== undefined) {
-      yield* waitedFor(row.claimedUntil, renewing);
-      return yield* renewedFrom(held, renewing);
-    }
-    return yield* refreshedFrom(held, renewing);
-  });
+  return Effect.flatMap(readOf(renewing), (row) => fromRow(held, row, renewing));
+}
+
+function underItsFailedClaim(failed: FailedClaim, held: Held, refused: boolean, { now }: TokenServing) {
+  return !refused && now() < held.endsAt ? Effect.succeed(held.tokens.access_token) : Effect.fail(failed.failure);
 }
 
 export function renewedTokens(sourced: Sourced, renewal: Renewal): TokenSource {
-  const { served, kept, heldAt, serving } = sourced;
-  const holding: { held: Held; renewing: Promise<string> | undefined } = {
-    held: { tokens: kept, version: served.held.version, renewAt: renewalOf(kept, heldAt, renewal) },
+  const { served, heldAt, serving } = sourced;
+  const holding: Holding = {
+    held: heldFrom(served.held.tokens, served.held.version, heldAt, renewal),
     renewing: undefined,
+    failed: undefined,
   };
+  const renewedAccess = (refused: boolean): Effect.Effect<string, unknown> =>
+    Effect.suspend(() => {
+      const { failed, held } = holding;
+      if (failed !== undefined && serving.now() < failed.until) {
+        return underItsFailedClaim(failed, held, refused, serving);
+      }
+      holding.failed = undefined;
+      const renewing: Renewing = { ...sourced, renewal, refused, deadline: serving.now() + renewal.waitMs };
+      return renewedFrom(held, renewing).pipe(
+        Effect.map((renewed) => {
+          holding.held = renewed;
+          return renewed.tokens.access_token;
+        }),
+        Effect.catch((failure) => {
+          if (failure instanceof FailedUnderItsClaim) {
+            holding.failed = { failure: failure.failure, until: failure.until };
+            return Effect.fail(failure.failure);
+          }
+          return Effect.fail(failure);
+        }),
+      );
+    });
   const renewedOnce = (refused: boolean): Promise<string> => {
-    const renewing: Renewing = { ...sourced, renewal, refused, deadline: serving.now() + renewal.waitMs };
-    holding.renewing ??= Effect.runPromise(renewedFrom(holding.held, renewing))
-      .then((renewed) => {
-        holding.held = renewed;
-        return renewed.tokens.access_token;
-      })
-      .finally(() => {
-        holding.renewing = undefined;
-      });
+    holding.renewing ??= Effect.runPromise(renewedAccess(refused)).finally(() => {
+      holding.renewing = undefined;
+    });
     return holding.renewing;
   };
   return {

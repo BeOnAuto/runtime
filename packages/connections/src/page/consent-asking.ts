@@ -1,5 +1,5 @@
-import type { ConsentServer, StartAsked } from '@on.auto/tool-servers';
-import { Effect, Option } from 'effect';
+import { keptTokensIn, type ConsentServer, type StartAsked } from '@on.auto/tool-servers';
+import { Effect, Function, Option } from 'effect';
 
 import { returnAddressOf } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
@@ -13,7 +13,7 @@ import {
   type KeptWithLink,
 } from '../registry/registry-lookup.ts';
 import type { KeptConnection } from '../registry/registry.ts';
-import type { ConsentNamed } from './consent-words.ts';
+import { unrevokedWordsOf, type ConsentNamed } from './consent-words.ts';
 
 export type ConsentAsked = Omit<StartAsked, 'state'>;
 
@@ -70,4 +70,26 @@ export function openConsentOf(
   }
   const stateIssue = stateIssueOf(kept, stateSha256);
   return stateIssue === undefined ? Effect.succeed<KeptWithConsent>(kept) : Effect.fail(stateIssue);
+}
+
+export function tokensRevokedOf(
+  { connection, secretId }: KeptConnection,
+  services: Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages'>,
+): Effect.Effect<void> {
+  const { credential } = connection;
+  if (credential.kind !== 'authorization' || secretId === undefined) {
+    return Effect.void;
+  }
+  const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+  return services.secrets.read(secretId).pipe(
+    Effect.orElseSucceed(Function.constUndefined),
+    Effect.map((row) => Option.flatMap(Option.fromNullishOr(row), ({ value }) => keptTokensIn(value))),
+    Effect.flatMap(
+      Option.match({
+        onNone: () => Effect.void,
+        onSome: (tokens) => services.consent.revoke({ ...consentAskedOf(connection, services), client, tokens }),
+      }),
+    ),
+    Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure))),
+  );
 }

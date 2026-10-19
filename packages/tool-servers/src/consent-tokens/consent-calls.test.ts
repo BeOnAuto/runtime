@@ -26,7 +26,7 @@ import {
   type FakeMcpServer,
   clockAt,
 } from '../testing/index.ts';
-import { keptTokensOf, type KeptTokens } from './kept-tokens.ts';
+import type { KeptTokens } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -92,7 +92,7 @@ describe('a call through an MCP connection connected by consent', () => {
   it('sends its access token, and holds neither token in what it records or the lines its server reports', async () => {
     const fake = await servedMcp();
     const connected = await connectedByConsent(fake);
-    const tokens = keptTokensOf(connected.tokens);
+    const tokens = connected.kept;
     const clock = clockAt(0);
     const served = servedOf(connected, rowOf(connected, clock.now));
     const consent = consentClientAt(fake, { fetch: echoingTokens(tokens) });

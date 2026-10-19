@@ -13,6 +13,7 @@ export const servingWords = {
     `The variable ${variable} that the connection ${name} sends is not set on this runtime; whoever runs it sets the variable and starts it again`,
   unrecorded: (name: string) =>
     `The runtime found the credential of the connection ${name} unreadable but could not record it broken; it reads the credential again, and records the break again, at the next use`,
+  notTokens: 'its value is not the tokens of a consent the runtime keeps',
   consentEnded: (name: string) => `The consent of the connection ${name} was revoked or has ended, so ${removeAndAdd}`,
   clientGone: (name: string) =>
     `The client the connection ${name} was made with is no longer registered, so ${removeAndAdd}`,

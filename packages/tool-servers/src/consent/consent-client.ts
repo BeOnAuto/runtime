@@ -5,7 +5,7 @@ import { Effect, type Redacted } from 'effect';
 import { toolBounds } from '../bounds/call-bounds.ts';
 import type { Timer } from '../clients/http-client.ts';
 import type { ConsentTokenSources, TokenSource } from '../clients/token-source.ts';
-import { heldAmongSecrets, keptTokensOf, type TokenHolding } from '../consent-tokens/kept-tokens.ts';
+import { heldAmongSecrets, type KeptTokens, type TokenHolding } from '../consent-tokens/kept-tokens.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
 import { sourcesHad, type ClientSource, type ClientsHad, type WayOfClients } from './client-sources.ts';
 import type { ConsentRequests } from './consent-requests.ts';
@@ -69,10 +69,14 @@ export type ConsentRefusal =
   | { readonly refused: 'no_scope' }
   | { readonly refused: 'malformed_scope' };
 
-export interface HeldTokens {
+export interface KeptRow {
   readonly value: Redacted.Redacted;
   readonly version: number;
   readonly claimedUntil: string | undefined;
+}
+
+export interface HeldTokens extends Omit<KeptRow, 'value'> {
+  readonly tokens: KeptTokens;
 }
 
 export type TokensReplaced = { readonly replaced: true; readonly version: number } | { readonly replaced: false };
@@ -105,10 +109,10 @@ export interface TokenServing extends TokenHolding {
 
 export interface RevokeAsked extends ConsentAsked {
   readonly client: ChosenClient;
-  readonly tokens: Redacted.Redacted;
+  readonly tokens: KeptTokens;
 }
 
-export type RevocationFailure = ConsentRefusal | { readonly refused: 'not_revoked'; readonly detail: string };
+export type RevocationFailure = ConsentRefusal | { readonly refused: 'not_revoked'; readonly status: number };
 
 export interface KeptRegistration {
   readonly clientId: string;
@@ -125,6 +129,7 @@ export interface ConsentClientOptions extends ClientsHad {
   readonly fetch: FetchLike;
   readonly registrations: ClientRegistrations;
   readonly requestMs?: number;
+  readonly requestTimeout?: (ms: number) => AbortSignal;
   readonly renewalSpreadMs?: number;
 }
 
@@ -139,7 +144,12 @@ const mostRenewalSpreadMs = 5000;
 
 async function requestsOf(options: ConsentClientOptions, renewalSpreadMs: number): Promise<ConsentRequests> {
   const { consentRequests } = await import('./consent-requests.ts');
-  return consentRequests({ ...options, requestMs: options.requestMs ?? toolBounds.callMs, renewalSpreadMs });
+  return consentRequests({
+    ...options,
+    requestMs: options.requestMs ?? toolBounds.callMs,
+    requestTimeout: options.requestTimeout ?? ((ms) => AbortSignal.timeout(ms)),
+    renewalSpreadMs,
+  });
 }
 
 function servedTokens(
@@ -147,13 +157,12 @@ function servedTokens(
   served: ConsentServed,
   serving: TokenServing,
 ): TokenSource {
-  const kept = keptTokensOf(served.held.value);
   const heldAt = serving.now();
-  heldAmongSecrets(kept, serving);
+  heldAmongSecrets(served.held.tokens, serving);
   const sourcing: { source?: Promise<TokenSource> } = {};
   const sourceOnUse = (): Promise<TokenSource> => {
     sourcing.source ??= Effect.runPromise(
-      Effect.map(loaded, (requests) => requests.tokenSource({ served, kept, heldAt, serving })),
+      Effect.map(loaded, (requests) => requests.tokenSource({ served, heldAt, serving })),
     );
     return sourcing.source;
   };

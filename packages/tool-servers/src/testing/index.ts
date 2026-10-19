@@ -83,7 +83,8 @@ export {
   type ManualTimer,
   type MemoryTokens,
 } from '../consent-testing/memory-tokens.ts';
-export { gatedRequests, type GatedRequests } from '../consent-testing/gated-requests.ts';
+export { gatedRequests, hostRefusedAt, type GatedRequests } from '../consent-testing/gated-requests.ts';
+export { leasedRows, type Leasing, type LeasedRows } from '../consent-testing/leased-rows.ts';
 export {
   clockAt,
   connectedByConsent,

@@ -21,6 +21,7 @@ import { runtimeLedger } from './runtime-ledger.ts';
 
 export interface ToolAccessWiring {
   readonly toolTiming?: Timing;
+  readonly now?: () => number;
   readonly telemetry?: {
     readonly traceMeta: ToolAccessOptions['traceMeta'];
   };
@@ -34,7 +35,7 @@ export interface ServedConnections {
 export async function toolAccessOf(
   runtime: AppRuntime<DispatcherServices>,
   { toolServers, registeredClients }: Pick<Settings, 'toolServers' | 'registeredClients'>,
-  { toolTiming, consent, connections, telemetry }: ToolAccessWiring & ServedConnections,
+  { toolTiming, now, consent, connections, telemetry }: ToolAccessWiring & ServedConnections,
 ): Promise<ToolAccess> {
   const traceMeta = telemetry?.traceMeta;
   const reportLeftOut: Describing['reportLeftOut'] = (server, leftOut) => {
@@ -48,6 +49,7 @@ export async function toolAccessOf(
     connections,
     reportLeftOut,
     ...(toolTiming === undefined ? {} : { timing: toolTiming }),
+    ...(now === undefined ? {} : { now }),
     ...(traceMeta === undefined ? {} : { traceMeta }),
     content: runtimeLedger(runtime).content,
     runtimeSecrets: registeredClientSecrets(registeredClients),

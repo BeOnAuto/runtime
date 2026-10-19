@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted } from '../authorization-testing/authorization-requests.ts';
@@ -35,6 +36,47 @@ async function twoProcessesOverOneRow() {
 
 function heardAt(fake: FakeMcpServer, path: string): number {
   return fake.heard().filter((heard) => heard.path === path).length;
+}
+
+function cuttingTimeouts() {
+  const cuts: number[] = [];
+  const cutting = new AbortController();
+  return {
+    requestTimeout: (ms: number) => {
+      cuts.push(ms);
+      return cutting.signal;
+    },
+    cut: () => {
+      cutting.abort();
+    },
+    cuts: () => [...cuts],
+  };
+}
+
+async function cutOffAt(requestMs: number) {
+  const { fake, clock, row, served } = await twoProcessesOverOneRow();
+  const gate = gatedRequests();
+  const timeouts = cuttingTimeouts();
+  const { requestTimeout } = timeouts;
+  const { source } = servedTokensOf(
+    served,
+    clock.now,
+    consentClientAt(fake, { fetch: gate.fetch, requestMs, requestTimeout }),
+  );
+  clock.setTo(renewalTime);
+  const renewing = source.token().catch((error: unknown) => error);
+  await until(() => gate.holding() === 1);
+  clock.advance(requestMs);
+  timeouts.cut();
+  gate.release();
+  const failed = await renewing;
+  const { claimedUntil } = Effect.runSync(Effect.orDie(row.read));
+  return {
+    cuts: timeouts.cuts(),
+    claims: row.claims(),
+    failed,
+    claimedFor: Date.parse(String(claimedUntil)) - clock.now(),
+  };
 }
 
 describe('a renewal two processes reach at once', () => {
@@ -96,7 +138,7 @@ describe('a renewal another process holds a claim for', () => {
         'The tokens of the connection files are being renewed by another process of the runtime, which did not finish within 30000 ms; the next call tries again',
       ),
     );
-    expect(row.claims()).toEqual([60_000]);
+    expect(row.claims()).toEqual([75_000]);
   });
 });
 
@@ -114,7 +156,7 @@ describe('a renewal that loses its row to another process before it claims it', 
     gate.release();
 
     expect(await reading).toBe(renewed);
-    expect(row.claims()).toEqual([30_000, 30_000]);
+    expect(row.claims()).toEqual([45_000, 45_000]);
     expect(fake.tokenRequests()).toBe(2);
   });
 });
@@ -137,7 +179,7 @@ describe('a renewal that finds tokens another process renewed long ago', () => {
 });
 
 describe('the lease a renewal claims its row for', () => {
-  it('is thirty seconds, and never shorter than the bound of the request it sends', async () => {
+  it('is the bound of the request it sends and fifteen seconds more, forty-five seconds by default', async () => {
     const { fake, clock, row, served } = await twoProcessesOverOneRow();
     const longer = await twoProcessesOverOneRow();
     const { source } = servedTokensOf(served, clock.now, consentClientAt(fake));
@@ -152,7 +194,39 @@ describe('the lease a renewal claims its row for', () => {
     await source.token();
     await bounded.source.token();
 
-    expect([row.claims(), longer.row.claims()]).toEqual([[30_000], [45_000]]);
+    expect([row.claims(), longer.row.claims()]).toEqual([[45_000], [60_000]]);
+  });
+
+  it('outlasts the refresh, which is cut off at the bound of its request before the claim ends', async () => {
+    const thirty = await cutOffAt(30_000);
+    const fortyFive = await cutOffAt(45_000);
+
+    expect([thirty, fortyFive]).toMatchObject([
+      { cuts: [30_000, 30_000, 30_000], claims: [45_000], failed: { name: 'AbortError' } },
+      { cuts: [45_000, 45_000, 45_000], claims: [60_000], failed: { name: 'AbortError' } },
+    ]);
+    expect([thirty.claimedFor, fortyFive.claimedFor]).toEqual([15_000, 15_000]);
+  });
+});
+
+describe('a renewal whose row moved before it replaces it', () => {
+  it('takes the tokens the row holds, and revokes nothing', async () => {
+    const { fake, clock, row, served } = await twoProcessesOverOneRow();
+    const other = await connectedByConsent(fake);
+    const gate = gatedRequests();
+    const { source } = servedTokensOf(served, clock.now, consentClientAt(fake, { fetch: gate.fetch }));
+
+    clock.setTo(renewalTime);
+    const renewing = source.token();
+    await until(() => gate.holding() === 1);
+    Effect.runSync(row.replace(1, other.tokens));
+    gate.release();
+    const taken = await renewing;
+    const [got = ''] = gate.answered();
+
+    expect(taken).toBe(other.kept.access_token);
+    expect(heardAt(fake, '/revoke')).toBe(0);
+    expect([await admitted(fake, taken), await admitted(fake, got)]).toEqual([true, true]);
   });
 });
 

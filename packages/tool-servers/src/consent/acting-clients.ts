@@ -193,6 +193,7 @@ function clientChoice(choosing: ClientChoosing): ClientChoice {
 export interface Requesting extends ClientChoosing {
   readonly fetch: FetchLike;
   readonly requestMs: number;
+  readonly requestTimeout: (ms: number) => AbortSignal;
 }
 
 export interface Requests {
@@ -200,15 +201,15 @@ export interface Requests {
   readonly fetchFor: (reaches: Reaches) => FetchLike;
 }
 
-function boundedFetchOf(fetch: FetchLike, reaches: Reaches, requestMs: number): FetchLike {
+function boundedFetchOf({ fetch, requestMs, requestTimeout }: Requesting, reaches: Reaches): FetchLike {
   const within = fetchWithin(fetch, reaches);
   return (...[address, init]: readonly [unknown, unknown?]) =>
-    within(String(address), Object.assign({}, init, { signal: AbortSignal.timeout(requestMs) }));
+    within(String(address), Object.assign({}, init, { signal: requestTimeout(requestMs) }));
 }
 
 export function requestsOf(requesting: Requesting): Requests {
   return {
     clients: clientChoice(requesting),
-    fetchFor: (reaches) => boundedFetchOf(requesting.fetch, reaches, requesting.requestMs),
+    fetchFor: (reaches) => boundedFetchOf(requesting, reaches),
   };
 }

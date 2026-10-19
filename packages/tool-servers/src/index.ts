@@ -87,6 +87,7 @@ export {
   type FinishAsked,
   type FinishedConsent,
   type HeldTokens,
+  type KeptRow,
   type KeptRegistration,
   type RevocationFailure,
   type RevokeAsked,
@@ -97,6 +98,7 @@ export {
   type TokensReplaced,
 } from './consent/consent-client.ts';
 export { isScope } from './consent/scopes.ts';
+export { keptTokensIn, type KeptTokens } from './consent-tokens/kept-tokens.ts';
 export { defineSearch } from './search/search.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
 export type { OfferedProvider, ProviderOffering } from './search/found-providers.ts';

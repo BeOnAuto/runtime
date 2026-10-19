@@ -1,5 +1,5 @@
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
-import { admitted, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { admitted, hostRefusedAt, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -25,8 +25,8 @@ function revocationsAt(fake: FakeMcpServer): number {
   return fake.heard().filter(({ path }) => path === '/revoke').length;
 }
 
-async function connectedByConsentAt(fake: FakeMcpServer, fetch: ConsentClientOptions['fetch'] = globalThis.fetch) {
-  const h = consentHarnessAt(fake, { consenting: { registeredClients: [registeredAt(fake.origin)], fetch } });
+async function connectedByConsentAt(fake: FakeMcpServer, consenting: Partial<ConsentClientOptions> = {}) {
+  const h = consentHarnessAt(fake, { consenting: { registeredClients: [registeredAt(fake.origin)], ...consenting } });
   const link = await added(h, { provider: 'files' });
   await finishing(h, link, await consentedOf(h, link));
   const [row = ''] = h.secrets.values().values();
@@ -37,12 +37,24 @@ interface Sending {
   token: string;
 }
 
-function revocationsFailingWhile(sending: Readonly<Sending>): ConsentClientOptions['fetch'] {
+function revocationsAnswering(answer: () => Promise<Response>): ConsentClientOptions['fetch'] {
   return (...[address, init]: readonly [unknown, unknown?]) =>
-    String(address).endsWith('/revoke')
-      ? Promise.reject(new Error(`The connection reset while it sent ${sending.token}`))
-      : globalThis.fetch(String(address), Object.assign({}, init));
+    String(address).endsWith('/revoke') ? answer() : globalThis.fetch(String(address), Object.assign({}, init));
 }
+
+function failingWhileSending(sending: Readonly<Sending>): () => Promise<Response> {
+  return () => Promise.reject(new Error(`The connection reset while it sent ${sending.token}`));
+}
+
+async function loggedRemovalOf(h: Harness, id: string): Promise<string> {
+  const removed = await removing(h, id);
+  expect(removed).toMatchObject({ status: 'succeeded', output: { status: 'removed' } });
+  expect(h.secrets.values().size).toBe(0);
+  return h.logged().join('\n');
+}
+
+const unanswered =
+  'The authorization server of the connection files did not answer the revocation of its tokens, so they end on their own';
 
 async function consentServed(): Promise<FakeMcpServer> {
   const fake = await consentFake();
@@ -114,32 +126,58 @@ describe('removing a connection connected by consent', () => {
 });
 
 describe('a removal whose revocation does not happen', () => {
-  it('goes on to forget the row, and logs why in words that hold no token', async () => {
+  it('goes on to forget the row where the request fails, and logs that it was not answered in words that hold no token', async () => {
     const fake = await consentServed();
     const sending: Sending = { token: '' };
-    const { h, id, tokens } = await connectedByConsentAt(fake, revocationsFailingWhile(sending));
+    const { h, id, tokens } = await connectedByConsentAt(fake, {
+      fetch: revocationsAnswering(failingWhileSending(sending)),
+    });
     sending.token = tokens.refresh_token;
 
-    const removed = await removing(h, id);
+    const logged = await loggedRemovalOf(h, id);
 
-    expect(removed).toMatchObject({ status: 'succeeded', output: { status: 'removed' } });
-    expect(h.secrets.values().size).toBe(0);
-    expect(h.logged().join('\n')).toContain(
-      'The tokens of the connection files were not revoked at its authorization server, so they end on their own: The connection reset while it sent [redacted]',
-    );
-    expect(h.logged().join('\n')).not.toContain(tokens.refresh_token);
+    expect(logged).toContain(unanswered);
+    expect(logged).not.toContain(tokens.refresh_token);
   });
 
-  it('goes on where the authorization server does not answer, and logs that in the words of a consent', async () => {
-    const fake = await consentFake();
-    const { h, id } = await connectedByConsentAt(fake);
-    await fake.close();
+  it('goes on where the authorization server does not answer at all, or refuses the revocation', async () => {
+    const gone = await consentFake();
+    const refusing = await consentServed();
+    const unanswering = await connectedByConsentAt(gone);
+    const refused = await connectedByConsentAt(refusing, {
+      fetch: revocationsAnswering(() => Promise.resolve(new Response(null, { status: 503 }))),
+    });
+    await gone.close();
 
-    const removed = await removing(h, id);
+    const loggedUnanswered = await loggedRemovalOf(unanswering.h, unanswering.id);
+    const loggedRefused = await loggedRemovalOf(refused.h, refused.id);
 
-    expect(removed).toMatchObject({ status: 'succeeded', output: { status: 'removed' } });
-    expect(h.logged().join('\n')).toContain(
-      'The tokens of the connection files were not revoked at its authorization server, so they end on their own: The authorization server of the connection files did not answer as an authorization server does; try again in a moment',
+    expect(loggedUnanswered).toContain(unanswered);
+    expect(loggedRefused).toContain(
+      'The authorization server of the connection files refused to revoke its tokens, answering HTTP 503, so they end on their own',
+    );
+  });
+});
+
+describe('a removal whose revocation cannot be made', () => {
+  it('goes on where the rules refuse the host it reaches, or the client the connection was made with is gone', async () => {
+    const fake = await consentServed();
+    const rule = 'The rules of whoever runs Auto do not allow the host 127.0.0.1';
+    const registered = [registeredAt(fake.origin)];
+    const refusedItsHost = await connectedByConsentAt(fake, {
+      fetch: hostRefusedAt('/revoke', rule),
+    });
+    const withoutItsClient = await connectedByConsentAt(fake, { registeredClients: registered });
+    registered.splice(0, 1, registeredAt(fake.origin, { clientId: 'renamed' }));
+
+    const loggedHost = await loggedRemovalOf(refusedItsHost.h, refusedItsHost.id);
+    const loggedClient = await loggedRemovalOf(withoutItsClient.h, withoutItsClient.id);
+
+    expect(loggedHost).toContain(
+      `The tokens of the connection files were not revoked, so they end on their own: ${rule}`,
+    );
+    expect(loggedClient).toContain(
+      'The tokens of the connection files could not be revoked with the client and at the authorization server it was made with, so they end on their own',
     );
   });
 });

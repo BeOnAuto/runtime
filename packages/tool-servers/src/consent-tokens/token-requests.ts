@@ -7,7 +7,7 @@ import type { ConsentRefusal, ConsentServed, RevocationFailure, RevokeAsked } fr
 import { revocationOf } from '../consent/revocation.ts';
 import { normalizedScopeOf } from '../consent/scopes.ts';
 import { libraryMetadataOf, serverMetadataOf, type ServerMetadata } from '../consent/server-metadata.ts';
-import { answeredTokensOf, keptOf, keptTokensOf, type AnsweredTokens, type KeptTokens } from './kept-tokens.ts';
+import { answeredTokensOf, keptOf, type AnsweredTokens, type KeptTokens } from './kept-tokens.ts';
 import { renewedTokens, type Refreshing, type Sourced } from './renewed-tokens.ts';
 
 export interface TokenRequests {
@@ -26,7 +26,11 @@ interface Refreshed extends ServerMetadata {
   readonly fetch: FetchLike;
 }
 
-const leaseMs = 30_000;
+const leaseBeyondTheRequestMs = 15_000;
+
+function leaseOf(requestMs: number): number {
+  return requestMs + leaseBeyondTheRequestMs;
+}
 
 function revokedTokensOf({ access_token: accessToken, refresh_token: refreshToken }: KeptTokens) {
   return { access_token: accessToken, refresh_token: refreshToken };
@@ -81,14 +85,14 @@ function revocationAsked(asked: RevokeAsked, { clients, fetchFor }: Requests): E
     const fetch = fetchFor(asked.reaches);
     const { server } = yield* serverMetadataOf(asked, fetch);
     const client = yield* clients.recordedFor(asked);
-    yield* revocationOf({ server, client, tokens: revokedTokensOf(keptTokensOf(asked.tokens)), fetch });
+    yield* revocationOf({ server, client, tokens: revokedTokensOf(asked.tokens), fetch });
   });
 }
 
 export function tokenRequestsOf(requests: Requests, { requestMs, renewalSpreadMs }: TokenRequesting): TokenRequests {
   const renewal = {
     refreshing: (served: ConsentServed) => refreshingOf(served, requests),
-    leaseMs: Math.max(leaseMs, requestMs),
+    leaseMs: leaseOf(requestMs),
     waitMs: requestMs,
     spreadMs: renewalSpreadMs,
   };
