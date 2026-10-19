@@ -245,11 +245,13 @@ describe('the issuers and the references of the registered clients of the connec
       EXAMPLE_ISSUER: 'https://accounts.example.com',
       CRM_HOST: 'crm.example.com',
     };
-    const misplaced =
+    const misplacedInAClient =
       'Holds a reference to an environment variable, which only the client_secret and the private_key of a registered client may hold';
+    const misplacedInThePolicy =
+      'Holds a reference to an environment variable, which only the client_secret and the private_key of a registered client, and a header or a query value of a provider, may hold';
 
     expect(refusalOf(fileOf(elsewhere), environment)).toBe(
-      `${fileInvalid} auto-runtime.yaml:3:17 connections.registered_clients[0].issuers[0]: ${misplaced}; auto-runtime.yaml:13:19 connections.allowed_hosts[0]: ${misplaced}`,
+      `${fileInvalid} auto-runtime.yaml:3:17 connections.registered_clients[0].issuers[0]: ${misplacedInAClient}; auto-runtime.yaml:13:19 connections.allowed_hosts[0]: ${misplacedInThePolicy}`,
     );
   });
 });

@@ -8,6 +8,8 @@ export type ReferenceHoldingField = (typeof referenceHoldingFields)[number];
 
 export const misplacedReference = `Holds a reference to an environment variable, which only ${listed(referenceHoldingFields.map((field) => `the ${field}`))} of a registered client may hold`;
 
+const misplacedInThePolicy = `Holds a reference to an environment variable, which only ${listed(referenceHoldingFields.map((field) => `the ${field}`))} of a registered client, and a header or a query value of a provider, may hold`;
+
 export function holdsAReference(text: string): boolean {
   return referencedVariablesOf(text).length > 0;
 }
@@ -17,7 +19,7 @@ export function isReferenceHoldingField(field: string): boolean {
 }
 
 export const heldAsWritten = Schema.makeFilter(
-  (text: string) => (holdsAReference(text) ? misplacedReference : undefined),
+  (text: string) => (holdsAReference(text) ? misplacedInThePolicy : undefined),
   undefined,
   true,
 );

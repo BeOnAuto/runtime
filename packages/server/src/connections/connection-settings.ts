@@ -1,6 +1,7 @@
 import type { Environment, FileUse, SettingProblem } from '@on.auto/config';
 import {
   ConnectionsSettingInvalid,
+  namingNoOwnVariable,
   readConnectionsSetting,
   type ConnectionPolicy,
   type RegisteredClient,
@@ -64,7 +65,9 @@ export function readConnectionSettings(
   functions: Pick<FunctionSettings, 'models' | 'toolServers'>,
   providers: ProviderList,
 ): ConnectionSettings {
-  const setting = readConnectionsSetting(environment, ownVariablesOf(functions, file, providers));
+  const setting = Effect.flatMap(readConnectionsSetting(environment), (read) =>
+    namingNoOwnVariable(read, ownVariablesOf(functions, file, providers)),
+  );
   const { policy: connections, registeredClients } = Effect.runSync(
     setting.pipe(Effect.mapError((invalid: Problems) => placed(invalid, file))),
   );

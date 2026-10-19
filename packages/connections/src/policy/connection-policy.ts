@@ -1,4 +1,5 @@
 import {
+  clientIdWrittenOut,
   credentialAsDefault,
   credentialProblems,
   decodedJsonSetting,
@@ -25,6 +26,7 @@ import {
   type RegisteredClient,
 } from '../registered-clients/registered-clients.ts';
 import { CredentialKindSchema, type CredentialKind } from '../registry/credential.ts';
+import { AddedProvidersSchema, type AddedProviders } from './added-providers.ts';
 
 export const connectionsSetting = 'CONNECTIONS';
 
@@ -37,8 +39,7 @@ const writtenOutWords: Readonly<Record<string, string>> = {
     'Looks like a client secret written out, which a registered client holds only as a reference to the environment variable that holds it, such as ${EXAMPLE_CLIENT_SECRET}',
   private_key:
     'Looks like a private key written out, which a registered client holds only as a reference to the environment variable that holds it, such as ${EXAMPLE_PRIVATE_KEY}',
-  client_id:
-    'Looks like a credential, which a client id never is: the secret or the key of the client goes in its client_secret or its private_key, as a reference',
+  client_id: clientIdWrittenOut,
 };
 
 const writtenOutElsewhere =
@@ -94,9 +95,10 @@ const ConnectionPolicyFieldsSchema = Schema.Struct(policyFields);
 export const ConnectionsSettingSchema = Schema.Struct({
   ...policyFields,
   registered_clients: Schema.optionalKey(RegisteredClientsSchema),
+  providers: Schema.optionalKey(AddedProvidersSchema),
 }).annotate({
   description:
-    'What people may add as connections through their agents, tool servers of an org which every playbook of the org may use, and the clients whoever runs the runtime registered at authorization servers. CONNECTIONS wins over it',
+    'What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it',
 });
 
 export type ConnectionPolicyFields = typeof ConnectionPolicyFieldsSchema.Type;
@@ -114,9 +116,11 @@ export interface ConnectionPolicy {
   readonly variables: readonly string[];
 }
 
-interface ConnectionsSetting {
+export interface ConnectionsSetting {
   readonly policy: ConnectionPolicy;
   readonly registeredClients: readonly RegisteredClient[];
+  readonly clientVariables: readonly string[];
+  readonly providers: AddedProviders;
 }
 
 interface ResolvedClient {
@@ -149,7 +153,7 @@ export function connectionPolicyOf({
 }
 
 function ownVariableProblems(
-  { variables = [] }: ConnectionPolicyFields,
+  { variables }: ConnectionPolicy,
   ownVariables: ReadonlySet<string>,
 ): readonly SettingProblem[] {
   return variables.flatMap((name, index) =>
@@ -235,33 +239,43 @@ function decodedFields(
 function settingOf(
   written: Schema.Json,
   environment: Environment,
-  ownVariables: ReadonlySet<string>,
 ): Result.Result<ConnectionsSetting, readonly SettingProblem[]> {
   const clients = writtenClientsOf(written);
-  return Result.flatMap(decodedFields(written, clients), (fields) => {
-    const owned = ownVariableProblems(fields, new Set([...ownVariables, ...referencedVariablesOf(clients)]));
-    return owned.length > 0
-      ? Result.fail(owned)
-      : Result.map(clientsResolved(fields.registered_clients ?? [], environment), (resolved) => ({
-          policy: connectionPolicyOf(fields),
-          registeredClients: registeredClientsOf(resolved),
-        }));
-  });
+  return Result.flatMap(decodedFields(written, clients), (fields) =>
+    Result.map(clientsResolved(fields.registered_clients ?? [], environment), (resolved) => ({
+      policy: connectionPolicyOf(fields),
+      registeredClients: registeredClientsOf(resolved),
+      clientVariables: referencedVariablesOf(clients),
+      providers: fields.providers ?? [],
+    })),
+  );
 }
 
 export function readConnectionsSetting(
   environment: Environment,
-  ownVariables: ReadonlySet<string>,
 ): Effect.Effect<ConnectionsSetting, ConnectionsSettingInvalid> {
   const text = environment[connectionsSetting];
   if (text === undefined || text === '') {
-    return Effect.succeed({ policy: connectionPolicyOf({}), registeredClients: [] });
+    return Effect.succeed({
+      policy: connectionPolicyOf({}),
+      registeredClients: [],
+      clientVariables: [],
+      providers: [],
+    });
   }
   const read = Result.flatMap(decodedJsonSetting(connectionsSetting, text, Schema.Json), (written) =>
-    settingOf(written, environment, ownVariables),
+    settingOf(written, environment),
   );
   return Result.match(read, {
     onSuccess: (setting) => Effect.succeed(setting),
     onFailure: (problems) => Effect.fail(invalid(problems)),
   });
+}
+
+export function namingNoOwnVariable(
+  setting: ConnectionsSetting,
+  ownVariables: ReadonlySet<string>,
+): Effect.Effect<ConnectionsSetting, ConnectionsSettingInvalid> {
+  const problems = ownVariableProblems(setting.policy, new Set([...ownVariables, ...setting.clientVariables]));
+  return problems.length === 0 ? Effect.succeed(setting) : Effect.fail(invalid(problems));
 }

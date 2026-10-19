@@ -30,14 +30,12 @@ const publicClient = {
 
 function clientsOf(...clients: readonly object[]) {
   const connections = JSON.stringify({ registered_clients: clients });
-  return Effect.runSync(readConnectionsSetting({ ...environment, CONNECTIONS: connections }, new Set()))
-    .registeredClients;
+  return Effect.runSync(readConnectionsSetting({ ...environment, CONNECTIONS: connections })).registeredClients;
 }
 
 function refusalOf(...clients: readonly object[]): string {
   const connections = JSON.stringify({ registered_clients: clients });
-  return Effect.runSync(Effect.flip(readConnectionsSetting({ ...environment, CONNECTIONS: connections }, new Set())))
-    .message;
+  return Effect.runSync(Effect.flip(readConnectionsSetting({ ...environment, CONNECTIONS: connections }))).message;
 }
 
 const prefix = 'The connection settings are invalid. CONNECTIONS: /registered_clients/0';
