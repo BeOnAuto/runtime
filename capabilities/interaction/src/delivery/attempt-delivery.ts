@@ -1,3 +1,4 @@
+import { renderClock, type RenderClock } from '@on.auto/definitions/template';
 import type { OneCall, StartedFields } from '@on.auto/tool-servers';
 import { deliveryIdKey, runIdKey } from '@on.auto/tool-servers/policy';
 import { Effect, Result, type Schema } from 'effect';
@@ -43,10 +44,14 @@ function callOf({ request, record }: DeliveryPlan, input: OneCall['input']): One
   };
 }
 
-export function deliveredOnce(parts: DeliveryParts, plan: DeliveryPlan): Effect.Effect<Delivered | undefined> {
+function deliveredOn(
+  clock: RenderClock,
+  parts: DeliveryParts,
+  plan: DeliveryPlan,
+): Effect.Effect<Delivered | undefined> {
   const { request, record, input } = plan;
   const asking = { input, runId: request.address.id, functionName: request.row.function };
-  const rendered = renderedArguments(record.deliver.with, deliveryVariablesOf(record, asking));
+  const rendered = renderedArguments(record.deliver.with, deliveryVariablesOf(record, asking), clock);
   if (Result.isFailure(rendered)) {
     const { failure } = rendered;
     const end: AttemptEnd = {
@@ -64,7 +69,11 @@ export function deliveredOnce(parts: DeliveryParts, plan: DeliveryPlan): Effect.
     Effect.flatMap(recordedStart(parts, plan, fields), (startedId) =>
       startedId === undefined
         ? Effect.undefined
-        : Effect.map(called, (once): Delivered => ({ startedId, end: endOf(once, record) })),
+        : Effect.map(called, (once): Delivered => ({ startedId, end: endOf(once, record, clock) })),
     ),
   );
+}
+
+export function deliveredOnce(parts: DeliveryParts, plan: DeliveryPlan): Effect.Effect<Delivered | undefined> {
+  return Effect.flatMap(renderClock, (clock) => deliveredOn(clock, parts, plan));
 }

@@ -3,8 +3,8 @@ import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { echo } from '../testing/echo.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');

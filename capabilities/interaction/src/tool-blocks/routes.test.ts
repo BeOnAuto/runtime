@@ -1,3 +1,4 @@
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -69,16 +70,16 @@ describe('the arguments of a call', () => {
       expires_at: '2026-10-09T09:00:00.000Z',
       answer_schema: null,
     });
-    expect(renderedArguments({ text: '{{ to }}: {{ message }}' }, variables)).toEqual(
+    expect(renderedArguments({ text: '{{ to }}: {{ message }}' }, variables, standingRenderClock)).toEqual(
       Result.succeed({ input: { text: 'ada: Approve?' }, bytes: 24 }),
     );
   });
 
   it('fail at an argument that does not compile or renders no text, and past the bound of a call', () => {
     expect([
-      renderedArguments({ a: '{{ to' }, { to: 'ada' }),
-      renderedArguments({ a: 'Input: {{ input }}' }, { input: { a: 1 } }),
-      renderedArguments({ a: '{{ text }}', b: '{{ text }}' }, { text: 'x'.repeat(9000) }),
+      renderedArguments({ a: '{{ to' }, { to: 'ada' }, standingRenderClock),
+      renderedArguments({ a: 'Input: {{ input }}' }, { input: { a: 1 } }, standingRenderClock),
+      renderedArguments({ a: '{{ text }}', b: '{{ text }}' }, { text: 'x'.repeat(9000) }, standingRenderClock),
     ]).toMatchObject([
       Result.fail({ reason: 'argument', argument: 'a', failure: { reason: 'failed', line: 1 } }),
       Result.fail({ reason: 'argument', argument: 'a', failure: { reason: 'not_text' } }),
@@ -95,7 +96,7 @@ const typed = deliveryVariablesOf(
 );
 
 function inputOf(templates: Parameters<typeof renderedArguments>[0]) {
-  return Result.map(renderedArguments(templates, typed), ({ input }) => input);
+  return Result.map(renderedArguments(templates, typed, standingRenderClock), ({ input }) => input);
 }
 
 describe('an argument written as a value', () => {
@@ -126,7 +127,7 @@ describe('an argument written as a value', () => {
   it('fails at its path when an expression alone reads no JSON, or more than a call may send', () => {
     expect([
       inputOf({ blocks: [{ count: '{{ 1 | divided_by: 0 }}' }] }),
-      renderedArguments({ a: '{{ text }}' }, { text: 'x'.repeat(16_384) }),
+      renderedArguments({ a: '{{ text }}' }, { text: 'x'.repeat(16_384) }, standingRenderClock),
       inputOf({ a: '{{ nothing }}' }),
     ]).toMatchObject([
       Result.fail({

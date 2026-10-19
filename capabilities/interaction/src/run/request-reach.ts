@@ -1,3 +1,4 @@
+import { renderClock } from '@on.auto/definitions/template';
 import { Unavailable, type PlaybookAddress, type Conflict } from '@on.auto/operations';
 import { toolBounds, type ToolAccess, type ToolNotOffered } from '@on.auto/tool-servers';
 import type { ToolReference } from '@on.auto/tool-servers/policy';
@@ -68,8 +69,11 @@ export function checkedArguments(record: RequestRecord, asking: Asking): Effect.
   if (record.deliver === undefined) {
     return Effect.void;
   }
-  return Result.match(renderedArguments(record.deliver.with, deliveryVariablesOf(record, asking)), {
-    onSuccess: () => Effect.void,
-    onFailure: (failure) => Effect.fail(argumentsRefusal(failure)),
-  });
+  const { deliver } = record;
+  return Effect.flatMap(renderClock, (clock) =>
+    Result.match(renderedArguments(deliver.with, deliveryVariablesOf(record, asking), clock), {
+      onSuccess: () => Effect.void,
+      onFailure: (failure) => Effect.fail(argumentsRefusal(failure)),
+    }),
+  );
 }

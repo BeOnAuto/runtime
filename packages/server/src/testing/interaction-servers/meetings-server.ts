@@ -2,7 +2,7 @@ import { listedTools, withMcpSession, type ListedTool, type McpSession } from '@
 import type { ScriptedReply } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
-import { servingReasoning } from './reasoning-server.ts';
+import { servingReasoning } from '../servers/reasoning-server.ts';
 
 const slackKey = 'slack-api-key-7c2e9b14';
 

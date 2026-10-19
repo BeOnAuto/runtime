@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import type { DefinitionEvent } from '../registry/definition-events.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { overviewTitled } from '../testing/overview-sections.ts';
 
 const { present } = presentationOf(makeDefinitionPresenters([echo]));

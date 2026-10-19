@@ -2,9 +2,10 @@ import { approvalDocument, notificationDocument } from '@on.auto/interaction/tes
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
+import { alpha, noNetwork, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
+import type { ServedParts } from '../servers/served-parts.ts';
+import { runIdIn, settledRun, workflowSource } from '../servers/workflow-server.ts';
 import { until } from '../waiting/until.ts';
-import { alpha, noNetwork, servingReasoning, type ReasoningServer, type ServedParts } from './reasoning-server.ts';
-import { runIdIn, settledRun, workflowSource } from './workflow-server.ts';
 
 export const brief = { campaign: 'Spring', owner: 'ada' };
 
@@ -90,8 +91,9 @@ export async function interactionServerOn(
 export async function servingInteractions(
   delivery: readonly string[] = [],
   environment: Readonly<Record<string, string>> = {},
+  parts: ServedParts = {},
 ): Promise<InteractionServer> {
-  const server = await interactionServerOn(environment);
+  const server = await interactionServerOn(environment, parts);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/interaction`, {
     body: { name: 'approve-brief', source: approvalDocument(delivery) },

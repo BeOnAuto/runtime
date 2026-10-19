@@ -3,10 +3,10 @@ import { Effect } from 'effect';
 
 import { runSettler, type RunStreamAddress, type Settlement } from '../index.ts';
 import { acmeAdmin } from './callers.ts';
+import { probe } from './capabilities/probe.ts';
+import { relay } from './capabilities/relay.ts';
 import { definitionOperationsFor } from './definition-operations.ts';
 import { harness, toPlaybook } from './harness.ts';
-import { probe } from './probe.ts';
-import { relay } from './relay.ts';
 
 export const relayedId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 

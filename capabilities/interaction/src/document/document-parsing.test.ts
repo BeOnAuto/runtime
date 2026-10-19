@@ -1,4 +1,5 @@
 import { issueText } from '@on.auto/definitions/document';
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,7 +8,7 @@ import { requestDocumentOf } from '../testing/route-documents.ts';
 import { parseInteractionDocument } from './document-parsing.ts';
 
 function problemsOf(source: string): readonly string[] {
-  const parsed = parseInteractionDocument(source);
+  const parsed = parseInteractionDocument(source, standingRenderClock);
   return Result.isFailure(parsed) ? parsed.failure.map((issue) => issueText(issue)) : [];
 }
 
@@ -35,7 +36,7 @@ describe('an interaction function definition', () => {
   });
 
   it('is a notification when it gives no answer schema', () => {
-    expect(Result.getOrThrow(parseInteractionDocument(notificationDocument())).output).toEqual({});
+    expect(Result.getOrThrow(parseInteractionDocument(notificationDocument(), standingRenderClock)).output).toEqual({});
   });
 
   it.each(['channel', 'model', 'tools', 'language', 'config'])(

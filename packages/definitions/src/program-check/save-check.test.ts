@@ -3,10 +3,13 @@ import { programPool, type CheckOutcome, type CheckJob, type ProgramPool } from 
 import { Effect, Exit } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { checkingWithin } from '../testing/time/patient-checks.ts';
 import * as checkWorkerModule from './check-worker.ts';
 import { checkDeadlineMs, checkedAtSave, checkWorker, warmedChecks } from './save-check.ts';
 
 const pool = programPool({ workers: 1, heapMegabytes: 256 });
+
+const patient = checkingWithin(pool);
 
 afterAll(() => pool.close());
 
@@ -31,7 +34,7 @@ function checked(on: ProgramPool, deadlineMs?: number) {
 
 describe('the check of a document when it is saved', () => {
   it('runs in the pool’s check worker and answers the compiler’s issues', async () => {
-    expect(await checked(pool)).toEqual(
+    expect(await checked(patient)).toEqual(
       Exit.succeed({
         issues: [
           {
@@ -62,7 +65,7 @@ describe('a check that passes', () => {
       ],
     };
 
-    expect(await Effect.runPromise(checkedAtSave(pool, passing))).toEqual({
+    expect(await Effect.runPromise(checkedAtSave(patient, passing))).toEqual({
       stripped: {
         module: 'export default function (input       )         {\n  return input.ready;\n}',
         expressions: { '$data.ready as boolean': '$data.ready           ' },
@@ -116,7 +119,7 @@ describe('the check worker a server warms when it starts', () => {
       ...pool,
       check: (request, signal) => {
         asked.push(request);
-        return pool.check(request, signal);
+        return patient.check(request, signal);
       },
     };
 

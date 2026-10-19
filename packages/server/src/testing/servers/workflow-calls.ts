@@ -1,4 +1,5 @@
 import type { ScriptedReply } from '@on.auto/reasoning/testing';
+import type { HostClock } from '@on.auto/workflow-host';
 import { Schema } from 'effect';
 
 import type { TestResponse } from './http-client.ts';
@@ -6,6 +7,8 @@ import { alpha, type ReasoningServer } from './reasoning-server.ts';
 import { servingWorkflows, workflowSource } from './workflow-server.ts';
 
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize: {{ input.text }}'].join('\n');
+
+export const impatientTimeoutMs = 500;
 
 function calling(name: string, task: string, indent = '  '): string {
   return `${indent}- ${task}: { call: run_definition, with: { type: workflow, name: ${name} } }\n`;
@@ -32,7 +35,7 @@ ${calling('pending', 'wait', '        ')}      catch:
   - wait:
       call: run_definition
       with: { type: workflow, name: pending }
-      timeout: { after: { milliseconds: 500 } }
+      timeout: { after: { milliseconds: ${impatientTimeoutMs} } }
 `,
   wide: `do:
   - each:
@@ -53,8 +56,9 @@ async function definedInTurn(server: ReasoningServer, entries: readonly (readonl
 export async function servingCalls(
   replies: readonly ScriptedReply[],
   environment: Readonly<Record<string, string>> = {},
+  clock?: HostClock,
 ): Promise<ReasoningServer> {
-  const server = await servingWorkflows(replies, environment);
+  const server = await servingWorkflows(replies, environment, undefined, clock);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
   await definedInTurn(server, Object.entries(workflows));

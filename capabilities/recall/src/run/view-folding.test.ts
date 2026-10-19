@@ -6,7 +6,7 @@ import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { campaignReviews, foldOf, recallDocument } from '../testing/campaign-reviews.ts';
-import { poolOf } from '../testing/recall-runs.ts';
+import { patientPage, poolOf } from '../testing/recall-runs.ts';
 import { runnableDetailsOf } from '../testing/runnable-details.ts';
 import { recallFolding } from './recall-bounds.ts';
 
@@ -88,8 +88,7 @@ function folded(pool: ProgramPool, details: ViewDetails, events: readonly Schema
         events: events.map((_, index) => index),
       },
     ],
-    waitMs: 5000,
-    deadlineMs: 20_000,
+    ...patientPage,
   };
   return pool.fold(request);
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { echo } from '../testing/echo.ts';
 
 const { listRuns } = definitionOperationsFor([echo]);
 

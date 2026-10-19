@@ -2,8 +2,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { defineCapability, makeDefinitionOperations } from '../index.ts';
-import { echo } from '../testing/echo.ts';
-import { probe } from '../testing/probe.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 
 const operations = makeDefinitionOperations([echo, probe().capability]).map(({ registration }) => registration);
 

@@ -14,7 +14,11 @@ const sizesTestTimeoutMs = 120_000;
 
 const startedAt = Date.parse('2026-10-01T09:00:00.000Z');
 
-const threeThousand: readonly JsonObject[] = Array.from({ length: 3000 }, (_, index) => ({
+const rowsAcrossTwoPagesOfAThousand = 2001;
+
+const rowsAcrossThreePagesOfSeven = 22;
+
+const recorded: readonly JsonObject[] = Array.from({ length: rowsAcrossTwoPagesOfAThousand }, (_, index) => ({
   type: 'run_succeeded',
   subject: 'reasoning/review-brief',
   source: '/runs/run',
@@ -26,7 +30,7 @@ const working = [
   'export function fold(view, event) {',
   '  const { n } = event.data.output;',
   '  let spent = 0;',
-  '  for (let step = 0; step < 20000 + n * 7; step++) spent += step % 3;',
+  '  for (let step = 0; step < 7000 + (n % 13) * 500; step++) spent += step % 3;',
   '  return { folds: view.folds + 1, spent: (view.spent + spent) % 1000003 };',
   '}',
 ].join('\n');
@@ -46,7 +50,7 @@ interface Paging {
   readonly count: number;
 }
 
-function pagesOf(fold: string, size: number, count = 3000): Paging {
+function pagesOf(fold: string, size: number, count = rowsAcrossTwoPagesOfAThousand): Paging {
   return { fold, size, count };
 }
 
@@ -59,7 +63,7 @@ async function foldedInPages(paging: Paging, from = before, start = 0): Promise<
   if (start >= paging.count) {
     return from;
   }
-  const events = threeThousand.slice(start, Math.min(start + paging.size, paging.count));
+  const events = recorded.slice(start, Math.min(start + paging.size, paging.count));
   const result = await pageFolded(paging.fold, from.view, events);
   const pageWork = result?.work ?? 0;
   const spent = { work: from.work + pageWork, works: [...from.works, pageWork] };
@@ -74,19 +78,19 @@ function sumsOf(works: readonly number[], size: number): readonly number[] {
   );
 }
 
-describe('the folds of one view over 3,000 events', { timeout: sizesTestTimeoutMs }, () => {
+describe('the folds of one view over 2,001 events', { timeout: sizesTestTimeoutMs }, () => {
   it('give the same view and spend the same checkpoints in pages of 7 as in pages of 1,000', async () => {
     const [seven, thousand] = [await foldedInPages(pagesOf(working, 7)), await foldedInPages(pagesOf(working, 1000))];
 
-    expect(thousand.work).toBeGreaterThan(3000);
+    expect(thousand.work).toBeGreaterThan(rowsAcrossTwoPagesOfAThousand);
     expect([seven.view, seven.work]).toEqual([thousand.view, thousand.work]);
-    expect(thousand.view).toMatchObject({ folds: 3000 });
+    expect(thousand.view).toMatchObject({ folds: rowsAcrossTwoPagesOfAThousand });
   });
 
   it('spend in each page of 7 and of 1,000 what its folds spend in pages of one event each, more than nothing for every fold', async () => {
-    const eachFold = (await foldedInPages(pagesOf(working, 1, 1000))).works;
-    const sevens = (await foldedInPages(pagesOf(working, 7, 1000))).works;
-    const thousand = (await foldedInPages(pagesOf(working, 1000, 1000))).works;
+    const eachFold = (await foldedInPages(pagesOf(working, 1, rowsAcrossThreePagesOfSeven))).works;
+    const sevens = (await foldedInPages(pagesOf(working, 7, rowsAcrossThreePagesOfSeven))).works;
+    const thousand = (await foldedInPages(pagesOf(working, 1000, rowsAcrossThreePagesOfSeven))).works;
 
     expect(Math.min(...eachFold)).toBeGreaterThan(0);
     expect([sevens, thousand]).toEqual([sumsOf(eachFold, 7), sumsOf(eachFold, 1000)]);

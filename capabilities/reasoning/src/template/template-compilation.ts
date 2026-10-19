@@ -27,6 +27,6 @@ export function compileTemplate(
     hasInstructions,
     hasMessage: outline.hasMessage,
     variables: parsed.variables,
-    render: (scope) => renderTemplate(parsed, hasInstructions, scope),
+    render: (scope, clock) => renderTemplate(parsed, hasInstructions, scope, clock),
   });
 }

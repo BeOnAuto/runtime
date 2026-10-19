@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { defineCapability, mostCallDepth } from '../index.ts';
 import { answeringLaterMs, answeringNowMs, asking } from '../testing/asking.ts';
 import { acmeAdmin } from '../testing/callers.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
-import { probe } from '../testing/probe.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

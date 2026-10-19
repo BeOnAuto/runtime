@@ -10,9 +10,9 @@ import {
   type CapabilityDeclaration,
 } from '../index.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
+import { answerOfCall, startOfCall } from '../testing/capabilities/tool-user.ts';
 import { noLongestRuns } from '../testing/longest-runs.ts';
 import { recordingJournal } from '../testing/recording-journal.ts';
-import { answerOfCall, startOfCall } from '../testing/tool-user.ts';
 
 const parseWords = (source: string) =>
   source.trim() === ''

@@ -1,5 +1,6 @@
 import type { DocumentIssue } from '@on.auto/definitions/document';
-import type { Schema } from 'effect';
+import { renderClock } from '@on.auto/definitions/template';
+import { Effect, type Schema } from 'effect';
 
 import { predictionBounds } from '../capability/prediction-bounds.ts';
 import {
@@ -77,6 +78,6 @@ function largestBriefVariables(parts: BriefParts): BriefVariables {
 
 export function briefIssuesOverTheLargestDataset(
   document: PredictionFunctionDefinitionDocument,
-): readonly DocumentIssue[] {
-  return briefRenderIssues(document.brief, largestBriefVariables(document));
+): Effect.Effect<readonly DocumentIssue[]> {
+  return Effect.map(renderClock, (clock) => briefRenderIssues(document.brief, largestBriefVariables(document), clock));
 }

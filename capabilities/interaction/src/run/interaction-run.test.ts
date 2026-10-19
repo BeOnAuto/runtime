@@ -1,5 +1,5 @@
 import type { RunContext } from '@on.auto/definitions';
-import { noLongestRuns, recordingJournal } from '@on.auto/definitions/testing';
+import { noLongestRuns, onTheStandingClock, recordingJournal } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -116,11 +116,11 @@ describe('a message the request cannot carry', () => {
   it('rejects an input the input schema refuses, or nested deeper than a run takes', async () => {
     const deep = Array.from({ length: 600 }).reduce<Schema.Json>((inner) => [inner], 'x');
     const playbook = interactionHarness();
-    const prepared = Effect.runSync(playbook.capability.prepare(approvalDocument()));
+    const prepared = Effect.runSync(onTheStandingClock(playbook.capability.prepare(approvalDocument())));
 
     expect([
       await askedWith(approvalDocument(), { campaign: 'Spring' }),
-      await Effect.runPromise(Effect.flip(prepared.run({ campaign: deep, owner: 'ada' }, aRun))),
+      await Effect.runPromise(onTheStandingClock(Effect.flip(prepared.run({ campaign: deep, owner: 'ada' }, aRun)))),
     ]).toMatchObject([
       { reason: 'invalid_input', detail: 'The input: expected the field owner.' },
       { detail: 'The input nests more than the 512 levels an interaction function takes' },

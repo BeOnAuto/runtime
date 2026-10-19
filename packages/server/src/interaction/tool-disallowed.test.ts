@@ -5,9 +5,9 @@ import { chatDelivery } from '@on.auto/interaction/testing';
 import { projectedTableOf } from '@on.auto/operations';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { chatEnvironment, chatServer, deliveryHistoryOf } from '../testing/interaction-servers/chat-deliveries.ts';
+import { interactionServerOn, servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { chatEnvironment, chatServer, deliveryHistoryOf } from '../testing/servers/chat-deliveries.ts';
-import { interactionServerOn, servingInteractions } from '../testing/servers/interaction-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const aNumber: unknown = expect.any(Number);

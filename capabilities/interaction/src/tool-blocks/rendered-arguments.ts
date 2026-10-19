@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import { parsedTemplate } from '@on.auto/definitions/template';
+import { parsedTemplate, type RenderClock } from '@on.auto/definitions/template';
 import { toolBounds } from '@on.auto/tool-servers';
 import { Result, type Schema } from 'effect';
 
@@ -25,14 +25,18 @@ export interface RenderedArguments {
 
 const mostBytes = toolBounds.argumentBytes + 1;
 
-function renderedString(text: string, variables: TemplateVariables): Result.Result<Schema.Json, TextFailure> {
+function renderedString(
+  text: string,
+  variables: TemplateVariables,
+  clock: RenderClock,
+): Result.Result<Schema.Json, TextFailure> {
   const parsed = parsedTemplate(interactionEngine, text, 1);
   if (Result.isFailure(parsed)) {
     return Result.fail({ reason: 'failed', detail: parsed.failure.map(({ detail }) => detail).join('; '), line: 1 });
   }
   return isLoneExpression(text)
-    ? renderedValue(parsed.success, variables, mostBytes)
-    : renderedText(parsed.success, variables, mostBytes);
+    ? renderedValue(parsed.success, variables, mostBytes, clock)
+    : renderedText(parsed.success, variables, mostBytes, clock);
 }
 
 function pathOf(path: string, key: string): string {
@@ -43,10 +47,11 @@ function renderedEntries(
   entries: readonly JsonChild[],
   variables: TemplateVariables,
   path: string,
+  clock: RenderClock,
 ): Result.Result<readonly JsonChild[], ArgumentsFailure> {
   const rendered: JsonChild[] = [];
   for (const [key, value] of entries) {
-    const each = renderedJson(value, variables, pathOf(path, key));
+    const each = renderedJson(value, variables, pathOf(path, key), clock);
     if (Result.isFailure(each)) {
       return Result.fail(each.failure);
     }
@@ -59,9 +64,10 @@ function renderedJson(
   value: Schema.Json,
   variables: TemplateVariables,
   path: string,
+  clock: RenderClock,
 ): Result.Result<Schema.Json, ArgumentsFailure> {
   if (typeof value === 'string') {
-    return Result.mapError(renderedString(value, variables), (failure) => ({
+    return Result.mapError(renderedString(value, variables, clock), (failure) => ({
       reason: 'argument',
       argument: path,
       failure,
@@ -70,7 +76,7 @@ function renderedJson(
   if (!isJsonParent(value)) {
     return Result.succeed(value);
   }
-  return Result.map(renderedEntries(childrenOf(value), variables, path), (rendered) =>
+  return Result.map(renderedEntries(childrenOf(value), variables, path, clock), (rendered) =>
     isJsonArray(value) ? rendered.map(([, item]) => item) : Object.fromEntries(rendered),
   );
 }
@@ -78,8 +84,9 @@ function renderedJson(
 export function renderedArguments(
   templates: Templates,
   variables: TemplateVariables,
+  clock: RenderClock,
 ): Result.Result<RenderedArguments, ArgumentsFailure> {
-  return Result.flatMap(renderedEntries(childrenOf(templates), variables, ''), (entries) => {
+  return Result.flatMap(renderedEntries(childrenOf(templates), variables, '', clock), (entries) => {
     const input = Object.fromEntries(entries);
     const bytes = Buffer.byteLength(JSON.stringify(input), 'utf8');
     return bytes > toolBounds.argumentBytes

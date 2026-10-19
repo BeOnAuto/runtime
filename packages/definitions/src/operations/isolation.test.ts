@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin, acmeAlphaKeeper, acmeReader, globexAdmin } from '../testing/callers.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { echo } from '../testing/echo.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
 const { createDefinition, runDefinition, getRun, getDefinition, listDefinitions, retireDefinition, updateDefinition } =

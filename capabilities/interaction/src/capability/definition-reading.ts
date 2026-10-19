@@ -1,5 +1,6 @@
 import type { DefinitionSummary, OverviewParts } from '@on.auto/definitions';
 import { issueText } from '@on.auto/definitions/document';
+import { renderClock } from '@on.auto/definitions/template';
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
@@ -9,16 +10,18 @@ import { callSections } from '../overview/call-overview.ts';
 import { requestSections } from '../overview/request-overview.ts';
 
 export function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
-  return Result.match(parseInteractionDocument(source), {
-    onSuccess: (document) => Effect.succeed(document),
-    onFailure: (issues) =>
-      Effect.fail(
-        new InvalidInput({
-          detail: `The interaction function definition has ${issues.length === 1 ? 'a problem' : `${issues.length} problems`}`,
-          issues: issues.map((issue) => ({ pointer: '', detail: issueText(issue) })),
-        }),
-      ),
-  });
+  return Effect.flatMap(renderClock, (clock) =>
+    Result.match(parseInteractionDocument(source, clock), {
+      onSuccess: (document) => Effect.succeed(document),
+      onFailure: (issues) =>
+        Effect.fail(
+          new InvalidInput({
+            detail: `The interaction function definition has ${issues.length === 1 ? 'a problem' : `${issues.length} problems`}`,
+            issues: issues.map((issue) => ({ pointer: '', detail: issueText(issue) })),
+          }),
+        ),
+    }),
+  );
 }
 
 function detailsOf(document: InteractionFunctionDefinitionDocument): Schema.JsonObject {

@@ -4,14 +4,14 @@ import { openRequests } from '@on.auto/interaction';
 import { projectedTableOf } from '@on.auto/operations';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import {
   asking,
   brief,
   guarded,
   interactionServerOn,
   servingInteractions,
-} from '../testing/servers/interaction-server.ts';
+} from '../testing/interaction-servers/interaction-server.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 
 function ledgerFile(): string {

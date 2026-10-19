@@ -1,7 +1,8 @@
+import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { servingInteractions } from '../testing/servers/interaction-server.ts';
+import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
@@ -21,11 +22,13 @@ do:
 `,
 );
 
+const stepTimeoutMs = 500;
+
 const hurried = `do:
   - ask:
       call: run_definition
       with: { type: interaction, name: approve-brief, input: { campaign: Spring, owner: ada } }
-      timeout: { after: { milliseconds: 500 } }
+      timeout: { after: { milliseconds: ${stepTimeoutMs} } }
 `;
 
 describe('another workflow, triggered by the answer to a request', () => {
@@ -49,10 +52,12 @@ describe('another workflow, triggered by the answer to a request', () => {
 
 describe('a request a workflow step waits for past its deadline', () => {
   it('is cancelled with the kind deadline, and leaves the inbox', async () => {
-    const server = await servingInteractions();
+    const clock = movedClock(Date.now());
+    const server = await servingInteractions([], {}, { clock });
     const workflowId = await server.workflow('hurried', hurried);
 
     const [request] = await server.openRequests(1);
+    clock.moveTo(clock.now() + stepTimeoutMs);
     const workflow = await server.settled(workflowId);
     const asked = await server.settled(String(request));
 

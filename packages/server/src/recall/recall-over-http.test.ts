@@ -1,8 +1,6 @@
-import { scriptedPool } from '@on.auto/workflow-engine/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool } from '../composition/served-computation.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import {
   playbookWithReviews,
@@ -13,6 +11,7 @@ import {
   standingUntil,
   verdicts,
 } from '../testing/servers/recall-server.ts';
+import { scriptedWorkerPool } from '../testing/servers/worker-pools.ts';
 
 const decodeHistory = Schema.decodeUnknownSync(
   Schema.Struct({
@@ -100,13 +99,12 @@ describe('the input of a run of a recall function over HTTP', () => {
 
 describe('a run of a recall function the server cannot finish, over HTTP', () => {
   it('is unavailable when no worker is free to answer, and failed when the worker answering breaks', async () => {
-    const server = await servingRecall(verdicts({ campaign: 'spring', verdict: 'approve' }), {}, (settings) =>
-      scriptedPool(
-        [
-          { ran: 'stopped', because: 'busy', milliseconds: 10_000 },
-          { ran: 'crashed', detail: 'The worker failed: broken', milliseconds: 1 },
-        ],
-        workerPool(settings),
+    const server = await servingRecall(
+      verdicts({ campaign: 'spring', verdict: 'approve' }),
+      {},
+      scriptedWorkerPool(
+        { ran: 'stopped', because: 'busy', milliseconds: 10_000 },
+        { ran: 'crashed', detail: 'The worker failed: broken', milliseconds: 1 },
       ),
     );
     closing.push(server.stop);

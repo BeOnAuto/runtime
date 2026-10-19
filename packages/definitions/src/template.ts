@@ -1,5 +1,6 @@
 export { engineFailureOf, linesOf, type EngineFailure, type LineOfOffset } from './template/engine-failure.ts';
 export { outputText } from './template/output-text.ts';
+export { renderClock, renderClockOf, type RenderClock } from './template/render-clock.ts';
 export {
   templateEngine,
   templateLimits,

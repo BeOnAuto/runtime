@@ -1,8 +1,9 @@
 import type { CheckRequest, ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool, type ProgramPoolOf } from '../composition/served-computation.ts';
+import type { ProgramPoolOf } from '../composition/served-computation.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
 import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 
 const hundred = workflowSource(
@@ -34,7 +35,7 @@ function recordingChecks(): { readonly checked: readonly CheckRequest[]; readonl
       return pool.check(request, signal);
     },
   });
-  return { checked, poolOf: (settings) => recording(workerPool(settings)) };
+  return { checked, poolOf: (settings) => recording(patientWorkerPool(settings)) };
 }
 
 function saving(name: string, source: string) {

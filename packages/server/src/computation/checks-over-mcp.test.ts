@@ -3,9 +3,10 @@ import { campaignPace } from '@on.auto/computation/testing';
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool, type ProgramPoolOf } from '../composition/served-computation.ts';
+import type { ProgramPoolOf } from '../composition/served-computation.ts';
 import { checkRefusals, documentOf } from '../testing/servers/check-refusals.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
 
 const misspelt = [
   '---',
@@ -36,7 +37,7 @@ function stallingChecks(): {
       state.because = because;
     },
     poolOf: (settings) => {
-      const pool = workerPool(settings);
+      const pool = patientWorkerPool(settings);
       return {
         ...pool,
         check: (request, signal) =>
@@ -62,7 +63,7 @@ async function onAlpha<T>(programPoolOf: ProgramPoolOf, use: (session: McpSessio
 
 describe('a computation function checked when it is saved, over MCP', () => {
   it('answers a refused program with isError, its line and the compiler’s words, in plain words', async () => {
-    const created = await onAlpha(workerPool, (session) =>
+    const created = await onAlpha(patientWorkerPool, (session) =>
       session.callTool('create_definition', { type: 'computation', name: 'misspelt', source: misspelt }),
     );
 
@@ -85,7 +86,7 @@ describe('a computation function checked when it is saved, over MCP', () => {
 
 describe('each refusal of the check at save, over MCP', () => {
   it('answers each refusal of the check with isError, its line and its words, as over HTTP', async () => {
-    const created = await onAlpha(workerPool, (session) =>
+    const created = await onAlpha(patientWorkerPool, (session) =>
       checkRefusals.reduce<Promise<readonly ToolResult[]>>(
         async (before, [, program], index) => [
           ...(await before),

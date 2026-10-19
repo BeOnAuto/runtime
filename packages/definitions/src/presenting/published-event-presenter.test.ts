@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { publishedEventStreamOf, type EventPublished } from '../events/published-events.ts';
 import { makeDefinitionPresenters } from '../index.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 
 const { present } = presentationOf(makeDefinitionPresenters([echo]));
 

@@ -49,7 +49,9 @@ A fold writes its view out after it, through the refusing replacer, over the who
 
 ## Testing
 
-`@on.auto/recall/testing` exports `campaignReviews`, the example document, `recallDocument(module, frontMatter)`, a document of a module over every successful run, and `reviewBrief`, a reasoning function whose runs the example folds; `foldOf(body, answerBody)` writes such a module for the package's own tests. The tests of this package run real workers through a fake views port (`src/testing/kept-views.ts`), and the engine's `scriptedPool` for the outcomes a real worker gives only rarely.
+`@on.auto/recall/testing` exports `campaignReviews`, the example document, `recallDocument(module, frontMatter)`, a document of a module over every successful run, and `reviewBrief`, a reasoning function whose runs the example folds; `foldOf(body, answerBody)` writes such a module for the package's own tests. The tests of this package run real workers through a fake views port (`src/testing/kept-views.ts`), their checks at save allowed 30 s by `checkingWithin` of `@on.auto/definitions/testing`, so a check that a busy machine slows is not refused by the 2 s a save allows, and the engine's `scriptedPool` for the outcomes a real worker gives only rarely.
+
+The tests that fold a page of the views of the example in a real worker, `src/document/reference-example.test.ts` and `src/run/view-folding.test.ts`, give it `patientPage` of `src/testing/recall-runs.ts`, a page budget, a wait for a worker and a deadline of 30 s each, `checksAwaitedAtMostMs` of `@on.auto/definitions/testing`, so a page that a busy machine slows is not stopped by the 2 s of `recallBounds`, a wait of 5 s or a deadline of 20 s; the stops at those bounds are held by the fold pool's own tests in `@on.auto/workflow-engine`.
 
 ## Source
 

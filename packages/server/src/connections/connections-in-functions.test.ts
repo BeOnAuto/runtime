@@ -3,9 +3,9 @@ import { chatDelivery } from '@on.auto/interaction/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { chatKey, chatServer, deliveryHistoryOf } from '../testing/servers/chat-deliveries.ts';
+import { chatKey, chatServer, deliveryHistoryOf } from '../testing/interaction-servers/chat-deliveries.ts';
+import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { addedConnection, aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
-import { servingInteractions } from '../testing/servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { until } from '../testing/waiting/until.ts';
 

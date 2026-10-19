@@ -1,3 +1,4 @@
+import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { threadReplies } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -88,7 +89,7 @@ describe('what a run that asks a system answers with', () => {
 
 describe('an interaction function that asks a system, as the playbook runs it', () => {
   it('calls tools, finishes within its call, and runs at most 70 seconds', () => {
-    const prepared = Effect.runSync(asSystem.prepare(callDocument()));
+    const prepared = Effect.runSync(onTheStandingClock(asSystem.prepare(callDocument())));
 
     expect([prepared.callsTools, prepared.finishesLaterFor({}), prepared.longestRunMs]).toEqual([true, false, 70_000]);
   });

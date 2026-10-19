@@ -3,11 +3,11 @@ import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { probe } from '../testing/capabilities/probe.ts';
+import { relay } from '../testing/capabilities/relay.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { echo } from '../testing/echo.ts';
 import { asQueryString, harness, toPlaybook } from '../testing/harness.ts';
-import { probe } from '../testing/probe.ts';
-import { relay } from '../testing/relay.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

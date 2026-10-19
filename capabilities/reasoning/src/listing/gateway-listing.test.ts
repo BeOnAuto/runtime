@@ -115,17 +115,32 @@ const hostileIds = [
 
 const hostileNames = ['Line one\nLine two', 'Nul\u0000name', 'x'.repeat(3000), 'Paragraph\u2029apart'];
 
-function trickling(text: string): Response {
+interface Trickling {
+  readonly answer: () => Response;
+  readonly reads: () => number;
+}
+
+function trickling(text: string): Trickling {
   const bytes = new TextEncoder().encode(text);
-  const body = new ReadableStream<Uint8Array>({
-    start: (controller) => {
-      for (const [index] of bytes.entries()) {
-        controller.enqueue(bytes.subarray(index, index + 1));
-      }
-      controller.close();
+  const counted = { reads: 0 };
+  const body = new ReadableStream<Uint8Array>(
+    {
+      pull: (controller) => {
+        const at = counted.reads;
+        counted.reads += 1;
+        if (at < bytes.length) {
+          controller.enqueue(bytes.subarray(at, at + 1));
+        } else {
+          controller.close();
+        }
+      },
     },
-  });
-  return new Response(body, { headers: { 'content-type': 'application/json' } });
+    { highWaterMark: 0 },
+  );
+  return {
+    answer: () => new Response(body, { headers: { 'content-type': 'application/json' } }),
+    reads: () => counted.reads,
+  };
 }
 
 describe('the entries of a gateway that cannot be shown', () => {
@@ -154,14 +169,13 @@ describe('the entries of a gateway that cannot be shown', () => {
 });
 
 describe('an answer that arrives in many small pieces', () => {
-  it('is read in one pass, so 80,000 pieces of one byte take well under a second', async () => {
+  it('is read in one pass, each of 80,000 pieces of one byte once, and the end once', async () => {
     const text = JSON.stringify({ data: [{ id: 'llama-3.3-70b' }] }).padEnd(80_000, ' ');
-    const catalog = await catalogFor(withGateway(gateway), () => trickling(text));
+    const pieces = trickling(text);
+    const catalog = await catalogFor(withGateway(gateway), pieces.answer);
 
-    const started = performance.now();
     const list = await catalog.list();
 
-    expect(performance.now() - started).toBeLessThan(1000);
-    expect(list.data.map(({ id }) => id)).toEqual(['gateway/llama-3.3-70b']);
+    expect([pieces.reads(), list.data.map(({ id }) => id)]).toEqual([80_001, ['gateway/llama-3.3-70b']]);
   });
 });

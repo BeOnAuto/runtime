@@ -2,8 +2,8 @@ import { withMcpSession, type ToolResult } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { askingASystem, calling, systemRunId, type SystemServer } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { askingASystem, calling, systemRunId, type SystemServer } from '../testing/servers/system-calls.ts';
 
 const kibibytes = 5120;
 

@@ -26,6 +26,7 @@ export interface DuePerformer {
 export interface DueParts {
   readonly trouble: Trouble;
   readonly now: () => number;
+  readonly sleep: (milliseconds: number) => Effect.Effect<void>;
   readonly wake: () => void;
   readonly context?: HostContext;
 }
@@ -59,8 +60,8 @@ function itemPerformer(work: DueWork, waits: RowWaits, { trouble, now }: DuePart
     });
 }
 
-function awaitedAtMost(handedOut: Effect.Effect<void>): Effect.Effect<void> {
-  return Effect.interruptible(Effect.raceFirst(handedOut, Effect.sleep(dueAwaitedMs)));
+function awaitedAtMost(handedOut: Effect.Effect<void>, { sleep }: DueParts): Effect.Effect<void> {
+  return Effect.interruptible(Effect.raceFirst(handedOut, sleep(dueAwaitedMs)));
 }
 
 function laterThan(now: number, next: number | null): number {
@@ -148,7 +149,7 @@ function workPerformer(work: DueWork, parts: DueParts): DuePerformer {
       Effect.zipWith(readOf(now, outbound, true), readOf(now, local, false), (outward, inward) =>
         handedOut([...outward, ...inward], now),
       ).pipe(
-        Effect.flatMap((keys) => awaitedAtMost(local.awaited(keys))),
+        Effect.flatMap((keys) => awaitedAtMost(local.awaited(keys), parts)),
         Effect.catchCause((cause) =>
           parts.trouble(`The due rows of ${work.name} could not be read; the loop tries again`, cause),
         ),

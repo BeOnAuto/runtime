@@ -1,4 +1,5 @@
 import type { PlaybookOperation } from '@on.auto/definitions';
+import { onTheStandingClock } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
@@ -23,15 +24,17 @@ export async function firstOpenOf(
 
 export function dueInBothLanes(due: RequestsDue, now: number): Promise<readonly DueRequestItem[]> {
   return Effect.runPromise(
-    Effect.zipWith(due.due(now, 256, true), due.due(now, 256, false), (outward, inward) => [
-      ...new Map([...outward, ...inward].map((item) => [item.key, item])).values(),
-    ]),
+    onTheStandingClock(
+      Effect.zipWith(due.due(now, 256, true), due.due(now, 256, false), (outward, inward) => [
+        ...new Map([...outward, ...inward].map((item) => [item.key, item])).values(),
+      ]),
+    ),
   );
 }
 
 export function performedAll(items: readonly DueRequestItem[], now: number): Promise<void> {
   return Effect.runPromise(
-    Effect.forEach(items, (item) => item.perform(now), { concurrency: 'unbounded', discard: true }),
+    onTheStandingClock(Effect.forEach(items, (item) => item.perform(now), { concurrency: 'unbounded', discard: true })),
   );
 }
 

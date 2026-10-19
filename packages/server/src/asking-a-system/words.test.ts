@@ -2,14 +2,14 @@ import { plainTextIn, withMcpSession, type McpSession } from '@on.auto/api/testi
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { chatKey } from '../testing/servers/chat-deliveries.ts';
+import { chatKey } from '../testing/interaction-servers/chat-deliveries.ts';
 import {
   askingASystem,
   calling,
   systemRunId,
   threadInput,
   type SystemServer,
-} from '../testing/servers/system-calls.ts';
+} from '../testing/interaction-servers/system-calls.ts';
 
 const longestName = `thread-${'x'.repeat(41)}`;
 

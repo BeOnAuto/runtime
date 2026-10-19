@@ -1,4 +1,5 @@
 import type {
+  RenderClock,
   RenderFailure as EngineRenderFailure,
   TemplateText,
   VariableReference,
@@ -28,5 +29,5 @@ export interface CompiledTemplate extends TemplateText {
   readonly hasInstructions: boolean;
   readonly hasMessage: boolean;
   readonly variables: readonly VariableReference[];
-  readonly render: (scope: TemplateScope) => Result.Result<RenderedPrompt, RenderFailure>;
+  readonly render: (scope: TemplateScope, clock: RenderClock) => Result.Result<RenderedPrompt, RenderFailure>;
 }

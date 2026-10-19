@@ -36,7 +36,7 @@ export function predictionCheck(pool: ProgramPool): PredictionCheck {
   return (document, _source, saved) =>
     Effect.gen(function* () {
       const found = [
-        ...briefIssuesOverTheLargestDataset(document),
+        ...(yield* briefIssuesOverTheLargestDataset(document)),
         ...(yield* calledFunctionIssues(document, saved)),
         ...(yield* uploadedDatasetIssues(document, saved)),
       ];

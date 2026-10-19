@@ -2,6 +2,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Schema } from 'effect';
 
+import { mostFilterMs } from '../dsl/evaluation.ts';
+import type { FilterSandbox } from '../filters/filter-verdicts.ts';
 import { answerGraceMs } from '../program-pool/evaluation-thread.ts';
 import { nextThreadStarted } from './threads-alive.ts';
 
@@ -30,6 +32,16 @@ const asked = 'the requests evaluation workers are asked';
 const decodeAsked = Schema.decodeUnknownSync(Schema.Struct({ kind: Schema.String }));
 
 const evaluationLoop = new URL('../program-pool/evaluation-loop.ts', import.meta.url).href;
+
+export function filteringWithin(filters: FilterSandbox, milliseconds: number): FilterSandbox {
+  return { ...filters, clock: () => filters.clock() + milliseconds - mostFilterMs };
+}
+
+export function filteringWithinOnceReplaced(filters: FilterSandbox, milliseconds: number): FilterSandbox {
+  const ahead = { ms: 0 };
+  void nextThreadStarted().then(() => Object.assign(ahead, { ms: milliseconds - mostFilterMs }));
+  return { ...filters, clock: () => filters.clock() + ahead.ms };
+}
 
 export const announcingEvaluations = new URL(
   `data:text/javascript,${encodeURIComponent(

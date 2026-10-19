@@ -1,14 +1,13 @@
 import { makeModelAccess } from '@on.auto/reasoning';
 import { scriptedLanguageModel, type ScriptedReply } from '@on.auto/reasoning/testing';
-import type { Timing } from '@on.auto/tool-servers';
-import type { HostClock } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { compositionRootWith } from '../../composition/composition-root.ts';
-import { workerPool, type ProgramPoolOf } from '../../composition/served-computation.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
+import type { ServedParts } from './served-parts.ts';
+import { patientWorkerPool } from './worker-pools.ts';
 
 export interface ReasoningServer {
   readonly origin: string;
@@ -16,12 +15,6 @@ export interface ReasoningServer {
   readonly modelCalls: () => number;
   readonly modelRunIds: () => readonly (string | undefined)[];
   readonly stop: () => Promise<void>;
-}
-
-export interface ServedParts {
-  readonly programPoolOf?: ProgramPoolOf;
-  readonly clock?: HostClock;
-  readonly toolTiming?: Timing;
 }
 
 export const alpha = '/v1/orgs/acme/playbooks/alpha';
@@ -34,7 +27,7 @@ export async function servingReasoning(
   replies: readonly ScriptedReply[],
   environment: Readonly<Record<string, string>> = {},
   fetch: Fetch = noNetwork,
-  { programPoolOf = workerPool, clock, toolTiming }: ServedParts = {},
+  { programPoolOf = patientWorkerPool, clock, toolTiming }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const ledger = temporaryLedger();
   const scripted = scriptedLanguageModel(...replies);

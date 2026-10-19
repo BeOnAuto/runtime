@@ -2,6 +2,7 @@ import { shapeNamed } from '@on.auto/definitions/testing';
 import { Effect, Exit, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { computationBounds } from '../run/run-bounds.ts';
 import { campaignPace, campaignRows } from '../testing/campaign-pace.ts';
 import { computationWith, functionOf, poolOf, programDocument, type Run } from '../testing/computation-runs.ts';
 
@@ -120,7 +121,9 @@ describe('a computation function', () => {
 
 describe('the summary of a computation function', () => {
   it('is its description and its schemas, and it reaches nothing outside', () => {
-    const { capability, prepared } = computationWith(poolOf({ workers: 1 }));
+    const { capability, prepared } = computationWith(poolOf({ workers: 1 }), {
+      deadlineMs: computationBounds.deadlineMs,
+    });
 
     expect(prepared(campaignPace).summary).toMatchObject({
       description: 'Spend, pace and projection per campaign, in cents, for a reporting period',

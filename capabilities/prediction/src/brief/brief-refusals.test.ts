@@ -1,5 +1,5 @@
-import { nothingSaved } from '@on.auto/definitions/testing';
-import { Effect } from 'effect';
+import { nothingSaved, standingClock, steppingClock } from '@on.auto/definitions/testing';
+import { Clock, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { problemsOf } from '../testing/document-problems.ts';
@@ -76,14 +76,25 @@ const refusedAtSave: ReadonlyArray<readonly [string, string, string]> = [
     'Line 28: The brief reads dataset.features[5], which the largest dataset the bounds admit does not have',
   ],
   [
-    'a loop longer than a template may render',
-    '{% for row in (1..dataset.rows) %}{% for again in (1..dataset.rows) %}{% endfor %}{% endfor %}',
-    'Line 28: The brief takes more time to render than a template may, over the largest dataset the bounds admit',
+    'a range larger than a template may hold',
+    '{% for i in (1..6000000) %}{% endfor %}',
+    'Line 28: The brief takes more memory to render than a template may, over the largest dataset the bounds admit',
   ],
 ];
 
-function savedProblemsOf(source: string): Promise<unknown> {
-  return Effect.runPromise(Effect.flip(predictionRuns().prepared(source).check(nothingSaved)));
+const fourHundredSteps = '{% for i in (1..400) %}{% endfor %}';
+
+const takingMoreTime =
+  'Line 28: The brief takes more time to render than a template may, over the largest dataset the bounds admit';
+
+function checkedOn(clock: Clock.Clock, source: string) {
+  return Effect.flatMap(predictionRuns().capability.prepare(source), (prepared) => prepared.check(nothingSaved)).pipe(
+    Effect.provideService(Clock.Clock, clock),
+  );
+}
+
+function savedProblemsOf(source: string, clock = standingClock): Promise<unknown> {
+  return Effect.runPromise(Effect.flip(checkedOn(clock, source)));
 }
 
 describe('the brief of a prediction function', () => {
@@ -102,7 +113,7 @@ describe('the brief of a prediction function', () => {
   it('renders at save over the largest dataset of a function that names no season', async () => {
     const seasonless = weeklyOrdersWith(['  season: 52', ''], [firstLine, 'Its season: {{ dataset.periods.season }}']);
 
-    expect(await Effect.runPromise(predictionRuns().prepared(seasonless).check(nothingSaved))).toEqual({});
+    expect(await Effect.runPromise(checkedOn(steppingClock(1), seasonless))).toEqual({});
   });
 
   it('reads the parts of dataset and function, their sizes, and the items of their lists', () => {
@@ -126,5 +137,17 @@ describe('the brief of a prediction function', () => {
       'Line 20: Flow sequence in block collection must be sufficiently indented and end with a ]',
       'Line 28: input is not a variable of the brief, which reads dataset and function alone',
     ]);
+  });
+});
+
+describe('the time a brief takes to render at save', () => {
+  it('is counted on the clock of the save, which refuses a loop longer than a template may render, and lets the same loop render on a clock that stands still', async () => {
+    const loop = withBrief(fourHundredSteps);
+
+    expect(problemsOf(loop)).toEqual([]);
+    expect(await savedProblemsOf(loop, steppingClock(1))).toMatchObject({
+      issues: [{ pointer: '', detail: takingMoreTime }],
+    });
+    expect(await Effect.runPromise(checkedOn(standingClock, loop))).toEqual({});
   });
 });

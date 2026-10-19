@@ -1,8 +1,8 @@
 import type { FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 
+import { alpha } from '../servers/reasoning-server.ts';
 import type { InteractionServer } from './interaction-server.ts';
-import { alpha } from './reasoning-server.ts';
 
 const readingOf = (conversation: readonly string[], to: readonly string[]): readonly string[] => [
   'replies:',

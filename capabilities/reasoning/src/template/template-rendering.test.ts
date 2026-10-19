@@ -1,3 +1,5 @@
+import { renderClockOf } from '@on.auto/definitions/template';
+import { standingRenderClock, steppingClock } from '@on.auto/definitions/testing';
 import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -6,16 +8,33 @@ import { compileTemplate } from './template-compilation.ts';
 
 const moment = { today: '2026-10-01', now: '2026-10-01T09:30:00.000Z' };
 
-function rendering(body: string, input: Schema.Json = {}, firstLine = 1): Result.Result<RenderedPrompt, RenderFailure> {
-  return Result.getOrThrow(compileTemplate(body, firstLine)).render({ input, ...moment });
+function itemsOf(length: number): readonly number[] {
+  return Array.from({ length }, (_, index) => index);
+}
+
+function rendering(
+  body: string,
+  input: Schema.Json = {},
+  firstLine = 1,
+  clock = standingRenderClock,
+): Result.Result<RenderedPrompt, RenderFailure> {
+  return Result.getOrThrow(compileTemplate(body, firstLine)).render({ input, ...moment }, clock);
 }
 
 function rendered(body: string, input: Schema.Json = {}): RenderedPrompt {
   return Result.getOrThrow(rendering(body, input));
 }
 
-function failureOf(body: string, input: Schema.Json = {}, firstLine = 1): RenderFailure | null {
-  return Result.match(rendering(body, input, firstLine), { onSuccess: () => null, onFailure: (failure) => failure });
+function failureOf(
+  body: string,
+  input: Schema.Json = {},
+  firstLine = 1,
+  clock = standingRenderClock,
+): RenderFailure | null {
+  return Result.match(rendering(body, input, firstLine, clock), {
+    onSuccess: () => null,
+    onFailure: (failure) => failure,
+  });
 }
 
 describe('rendering a template', () => {
@@ -146,15 +165,16 @@ describe('the limits of a render', () => {
     });
   });
 
-  it('stop a render that takes too long', () => {
-    const items = Array.from({ length: 400 }, (_, index) => index);
+  it('stop a render whose clock passes the time a render may take, and not one that ends within it', () => {
+    const nested =
+      '{% for a in input.items %}{% for b in input.items %}{% for c in input.items %}{% endfor %}{% endfor %}{% endfor %}';
 
-    expect(
-      failureOf(
-        '{% for a in input.items %}{% for b in input.items %}{% for c in input.items %}{% endfor %}{% endfor %}{% endfor %}',
-        { items },
-      ),
-    ).toEqual({ reason: 'limit_exceeded', limit: 'time', line: 1 });
+    expect(failureOf(nested, { items: itemsOf(400) }, 1, renderClockOf(steppingClock(1)))).toEqual({
+      reason: 'limit_exceeded',
+      limit: 'time',
+      line: 1,
+    });
+    expect(failureOf(nested, { items: itemsOf(3) }, 1, renderClockOf(steppingClock(1)))).toBeNull();
   });
 });
 

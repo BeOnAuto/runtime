@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import { asking, nudgesPresenter } from '../testing/asking.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { playbookOwnNamesOf, isReservedSource } from './reserved-attributes.ts';
 
 const { types, refusingThePlaybooksOwnAttributes } = playbookOwnNamesOf([echo, asking]);

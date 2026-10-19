@@ -1,7 +1,12 @@
 import { approvalDocument, chatDelivery } from '@on.auto/interaction/testing';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { chatEnvironment, chatKey, chatServer, deliveryHistoryOf } from '../testing/servers/chat-deliveries.ts';
+import {
+  chatEnvironment,
+  chatKey,
+  chatServer,
+  deliveryHistoryOf,
+} from '../testing/interaction-servers/chat-deliveries.ts';
 import {
   playbookEventsOf,
   flatReading,
@@ -13,8 +18,8 @@ import {
   someRead,
   threadReading,
   toldReading,
-} from '../testing/servers/chat-readings.ts';
-import { servingInteractions } from '../testing/servers/interaction-server.ts';
+} from '../testing/interaction-servers/chat-readings.ts';
+import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { until } from '../testing/waiting/until.ts';
 

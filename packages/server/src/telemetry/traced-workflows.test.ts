@@ -5,6 +5,7 @@ import { alpha } from '../testing/servers/reasoning-server.ts';
 import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 import { spansIn, type ExportedSpan } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
+import { until } from '../testing/waiting/until.ts';
 
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize: {{ input.text }}'].join('\n');
 
@@ -14,6 +15,19 @@ const asking = workflowSource(
 );
 
 const runPath = 'POST /v1/orgs/:org/playbooks/:playbook/definitions/:type/:name/run';
+
+function childOf(spans: readonly ExportedSpan[], name: string, parent?: ExportedSpan): ExportedSpan | undefined {
+  return spans.find((span) => span.name === name && span.parentSpanId === parent?.spanId);
+}
+
+function linkedTraces(spans: readonly ExportedSpan[], name: string): readonly string[] {
+  return spans.filter((span) => span.name === name).flatMap(({ links }) => links.map(({ traceId }) => traceId));
+}
+
+function followedTheRun(spans: readonly ExportedSpan[]): boolean {
+  const request = childOf(spans, runPath);
+  return request !== undefined && linkedTraces(spans, 'follow run_succeeded').includes(request.traceId);
+}
 
 async function spansOfARun(): Promise<readonly ExportedSpan[]> {
   const receiver = await receivingOtlp();
@@ -27,16 +41,9 @@ async function spansOfARun(): Promise<readonly ExportedSpan[]> {
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'asking', source: asking } });
   const started = await server.call('POST', `${alpha}/definitions/workflow/asking/run`, { body: { input: {} } });
   await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
+  await until(() => spansIn(receiver.received()), followedTheRun);
   await server.stop();
   return spansIn(receiver.received());
-}
-
-function childOf(spans: readonly ExportedSpan[], name: string, parent?: ExportedSpan): ExportedSpan | undefined {
-  return spans.find((span) => span.name === name && span.parentSpanId === parent?.spanId);
-}
-
-function linkedTraces(spans: readonly ExportedSpan[], name: string): readonly string[] {
-  return spans.filter((span) => span.name === name).flatMap(({ links }) => links.map(({ traceId }) => traceId));
 }
 
 describe('a run of a workflow that calls a function, with telemetry on', () => {

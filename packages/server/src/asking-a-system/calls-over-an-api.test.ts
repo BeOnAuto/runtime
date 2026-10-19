@@ -3,9 +3,9 @@ import { serveFakeApi } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { interactionServerOn } from '../testing/servers/interaction-server.ts';
+import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
+import { openInput, systemRunId } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { openInput, systemRunId } from '../testing/servers/system-calls.ts';
 
 const apiKey = 'billing-api-key-5c2e8d1f';
 

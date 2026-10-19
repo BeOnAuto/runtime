@@ -70,7 +70,7 @@ function nextDueOf({ timers, trouble }: LoopParts): Effect.Effect<number | null>
 }
 
 function dueOf({ dueWork, trouble, clock, context }: LoopParts, wake: () => void): DuePerformer {
-  return duePerformer(dueWork, { trouble, now: clock.now, wake, context });
+  return duePerformer(dueWork, { trouble, now: clock.now, sleep: clock.sleep, wake, context });
 }
 
 export function startLoop(parts: LoopParts): HostLoop {

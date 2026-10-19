@@ -1,3 +1,4 @@
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,7 +8,7 @@ import { compileTemplate } from './template-compilation.ts';
 function rendering(body: string, value: Schema.Json): Result.Result<string, RenderFailure> {
   const template = Result.getOrThrow(compileTemplate(body, 1));
   return Result.map(
-    template.render({ input: { value }, today: '2026-10-01', now: '2026-10-01T00:00:00.000Z' }),
+    template.render({ input: { value }, today: '2026-10-01', now: '2026-10-01T00:00:00.000Z' }, standingRenderClock),
     ({ message }) => message,
   );
 }

@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { refusingForbiddenCharacters } from '@on.auto/definitions';
-import { parsedTemplate } from '@on.auto/definitions/template';
+import { parsedTemplate, type RenderClock } from '@on.auto/definitions/template';
 import { answerDocument, type CallAnswer } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
@@ -41,17 +41,17 @@ function partAt(document: Schema.Json, pointer: string, name: string): Result.Re
 
 const unkeyed = `The conversation's key renders to nothing, to more than ${sentBounds.partBytes} bytes or to a character a key may not hold`;
 
-function renderedKey(replies: Replies, party: string, sent: DeliveredAs): string | undefined {
+function renderedKey(replies: Replies, party: string, sent: DeliveredAs, clock: RenderClock): string | undefined {
   const parsed = parsedTemplate(interactionEngine, replies.conversation ?? firstConversation, 1);
   if (Result.isFailure(parsed)) {
     return undefined;
   }
-  const rendered = renderedText(parsed.success, { to: party, sent: { ...sent } }, sentBounds.partBytes + 1);
+  const rendered = renderedText(parsed.success, { to: party, sent: { ...sent } }, sentBounds.partBytes + 1, clock);
   return Result.isSuccess(rendered) && isBoundedPart(rendered.success) ? rendered.success : undefined;
 }
 
-function keyOf(replies: Replies, party: string, sent: DeliveredAs): Result.Result<string, string> {
-  const key = renderedKey(replies, party, sent);
+function keyOf(replies: Replies, party: string, sent: DeliveredAs, clock: RenderClock): Result.Result<string, string> {
+  const key = renderedKey(replies, party, sent, clock);
   return key === undefined ? Result.fail(unkeyed) : Result.succeed(key);
 }
 
@@ -59,18 +59,18 @@ function readingOf(record: DeliveringRecord): Replies | undefined {
   return record.answer_schema === undefined || record.reply === undefined ? undefined : record.replies;
 }
 
-function keptAs(record: DeliveringRecord, deliveredAs: DeliveredAs): Result.Result<Kept, string> {
+function keptAs(record: DeliveringRecord, deliveredAs: DeliveredAs, clock: RenderClock): Result.Result<Kept, string> {
   const reading = readingOf(record);
   if (reading === undefined) {
     return Result.succeed({ delivered_as: deliveredAs });
   }
-  return Result.map(keyOf(reading, record.to, deliveredAs), (key) => ({
+  return Result.map(keyOf(reading, record.to, deliveredAs, clock), (key) => ({
     delivered_as: deliveredAs,
     replies_in: { server: record.deliver.server, tool: reading.tool, key },
   }));
 }
 
-export function keptOf(record: DeliveringRecord, answer: CallAnswer): Kept {
+export function keptOf(record: DeliveringRecord, answer: CallAnswer, clock: RenderClock): Kept {
   const { sent } = record.deliver;
   if (sent === undefined) {
     return {};
@@ -84,7 +84,7 @@ export function keptOf(record: DeliveringRecord, answer: CallAnswer): Kept {
             conversation: partAt(document, sent.conversation, 'conversation'),
             id: partAt(document, sent.id, 'message'),
           }),
-          (deliveredAs) => keptAs(record, deliveredAs),
+          (deliveredAs) => keptAs(record, deliveredAs, clock),
         );
   return Result.getOrElse(kept, (what) => ({
     detail:

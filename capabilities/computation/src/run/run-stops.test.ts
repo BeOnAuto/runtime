@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { campaignPace, campaignRows } from '../testing/campaign-pace.ts';
 import { computationWith, functionOf, poolOf, programDocument } from '../testing/computation-runs.ts';
+import { computationBounds } from './run-bounds.ts';
 
 const decodeRun = Schema.decodeUnknownSync(
   Schema.Struct({ output: Schema.Json, record: Schema.Struct({ work: Schema.Number }) }),
@@ -50,7 +51,7 @@ const brokenWhen: readonly (readonly [PoolOutcome, string])[] = [
 
 describe('a run that the pool stops', () => {
   it.each(unavailableWhen)('is unavailable when the pool answers %j', async (outcome, detail) => {
-    const run = computationWith(scriptedPool([outcome], poolOf()));
+    const run = computationWith(scriptedPool([outcome], poolOf()), { deadlineMs: computationBounds.deadlineMs });
 
     expect(await run.running(addingOne, 1)).toEqual(Exit.fail(new Unavailable({ detail })));
   });

@@ -1,4 +1,5 @@
 import { issueText } from '@on.auto/definitions/document';
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Option, Result } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
@@ -62,7 +63,7 @@ export function without(lines: readonly string[], ...left: readonly string[]): r
 }
 
 export function problemsOf(source: string): readonly string[] {
-  const parsed = parseInteractionDocument(source);
+  const parsed = parseInteractionDocument(source, standingRenderClock);
   return Result.isFailure(parsed) ? parsed.failure.map((issue) => issueText(issue)) : [];
 }
 
@@ -71,5 +72,7 @@ function isRequest(document: InteractionFunctionDefinitionDocument): document is
 }
 
 export function requestDocumentOf(source: string): RequestDocument {
-  return Option.getOrThrow(Option.liftPredicate(Result.getOrThrow(parseInteractionDocument(source)), isRequest));
+  return Option.getOrThrow(
+    Option.liftPredicate(Result.getOrThrow(parseInteractionDocument(source, standingRenderClock)), isRequest),
+  );
 }

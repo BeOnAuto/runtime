@@ -2,8 +2,8 @@ import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing'
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
+import { alpha } from '../servers/reasoning-server.ts';
 import type { InteractionServer } from './interaction-server.ts';
-import { alpha } from './reasoning-server.ts';
 
 export const chatKey = 'chat-api-key-5a1c9e27';
 

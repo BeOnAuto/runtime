@@ -5,9 +5,10 @@ import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Option, Schema } from 'effect';
 import { expect } from 'vitest';
 
-import { workerPool, type ProgramPoolOf } from '../../composition/served-computation.ts';
+import type { ProgramPoolOf } from '../../composition/served-computation.ts';
 import { until } from '../waiting/until.ts';
 import { alpha, servingReasoning, type ReasoningServer } from './reasoning-server.ts';
+import { patientWorkerPool } from './worker-pools.ts';
 
 export const anyReview = [
   '---',
@@ -60,7 +61,7 @@ export function foldsHeldUntilOpened(): Gate {
     },
   });
   return {
-    poolOf: (settings) => held(workerPool(settings)),
+    poolOf: (settings) => held(patientWorkerPool(settings)),
     letThrough: (folds) => {
       allowed.folds += folds;
       released();
@@ -144,7 +145,7 @@ export function inState(state: string): (standing: Standing) => boolean {
 export function servingRecall(
   replies: readonly ScriptedReply[],
   environment: Readonly<Record<string, string>> = {},
-  programPoolOf: ProgramPoolOf = workerPool,
+  programPoolOf: ProgramPoolOf = patientWorkerPool,
 ): Promise<ReasoningServer> {
   return servingReasoning(replies, environment, undefined, { programPoolOf });
 }

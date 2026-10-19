@@ -15,6 +15,8 @@ export interface FakeDueWork {
   readonly add: (key: string, dueAt: number) => void;
   readonly failing: (key: string) => void;
   readonly hanging: (key: string) => void;
+  readonly hold: () => void;
+  readonly release: () => void;
   readonly local: (key: string) => void;
   readonly endsAt: (key: string, at: number) => void;
   readonly performed: () => readonly PerformedRow[];
@@ -56,6 +58,8 @@ interface Flight {
   readonly attempt: (row: PerformedRow, performMs: number) => Promise<boolean>;
   readonly failing: (key: string) => void;
   readonly hanging: (key: string) => void;
+  readonly hold: () => void;
+  readonly release: () => void;
   readonly hangs: (key: string) => boolean;
   readonly attempts: () => readonly PerformedRow[];
   readonly stopped: (key: string) => void;
@@ -115,14 +119,22 @@ function flight(): Flight {
   const attempts: PerformedRow[] = [];
   const interrupted: string[] = [];
   const counts = { now: 0, most: 0 };
+  const holding: { gate?: PromiseWithResolvers<void> } = {};
   return {
     attempt: async (row, performMs) => {
       attempts.push(row);
       counts.now += 1;
       counts.most = Math.max(counts.most, counts.now);
-      await setTimeout(performMs);
+      await (holding.gate?.promise ?? setTimeout(performMs));
       counts.now -= 1;
       return failing.has(row.key);
+    },
+    hold: () => {
+      holding.gate = Promise.withResolvers<void>();
+    },
+    release: () => {
+      holding.gate?.resolve();
+      delete holding.gate;
     },
     failing: (key) => {
       failing.add(key);
@@ -209,6 +221,8 @@ export function fakeDueWork(
     add: store.add,
     failing: flown.failing,
     hanging: flown.hanging,
+    hold: flown.hold,
+    release: flown.release,
     local: store.local,
     endsAt: store.endsAt,
     performed: store.performed,

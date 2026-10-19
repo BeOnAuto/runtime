@@ -13,6 +13,7 @@ import {
   type Succeeded,
 } from '@on.auto/operations';
 import { memoryPlaybookRegistry, recordingReporter, type MemoryLedger } from '@on.auto/operations/testing';
+import type { DueWork } from '@on.auto/workflow-host';
 import { Clock, Effect, Layer } from 'effect';
 
 import type { ChildStart, ChildStarted } from '../capability/prediction-ports.ts';
@@ -23,6 +24,21 @@ const owner: CallerIdentity = { id: 'acme-admin', org: 'acme', permissions: allP
 
 interface HttpOperation {
   readonly registration: HttpRegistration<'playbook'>;
+}
+
+export type PlaybookDue = readonly DueWork[];
+
+export function performedOn(clock: Clock.Clock, work: DueWork): DueWork {
+  return {
+    ...work,
+    due: (now, most, callsOut) =>
+      Effect.map(work.due(now, most, callsOut), (items) =>
+        items.map((item) => ({
+          ...item,
+          perform: (at: number) => Effect.provideService(item.perform(at), Clock.Clock, clock),
+        })),
+      ),
+  };
 }
 
 export interface PlaybookCalls {

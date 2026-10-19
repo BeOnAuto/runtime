@@ -2,12 +2,12 @@ import { withMcpSession } from '@on.auto/api/testing';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import { jsonResult, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
-import { scriptedPool, type PoolOutcome } from '@on.auto/workflow-engine/testing';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { workerPool, type ProgramPoolOf } from '../composition/served-computation.ts';
+import type { ProgramPoolOf } from '../composition/served-computation.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { patientWorkerPool, scriptedWorkerPool } from '../testing/servers/worker-pools.ts';
 import {
   runIdIn,
   servingWorkflows,
@@ -186,13 +186,9 @@ async function computedOutput(server: ReasoningServer): Promise<unknown> {
   return Schema.decodeUnknownSync(Schema.Struct({ output: Schema.Unknown }))(read.body).output;
 }
 
-function scripted(...outcomes: readonly PoolOutcome[]): ProgramPoolOf {
-  return (settings) => scriptedPool(outcomes, workerPool(settings));
-}
-
 describe('a workflow that reads rows through an MCP server, computes and reasons', () => {
   it('turns the rows into exact totals with a computation function and has a reasoning function write the words', async () => {
-    const server = await serving(workerPool, readingRowsThroughTheGraph(), () =>
+    const server = await serving(patientWorkerPool, readingRowsThroughTheGraph(), () =>
       Effect.succeed(textResult('The campaigns spent 2,831.50 in all.')),
     );
 
@@ -209,7 +205,7 @@ describe('a workflow that reads rows through an MCP server, computes and reasons
 
   it('retries the computation step after a transient failure, and runs it again', async () => {
     const server = await serving(
-      scripted({ ran: 'stopped', because: 'busy', milliseconds: 10_000 }),
+      scriptedWorkerPool({ ran: 'stopped', because: 'busy', milliseconds: 10_000 }),
       readingRowsThroughTheGraph(),
       () => Effect.succeed(textResult('Spent.')),
     );
@@ -226,7 +222,7 @@ describe('a workflow that reads rows through an MCP server, computes and reasons
   });
 
   it('does not retry a conflict, since the same input gives the same result, and the workflow ends', async () => {
-    const server = await serving(workerPool, readingRowsThroughTheGraph());
+    const server = await serving(patientWorkerPool, readingRowsThroughTheGraph());
 
     const settled = await settledWorkflowRun(server, 'stuck');
 
@@ -240,7 +236,7 @@ describe('a workflow that reads rows through an MCP server, computes and reasons
 
 describe('a workflow whose computation function raises a long error', () => {
   it('catches it as the runtime error of status 409 the format documents, its text cut at 1,024 bytes', async () => {
-    const server = await serving(workerPool);
+    const server = await serving(patientWorkerPool);
 
     const settled = await settledWorkflowRun(server, 'catching');
     const caught = Schema.decodeUnknownSync(
@@ -262,7 +258,7 @@ describe('a workflow whose computation function raises a long error', () => {
 
 describe('the same workflow over MCP', () => {
   it('runs as it does over HTTP', async () => {
-    const server = await serving(workerPool, readingRowsThroughTheGraph(), () =>
+    const server = await serving(patientWorkerPool, readingRowsThroughTheGraph(), () =>
       Effect.succeed(textResult('The campaigns spent 2,831.50 in all.')),
     );
 

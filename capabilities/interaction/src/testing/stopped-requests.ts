@@ -1,3 +1,4 @@
+import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { Effect, Exit, Schema } from 'effect';
 
 import type { RequestLedger } from '../schedule/request-ledger.ts';
@@ -19,6 +20,8 @@ function stoppingBeforeSettling(ledger: RequestLedger): RequestLedger {
 export async function attemptedThenStopped({ playbook, askedAt }: AskedRequest): Promise<boolean> {
   const stopping = playbook.dueOver(stoppingBeforeSettling(playbook.ledger.service));
   const items = await dueInBothLanes(stopping, askedAt);
-  const exit = await Effect.runPromise(Effect.exit(Effect.forEach(items, (item) => item.perform(askedAt))));
+  const exit = await Effect.runPromise(
+    Effect.exit(onTheStandingClock(Effect.forEach(items, (item) => item.perform(askedAt)))),
+  );
   return Exit.isFailure(exit);
 }

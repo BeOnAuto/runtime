@@ -13,6 +13,7 @@ import {
   type Capability,
   type PlaybookOperation,
 } from '@on.auto/definitions';
+import { standingClock } from '@on.auto/definitions/testing';
 import {
   defineAnswerInteraction,
   listInteractions,
@@ -21,14 +22,13 @@ import {
   requestsDue,
 } from '@on.auto/interaction';
 import { noTools } from '@on.auto/interaction/testing';
-import type { DueWork } from '@on.auto/workflow-host';
 import { Clock, Effect } from 'effect';
 
 import { buildsDue } from '../builds/builds-due.ts';
 import { makePredictionFunctionAdapter } from '../capability/prediction-function.ts';
 import { testPorts, type PortOptions, type TestPorts } from '../testing/prediction-ports.ts';
 import { poolOf } from '../testing/prediction-runs.ts';
-import { playbookCalls, type PlaybookCalls } from './playbook-calls.ts';
+import { performedOn, playbookCalls, type PlaybookCalls, type PlaybookDue } from './playbook-calls.ts';
 
 interface PlaybookOperations {
   readonly create: PlaybookOperation;
@@ -46,7 +46,7 @@ export interface BuildPlaybook extends PlaybookCalls {
   readonly test: TestPorts;
   readonly prediction: Capability;
   readonly operations: PlaybookOperations;
-  readonly due: readonly DueWork[];
+  readonly due: PlaybookDue;
   readonly now: () => number;
   readonly cancelled: (id: string) => ReturnType<PlaybookCalls['call']>;
 }
@@ -55,23 +55,7 @@ interface BuildPlaybookOptions extends PortOptions {
   readonly clock?: Clock.Clock;
 }
 
-function performedOn(clock: Clock.Clock, work: DueWork): DueWork {
-  return {
-    ...work,
-    due: (now, most, callsOut) =>
-      Effect.map(work.due(now, most, callsOut), (items) =>
-        items.map((item) => ({
-          ...item,
-          perform: (at: number) => Effect.provideService(item.perform(at), Clock.Clock, clock),
-        })),
-      ),
-  };
-}
-
-export function buildPlaybook({
-  clock = Clock.Clock.defaultValue(),
-  ...options
-}: BuildPlaybookOptions = {}): BuildPlaybook {
+export function buildPlaybook({ clock = standingClock, ...options }: BuildPlaybookOptions = {}): BuildPlaybook {
   const test = testPorts({ ...options, projections: [openRequests] });
   const { ports, ledger } = test;
   const prediction = makePredictionFunctionAdapter({
@@ -98,7 +82,7 @@ export function buildPlaybook({
   };
   const calls = playbookCalls(ledger, { runDefinition: operations.run }, clock);
   const record = workRecorder(ledger.service, runFactsOf(composedFactsOf(capabilities).onRuns));
-  const due: readonly DueWork[] = [
+  const due: PlaybookDue = [
     buildsDue({ ports, runs: calls.startChild }),
     requestsDue({ ledger: ledger.service, tools: noTools, record }),
   ].map((work) => performedOn(clock, work));

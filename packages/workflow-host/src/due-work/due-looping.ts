@@ -19,6 +19,7 @@ const engine: WorkflowEngine = {
 export interface DueLooping {
   readonly stop: () => Promise<void>;
   readonly order: () => readonly string[];
+  readonly firedAt: () => readonly number[];
   readonly troubles: () => readonly string[];
   readonly armTimer: (dueAt: number, timerId?: string) => Promise<void>;
 }
@@ -30,6 +31,7 @@ export async function dueLooping(
 ): Promise<DueLooping> {
   const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
   const order: string[] = [];
+  const firedAt: number[] = [];
   const troubles: string[] = [];
   const alarm: { armed: (dueAt: number) => void } = { armed: Function.constVoid };
   const timers = sqlTimers(database, (dueAt) => {
@@ -44,7 +46,11 @@ export async function dueLooping(
     timers,
     dueWork: [rows.work('host')],
     engine,
-    fire: ({ timerId }) => Effect.sync(() => order.push(`timer ${timerId} after ${rows.performed().length} rows`)),
+    fire: ({ timerId }) =>
+      Effect.sync(() => {
+        order.push(`timer ${timerId} after ${rows.performed().length} rows`);
+        firedAt.push(clock.now());
+      }),
     resume: () => Effect.succeed(0),
     trouble,
     sweepEveryMs,
@@ -54,6 +60,7 @@ export async function dueLooping(
   return {
     stop: loop.stop,
     order: () => order,
+    firedAt: () => firedAt,
     troubles: () => troubles,
     armTimer: async (dueAt, timerId = '1') => {
       const timer: ArmTimer = { kind: 'arm_timer', runId: runKey, timerId, dueAt, purpose: 'wait' };

@@ -1,3 +1,4 @@
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -69,11 +70,10 @@ describe('a complete reasoning function definition', () => {
   });
 
   it('renders with the input and the moment', () => {
-    const rendered = parsed(complete).template.render({
-      input: { account: 'Globex', tone: 'busy' },
-      today: '2026-10-01',
-      now: '2026-10-01T09:00:00.000Z',
-    });
+    const rendered = parsed(complete).template.render(
+      { input: { account: 'Globex', tone: 'busy' }, today: '2026-10-01', now: '2026-10-01T09:00:00.000Z' },
+      standingRenderClock,
+    );
 
     expect(Result.getOrThrow(rendered)).toEqual({
       instructions: 'You write for busy readers. Today is 2026-10-01.',

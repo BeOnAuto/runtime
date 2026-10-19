@@ -6,7 +6,7 @@ import { clockRunningFrom, startedAt } from './suite-clock.ts';
 const nanosecondsInAMillisecond = 1_000_000n;
 
 describe('a clock running from a moment', () => {
-  it('reads the moment it starts from, and runs on across a sleep at the pace of the real clock', async () => {
+  it('reads the moment it starts from and runs on across a sleep at the pace of the real clock, on a monotonic time that stands still', async () => {
     const real = Clock.Clock.defaultValue();
     const before = real.currentTimeMillisUnsafe();
     const clock = clockRunningFrom(startedAt);
@@ -26,7 +26,7 @@ describe('a clock running from a moment', () => {
     );
     const shiftedNanos = shifted.nanos - BigInt(startedAt) * nanosecondsInAMillisecond;
 
-    expect(slept).toBeGreaterThan(0n);
+    expect(slept).toBe(0n);
     for (const millis of [shifted.millis, shifted.at]) {
       expect(millis - startedAt).toBeGreaterThanOrEqual(first.millis - after);
       expect(millis - startedAt).toBeLessThanOrEqual(last.millis - before);

@@ -1,25 +1,18 @@
 import { issueText } from '@on.auto/definitions/document';
+import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import { notificationDocument, threadDocument } from '../testing/index.ts';
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['performance'] });
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
 function problemsOf(source: string): readonly string[] {
-  const parsed = parseInteractionDocument(source);
+  const parsed = parseInteractionDocument(source, standingRenderClock);
   return Result.isFailure(parsed) ? parsed.failure.map((issue) => issueText(issue)) : [];
 }
 
 function ruleOf(source: string) {
-  const parsed = parseInteractionDocument(source);
+  const parsed = parseInteractionDocument(source, standingRenderClock);
   return Result.isSuccess(parsed) && parsed.success.shape === 'request' ? parsed.success.reply : 'refused';
 }
 

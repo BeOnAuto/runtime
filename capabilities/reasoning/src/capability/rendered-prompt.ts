@@ -1,5 +1,6 @@
+import { renderClockOf } from '@on.auto/definitions/template';
 import { InvalidInput } from '@on.auto/operations';
-import { Effect, JsonPointer, Result } from 'effect';
+import { Effect, JsonPointer, Result, type Clock } from 'effect';
 
 import type { CompiledTemplate, RenderedPrompt, RenderFailure, TemplateScope } from '../template/compiled-template.ts';
 
@@ -52,8 +53,9 @@ const emptyMessage = rejection(
 export function renderedPrompt(
   template: CompiledTemplate,
   scope: TemplateScope,
+  clock: Clock.Clock,
 ): Effect.Effect<RenderedPrompt, InvalidInput> {
-  return Result.match(template.render(scope), {
+  return Result.match(template.render(scope, renderClockOf(clock)), {
     onFailure: (failure) => Effect.fail(rejectionOf(failure)),
     onSuccess: (prompt) => (prompt.message.trim() === '' ? Effect.fail(emptyMessage) : Effect.succeed(prompt)),
   });

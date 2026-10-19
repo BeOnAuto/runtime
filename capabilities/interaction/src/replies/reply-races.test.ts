@@ -1,3 +1,4 @@
+import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -44,7 +45,7 @@ function readOver(playbook: ChatHarness, ledger: ConversationLedger) {
     Effect.exit(
       Effect.flatMap(
         Effect.promise(() => dueInBothLanes(reads, now)),
-        (items) => Effect.forEach(items, (item) => item.perform(now)),
+        (items) => onTheStandingClock(Effect.forEach(items, (item) => item.perform(now))),
       ),
     ),
   );

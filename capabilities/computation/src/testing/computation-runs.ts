@@ -1,5 +1,5 @@
 import type { CapabilityAnswer, PreparedDefinition, Capability, RunContext } from '@on.auto/definitions';
-import { noLongestRuns, nothingSaved, recordingJournal } from '@on.auto/definitions/testing';
+import { checkingWithin, noLongestRuns, nothingSaved, recordingJournal } from '@on.auto/definitions/testing';
 import { allPermissions, type Conflict, type InvalidInput, type Unavailable } from '@on.auto/operations';
 import { programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Exit, type Schema } from 'effect';
@@ -55,13 +55,15 @@ export function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
     ...settings,
   });
   pools.push(pool);
-  return pool;
+  return checkingWithin(pool);
 }
 
 export type RunBounds = Omit<ComputationFunctionAdapterOptions, 'pool'>;
 
+const runsAwaitedAtMostMs = 30_000;
+
 export function computationWith(pool: ProgramPool = poolOf(), bounds: RunBounds = {}): ComputationRuns {
-  const capability = makeComputationFunctionAdapter({ pool, ...bounds });
+  const capability = makeComputationFunctionAdapter({ pool, deadlineMs: runsAwaitedAtMostMs, ...bounds });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   const saved = (source: string) =>
     Effect.flatMap(prepared(source).check(nothingSaved), (stripped) => capability.prepare(source, stripped));

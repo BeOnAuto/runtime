@@ -10,6 +10,7 @@ import {
   type Capability,
   type RecordWork,
 } from '@on.auto/definitions';
+import { standingClock } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   makeDispatcher,
@@ -21,7 +22,7 @@ import {
   type Succeeded,
 } from '@on.auto/operations';
 import { memoryPlaybookRegistry, memoryLedger, recordingReporter } from '@on.auto/operations/testing';
-import { Effect, Layer } from 'effect';
+import { Clock, Effect, Layer } from 'effect';
 
 import { makeInteractionFunctionAdapter } from '../capability/interaction-function.ts';
 import { openRequests, openRequestsName } from '../requests/open-requests.ts';
@@ -93,6 +94,15 @@ function callingIn(services: Layer.Layer<DispatcherServices>): Calling {
   return call;
 }
 
+function servicesOf(ledger: HarnessLedger): Layer.Layer<DispatcherServices> {
+  return Layer.mergeAll(
+    ledger.layer,
+    memoryPlaybookRegistry([alpha]),
+    recordingReporter().layer,
+    Layer.succeed(Clock.Clock, standingClock),
+  );
+}
+
 export function interactionHarness(options: HarnessOptions = {}): InteractionHarness {
   const ledger: HarnessLedger = options.ledger ?? memoryLedger(undefined, [openRequests]);
   const tools = options.tools ?? noTools;
@@ -102,8 +112,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
       ledger.service.countProjectedRows(openRequestsName, playbook, [{ column: 'open', equals: true }]),
     mostOpenRequests: options.mostOpenRequests ?? 10_000,
   });
-  const services = Layer.mergeAll(ledger.layer, memoryPlaybookRegistry([alpha]), recordingReporter().layer);
-  const call = callingIn(services);
+  const call = callingIn(servicesOf(ledger));
   const capabilities = [capability, ...(options.others ?? [])];
   const facts = runFactsOf(declaredFactsOf(capabilities));
   const dueOver = (over: RequestLedger): RequestsDue =>

@@ -1,5 +1,3 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -133,7 +131,7 @@ describe('a question whose model processes are all taken', () => {
     for (const held of ['first', 'second', 'third']) {
       void Effect.runPromise(models.walk({ sha256: held, path: `/${held}.onnx` }, heldWalk));
     }
-    await sleep(100);
+    await scripted.untilSleeping(['walk', 'walk', 'walk']);
 
     expect(await asked(playbook, { series: 'north', horizon: 1 })).toMatchObject({
       status: 'rejected',

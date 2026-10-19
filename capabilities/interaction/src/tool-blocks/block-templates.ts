@@ -1,5 +1,10 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
-import { inputVariableIssues, parsedTemplate, type ParsedTemplate } from '@on.auto/definitions/template';
+import {
+  inputVariableIssues,
+  parsedTemplate,
+  type ParsedTemplate,
+  type RenderClock,
+} from '@on.auto/definitions/template';
 import { Result, type Schema } from 'effect';
 
 import { interactionEngine } from '../document/request-templates.ts';
@@ -13,6 +18,7 @@ export interface TemplatePlace {
   readonly lines: SourceLines;
   readonly pointer: string;
   readonly inputSchema: Schema.JsonObject | undefined;
+  readonly clock: RenderClock;
 }
 
 const listed = new Intl.ListFormat('en-GB', { type: 'conjunction' });
@@ -37,8 +43,8 @@ function variableDetails(set: TemplateSet, parsed: ParsedTemplate, inputSchema: 
   ];
 }
 
-function rendersText(set: TemplateSet, parsed: ParsedTemplate): boolean {
-  const rendered = renderedText(parsed, set.sample, Number.POSITIVE_INFINITY);
+function rendersText(set: TemplateSet, parsed: ParsedTemplate, clock: RenderClock): boolean {
+  const rendered = renderedText(parsed, set.sample, Number.POSITIVE_INFINITY, clock);
   return Result.isSuccess(rendered) || rendered.failure.reason !== 'not_text';
 }
 
@@ -62,7 +68,12 @@ function templateDetails(set: TemplateSet, text: string, place: TemplatePlace, r
     ...variableDetails(set, parsed.success, place.inputSchema),
   ];
   const sentAsItIs = rendering === 'argument' && isLoneExpression(text);
-  if (details.length > 0 || sentAsItIs || readsTheInput(parsed.success) || rendersText(set, parsed.success)) {
+  if (
+    details.length > 0 ||
+    sentAsItIs ||
+    readsTheInput(parsed.success) ||
+    rendersText(set, parsed.success, place.clock)
+  ) {
     return details;
   }
   return [notTextWords[rendering](set.structured)];

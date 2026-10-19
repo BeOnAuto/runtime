@@ -1,4 +1,5 @@
 import { makeDefinitionPresenters } from '@on.auto/definitions';
+import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -16,7 +17,7 @@ describe('the interaction capability', () => {
     const { capability } = interactionHarness();
     const input = { campaign: 'Spring', owner: 'ada' };
     const prepared = [approvalDocument(), notificationDocument(), notificationDocument(chatDelivery)].map((document) =>
-      Effect.runSync(capability.prepare(document)),
+      Effect.runSync(onTheStandingClock(capability.prepare(document))),
     );
 
     expect(prepared).toMatchObject([
@@ -49,8 +50,8 @@ describe('the interaction capability', () => {
     const { capability } = interactionHarness();
 
     expect([
-      Effect.runSync(Effect.flip(capability.prepare("---\nto: 'x'\n---\n"))).detail,
-      Effect.runSync(Effect.flip(capability.prepare('Hello'))).detail,
+      Effect.runSync(onTheStandingClock(Effect.flip(capability.prepare("---\nto: 'x'\n---\n")))).detail,
+      Effect.runSync(onTheStandingClock(Effect.flip(capability.prepare('Hello')))).detail,
     ]).toEqual([
       'The interaction function definition has 2 problems',
       'The interaction function definition has a problem',

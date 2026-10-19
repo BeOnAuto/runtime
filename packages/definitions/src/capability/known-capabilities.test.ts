@@ -2,8 +2,8 @@ import { NotFound } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { echo } from '../testing/echo.ts';
-import { probe } from '../testing/probe.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { knownCapabilities } from './known-capabilities.ts';
 
 const known = knownCapabilities([echo, probe().capability]);

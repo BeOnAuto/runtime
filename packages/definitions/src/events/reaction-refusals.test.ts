@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
-import { echo } from '../testing/echo.ts';
+import { echo } from '../testing/capabilities/echo.ts';
 import { reactionRefusalDecider } from './reaction-refusals.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
