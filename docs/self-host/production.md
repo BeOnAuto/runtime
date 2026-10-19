@@ -30,7 +30,7 @@ The server speaks plain HTTP on `PORT` (`5555` unless set), on every interface, 
 2. Keep port `5555` itself off the internet.
 3. Set `PUBLIC_URL` to the proxy's public `https` address, such as `https://runtime.example.com`. [Let people sign in](security.md#let-people-sign-in) has the rules for it.
 
-Never run a server in [local mode](security.md#local-mode) behind a proxy, which makes remote requests look local. The image cannot run in local mode anyway: it listens on every interface, so without `PUBLIC_URL` or `API_KEYS` it stops at start. A web page may call the API only from Auto Studio or from an origin you list in `ALLOWED_ORIGINS`; see [Calling from a browser](security.md#calling-from-a-browser).
+Never run a server in [local mode](security.md#local-mode) behind a proxy, which makes remote requests look local. The image cannot run in local mode anyway: it listens on every interface, so without `PUBLIC_URL` or `API_KEYS` it stops at start. A web page may call the API only from Auto Studio or from an origin you list in `ALLOWED_ORIGINS`, and the runtime serves no Studio of its own, which works in local mode alone; see [Calling from a browser](security.md#calling-from-a-browser).
 
 ## Give every client its own key
 

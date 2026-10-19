@@ -77,6 +77,8 @@ Once Auto lists your models, your agent offers to create your first function. Co
 
 ## See and control Auto
 
+Open `http://localhost:5555/studio/` to see and manage your playbooks in Studio. A page on a public address may not reach an address on your computer, so Auto serves Studio itself there: it fetches Studio from Auto's Studio host and keeps it in `~/.auto-runtime/auto-runtime-studio`. [Studio served by the runtime](../self-host/security.md#studio-served-by-the-runtime) sets out how.
+
 Open `http://localhost:5555` to see which release of Auto runs, since when and from which folder, with buttons that restart and stop it. From a terminal, `npx @on.auto/runtime status`, `restart` and `stop` do the same. Both control Auto only in local mode, which is how your agent starts it. Your work is saved in `~/.auto-runtime/ledger.db`, and Auto writes its log to `~/.auto-runtime/runtime.log`.
 
 ## Other ways to run Auto

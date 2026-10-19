@@ -25,10 +25,10 @@ A service whose metadata or key set cannot be used stops the start with an `Unus
 
 ## The two token forms
 
-| Form         | Holds `aud` | Who holds it                                                                                                                                                                                                                  | Where it is accepted                                                                                                                     | Permissions                                     |
-| ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Access token | Yes         | A third party acting for a person: an agent that obtains it through the authorization flow, or an agent gateway that obtains it on the person's behalf. The person grants its scopes on the identity service's consent screen | Wherever its `aud` names the runtime; see [The audience of a token](#the-audience-of-a-token)                                            | The permissions among the scopes it was granted |
-| Session      | No          | A page the person signs in to: Studio, Auto's own app (signed in to once, with no consent screen), or a page at an origin in `ALLOWED_ORIGINS`                                                                                | Only when its `azp` names Studio's origin or one of `ALLOWED_ORIGINS`, and only on a request whose `Origin` header is exactly that `azp` | Every permission in the person's org            |
+| Form         | Holds `aud` | Who holds it                                                                                                                                                                                                                  | Where it is accepted                                                                                                                                                                             | Permissions                                     |
+| ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Access token | Yes         | A third party acting for a person: an agent that obtains it through the authorization flow, or an agent gateway that obtains it on the person's behalf. The person grants its scopes on the identity service's consent screen | Wherever its `aud` names the runtime; see [The audience of a token](#the-audience-of-a-token)                                                                                                    | The permissions among the scopes it was granted |
+| Session      | No          | A page the person signs in to: Studio, Auto's own app (signed in to once, with no consent screen), or a page at an origin in `ALLOWED_ORIGINS`                                                                                | Only when its `azp` names the Studio host's origin, `PUBLIC_URL` where the runtime serves Studio, or one of `ALLOWED_ORIGINS`, and only on a request whose `Origin` header is exactly that `azp` | Every permission in the person's org            |
 
 A token that holds `aud` is an access token, even when it also holds an `azp`.
 
@@ -103,17 +103,17 @@ The audience is the check that a public server needs. Requests reach it through 
 
 The runtime checks the `Origin` header a browser sends with every request:
 
-- A page may call the API from Auto Studio, `https://studio.on.auto`, or from an origin listed in `ALLOWED_ORIGINS`.
+- A page may call the API from the Studio host, `STUDIO_ORIGIN`, which is `https://studio.on.auto` unless it is set, from the runtime's own origin where the runtime serves Studio ([Studio served by the runtime](../self-host/security.md#studio-served-by-the-runtime)), or from an origin listed in `ALLOWED_ORIGINS`. The runtime's own origin is `PUBLIC_URL` where it is set, and otherwise the origin the request came in on, which in local mode is a localhost name by the `Host` check.
 - A request whose `Origin` names any other origin is refused `403`.
 - A request with no `Origin` header, such as one from a script or an agent, passes this check.
-- The paths that need no caller skip the `Origin` and `Host` checks: `/health`, the OpenAPI document, the guides, the API catalog, the page at `/` and, where sign-in is on, the protected resource metadata.
+- The paths that need no caller skip the `Origin` and `Host` checks: `/health`, the OpenAPI document, the guides, the API catalog, the page at `/` and, where sign-in is on, the protected resource metadata. Under `/studio/`, where the runtime serves Studio, no caller is needed either, and the `Origin` and `Host` checks still apply.
 - Being allowed lets a page reach the API. Where credentials are enforced, the page still sends a key or a session in the `Authorization` header. There is no wildcard origin and no credentials mode.
 
 A page that a person signed in to sends the session that the identity service issued to it, as `Authorization: Bearer <session>`. It then acts as that person, with every permission in their org.
 
 - A session is accepted only from its own page: the request's `Origin` header must be the origin the session names as `azp`.
 - A session sent without `Origin` (by a script outside a browser, or by an agent) or from another page is refused `401`. [When a token is refused](#when-a-token-is-refused) gives the detail it carries.
-- In local mode no key is needed, so a script served from `https://studio.on.auto` can act as the local developer. The session it sends is ignored.
+- In local mode no key is needed, so a script served from the Studio host, or by the runtime itself under `/studio/`, can act as the local developer. The session it sends is ignored.
 
 For an allowed origin, the server responds to CORS like this:
 
@@ -129,7 +129,7 @@ A server is in [local mode](../self-host/security.md#local-mode) when it listens
 - The credential a request presents is ignored, since a page signed in to Auto sends its session to every server it calls. A request with a session, an access token or a key acts as the local developer.
 - An `Authorization` header that is not one `Bearer <key or token>` is still refused `400`.
 - A request whose `Host` header is not `localhost`, `127.0.0.1` or `[::1]`, with or without a port, is refused `403`. This stops a web page from driving the server through a name that resolves to the loopback address.
-- As always, a request whose `Origin` is neither Studio's nor in `ALLOWED_ORIGINS` is refused `403`.
+- As always, a request whose `Origin` is neither the Studio host's, nor the runtime's own while it serves Studio, as it does by default in local mode, nor in `ALLOWED_ORIGINS` is refused `403`.
 - The paths that need no caller skip the `Host` and `Origin` checks.
 - On `/mcp`, which names no org, the local developer acts in the org `local`.
 
