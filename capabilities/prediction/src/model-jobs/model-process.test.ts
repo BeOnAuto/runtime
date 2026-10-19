@@ -1,9 +1,9 @@
-import { fork } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -84,7 +84,7 @@ const baselinesJob: Parameters<ModelProcesses['baselines']>[1] = {
 
 describe('the module a model process runs', () => {
   it('says it is ready to its server, and ends of itself when its server lets it go', async () => {
-    const child = fork(fileURLToPath(modelProcessModule), [], {
+    const child = spawnForTheTest(process.execPath, [...process.execArgv, fileURLToPath(modelProcessModule)], {
       serialization: 'json',
       stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     });
