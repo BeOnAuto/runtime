@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
+import { stoppedWithinMs } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { untilRefusingConnections } from '../testing/processes/accepting-connections.ts';
@@ -7,6 +8,7 @@ import { shortShutdownTimeoutMs, shutdownTimeoutVariable } from '../testing/proc
 import { serverHoldingARequest, spawnServer } from '../testing/processes/spawned-server.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
 import { defaultServerOptions } from './lifecycle.ts';
+import { longestStopMs } from './shutdown.ts';
 
 const serveWithTestRoutes = fileURLToPath(new URL('../testing/entries/serve-with-test-routes.ts', import.meta.url));
 
@@ -68,5 +70,11 @@ describe('a server process that something keeps running after it stopped', () =>
     expect(child.output().stderr).toContain(
       `Auto Runtime was still running ${defaultServerOptions.exitDeadlineMs} ms after it stopped, so it exits now\n`,
     );
+  });
+});
+
+describe('the longest stop of the server process', () => {
+  it('is shorter than the bound a test gives a process it started to stop before it is killed', () => {
+    expect(longestStopMs).toBeLessThan(stoppedWithinMs);
   });
 });

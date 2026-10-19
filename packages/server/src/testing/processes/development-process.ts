@@ -1,10 +1,10 @@
-import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Option, Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -74,7 +74,7 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
     configFile: files.configFile,
     pidsFile: files.pidsFile,
   };
-  const child = spawn(process.execPath, [runner, JSON.stringify(setup)], {
+  const child = spawnForTheTest(process.execPath, [runner, JSON.stringify(setup)], {
     env: {
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
       HOME: homedir(),
@@ -87,18 +87,14 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const output = { stdout: '', stderr: '' };
-  child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stdout += chunk;
   });
-  child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+  child.stderr?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stderr += chunk;
   });
   const exited = once(child, 'exit').then(([code]: readonly unknown[]) => code);
-  const outputClosed = once(child.stderr, 'close');
-  onTestFinished(async () => {
-    child.kill('SIGTERM');
-    await exited;
-  });
+  const outputClosed = once(child, 'close');
   return {
     files,
     exited,
