@@ -1,8 +1,8 @@
-import { servedStudio } from '@on.auto/identity/testing';
 import { describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
 import { acmeAdmin, operationServer } from '../testing/operation-server.ts';
+import { servedStudio } from '../testing/studios.ts';
 
 const allowed = 'https://app.example';
 

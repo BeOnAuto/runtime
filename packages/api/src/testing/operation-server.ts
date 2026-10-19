@@ -1,4 +1,4 @@
-import { authenticatorFor, createApiKey, type Authenticator, type StudioSettings } from '@on.auto/identity';
+import { authenticatorFor, createApiKey, type Authenticator } from '@on.auto/identity';
 import { allPermissions, makeCatalog, makeDispatcher, type DispatcherServices } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
@@ -18,6 +18,7 @@ import {
   openApiDocumentRoutes,
   operationRoutes,
   type ApiHandler,
+  type ApiStudio,
   type AppRuntime,
   type RetryStateKeys,
 } from '../index.ts';
@@ -78,7 +79,7 @@ const keyHolders = authenticatorFor({
 export interface OperationServerOptions {
   readonly authenticator?: Authenticator;
   readonly allowedOrigins?: readonly string[];
-  readonly studio?: StudioSettings;
+  readonly studio?: ApiStudio;
   readonly operations?: Parameters<typeof makeCatalog>[0];
   readonly requests?: MiddlewareHandler<ApiEnv>;
   readonly tracer?: Tracer.Tracer;

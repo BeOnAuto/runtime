@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import { servedStudio } from '@on.auto/identity/testing';
 import { describe, expect, it } from 'vitest';
 
 import type { ApiHandler } from '../index.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
 import { operationServer } from '../testing/operation-server.ts';
+import { servedStudio } from '../testing/studios.ts';
 
 const fromABrowser = { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' };
 

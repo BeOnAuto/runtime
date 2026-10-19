@@ -1,6 +1,7 @@
 import {
   createApiHandler,
   makeAppRuntime,
+  type HostedStudio,
   type RegisterRoutes,
   type AppRuntime,
   type RuntimeControl,
@@ -13,7 +14,6 @@ import {
   type AccessMode,
   type Authenticator,
   type SignInSettings,
-  type StudioSettings,
 } from '@on.auto/identity';
 import { Effect, Layer } from 'effect';
 
@@ -31,7 +31,7 @@ import { createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts
 import { exitDeadlineMs, shutDown, shutdownTimeoutMs } from './shutdown.ts';
 import { StartupError } from './startup-error.ts';
 
-const hostedStudio: StudioSettings = { origin: defaultStudioOrigin, served: false };
+const hostedStudio: HostedStudio = { origin: defaultStudioOrigin, served: false };
 
 export interface RunningServer {
   readonly port: number;

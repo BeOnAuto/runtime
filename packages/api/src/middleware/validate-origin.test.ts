@@ -1,8 +1,8 @@
 import type { Authenticator } from '@on.auto/identity';
-import { servedStudio } from '@on.auto/identity/testing';
 import { describe, expect, it } from 'vitest';
 
 import { call, echoRequestId, createTestHandler } from '../testing/api-calls.ts';
+import { servedStudio } from '../testing/studios.ts';
 
 const allowed = 'https://app.example';
 
