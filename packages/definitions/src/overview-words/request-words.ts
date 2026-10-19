@@ -25,6 +25,8 @@ export type ReplyParts = Readonly<Record<string, ReplyPart>>;
 
 type Asks = 'answer' | 'nothing';
 
+type Refused = 'another-first-word' | 'unread';
+
 interface MessageSent {
   readonly input?: JsonSchema | undefined;
   readonly party: Phrases;
@@ -83,8 +85,13 @@ export function unansweredSentence(expiresMs: number): string {
   return `If nobody answers within ${durationInWords(expiresMs)}, the request ends unanswered.`;
 }
 
-export function notTakenSentence(told: boolean): string {
-  return `A reply that begins with any other word is not taken${told ? ', and the person is told how to answer' : ''}.`;
+const refusedReplies: Readonly<Record<Refused, string>> = {
+  'another-first-word': 'A reply that begins with any other word',
+  unread: 'A reply it cannot read',
+};
+
+export function notTakenSentence(refused: Refused, told: boolean): string {
+  return `${refusedReplies[refused]} is not taken${told ? ', and the person is told how to answer' : ''}.`;
 }
 
 export function firstWordsOf(value: string, words: readonly string[]): string {
@@ -138,13 +145,22 @@ function routeWords({ server, tool, replies }: Route): Phrases {
   ];
 }
 
+function partyWords(from: string | undefined, readsReplies: boolean): Phrases {
+  if (from === undefined) {
+    return readsReplies ? [', whose reply alone answers it'] : [];
+  }
+  return readsReplies
+    ? ['; answered by ', { code: from }, ', whose reply alone counts']
+    : ['; its answerer ', { code: from }];
+}
+
 export function whereSection({ to, from, route, expires }: Where): OverviewSection {
   return sectionOf(
     'Where',
     paragraph(
       'To ',
       { code: to },
-      ...(from === undefined ? [] : [', answered by ', { code: from }]),
+      ...partyWords(from, route?.replies !== undefined),
       '. ',
       ...(route === undefined ? ["Left in the playbook's inbox"] : routeWords(route)),
       '; expires after ',
