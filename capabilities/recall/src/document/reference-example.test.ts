@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { recallFolding } from '../run/recall-bounds.ts';
 import { campaignReviews } from '../testing/campaign-reviews.ts';
-import { liveView, poolOf, recallWith } from '../testing/recall-runs.ts';
+import { liveView, patientPage, poolOf, recallWith } from '../testing/recall-runs.ts';
 import { runnableDetailsOf } from '../testing/runnable-details.ts';
 import { parseRecallDocument } from './document-parsing.ts';
 
@@ -84,11 +84,9 @@ async function foldedOver(source: string, foldedEvents: readonly Schema.JsonObje
   const { fold, filters, initial, schema = {} } = await runnableDetailsOf(source);
   return poolOf().fold({
     ...recallFolding,
-    pageBudgetMs: 20_000,
+    ...patientPage,
     events: foldedEvents,
     views: [{ fold, filters, view: initial, schema, events: foldedEvents.map((_, index) => index) }],
-    waitMs: 5000,
-    deadlineMs: 20_000,
   });
 }
 

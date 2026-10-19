@@ -1,7 +1,13 @@
 import type { CapabilityAnswer, PreparedDefinition, Capability, RunContext } from '@on.auto/definitions';
-import { noLongestRuns, nothingSaved, recordingJournal } from '@on.auto/definitions/testing';
+import {
+  checkingWithin,
+  checksAwaitedAtMostMs,
+  noLongestRuns,
+  nothingSaved,
+  recordingJournal,
+} from '@on.auto/definitions/testing';
 import { allPermissions, type Conflict, type InvalidInput, type Unavailable } from '@on.auto/operations';
-import { programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { programPool, type FoldRequest, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import type { KeptView } from '@on.auto/workflow-host';
 import { Effect, type Exit, type Schema } from 'effect';
 import { afterEach } from 'vitest';
@@ -9,8 +15,6 @@ import { afterEach } from 'vitest';
 import { makeRecallFunctionAdapter, type RecallFunctionAdapterOptions } from '../capability/recall-function.ts';
 import { recallBounds } from '../run/recall-bounds.ts';
 import { keptViews, type KeptViews } from './kept-views.ts';
-
-const checksAwaitedAtMostMs = 30_000;
 
 const reviewsRun: RunContext = {
   id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
@@ -46,10 +50,6 @@ const measured: Readonly<Record<string, string>> = Object.fromEntries(
   ),
 );
 
-function checkingWithin(pool: ProgramPool, deadlineMs: number): ProgramPool {
-  return { ...pool, check: (request, signal) => pool.check({ ...request, deadlineMs }, signal) };
-}
-
 export function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
   const pool = programPool({
     workers: 2,
@@ -58,8 +58,14 @@ export function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
     ...settings,
   });
   pools.push(pool);
-  return checkingWithin(pool, checksAwaitedAtMostMs);
+  return checkingWithin(pool);
 }
+
+export const patientPage: Pick<FoldRequest, 'pageBudgetMs' | 'waitMs' | 'deadlineMs'> = {
+  pageBudgetMs: checksAwaitedAtMostMs,
+  waitMs: checksAwaitedAtMostMs,
+  deadlineMs: checksAwaitedAtMostMs,
+};
 
 export function liveView(view: Schema.Json, more: Partial<KeptView> = {}): KeptView {
   return {
