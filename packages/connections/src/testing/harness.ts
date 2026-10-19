@@ -24,7 +24,7 @@ import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 
 const firstMoment = '2026-10-15T14:00:00.000Z';
 
-const studio = 'https://studio.on.auto';
+const studio = { origin: 'https://studio.on.auto', served: false };
 
 const runtimeOrigin = 'http://localhost:5555';
 

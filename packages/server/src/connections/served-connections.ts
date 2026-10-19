@@ -7,7 +7,7 @@ import {
   type ConnectionServices,
   type RuntimeAccess,
 } from '@on.auto/connections';
-import { defaultStudioOrigin } from '@on.auto/identity';
+import { defaultStudioOrigin, type StudioSettings } from '@on.auto/identity';
 import type { SecretStore } from '@on.auto/ledger';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ProviderOffering } from '@on.auto/tool-servers';
@@ -23,6 +23,8 @@ export interface StoresAndConnections {
   readonly source: ReturnType<typeof makeConnectionSource>;
   readonly offering: ProviderOffering;
 }
+
+const hostedStudio: StudioSettings = { origin: defaultStudioOrigin, served: false };
 
 type ServingSettings = Pick<
   Settings,
@@ -56,7 +58,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: { studio: defaultStudioOrigin, runtime: () => signIn?.publicUrl ?? ownOrigin() },
+    pages: { studio: hostedStudio, runtime: () => signIn?.publicUrl ?? ownOrigin() },
     access: accessOf(settings),
   };
 }
