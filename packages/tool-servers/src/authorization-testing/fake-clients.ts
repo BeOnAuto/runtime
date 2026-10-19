@@ -26,6 +26,7 @@ export interface ClientRegistration {
   readonly takesBasicSecrets?: boolean;
   readonly listsRevocationMethods?: boolean;
   readonly scopesSupported?: readonly string[];
+  readonly protectedScopes?: readonly string[];
   readonly refusesRegistration?: boolean;
   readonly registeredClientId?: string;
   readonly registrationSecretSeconds?: number;

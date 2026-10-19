@@ -227,6 +227,12 @@ export function credentialFieldIssuesOf(credential: CredentialFields): readonly 
   ];
 }
 
+const kindsPlacingNoValue: ReadonlySet<CredentialKind> = new Set(['none', 'authorization']);
+
+export function placesNoValue(kind: CredentialKind): boolean {
+  return kindsPlacingNoValue.has(kind);
+}
+
 export const CredentialSchema = CredentialFieldsSchema.annotate({ description: credentialDescription }).check(
   Schema.makeFilter((credential: CredentialFields) => credentialFieldIssuesOf(credential)),
 );

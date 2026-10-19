@@ -8,6 +8,7 @@ import {
   type ConnectionUnready,
   type OrgConnection,
 } from '../org-servers/connection-source.ts';
+import type { AuthSettings } from '../settings/server-settings.ts';
 import { readToolServerSettings, type Environment } from '../settings/settings-reading.ts';
 
 export interface FakeConnection {
@@ -17,6 +18,7 @@ export interface FakeConnection {
   readonly entry: Readonly<Record<string, unknown>>;
   readonly environment?: Environment;
   readonly reaches?: ConnectionServer['reaches'];
+  readonly auth?: AuthSettings;
 }
 
 type Standing =
@@ -57,14 +59,15 @@ export function pendingWords(name: string): string {
   return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or removes it and adds it again for a new link`;
 }
 
-function settingsOf(org: string, { name, entry, environment = {} }: FakeConnection): ConnectionServerSettings {
+function settingsOf(org: string, { name, entry, environment = {}, auth }: FakeConnection): ConnectionServerSettings {
   const read = Effect.runSync(
     readToolServerSettings(
       { ...environment, TOOL_SERVERS: JSON.stringify({ [name]: { ...entry, org } }) },
       { modelProviders: [] },
     ),
   );
-  return Option.getOrThrow(Arr.head(read.servers.filter((settings) => isConnectionServerSettings(settings))));
+  const settings = Option.getOrThrow(Arr.head(read.servers.filter((server) => isConnectionServerSettings(server))));
+  return auth === undefined ? settings : { ...settings, auth };
 }
 
 function unreadyOf(name: string, standing: Standing): ConnectionUnready | undefined {

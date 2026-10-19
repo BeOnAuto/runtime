@@ -4,6 +4,7 @@ import {
   type FetchLike,
   type OAuthClientInformationFull,
 } from '@modelcontextprotocol/client';
+import { fetchWithin, type Reaches } from '@on.auto/outbound';
 import { Effect, Option, Redacted } from 'effect';
 
 import {
@@ -38,7 +39,7 @@ export interface ActingClient {
   readonly authentication: AddClientAuthentication | undefined;
 }
 
-export interface ClientChoosing extends ClientsHad {
+interface ClientChoosing extends ClientsHad {
   readonly registrations: ClientRegistrations;
 }
 
@@ -48,9 +49,11 @@ interface Taking {
   readonly fetch: FetchLike;
 }
 
-export interface ClientChoice {
+type RecordedClient = Pick<FinishAsked, 'way' | 'client' | 'returnAddress'>;
+
+interface ClientChoice {
   readonly chosenAt: (taking: Taking) => Effect.Effect<ActingClient, ConsentRefusal>;
-  readonly recordedFor: (asked: FinishAsked) => Effect.Effect<ActingClient, ConsentRefusal>;
+  readonly recordedFor: (recorded: RecordedClient) => Effect.Effect<ActingClient, ConsentRefusal>;
 }
 
 interface Choosing extends ClientChoosing {
@@ -158,7 +161,7 @@ function chosenAt(taking: Taking, choosing: Choosing): Effect.Effect<ActingClien
   });
 }
 
-function recordedOf({ way, client, returnAddress }: FinishAsked, choosing: Choosing): ActingClient | undefined {
+function recordedOf({ way, client, returnAddress }: RecordedClient, choosing: Choosing): ActingClient | undefined {
   if (client.client_source === 'registered') {
     const registered = registeredClientAt(choosing.registeredClients, way.issuer);
     return registered?.clientId === client.client_id ? registeredActing(registered, returnAddress) : undefined;
@@ -168,20 +171,44 @@ function recordedOf({ way, client, returnAddress }: FinishAsked, choosing: Choos
     : undefined;
 }
 
-function recordedFor(asked: FinishAsked, choosing: Choosing): Effect.Effect<ActingClient, ConsentRefusal> {
-  if (asked.client.client_source === 'dynamic') {
-    return Effect.flatMap(choosing.registrations.named(asked.way.issuer, asked.client.client_id), (kept) =>
-      kept === undefined ? Effect.fail(clientGone) : Effect.succeed(dynamicActing(kept, asked.returnAddress)),
+function recordedFor(recorded: RecordedClient, choosing: Choosing): Effect.Effect<ActingClient, ConsentRefusal> {
+  const { way, client, returnAddress } = recorded;
+  if (client.client_source === 'dynamic') {
+    return Effect.flatMap(choosing.registrations.named(way.issuer, client.client_id), (kept) =>
+      kept === undefined ? Effect.fail(clientGone) : Effect.succeed(dynamicActing(kept, returnAddress)),
     );
   }
-  const recorded = recordedOf(asked, choosing);
-  return recorded === undefined ? Effect.fail(clientGone) : Effect.succeed(recorded);
+  const acting = recordedOf(recorded, choosing);
+  return acting === undefined ? Effect.fail(clientGone) : Effect.succeed(acting);
 }
 
-export function clientChoice(choosing: ClientChoosing): ClientChoice {
+function clientChoice(choosing: ClientChoosing): ClientChoice {
   const choosingOnce: Choosing = { ...choosing, registeredOnce: singleFlight() };
   return {
     chosenAt: (taking) => chosenAt(taking, choosingOnce),
-    recordedFor: (asked) => recordedFor(asked, choosingOnce),
+    recordedFor: (recorded) => recordedFor(recorded, choosingOnce),
+  };
+}
+
+export interface Requesting extends ClientChoosing {
+  readonly fetch: FetchLike;
+  readonly requestMs: number;
+}
+
+export interface Requests {
+  readonly clients: ClientChoice;
+  readonly fetchFor: (reaches: Reaches) => FetchLike;
+}
+
+function boundedFetchOf(fetch: FetchLike, reaches: Reaches, requestMs: number): FetchLike {
+  const within = fetchWithin(fetch, reaches);
+  return (...[address, init]: readonly [unknown, unknown?]) =>
+    within(String(address), Object.assign({}, init, { signal: AbortSignal.timeout(requestMs) }));
+}
+
+export function requestsOf(requesting: Requesting): Requests {
+  return {
+    clients: clientChoice(requesting),
+    fetchFor: (reaches) => boundedFetchOf(requesting.fetch, reaches, requesting.requestMs),
   };
 }

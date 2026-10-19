@@ -7,7 +7,15 @@ import { describe, expect, it } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added, adding, issuesIn, notes } from '../testing/additions.ts';
-import { ada, developerToken, developerTokenSet, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import {
+  ada,
+  developerToken,
+  developerTokenSet,
+  harness,
+  harnessPages,
+  operationNamed,
+  type Harness,
+} from '../testing/harness.ts';
 
 const acmeLedgers = { provider: 'ledgers', placeholders: { tenant: 'acme', manager: '1234567890' } };
 
@@ -33,6 +41,7 @@ function listedBy(
     modelProviders: ['openai'],
     providers,
     providerValues,
+    pages: harnessPages,
   });
   return Effect.runPromise(source.connectionsOf('acme'));
 }

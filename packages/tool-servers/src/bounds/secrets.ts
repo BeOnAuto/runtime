@@ -97,11 +97,11 @@ export function secretsOf(redacted: readonly Redacted.Redacted[]): Secrets {
 }
 
 function credentialOf(auth: AuthSettings | null): readonly Redacted.Redacted[] {
-  if (auth === null) {
-    return [];
+  const credential = auth?.credential;
+  if (credential?.kind === 'client_secret') {
+    return [credential.client_secret];
   }
-  const { credential } = auth;
-  return [credential.kind === 'client_secret' ? credential.client_secret : credential.private_key];
+  return credential?.kind === 'private_key' ? [credential.private_key] : [];
 }
 
 export function secretsOfServer(server: ServerSettings): readonly Redacted.Redacted[] {

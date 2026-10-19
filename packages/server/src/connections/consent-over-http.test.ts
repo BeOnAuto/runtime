@@ -1,8 +1,13 @@
-import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
-import { Schema } from 'effect';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { Buffer } from 'node:buffer';
+import { setTimeout as delay } from 'node:timers/promises';
 
-import { secretsKey } from '../testing/records/kept-credentials.ts';
+import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
+import { consentRegistration, consentSecret, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { Schema } from 'effect';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
+
+import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
@@ -92,5 +97,115 @@ describe('a connection of consent given by hand', () => {
     });
     expect(overMcp).toMatchObject({ isError: true });
     expect(JSON.stringify(overMcp)).toContain(consentByHand);
+  });
+});
+
+const studioReturn = 'https://studio.on.auto/connect/return';
+
+const consentEnded =
+  'The consent of the connection files was revoked or has ended, so the person who added it removes it and adds it again';
+
+const StartedSchema = Schema.Struct({ authorize: Schema.Struct({ url: Schema.String }) });
+
+const KeptTokensSchema = Schema.fromJsonString(
+  Schema.Struct({ access_token: Schema.String, refresh_token: Schema.String }),
+);
+
+function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> {
+  return {
+    CONNECTIONS: JSON.stringify({
+      registered_clients: [
+        { issuers: [fake.origin], client_id: 'auto-runtime', client_secret: '${FILES_CLIENT_SECRET}' },
+      ],
+      providers: [
+        {
+          name: 'files',
+          title: 'Files',
+          description: 'Read the files of an account.',
+          website: 'https://developer.files.example.com',
+          type: 'mcp',
+          url: fake.url,
+          credentials: [{ kind: 'authorization', issuer: fake.origin, scope: 'files.read' }],
+        },
+      ],
+    }),
+    FILES_CLIENT_SECRET: consentSecret,
+  };
+}
+
+async function connectedByConsent(served: ReasoningServer): Promise<string> {
+  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(
+    (await served.call('POST', connections, { body: { provider: 'files' } })).body,
+  );
+  const token = String(new URL(connect.url).searchParams.get('token'));
+  const { authorize } = Schema.decodeUnknownSync(StartedSchema)(
+    (await served.call('POST', `${connections}/${id}/consent`, { body: { token } })).body,
+  );
+  const back = new URL(String((await fetch(authorize.url, { redirect: 'manual' })).headers.get('location')));
+  const [code, state, iss] = ['code', 'state', 'iss'].map((name) => String(back.searchParams.get(name)));
+  await served.call('POST', `${connections}/${id}/consent/code`, { body: { token, code, state, iss } });
+  return id;
+}
+
+async function tokensKeptFor(fileName: string, id: string) {
+  const secretId = String(await secretIdOf(fileName, 'local', id));
+  return Schema.decodeUnknownSync(KeptTokensSchema)(String((await keptSecretOf(fileName, secretId)).value));
+}
+
+function revokedAt(fake: FakeMcpServer, refreshToken: string): Promise<Response> {
+  return fetch(`${fake.origin}/revoke`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      authorization: `Basic ${Buffer.from(`auto-runtime:${consentSecret}`).toString('base64')}`,
+    },
+    body: new URLSearchParams({ token: refreshToken }),
+  });
+}
+
+function echoing(served: ReasoningServer) {
+  return served.call('POST', '/v1/orgs/local/playbooks/alpha/tool-servers/files/tools/echo/execute', {
+    body: { arguments: { said: 'hi' } },
+  });
+}
+
+describe('a connection connected by consent over HTTP', () => {
+  it('calls a tool with its access token, is renewed once it expires and broken once its grant is revoked', async () => {
+    const fake = await serveFakeMcp({
+      client: consentRegistration({ redirectUris: [studioReturn], expiresInSeconds: 1 }),
+    });
+    const ledger = temporaryLedger();
+    const served = await servingReasoning([], {
+      LEDGER_FILE: ledger.fileName,
+      SECRETS_KEY: secretsKey.toString('base64'),
+      ...filesProvidedBy(fake),
+    });
+    onTestFinished(async () => {
+      await served.stop();
+      await fake.close();
+      ledger.remove();
+    });
+    await served.call('POST', '/v1/orgs/local/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    const id = await connectedByConsent(served);
+    const first = await tokensKeptFor(ledger.fileName, id);
+
+    const called = await echoing(served);
+    await delay(1100);
+    const renewedCall = await echoing(served);
+    const renewed = await tokensKeptFor(ledger.fileName, id);
+    await revokedAt(fake, renewed.refresh_token);
+    const refused = await echoing(served);
+    const read = await served.call('GET', `${connections}/${id}`);
+
+    expect([called.body, renewedCall.body]).toMatchObject([{ outcome: 'result' }, { outcome: 'result' }]);
+    expect(renewed.access_token).not.toBe(first.access_token);
+    expect(fake.seen().map(({ authorization }) => authorization)).toEqual(
+      expect.arrayContaining([`Bearer ${first.access_token}`, `Bearer ${renewed.access_token}`]),
+    );
+    expect(refused.body).not.toMatchObject({ outcome: 'result' });
+    expect(read.body).toMatchObject({ status: 'broken', broken: consentEnded });
+    expect(JSON.stringify([called.body, renewedCall.body, refused.body, read.body])).not.toContain(
+      renewed.refresh_token,
+    );
   });
 });

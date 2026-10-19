@@ -27,12 +27,14 @@ async function authorizationOf(tokens: TokenSource | undefined): Promise<Readonl
   return tokens === undefined ? {} : { authorization: `Bearer ${await tokens.token()}` };
 }
 
-async function sent(
-  request: ApiRequest,
-  opening: ApiOpening,
-  signal: Readonly<AbortSignal>,
-  mintedAgain = false,
-): Promise<Response> {
+interface Sending {
+  readonly endpoint: ApiEndpoint;
+  readonly opening: ApiOpening;
+  readonly signal: Readonly<AbortSignal>;
+}
+
+async function sent(request: ApiRequest, sending: Sending, mintedAgain = false): Promise<Response> {
+  const { endpoint, opening, signal } = sending;
   const tokens = request.usesToken ? opening.tokens : undefined;
   const response = await opening.fetch(request.url, {
     method: request.method,
@@ -45,8 +47,8 @@ async function sent(
     return response;
   }
   await response.body?.cancel();
-  await tokens.onUnauthorized();
-  return sent(request, opening, signal, true);
+  await tokens.onUnauthorized({ response, serverUrl: new URL(endpoint.baseUrl), fetchFn: opening.fetch });
+  return sent(request, sending, true);
 }
 
 export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): ServerClient {
@@ -72,7 +74,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
         return { error: new AddressOutsideBase(), observed: unobserved };
       }
       try {
-        return await settledOf(await sent(request.success, opening, signal), answering);
+        return await settledOf(await sent(request.success, { endpoint, opening, signal }), answering);
       } catch (error) {
         return { error, observed: unobserved };
       }

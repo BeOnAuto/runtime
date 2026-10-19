@@ -1,5 +1,7 @@
 import { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
-import type { ConsentRefusal } from '@on.auto/tool-servers';
+import type { ConsentRefusal, RevocationFailure } from '@on.auto/tool-servers';
+
+import { servingWords } from '../serving/serving-words.ts';
 
 export interface ConsentNamed {
   readonly name: string;
@@ -34,8 +36,7 @@ const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = 
     `The authorization server of the connection ${name} does not take the authorization code with an S256 challenge, which Auto asks for`,
   no_client: ({ name }) =>
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
-  client_gone: ({ name }) =>
-    `The client the connection ${name} was made with is no longer registered, so the person who added it removes it and adds it again`,
+  client_gone: ({ name }) => servingWords.clientGone(name),
   malformed_scope: ({ name }) =>
     `The authorization server of the connection ${name} granted a scope written with characters a scope does not hold, ${notAsAdded}`,
   no_scope: ({ name }) =>
@@ -83,4 +84,9 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
   return refusal.refused === 'code'
     ? refusedAt('/code', 'Expected a code the authorization server takes; it refused this one')
     : conflictOf(named, refusal);
+}
+
+export function unrevokedWordsOf(named: ConsentNamed, failure: RevocationFailure): string {
+  const why = failure.refused === 'not_revoked' ? failure.detail : consentRefusalOf(named, failure).detail;
+  return `The tokens of the connection ${named.name} were not revoked at its authorization server, so they end on their own: ${why}`;
 }

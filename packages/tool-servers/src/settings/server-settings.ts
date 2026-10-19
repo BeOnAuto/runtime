@@ -1,9 +1,17 @@
 import { servesOrg, servesPlaybook } from '@on.auto/config';
 import type { Redacted } from 'effect';
 
-export type AuthCredential =
+import type { ConsentServed } from '../consent/consent-client.ts';
+
+export type MintingCredential =
   | { readonly kind: 'client_secret'; readonly client_secret: Redacted.Redacted }
   | { readonly kind: 'private_key'; readonly private_key: Redacted.Redacted; readonly algorithm: string };
+
+export interface ConsentCredential extends ConsentServed {
+  readonly kind: 'consent';
+}
+
+type AuthCredential = MintingCredential | ConsentCredential;
 
 export interface AuthSettings {
   readonly issuer: string;
@@ -11,6 +19,10 @@ export interface AuthSettings {
   readonly scope: string | null;
   readonly credential: AuthCredential;
 }
+
+export type MintingAuth = AuthSettings & { readonly credential: MintingCredential };
+
+export type ConsentAuth = AuthSettings & { readonly credential: ConsentCredential };
 
 interface ServedBy {
   readonly name: string;

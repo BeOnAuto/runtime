@@ -18,4 +18,4 @@ export { makeConnectionSource } from './serving/connection-source.ts';
 export { makeClientRegistrations } from './registrations/client-registrations.ts';
 export { makeProviderOffering } from './providers/provider-offering.ts';
 export { makeProviderResolver } from './providers/provider-resolver.ts';
-export type { ServingServices } from './serving/given-credentials.ts';
+export type { ServingServices } from './serving/serving-services.ts';

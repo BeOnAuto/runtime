@@ -1,12 +1,13 @@
 import { generateKeyPairSync } from 'node:crypto';
 
+import type { FetchLike } from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
-import type { AuthSettings } from '../settings/server-settings.ts';
+import type { MintingAuth } from '../settings/server-settings.ts';
 import { serveFakeMcp, type ClientRegistration, type FakeMcpServer } from '../testing/index.ts';
-import { tokenSource } from './token-source.ts';
+import { tokenSource, type UnauthorizedContext } from './token-source.ts';
 
 const clientSecret = 'graph-client-secret-81c2';
 
@@ -30,7 +31,7 @@ function rsaKeys() {
   });
 }
 
-function secretAuth(fake: FakeMcpServer, changes: Partial<AuthSettings> = {}): AuthSettings {
+function secretAuth(fake: FakeMcpServer, changes: Partial<MintingAuth> = {}): MintingAuth {
   return {
     issuer: fake.origin,
     client_id: 'playbook',
@@ -40,7 +41,26 @@ function secretAuth(fake: FakeMcpServer, changes: Partial<AuthSettings> = {}): A
   };
 }
 
-function sourceOf(fake: FakeMcpServer, settings: AuthSettings) {
+function refusedAt(fake: FakeMcpServer, challenge = ''): UnauthorizedContext {
+  const headers = new Headers(challenge === '' ? {} : { 'www-authenticate': challenge });
+  return { response: new Response(null, { status: 401, headers }), serverUrl: new URL(fake.url), fetchFn: fetch };
+}
+
+function askingFetch() {
+  const urls: string[] = [];
+  const scopes: (string | null)[] = [];
+  const asking: FetchLike = async (...[address, init]: readonly [unknown, unknown?]) => {
+    const request = new Request(String(address), Object.assign({}, init));
+    urls.push(request.url);
+    if (request.url.endsWith('/token')) {
+      scopes.push(new URLSearchParams(await request.clone().text()).get('scope'));
+    }
+    return globalThis.fetch(request);
+  };
+  return { fetch: asking, urls: () => [...urls], scopes: () => [...scopes] };
+}
+
+function sourceOf(fake: FakeMcpServer, settings: MintingAuth, fetch: FetchLike = globalThis.fetch) {
   const clock = { now: Date.parse('2026-10-05T09:00:00.000Z') };
   const minted: (readonly [string, string])[] = [];
   const secrets = secretsOf([]);
@@ -48,7 +68,7 @@ function sourceOf(fake: FakeMcpServer, settings: AuthSettings) {
     server: 'graph',
     serverUrl: fake.url,
     discovery: 'from_the_server',
-    fetch: globalThis.fetch,
+    fetch,
     now: () => clock.now,
     minted: (server, token) => {
       minted.push([server, token]);
@@ -140,10 +160,10 @@ describe('the tokens a source mints among the secrets', () => {
     const { source, secrets } = sourceOf(fake, secretAuth(fake));
 
     const refused = await source.token();
-    await source.onUnauthorized();
+    await source.onUnauthorized(refusedAt(fake));
     const replacing = await source.token();
     const afterRefusal = secrets.scrub(`${refused} ${replacing}`);
-    await source.onUnauthorized();
+    await source.onUnauthorized(refusedAt(fake));
     const replacingAgain = await source.token();
 
     expect([afterRefusal, secrets.scrub(`${refused} ${replacing} ${replacingAgain}`)]).toEqual([
@@ -159,7 +179,7 @@ describe('minting a token again, and with a private key', () => {
     const { source } = sourceOf(fake, secretAuth(fake));
 
     const first = await source.token();
-    await source.onUnauthorized();
+    await source.onUnauthorized(refusedAt(fake));
 
     expect(await source.token()).not.toBe(first);
     expect(fake.tokenRequests()).toBe(2);
@@ -232,5 +252,47 @@ describe('an authorization server that refuses', () => {
     const { source } = sourceOf(fake, secretAuth(fake));
 
     await expect(source.token()).rejects.toThrow('invalid_client');
+  });
+});
+
+describe('the scope a source asks for', () => {
+  it('is the scope of the entry, never the scopes the metadata of the server lists', async () => {
+    const fake = await authorizationServer({
+      clientId: 'playbook',
+      clientSecret,
+      expiresInSeconds: 3600,
+      protectedScopes: ['graph.read', 'graph.write', 'graph.admin'],
+    });
+    const asking = askingFetch();
+    const { source } = sourceOf(fake, secretAuth(fake, { scope: 'graph.read' }), asking.fetch);
+
+    await source.token();
+
+    expect(asking.scopes()).toEqual(['graph.read']);
+  });
+
+  it('grows by the scope a refusal challenges it with, and reads the metadata the challenge names', async () => {
+    const fake = await authorizationServer({ clientId: 'playbook', clientSecret, expiresInSeconds: 3600 });
+    const asking = askingFetch();
+    const { source } = sourceOf(fake, secretAuth(fake, { scope: 'graph.read' }), asking.fetch);
+    const named = `${fake.origin}/.well-known/oauth-protected-resource/mcp?challenged=1`;
+
+    await source.token();
+    await source.onUnauthorized(refusedAt(fake, `Bearer scope="graph.write", resource_metadata="${named}"`));
+    await source.onUnauthorized(refusedAt(fake, 'Bearer scope="graph.read"'));
+
+    expect(asking.scopes()).toEqual(['graph.read', 'graph.read graph.write', 'graph.read graph.write']);
+    expect(asking.urls().filter((url) => url === named)).toHaveLength(2);
+  });
+
+  it('is the scope a refusal challenges it with where the entry gives none', async () => {
+    const fake = await authorizationServer({ clientId: 'playbook', clientSecret, expiresInSeconds: 3600 });
+    const asking = askingFetch();
+    const { source } = sourceOf(fake, secretAuth(fake), asking.fetch);
+
+    await source.token();
+    await source.onUnauthorized(refusedAt(fake, 'Bearer scope="graph.write"'));
+
+    expect(asking.scopes()).toEqual([null, 'graph.write']);
   });
 });

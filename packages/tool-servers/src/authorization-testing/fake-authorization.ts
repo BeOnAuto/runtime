@@ -84,6 +84,7 @@ function documentRoutesOf(origin: string, registration: ClientRegistration): rea
   const resource = {
     resource: registration.protectedResource ?? `${origin}/mcp`,
     authorization_servers: [registration.authorizationServer ?? origin],
+    ...(registration.protectedScopes === undefined ? {} : { scopes_supported: registration.protectedScopes }),
   };
   return [
     ['/.well-known/oauth-protected-resource/mcp', () => Promise.resolve(json(resource))],

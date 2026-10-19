@@ -13,7 +13,7 @@ import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/conne
 import { added, billing, crm, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
-import type { ServingServices } from './given-credentials.ts';
+import type { ServingServices } from './serving-services.ts';
 
 const crmKey = 'Bearer crm-key-0f3c9a71';
 

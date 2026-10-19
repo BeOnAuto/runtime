@@ -19,6 +19,7 @@ import type { Settings } from '../settings/settings.ts';
 
 export interface StoresAndConnections {
   readonly stores: LedgerStores;
+  readonly consent: ReturnType<typeof consentClientOf>;
   readonly connections: ConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
   readonly offering: ReturnType<typeof makeProviderOffering>;
@@ -47,22 +48,29 @@ function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): Runti
   return signIn === undefined ? 'keys' : 'people';
 }
 
+interface Composed {
+  readonly secrets: SecretStore;
+  readonly consent: ReturnType<typeof consentClientOf>;
+  readonly ownOrigin: () => string;
+}
+
+function pagesOf({ studio }: ServingSettings, ownOrigin: () => string): ConnectionServices['pages'] {
+  return { studio, runtime: ownOrigin };
+}
+
 function connectionServicesOf(
-  runtime: AppRuntime<DispatcherServices>,
   settings: ServingSettings,
-  secrets: SecretStore,
-  ownOrigin: () => string,
+  { secrets, consent, ownOrigin }: Composed,
 ): ConnectionServices {
-  const { studio } = settings;
   return {
-    consent: consentClientOf(runtime, settings, secrets),
+    consent,
     secrets,
     policy: settings.connections,
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
-    pages: { studio, runtime: ownOrigin },
+    pages: pagesOf(settings, ownOrigin),
     access: accessOf(settings),
   };
 }
@@ -70,12 +78,13 @@ function connectionServicesOf(
 function sourceServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: ServingSettings,
-  secrets: SecretStore,
+  { secrets, ownOrigin }: Omit<Composed, 'consent'>,
 ): ReturnType<typeof makeConnectionSource> {
   return makeConnectionSource({
     registry: runtimeLedger(runtime),
     secrets,
     policy: settings.connections,
+    pages: pagesOf(settings, ownOrigin),
     variables: settings.connectionVariables,
     modelProviders: settings.modelProviders,
     providers: settings.providers,
@@ -90,11 +99,13 @@ export async function storesAndConnectionsOf(
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
-  const services = connectionServicesOf(runtime, settings, stores.secrets, ownOrigin);
+  const consent = consentClientOf(runtime, settings, stores.secrets);
+  const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, ownOrigin });
   return {
     stores,
+    consent,
     connections: makeConnectionOperations(services),
-    source: sourceServedBy(runtime, settings, stores.secrets),
+    source: sourceServedBy(runtime, settings, { secrets: stores.secrets, ownOrigin }),
     offering: makeProviderOffering(services),
   };
 }

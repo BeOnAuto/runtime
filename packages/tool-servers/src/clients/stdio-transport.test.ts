@@ -3,7 +3,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
 import type { StdioServerSettings } from '../settings/server-settings.ts';
-import { fakeStdioServerPath, testClientInfo } from '../testing/index.ts';
+import { consentClientWith, fakeStdioServerPath, testClientInfo } from '../testing/index.ts';
 import { errorsNoLongerReported } from './mcp-client.ts';
 import { observations } from './observed-requests.ts';
 import { failureOf } from './server-failures.ts';
@@ -53,6 +53,7 @@ function linkTo(settings: StdioServerSettings, openMs = patientMs) {
   const link = serverLink(settings, {
     clientInfo: testClientInfo,
     fetch: globalThis.fetch,
+    consent: consentClientWith(),
     secrets: secretsOf([Redacted.make('fake MCP server')]),
     now: Date.now,
     timing: { callMs: patientMs, openMs, longestRetryWaitMs: 1000 },
