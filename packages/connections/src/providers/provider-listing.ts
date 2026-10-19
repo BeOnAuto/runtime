@@ -98,6 +98,13 @@ function wayOfferingOf(way: CredentialWay, offering: Offering, { entry }: Provid
     : offering;
 }
 
+export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Listing): boolean {
+  return (
+    isListed(provider, way, listing.policy) &&
+    wayOfferingOf(way, offeringOf(provider, listing.providerValues), provider, listing).offered
+  );
+}
+
 function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
   const { name, title, description, website, type, credentials } = provider.entry;
   const offering = offeringOf(provider, listing.providerValues);

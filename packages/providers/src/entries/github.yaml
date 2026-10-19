@@ -7,6 +7,11 @@ url: https://api.githubcopilot.com/mcp/
 headers:
   X-MCP-Toolsets: context,repos,issues,pull_requests,users
 credentials:
+  - kind: authorization
+    issuer: https://github.com/login/oauth
+    scope: read:org repo
+    clients: [registered]
+    description: Sign in to GitHub and allow access to your repositories.
   - kind: secret
     in: header
     name: Authorization

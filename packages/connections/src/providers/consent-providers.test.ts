@@ -62,7 +62,7 @@ describe('a connection added by a provider whose way is consent', () => {
   });
 
   it('is refused where the rules take no host of its endpoints, or not the kind', async () => {
-    const tenant = { provider: 'adverts', placeholders: { tenant: 'acme' } };
+    const tenant = { provider: 'adverts', placeholders: { tenant: 'acme' }, credential: { kind: 'authorization' } };
 
     expect([
       await adding(consentHarness({ allowed_hosts: ['adverts.example.com', 'api.adverts.example.com'] }), tenant),
@@ -79,6 +79,21 @@ describe('a connection added by a provider whose way is consent', () => {
         reason: 'forbidden',
         detail: 'A connection may not take an authorization credential on this runtime, which allows secret',
       },
+    ]);
+  });
+});
+
+describe('a connection added by a provider whose way is consent, by its name alone', () => {
+  it('takes the first way the listing offers, consent where whoever runs Auto registered a client and the rules take its hosts, and another way otherwise', async () => {
+    const byName = { provider: 'adverts', placeholders: { tenant: 'acme' } };
+    const consentOutOfReach = { allowed_hosts: ['adverts.example.com', 'api.adverts.example.com'] };
+
+    expect([
+      await adding(consentHarness(), byName),
+      await adding(consentHarness(consentOutOfReach), byName),
+    ]).toMatchObject([
+      { status: 'succeeded', output: { credential: { kind: 'authorization' } } },
+      { status: 'succeeded', output: { credential: { kind: 'secret', in: 'header', name: 'X-Api-Key' } } },
     ]);
   });
 });

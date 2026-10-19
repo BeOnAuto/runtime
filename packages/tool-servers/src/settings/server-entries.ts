@@ -161,7 +161,7 @@ const providerFields = {
       CredentialFieldsSchema,
     ]).annotate({
       description:
-        'With provider, the credential of its first way, or of the way kind names: a secret as a reference such as ${TRACKER_TOKEN}, or client credentials as the client id written out with client_secret, or with private_key and its algorithm, each key a reference; nothing for a way that takes none',
+        "With provider, the credential of the way kind names, or else of its first way but authorization, a consent a person gives on Studio's page alone: a secret as a reference such as ${TRACKER_TOKEN}, or client credentials as the client id written out with client_secret, or with private_key and its algorithm, each key a reference; nothing for a way that takes none",
     }),
   ),
 };

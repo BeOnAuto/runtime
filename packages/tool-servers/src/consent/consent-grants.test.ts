@@ -83,6 +83,16 @@ describe('the scope a finish answers', () => {
     expect([done.scope, tokensKeptBy(done).scope]).toEqual(['files.read files.write', 'files.read files.write']);
   });
 
+  it('is the granted scope with its scopes separated by single spaces where the server separates them with commas', async () => {
+    const commas = await served({ grantedScope: 'files.read,files.write, files.share' });
+    const done = await finishedAt(clientAt(commas), startAskedAt(commas, { scope: 'files.read files.write' }));
+
+    expect([done.scope, tokensKeptBy(done).scope]).toEqual([
+      'files.read files.write files.share',
+      'files.read files.write files.share',
+    ]);
+  });
+
   it('is refused as no scope where the server grants an empty one to a scope asked, or as malformed where it is not a scope, revoking the tokens', async () => {
     const empty = await served({ grantedScope: '' });
     const quoted = await served({ grantedScope: 'files."read"' });

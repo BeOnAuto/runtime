@@ -16,11 +16,11 @@ import {
   type EntryChecking,
 } from '../entries/entry-checks.ts';
 import type { AdditionGiven } from '../operations/connection-fields.ts';
-import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
 import { consentUnsetUp, isConsentUnsetUp, type ClientSourcesHad } from './consent-offered.ts';
+import { isOfferedWay, type Listing } from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
@@ -58,14 +58,15 @@ function namedHere(providers: ProviderList, provider: string): Result.Result<Pro
 function givenToProvider(
   provider: string,
   given: AdditionGiven,
-  providers: ProviderList,
+  listing: Listing,
 ): Result.Result<GivenAddition, readonly Issue[]> {
   const { name, placeholders, entry = {}, credential } = given;
-  return Result.flatMap(namedHere(providers, provider), ({ entry: written }) =>
-    additionOfProvider(written, {
+  return Result.flatMap(namedHere(listing.providers, provider), (named) =>
+    additionOfProvider(named.entry, {
       name,
       placeholders,
       kind: credential?.kind,
+      canBeGiven: (way) => isOfferedWay(named, way, listing),
       playbooks: entry.playbooks,
       allowed: entry.allowed,
       record_content: entry.record_content,
@@ -78,9 +79,7 @@ export interface ProviderServices {
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
 }
 
-interface AdditionServices extends ProviderServices {
-  readonly consent: ClientSourcesHad;
-}
+type AdditionServices = ProviderServices & Listing;
 
 export function providingOf(
   { provider }: Pick<AdditionInput, 'provider'>,
@@ -149,7 +148,7 @@ export function checkedAdditionOf(
   const resolved =
     given.provider === undefined
       ? Result.succeed(givenByHand(given))
-      : givenToProvider(given.provider, given, services.providers);
+      : givenToProvider(given.provider, given, services);
   return Result.flatMap(Result.mapError(resolved, invalidAddition), (addition) => {
     const providing = providingOf(addition, services);
     const issues = issuesOf(addition, { given, checking: { ...checking, providing }, consent: services.consent });
@@ -159,7 +158,7 @@ export function checkedAdditionOf(
 
 export function refusalOfTheAddition(
   addition: GivenAddition,
-  policy: ConnectionPolicy,
+  policy: Listing['policy'],
   fileEntries: readonly string[],
   services: ProviderServices,
 ): Forbidden | Conflict | undefined {

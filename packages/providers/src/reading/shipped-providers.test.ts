@@ -53,12 +53,12 @@ describe('the shipped providers', () => {
   it('are the entries of the folder, each named as its file, sorted by name and so each named once', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
-    expect(names).toEqual(['github', 'profound', 'slack-api']);
+    expect(names).toEqual(['github', 'profound', 'slack', 'slack-api']);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
         .toSorted(),
-    ).toEqual(names.map((name) => `${name}.yaml`));
+    ).toEqual(names.map((name) => `${name}.yaml`).toSorted());
     expect(new Set(names).size).toBe(names.length);
   });
 
@@ -79,8 +79,9 @@ describe('the ways and the servers of the shipped providers', () => {
         operatorVariablesOf(entry),
       ]),
     ).toEqual([
-      ['github', ['secret'], []],
-      ['profound', ['secret'], []],
+      ['github', ['authorization', 'secret'], []],
+      ['profound', ['authorization', 'secret'], []],
+      ['slack', ['authorization'], []],
       ['slack-api', ['secret'], []],
     ]);
   });
@@ -89,12 +90,19 @@ describe('the ways and the servers of the shipped providers', () => {
     expect(shipped.providers.map(({ entry, address }) => [entry.name, address])).toEqual([
       ['github', 'https://api.githubcopilot.com/mcp/'],
       ['profound', 'https://mcp.tryprofound.com/mcp'],
+      ['slack', 'https://mcp.slack.com/mcp'],
       ['slack-api', 'https://slack.com/api'],
     ]);
     expect(
       shipped.providers.map((provider) => provider.entry.credentials.map((way) => hostAlternativesOf(provider, way))),
-    ).toEqual([[[['api.githubcopilot.com']]], [[['mcp.tryprofound.com']]], [[['slack.com']]]]);
+    ).toEqual([
+      [[['api.githubcopilot.com', 'github.com']], [['api.githubcopilot.com']]],
+      [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
+      [[['mcp.slack.com', 'mcp.slack.com']]],
+      [[['slack.com']]],
+    ]);
     expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual([
+      undefined,
       undefined,
       undefined,
       'https://slack.com/api',

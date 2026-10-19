@@ -1,0 +1,12 @@
+name: slack
+title: Slack
+description: Search and read Slack messages, in public and private channels, direct messages and threads, look up people and channels, and send messages and add reactions as the person who connects, through Slack's MCP server.
+website: https://docs.slack.dev/ai/slack-mcp-server/
+type: mcp
+url: https://mcp.slack.com/mcp
+credentials:
+  - kind: authorization
+    issuer: https://mcp.slack.com
+    scope: search:read.public search:read.private search:read.im search:read.mpim search:read.users channels:read groups:read im:read mpim:read channels:history groups:history im:history mpim:history users:read reactions:read chat:write reactions:write
+    clients: [registered]
+    description: Sign in to Slack and allow access as yourself.

@@ -11,6 +11,7 @@ export interface GivenToProvider {
   readonly name?: string | undefined;
   readonly placeholders?: Readonly<Record<string, string>> | undefined;
   readonly kind?: string | undefined;
+  readonly canBeGiven?: ((way: CredentialWay) => boolean) | undefined;
   readonly playbooks?: readonly string[] | undefined;
   readonly allowed?: readonly string[] | undefined;
   readonly record_content?: boolean | undefined;
@@ -49,12 +50,19 @@ export interface ProviderAddition {
 
 type Placed = Readonly<Record<string, string>>;
 
+function everyWay(): boolean {
+  return true;
+}
+
 function wayOf(
   { name, credentials }: ProviderEntry,
-  kind: string | undefined,
+  { kind, canBeGiven = everyWay }: GivenToProvider,
 ): Result.Result<CredentialWay, readonly Issue[]> {
   const [first] = credentials;
-  const way = kind === undefined ? first : credentials.find((offered) => offered.kind === kind);
+  const way =
+    kind === undefined
+      ? (credentials.find((offered) => canBeGiven(offered)) ?? first)
+      : credentials.find((offered) => offered.kind === kind);
   return way === undefined
     ? Result.fail([
         {
@@ -132,7 +140,7 @@ export function additionOfProvider(
   given: GivenToProvider,
 ): Result.Result<ProviderAddition, readonly Issue[]> {
   const placeholders = given.placeholders ?? {};
-  const way = wayOf(provider, given.kind);
+  const way = wayOf(provider, given);
   return Result.match(valuesOf(provider, placeholders), {
     onFailure: (placing) =>
       Result.fail([...placing, ...Result.getFailure(way).pipe(Option.getOrElse((): readonly Issue[] => []))]),

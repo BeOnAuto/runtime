@@ -20,14 +20,40 @@ function hostsOf(provider: Provider): readonly (readonly string[])[] {
   return provider.entry.credentials.flatMap((way) => hostAlternativesOf(provider, way));
 }
 
-function placementOf({ entry }: Provider) {
-  const { kind, in: placedIn, name, scheme } = required(entry.credentials[0]);
+const github = required(shippedProviders.find(({ entry }) => entry.name === 'github'));
+
+function wayOf({ entry }: Provider, kind: string) {
+  return required(entry.credentials.find((way) => way.kind === kind));
+}
+
+function placementOf(provider: Provider) {
+  const { kind, in: placedIn, name, scheme } = wayOf(provider, 'secret');
   return { kind, in: placedIn, name, scheme };
 }
 
-const addedByName = shippedProviders.filter(
-  ({ entry }) => entry.type === 'mcp' && entry.placeholders === undefined && entry.credentials[0]?.kind === 'secret',
+function consentOf(provider: Provider) {
+  const { kind, issuer, scope, clients } = wayOf(provider, 'authorization');
+  return { kind, issuer, scope, clients };
+}
+
+const issuersOfConsent = shippedProviders.flatMap(({ entry }) =>
+  entry.credentials.flatMap(({ kind, issuer }) => (kind === 'authorization' && issuer !== undefined ? [issuer] : [])),
 );
+
+const registeredAtTheIssuers = JSON.stringify({
+  registered_clients: [{ issuers: issuersOfConsent, client_id: 'auto-runtime' }],
+});
+
+const SearchedSchema = Schema.Struct({ providers: Schema.Array(Schema.Struct({ name: Schema.String })) });
+
+const WaysListedSchema = Schema.Struct({
+  providers: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      credentials: Schema.Array(Schema.Struct({ kind: Schema.String, offered: Schema.Boolean })),
+    }),
+  ),
+});
 
 const refusedName = 'There is no provider named crm here; search lists the providers a person may connect';
 
@@ -80,29 +106,66 @@ describe('the providers a server lists over HTTP', () => {
   });
 });
 
+async function waysListedBy(served: ReasoningServer): Promise<readonly (readonly [string, readonly string[]])[]> {
+  const { body } = await served.call('GET', '/v1/orgs/local/providers');
+  return Schema.decodeUnknownSync(WaysListedSchema)(body).providers.map(({ name, credentials }) => [
+    name,
+    credentials.map(({ kind, offered }) => `${kind} ${offered ? 'offered' : 'set up first'}`),
+  ]);
+}
+
+async function namesSearchedBy(served: ReasoningServer): Promise<readonly string[]> {
+  const { body } = await served.call('GET', '/v1/orgs/local/tool-servers/search');
+  return Schema.decodeUnknownSync(SearchedSchema)(body).providers.map(({ name }) => name);
+}
+
+describe('the ways of the providers a server lists', () => {
+  it('offer consent where whoever runs it registered a client at the issuer or the server registers one itself, and search offers a provider with a way offered', async () => {
+    const withClients = await servingReasoning([], { CONNECTIONS: registeredAtTheIssuers });
+    onTestFinished(() => withClients.stop());
+
+    expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
+      [
+        ['github', ['authorization set up first', 'secret offered']],
+        ['profound', ['authorization offered', 'secret offered']],
+        ['slack', ['authorization set up first']],
+        ['slack-api', ['secret offered']],
+      ],
+      ['github', 'profound', 'slack-api'],
+    ]);
+    expect([await waysListedBy(withClients), await namesSearchedBy(withClients)]).toEqual([
+      [
+        ['github', ['authorization offered', 'secret offered']],
+        ['profound', ['authorization offered', 'secret offered']],
+        ['slack', ['authorization offered']],
+        ['slack-api', ['secret offered']],
+      ],
+      names,
+    ]);
+  });
+});
+
 describe('a connection added by a provider', () => {
-  it('is added over HTTP by its name alone, with the server and the credential the provider gives', async () => {
-    const provider = required(addedByName[0]);
-    const { name, url } = provider.entry;
+  it('is added over HTTP by its name alone, by the first way the server offers: github by its token where no client is registered at the issuer of its consent, and by consent where one is', async () => {
+    const withClients = await servingReasoning([], { CONNECTIONS: registeredAtTheIssuers });
+    onTestFinished(() => withClients.stop());
+    const { name, url } = github.entry;
+    const pending = { name, type: 'mcp', provider: name, placeholders: {}, entry: { url }, status: 'pending' };
 
-    const answer = await server.call('POST', '/v1/orgs/local/connections', { body: { provider: name } });
+    const added = await Promise.all(
+      [server, withClients].map((served) =>
+        served.call('POST', '/v1/orgs/local/connections', { body: { provider: name } }),
+      ),
+    );
 
-    expect(answer).toMatchObject({
-      status: 201,
-      body: {
-        name,
-        type: 'mcp',
-        provider: name,
-        placeholders: {},
-        entry: { url },
-        credential: placementOf(provider),
-        status: 'pending',
-      },
-    });
+    expect(added).toMatchObject([
+      { status: 201, body: { ...pending, credential: placementOf(github) } },
+      { status: 201, body: { ...pending, credential: consentOf(github) } },
+    ]);
   });
 
-  it('is added over MCP by its name, and a provider the server has not is refused at /provider', async () => {
-    const { name, url } = required(addedByName.at(-1)).entry;
+  it('is added over MCP by its name alone, and a provider the server has not is refused at /provider', async () => {
+    const { name, url } = github.entry;
     const connection = { url: `${server.origin}/mcp`, headers: {} };
 
     const { answer } = await calledOpeningLinks(connection, {
@@ -116,6 +179,7 @@ describe('a connection added by a provider', () => {
       provider: name,
       placeholders: {},
       entry: { url },
+      credential: placementOf(github),
     });
     expect(refused).toMatchObject({
       status: 422,

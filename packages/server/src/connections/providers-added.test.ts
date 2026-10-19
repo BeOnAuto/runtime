@@ -7,7 +7,7 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { readSettings } from '../settings/settings.ts';
-import { offeredByTheServer } from '../testing/servers/connected-servers.ts';
+import { offeredByTheServer, shippedProviders } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const workspace = 'notes-workspace-6b2e0d';
@@ -78,7 +78,9 @@ describe('a provider the settings file adds', () => {
     const searched = await server.call('GET', '/v1/orgs/local/tool-servers/search');
     const added = await server.call('POST', '/v1/orgs/local/connections', { body: { provider: 'notes' } });
 
-    expect(listed.map(({ name }) => name)).toEqual([...offeredByTheServer.map(({ name }) => name), 'notes'].toSorted());
+    expect(listed.map(({ name }) => name)).toEqual(
+      [...shippedProviders.map(({ entry }) => entry.name), 'notes'].toSorted(),
+    );
     expect(searched).toMatchObject({
       status: 200,
       body: { providers: [...offeredByTheServer, notes].toSorted((one, other) => one.name.localeCompare(other.name)) },

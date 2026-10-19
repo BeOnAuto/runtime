@@ -60,6 +60,16 @@ describe('the addition a provider makes', () => {
       credential: { kind: 'none' },
     });
   });
+
+  it('takes the first way the caller can be given where it names no kind, and the first where it can be given none', () => {
+    const givenNoConsent = { canBeGiven: ({ kind }: { readonly kind: string }) => kind !== 'authorization' };
+
+    expect([
+      resolved(adverts, { placeholders: { tenant: 'acme' }, ...givenNoConsent }).credential.kind,
+      resolved(drive, givenNoConsent).credential.kind,
+      resolved(adverts, { placeholders: { tenant: 'acme' } }).credential.kind,
+    ]).toEqual(['secret', 'authorization', 'authorization']);
+  });
 });
 
 describe('the addition a provider of client credentials makes', () => {

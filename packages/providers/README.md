@@ -42,11 +42,14 @@ The fields of a way, `wayFields`, are the one place of the placement, `in`, `nam
 
 The entries this runtime ships, each verified against its vendor's documentation when it was written:
 
-| Provider    | Server                                                    | Ways                                        | Placeholders |
-| ----------- | --------------------------------------------------------- | ------------------------------------------- | ------------ |
-| `github`    | MCP, `https://api.githubcopilot.com/mcp/`                 | `secret`, `Authorization: Bearer`           | none         |
-| `profound`  | MCP, `https://mcp.tryprofound.com/mcp`                    | `secret`, `Authorization: Bearer`           | none         |
-| `slack-api` | HTTP, the server of its document, `https://slack.com/api` | `secret`, the document's `bot_token` scheme | none         |
+| Provider    | Server                                                    | Ways                                                                                                                             | Placeholders |
+| ----------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `github`    | MCP, `https://api.githubcopilot.com/mcp/`                 | `authorization` at `https://github.com/login/oauth`, `[registered]`; `secret`, `Authorization: Bearer`                           | none         |
+| `profound`  | MCP, `https://mcp.tryprofound.com/mcp`                    | `authorization` at `https://auth.tryprofound.com`, `[registered, metadata_document, dynamic]`; `secret`, `Authorization: Bearer` | none         |
+| `slack`     | MCP, `https://mcp.slack.com/mcp`                          | `authorization` at `https://mcp.slack.com`, `[registered]`                                                                       | none         |
+| `slack-api` | HTTP, the server of its document, `https://slack.com/api` | `secret`, the document's `bot_token` scheme                                                                                      | none         |
+
+A way of consent names as its issuer the authorization server its server's protected-resource metadata names, and lists the client sources that authorization server's metadata takes. GitHub's and Slack's publish no registration endpoint, so their ways take a client whoever runs the runtime registered, and no other; Profound's offers registration and takes a client metadata document. Each way's scope is the least the tools of the entry's server need, read before write, as the vendor documents them, and the self-host page for connections names them.
 
 `slack-api`'s document is curated, beside the entries: ten Web API methods written from the vendor's method references.
 
@@ -60,7 +63,7 @@ The entries this runtime ships, each verified against its vendor's documentation
 
 ## The resolution
 
-`additionOfProvider(provider, given)` (`src/resolution/provider-addition.ts`) takes an entry and what a caller gives: the connection's `name`, the provider's when left out; `placeholders`, the values by name; `kind`, the credential's way, the first when left out; and what is per connection, `playbooks`, `allowed` and `record_content`. It answers `{ name, type, entry, credential }`, the addition the connections package takes, with `provider` and `placeholders`, the values given, for the record: the entry is the server part with each value in its place and the choice's settings placed, the provider's references kept as it writes them, without a header or a query parameter whose optional placeholder is not given, and `{client_id}` kept for the serving to place; the credential is the way's placement, its issuer and its endpoints, with each value in its place, its scope, its parameters and its client sources, without its description. It refuses, each as an `Issue` at the pointer the caller wrote:
+`additionOfProvider(provider, given)` (`src/resolution/provider-addition.ts`) takes an entry and what a caller gives: the connection's `name`, the provider's when left out; `placeholders`, the values by name; `kind`, the credential's way, and where it is left out the first way the caller can be given, by the caller's `canBeGiven`, every way when it gives none, or the first where it can be given none, which the caller then refuses in its own words; and what is per connection, `playbooks`, `allowed` and `record_content`. It answers `{ name, type, entry, credential }`, the addition the connections package takes, with `provider` and `placeholders`, the values given, for the record: the entry is the server part with each value in its place and the choice's settings placed, the provider's references kept as it writes them, without a header or a query parameter whose optional placeholder is not given, and `{client_id}` kept for the serving to place; the credential is the way's placement, its issuer and its endpoints, with each value in its place, its scope, its parameters and its client sources, without its description. It refuses, each as an `Issue` at the pointer the caller wrote:
 
 | What the caller gave                                         | Pointer                | Words                                                                                                                                                                    |
 | ------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

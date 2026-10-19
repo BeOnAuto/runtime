@@ -2,7 +2,7 @@ const scopeToken = '[\\x21\\x23-\\x5B\\x5D-\\x7E]+';
 
 const scopeShape = new RegExp(`^${scopeToken}(?: ${scopeToken})*$`, 'u');
 
-const between = /\s+/u;
+const separatorsOfAGrant = /[\s,]+/u;
 
 const offlineAccess = 'offline_access';
 
@@ -12,7 +12,7 @@ export function isScope(text: string): boolean {
 
 export function normalizedScopeOf(granted: string): string {
   return granted
-    .split(between)
+    .split(separatorsOfAGrant)
     .filter((token) => token !== '')
     .join(' ');
 }

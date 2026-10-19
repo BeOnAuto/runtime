@@ -5,6 +5,11 @@ website: https://docs.tryprofound.com/mcp/overview
 type: mcp
 url: https://mcp.tryprofound.com/mcp
 credentials:
+  - kind: authorization
+    issuer: https://auth.tryprofound.com
+    scope: openid offline_access
+    clients: [registered, metadata_document, dynamic]
+    description: Sign in to Profound and allow access.
   - kind: secret
     in: header
     name: Authorization

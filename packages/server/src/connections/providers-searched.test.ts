@@ -15,8 +15,10 @@ import {
 } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
+const byAToken = { kind: 'secret' };
+
 const addedByAToken = shippedProviders.filter(
-  ({ entry }) => entry.placeholders === undefined && entry.credentials[0]?.kind === 'secret',
+  ({ entry }) => entry.placeholders === undefined && entry.credentials.some((way) => way.kind === byAToken.kind),
 );
 
 const listedWithoutAsking = required(addedByAToken.find(({ entry }) => entry.type === 'openapi'));
@@ -109,11 +111,15 @@ describe('a provider a connection of the org serves', () => {
     ledger = temporaryLedger();
     const kept = { LEDGER_FILE: ledger.fileName };
     const first = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
-    await connectedWith(first, { provider: nameOf(brokenOne) }, 'token-sealed-under-the-first-key');
+    await connectedWith(
+      first,
+      { provider: nameOf(brokenOne), credential: byAToken },
+      'token-sealed-under-the-first-key',
+    );
     await first.stop();
     const restarted = await served({ ...kept, SECRETS_KEY: anotherKey });
     await restarted.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    const pending = await addedConnection(restarted, { provider: nameOf(pendingOne) });
+    const pending = await addedConnection(restarted, { provider: nameOf(pendingOne), credential: byAToken });
 
     const whilePending = await restarted.call('GET', searchOfAcme);
     const narrowed = { playbooks: ['alpha'], record_content: false };
