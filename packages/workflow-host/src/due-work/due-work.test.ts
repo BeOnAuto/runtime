@@ -1,8 +1,9 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { skippingClock, systemClock } from '../loop/host-clock.ts';
+import { systemClock } from '../loop/host-clock.ts';
 import { until } from '../testing/until.ts';
+import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneTick, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork, type FakeDueWork } from './fake-due-work.ts';
@@ -22,9 +23,11 @@ describe('the due rows of a projection, in the loop of the host', () => {
   it('are performed before the timers of the same tick, at most 256 a tick and 16 at once, the rest at once after', async () => {
     const now = Date.now();
     const rows = rowsDueBy(300, now - 1000, { callsOut: false });
-    const looping = await dueLooping(rows, skippingClock(now));
+    rows.hold();
+    const looping = await dueLooping(rows, steppedClock(now));
 
     await looping.armTimer(now - 1000);
+    rows.release();
     await until(rows.performed, (performed) => performed.length === 300);
 
     expect(looping.order()).toEqual([`timer 1 after ${dueInOneTick} rows`]);
@@ -33,25 +36,31 @@ describe('the due rows of a projection, in the loop of the host', () => {
 
   it('that call out are handed out as many a tick as are performed at once, the rest as places free, holding no timer', async () => {
     const now = Date.now();
-    const rows = fakeDueWork(100);
+    const rows = fakeDueWork();
     for (const key of keysOf(40, 'row')) {
       rows.add(key, now - 1000);
     }
-    const looping = await dueLooping(rows, skippingClock(now));
+    rows.hold();
+    const looping = await dueLooping(rows, steppedClock(now));
 
     await looping.armTimer(now - 1000);
+    const firedWhileHeld = [...(await until(looping.order, (order) => order.length === 1))];
+    const handedWhileHeld = (await until(rows.attempts, (made) => made.length === duePerformedAtOnce)).length;
+    rows.release();
     await until(rows.performed, (performed) => performed.length === 40);
 
-    expect(looping.order()).toEqual(['timer 1 after 0 rows']);
-    expect(rows.mostAtOnce()).toBe(duePerformedAtOnce);
+    expect([firedWhileHeld, handedWhileHeld]).toEqual([['timer 1 after 0 rows'], duePerformedAtOnce]);
+    expect([rows.attempts().length, rows.mostAtOnce()]).toEqual([40, duePerformedAtOnce]);
   });
 
   it('wake the loop when the next of them is due', async () => {
     const now = Date.now();
     const rows = fakeDueWork();
     rows.add('later', now + 90_000);
+    const clock = steppedClock(now);
 
-    await dueLooping(rows, skippingClock(now));
+    await dueLooping(rows, clock);
+    clock.step(90_000);
     const [performed] = await until(rows.performed, (done) => done.length > 0);
 
     expect(performed).toEqual({ key: 'later', at: now + 90_000, by: 'host' });
@@ -59,26 +68,50 @@ describe('the due rows of a projection, in the loop of the host', () => {
 });
 
 describe('due rows whose perform never ends, as a delivery through a tool that never answers', () => {
-  it('hold the timers of a tick for a second at most, and the ticks after not at all, 16 of them at once', async () => {
+  it('hold no timer, of the tick that hands them out or of the ticks after, 16 of them at once', async () => {
     const now = Date.now();
+    const clock = steppedClock(now);
     const rows = fakeDueWork();
     for (const key of Array.from({ length: 20 }, (_, index) => `hanging-${index}`)) {
       rows.add(key, now - 1000);
       rows.hanging(key);
     }
-    const looping = await dueLooping(rows);
+    const looping = await dueLooping(rows, clock);
 
     await looping.armTimer(now - 1000);
     await until(looping.order, (order) => order.length === 1);
-    const firstFiredAt = Date.now();
-    const secondDueAt = Date.now() + 300;
-    await looping.armTimer(secondDueAt, '2');
+    await looping.armTimer(now + 300, '2');
+    clock.step(300);
     await until(looping.order, (order) => order.length === 2);
 
-    expect(firstFiredAt - now).toBeLessThan(dueAwaitedMs + 3000);
-    expect(Date.now() - secondDueAt).toBeLessThan(dueAwaitedMs);
     expect(looping.order()).toEqual(['timer 1 after 0 rows', 'timer 2 after 0 rows']);
+    expect(looping.firedAt()).toEqual([now, now + 300]);
     expect([rows.attempts().length, rows.mostAtOnce()]).toEqual([duePerformedAtOnce, duePerformedAtOnce]);
+  });
+});
+
+describe('a due row that calls out nowhere and whose perform never ends', () => {
+  it('holds the timers of the tick that hands it out a second at most, and those of the ticks after not at all', async () => {
+    const now = Date.now();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork();
+    rows.add('expiry', now - 1000);
+    rows.local('expiry');
+    rows.hanging('expiry');
+    const looping = await dueLooping(rows, clock);
+
+    await until(rows.attempts, (made) => made.length === 1);
+    await looping.armTimer(now - 1000);
+    const beforeTheSecond = [...looping.order()];
+    clock.step(dueAwaitedMs);
+    await until(looping.order, (order) => order.length === 1);
+    await looping.armTimer(now + dueAwaitedMs + 300, '2');
+    clock.step(300);
+    await until(looping.order, (order) => order.length === 2);
+
+    expect(beforeTheSecond).toEqual([]);
+    expect(looping.firedAt()).toEqual([now + dueAwaitedMs, now + dueAwaitedMs + 300]);
+    expect(rows.attempts()).toHaveLength(1);
   });
 });
 
@@ -118,6 +151,7 @@ describe('due rows in flight', () => {
 describe('a due row that calls out nowhere, while deliveries hang', () => {
   it('is performed at once, beside the 16 that hang, not behind them', async () => {
     const now = Date.now();
+    const clock = steppedClock(now);
     const rows = fakeDueWork();
     for (const key of Array.from({ length: 20 }, (_, index) => `delivery-${index}`)) {
       rows.add(key, now - 1000);
@@ -126,11 +160,10 @@ describe('a due row that calls out nowhere, while deliveries hang', () => {
     rows.add('expiry', now - 1000);
     rows.local('expiry');
 
-    await dueLooping(rows);
+    await dueLooping(rows, clock);
     const [performed] = await until(rows.performed, (done) => done.length > 0);
 
-    expect(performed?.key).toBe('expiry');
-    expect(Date.now() - now).toBeLessThan(dueAwaitedMs);
+    expect(performed).toEqual({ key: 'expiry', at: now, by: 'host' });
     expect(rows.mostAtOnce()).toBe(duePerformedAtOnce + 1);
   });
 });
@@ -145,8 +178,19 @@ describe('a due row that cannot be performed', () => {
     rows.local('stuck');
     rows.local('next');
 
-    const looping = await dueLooping(rows, skippingClock(now));
-    const attempts = await until(rows.attempts, (made) => made.length >= 6);
+    const clock = steppedClock(now);
+    const looping = await dueLooping(rows, clock);
+    await until(rows.attempts, (made) => made.length === 1);
+    const steppedUntilTried = async (gapMs: number, made: number) => {
+      clock.step(gapMs);
+      await until(rows.attempts, (attempted) => attempted.length === made);
+    };
+    await steppedUntilTried(1000, 2);
+    await steppedUntilTried(500, 3);
+    await steppedUntilTried(1500, 4);
+    await steppedUntilTried(4000, 5);
+    await steppedUntilTried(8000, 6);
+    const attempts = rows.attempts();
 
     expect(attempts.slice(0, 6).map(({ key, at }) => [key, at - now])).toEqual([
       ['stuck', 0],

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { until } from '../testing/until.ts';
+import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneTick, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork } from './fake-due-work.ts';
@@ -98,18 +99,23 @@ describe('a host that stops while due rows are in flight', () => {
 
 describe('a delivery handed out while workflow timers fall due', () => {
   it('holds none of them, as the tick waits for the rows that call out nowhere alone', async () => {
-    const rows = fakeDueWork(300);
-    for (const key of keysOf(duePerformedAtOnce + 1, 'delivery')) {
-      rows.add(key, Date.now() - 1000);
+    const now = Date.now();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork();
+    for (const key of keysOf(duePerformedAtOnce - 1, 'delivery')) {
+      rows.add(key, now - 1000);
     }
-    rows.hanging(`delivery-${duePerformedAtOnce}`);
-    const looping = await dueLooping(rows);
-    const dueAt = Date.now() + 500;
+    rows.add('handed-as-the-timer-falls-due', now + 500);
+    rows.hold();
+    const looping = await dueLooping(rows, clock);
 
-    await looping.armTimer(dueAt);
+    await looping.armTimer(now + 500);
+    clock.step(500);
     await until(looping.order, (order) => order.length === 1);
+    const handed = await until(rows.attempts, (made) => made.length === duePerformedAtOnce);
+    rows.release();
 
-    expect(Date.now() - dueAt).toBeLessThan(dueAwaitedMs / 2);
-    expect(rows.attempts()).toHaveLength(duePerformedAtOnce + 1);
+    expect(looping.firedAt()).toEqual([now + 500]);
+    expect(handed.at(-1)).toEqual({ key: 'handed-as-the-timer-falls-due', at: now + 500, by: 'host' });
   });
 });
