@@ -103,7 +103,7 @@ model_aliases:
 # connections:
 #   people_may_add: true
 #   allowed_hosts: ['*.example.com', 'crm.example.com']
-#   credential_kinds: [none, reference, secret, client_credentials]
+#   credential_kinds: [none, reference, secret, client_credentials, authorization]
 #   providers:
 #     - name: crm
 #       title: CRM
