@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.13.0](https://github.com/BeOnAuto/runtime/compare/v0.12.0...v0.13.0) (2026-10-19)
+
+
+### Features
+
+* **connections:** a connection connected by consent serves tools, renewed and revoked ([#255](https://github.com/BeOnAuto/runtime/issues/255)) ([e85ec45](https://github.com/BeOnAuto/runtime/commit/e85ec45e132deeb57f1a6b749f62e5c6e6cbdea9))
+* **connections:** a person connects a provider by signing in to it ([#252](https://github.com/BeOnAuto/runtime/issues/252)) ([59b906b](https://github.com/BeOnAuto/runtime/commit/59b906b6399160d233de8e6153a8612b38505bce))
+* **connections:** the operator's registered clients, and a secret replaced under a lease ([#246](https://github.com/BeOnAuto/runtime/issues/246)) ([048b363](https://github.com/BeOnAuto/runtime/commit/048b36395fc6c871baeac469395185ae20aee1e8))
+* **definitions:** a definition says what it is for, in about ([#251](https://github.com/BeOnAuto/runtime/issues/251)) ([3365c41](https://github.com/BeOnAuto/runtime/commit/3365c41ec787e6554fac16010443bd52d2f53013))
+* **definitions:** computation and interaction overviews told as what happens ([#254](https://github.com/BeOnAuto/runtime/issues/254)) ([3fb388f](https://github.com/BeOnAuto/runtime/commit/3fb388f4bf136e3f2147eeded7cc7c2e04b599a1))
+* **server:** the runtime serves Studio at its own origin ([#253](https://github.com/BeOnAuto/runtime/issues/253)) ([049704b](https://github.com/BeOnAuto/runtime/commit/049704b8a8c2f535bf5e3560f4ab23c6f232b3b5))
+* **tool-servers:** an entry of the file names a provider, and the operator adds providers ([#249](https://github.com/BeOnAuto/runtime/issues/249)) ([5d82798](https://github.com/BeOnAuto/runtime/commit/5d82798d8b57d8ec9737e9a6c41089db5c19de51))
+
+
+### Bug Fixes
+
+* **definitions:** an overview says whose reply counts, escapes names and reads a typed input ([#256](https://github.com/BeOnAuto/runtime/issues/256)) ([eb82511](https://github.com/BeOnAuto/runtime/commit/eb825111a1c16e8bdd08c6b82659d2a6f2475c40))
+* **tool-servers:** the lease of a token row outlasts the refresh, and a failed claim is its own ([#258](https://github.com/BeOnAuto/runtime/issues/258)) ([e885f0d](https://github.com/BeOnAuto/runtime/commit/e885f0d2cfc75ce757f27046ccf0d9604d68af48))
+
 ## [0.12.0](https://github.com/BeOnAuto/runtime/compare/v0.11.0...v0.12.0) (2026-10-19)
 
 
