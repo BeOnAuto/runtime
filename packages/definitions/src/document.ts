@@ -6,4 +6,5 @@ export {
   type FrontMatterShape,
   type ReadFrontMatter,
 } from './document/front-matter-keys.ts';
-export { DescriptionSchema, type ValueContract } from './document/function-fields.ts';
+export { AboutSchema, DescriptionSchema, type ValueContract } from './document/function-fields.ts';
+export { writtenTextIssues, type TextPosition } from './document/written-texts.ts';

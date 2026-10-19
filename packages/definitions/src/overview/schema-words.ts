@@ -4,6 +4,7 @@ import type { Schema } from 'effect';
 
 import { firstCharacters } from '../plain-language/characters.ts';
 import { inWords } from '../plain-language/in-words.ts';
+import { oneLine } from './markdown-text.ts';
 import { fieldTable, named, paragraph, type OverviewBlock, type Phrase, type Phrases } from './overview.ts';
 import { amountOf, countedIn, entry, entryBound, item, itemBound, trailingWords, type Bound } from './schema-bounds.ts';
 import { anyValue, countOf, eachOf, forms, list, nouns, record, text, values, type Count } from './schema-nouns.ts';
@@ -72,8 +73,9 @@ function alternativeWords(schema: JsonSchema, reading: SchemaReading, count: Cou
 }
 
 export function descriptionOf(schema: JsonSchema): string | undefined {
-  const description = textOf(schema, 'description')?.trim();
-  if (description === undefined || description === '') {
+  const written = textOf(schema, 'description');
+  const description = written === undefined ? '' : oneLine(written).trim();
+  if (description === '') {
     return undefined;
   }
   const shown = firstCharacters(description, mostFieldDescriptionCharacters);

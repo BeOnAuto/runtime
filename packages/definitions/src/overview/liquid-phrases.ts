@@ -1,6 +1,6 @@
 import { Tokenizer, TypeGuards } from 'liquidjs';
 
-import { named, paragraph, type OverviewBlock, type Phrase, type Phrases } from './overview.ts';
+import { named, paragraph, type Paragraph, type Phrase, type Phrases } from './overview.ts';
 
 export interface TextPiece {
   readonly kind: 'text';
@@ -189,8 +189,8 @@ export function trimmed(phrases: Phrases): Phrases {
     .filter((phrase) => phrase !== '');
 }
 
-export function blocksOf(pieces: readonly ReadPiece[]): readonly OverviewBlock[] {
-  const blocks: OverviewBlock[] = [];
+export function blocksOf(pieces: readonly ReadPiece[]): readonly Paragraph[] {
+  const blocks: Paragraph[] = [];
   let current: Phrase[] = [];
   const close = (): void => {
     const phrases = trimmed(current);

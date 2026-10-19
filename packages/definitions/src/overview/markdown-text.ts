@@ -1,5 +1,6 @@
+import { markdownLinesOf, standsApart, type OpenBlock } from '../markdown/markdown-lines.ts';
 import { readableName } from '../plain-language/in-words.ts';
-import type { Phrase, Phrases } from './overview.ts';
+import { paragraph, type Paragraph, type Phrase, type Phrases } from './overview.ts';
 
 type Place = 'prose' | 'cell';
 
@@ -10,19 +11,18 @@ interface TitledName {
   readonly title?: string;
 }
 
-type HtmlBlock = 'raw' | 'comment' | 'instruction' | 'declaration' | 'data' | 'element';
-
-interface LineReading {
-  readonly fence: string | undefined;
-  readonly html: HtmlBlock | undefined;
-  readonly codeMayStart: boolean;
-  readonly inCode: boolean;
+export interface UnclosedBlock {
+  readonly line: number;
+  readonly kind: 'fence' | 'html';
+  readonly closer: string;
 }
 
-interface ReadLine {
-  readonly reading: LineReading;
-  readonly prose: boolean;
+interface FirstParagraph {
+  readonly text: string;
+  readonly endsInProse: boolean;
 }
+
+export const detailsHeading = '## Details';
 
 const inlinePunctuation = /[\\`*[\]<>]/gu;
 
@@ -34,55 +34,9 @@ const backtickRuns = /`+/gu;
 
 const blankLine = /^[ \t]*$/u;
 
-const indentedCode = /^(?: {4}|\t)/u;
-
-const fenceLine = /^[ \t]*(?<marker>`{3,}|~{3,})(?<rest>.*)$/u;
-
-const listItem = /^[ \t]*(?:[-+*]|\d{1,9}[.)])(?:[ \t]|$)/u;
-
-const quoteMarker = /^[ \t]*>/u;
-
-const headingLine = /^[ \t]*#{1,6}(?:[ \t]|$)/u;
-
-const thematicBreak = /^[ \t]*(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/u;
-
-const setextUnderline = /^[ \t]*(?:=+|-+)[ \t]*$/u;
-
-const delimiterCell = /^:?-+:?$/u;
-
-const outerPipes = /^\||\|$/gu;
-
-const blockTags = [
-  ['address', 'article', 'aside', 'base', 'basefont', 'blockquote', 'body', 'caption', 'center', 'col'],
-  ['colgroup', 'dd', 'details', 'dialog', 'dir', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure'],
-  ['footer', 'form', 'frame', 'frameset', 'h[1-6]', 'head', 'header', 'hr', 'html', 'iframe', 'legend'],
-  ['li', 'link', 'main', 'menu', 'menuitem', 'nav', 'noframes', 'ol', 'optgroup', 'option', 'p', 'param'],
-  ['search', 'section', 'summary', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'track', 'ul'],
-].flat();
-
-const htmlBlocks: readonly HtmlBlock[] = ['raw', 'comment', 'instruction', 'declaration', 'data', 'element'];
-
-const htmlOpeners: Readonly<Record<HtmlBlock, RegExp>> = {
-  raw: /^[ \t]*<(?:script|pre|style|textarea)(?:[ \t>]|$)/iu,
-  comment: /^[ \t]*<!--/u,
-  instruction: /^[ \t]*<\?/u,
-  declaration: /^[ \t]*<![A-Za-z]/u,
-  data: /^[ \t]*<!\[CDATA\[/u,
-  element: new RegExp(`^[ \\t]*</?(?:${blockTags.join('|')})(?:[ \\t>]|/>|$)`, 'iu'),
-};
-
-const htmlEnds: Readonly<Record<HtmlBlock, RegExp>> = {
-  raw: /<\/(?:script|pre|style|textarea)>/iu,
-  comment: /--!?>/u,
-  instruction: /\?>/u,
-  declaration: />/u,
-  data: /\]\]>/u,
-  element: blankLine,
-};
-
 const hardBreak = '\\';
 
-const atRest: LineReading = { fence: undefined, html: undefined, codeMayStart: true, inCode: false };
+const wordsBefore = 'Words: ';
 
 export function oneLine(text: string): string {
   const lines = text.split('\n');
@@ -173,86 +127,9 @@ export function plainTextOf(phrases: Phrases): string {
   return phrases.map((phrase) => plainTextOfPhrase(phrase)).join('');
 }
 
-function closesFence(line: string, opened: string): boolean {
-  const { marker = '', rest = '' } = fenceLine.exec(line)?.groups ?? {};
-  return marker.startsWith(opened.charAt(0)) && marker.length >= opened.length && rest.trim() === '';
-}
-
-function htmlBlockOpenedBy(line: string): HtmlBlock | undefined {
-  return htmlBlocks.find((html) => htmlOpeners[html].test(line));
-}
-
-function standsAlone(line: string): boolean {
-  return headingLine.test(line) || thematicBreak.test(line) || setextUnderline.test(line);
-}
-
-function insideFence(fence: string, line: string): LineReading {
-  return closesFence(line, fence) ? atRest : { ...atRest, fence, codeMayStart: false };
-}
-
-function insideHtml(html: HtmlBlock, line: string): LineReading {
-  return htmlEnds[html].test(line) ? atRest : { ...atRest, html, codeMayStart: false };
-}
-
-function outsideBlocks({ codeMayStart, inCode }: LineReading, line: string): ReadLine {
-  if (blankLine.test(line)) {
-    return { reading: { ...atRest, inCode }, prose: false };
-  }
-  if ((codeMayStart || inCode) && indentedCode.test(line)) {
-    return { reading: { ...atRest, inCode: true }, prose: false };
-  }
-  const fence = fenceLine.exec(line)?.groups?.['marker'];
-  if (fence !== undefined) {
-    return { reading: { ...atRest, fence, codeMayStart: false }, prose: false };
-  }
-  const html = htmlBlockOpenedBy(line);
-  if (html !== undefined) {
-    return { reading: insideHtml(html, line), prose: false };
-  }
-  const alone = standsAlone(line);
-  return { reading: { ...atRest, codeMayStart: alone }, prose: !alone };
-}
-
-function readLine(reading: LineReading, line: string): ReadLine {
-  if (reading.fence !== undefined) {
-    return { reading: insideFence(reading.fence, line), prose: false };
-  }
-  if (reading.html !== undefined) {
-    return { reading: insideHtml(reading.html, line), prose: false };
-  }
-  return outsideBlocks(reading, line);
-}
-
-function isDelimiterRow(line: string | undefined): boolean {
-  const cells = line?.trim().replaceAll(outerPipes, '').split('|') ?? [];
-  return line?.includes('|') === true && cells.every((cell) => delimiterCell.test(cell.trim()));
-}
-
-function tableLinesOf(lines: readonly string[]): readonly boolean[] {
-  let within = false;
-  return lines.map((line, index) => {
-    within = within ? !blankLine.test(line) : line.includes('|') && isDelimiterRow(lines.at(index + 1));
-    return within;
-  });
-}
-
-function proseLinesOf(lines: readonly string[]): readonly boolean[] {
-  const inTable = tableLinesOf(lines);
-  let reading = atRest;
-  return lines.map((line, index) => {
-    const read = readLine(reading, line);
-    reading = read.reading;
-    return read.prose && inTable[index] === false;
-  });
-}
-
-function opensAContainer(line: string): boolean {
-  return listItem.test(line) || quoteMarker.test(line);
-}
-
 function hardBreaksOf(lines: readonly string[]): readonly boolean[] {
-  const prose = proseLinesOf(lines);
-  const goesOn = lines.map((line, index) => prose[index] === true && !opensAContainer(line));
+  const prose = markdownLinesOf(lines).reads.map((read) => read.prose);
+  const goesOn = lines.map((line, index) => prose[index] === true && !standsApart(line));
   return lines.map((line, index) => prose[index] === true && goesOn[index + 1] === true && !line.endsWith(hardBreak));
 }
 
@@ -261,4 +138,71 @@ export function blockQuoted(lines: readonly string[]): string {
   return lines
     .map((line, index) => (blankLine.test(line) ? '>' : `> ${line}${hardBreaks[index] === true ? hardBreak : ''}`))
     .join('\n');
+}
+
+function makesAHeading({ form }: { readonly form: string | undefined }): boolean {
+  return form === 'atx' || form === 'underline';
+}
+
+export function headingLinesIn(text: string): readonly number[] {
+  const { reads } = markdownLinesOf(text.split('\n'));
+  return reads.flatMap((read, index) => (makesAHeading(read) ? [index] : []));
+}
+
+function isClosedByTheBlankLineAfterIt({ within, kind }: OpenBlock): boolean {
+  return within !== undefined || kind === 'element' || kind === 'tag';
+}
+
+function unclosedOf(open: OpenBlock | undefined): UnclosedBlock | undefined {
+  if (open === undefined || isClosedByTheBlankLineAfterIt(open)) {
+    return undefined;
+  }
+  return { line: open.line, kind: open.kind === 'fence' ? 'fence' : 'html', closer: open.closer };
+}
+
+export function unclosedBlockIn(text: string): UnclosedBlock | undefined {
+  return unclosedOf(markdownLinesOf(text.split('\n')).open);
+}
+
+export function detailsLinesIn(text: string): readonly number[] {
+  return text.split('\n').flatMap((line, index) => (line === detailsHeading ? [index] : []));
+}
+
+function withDetailsLinesEscaped(phrase: Phrase, startsALine: boolean): Phrase {
+  if (typeof phrase !== 'string') {
+    return phrase;
+  }
+  return phrase
+    .split('\n')
+    .map((line, index) => (line === detailsHeading && (index > 0 || startsALine) ? `\\${line}` : line))
+    .join('\n');
+}
+
+export function paragraphsAsWritten(paragraphs: readonly Paragraph[]): readonly Paragraph[] {
+  const escaped = paragraphs.map(({ phrases }) =>
+    paragraph(...phrases.map((phrase, index) => withDetailsLinesEscaped(phrase, index === 0))),
+  );
+  const unclosed = unclosedBlockIn(escaped.map(({ phrases }) => phrasesText(phrases, 'prose', 'body')).join('\n\n'));
+  const last = escaped.at(-1);
+  if (unclosed === undefined || last === undefined) {
+    return escaped;
+  }
+  return [...escaped.slice(0, -1), paragraph(...last.phrases, `\n${unclosed.closer}`)];
+}
+
+export function firstParagraphOf(text: string): FirstParagraph {
+  const placed = `${wordsBefore}${text}`.split('\n');
+  const { reads, open } = markdownLinesOf(placed);
+  const unclosed = unclosedOf(open);
+  const end = Math.min(
+    ...[
+      reads.findIndex((read) => read.separates),
+      reads.findIndex((read) => makesAHeading(read)),
+      unclosed === undefined ? -1 : unclosed.line,
+    ].map((index) => (index < 0 ? placed.length : index)),
+  );
+  return {
+    text: text.split('\n').slice(0, end).join('\n'),
+    endsInProse: reads.slice(end - 1, end).some((read) => read.prose),
+  };
 }

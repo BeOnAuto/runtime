@@ -67,6 +67,8 @@ const DiagramSchema = Schema.Struct({
 
 const QuoteSchema = Schema.Struct({ kind: Schema.Literal('quote'), lines: Schema.Array(PhrasesSchema) });
 
+const AuthoredTextSchema = Schema.Struct({ kind: Schema.Literal('authored'), text: Schema.String });
+
 const OverviewBlockSchema = Schema.Union([
   ParagraphSchema,
   BulletListSchema,
@@ -74,6 +76,7 @@ const OverviewBlockSchema = Schema.Union([
   FieldTableSchema,
   DiagramSchema,
   QuoteSchema,
+  AuthoredTextSchema,
 ]);
 
 const OverviewSectionSchema = Schema.Struct({ heading: Schema.String, blocks: Schema.Array(OverviewBlockSchema) });
@@ -114,6 +117,8 @@ export type Diagram = typeof DiagramSchema.Type;
 
 export type Quote = typeof QuoteSchema.Type;
 
+export type AuthoredText = typeof AuthoredTextSchema.Type;
+
 export type OverviewBlock = typeof OverviewBlockSchema.Type;
 
 export type OverviewSection = typeof OverviewSectionSchema.Type;
@@ -140,6 +145,10 @@ export function definitionPhrase({ type, name, title }: PhrasedDefinition): type
 
 export function paragraph(...phrases: Phrases): Paragraph {
   return { kind: 'paragraph', phrases };
+}
+
+export function authoredText(text: string): AuthoredText {
+  return { kind: 'authored', text };
 }
 
 export function bulletList(items: readonly Phrases[]): BulletList {

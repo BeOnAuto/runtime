@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { markdownOf, sectionOf, type OverviewBlock } from '../index.ts';
 import { mostReadCharacters, readableParts, readableTemplate } from '../template.ts';
 
+const fence = '`'.repeat(3);
+
 function markdownIn(blocks: readonly OverviewBlock[]): string {
   return (
     markdownOf({ title: 't', opening: ['o'], body: [], sections: [sectionOf('s', ...blocks)], appendix: [] }).split(
@@ -206,5 +208,55 @@ describe(`a template past ${mostReadCharacters} characters`, () => {
 
     expect(markdownIn(inside)).toMatch(/… The rest is in the source, from line 82\.\n$/u);
     expect(markdownIn(outside)).toBe('Short.\n');
+  });
+});
+
+describe('a template the overview writes as its author wrote it', () => {
+  it('escapes the first character of each line ## Details, at which the page that shows an overview splits it', () => {
+    const lines = ['## Details', 'Review {{ input.brief }}.', '## Details', fence, '## Details', fence];
+
+    expect(read([...lines, '{{ input.brief }}## Details', '## Details text'].join('\n'))).toBe(
+      [
+        '\\## Details',
+        'Review **brief**.',
+        '\\## Details',
+        fence,
+        '\\## Details',
+        fence,
+        '**brief**## Details',
+        '## Details text',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('closes a fence or an HTML block it leaves open at its end, with a line that closes it', () => {
+    expect([
+      read(['Review {{ input.brief }} as in:', '````', 'an example', '', 'more'].join('\n')),
+      read(['Review it.', '<!-- say more later'].join('\n')),
+      read(['<PRE class="wide">', 'kept'].join('\n')),
+      read(['<?php', 'echo 1;'].join('\n')),
+      read(['<!DOCTYPE html'].join('\n')),
+      read(['<![CDATA[', 'data'].join('\n')),
+    ]).toEqual([
+      'Review **brief** as in:\n````\nan example\n\nmore\n````\n',
+      'Review it.\n<!-- say more later\n-->\n',
+      '<PRE class="wide">\nkept\n</pre>\n',
+      '<?php\necho 1;\n?>\n',
+      '<!DOCTYPE html\n>\n',
+      '<![CDATA[\ndata\n]]>\n',
+    ]);
+  });
+
+  it('leaves as it is a block the blank line after it ends: an element, a lone tag and a block of a list item', () => {
+    const texts = ['<div>\nkept', '<span>\nkept', `- item\n  ${fence}\n  code`];
+
+    expect(texts.map((text) => read(text))).toEqual(texts.map((text) => `${text}\n`));
+  });
+
+  it(`closes a fence that the cut past ${mostReadCharacters} characters leaves open, before the line that says so`, () => {
+    expect(read(`${fence}\n${`${'x'.repeat(99)}\n`.repeat(100)}${fence}`)).toMatch(
+      /x{99}\n`{3}\n\n… The rest is in the source, from line 83\.\n$/u,
+    );
   });
 });

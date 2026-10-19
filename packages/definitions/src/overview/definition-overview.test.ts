@@ -100,6 +100,85 @@ describe('the overview of a definition that says little', () => {
   });
 });
 
+describe('the overview of a definition whose document has an about', () => {
+  const about =
+    '\n  \nIt serves the **team** that plans *campaigns*_, [all of them]_.\n\n- It runs on each brief.\n- It answers.\n\n';
+
+  const reviewBrief = composedOverview({
+    name: 'review-brief',
+    noun: { one: 'item', other: 'items' },
+    summary: { description: 'Reviews a campaign brief.', about },
+    parts: {
+      body: [paragraph('It reads the brief.')],
+      sections: [sectionOf('What it needs', paragraph('A brief.'))],
+      appendix: [],
+    },
+  });
+
+  it('keeps the about in the body after the opening and before the rest, as its author wrote it', () => {
+    expect(reviewBrief.body).toEqual([
+      {
+        kind: 'authored',
+        text: 'It serves the **team** that plans *campaigns*_, [all of them]_.\n\n- It runs on each brief.\n- It answers.',
+      },
+      paragraph('It reads the brief.'),
+    ]);
+  });
+
+  it('writes the about as it is, between blank lines, without the blank lines around it', () => {
+    expect(markdownOf(reviewBrief)).toBe(
+      [
+        '# review-brief',
+        'Reviews a campaign brief.',
+        'It serves the **team** that plans *campaigns*_, [all of them]_.',
+        '- It runs on each brief.\n- It answers.',
+        'It reads the brief.',
+        '## What it needs',
+        'A brief.\n',
+      ].join('\n\n'),
+    );
+  });
+
+  it('writes nothing of an about of blanks', () => {
+    expect(
+      composedOverview({ name: 'plain', noun: { one: 'item', other: 'items' }, summary: { about: ' \n\t\n' } }).body,
+    ).toEqual([]);
+  });
+});
+
+const describedOnLines = defineCapability({
+  type: 'lined',
+  title: 'Lined',
+  guide: { name: 'lined' },
+  noun: { one: 'report', other: 'reports' },
+  describeOutput: () => 'It reported.',
+  mediaType: 'application/json',
+  parse: (source: string) => Effect.succeed({ source }),
+  summarize: () => ({
+    inputSchema: { type: 'string', description: 'The month to report\n## Details\nas YYYY-MM' },
+    outputSchema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { body: { type: 'string', description: 'Its body\n\n## Details\nin Markdown' } },
+      },
+    },
+  }),
+  run: () => Effect.succeed({ output: null, record: {} }),
+});
+
+describe('the overview of a definition whose schemas describe their values over several lines', () => {
+  it('writes each description as one line of prose, so no line of it is the line ## Details', () => {
+    const written = markdownOf(Effect.runSync(describedOnLines.prepare('{}')).overview('monthly-report'));
+
+    expect(written.split('\n').filter((line) => line === '## Details')).toEqual([]);
+    expect([sectionIn(written, 'What it needs'), sectionIn(written, 'What it produces')]).toEqual([
+      'The month to report ## Details as YYYY-MM.\n\nText.',
+      'A list of records with: **body** (Its body ## Details in Markdown; text, optional).\n',
+    ]);
+  });
+});
+
 describe('the overview of a capability of its own', () => {
   it('is given in place of the one of every type, its body, its sections and its appendix, from the summary its capability made', () => {
     expect(markdownOf(Effect.runSync(told.prepare(' hello ')).overview('saying'))).toBe(

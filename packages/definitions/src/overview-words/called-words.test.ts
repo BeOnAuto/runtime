@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { markdownOf, paragraph, type DefinitionCalled } from '../index.ts';
+import { headingLinesIn, unclosedBlockIn } from '../overview/markdown-text.ts';
 import { calledSentence } from './called-words.ts';
 
 function writtenOf(called: DefinitionCalled): string {
@@ -56,5 +57,49 @@ describe('the sentence of a definition a workflow calls', () => {
       'It calls the interaction function **Approve report**, which is retired.',
       'It calls the computation function **Month window**, which the playbook does not have yet.',
     ]);
+  });
+});
+
+function describedAs(...lines: readonly string[]): DefinitionCalled {
+  return { type: 'reasoning', name: 'write-report', standing: 'active', description: lines.join('\n') };
+}
+
+describe('the first paragraph of the description of a definition a workflow calls', () => {
+  const fence = '`'.repeat(3);
+
+  it('ends at a blank line outside a fence, and before a fence that its place after the colon leaves open', () => {
+    const written = [
+      writtenOf(describedAs('Lists the steps:', fence, 'one', '', 'two', fence, '', 'The rest.')),
+      writtenOf(describedAs(fence, 'code', fence, '', 'The rest.')),
+    ];
+
+    expect(written).toEqual([
+      `It calls the reasoning function **Write report**: Lists the steps:\n${fence}\none\n\ntwo\n${fence}`,
+      `It calls the reasoning function **Write report**: ${fence}\ncode.`,
+    ]);
+    expect(written.map((text) => unclosedBlockIn(text))).toEqual([undefined, undefined]);
+  });
+
+  it('ends before a heading line that a fence or an HTML block hid, once its first line is after the colon', () => {
+    const written = [
+      writtenOf(describedAs(fence, '# run nightly', fence)),
+      writtenOf(describedAs('<div>', '# run nightly', '</div>')),
+    ];
+
+    expect(written).toEqual([
+      `It calls the reasoning function **Write report**: ${fence}.`,
+      'It calls the reasoning function **Write report**: <div>.',
+    ]);
+    expect(written.map((text) => headingLinesIn(text))).toEqual([[], []]);
+  });
+
+  it('ends before a line of = or - that its place after the colon makes the underline of a heading', () => {
+    const written = [writtenOf(describedAs('- a', '---')), writtenOf(describedAs('> q', '==='))];
+
+    expect(written).toEqual([
+      'It calls the reasoning function **Write report**: - a.',
+      'It calls the reasoning function **Write report**: > q.',
+    ]);
+    expect(written.map((text) => headingLinesIn(text))).toEqual([[], []]);
   });
 });

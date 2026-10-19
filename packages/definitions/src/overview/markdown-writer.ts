@@ -1,4 +1,4 @@
-import { blockQuoted, escapedInline, oneLine, phrasesText, type Part } from './markdown-text.ts';
+import { blockQuoted, detailsHeading, escapedInline, oneLine, phrasesText, type Part } from './markdown-text.ts';
 import { mermaidOf } from './mermaid-diagram.ts';
 import {
   decodedOverview,
@@ -17,8 +17,6 @@ export const mostOverviewBytes = 65_536;
 const counted = new Intl.NumberFormat('en');
 
 const cutLine = `*The overview stops here, at the ${counted.format(mostOverviewBytes)} bytes an overview may take; the whole definition is under Source.*`;
-
-const detailsHeading = '## Details';
 
 const blockSeparator = '\n\n';
 
@@ -76,6 +74,9 @@ function blockText(block: OverviewBlock, part: Part): string {
   }
   if (block.kind === 'quote') {
     return quoteText(block, part);
+  }
+  if (block.kind === 'authored') {
+    return block.text;
   }
   return block.kind === 'fields' ? fieldTableText(block, part) : mermaidOf(block);
 }
