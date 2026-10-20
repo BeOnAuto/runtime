@@ -1,0 +1,15 @@
+name: zoom
+title: Zoom
+description: Read your Zoom meetings, past meetings and their participants, cloud recordings, transcript details and AI summaries, and Team Chat channels, messages and threads, and create and update meetings and send chat messages, as yourself. A recording's or transcript's file is not fetched.
+website: https://developers.zoom.us/docs/integrations/oauth/
+type: openapi
+document: documents/zoom.openapi.json
+request_id: x-zm-trackingid
+credentials:
+  - kind: authorization
+    issuer: https://zoom.us
+    authorization_endpoint: https://zoom.us/oauth/authorize
+    token_endpoint: https://zoom.us/oauth/token
+    revocation_endpoint: https://zoom.us/oauth/revoke
+    clients: [registered]
+    description: Sign in to Zoom and allow access to your meetings, recordings and Team Chat.

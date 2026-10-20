@@ -196,6 +196,7 @@ const trackerCuts = [
 ];
 
 export const trackerManifest = {
+  type: 'discovery',
   discovery: 'https://tracker.example.com/$discovery/rest?version=v1',
   revision: '20261001',
   authorization_server: 'https://auth.tracker.example.com/.well-known/oauth-authorization-server',

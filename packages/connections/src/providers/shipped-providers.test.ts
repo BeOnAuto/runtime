@@ -181,12 +181,12 @@ async function consentOf({ name, issuer, vendor }: WayOfConsent, registered: boo
     providers: shipped,
     registeredIssuer: registered ? issuer : undefined,
   });
-  const { asked, finished } = await consentedAtTheVendor(h, name);
+  const { asked, finished } = await consentedAtTheVendor(h, name, { fake, vendor: theVendor });
   const facts = await h.facts();
   const { status, credential } = connectedOf(finished).output;
   return {
     provider: name,
-    at_its_authorization_endpoint: `${asked.origin}${asked.pathname}` === `${fake.origin}/authorize`,
+    authorization_endpoint: `${asked.origin}${asked.pathname}`.replace(fake.origin, '<the fake>'),
     scope: asked.searchParams.get('scope'),
     resource: asked.searchParams.get('resource'),
     code_challenge_method: asked.searchParams.get('code_challenge_method'),
@@ -199,16 +199,16 @@ async function consentOf({ name, issuer, vendor }: WayOfConsent, registered: boo
 }
 
 function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string) {
-  const { asked = scope, resource, parameters = {} } = required(vendor);
+  const { asked = scope ?? null, resource, parameters = {}, endpointsAt, metadata } = required(vendor);
   return {
     provider: name,
-    at_its_authorization_endpoint: true,
+    authorization_endpoint: endpointsAt?.authorization ?? '<the fake>/authorize',
     scope: asked,
     resource,
     code_challenge_method: 'S256',
     parameters,
     client_sources: [source],
-    connected: { status: 'connected', scope: asked, client_source: source },
+    connected: { status: 'connected', scope: metadata.grantedScope ?? asked, client_source: source },
   };
 }
 
@@ -234,6 +234,7 @@ describe('every way of consent of a shipped provider, against the fake authoriza
       'profound',
       'search-ads-360',
       'slack',
+      'zoom',
     ]);
   });
 

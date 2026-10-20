@@ -6,18 +6,22 @@ import { fileURLToPath } from 'node:url';
 import { listed } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { CutSchema, discoveryCut } from './discovery-cuts.ts';
-import { authorizationServerOf, discoveryDocumentOf } from './discovery-document.ts';
-import { curatedDocumentOf } from './translate-discovery.ts';
+import { CutSchema } from './discovery-cuts.ts';
+import { OpenApiTranslationSchema } from './openapi-operations.ts';
+import { translatedDiscoveryOf } from './translate-discovery.ts';
+import { curatedOpenApiOf } from './translate-openapi.ts';
 
 export const documentsBesideTheEntries = fileURLToPath(new URL('../entries/documents/', import.meta.url));
 
-const DocumentManifestSchema = Schema.Struct({
+const AuthorizationServerAddressSchema = Schema.String.annotate({
+  description: 'The address of the metadata of the authorization server whose endpoints the oauth2 scheme names',
+});
+
+const DiscoveryManifestSchema = Schema.Struct({
+  type: Schema.Literal('discovery').annotate({ description: 'A document translated from a Discovery document' }),
   discovery: Schema.String.annotate({ description: 'The address of the Discovery document the document is made from' }),
   revision: Schema.String.annotate({ description: 'The revision of the Discovery document it was last made from' }),
-  authorization_server: Schema.String.annotate({
-    description: 'The address of the metadata of the authorization server whose endpoints the oauth2 scheme names',
-  }),
+  authorization_server: AuthorizationServerAddressSchema,
   methods: Schema.Array(Schema.String)
     .check(Schema.isMinLength(1))
     .annotate({ description: 'The ids of the methods the document keeps' }),
@@ -27,6 +31,21 @@ const DocumentManifestSchema = Schema.Struct({
     }),
   ),
 });
+
+type DiscoveryManifest = typeof DiscoveryManifestSchema.Type;
+
+const OpenApiManifestSchema = Schema.Struct({
+  type: Schema.Literal('openapi').annotate({ description: 'A document translated from OpenAPI documents' }),
+  sources: Schema.Array(Schema.String)
+    .check(Schema.isMinLength(1))
+    .annotate({ description: 'The addresses of the OpenAPI documents in JSON the document is made from' }),
+  authorization_server: AuthorizationServerAddressSchema,
+  ...OpenApiTranslationSchema.fields,
+});
+
+type OpenApiManifest = typeof OpenApiManifestSchema.Type;
+
+const DocumentManifestSchema = Schema.Union([DiscoveryManifestSchema, OpenApiManifestSchema]);
 
 export type DocumentManifest = typeof DocumentManifestSchema.Type;
 
@@ -95,26 +114,49 @@ function jsonText(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-async function translatedOne({ name, given }: Asked, { folder, fetching }: Translating): Promise<readonly Written[]> {
-  const manifest = manifestIn(folder, name);
-  const read = given === undefined ? fetchedJson(manifest.discovery, fetching) : givenJson(given);
-  const discovery = discoveryDocumentOf(await read);
-  const server = authorizationServerOf(await fetchedJson(manifest.authorization_server, fetching));
-  const document = curatedDocumentOf(discoveryCut(discovery, manifest.cuts ?? []), server, manifest.methods);
-  const { discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
-  const remade = {
-    discovery: address,
-    revision: discovery.revision,
-    authorization_server: authorizationServer,
-    methods,
-  };
+function documentPathOf(folder: string, name: string): string {
+  return join(folder, `${name}${documentSuffix}`);
+}
+
+async function discoveryTranslated(
+  { name, given }: Asked,
+  manifest: DiscoveryManifest,
+  { folder, fetching }: Translating,
+): Promise<readonly Written[]> {
+  const read = await (given === undefined ? fetchedJson(manifest.discovery, fetching) : givenJson(given));
+  const metadata = await fetchedJson(manifest.authorization_server, fetching);
+  const { document, revision } = translatedDiscoveryOf(read, metadata, manifest);
+  const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
+  const remade = { type, discovery: address, revision, authorization_server: authorizationServer, methods };
   return [
-    { path: join(folder, `${name}${documentSuffix}`), text: jsonText(document) },
+    { path: documentPathOf(folder, name), text: jsonText(document) },
     {
       path: join(folder, `${name}${manifestSuffix}`),
       text: jsonText(cuts === undefined ? remade : { ...remade, cuts }),
     },
   ];
+}
+
+async function openApiTranslated(
+  { name, given }: Asked,
+  manifest: OpenApiManifest,
+  { folder, fetching }: Translating,
+): Promise<readonly Written[]> {
+  if (given !== undefined) {
+    throw new Error(
+      `The manifest ${name} is of OpenAPI documents, which the command fetches at the addresses it names, so no file is given in place of one. ${usage}`,
+    );
+  }
+  const documents = await Promise.all(manifest.sources.map((address) => fetchedJson(address, fetching)));
+  const metadata = await fetchedJson(manifest.authorization_server, fetching);
+  return [{ path: documentPathOf(folder, name), text: jsonText(curatedOpenApiOf(documents, manifest, metadata)) }];
+}
+
+function translatedOne(asked: Asked, translating: Translating): Promise<readonly Written[]> {
+  const manifest = manifestIn(translating.folder, asked.name);
+  return manifest.type === 'discovery'
+    ? discoveryTranslated(asked, manifest, translating)
+    : openApiTranslated(asked, manifest, translating);
 }
 
 export async function translatedDocuments(

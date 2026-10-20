@@ -8,7 +8,8 @@ import {
   trackerMethodIds,
   trackerReadScope,
 } from '../testing/discovery-documents.ts';
-import { authorizationServerOf, discoveryDocumentOf } from './discovery-document.ts';
+import { discoveryDocumentOf } from './discovery-document.ts';
+import { authorizationServerOf } from './oauth2-scheme.ts';
 import { curatedDocumentOf } from './translate-discovery.ts';
 
 const server = authorizationServerOf(trackerAuthorizationServer);
