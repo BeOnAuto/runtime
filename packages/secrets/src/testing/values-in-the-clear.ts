@@ -1,11 +1,8 @@
 import { Effect, Redacted } from 'effect';
 
 import type { Claim, Holding, Replacement } from '../rows/secret-rows.ts';
+import { SecretRefused } from '../store/secret-refused.ts';
 import { memoryRows, type MemoryRowsOptions } from './memory-rows.ts';
-
-export interface ValueRefused {
-  readonly detail: string;
-}
 
 export interface ValueInTheClear {
   readonly value: Redacted.Redacted;
@@ -14,9 +11,13 @@ export interface ValueInTheClear {
 }
 
 export interface ValuesInTheClear {
-  readonly keep: (id: string, value: Redacted.Redacted, endsWith?: string) => Effect.Effect<void, ValueRefused>;
+  readonly keep: (id: string, value: Redacted.Redacted, endsWith?: string) => Effect.Effect<void, SecretRefused>;
   readonly read: (id: string) => Effect.Effect<ValueInTheClear | undefined>;
-  readonly replace: (id: string, version: number, value: Redacted.Redacted) => Effect.Effect<Replacement, ValueRefused>;
+  readonly replace: (
+    id: string,
+    version: number,
+    value: Redacted.Redacted,
+  ) => Effect.Effect<Replacement, SecretRefused>;
   readonly claim: (id: string, version: number, lastingMs: number) => Effect.Effect<Claim>;
   readonly endingsOf: (ids: readonly string[]) => Effect.Effect<ReadonlyMap<string, string>>;
   readonly forget: (id: string) => Effect.Effect<void>;
@@ -35,11 +36,16 @@ export function valuesInTheClear({ now, mostCharacters }: ValuesInTheClearOption
   const heldOr = <A>(
     value: Redacted.Redacted,
     held: (holding: Holding) => Effect.Effect<A>,
-  ): Effect.Effect<A, ValueRefused> =>
+  ): Effect.Effect<A, SecretRefused> =>
     Effect.suspend(() => {
       const text = Redacted.value(value);
       return text.length > mostCharacters
-        ? Effect.fail({ detail: `A secret to keep holds more than ${mostCharacters} characters` })
+        ? Effect.fail(
+            new SecretRefused({
+              because: 'too_large',
+              detail: `A secret to keep holds more than ${mostCharacters} characters`,
+            }),
+          )
         : held({ keptBy: keptInMemory, held: text });
     });
   return {

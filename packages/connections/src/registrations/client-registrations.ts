@@ -7,8 +7,8 @@ import {
   type StreamReader,
   type StreamWriter,
 } from '@on.auto/operations';
-import type { ClientRegistrations, KeptRegistration } from '@on.auto/tool-servers';
-import { DateTime, Effect, Function, Result, Schema } from 'effect';
+import type { ClientRegistrations, KeptRegistration, RegistrationUnavailable } from '@on.auto/tool-servers';
+import { DateTime, Effect, Result, Schema } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
 import type { CommandMetadata } from '../registry/connection-commands.ts';
@@ -63,10 +63,9 @@ function keptOf(
   { secrets }: RegistrationServices,
   clientId: string,
   secretId: string,
-): Effect.Effect<KeptRegistration | undefined> {
-  return secrets.read(secretId).pipe(
-    Effect.map((stored) => (stored === undefined ? undefined : { clientId, registration: stored.value })),
-    Effect.orElseSucceed(Function.constUndefined),
+): Effect.Effect<KeptRegistration | undefined, RegistrationUnavailable> {
+  return Effect.map(secrets.read(secretId), (stored) =>
+    stored === undefined ? undefined : { clientId, registration: stored.value },
   );
 }
 
@@ -91,7 +90,7 @@ export function makeClientRegistrations(services: RegistrationServices): ClientR
       }),
     keep: (issuer, { clientId, registration }) =>
       Effect.gen(function* () {
-        const secretId = yield* Effect.orDie(services.secrets.keep(registration));
+        const secretId = yield* services.secrets.keep(registration);
         const at = DateTime.formatIso(yield* DateTime.now);
         const registering = { issuer, client_id: clientId, secret_id: secretId, by: byTheRuntime, at };
         yield* Effect.orDie(services.registry.execute(clientRegistrationsStream, registrationsDecider, registering));

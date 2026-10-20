@@ -6,7 +6,6 @@ export { storeBehaviour } from './store-behaviour.ts';
 export {
   valuesInTheClear,
   type ValueInTheClear,
-  type ValueRefused,
   type ValuesInTheClear,
   type ValuesInTheClearOptions,
 } from './values-in-the-clear.ts';

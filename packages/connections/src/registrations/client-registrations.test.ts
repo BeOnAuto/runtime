@@ -1,10 +1,12 @@
 import { memoryLedger } from '@on.auto/operations/testing';
+import { custodianRefusal } from '@on.auto/secrets/testing';
 import type { ClientRegistrations } from '@on.auto/tool-servers';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { keptSecrets } from '../testing/harness-services.ts';
-import { makeClientRegistrations } from './client-registrations.ts';
+import { sealedInMemory } from '../testing/sealed-connections.ts';
+import { clientRegistrationsStream, makeClientRegistrations } from './client-registrations.ts';
 
 const accounts = 'https://accounts.example.com';
 
@@ -54,20 +56,46 @@ describe('the clients the runtime registered itself', () => {
     expect([clientIdOf(latest), registrationTextOf(latest)]).toEqual(['one', '{"client_id":"one"}']);
   });
 
-  it('are none whose row the secret store no longer keeps or cannot read', async () => {
+  it('are none whose row the secret store no longer keeps', async () => {
     const secrets = keptSecrets({});
-    const ledger = memoryLedger();
-    const registrations = makeClientRegistrations({ registry: ledger.service, secrets });
-    const unreadable = makeClientRegistrations({
-      registry: ledger.service,
-      secrets: { ...secrets, read: () => Effect.fail({ detail: 'The key of the secret is unknown' }) },
-    });
+    const registrations = makeClientRegistrations({ registry: memoryLedger().service, secrets });
     await kept(registrations, [accounts, 'one'], [accounts, 'two']);
     await Effect.runPromise(secrets.forget('secret-1'));
 
-    expect([
-      await Effect.runPromise(registrations.named(accounts, 'one')),
-      await Effect.runPromise(unreadable.named(accounts, 'two')),
-    ]).toEqual([undefined, undefined]);
+    expect(await Effect.runPromise(registrations.named(accounts, 'one'))).toBeUndefined();
+  });
+});
+
+describe('the clients the runtime registered itself, in a secret store that cannot answer now', () => {
+  it('fail in the words of the store where it cannot read their row now, by issuer and by issuer and id alike', async () => {
+    const { custodian, store } = sealedInMemory();
+    const registrations = makeClientRegistrations({ registry: memoryLedger().service, secrets: store });
+    await kept(registrations, [accounts, 'one']);
+
+    custodian.refuse();
+    const failures = await Effect.runPromise(
+      Effect.all([Effect.flip(registrations.latestAt(accounts)), Effect.flip(registrations.named(accounts, 'one'))]),
+    );
+
+    const words = `The custodian of the key ${custodian.kid} refused to unwrap a data key: ${custodianRefusal}`;
+    expect(failures).toMatchObject([
+      { _tag: 'custodian_refused', detail: words },
+      { _tag: 'custodian_refused', detail: words },
+    ]);
+  });
+
+  it('fail in the words of the store where it cannot keep a registration now, and record nothing', async () => {
+    const { custodian, store } = sealedInMemory();
+    const ledger = memoryLedger();
+    const registrations = makeClientRegistrations({ registry: ledger.service, secrets: store });
+
+    custodian.refuse();
+    const failure = await Effect.runPromise(Effect.flip(registrations.keep(accounts, registrationOf('one'))));
+
+    expect(failure).toMatchObject({
+      _tag: 'custodian_refused',
+      detail: `The custodian of the key ${custodian.kid} refused to wrap a data key: ${custodianRefusal}`,
+    });
+    expect(ledger.streamNames()).not.toContain(clientRegistrationsStream);
   });
 });

@@ -23,7 +23,14 @@ import type {
   FinishAsked,
   KeptRegistration,
 } from './consent-client.ts';
-import { registrationFieldsOf, registrationFor, singleFlight, type Registering } from './dynamic-registration.ts';
+import {
+  registrationFieldsOf,
+  registrationFor,
+  registrationUnavailable,
+  singleFlight,
+  unkeptRegistrations,
+  type RegistrationKeeping,
+} from './dynamic-registration.ts';
 import type { AuthorizationServer } from './server-metadata.ts';
 
 export interface ClientIdentity {
@@ -59,9 +66,7 @@ interface ClientChoice {
   readonly recordedFor: (recorded: RecordedClient) => Effect.Effect<ActingClient, ConsentRefusal>;
 }
 
-interface Choosing extends ClientChoosing {
-  readonly registeredOnce: Registering;
-}
+type Choosing = ClientChoosing & RegistrationKeeping;
 
 const noClient: ConsentRefusal = { refused: 'no_client' };
 
@@ -119,7 +124,7 @@ function dynamicActing(kept: KeptRegistration, returnAddress: string): ActingCli
 
 function dynamicallyRegistered(
   { asked, server, fetch }: Taking,
-  { registrations, registeredOnce }: Choosing,
+  choosing: Choosing,
 ): Effect.Effect<ActingClient | undefined, ConsentRefusal> {
   const endpoint = server.registration_endpoint;
   if (endpoint === undefined) {
@@ -127,9 +132,7 @@ function dynamicallyRegistered(
   }
   const { returnAddress } = asked;
   const registration = { issuer: asked.way.issuer, endpoint, returnAddress, fetch };
-  return Effect.map(registrationFor(registration, registrations, registeredOnce), (kept) =>
-    dynamicActing(kept, returnAddress),
-  );
+  return Effect.map(registrationFor(registration, choosing), (kept) => dynamicActing(kept, returnAddress));
 }
 
 function takenFrom(
@@ -177,8 +180,11 @@ function recordedOf({ way, client, returnAddress }: RecordedClient, choosing: Ch
 function recordedFor(recorded: RecordedClient, choosing: Choosing): Effect.Effect<ActingClient, ConsentRefusal> {
   const { way, client, returnAddress } = recorded;
   if (client.client_source === 'dynamic') {
-    return Effect.flatMap(choosing.registrations.named(way.issuer, client.client_id), (kept) =>
-      kept === undefined ? Effect.fail(clientGone) : Effect.succeed(dynamicActing(kept, returnAddress)),
+    return choosing.registrations.named(way.issuer, client.client_id).pipe(
+      Effect.mapError(registrationUnavailable),
+      Effect.flatMap((kept) =>
+        kept === undefined ? Effect.fail(clientGone) : Effect.succeed(dynamicActing(kept, returnAddress)),
+      ),
     );
   }
   const acting = recordedOf(recorded, choosing);
@@ -186,7 +192,7 @@ function recordedFor(recorded: RecordedClient, choosing: Choosing): Effect.Effec
 }
 
 function clientChoice(choosing: ClientChoosing): ClientChoice {
-  const choosingOnce: Choosing = { ...choosing, registeredOnce: singleFlight() };
+  const choosingOnce: Choosing = { ...choosing, registeredOnce: singleFlight(), unkept: unkeptRegistrations() };
   return {
     chosenAt: (taking) => chosenAt(taking, choosingOnce),
     recordedFor: (recorded) => recordedFor(recorded, choosingOnce),

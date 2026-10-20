@@ -1,5 +1,5 @@
 import { keptTokensIn, type ConsentServer, type StartAsked } from '@on.auto/tool-servers';
-import { Effect, Function, Option } from 'effect';
+import { Effect, Option } from 'effect';
 
 import { returnAddressOf } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
@@ -13,7 +13,7 @@ import {
   type KeptWithLink,
 } from '../registry/registry-lookup.ts';
 import type { KeptConnection } from '../registry/registry.ts';
-import { unrevokedWordsOf, type ConsentNamed } from './consent-words.ts';
+import { unavailableWords, unrevokedWordsOf, type ConsentNamed } from './consent-words.ts';
 
 export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
 
@@ -84,15 +84,18 @@ export function tokensRevokedOf(
     return Effect.void;
   }
   const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+  const named = namedOf(connection);
   return services.secrets.read(secretId).pipe(
-    Effect.orElseSucceed(Function.constUndefined),
     Effect.map((row) => Option.flatMap(Option.fromNullishOr(row), ({ value }) => keptTokensIn(value))),
     Effect.flatMap(
       Option.match({
         onNone: () => Effect.void,
-        onSome: (tokens) => services.consent.revoke({ ...consentAskedOf(connection, services), client, tokens }),
+        onSome: (tokens) =>
+          services.consent
+            .revoke({ ...consentAskedOf(connection, services), client, tokens })
+            .pipe(Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(named, failure, client.client_source)))),
       }),
     ),
-    Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure, client.client_source))),
+    Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.tokensUnread(named.name, detail))),
   );
 }

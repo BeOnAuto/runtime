@@ -95,7 +95,9 @@ export type ConsentRefusal =
   | { readonly refused: 'studio_elsewhere' }
   | { readonly refused: 'start_refused' }
   | { readonly refused: 'no_scope' }
-  | { readonly refused: 'malformed_scope' };
+  | { readonly refused: 'malformed_scope' }
+  | { readonly refused: 'registration_unavailable'; readonly detail: string }
+  | { readonly refused: 'registration_refused'; readonly detail: string };
 
 export interface KeptRow {
   readonly value: Redacted.Redacted;
@@ -113,12 +115,25 @@ export type TokensClaimed = { readonly claimed: true; readonly until: string } |
 
 export type TokensEnded = 'consent_ended' | 'client_gone' | 'key_unknown';
 
+export interface SecretKeepingFailure {
+  readonly _tag: 'secret_refused' | 'custodian_refused' | 'keeper_unavailable';
+  readonly detail: string;
+}
+
+export interface SecretReadingFailure {
+  readonly _tag: 'secret_key_unknown' | 'custodian_refused' | 'keeper_unavailable';
+  readonly kid?: string | undefined;
+  readonly detail: string;
+}
+
+export interface RegistrationUnavailable {
+  readonly _tag: SecretKeepingFailure['_tag'] | SecretReadingFailure['_tag'];
+  readonly detail: string;
+}
+
 export interface ConnectionTokens {
   readonly read: Effect.Effect<HeldTokens, ConnectionUnready>;
-  readonly replace: (
-    version: number,
-    value: Redacted.Redacted,
-  ) => Effect.Effect<TokensReplaced, { readonly detail: string }>;
+  readonly replace: (version: number, value: Redacted.Redacted) => Effect.Effect<TokensReplaced, SecretKeepingFailure>;
   readonly claim: (version: number, lastingMs: number) => Effect.Effect<TokensClaimed>;
   readonly broken: (ended: TokensEnded) => Effect.Effect<never, ConnectionUnready>;
 }
@@ -151,9 +166,12 @@ export interface KeptRegistration {
 }
 
 export interface ClientRegistrations {
-  readonly latestAt: (issuer: string) => Effect.Effect<KeptRegistration | undefined>;
-  readonly named: (issuer: string, clientId: string) => Effect.Effect<KeptRegistration | undefined>;
-  readonly keep: (issuer: string, kept: KeptRegistration) => Effect.Effect<void>;
+  readonly latestAt: (issuer: string) => Effect.Effect<KeptRegistration | undefined, RegistrationUnavailable>;
+  readonly named: (
+    issuer: string,
+    clientId: string,
+  ) => Effect.Effect<KeptRegistration | undefined, RegistrationUnavailable>;
+  readonly keep: (issuer: string, kept: KeptRegistration) => Effect.Effect<void, RegistrationUnavailable>;
 }
 
 export interface ConsentClientOptions extends Omit<ClientsHad, 'serviceClients'> {

@@ -1,4 +1,5 @@
-import { InvalidInput, type Conflict, type Issue } from '@on.auto/operations';
+import { InvalidInput, Unavailable, type Conflict, type Issue } from '@on.auto/operations';
+import type { SecretKeepingFailure } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
 import { clientIdReadingIssuesOf, type EntryChecking } from '../entries/entry-checks.ts';
@@ -6,6 +7,7 @@ import { givenFieldsOf, wordsOfThePage, type Given } from '../entries/given-valu
 import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
 import { connectedByConsent, takesNoCredential } from '../registry/registry-decisions.ts';
+import { unavailableWords } from './consent-words.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
 
@@ -31,8 +33,18 @@ export const GivingSchema = Schema.Struct({
 
 type Giving = typeof GivingSchema.Type;
 
-export function refused(issues: readonly Issue[]): InvalidInput {
+function refused(issues: readonly Issue[]): InvalidInput {
   return new InvalidInput({ detail: 'The credential cannot be taken as it is given', issues });
+}
+
+export function unkeptRefusalOf(
+  name: string,
+  pointer: string,
+  { _tag, detail }: SecretKeepingFailure,
+): InvalidInput | Unavailable {
+  return _tag === 'secret_refused'
+    ? refused([{ pointer, detail }])
+    : new Unavailable({ detail: unavailableWords.credentialUnkept(name, detail) });
 }
 
 function withAReadableClientId(

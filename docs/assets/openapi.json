@@ -3733,7 +3733,7 @@
       "post": {
         "operationId": "give_credential",
         "summary": "Give credential",
-        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. On a runtime that signs people in, only the person who added the connection may give it.",
+        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. On a runtime that signs people in, only the person who added the connection may give it.",
         "tags": [
           "connections"
         ],
@@ -4311,7 +4311,7 @@
       "post": {
         "operationId": "finish",
         "summary": "Finish consent",
-        "description": "Finishes the consent of a connection with the code and the state its authorization server sent the person back with, which connects it, and answers it connected. A consent begun through Auto's consent service is finished with the handle and the state the service sent the person back with instead. The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them. On a runtime that signs people in, only the person who added the connection may finish it.",
+        "description": "Finishes the consent of a connection with the code and the state its authorization server sent the person back with, which connects it, and answers it connected. A consent begun through Auto's consent service is finished with the handle and the state the service sent the person back with instead. The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them. Where the secret store cannot read the verifier just now, it answers unavailable and the same code may be tried again; where it cannot keep the tokens once the code is redeemed, it answers unavailable, revokes them, and the person starts again, since the code is spent. On a runtime that signs people in, only the person who added the connection may finish it.",
         "tags": [
           "connections"
         ],

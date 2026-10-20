@@ -29,9 +29,9 @@ export function consentFake(changes: Partial<ClientRegistration> = {}): Promise<
   return servedForConsent({ redirectUris: [studioReturn], ...changes });
 }
 
-const filesWay = { scope: 'files.read', parameters: { access_type: 'offline' } };
+export const filesWay = { scope: 'files.read', parameters: { access_type: 'offline' } };
 
-function filesAt(fake: FakeMcpServer, way: Readonly<Record<string, unknown>> = filesWay) {
+export function filesAt(fake: FakeMcpServer, way: Readonly<Record<string, unknown>> = filesWay) {
   return providerOf({
     name: 'files',
     title: 'Files',

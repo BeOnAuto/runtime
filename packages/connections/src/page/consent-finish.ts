@@ -1,4 +1,4 @@
-import { allPermissions, Conflict, defineHttpOperation, type NotFound } from '@on.auto/operations';
+import { allPermissions, defineHttpOperation, Unavailable, type NotFound } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
@@ -14,7 +14,14 @@ import {
   type ConsentServices,
   type FinishedConsent,
 } from './consent-asking.ts';
-import { finishRefusalOf, wrongShapeOf, type ConsentRefused, type Returned } from './consent-words.ts';
+import {
+  finishRefusalOf,
+  tokensUnkeptOf,
+  unavailableWords,
+  wrongShapeOf,
+  type ConsentRefused,
+  type Returned,
+} from './consent-words.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
 
@@ -69,14 +76,20 @@ function redeemedOf(
 ): Effect.Effect<FinishedConsent, ConsentRefused | NotFound> {
   const { consent, secrets } = services;
   const { client_id: clientId, client_source: clientSource, verifier_secret_id: verifierSecretId } = kept.consent;
+  const named = namedOf(kept.connection);
   return Effect.gen(function* () {
-    const verifier = yield* Effect.orDie(secrets.read(verifierSecretId));
+    const verifier = yield* secrets
+      .read(verifierSecretId)
+      .pipe(
+        Effect.mapError(
+          ({ detail }) => new Unavailable({ detail: unavailableWords.verifierUnread(named.name, detail) }),
+        ),
+      );
     if (verifier === undefined) {
       return yield* Effect.fail(noOpenConsent(kept.connection.name));
     }
     const asked = consentAskedOf(kept.connection, services);
     const client = { client_id: clientId, client_source: clientSource };
-    const named = namedOf(kept.connection);
     return yield* consent
       .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier: verifier.value })
       .pipe(Effect.mapError((refusal) => finishRefusalOf(named, refusal, returnedOf(finishing))));
@@ -98,8 +111,9 @@ function recordedWith(finished: FinishedConsent, secretId: string, { use, stateS
 }
 
 function connectedWith(finished: FinishedConsent, recording: Recording, { secrets }: ConsentServices) {
+  const named = namedOf(recording.kept.connection);
   return Effect.gen(function* () {
-    const secretId = yield* Effect.mapError(secrets.keep(finished.tokens), ({ detail }) => new Conflict({ detail }));
+    const secretId = yield* Effect.mapError(secrets.keep(finished.tokens), (failure) => tokensUnkeptOf(named, failure));
     return yield* Effect.andThen(
       secrets.forget(recording.kept.consent.verifier_secret_id),
       recordedWith(finished, secretId, recording),
@@ -116,6 +130,7 @@ export function defineFinishConsent(services: ConsentServices) {
       'Finishes the consent of a connection with the code and the state its authorization server sent the person back with, which connects it, and answers it connected.',
       "A consent begun through Auto's consent service is finished with the handle and the state the service sent the person back with instead.",
       'The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them.',
+      'Where the secret store cannot read the verifier just now, it answers unavailable and the same code may be tried again; where it cannot keep the tokens once the code is redeemed, it answers unavailable, revokes them, and the person starts again, since the code is spent.',
       'On a runtime that signs people in, only the person who added the connection may finish it.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/consent/code' },

@@ -8,9 +8,11 @@ import type {
   ConnectionTokens,
   ConsentServed,
   ConsentWay,
+  HeldTokens,
   TokensEnded,
 } from '../consent/consent-client.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { ConnectionUnready } from '../org-servers/connection-source.ts';
 import { everyHost, returnAddress } from './consent-fakes.ts';
 
 export interface MemoryTokens extends ConnectionTokens {
@@ -34,35 +36,49 @@ export const goneWords = 'The tokens of the connection are no longer in the secr
 
 const row = 'secret-1';
 
-function decoded({ value }: ValueInTheClear): KeptTokens {
+function decoded({ value }: Pick<ValueInTheClear, 'value'>): KeptTokens {
   return Option.getOrThrow(keptTokensIn(value));
+}
+
+export function heldTokensOf(kept: ValueInTheClear | undefined): Effect.Effect<HeldTokens, ConnectionUnready> {
+  return kept === undefined
+    ? Effect.fail({ because: 'connection_broken', detail: goneWords })
+    : Effect.succeed({ tokens: decoded(kept), version: kept.version, claimedUntil: kept.claimedUntil });
+}
+
+export interface RecordedBreaks extends Pick<ConnectionTokens, 'broken'> {
+  readonly ends: () => readonly TokensEnded[];
+}
+
+export function recordedBreaks(): RecordedBreaks {
+  const ends: TokensEnded[] = [];
+  return {
+    broken: (ended) =>
+      Effect.suspend(() => {
+        ends.push(ended);
+        return Effect.fail({ because: 'connection_broken', detail: brokenWords(ended) });
+      }),
+    ends: () => [...ends],
+  };
 }
 
 export function memoryTokens(value: Redacted.Redacted, { now, mostCharacters = 8192 }: MemoryTokensOptions) {
   const rows = valuesInTheClear({ now: Effect.sync(now), mostCharacters });
   Effect.runSync(Effect.orDie(rows.keep(row, value)));
   const claims: number[] = [];
-  const ends: TokensEnded[] = [];
+  const { broken, ends } = recordedBreaks();
   const tokens: MemoryTokens = {
-    read: Effect.flatMap(rows.read(row), (kept) =>
-      kept === undefined
-        ? Effect.fail({ because: 'connection_broken', detail: goneWords })
-        : Effect.succeed({ tokens: decoded(kept), version: kept.version, claimedUntil: kept.claimedUntil }),
-    ),
+    read: Effect.flatMap(rows.read(row), heldTokensOf),
     replace: (version, replacing) => rows.replace(row, version, replacing),
     claim: (version, lastingMs) => {
       claims.push(lastingMs);
       return rows.claim(row, version, lastingMs);
     },
-    broken: (ended) =>
-      Effect.suspend(() => {
-        ends.push(ended);
-        return Effect.fail({ because: 'connection_broken', detail: brokenWords(ended) });
-      }),
+    broken,
     kept: () => Option.getOrUndefined(Option.map(Option.fromNullishOr(Effect.runSync(rows.read(row))), decoded)),
     version: () => Effect.runSync(rows.read(row))?.version,
     claims: () => [...claims],
-    ends: () => [...ends],
+    ends,
     forget: () => {
       Effect.runSync(rows.forget(row));
     },
@@ -73,7 +89,7 @@ export function memoryTokens(value: Redacted.Redacted, { now, mostCharacters = 8
 export function servedAt(
   fake: FakeMcpServer,
   client: ChosenClient,
-  tokens: MemoryTokens,
+  tokens: ConnectionTokens,
   way: Partial<ConsentWay> = {},
 ): Effect.Effect<ConsentServed> {
   return Effect.map(Effect.orDie(tokens.read), (held) => ({

@@ -117,8 +117,14 @@ describe('a connection whose credential the secret store cannot read now', () =>
   });
 });
 
+async function wrappedAgainBadly(rows: ReturnType<typeof memoryRows>, kid: string): Promise<void> {
+  const [read] = await Effect.runPromise(rows.heldBy({ keptBy: 'ledger', kid }, 1));
+  const held = Option.getOrThrow(Option.fromNullishOr(read));
+  await Effect.runPromise(rows.reheld(held, { ...held.holding, wrappedKey: 'not a wrapping' }));
+}
+
 describe('the log of a credential that cannot be read now', () => {
-  it('holds each cause once, not one line a call, again when the cause changes, and again once a read succeeded between', async () => {
+  it('holds each cause once, by the failure and the key it names and not by its words, again when the cause changes, and again once a read succeeded between', async () => {
     const fake = await fakeServerAt();
     const h = harness();
     const rows = memoryRows({ now });
@@ -131,9 +137,11 @@ describe('the log of a credential that cannot be read now', () => {
 
     custodian.refuse();
     const refusals = [await refusalOf(source, id), await refusalOf(source, id)];
+    custodian.answer();
+    await wrappedAgainBadly(rows, custodian.kid);
+    refusals.push(await refusalOf(source, id));
     await Effect.runPromise(other.store.replace(secretId, 1, Redacted.make(fakeApiKey)));
     refusals.push(await refusalOf(source, id), await refusalOf(source, id));
-    custodian.answer();
     await Effect.runPromise(store.replace(secretId, 2, Redacted.make(fakeApiKey)));
     await Effect.runPromise(servedOf(await connectionOf(source, id)));
     custodian.refuse();
@@ -142,13 +150,19 @@ describe('the log of a credential that cannot be read now', () => {
     const keyUnknown = unreadableNow(
       `The secret is sealed under the key ${other.custodian.kid}, which is neither the current key nor the previous one`,
     );
-    expect(refusals).toEqual(
-      [refusedBy(custodian), refusedBy(custodian), keyUnknown, keyUnknown, refusedBy(custodian)].map((detail) => ({
-        because: 'connection_unavailable',
-        detail,
-      })),
+    const unopened = unreadableNow(
+      `The custodian of the key ${custodian.kid} refused to unwrap a data key: its wrapped key does not open under this key`,
     );
-    expect(warningsIn(lines).map((line) => line.includes(keyUnknown))).toEqual([false, true, false]);
+    expect(refusals).toEqual(
+      [refusedBy(custodian), refusedBy(custodian), unopened, keyUnknown, keyUnknown, refusedBy(custodian)].map(
+        (detail) => ({ because: 'connection_unavailable', detail }),
+      ),
+    );
+    expect(warningsIn(lines).map((line) => [line.includes(keyUnknown), line.includes(unopened)])).toEqual([
+      [false, false],
+      [true, false],
+      [false, false],
+    ]);
   });
 });
 
