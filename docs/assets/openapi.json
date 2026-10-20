@@ -1642,11 +1642,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",
@@ -2030,11 +2030,11 @@
                             },
                             "token_endpoint": {
                               "type": "string",
-                              "description": "For authorization, the token endpoint, beside the other two"
+                              "description": "For authorization, the token endpoint, beside the authorization endpoint"
                             },
                             "revocation_endpoint": {
                               "type": "string",
-                              "description": "For authorization, the revocation endpoint, beside the other two"
+                              "description": "For authorization, the revocation endpoint, beside them where the server has one"
                             },
                             "clients": {
                               "type": "array",
@@ -2386,11 +2386,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",
@@ -2738,11 +2738,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",
@@ -3106,11 +3106,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",
@@ -3532,11 +3532,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",
@@ -3952,11 +3952,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",
@@ -4511,11 +4511,11 @@
                         },
                         "token_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the token endpoint, beside the other two"
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
                         },
                         "revocation_endpoint": {
                           "type": "string",
-                          "description": "For authorization, the revocation endpoint, beside the other two"
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
                         },
                         "clients": {
                           "type": "array",

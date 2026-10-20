@@ -1,0 +1,45 @@
+name: amazon-ads
+title: Amazon Ads
+description: Read and change Amazon Ads campaigns, ad groups and targets, read ads, advertiser accounts and recommendations, and request reports. A connection without an advertiser account lists the accounts, and one with an account acts on it. A report's file is a download a call does not fetch.
+website: https://advertising.amazon.com/API/docs/en-us/guides/onboarding/overview
+type: openapi
+document: documents/amazon-ads.openapi.json
+base_url: https://{api_host}
+headers:
+  Amazon-Ads-ClientId: '{client_id}'
+  Amazon-Ads-AccountId: '{account_id}'
+placeholders:
+  region:
+    description: The region of your advertiser account, which sets the host of the Amazon Ads API and the Login with Amazon hosts a person signs in at and the tokens come from.
+    choices:
+      - value: na
+        title: North America
+        sets:
+          api_host: advertising-api.amazon.com
+          sign_in_host: www.amazon.com
+          token_host: api.amazon.com
+      - value: eu
+        title: Europe
+        sets:
+          api_host: advertising-api-eu.amazon.com
+          sign_in_host: eu.account.amazon.com
+          token_host: api.amazon.co.uk
+      - value: fe
+        title: Far East
+        sets:
+          api_host: advertising-api-fe.amazon.com
+          sign_in_host: apac.account.amazon.com
+          token_host: api.amazon.co.jp
+  account_id:
+    description: The ID of the Amazon Ads advertiser account the connection acts on, which QueryAdvertiserAccount lists; leave it empty to connect without one and list the accounts.
+    pattern: '^[A-Za-z0-9._-]{1,128}$'
+    example: amzn1.ads-account.g.26eqvvnjl03bvzcsjv6yp81x
+    required: false
+credentials:
+  - kind: authorization
+    issuer: https://lwa.amazon.com
+    authorization_endpoint: https://{sign_in_host}/ap/oa
+    token_endpoint: https://{token_host}/auth/o2/token
+    scope: advertising::campaign_management
+    clients: [registered]
+    description: Sign in with Amazon and allow Amazon Ads campaign management.

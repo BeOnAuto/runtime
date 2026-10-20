@@ -65,7 +65,67 @@ const zoomScopes = [
   'team_chat:write:user_message',
 ];
 
+const adobeIms = 'https://ims-na1.adobelogin.com';
+
+const adobeMcp = 'https://aa-mcp.adobe.io';
+
+const adobeMcpScopes = ['openid', 'AdobeID', 'additional_info.projectedProductContext'];
+
+const loginWithAmazon = 'https://lwa.amazon.com';
+
+const amazonAdsMcp = 'https://advertising-ai.amazon.com';
+
+const microsoft = 'https://login.microsoftonline.com';
+
+const workIq = 'https://workiq.svc.cloud.microsoft';
+
+function microsoftEndpointsAt(tenant: string) {
+  return {
+    authorization: `${microsoft}/${tenant}/oauth2/v2.0/authorize`,
+    token: `${microsoft}/${tenant}/oauth2/v2.0/token`,
+  };
+}
+
 export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> = {
+  'adobe-analytics': {
+    metadata: {
+      issuer: adobeIms,
+      scopesSupported: ['openid', 'email', 'profile'],
+      challengeMethods: ['S256', 'plain'],
+    },
+    authorizationServerAt: `${adobeIms}/.well-known/oauth-authorization-server`,
+    resource: null,
+  },
+  'adobe-analytics-mcp': {
+    metadata: {
+      issuer: adobeMcp,
+      authorizationServer: adobeMcp,
+      protectedResource: `${adobeMcp}/mcp`,
+      protectedScopes: adobeMcpScopes,
+      scopesSupported: adobeMcpScopes,
+      dynamicRegistration: true,
+    },
+    protectedResourceAt: `${adobeMcp}/.well-known/oauth-protected-resource/mcp`,
+    authorizationServerAt: `${adobeMcp}/.well-known/oauth-authorization-server`,
+    resource: `${adobeMcp}/mcp`,
+  },
+  'amazon-ads': {
+    metadata: { issuer: loginWithAmazon },
+    endpointsAt: { authorization: 'https://www.amazon.com/ap/oa', token: 'https://api.amazon.com/auth/o2/token' },
+    resource: null,
+  },
+  'amazon-ads-mcp': {
+    metadata: {
+      issuer: loginWithAmazon,
+      authorizationServer: loginWithAmazon,
+      protectedResource: amazonAdsMcp,
+      protectedScopes: ['advertising::campaign_management'],
+      scopesSupported: ['profile'],
+    },
+    protectedResourceAt: `${amazonAdsMcp}/.well-known/oauth-protected-resource`,
+    authorizationServerAt: `${loginWithAmazon}/.well-known/oauth-authorization-server`,
+    resource: amazonAdsMcp,
+  },
   'campaign-manager-360': googleApi,
   'display-video-360': googleApi,
   'display-video-360-reports': googleApi,
@@ -118,6 +178,22 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     'drive.file',
     'presentations',
   ]),
+  'microsoft-advertising': {
+    metadata: { issuer: `${microsoft}/common/v2.0` },
+    endpointsAt: microsoftEndpointsAt('common'),
+    resource: null,
+  },
+  outlook: {
+    metadata: {
+      issuer: `${microsoft}/organizations/v2.0`,
+      authorizationServer: `${microsoft}/organizations/v2.0`,
+      protectedResource: `${workIq}/mcp`,
+      protectedScopes: ['fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask'],
+    },
+    protectedResourceAt: `${workIq}/.well-known/oauth-protected-resource/mcp`,
+    endpointsAt: microsoftEndpointsAt('organizations'),
+    resource: `${workIq}/mcp`,
+  },
   profound: {
     metadata: {
       issuer: 'https://auth.tryprofound.com',

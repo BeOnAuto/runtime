@@ -139,7 +139,13 @@ describe('the ways of the providers a server lists', () => {
     expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
       waysExpected(
         {
+          'adobe-analytics': ['client_credentials offered', 'authorization set up first'],
+          'adobe-analytics-mcp': ['authorization offered'],
+          'amazon-ads': ['authorization set up first'],
+          'amazon-ads-mcp': ['authorization set up first'],
           github: ['authorization set up first', 'secret offered'],
+          'microsoft-advertising': ['authorization set up first'],
+          outlook: ['authorization set up first'],
           profound: ['authorization offered', 'secret offered'],
           slack: ['authorization set up first'],
           'slack-api': ['secret offered'],
@@ -147,12 +153,18 @@ describe('the ways of the providers a server lists', () => {
         },
         ['authorization set up first'],
       ),
-      ['github', 'profound', 'slack-api'],
+      ['adobe-analytics', 'adobe-analytics-mcp', 'github', 'profound', 'slack-api'],
     ]);
     expect([await waysListedBy(withClients), await namesSearchedBy(withClients)]).toEqual([
       waysExpected(
         {
+          'adobe-analytics': ['client_credentials offered', 'authorization offered'],
+          'adobe-analytics-mcp': ['authorization offered'],
+          'amazon-ads': ['authorization offered'],
+          'amazon-ads-mcp': ['authorization offered'],
           github: ['authorization offered', 'secret offered'],
+          'microsoft-advertising': ['authorization offered'],
+          outlook: ['authorization offered'],
           profound: ['authorization offered', 'secret offered'],
           slack: ['authorization offered'],
           'slack-api': ['secret offered'],

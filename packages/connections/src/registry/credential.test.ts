@@ -54,11 +54,7 @@ describe('a credential of the kind authorization', () => {
       ['/parameters/client_id', 'Expected no client_id, which the runtime sets in every authorization request itself'],
       [
         '/authorization_endpoint',
-        'Expected authorization_endpoint beside token_endpoint, since a way gives its endpoints together',
-      ],
-      [
-        '/revocation_endpoint',
-        'Expected revocation_endpoint beside token_endpoint, since a way gives its endpoints together',
+        'Expected authorization_endpoint beside token_endpoint, since a way gives its authorization and token endpoints together',
       ],
     ]);
   });

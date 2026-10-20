@@ -41,18 +41,36 @@ const SingleStringSchema = Schema.Struct({
   because: ReasonSchema,
 });
 
-const OpenApiSchemeSchema = Schema.Struct({
+const schemeFields = {
   name: NamedSchema.annotate({
     description: 'The name of the oauth2 scheme every operation requires, in place of the schemes of its document',
-  }),
-  scopes_at: NamesSchema.annotate({
-    description: 'The keys, each inside the one before, under which an operation lists its scopes',
   }),
   leaving_out: Schema.Array(NamedSchema).annotate({
     description: 'The endings of the scopes an operation lists that its requirements leave out',
   }),
   because: ReasonSchema,
+};
+
+const ScopesAtSchema = NamesSchema.annotate({
+  description: 'The keys, each inside the one before, under which an operation lists its scopes',
 });
+
+const ScopesFromSchemeSchema = NamedSchema.annotate({
+  description: "The scheme of the vendor's document whose requirement in an operation lists the scopes it needs",
+});
+
+const OpenApiSchemeSchema = Schema.Union([
+  Schema.Struct({
+    ...schemeFields,
+    scopes_at: ScopesAtSchema,
+    scopes_from_scheme: Schema.optionalKey(Schema.Never),
+  }),
+  Schema.Struct({
+    ...schemeFields,
+    scopes_from_scheme: ScopesFromSchemeSchema,
+    scopes_at: Schema.optionalKey(Schema.Never),
+  }),
+]);
 
 type OpenApiScheme = typeof OpenApiSchemeSchema.Type;
 
@@ -90,6 +108,12 @@ export interface Required {
 
 const decodeScopes = Schema.decodeUnknownOption(Schema.Array(Schema.String));
 
+const RequirementsSchema = Schema.Array(Schema.Record(Schema.String, Schema.Array(Schema.String)));
+
+type Requirements = typeof RequirementsSchema.Type;
+
+const decodeRequirements = Schema.decodeUnknownOption(RequirementsSchema);
+
 const decodeParameter = Schema.decodeUnknownOption(Schema.Struct({ name: Schema.String }));
 
 const vendorExtension = 'x-';
@@ -104,7 +128,7 @@ export function isJsonFields(value: Json | undefined): value is JsonFields {
   return Predicate.isObject(value) && !Array.isArray(value);
 }
 
-function isJsonList(value: Json | undefined): value is readonly Json[] {
+export function isJsonList(value: Json | undefined): value is readonly Json[] {
   return Array.isArray(value);
 }
 
@@ -192,14 +216,29 @@ export function changesCheckedIn(kept: readonly Kept[], translation: OpenApiTran
   pathValuesCheckedIn(kept, translation);
 }
 
-export function scopesOf(
-  { id, operation }: Kept,
-  { scopes_at: at, leaving_out: leavingOut }: OpenApiScheme,
-): readonly string[] {
-  const listedScopes = Option.getOrElse(decodeScopes(valueAt(operation, at)), (): readonly string[] => []);
-  const kept = listedScopes.filter((scope) => !leavingOut.some((ending) => scope.endsWith(ending)));
+function scopesRequiredBy(operation: JsonFields, vendorScheme: string): readonly string[] {
+  const requirements = Option.getOrElse(decodeRequirements(operation['security']), (): Requirements => []);
+  return requirements.flatMap((requirement) => requirement[vendorScheme] ?? []);
+}
+
+function listedScopesOf(operation: JsonFields, scheme: OpenApiScheme): readonly string[] {
+  return scheme.scopes_at === undefined
+    ? scopesRequiredBy(operation, scheme.scopes_from_scheme)
+    : Option.getOrElse(decodeScopes(valueAt(operation, scheme.scopes_at)), (): readonly string[] => []);
+}
+
+function whereListed(scheme: OpenApiScheme): string {
+  return scheme.scopes_at === undefined
+    ? `in its requirement of the scheme ${scheme.scopes_from_scheme}`
+    : `under ${scheme.scopes_at.join(' ')}`;
+}
+
+export function scopesOf({ id, operation }: Kept, scheme: OpenApiScheme): readonly string[] {
+  const kept = listedScopesOf(operation, scheme).filter(
+    (scope) => !scheme.leaving_out.some((ending) => scope.endsWith(ending)),
+  );
   if (kept.length === 0) {
-    throw new Error(`The operation ${id} lists no scope under ${at.join(' ')} that the translation keeps`);
+    throw new Error(`The operation ${id} lists no scope ${whereListed(scheme)} that the translation keeps`);
   }
   return kept;
 }

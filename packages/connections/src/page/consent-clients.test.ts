@@ -1,12 +1,12 @@
-import { providerListOf } from '@on.auto/providers/testing';
-import type { ClientRegistration, FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { providerListOf, providerOf } from '@on.auto/providers/testing';
+import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { clientRegistrationsStream } from '../registrations/client-registrations.ts';
 import { added } from '../testing/additions.ts';
 import { consentedOf, consentFake, consentHarnessAt, filesApiAt, finishing, startedAt } from '../testing/consents.ts';
-import { ada, operationNamed } from '../testing/harness.ts';
+import { ada, operationNamed, type Harness } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -77,5 +77,67 @@ describe('a connection connected by consent', () => {
     await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: link.id });
 
     expect(h.secrets.values().size).toBe(0);
+  });
+});
+
+function tenantAt(fake: FakeMcpServer, tenant: string) {
+  return providerOf({
+    name: `adverts-${tenant}`,
+    title: 'Adverts',
+    description: 'Read the campaigns of the accounts a person reaches.',
+    website: 'https://developer.adverts.example.com',
+    type: 'mcp',
+    url: `${fake.url}?toolSetNames=OpenBeta`,
+    credentials: [
+      {
+        kind: 'authorization',
+        issuer: `${fake.origin}/${tenant}/v2.0`,
+        authorization_endpoint: `${fake.origin}/authorize`,
+        token_endpoint: `${fake.origin}/token`,
+        scope: 'adverts.manage offline_access',
+      },
+    ],
+  });
+}
+
+async function connectedAndRemoved(h: Harness, provider: string) {
+  const link = await added(h, { provider });
+  const { url } = await startedAt(h, link);
+  const { code, state } = await consentedAt(url);
+  const connected = await h.call(operationNamed(h.operations, 'finish'), ada, {
+    id: link.id,
+    token: link.token,
+    code,
+    state,
+  });
+  await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: link.id });
+  const asked = new URL(url).searchParams;
+  return [asked.get('scope'), asked.has('resource'), connected];
+}
+
+describe('a connection of an MCP server whose way gives its endpoints at a tenant of a multi-tenant issuer', () => {
+  it('connects at an address with a query and no metadata, through the client registered at its issuer’s template, and is removed without a revocation', async () => {
+    const fake = await served({ publishesMetadata: false });
+    const h = consentHarnessAt(fake, {
+      providers: providerListOf(tenantAt(fake, 'common'), tenantAt(fake, 'organizations')),
+      consenting: { registeredClients: [registeredAt(`${fake.origin}/{tenant}/v2.0`)] },
+    });
+    const common = await connectedAndRemoved(h, 'adverts-common');
+    const organizations = await connectedAndRemoved(h, 'adverts-organizations');
+
+    expect([common, organizations]).toMatchObject(
+      Array.from({ length: 2 }, () => [
+        'adverts.manage offline_access',
+        false,
+        { output: { status: 'connected', credential: { client_id: 'auto-runtime', client_source: 'registered' } } },
+      ]),
+    );
+    expect(fake.heard().map(({ path }) => path)).toEqual(
+      expect.arrayContaining([
+        '/.well-known/oauth-protected-resource/mcp?toolSetNames=OpenBeta',
+        '/.well-known/oauth-protected-resource',
+      ]),
+    );
+    expect(fake.heard().map(({ path }) => path)).not.toContain('/revoke');
   });
 });
