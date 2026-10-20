@@ -1,3 +1,10 @@
+const bands: readonly (readonly [shape: string, color: string])[] = [
+  ['M693.161 -427.743L-623.632 1532.31L-591.107 1552.06L725.686 -407.988L693.161 -427.743Z', '#EC3F4A'],
+  ['M745.281 -396.071L-571.511 1563.98L-538.986 1583.73L777.807 -376.315L745.281 -396.071Z', '#FF8A1D'],
+  ['M797.394 -364.425L-519.399 1595.62L-486.874 1615.38L829.919 -344.67L797.394 -364.425Z', '#5EC72D'],
+  ['M849.467 -332.791L-467.326 1627.26L-434.801 1647.01L881.992 -313.035L849.467 -332.791Z', '#42C3F7'],
+];
+
 const tile =
   'M512.644 100H121.718C109.652 100 100 109.667 100 121.751V513.277C100 525.361 109.652 535.028 121.718 535.028H512.644C524.71 535.028 534.362 525.361 534.362 513.277V121.751C534.362 109.667 524.71 100 512.644 100Z';
 
@@ -8,12 +15,14 @@ const glyphs = [
   'M153.33 286.339C152.848 287.306 153.33 288.272 154.537 288.272H286.776C287.742 288.272 288.465 287.306 287.983 286.339L221.863 154.139C221.381 153.172 219.933 153.172 219.45 154.139L153.33 286.339Z',
 ];
 
+const coloredBands = bands.map(([band, color]) => `<path d="${band}" fill="${color}"/>`).join('');
+
 function filled(shapes: readonly string[], fill: string): string {
   return shapes.map((shape) => `<path d="${shape}" fill="${fill}"/>`).join('');
 }
 
 function iconOf(ink: string, paper: string): string {
-  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 100 435 435">${filled([tile], ink)}${filled(glyphs, paper)}</svg>`;
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 637 637">${coloredBands}${filled([tile], ink)}${filled(glyphs, paper)}</svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}`;
 }
 
@@ -21,6 +30,6 @@ export const iconOnLight = iconOf('#1A1A1A', '#FFFFFF');
 
 export const iconOnDark = iconOf('#FFFFFF', '#1A1A1A');
 
-export const mark = `<svg class="logo" viewBox="100 100 435 435" role="img" aria-label="Auto"><path class="tile" d="${tile}"/>${glyphs
+export const brand = `<span class="brand"><svg class="logo" viewBox="0 0 637 637" aria-hidden="true">${coloredBands}<path class="tile" d="${tile}"/>${glyphs
   .map((glyph) => `<path class="glyph" d="${glyph}"/>`)
-  .join('')}</svg>`;
+  .join('')}</svg><span class="name">Auto</span></span>`;

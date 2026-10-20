@@ -43,7 +43,16 @@ main {
   border-radius: 20px;
   text-align: center;
 }
-.logo { width: 52px; height: 52px; }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.logo { width: 1.5em; height: 1.5em; }
 .logo .tile { fill: var(--ink); }
 .logo .glyph { fill: var(--paper); }
 h1 {

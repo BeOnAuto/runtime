@@ -3,7 +3,7 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { html, raw } from 'hono/html';
 
 import type { ApiEnv } from '../api-env.ts';
-import { mark } from './auto-logo.ts';
+import { brand } from './auto-logo.ts';
 import { controlPageHeaders, headOf, readOnlyPageHeaders } from './page-style.ts';
 import {
   act,
@@ -56,7 +56,7 @@ function pageOf(studioLink: string, server: Readonly<URL>, status: RuntimeStatus
       </head>
       <body>
         <main>
-          ${raw(mark)}
+          ${raw(brand)}
           <h1>Auto Runtime is running</h1>
           <p>Create and manage your playbooks in the studio.</p>
           <span class="address">${server.host}</span>
@@ -74,7 +74,7 @@ const restartingPage = html`<!doctype html>
     </head>
     <body>
       <main>
-        ${raw(mark)}
+        ${raw(brand)}
         <h1>Auto Runtime is restarting</h1>
         <p>This page opens again once it is back.</p>
       </main>
@@ -88,7 +88,7 @@ const stoppedPage = html`<!doctype html>
     </head>
     <body>
       <main>
-        ${raw(mark)}
+        ${raw(brand)}
         <h1>Auto Runtime has stopped</h1>
         <p>Your agent starts it again when it next needs it. To start it yourself, run npx @on.auto/runtime.</p>
       </main>
