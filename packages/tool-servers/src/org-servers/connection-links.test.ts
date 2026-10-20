@@ -204,3 +204,27 @@ describe('a connection whose credential cannot be read, and whose break could no
     expect([connections.credentialReads(), fake.seen()]).toEqual([2, []]);
   });
 });
+
+describe('a connection whose credential cannot be read now', () => {
+  it('is refused unavailable in the words of its source and still listed, and is prepared again at each use until it is served', async () => {
+    const fake = await fakeServer();
+    const { access, connections } = connectedTo(fake);
+    const withheld = 'The credential of the connection graph cannot be read now: the key is disabled';
+    connections.withholdTheCredentialOf('graph-id', withheld);
+
+    const listed = await Effect.runPromise(access.listServers(alpha));
+    const refused = await Effect.runPromise(access.callOnce(searchOf('graph')));
+    connections.connect('acme', {
+      id: 'graph-id',
+      name: 'graph',
+      entry: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' } },
+      environment: { GRAPH_API_KEY: fakeApiKey },
+    });
+    const called = await Effect.runPromise(access.callOnce(searchOf('graph')));
+
+    expect(listed).toMatchObject([{ name: 'graph', because: 'connection_unavailable', unavailable: withheld }]);
+    expect(refused).toMatchObject({ kind: 'unopened', refused: 'tool_not_offered', because: 'connection_unavailable' });
+    expect(called).toMatchObject({ kind: 'answered', outcome: 'result' });
+    expect(connections.credentialReads()).toBe(3);
+  });
+});

@@ -1,6 +1,8 @@
+export { CustodianRefused } from './custodians/custodian-refused.ts';
 export type { Custodian, Custodians } from './custodians/custodian.ts';
 export { localCustodian, secretKeyBytes } from './custodians/local-custodian.ts';
-export type { Keeper } from './keepers/keeper.ts';
+export { KeeperUnavailable } from './keepers/keeper-unavailable.ts';
+export type { Keeper, KeepingFailure, ReadingFailure } from './keepers/keeper.ts';
 export { sealedKeeper } from './keepers/sealed-keeper.ts';
 export { SecretKeyUnknown } from './keepers/secret-key-unknown.ts';
 export type { Claim, HeldRow, Holder, Holding, Replacement, SecretRow, SecretRows } from './rows/secret-rows.ts';

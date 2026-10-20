@@ -27,6 +27,7 @@ type Standing =
   | { readonly status: 'broken'; readonly reason: string }
   | { readonly status: 'unreadable'; readonly reason: string }
   | { readonly status: 'unrecorded'; readonly reason: string }
+  | { readonly status: 'withheld'; readonly reason: string }
   | { readonly status: 'not_allowed'; readonly rule: string }
   | { readonly status: 'dying'; readonly reason: string };
 
@@ -42,6 +43,7 @@ export interface FakeConnections extends ConnectionSource {
   readonly breakOff: (id: string, reason: string) => void;
   readonly loseTheCredentialOf: (id: string, reason: string) => void;
   readonly loseTheCredentialUnrecordedOf: (id: string, reason: string) => void;
+  readonly withholdTheCredentialOf: (id: string, reason: string) => void;
   readonly disallow: (id: string, rule: string) => void;
   readonly dieOnceWhilePreparing: (id: string, reason: string) => void;
   readonly remove: (id: string) => void;
@@ -85,6 +87,16 @@ function standingOf({ standings }: Held, id: string): Standing {
   return Option.getOrThrow(Option.fromNullishOr(standings.get(id)));
 }
 
+function refusalAtUseOf(standing: Standing): ConnectionUnready | undefined {
+  if (standing.status === 'unreadable' || standing.status === 'unrecorded') {
+    return { because: 'connection_broken', detail: standing.reason };
+  }
+  if (standing.status === 'withheld') {
+    return { because: 'connection_unavailable', detail: standing.reason };
+  }
+  return standing.status === 'not_allowed' ? { because: 'connection_not_allowed', detail: standing.rule } : undefined;
+}
+
 function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<ConnectionServer, ConnectionUnready> {
   return Effect.suspend((): Effect.Effect<ConnectionServer, ConnectionUnready> => {
     held.credentialRead();
@@ -96,12 +108,10 @@ function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<C
     if (standing.status === 'unreadable') {
       held.standings.set(connection.id, { status: 'broken', reason: standing.reason });
     }
-    if (standing.status === 'unreadable' || standing.status === 'unrecorded') {
-      return Effect.fail({ because: 'connection_broken', detail: standing.reason });
-    }
-    return standing.status === 'not_allowed'
-      ? Effect.fail({ because: 'connection_not_allowed', detail: standing.rule })
-      : Effect.succeed({ settings, reaches: connection.reaches ?? everyAddress });
+    const refusal = refusalAtUseOf(standing);
+    return refusal === undefined
+      ? Effect.succeed({ settings, reaches: connection.reaches ?? everyAddress })
+      : Effect.fail(refusal);
   });
 }
 
@@ -113,6 +123,39 @@ function listedOf(held: Held, kept: Kept): OrgConnection {
   return unready === undefined
     ? { id, serving, state: { status: 'connected', server: preparedOf(held, kept) } }
     : { id, serving, state: { status: 'unready', unready } };
+}
+
+type StandingsSet = Pick<
+  FakeConnections,
+  | 'breakOff'
+  | 'loseTheCredentialOf'
+  | 'loseTheCredentialUnrecordedOf'
+  | 'withholdTheCredentialOf'
+  | 'disallow'
+  | 'dieOnceWhilePreparing'
+>;
+
+function standingsSetIn({ standings }: Held): StandingsSet {
+  return {
+    breakOff: (id, reason) => {
+      standings.set(id, { status: 'broken', reason });
+    },
+    loseTheCredentialOf: (id, reason) => {
+      standings.set(id, { status: 'unreadable', reason });
+    },
+    loseTheCredentialUnrecordedOf: (id, reason) => {
+      standings.set(id, { status: 'unrecorded', reason });
+    },
+    withholdTheCredentialOf: (id, reason) => {
+      standings.set(id, { status: 'withheld', reason });
+    },
+    disallow: (id, rule) => {
+      standings.set(id, { status: 'not_allowed', rule });
+    },
+    dieOnceWhilePreparing: (id, reason) => {
+      standings.set(id, { status: 'dying', reason });
+    },
+  };
 }
 
 export function fakeConnections(): FakeConnections {
@@ -142,21 +185,7 @@ export function fakeConnections(): FakeConnections {
     pend: (org, connection) => {
       keep(org, connection, { status: 'pending' });
     },
-    breakOff: (id, reason) => {
-      held.standings.set(id, { status: 'broken', reason });
-    },
-    loseTheCredentialOf: (id, reason) => {
-      held.standings.set(id, { status: 'unreadable', reason });
-    },
-    loseTheCredentialUnrecordedOf: (id, reason) => {
-      held.standings.set(id, { status: 'unrecorded', reason });
-    },
-    disallow: (id, rule) => {
-      held.standings.set(id, { status: 'not_allowed', rule });
-    },
-    dieOnceWhilePreparing: (id, reason) => {
-      held.standings.set(id, { status: 'dying', reason });
-    },
+    ...standingsSetIn(held),
     remove: (id) => {
       held.kept.delete(id);
     },

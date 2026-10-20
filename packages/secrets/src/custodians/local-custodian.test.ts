@@ -30,14 +30,22 @@ describe('the custodian of a key in hand', () => {
     expect(Array.from(Redacted.value(unwrapped))).toEqual(Array.from(Redacted.value(dataKey)));
   });
 
-  it('unwraps nothing wrapped under another key, or by another algorithm under its own', async () => {
+  it('refuses to unwrap what was wrapped under another key, or by another algorithm under its own, in words of its own that name its kid', async () => {
     const custodian = localCustodian(aKeyOf(5));
     const elsewhere = await Effect.runPromise(localCustodian(aKeyOf(6)).wrap(aKeyOf(9)));
     const direct = await new CompactEncrypt(new Uint8Array(32).fill(9))
       .setProtectedHeader({ alg: 'dir', enc: 'A256GCM' })
       .encrypt(new Uint8Array(32).fill(5));
 
-    await expect(Effect.runPromise(custodian.unwrap(elsewhere))).rejects.toThrow('decryption operation failed');
-    await expect(Effect.runPromise(custodian.unwrap(direct))).rejects.toThrow('not allowed');
+    const refusals = await Effect.runPromise(
+      Effect.forEach([elsewhere, direct], (wrapped) => Effect.flip(custodian.unwrap(wrapped))),
+    );
+
+    const refusal = {
+      _tag: 'custodian_refused',
+      kid: custodian.kid,
+      detail: `The custodian of the key ${custodian.kid} refused to unwrap a data key: its wrapped key does not open under this key`,
+    };
+    expect(refusals).toMatchObject([refusal, refusal]);
   });
 });

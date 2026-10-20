@@ -14,7 +14,7 @@ import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst, type KeptConnection } from '../registry/registry.ts';
-import { consentAuthOf, givenOf, notAllowed } from './given-credentials.ts';
+import { consentAuthOf, givenOf, loggedCauses, notAllowed } from './given-credentials.ts';
 import type { Serving, ServingServices } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
@@ -77,13 +77,14 @@ function orgConnectionOf(serving: Serving): OrgConnection {
 }
 
 export function makeConnectionSource(services: ServingServices): ConnectionSource {
+  const unreadable = loggedCauses();
   return {
     takesConnections: services.policy.peopleMayAdd,
     connectionsOf: (org) =>
       Effect.map(services.registry.load(connectionsStreamOfOrg(org), connectionsFold), ({ state }) =>
         newestFirst(state)
           .filter((kept) => kept.connection.status !== 'removed')
-          .map((kept) => orgConnectionOf({ org, kept, services })),
+          .map((kept) => orgConnectionOf({ org, kept, services, unreadable })),
       ),
   };
 }

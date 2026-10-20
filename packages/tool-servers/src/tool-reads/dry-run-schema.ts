@@ -10,7 +10,7 @@ const ReachedSchema = Schema.Struct({
   because: Schema.optionalKey(
     UnavailableBecauseSchema.annotate({
       description:
-        'Why it could not be asked: key_refused when it did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_not_allowed when a rule of whoever runs this server no longer allows the connection',
+        'Why it could not be asked: key_refused when it did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_not_allowed when a rule of whoever runs this server no longer allows the connection; connection_unavailable when the credential of the connection cannot be read just now, so asking again later may work',
     }),
   ),
 });

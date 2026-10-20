@@ -6,7 +6,7 @@ import type { Keeper } from '../keepers/keeper.ts';
 import { sealedKeeper } from '../keepers/sealed-keeper.ts';
 import type { Holding, SecretRows } from '../rows/secret-rows.ts';
 import { memoryRows } from '../testing/memory-rows.ts';
-import { recordingCustodian } from '../testing/recording-custodian.ts';
+import { custodianRefusal, recordingCustodian } from '../testing/recording-custodian.ts';
 import { secretStoreOn, type SecretStore } from './secret-store.ts';
 
 const now = Effect.map(DateTime.now, DateTime.toEpochMillis);
@@ -115,5 +115,26 @@ describe('the rotation of the secret store', () => {
     expect(unwrapped.map((dataKey) => dataKey.every((byte) => byte === 0))).toEqual([true]);
     expect(current.dataKeys().at(0)).toBe(unwrapped.at(0));
     expect(await stateOf(rotating, id)).toEqual({ value: 'pasted-key', version: 1 });
+  });
+});
+
+describe('a rotation whose previous custodian refuses', () => {
+  it('fails with the refusal of the custodian in its words, holding nothing again', async () => {
+    const rows = memoryRows({ now });
+    const [previous, current] = [recordingCustodian(), recordingCustodian()];
+    const before = secretStoreOn(rows, sealedKeeper({ current: previous }), { current: previous });
+    await Effect.runPromise(before.keep(Redacted.make('pasted-key')));
+    const rotating = secretStoreOn(rows, sealedKeeper({ current, previous }), { current, previous });
+
+    previous.refuse();
+
+    const refused = await Effect.runPromise(Effect.flip(rotating.rotated()));
+
+    expect(refused).toMatchObject({
+      _tag: 'custodian_refused',
+      kid: previous.kid,
+      detail: `The custodian of the key ${previous.kid} refused to unwrap a data key: ${custodianRefusal}`,
+    });
+    expect(rows.kept().map(({ kid }) => kid)).toEqual([previous.kid]);
   });
 });

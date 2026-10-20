@@ -6,10 +6,14 @@ import {
   withMcpSession,
   type LinkOpening,
 } from '@on.auto/api/testing';
+import { sha256Of } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { secretsKey } from '../testing/records/kept-credentials.ts';
+import { compositionRoot } from '../composition/composition-root.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { ownKeyFactsIn, secretsKey } from '../testing/records/kept-credentials.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 let server: ReasoningServer;
@@ -85,49 +89,99 @@ describe('add_connection over MCP', () => {
 
 async function servedFor(environment: Readonly<Record<string, string>> = {}): Promise<ReasoningServer> {
   const served = await servingReasoning([], environment);
-  onTestFinished(() => served.stop());
-  return served;
+  const stopping: { done?: Promise<void> } = {};
+  const stop = (): Promise<void> => {
+    stopping.done ??= served.stop();
+    return stopping.done;
+  };
+  onTestFinished(stop);
+  return { ...served, stop };
+}
+
+function aLedgerFile(): string {
+  const { fileName, remove } = temporaryLedger();
+  onTestFinished(remove);
+  return fileName;
 }
 
 function onMcpOf({ origin }: ReasoningServer) {
   return { url: `${origin}/mcp`, headers: {} };
 }
 
-describe('the retry of add_connection', () => {
-  it('is answered by another server of the same SECRETS_KEY with the connection the first added', async () => {
-    const sharing = { SECRETS_KEY: secretsKey.toString('base64') };
-    const [first, second] = [await servedFor(sharing), await servedFor(sharing)];
-    const call = { name: 'add_connection', arguments: { ...notes, name: 'notes-across' } };
+function addingNotes(name: string) {
+  return { name: 'add_connection', arguments: { ...notes, name } };
+}
 
+const sharing = { SECRETS_KEY: secretsKey.toString('base64') };
+
+describe('the retry of add_connection', () => {
+  it('is answered after a restart by the next server on the same ledger, under the key the runtime keeps for itself, adding nothing a second time', async () => {
+    const fileName = aLedgerFile();
+    const call = addingNotes('notes-across');
+    const first = await servedFor({ ...sharing, LEDGER_FILE: fileName });
     const state = await stateAskedBy(onMcpOf(first), call);
-    const retried = await retriedWith(onMcpOf(second), call, state);
+    await first.stop();
+    const next = await servedFor({ ...sharing, LEDGER_FILE: fileName });
+
+    const retried = await retriedWith(onMcpOf(next), call, state);
+    const listed = await next.call('GET', '/v1/orgs/local/connections');
+    await next.stop();
 
     expect(retried.structuredContent).toMatchObject({ name: 'notes-across', status: 'pending', added_by: 'local' });
-    expect((await second.call('GET', '/v1/orgs/local/connections')).body).toEqual({ connections: [] });
-    expect((await first.call('GET', '/v1/orgs/local/connections')).body).toMatchObject({
-      connections: [{ name: 'notes-across' }],
-    });
+    expect(listed.body).toMatchObject({ connections: [{ name: 'notes-across' }] });
+    expect(await ownKeyFactsIn(fileName)).toMatchObject([
+      { type: 'own_key_kept', data: { purpose: 'retry_state' }, context: { by: 'runtime' } },
+    ]);
   });
 
-  it('is answered across a rotation, by a server whose SECRETS_KEY_PREVIOUS is the key the first had', async () => {
-    const rotatedKey = Buffer.alloc(32, 9).toString('base64');
-    const first = await servedFor({ SECRETS_KEY: secretsKey.toString('base64') });
-    const rotated = await servedFor({ SECRETS_KEY: rotatedKey, SECRETS_KEY_PREVIOUS: secretsKey.toString('base64') });
-    const call = { name: 'add_connection', arguments: { ...notes, name: 'notes-rotated' } };
-
+  it('is answered across a rotation, by a server on the same ledger whose SECRETS_KEY_PREVIOUS is the key the first had', async () => {
+    const fileName = aLedgerFile();
+    const call = addingNotes('notes-rotated');
+    const first = await servedFor({ ...sharing, LEDGER_FILE: fileName });
     const state = await stateAskedBy(onMcpOf(first), call);
+    await first.stop();
+    const rotated = await servedFor({
+      LEDGER_FILE: fileName,
+      SECRETS_KEY: Buffer.alloc(32, 9).toString('base64'),
+      SECRETS_KEY_PREVIOUS: secretsKey.toString('base64'),
+    });
 
     expect((await retriedWith(onMcpOf(rotated), call, state)).structuredContent).toMatchObject({
       name: 'notes-rotated',
     });
   });
 
-  it('is refused by a server of another secrets key', async () => {
-    const [first, other] = [await servedFor(), await servedFor()];
-    const call = { name: 'add_connection', arguments: { ...notes, name: 'notes-elsewhere' } };
+  it('is refused by a server of another ledger, though it shares the SECRETS_KEY of the first', async () => {
+    const [first, other] = [await servedFor(sharing), await servedFor(sharing)];
+    const call = addingNotes('notes-elsewhere');
 
     const state = await stateAskedBy(onMcpOf(first), call);
 
     await expect(retriedWith(onMcpOf(other), call, state)).rejects.toThrow('Invalid or expired requestState');
+  });
+});
+
+describe('a server whose secrets key cannot read the key the runtime keeps for itself', () => {
+  it('does not start, naming the purpose of the key and the words of the store', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const first = await servedFor({ ...sharing, LEDGER_FILE: ledger.fileName });
+    await first.stop();
+    const anotherKey = Buffer.alloc(32, 9);
+
+    const started = startServer(
+      {
+        HOST: '127.0.0.1',
+        PORT: '0',
+        LEDGER_FILE: ledger.fileName,
+        PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+        SECRETS_KEY: anotherKey.toString('base64'),
+      },
+      compositionRoot,
+    );
+
+    await expect(started).rejects.toThrow(
+      `The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${sha256Of(secretsKey).slice(0, 16)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS beside a new key`,
+    );
   });
 });

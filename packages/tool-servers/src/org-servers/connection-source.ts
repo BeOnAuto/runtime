@@ -13,7 +13,12 @@ export type ConnectionServing = Pick<
   'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'provider'
 >;
 
-export const unreadyReasons = ['connection_pending', 'connection_broken', 'connection_not_allowed'] as const;
+export const unreadyReasons = [
+  'connection_pending',
+  'connection_broken',
+  'connection_not_allowed',
+  'connection_unavailable',
+] as const;
 
 const UnreadyBecauseSchema = Schema.Literals(unreadyReasons);
 

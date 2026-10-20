@@ -1,7 +1,13 @@
 import { Effect } from 'effect';
 
 import { secretsOfServer, type Secrets } from '../bounds/secrets.ts';
-import type { ConnectionServer, ConnectionSource, ConnectionUnready, OrgConnection } from './connection-source.ts';
+import type {
+  ConnectionServer,
+  ConnectionSource,
+  ConnectionUnready,
+  OrgConnection,
+  UnreadyBecause,
+} from './connection-source.ts';
 import { unreadyServer, type Linked, type OrgServer, type Served } from './org-servers.ts';
 import { serverFailed, type Unusable } from './server-refusals.ts';
 
@@ -78,9 +84,11 @@ function failedWith(settings: Served, secrets: Keeping): (error: unknown) => Unu
   };
 }
 
+const preparedAgainAtTheNextUse: ReadonlySet<UnreadyBecause> = new Set(['connection_broken', 'connection_unavailable']);
+
 function isKeptForTheProcess(prepared: Prepared): boolean {
   if ('unready' in prepared) {
-    return prepared.unready.because !== 'connection_broken';
+    return !preparedAgainAtTheNextUse.has(prepared.unready.because);
   }
   return 'server' in prepared;
 }

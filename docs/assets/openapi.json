@@ -1165,9 +1165,10 @@
                                   "key_refused",
                                   "connection_pending",
                                   "connection_broken",
-                                  "connection_not_allowed"
+                                  "connection_not_allowed",
+                                  "connection_unavailable"
                                 ],
-                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential cannot be read, so it is removed and added again, and connection_not_allowed when a rule of whoever runs this server no longer allows it"
+                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, so it is removed and added again, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
                               }
                             },
                             "required": [
@@ -6807,6 +6808,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -6823,7 +6825,7 @@
                                 "not_in_order",
                                 "baseline_check"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken or connection_not_allowed for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer"
                             }
                           },
                           "required": [
@@ -6879,6 +6881,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -7211,6 +7214,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -7227,7 +7231,7 @@
                                 "not_in_order",
                                 "baseline_check"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken or connection_not_allowed for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer"
                             }
                           },
                           "required": [
@@ -7283,6 +7287,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -7630,6 +7635,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -7646,7 +7652,7 @@
                                 "not_in_order",
                                 "baseline_check"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken or connection_not_allowed for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer"
                             }
                           },
                           "required": [
@@ -7702,6 +7708,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -8096,6 +8103,7 @@
                                 "connection_pending",
                                 "connection_broken",
                                 "connection_not_allowed",
+                                "connection_unavailable",
                                 "failing",
                                 "rate_limited",
                                 "unreachable",
@@ -9857,9 +9865,10 @@
                                   "key_refused",
                                   "connection_pending",
                                   "connection_broken",
-                                  "connection_not_allowed"
+                                  "connection_not_allowed",
+                                  "connection_unavailable"
                                 ],
-                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential cannot be read, so it is removed and added again, and connection_not_allowed when a rule of whoever runs this server no longer allows it"
+                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, so it is removed and added again, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
                               }
                             },
                             "required": [
@@ -10429,9 +10438,10 @@
                             "key_refused",
                             "connection_pending",
                             "connection_broken",
-                            "connection_not_allowed"
+                            "connection_not_allowed",
+                            "connection_unavailable"
                           ],
-                          "description": "Why it could not be asked: key_refused when it did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_not_allowed when a rule of whoever runs this server no longer allows the connection"
+                          "description": "Why it could not be asked: key_refused when it did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_not_allowed when a rule of whoever runs this server no longer allows the connection; connection_unavailable when the credential of the connection cannot be read just now, so asking again later may work"
                         }
                       },
                       "required": [
@@ -12171,6 +12181,7 @@
               "connection_pending",
               "connection_broken",
               "connection_not_allowed",
+              "connection_unavailable",
               "failing",
               "rate_limited",
               "unreachable",

@@ -1,24 +1,20 @@
 import { connectionsFold, connectionsStreamOfOrg } from '@on.auto/connections/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
-import { Ledger } from '@on.auto/operations';
+import { Ledger, sha256Of } from '@on.auto/operations';
 import { serveFakeMcp } from '@on.auto/tool-servers/testing';
-import { Effect, ManagedRuntime } from 'effect';
+import { Effect, ManagedRuntime, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
-import { secretsKey } from '../testing/records/kept-credentials.ts';
+import { secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const crmKey = 'crm-api-key-6e2b9d41';
 
-const anotherKey = Buffer.alloc(32, 9).toString('base64');
+const anotherKey = Buffer.alloc(32, 9);
 
-const unreadable: unknown = expect.stringContaining(
-  'The credential of the connection crm cannot be read, so the person who added it removes it and adds it again: The secret is sealed under the key',
-);
-
-const brokenAsSaid: unknown = expect.stringContaining('cannot be read');
+const unreadableNow = `The credential of the connection crm cannot be read now: The secret is sealed under the key ${sha256Of(anotherKey).slice(0, 16)}, which is neither the current key nor the previous one`;
 
 let ledger: TemporaryLedger | undefined;
 
@@ -69,25 +65,59 @@ async function connectionFactsIn(fileName: string): Promise<readonly string[]> {
   return state;
 }
 
+const echoing = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [crm/echo]', '---', 'Echo a note.'].join('\n');
+
+async function ranEchoing(server: ReasoningServer) {
+  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'echo', source: echoing } });
+  return server.call('POST', `${alpha}/definitions/reasoning/echo/run`, { body: { input: {} } });
+}
+
 function executed(server: ReasoningServer) {
   return server.call('POST', `${alpha}/tool-servers/crm/tools/echo/execute`, { body: { arguments: {} } });
 }
 
-describe('a connection whose credential the secret store of a restarted runtime cannot read', () => {
-  it('is broken once it is next used, the fact recorded, and listed broken in the sentence of why', async () => {
+async function sealedAgainUnder(fileName: string, id: string, key: Readonly<Uint8Array>, version: number) {
+  const store = await secretStoreInFile(fileName, key);
+  const secretId = Option.getOrThrow(Option.fromNullishOr(await secretIdOf(fileName, 'acme', id)));
+  const replaced = await Effect.runPromise(store.replace(secretId, version, Redacted.make(`Bearer ${crmKey}`)));
+  await store.close();
+  return replaced;
+}
+
+describe('a connection whose credential the secret store of a restarted runtime cannot read now', () => {
+  it('is refused unavailable in the words of the store and listed so, stays connected with nothing recorded, and is called once the credential can be read again', async () => {
     const { fileName, id } = await connectedBeforeARestart();
-    const restarted = await servedOn(fileName, { SECRETS_KEY: anotherKey });
+    await sealedAgainUnder(fileName, id, anotherKey, 1);
+    const restarted = await servedOn(fileName);
 
     const refused = await executed(restarted);
+    const ran = await ranEchoing(restarted);
     const searched = await restarted.call('GET', `${alpha}/tool-servers/search`);
     const read = await restarted.call('GET', `/v1/orgs/acme/connections/${id}`);
+    const sealedAgain = await sealedAgainUnder(fileName, id, secretsKey, 2);
+    const called = await executed(restarted);
 
-    expect(refused).toMatchObject({ status: 503, body: { kind: 'tool_not_offered', because: 'connection_broken' } });
-    expect(searched.body).toMatchObject({
-      servers: [{ name: 'crm', connection: id, because: 'connection_broken', unavailable: unreadable }],
+    expect(refused).toMatchObject({
+      status: 503,
+      body: { kind: 'tool_not_offered', because: 'connection_unavailable', detail: unreadableNow },
     });
-    expect(read.body).toMatchObject({ status: 'broken', broken: brokenAsSaid });
-    expect((await connectionFactsIn(fileName)).at(-1)).toBe('connection_broken');
+    expect(refused.headers.get('retry-after')).toBeNull();
+    expect(ran).toMatchObject({
+      status: 503,
+      body: {
+        reason: 'unavailable',
+        kind: 'tool_not_offered',
+        because: 'connection_unavailable',
+        detail: unreadableNow,
+      },
+    });
+    expect(searched.body).toMatchObject({
+      servers: [{ name: 'crm', connection: id, because: 'connection_unavailable', unavailable: unreadableNow }],
+    });
+    expect(read.body).toMatchObject({ status: 'connected' });
+    expect(sealedAgain).toEqual({ replaced: true, version: 3 });
+    expect(called.status).toBe(200);
+    expect(await connectionFactsIn(fileName)).not.toContain('connection_broken');
   });
 });
 

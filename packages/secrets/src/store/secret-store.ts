@@ -2,9 +2,9 @@ import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect, Redacted } from 'effect';
 
 import type { Custodians } from '../custodians/custodian.ts';
-import type { Keeper } from '../keepers/keeper.ts';
-import type { SecretKeyUnknown } from '../keepers/secret-key-unknown.ts';
+import type { Keeper, KeepingFailure, ReadingFailure } from '../keepers/keeper.ts';
 import type { Claim, Replacement, SecretRows } from '../rows/secret-rows.ts';
+import { answeredWithinItsBound } from './answer-bound.ts';
 import { rotatedOn } from './rotation.ts';
 import { SecretRefused } from './secret-refused.ts';
 
@@ -17,18 +17,23 @@ export interface StoredSecret {
 }
 
 export interface SecretStore {
-  readonly keep: (value: Redacted.Redacted, endsWith?: string) => Effect.Effect<string, SecretRefused>;
-  readonly read: (id: string) => Effect.Effect<StoredSecret | undefined, SecretKeyUnknown>;
+  readonly keep: (value: Redacted.Redacted, endsWith?: string) => Effect.Effect<string, SecretRefused | KeepingFailure>;
+  readonly read: (id: string) => Effect.Effect<StoredSecret | undefined, ReadingFailure>;
   readonly replace: (
     id: string,
     version: number,
     value: Redacted.Redacted,
-  ) => Effect.Effect<Replacement, SecretRefused>;
+  ) => Effect.Effect<Replacement, SecretRefused | KeepingFailure>;
   readonly claim: (id: string, version: number, lastingMs: number) => Effect.Effect<Claim>;
   readonly endingsOf: (ids: readonly string[]) => Effect.Effect<ReadonlyMap<string, string>>;
   readonly forget: (id: string) => Effect.Effect<void>;
-  readonly rotated: () => Effect.Effect<number>;
+  readonly rotated: () => Effect.Effect<number, KeepingFailure>;
   readonly close: () => Promise<void>;
+}
+
+interface Asked {
+  readonly id: string;
+  readonly version: number;
 }
 
 function refusalOf(value: string): SecretRefused | undefined {
@@ -43,8 +48,11 @@ function refusalOf(value: string): SecretRefused | undefined {
     : undefined;
 }
 
-function refusedOr<A>(value: Redacted.Redacted, kept: () => Effect.Effect<A>): Effect.Effect<A, SecretRefused> {
-  return Effect.suspend(() => {
+function refusedOr<A, E>(
+  value: Redacted.Redacted,
+  kept: () => Effect.Effect<A, E>,
+): Effect.Effect<A, E | SecretRefused> {
+  return Effect.suspend((): Effect.Effect<A, E | SecretRefused> => {
     const refusal = refusalOf(Redacted.value(value));
     return refusal === undefined ? kept() : Effect.fail(refusal);
   });
@@ -55,28 +63,35 @@ function keptBy(
   keeper: Keeper,
   value: Redacted.Redacted,
   endsWith: string | undefined,
-): Effect.Effect<string> {
+): Effect.Effect<string, KeepingFailure> {
   return Effect.gen(function* () {
     const id = randomUUIDv7();
-    const holding = yield* keeper.hold(id, value);
+    const holding = yield* answeredWithinItsBound(keeper.hold(id, value));
     yield* rows.keep(id, holding, endsWith);
     return id;
   });
 }
 
-function readBy(
-  rows: SecretRows,
-  keeper: Keeper,
-  id: string,
-): Effect.Effect<StoredSecret | undefined, SecretKeyUnknown> {
+function readBy(rows: SecretRows, keeper: Keeper, id: string): Effect.Effect<StoredSecret | undefined, ReadingFailure> {
   return Effect.flatMap(rows.read(id), (row) =>
     row === undefined
       ? Effect.undefined
-      : Effect.map(keeper.reveal(row.holding), (value) => ({
+      : Effect.map(answeredWithinItsBound(keeper.reveal(row.holding)), (value) => ({
           value,
           version: row.version,
           claimedUntil: row.claimedUntil,
         })),
+  );
+}
+
+function replacedBy(
+  rows: SecretRows,
+  keeper: Keeper,
+  { id, version }: Asked,
+  value: Redacted.Redacted,
+): Effect.Effect<Replacement, KeepingFailure> {
+  return Effect.flatMap(answeredWithinItsBound(keeper.hold(id, value)), (holding) =>
+    rows.replace(id, version, holding),
   );
 }
 
@@ -88,8 +103,7 @@ export function secretStoreOn(rows: SecretRows, keeper: Keeper, custodians: Cust
   return {
     keep: (value, endsWith) => refusedOr(value, () => keptBy(rows, keeper, value, endsWith)),
     read: (id) => readBy(rows, keeper, id),
-    replace: (id, version, value) =>
-      refusedOr(value, () => Effect.flatMap(keeper.hold(id, value), (holding) => rows.replace(id, version, holding))),
+    replace: (id, version, value) => refusedOr(value, () => replacedBy(rows, keeper, { id, version }, value)),
     claim: rows.claim,
     endingsOf: rows.endingsOf,
     forget: (id) => forgottenBy(rows, keeper, id),

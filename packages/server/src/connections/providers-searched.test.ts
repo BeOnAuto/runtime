@@ -1,8 +1,9 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import type { Provider } from '@on.auto/providers';
+import { Effect } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
-import { secretsKey } from '../testing/records/kept-credentials.ts';
+import { secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import {
   addedConnection,
@@ -48,7 +49,11 @@ function searchedAs(states: ReadonlyMap<Provider, Readonly<Record<string, unknow
 
 const searchOfAcme = '/v1/orgs/acme/tool-servers/search';
 
-const anotherKey = Buffer.alloc(32, 9).toString('base64');
+async function forgottenIn(fileName: string, connection: string): Promise<void> {
+  const store = await secretStoreInFile(fileName, secretsKey);
+  await Effect.runPromise(store.forget(required(await secretIdOf(fileName, 'acme', connection))));
+  await store.close();
+}
 
 let ledger: TemporaryLedger | undefined;
 
@@ -112,13 +117,14 @@ describe('a provider a connection of the org serves', () => {
     ledger = temporaryLedger();
     const kept = { LEDGER_FILE: ledger.fileName };
     const first = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
-    await connectedWith(
+    const lost = await connectedWith(
       first,
       { provider: nameOf(brokenOne), credential: byAToken },
-      'token-sealed-under-the-first-key',
+      'token-lost-before-the-restart',
     );
     await first.stop();
-    const restarted = await served({ ...kept, SECRETS_KEY: anotherKey });
+    await forgottenIn(ledger.fileName, lost);
+    const restarted = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
     await restarted.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     const pending = await addedConnection(restarted, { provider: nameOf(pendingOne), credential: byAToken });
 
