@@ -54,6 +54,22 @@ const testGroupsOf = Schema.decodeUnknownSync(
   }),
 );
 
+const stepsOf = Schema.decodeUnknownSync(
+  Schema.Struct({
+    jobs: Schema.Record(
+      Schema.String,
+      Schema.Struct({
+        steps: Schema.Array(
+          Schema.Struct({
+            run: Schema.optionalKey(Schema.String),
+            env: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+          }),
+        ),
+      }),
+    ),
+  }),
+);
+
 function isFolderOrEveryFolderIn(pattern: string): boolean {
   const folder = pattern.endsWith(everyFolderIn) ? pattern.slice(0, -everyFolderIn.length) : pattern;
   return folder !== '' && !folder.includes('*') && !folder.startsWith('!');
@@ -100,20 +116,44 @@ const testedPackages: readonly TestedPackage[] = workspacePatterns
   .filter(({ manifest }) => manifest.scripts?.['test'] !== undefined)
   .map(({ folder, manifest }): TestedPackage => ({ name: manifest.name, folder }));
 
-const groups = testGroupsOf(parse(textOf('.github/workflows/ci.yml'))).jobs.test.strategy.matrix.include.map(
+const workflow: unknown = parse(textOf('.github/workflows/ci.yml'));
+
+const groups = testGroupsOf(workflow).jobs.test.strategy.matrix.include.map(
   ({ packages, shard, services }): TestGroup => ({ names: packages.map((name) => `${scope}${name}`), shard, services }),
 );
 
-const variablesOfTheServices = testEnvironmentOf(textOf('turbo.json')).tasks.test.env;
+const variablesOfTheTests = testEnvironmentOf(textOf('turbo.json')).tasks.test.env;
 
-function readsTheServices({ folder }: TestedPackage): boolean {
+const jobs = stepsOf(workflow).jobs;
+
+const kmsJob = 'kms';
+
+function variablesSetBy(job: string): readonly string[] {
+  return (jobs[job]?.steps ?? [])
+    .flatMap(({ env }) => Object.keys(env ?? {}))
+    .filter((name) => variablesOfTheTests.includes(name));
+}
+
+const variablesOfTheServices = variablesSetBy('test');
+
+const variablesOfKms = variablesSetBy(kmsJob);
+
+const variablesSetByAJob = new Set([...variablesOfTheServices, ...variablesOfKms]);
+
+function readsAnyOf({ folder }: TestedPackage, variables: readonly string[]): boolean {
   const sources = join(root, folder, 'src');
   return readdirSync(sources, { recursive: true, encoding: 'utf8' })
     .filter((file) => file.endsWith('.ts'))
     .some((file) => {
       const source = readFileSync(join(sources, file), 'utf8');
-      return variablesOfTheServices.some((variable) => source.includes(variable));
+      return variables.some((variable) => source.includes(variable));
     });
+}
+
+function packagesRunBy(job: string): readonly string[] {
+  return (jobs[job]?.steps ?? []).flatMap(({ run = '' }) =>
+    [...run.matchAll(/--filter (@on\.auto\/[\w-]+) test/gu)].map(([, name = '']: readonly string[]) => name),
+  );
 }
 
 await test('the workspace names its packages by folder, or as every folder in a folder, so the groups can be checked against it', () => {
@@ -153,13 +193,24 @@ await test('every package with tests runs in exactly one group of the test job, 
 });
 
 await test('a group starts PostgreSQL and the object store exactly when the tests of one of its packages read the variables that reach them', () => {
-  const readers = testedPackages.filter((tested) => readsTheServices(tested)).map(({ name }) => name);
+  const readers = testedPackages.filter((tested) => readsAnyOf(tested, variablesOfTheServices)).map(({ name }) => name);
   assert.ok(variablesOfTheServices.length > 0);
   assert.ok(readers.length > 0);
   assert.deepEqual(
     groups
       .filter(({ names, services }) => services !== names.some((name) => readers.includes(name)))
       .map(({ names }) => names.join(' ')),
+    [],
+  );
+});
+
+await test('the job against moto runs the tests of exactly the packages that read the variables it sets, and every variable that reaches the tests is set by it or by the test job', () => {
+  const readers = testedPackages.filter((tested) => readsAnyOf(tested, variablesOfKms)).map(({ name }) => name);
+  assert.ok(variablesOfKms.length > 0);
+  assert.ok(readers.length > 0);
+  assert.deepEqual(packagesRunBy(kmsJob), readers);
+  assert.deepEqual(
+    variablesOfTheTests.filter((name) => !variablesSetByAJob.has(name)),
     [],
   );
 });

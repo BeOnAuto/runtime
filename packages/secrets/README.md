@@ -104,7 +104,7 @@ The same suite runs against a real server of the KMS API when `SECRETS_TEST_KMS_
 SECRETS_TEST_KMS_URL=http://kms-test:kms-test-secret@127.0.0.1:19760 pnpm --filter @on.auto/secrets test
 ```
 
-It passes against moto's server mode, `motoserver/moto`, which answers `Encrypt` and `Decrypt` with their context but not the state of a key, so a key disabled, pending deletion or denied is the fake's to show.
+It passes against moto's server mode, `motoserver/moto`, which answers `Encrypt` and `Decrypt` with their context but not the state of a key, so a key disabled, pending deletion or denied is the fake's to show. CI runs the package's tests with the variable in a job of their own, `kms`, against moto on the port 19760, and in the same job starts the runtime twice under a key it makes through the KMS API, checking the line the start logs and that neither the credential nor the data key of the secret the runtime keeps reaches its log.
 
 `src/store/secret-store.test.ts` adds what only a keeper or rows of a test's own show: the id the store hands its keeper and the holding it releases, a replacement made between a rotation's read of a row and its write, which the rotation leaves as it is, the data key a rotation unwrapped, filled with zeros once wrapped again, and a rotation whose previous custodian refuses, which fails with that refusal and holds nothing again.
 

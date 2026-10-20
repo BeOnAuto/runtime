@@ -186,6 +186,119 @@ jobs:
           docker logs postgresql
           docker logs object-store
 
+  kms:
+    name: Secrets under a key in KMS
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Start moto's server mode, which answers the KMS API, once the runner is hardened, as the test job starts PostgreSQL and the object store
+        run: |
+          docker run --detach --name kms --publish 19760:5000 \
+            motoserver/moto:5.2.4@sha256:120b1589c6df7e35d2092935f6ff724486bb2c4189d0e36ce795baba1400ffd2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Wait until moto answers on its port, and make through the KMS API the key the runtime starts under
+        run: |
+          for attempt in $(seq 1 30); do
+            curl --fail --silent --output /dev/null http://127.0.0.1:19760/moto-api/ && break
+            sleep 1
+          done
+          curl --fail --silent --output "$RUNNER_TEMP/created-key.json" http://127.0.0.1:19760/ \
+            --header 'x-amz-target: TrentService.CreateKey' --header 'content-type: application/x-amz-json-1.1' \
+            --header "authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/20260101/us-east-1/kms/aws4_request, SignedHeaders=host, Signature=0" \
+            --data '{"Description":"The key the runtime of this job keeps its secrets under"}'
+          jq --raw-output .KeyMetadata.Arn "$RUNNER_TEMP/created-key.json" > "$RUNNER_TEMP/kms-key-arn"
+          grep --quiet --extended-regexp '^arn:aws:kms:us-east-1:[0-9]{12}:key/[0-9a-f-]{36}$' "$RUNNER_TEMP/kms-key-arn"
+        env:
+          AWS_ACCESS_KEY_ID: kms-ci
+      - name: Run the tests of the secrets package with SECRETS_TEST_KMS_URL, so its suite against a server of the KMS API runs on moto and is skipped nowhere, and no key reaches their output
+        run: |
+          pnpm --filter @on.auto/secrets test --reporter=verbose > "$RUNNER_TEMP/kms-tests.log" 2>&1 || { cat "$RUNNER_TEMP/kms-tests.log"; exit 1; }
+          cat "$RUNNER_TEMP/kms-tests.log"
+          test "$(grep --count --fixed-strings ' > The secret store over keys in a server that answers the KMS API > ' "$RUNNER_TEMP/kms-tests.log")" -gt 0
+          test "$(grep --count --extended-regexp '^ +(Test Files|Tests) ' "$RUNNER_TEMP/kms-tests.log")" = 2
+          test "$(grep --extended-regexp '^ +(Test Files|Tests) ' "$RUNNER_TEMP/kms-tests.log" | grep --count skipped)" = 0
+          test "$(grep --count --fixed-strings kms-ci-secret "$RUNNER_TEMP/kms-tests.log")" = 0
+        env:
+          NO_COLOR: '1'
+          SECRETS_TEST_KMS_URL: http://kms-ci:kms-ci-secret@127.0.0.1:19760
+      - name: Keep the runtime's own key under the key in KMS across a restart, logging that key and nothing of a credential or of a data key
+        timeout-minutes: 3
+        run: |
+          arn="$(cat "$RUNNER_TEMP/kms-key-arn")"
+          secrets_line="\"message\":\"Secrets are kept in the ledger's database, sealed under the key ${arn##*/} that the KMS key $arn holds, and 0 sealed under the previous key"
+          export SECRETS_KEY_KMS="$arn" LEDGER_FILE="$RUNNER_TEMP/kms/ledger.db" HOST=127.0.0.1 PORT=19761 DO_NOT_TRACK=1
+          started=''
+          shown_on_failure() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              if [ -n "$started" ]; then
+                kill -TERM "$started" 2> /dev/null || true
+              fi
+              for start in first second; do
+                echo "::group::The log of the runtime's $start start"
+                cat "$RUNNER_TEMP/runtime-$start.log" 2> /dev/null || true
+                echo '::endgroup::'
+              done
+            fi
+            exit "$status"
+          }
+          trap shown_on_failure EXIT
+          started_and_stopped() {
+            node packages/server/src/main.ts > "$RUNNER_TEMP/runtime-$1.log" 2>&1 &
+            started=$!
+            for attempt in $(seq 1 60); do
+              curl --silent --fail --max-time 5 --output /dev/null http://127.0.0.1:19761/health && break
+              sleep 1
+            done
+            test "$(curl --silent --fail --max-time 5 http://127.0.0.1:19761/health)" = '{"status":"ok"}'
+            kill -TERM "$started"
+            wait "$started"
+            started=''
+          }
+          started_and_stopped first
+          started_and_stopped second
+          log="$RUNNER_TEMP/runtime.log"
+          cat "$RUNNER_TEMP/runtime-first.log" "$RUNNER_TEMP/runtime-second.log" > "$log"
+          test "$(grep --count --fixed-strings "$secrets_line" "$log")" = 2
+          test "$(grep --count --fixed-strings "$AWS_SECRET_ACCESS_KEY" "$log")" = 0
+          node --input-type=module --eval "
+            import { DatabaseSync } from 'node:sqlite';
+            const kept = new DatabaseSync(process.env.LEDGER_FILE, { readOnly: true });
+            for (const { wrapped_key } of kept.prepare('SELECT wrapped_key FROM kept_secrets').all()) console.log(wrapped_key);
+          " > "$RUNNER_TEMP/wrapped-keys"
+          test "$(wc --lines < "$RUNNER_TEMP/wrapped-keys")" -gt 0
+          while read -r wrapped; do
+            curl --fail --silent --output "$RUNNER_TEMP/unwrapped.json" http://127.0.0.1:19760/ \
+              --header 'x-amz-target: TrentService.Decrypt' --header 'content-type: application/x-amz-json-1.1' \
+              --header "authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/20260101/us-east-1/kms/aws4_request, SignedHeaders=host, Signature=0" \
+              --data "$(jq --null-input --compact-output --arg blob "$wrapped" '{CiphertextBlob: $blob, EncryptionContext: {"on.auto/runtime": "secret data key"}}')"
+            data_key="$(jq --raw-output .Plaintext "$RUNNER_TEMP/unwrapped.json")"
+            echo "::add-mask::$data_key"
+            data_key_hex="$(printf '%s' "$data_key" | base64 --decode | od --address-radix=n --format=x1 --output-duplicates | tr --delete ' \n')"
+            echo "::add-mask::$data_key_hex"
+            test "${#data_key_hex}" = 64
+            test "$(grep --count --fixed-strings --regexp="$data_key" --regexp="$data_key_hex" "$log")" = 0
+          done < "$RUNNER_TEMP/wrapped-keys"
+        env:
+          AWS_ENDPOINT_URL_KMS: http://127.0.0.1:19760
+          AWS_ACCESS_KEY_ID: kms-ci
+          AWS_SECRET_ACCESS_KEY: kms-ci-secret
+      - name: Show the log of moto when a step failed
+        if: failure()
+        run: docker logs kms
+
   coverage:
     name: Coverage (server)
     needs: test
@@ -989,7 +1102,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [verify, test, coverage, container, package, pull-request-title, workflows]
+    needs: [verify, test, kms, coverage, container, package, pull-request-title, workflows]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
