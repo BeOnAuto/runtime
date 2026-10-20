@@ -1,19 +1,18 @@
 import { connectionsFold, connectionsStreamOfOrg } from '@on.auto/connections/testing';
 import { ledgerLayer, sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { Ledger } from '@on.auto/operations';
-import type { SecretStore } from '@on.auto/secrets';
+import { localCustodian, type SecretStore } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, Redacted } from 'effect';
 
 import { ownKeysDecider, ownKeysStream, type OwnKeyEvent } from '../../database/own-keys.ts';
-import { custodiansOf, secretStoreOver } from '../../database/secret-store.ts';
+import { secretStoreOver } from '../../database/secret-store.ts';
 
 export const secretsKey = Buffer.alloc(32, 7);
 
 export async function secretStoreInFile(fileName: string, key: Readonly<Uint8Array>): Promise<SecretStore> {
-  return secretStoreOver(
-    await Effect.runPromise(sqliteSecretRows({ fileName })),
-    custodiansOf({ current: Redacted.make(Uint8Array.from(key)) }),
-  );
+  return secretStoreOver(await Effect.runPromise(sqliteSecretRows({ fileName })), {
+    current: localCustodian(Redacted.make(Uint8Array.from(key))),
+  });
 }
 
 export async function secretIdOf(fileName: string, org: string, connection: string): Promise<string | undefined> {

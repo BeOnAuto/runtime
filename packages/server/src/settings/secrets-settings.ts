@@ -5,9 +5,10 @@ import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
 import { InvalidSettingsError } from './invalid-settings-error.ts';
 import { besideTheLedgerFile, ledgerVariables, readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
 
-export type SecretsKeyGiven =
+type SecretsKeyGiven =
   | { readonly from: 'environment'; readonly setting: string; readonly key: Redacted.Redacted<Uint8Array> }
-  | { readonly from: 'file'; readonly setting: string; readonly file: string; readonly madeByTheServer: boolean };
+  | { readonly from: 'file'; readonly setting: string; readonly file: string; readonly madeByTheServer: boolean }
+  | { readonly from: 'kms'; readonly setting: string; readonly arn: string; readonly region: string };
 
 export type SecretsKeySource = SecretsKeyGiven | { readonly from: 'start' };
 
@@ -24,20 +25,32 @@ export interface LedgerAndSecrets {
 interface KeySettings {
   readonly key: string;
   readonly file: string;
+  readonly kms: string;
 }
 
-const currentKey: KeySettings = { key: 'SECRETS_KEY', file: 'SECRETS_KEY_FILE' };
+const currentKey: KeySettings = { key: 'SECRETS_KEY', file: 'SECRETS_KEY_FILE', kms: 'SECRETS_KEY_KMS' };
 
-const previousKey: KeySettings = { key: 'SECRETS_KEY_PREVIOUS', file: 'SECRETS_KEY_FILE_PREVIOUS' };
+const previousKey: KeySettings = {
+  key: 'SECRETS_KEY_PREVIOUS',
+  file: 'SECRETS_KEY_FILE_PREVIOUS',
+  kms: 'SECRETS_KEY_KMS_PREVIOUS',
+};
 
-export const secretsVariables: readonly string[] = [currentKey, previousKey].flatMap(({ key, file }) => [key, file]);
+function settingsOf({ key, file, kms }: KeySettings): readonly string[] {
+  return [key, file, kms];
+}
+
+export const secretsVariables: readonly string[] = [currentKey, previousKey].flatMap((settings) =>
+  settingsOf(settings),
+);
 
 export const ledgerAndSecretsVariables: readonly string[] = [...ledgerVariables, ...secretsVariables];
 
-function sourcesOf({ key, file }: KeySettings) {
+function sourcesOf({ key, file, kms }: KeySettings) {
   return Config.all({
     key: Config.map(Config.option(Config.Redacted(key)), Option.getOrUndefined),
     file: Config.map(Config.option(Config.String(file)), Option.getOrUndefined),
+    kms: Config.map(Config.option(Config.String(kms)), Option.getOrUndefined),
   });
 }
 
@@ -46,11 +59,18 @@ const sources = Config.all({ current: sourcesOf(currentKey), previous: sourcesOf
 interface Given {
   readonly key: Redacted.Redacted | undefined;
   readonly file: string | undefined;
+  readonly kms: string | undefined;
 }
 
 const keyFileName = 'secrets.key';
 
+const kmsKeyArn =
+  /^arn:aws:kms:([a-z]{2}(?:-[a-z]+)+-\d+):\d{12}:(?:key\/(?:[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}|mrk-[\da-f]{32})|alias\/[\w/-]+)$/u;
+
 export const aSecretsKeyInWords = `the base64 of ${secretKeyBytes} bytes, as openssl rand -base64 ${secretKeyBytes} prints it`;
+
+const aKmsKeyInWords =
+  'the ARN of a symmetric AWS KMS key, arn:aws:kms:<region>:<account>:key/<id>, or of an alias of one, arn:aws:kms:<region>:<account>:alias/<name>';
 
 function invalid(detail: string): InvalidSettingsError {
   return new InvalidSettingsError({ message: `The secrets settings are invalid. ${detail}` });
@@ -71,15 +91,29 @@ function keyIn(setting: string, given: Redacted.Redacted): Effect.Effect<Secrets
     : Effect.succeed({ from: 'environment', setting, key });
 }
 
+function kmsKeyIn(setting: string, given: string): Effect.Effect<SecretsKeyGiven, InvalidSettingsError> {
+  const arn = given.trim();
+  const [, region] = kmsKeyArn.exec(arn) ?? [];
+  return region === undefined
+    ? Effect.fail(invalid(`${setting}: Expected ${aKmsKeyInWords}`))
+    : Effect.succeed({ from: 'kms', setting, arn, region });
+}
+
 function sourceGiven(
   settings: KeySettings,
-  { key, file }: Given,
+  { key, file, kms }: Given,
 ): Effect.Effect<SecretsKeyGiven | undefined, InvalidSettingsError> {
-  if (key !== undefined && file !== undefined) {
-    return Effect.fail(invalid(`${settings.key}: Set ${settings.key} or ${settings.file}, not both`));
+  const set = [key, file, kms].filter((value) => value !== undefined).length;
+  if (set > 1) {
+    return Effect.fail(
+      invalid(`${settings.key}: Set one of ${settings.key}, ${settings.file} and ${settings.kms}, not more`),
+    );
   }
   if (key !== undefined) {
     return keyIn(settings.key, key);
+  }
+  if (kms !== undefined) {
+    return kmsKeyIn(settings.kms, kms);
   }
   return Effect.succeed(
     file === undefined ? undefined : { from: 'file', setting: settings.file, file, madeByTheServer: false },
@@ -90,7 +124,7 @@ function withoutAKey(ledger: LedgerSettings): Effect.Effect<SecretsKeySource, In
   if (ledger.store === 'postgresql') {
     return Effect.fail(
       invalid(
-        'SECRETS_KEY: Set it, or SECRETS_KEY_FILE, when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks',
+        'SECRETS_KEY: Set it, SECRETS_KEY_FILE or SECRETS_KEY_KMS when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks',
       ),
     );
   }
@@ -102,7 +136,7 @@ function withoutAKey(ledger: LedgerSettings): Effect.Effect<SecretsKeySource, In
 
 function previousAlone({ setting }: SecretsKeyGiven): InvalidSettingsError {
   return invalid(
-    `${setting}: Set it only beside ${currentKey.key} or ${currentKey.file}, to the key that one replaces`,
+    `${setting}: Set it only beside ${currentKey.key}, ${currentKey.file} or ${currentKey.kms}, to the key that one replaces`,
   );
 }
 

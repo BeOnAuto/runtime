@@ -203,7 +203,7 @@ describe('the key the runtime keeps for itself as the server starts', () => {
     const stderr = await refusedStart({ LEDGER_FILE: fileName, SECRETS_KEY: previousKey.toString('base64') });
 
     expect(lastLinesOf(stderr)).toEqual([
-      `Auto Runtime could not start: OwnKeyUnavailable: The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${kidOf(currentKey)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS beside a new key`,
+      `Auto Runtime could not start: OwnKeyUnavailable: The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${kidOf(currentKey)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key`,
       '',
     ]);
     expect(secretsIn(stderr, [ownKey])).toEqual([]);
@@ -211,7 +211,7 @@ describe('the key the runtime keeps for itself as the server starts', () => {
 });
 
 describe('a server given its secrets keys in more places than one', () => {
-  it('stops the process at start for two previous keys, naming both settings and never a key', async () => {
+  it('stops the process at start for two previous keys, naming the settings and never a key', async () => {
     const fileName = aLedgerFile();
 
     const stderr = await refusedStart({
@@ -222,19 +222,19 @@ describe('a server given its secrets keys in more places than one', () => {
     });
 
     expect(lastLinesOf(stderr)).toEqual([
-      `${refusedAs} SECRETS_KEY_PREVIOUS: Set SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS, not both`,
+      `${refusedAs} SECRETS_KEY_PREVIOUS: Set one of SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS and SECRETS_KEY_KMS_PREVIOUS, not more`,
       '',
     ]);
     expect(secretsIn(stderr)).toEqual([]);
   });
 
-  it('stops the process at start for a ledger in PostgreSQL without SECRETS_KEY or SECRETS_KEY_FILE, naming both and no URL', async () => {
+  it('stops the process at start for a ledger in PostgreSQL without SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, naming them and no URL', async () => {
     const stderr = await refusedStart({
       DATABASE_URL: 'postgresql://playbooks:a-secret-password@db.example.com/playbooks',
     });
 
     expect(stderr).toBe(
-      `${refusedAs} SECRETS_KEY: Set it, or SECRETS_KEY_FILE, when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks\n`,
+      `${refusedAs} SECRETS_KEY: Set it, SECRETS_KEY_FILE or SECRETS_KEY_KMS when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks\n`,
     );
   });
 });

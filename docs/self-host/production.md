@@ -56,7 +56,7 @@ Restrict access to the database, and to its backups, accordingly.
 
 ## Keep the secrets key
 
-The runtime seals the secrets it keeps in the ledger's database under the secrets key, as [Secrets at rest](security.md#secrets-at-rest) describes. A container takes it from your platform's secret store, as it does the other secrets: in `SECRETS_KEY`, or in a file the platform mounts into the container, whose path `SECRETS_KEY_FILE` names. A file a setting names is read as the platform mounts it, and the file the server makes beside a SQLite ledger is its owner's alone. Either way the key is on no disk the ledger is on and in no backup of it; a ledger in PostgreSQL cannot start without one of them, and every server that shares the database takes the same key. Make one with either command, and keep a copy where your other secrets are kept. A secret sealed under a lost key cannot be read again, and the runtime keeps a key of its own under it, so a server started with another key does not start on that ledger:
+The runtime seals the secrets it keeps in the ledger's database under the secrets key, as [Secrets at rest](security.md#secrets-at-rest) describes. A container takes it from your platform's secret store, as it does the other secrets: in `SECRETS_KEY`, or in a file the platform mounts into the container, whose path `SECRETS_KEY_FILE` names; or the key stays in AWS KMS, as [Hold the secrets key in a KMS](#hold-the-secrets-key-in-a-kms) sets out. A file a setting names is read as the platform mounts it, and the file the server makes beside a SQLite ledger is its owner's alone. Either way the key is on no disk the ledger is on and in no backup of it; a ledger in PostgreSQL cannot start without one of them, and every server that shares the database takes the same key. Make one with either command, and keep a copy where your other secrets are kept. A secret sealed under a lost key cannot be read again, and the runtime keeps a key of its own under it, so a server started with another key does not start on that ledger:
 
 ```bash
 openssl rand -base64 32
@@ -66,6 +66,46 @@ docker run --rm docker.on.auto/onauto/runtime:0.9.1 node --print "require('node:
 ### Rotate the secrets key
 
 To replace the key, give the old key to `SECRETS_KEY_PREVIOUS`, or the path of its file to `SECRETS_KEY_FILE_PREVIOUS`, the new key to `SECRETS_KEY` or the path of its file to `SECRETS_KEY_FILE`, and restart the server. At start it unwraps with the old key the key of each secret the old key wrapped, wraps it again under the new one, leaving the secrets themselves as they are, and logs `Secrets are kept in the ledger's database, sealed under the key <id> that SECRETS_KEY holds, and <count> sealed under the previous key were sealed again under it`, or `that the file <path> holds` for a key in a file, where the id is the new key's, the first 16 hex characters of its SHA-256. Then remove the previous key's setting and restart it again: nothing is sealed under the old key any more. With several servers, stop them all and start them with both keys, as for an [upgrade](#upgrades), since a server that still runs with the old key alone cannot read what the new key seals.
+
+### Hold the secrets key in a KMS
+
+The secrets key can be a key in AWS KMS instead, which wraps the key of each secret itself, so no process of yours ever holds it and every use of it is an entry in your account's trail. Set `SECRETS_KEY_KMS`, in place of `SECRETS_KEY` and `SECRETS_KEY_FILE`, to the ARN of a symmetric KMS key, or of an alias of one:
+
+```bash
+SECRETS_KEY_KMS=arn:aws:kms:eu-west-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
+```
+
+```bash
+SECRETS_KEY_KMS=arn:aws:kms:eu-west-1:111122223333:alias/auto-runtime
+```
+
+The runtime asks KMS in the region the ARN names, with the credentials of the AWS default credential chain, the role of the task, the pod or the instance it runs as, as it does for [object storage](object-storage.md), and through your proxy where `NODE_USE_ENV_PROXY=1` is set. Where the setting names an alias, the server asks `DescribeKey` once at start for the key the alias names, and holds to that key until it starts again. It wraps with `Encrypt` and unwraps with `Decrypt`, each under that key and the encryption context `on.auto/runtime: secret data key`, which your trail records beside each request. The identity the container runs as needs those two actions on the key, the key itself where the setting names an alias, and `kms:DescribeKey` on it too where it names an alias:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["kms:Encrypt", "kms:Decrypt"],
+      "Resource": "arn:aws:kms:eu-west-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+    }
+  ]
+}
+```
+
+At start, before it reads any secret, the server wraps and unwraps one key of its own with KMS and forgets it, so a key that does not exist, one that is disabled or pending deletion, and one the identity may not use stop the start, naming the setting, the key's id and the answer of KMS and never a credential, as an alias KMS does not know or will not describe does, naming the alias, such as `The secrets settings are invalid. SECRETS_KEY_KMS: The KMS key 1234abcd-12ab-34cd-56ef-1234567890ab it names could not wrap and unwrap a data key at start: The custodian of the key 1234abcd-12ab-34cd-56ef-1234567890ab refused to wrap a data key: DisabledException: key/1234abcd-12ab-34cd-56ef-1234567890ab is disabled.`; a KMS that does not answer within 10 seconds stops it too. Once started, it logs `Secrets are kept in the ledger's database, sealed under the key <id> that the KMS key <arn> holds, and 0 sealed under the previous key were sealed again under it`.
+
+The runtime keeps no key unwrapped: it asks KMS for the key of a secret at each read, when a connection is first used in a server's process and when its tokens are renewed, and waits 10 seconds for the answer. So disabling the key, scheduling its deletion or taking the permission away ends the runtime's reading at the next read KMS refuses: a connection's first read in a process fails the call as `connection_unavailable` in KMS's words, a renewal of its tokens fails the call in the same words, both leave the connection connected, and once the key is enabled again the next call reads it. A process that already uses a connection keeps the credential it read until it stops, and a server does not start while the key is disabled.
+
+To move secrets from a key in the environment or in a file to a key in KMS, set `SECRETS_KEY_KMS`, give the key it replaces to `SECRETS_KEY_PREVIOUS` or the path of its file to `SECRETS_KEY_FILE_PREVIOUS`, and restart once: at start the server unwraps with the old key the key of each secret, wraps it again with KMS, leaving the secrets themselves as they are, and logs how many, after which the previous setting can go:
+
+```bash
+SECRETS_KEY_KMS=arn:aws:kms:eu-west-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
+SECRETS_KEY_FILE_PREVIOUS=/run/secrets/secrets-key
+```
+
+Moving back is the same with `SECRETS_KEY` or `SECRETS_KEY_FILE` and the ARN in `SECRETS_KEY_KMS_PREVIOUS`, for which the identity needs `kms:Decrypt` alone. To move to another key in KMS, restart once with the new key's ARN, or the alias once you have pointed it at the new key, in `SECRETS_KEY_KMS`, and the old key's ARN in `SECRETS_KEY_KMS_PREVIOUS`. The rotation of a key's material that KMS makes itself, on its schedule or on demand, needs nothing of the runtime, since KMS decrypts with the material that encrypted.
 
 ## Run it as an always-on service
 

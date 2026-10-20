@@ -73,7 +73,7 @@ interface Asked {
 
 function unreadableUnder({ purpose, keyFrom }: Asked, words: string): OwnKeyUnavailable {
   return new OwnKeyUnavailable({
-    message: `The key the runtime keeps for ${purpose} cannot be read under the key ${keyHeldBy(keyFrom)}: ${words}. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS beside a new key`,
+    message: `The key the runtime keeps for ${purpose} cannot be read under the key ${keyHeldBy(keyFrom)}: ${words}. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key`,
   });
 }
 

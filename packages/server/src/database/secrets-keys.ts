@@ -6,17 +6,9 @@ import { secretKeyBytes } from '@on.auto/secrets';
 import { Redacted } from 'effect';
 
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
-import {
-  aSecretsKeyInWords,
-  secretsKeyOfBase64,
-  type SecretsKeySource,
-  type SecretsSettings,
-} from '../settings/secrets-settings.ts';
+import { aSecretsKeyInWords, secretsKeyOfBase64, type SecretsKeySource } from '../settings/secrets-settings.ts';
 
-export interface SecretKeys {
-  readonly current: Redacted.Redacted<Uint8Array>;
-  readonly previous?: Redacted.Redacted<Uint8Array> | undefined;
-}
+export type KeyInHand = Exclude<SecretsKeySource, { readonly from: 'kms' }>;
 
 type KeyFile = Extract<SecretsKeySource, { readonly from: 'file' }>;
 
@@ -80,13 +72,9 @@ function keyInFile(keyFile: KeyFile): Redacted.Redacted<Uint8Array> {
   return keyReadFrom(keyFile);
 }
 
-function keyOf(source: SecretsKeySource): Redacted.Redacted<Uint8Array> {
+export function keyInHandOf(source: KeyInHand): Redacted.Redacted<Uint8Array> {
   if (source.from === 'environment') {
     return source.key;
   }
   return source.from === 'file' ? keyInFile(source) : Redacted.make(Uint8Array.from(randomBytes(secretKeyBytes)));
-}
-
-export function secretsKeysOf({ current, previous }: SecretsSettings): SecretKeys {
-  return { current: keyOf(current), previous: previous === undefined ? undefined : keyOf(previous) };
 }

@@ -10,8 +10,9 @@
 # write ${NAME} where one belongs and set NAME in .env or in the container.
 # DATABASE_URL, the PostgreSQL database of the ledger, holds a password, and
 # SECRETS_KEY is the key the secrets kept in the ledger are sealed under, so both
-# are read from the environment only and have no key here. SECRETS_KEY_FILE is an
-# environment variable too, which names a file that holds that key instead.
+# are read from the environment only and have no key here. SECRETS_KEY_FILE and
+# SECRETS_KEY_KMS are environment variables too, which name a file that holds that
+# key and a key in AWS KMS that wraps the key of each secret instead.
 
 # OpenAI-compatible gateways; a reasoning function then names gateway/<model id>.
 model_gateways:
