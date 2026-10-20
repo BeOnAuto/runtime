@@ -9,7 +9,7 @@ import {
   type ClientRegistration,
   type FakeMcpServer,
 } from '../testing/index.ts';
-import type { ClientSource } from './client-sources.ts';
+import type { WayClientSource } from './client-sources.ts';
 import type { ConsentClient, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -32,7 +32,7 @@ function refused(client: ConsentClient, asked: StartAsked) {
   return Effect.runPromise(Effect.flip(client.start(asked)));
 }
 
-const documentFirst: readonly ClientSource[] = ['metadata_document', 'dynamic'];
+const documentFirst: readonly WayClientSource[] = ['metadata_document', 'dynamic'];
 
 const publicUrl = 'https://runtime.example.com';
 

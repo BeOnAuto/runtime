@@ -1,6 +1,7 @@
 import { allPermissions, defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
+import { studioBaseFor } from '../links/connect-page.ts';
 import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts';
 import { ExpiresAtField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
@@ -43,7 +44,7 @@ export function defineStartConsent(services: ConsentServices) {
       const asked = consentAskedOf(kept.connection, services);
       const state = issuedToken();
       const started = yield* consent
-        .start({ ...asked, state: state.token })
+        .start({ ...asked, state: state.token, studioBase: studioBaseFor(services.pages) })
         .pipe(Effect.mapError((refusal) => consentRefusalOf(namedOf(kept.connection), refusal)));
       const verifierSecretId = yield* Effect.orDie(secrets.keep(started.verifier));
       const expiresAt = yield* tenMinutesOn;

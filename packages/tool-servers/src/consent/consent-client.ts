@@ -2,13 +2,26 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import type { Reaches } from '@on.auto/outbound';
 import { Effect, type Redacted } from 'effect';
 
-import { toolBounds } from '../bounds/call-bounds.ts';
 import type { Timer } from '../clients/http-client.ts';
 import type { ConsentTokenSources, TokenSource } from '../clients/token-source.ts';
+import {
+  serviceClientsListed,
+  throughAutoOf,
+  type AutoClients,
+  type ThroughAuto,
+} from '../consent-through-auto/auto-clients.ts';
+import type { ConsentRequests } from '../consent-through-auto/consents-by-source.ts';
 import { heldAmongSecrets, type KeptTokens, type TokenHolding } from '../consent-tokens/kept-tokens.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
-import { sourcesHad, type ClientSource, type ClientsHad, type WayOfClients } from './client-sources.ts';
-import type { ConsentRequests } from './consent-requests.ts';
+import {
+  sourcesHad,
+  sourceTakenOf,
+  type ClientSource,
+  type ClientsHad,
+  type HadSources,
+  type ServiceClient,
+  type WayOfClients,
+} from './client-sources.ts';
 
 export interface ConsentWay extends WayOfClients {
   readonly scope?: string | undefined;
@@ -29,6 +42,7 @@ export interface ConsentAsked {
 
 export interface StartAsked extends ConsentAsked {
   readonly state: string;
+  readonly studioBase: string;
 }
 
 export interface ChosenClient {
@@ -38,16 +52,26 @@ export interface ChosenClient {
 
 export interface StartedConsent {
   readonly url: string;
+  readonly state: string;
   readonly verifier: Redacted.Redacted;
   readonly client: ChosenClient;
 }
 
-export interface FinishAsked extends ConsentAsked {
+interface FinishAskedOfTheStart extends ConsentAsked {
   readonly client: ChosenClient;
-  readonly code: string;
-  readonly iss: string | undefined;
   readonly verifier: Redacted.Redacted;
 }
+
+export interface CodeFinishAsked extends FinishAskedOfTheStart {
+  readonly code: string;
+  readonly iss: string | undefined;
+}
+
+export interface HandleFinishAsked extends FinishAskedOfTheStart {
+  readonly handle: string;
+}
+
+export type FinishAsked = CodeFinishAsked | HandleFinishAsked;
 
 export interface FinishedConsent {
   readonly tokens: Redacted.Redacted;
@@ -66,6 +90,7 @@ export type ConsentRefusal =
   | { readonly refused: 'unanswered' }
   | { readonly refused: 'iss' }
   | { readonly refused: 'code' }
+  | { readonly refused: 'studio_elsewhere' }
   | { readonly refused: 'no_scope' }
   | { readonly refused: 'malformed_scope' };
 
@@ -125,31 +150,46 @@ export interface ClientRegistrations {
   readonly keep: (issuer: string, kept: KeptRegistration) => Effect.Effect<void>;
 }
 
-export interface ConsentClientOptions extends ClientsHad {
+export interface ConsentClientOptions extends Omit<ClientsHad, 'serviceClients'> {
   readonly fetch: FetchLike;
   readonly registrations: ClientRegistrations;
+  readonly autoClients?: AutoClients;
   readonly requestMs?: number;
   readonly requestTimeout?: (ms: number) => AbortSignal;
   readonly renewalSpreadMs?: number;
 }
 
 export interface ConsentClient extends ConsentTokenSources {
-  readonly sourcesOf: (way: WayOfClients) => readonly ClientSource[];
+  readonly hadSources: Effect.Effect<HadSources>;
   readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
   readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;
 }
 
+export interface LoadedOptions extends ConsentClientOptions {
+  readonly auto: ThroughAuto;
+  readonly serviceClients: Effect.Effect<readonly ServiceClient[]>;
+  readonly renewalSpreadMs: number;
+}
+
 const mostRenewalSpreadMs = 5000;
 
-async function requestsOf(options: ConsentClientOptions, renewalSpreadMs: number): Promise<ConsentRequests> {
-  const { consentRequests } = await import('./consent-requests.ts');
-  return consentRequests({
-    ...options,
-    requestMs: options.requestMs ?? toolBounds.callMs,
-    requestTimeout: options.requestTimeout ?? ((ms) => AbortSignal.timeout(ms)),
-    renewalSpreadMs,
-  });
+async function requestsOf(options: LoadedOptions): Promise<ConsentRequests> {
+  const { consentRequests } = await import('../consent-through-auto/consents-by-source.ts');
+  return consentRequests(options);
+}
+
+function loadedOf(options: ConsentClientOptions): LoadedOptions {
+  const auto = throughAutoOf(options);
+  const renewalSpreadMs = options.renewalSpreadMs ?? Math.floor(Math.random() * mostRenewalSpreadMs);
+  return { ...options, auto, serviceClients: serviceClientsListed(auto), renewalSpreadMs };
+}
+
+function hadSourcesOf(options: LoadedOptions): Effect.Effect<HadSources> {
+  return Effect.map(options.serviceClients, (serviceClients) => ({
+    sourcesOf: (way: WayOfClients): readonly ClientSource[] => sourcesHad(way, { ...options, serviceClients }),
+    sourceOf: (way: WayOfClients) => sourceTakenOf(way, { ...options, serviceClients }),
+  }));
 }
 
 function servedTokens(
@@ -174,15 +214,15 @@ function servedTokens(
   };
 }
 
-export function makeConsentClient(options: ConsentClientOptions): ConsentClient {
-  const renewalSpreadMs = options.renewalSpreadMs ?? Math.floor(Math.random() * mostRenewalSpreadMs);
+export function makeConsentClient(given: ConsentClientOptions): ConsentClient {
+  const options = loadedOf(given);
   const loading: { requests?: Promise<ConsentRequests> } = {};
   const loaded = Effect.promise(() => {
-    loading.requests ??= requestsOf(options, renewalSpreadMs);
+    loading.requests ??= requestsOf(options);
     return loading.requests;
   });
   return {
-    sourcesOf: (way) => sourcesHad(way, options),
+    hadSources: hadSourcesOf(options),
     start: (asked) => Effect.flatMap(loaded, (requests) => requests.start(asked)),
     finish: (asked) => Effect.flatMap(loaded, (requests) => requests.finish(asked)),
     tokenSource: (served, serving) => servedTokens(loaded, served, serving),

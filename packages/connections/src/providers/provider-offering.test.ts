@@ -1,7 +1,7 @@
 import type { CallerIdentity } from '@on.auto/operations';
 import { fixtureProviders } from '@on.auto/providers/testing';
 import { consentClientWith } from '@on.auto/tool-servers/testing';
-import type { Redacted } from 'effect';
+import { Effect, type Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeProviderOffering } from '../index.ts';
@@ -19,13 +19,14 @@ interface RuntimeSettings {
 }
 
 function offeredBy(access: RuntimeAccess, { policy = {}, providerValues = new Map() }: RuntimeSettings = {}) {
-  return makeProviderOffering({
+  const offering = makeProviderOffering({
     providers: fixtureProviders,
     providerValues,
     policy: connectionPolicyOf(policy),
     access,
     consent: consentClientWith(),
   });
+  return (caller: CallerIdentity) => Effect.runSync(offering(caller));
 }
 
 function namesOf(offered: readonly { readonly name: string }[] | undefined): readonly string[] | undefined {

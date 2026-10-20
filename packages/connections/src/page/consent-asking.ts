@@ -15,7 +15,7 @@ import {
 import type { KeptConnection } from '../registry/registry.ts';
 import { unrevokedWordsOf, type ConsentNamed } from './consent-words.ts';
 
-export type ConsentAsked = Omit<StartAsked, 'state'>;
+export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
 
 export type ConsentServices = Pick<ConnectionServices, 'consent' | 'policy' | 'pages' | 'secrets'> & {
   readonly bindsPerson: boolean;

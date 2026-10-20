@@ -6,7 +6,9 @@ import {
   isSameIssuer,
   metadataDocumentOf,
   registeredClientAt,
+  serviceClientAt,
   sourcesHad,
+  sourceTakenOf,
   type RegisteredClient,
   type WayOfClients,
 } from './client-sources.ts';
@@ -52,8 +54,8 @@ describe('the client sources a runtime has for a way', () => {
 
   it('are the registered client alone when the way names none, where one is registered at its issuer', () => {
     expect([
-      sourcesHad({ issuer }, { registeredClients: [accounts], publicUrl: undefined }),
-      sourcesHad({ issuer }, { registeredClients: [tenants], publicUrl: undefined }),
+      sourcesHad({ issuer }, { registeredClients: [accounts], publicUrl: undefined, serviceClients: [] }),
+      sourcesHad({ issuer }, { registeredClients: [tenants], publicUrl: undefined, serviceClients: [] }),
     ]).toEqual([['registered'], []]);
   });
 
@@ -62,9 +64,9 @@ describe('the client sources a runtime has for a way', () => {
     const reversed: WayOfClients = { issuer, clients: ['dynamic', 'registered'] };
 
     expect([
-      sourcesHad(way, { registeredClients: [], publicUrl: 'https://runtime.example.com' }),
-      sourcesHad(way, { registeredClients: [accounts], publicUrl: 'http://127.0.0.1:5555' }),
-      sourcesHad(reversed, { registeredClients: [accounts], publicUrl: undefined }),
+      sourcesHad(way, { registeredClients: [], publicUrl: 'https://runtime.example.com', serviceClients: [] }),
+      sourcesHad(way, { registeredClients: [accounts], publicUrl: 'http://127.0.0.1:5555', serviceClients: [] }),
+      sourcesHad(reversed, { registeredClients: [accounts], publicUrl: undefined, serviceClients: [] }),
     ]).toEqual([
       ['metadata_document', 'dynamic'],
       ['registered', 'dynamic'],
@@ -77,6 +79,42 @@ describe('the client sources a runtime has for a way', () => {
       'https://runtime.example.com/oauth/client.json',
       undefined,
     ]);
+  });
+});
+
+describe('the client of Auto’s consent service among the sources a runtime has', () => {
+  const issuer = 'https://accounts.example.com';
+
+  it('is taken where the service lists the issuer and the way takes a registered client, after the runtime’s own', () => {
+    const listed = [{ issuer: `${issuer}/`, client_id: 'auto.apps.example.com' }];
+    const had = { registeredClients: [], publicUrl: undefined, serviceClients: listed };
+
+    expect([
+      sourcesHad({ issuer }, had),
+      sourcesHad({ issuer }, { ...had, registeredClients: [accounts] }),
+      sourcesHad({ issuer, clients: ['registered', 'dynamic'] }, had),
+      sourcesHad({ issuer, clients: ['metadata_document', 'dynamic'] }, had),
+      sourcesHad({ issuer: 'https://elsewhere.example.com' }, had),
+    ]).toEqual([['auto'], ['registered', 'auto'], ['auto', 'dynamic'], ['dynamic'], []]);
+  });
+
+  it('is the source a start takes where no registered client is had at the issuer, and none is taken where no source is had', () => {
+    const had = { registeredClients: [], publicUrl: undefined, serviceClients: [{ issuer, client_id: 'auto' }] };
+
+    expect([
+      sourceTakenOf({ issuer }, had),
+      sourceTakenOf({ issuer }, { ...had, registeredClients: [accounts] }),
+      sourceTakenOf({ issuer, clients: ['metadata_document'] }, had),
+    ]).toEqual(['auto', 'registered', undefined]);
+  });
+
+  it('is found by an issuer the service lists, or by the issuer its template takes', () => {
+    const listed = [{ issuer: 'https://login.example.net/{tenant}/v2.0', client_id: 'auto-tenants' }];
+
+    expect([
+      serviceClientAt(listed, 'https://login.example.net/acme.example.org/v2.0')?.client_id,
+      serviceClientAt(listed, 'https://login.example.net/a/b/v2.0'),
+    ]).toEqual(['auto-tenants', undefined]);
   });
 });
 

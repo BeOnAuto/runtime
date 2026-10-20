@@ -24,7 +24,7 @@ export interface Refreshing {
 }
 
 export interface Renewal {
-  readonly refreshing: (served: ConsentServed) => Effect.Effect<Refreshing, ConsentRefusal>;
+  readonly refreshing: (served: ConsentServed, name: string) => Effect.Effect<Refreshing, ConsentRefusal>;
   readonly leaseMs: number;
   readonly waitMs: number;
   readonly spreadMs: number;
@@ -175,7 +175,7 @@ function refreshedFrom(held: Held, renewing: Renewing): Effect.Effect<Held, unkn
       return yield* ended(renewing, 'consent_ended');
     }
     const refreshing = yield* renewing.renewal
-      .refreshing(renewing.served)
+      .refreshing(renewing.served, renewing.serving.name)
       .pipe(Effect.catch((refusal) => refusedWith(refusal, renewing)));
     const claim = yield* renewing.served.tokens.claim(held.version, renewing.renewal.leaseMs);
     return claim.claimed

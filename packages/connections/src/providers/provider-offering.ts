@@ -1,5 +1,6 @@
 import { permissionFor, permissionRefusalOf, type CallerIdentity } from '@on.auto/operations';
 import type { OfferedProvider, ProviderOffering } from '@on.auto/tool-servers';
+import { Effect } from 'effect';
 
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
@@ -35,5 +36,8 @@ function offeredAmong(listed: readonly ListedProvider[]): readonly OfferedProvid
 }
 
 export function makeProviderOffering(services: OfferingServices): ProviderOffering {
-  return (caller) => (refusalToAdd(services, caller) === null ? offeredAmong(listedProviders(services)) : undefined);
+  return (caller) =>
+    refusalToAdd(services, caller) === null
+      ? Effect.map(services.consent.hadSources, (consent) => offeredAmong(listedProviders({ ...services, consent })))
+      : Effect.undefined;
 }

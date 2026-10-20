@@ -22,6 +22,7 @@ import {
   serveFakeApi,
   servedForConsent,
   servedOf,
+  studioBase,
   type FakeApiServer,
   type FakeMcpServer,
   clockAt,
@@ -130,6 +131,7 @@ async function connectedToApi(api: FakeApiServer) {
     returnAddress,
     reaches: everyHost,
     state: 'state-1',
+    studioBase,
   });
   const finished = await Effect.runPromise(consent.finish(asked).pipe(Effect.provide(TestClock.layer())));
   const clock = clockAt(0);

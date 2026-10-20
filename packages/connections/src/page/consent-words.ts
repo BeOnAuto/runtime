@@ -20,6 +20,7 @@ type ConflictingRefusal = Extract<
       | 'no_challenge'
       | 'no_client'
       | 'client_gone'
+      | 'studio_elsewhere'
       | 'no_scope'
       | 'malformed_scope';
   }
@@ -37,6 +38,8 @@ const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = 
   no_client: ({ name }) =>
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
   client_gone: ({ name }) => servingWords.clientGone(name),
+  studio_elsewhere: ({ name }) =>
+    `The connection ${name} takes consent through Auto's client only where Studio is Auto's or on this computer, so whoever runs this runtime registers a client`,
   malformed_scope: ({ name }) =>
     `The authorization server of the connection ${name} granted a scope written with characters a scope does not hold, ${notAsAdded}`,
   no_scope: ({ name }) =>

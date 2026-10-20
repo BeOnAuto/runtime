@@ -73,7 +73,25 @@ export {
   returnAddress,
   servedForConsent,
   startAskedAt,
+  studioBase,
 } from '../consent-testing/consent-fakes.ts';
+export {
+  serveFakeConsentService,
+  type FakeConsentService,
+  type ServiceCall,
+} from '../consent-testing/fake-consent-service.ts';
+export type { FakeConsentServiceOptions, RefusedCall } from '../consent-testing/fake-consent-store.ts';
+export {
+  autoClientsOf,
+  connectedThroughAuto,
+  consentClientThrough,
+  handedOffAskedOf,
+  handleOf,
+  servedThroughAuto,
+  serviceCallsAt,
+  studioSession,
+  type ThroughAuto,
+} from '../consent-testing/auto-consents.ts';
 export {
   brokenWords,
   goneWords,

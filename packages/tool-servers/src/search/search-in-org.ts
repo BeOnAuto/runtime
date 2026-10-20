@@ -64,7 +64,7 @@ export function defineSearchInOrg(
       return {
         ...foundIn(servers, asked),
         servers: servers.map((listed) => withServedPlaybooks(listed, asked, caller.playbooks)),
-        ...providersOf(offering(caller), listing, asked),
+        ...providersOf(yield* offering(caller), listing, asked),
       };
     }),
     plainLanguage: {

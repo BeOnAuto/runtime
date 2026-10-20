@@ -10,7 +10,6 @@ import { Effect, Option, Redacted } from 'effect';
 import {
   clientMetadataDocumentOf,
   registeredClientAt,
-  sourcesHad,
   type ClientMetadataDocument,
   type ClientSource,
   type ClientsHad,
@@ -40,14 +39,17 @@ export interface ActingClient {
   readonly authentication: AddClientAuthentication | undefined;
 }
 
-interface ClientChoosing extends ClientsHad {
+interface ClientChoosing extends Omit<ClientsHad, 'serviceClients'> {
   readonly registrations: ClientRegistrations;
 }
+
+export type ServerSource = Exclude<ClientSource, 'auto'>;
 
 interface Taking {
   readonly asked: ConsentAsked;
   readonly server: AuthorizationServer;
   readonly fetch: FetchLike;
+  readonly sources: readonly ServerSource[];
 }
 
 type RecordedClient = Pick<FinishAsked, 'way' | 'client' | 'returnAddress'>;
@@ -131,7 +133,7 @@ function dynamicallyRegistered(
 }
 
 function takenFrom(
-  source: ClientSource,
+  source: ServerSource,
   taking: Taking,
   choosing: Choosing,
 ): Effect.Effect<ActingClient | undefined, ConsentRefusal> {
@@ -153,7 +155,7 @@ function takenFrom(
 
 function chosenAt(taking: Taking, choosing: Choosing): Effect.Effect<ActingClient, ConsentRefusal> {
   return Effect.gen(function* () {
-    for (const source of sourcesHad(taking.asked.way, choosing)) {
+    for (const source of taking.sources) {
       const taken = yield* takenFrom(source, taking, choosing);
       if (taken !== undefined) {
         return taken;
@@ -189,6 +191,10 @@ function clientChoice(choosing: ClientChoosing): ClientChoice {
     chosenAt: (taking) => chosenAt(taking, choosingOnce),
     recordedFor: (recorded) => recordedFor(recorded, choosingOnce),
   };
+}
+
+export function isServerSource(source: ClientSource): source is ServerSource {
+  return source !== 'auto';
 }
 
 export interface Requesting extends ClientChoosing {

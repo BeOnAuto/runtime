@@ -21,7 +21,8 @@ export function defineListProviders(listing: OfferingServices) {
     reasons: [],
     handle: Effect.fnUntraced(function* () {
       const refusal = refusalToAdd(listing, yield* Caller);
-      return { providers: listedProviders(listing), may_add: refusal === null, refusal };
+      const consent = yield* listing.consent.hadSources;
+      return { providers: listedProviders({ ...listing, consent }), may_add: refusal === null, refusal };
     }),
   });
 }

@@ -1664,6 +1664,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],
@@ -2052,6 +2053,7 @@
                               "type": "string",
                               "enum": [
                                 "registered",
+                                "auto",
                                 "metadata_document",
                                 "dynamic"
                               ],
@@ -2408,6 +2410,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],
@@ -2760,6 +2763,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],
@@ -3128,6 +3132,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],
@@ -3554,6 +3559,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],
@@ -3974,6 +3980,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],
@@ -4533,6 +4540,7 @@
                           "type": "string",
                           "enum": [
                             "registered",
+                            "auto",
                             "metadata_document",
                             "dynamic"
                           ],

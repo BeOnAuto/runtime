@@ -1,6 +1,7 @@
 import { adverts, drive, providersOf } from '@on.auto/providers/testing';
 import type { RegisteredClient } from '@on.auto/tool-servers';
 import { consentClientWith, registeredAt } from '@on.auto/tool-servers/testing';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeProviderOffering } from '../index.ts';
@@ -209,13 +210,15 @@ describe('a connection of consent given by hand', () => {
 });
 
 function offeredWith(clients: readonly RegisteredClient[]) {
-  return makeProviderOffering({
-    providers: providersOf(drive),
-    providerValues: new Map(),
-    policy: connectionPolicyOf({}),
-    access: 'people',
-    consent: consentClientWith({ registeredClients: clients }),
-  })(ada);
+  return Effect.runSync(
+    makeProviderOffering({
+      providers: providersOf(drive),
+      providerValues: new Map(),
+      policy: connectionPolicyOf({}),
+      access: 'people',
+      consent: consentClientWith({ registeredClients: clients }),
+    })(ada),
+  );
 }
 
 describe('the providers search offers a caller who may add', () => {

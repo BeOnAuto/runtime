@@ -34,7 +34,7 @@ const chat: OfferedProvider = {
 const offeredToTheAdder =
   (offered: readonly OfferedProvider[]): ProviderOffering =>
   ({ id }) =>
-    id === adder.id ? offered : undefined;
+    Effect.succeed(id === adder.id ? offered : undefined);
 
 const services = Layer.mergeAll(
   memoryLedger().layer,
