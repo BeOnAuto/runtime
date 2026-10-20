@@ -14,6 +14,10 @@ function policyOf(environment: Readonly<Record<string, string>>) {
   return Effect.runSync(settingRead(environment)).policy;
 }
 
+function autoClientsOf(environment: Readonly<Record<string, string>>) {
+  return Effect.runSync(settingRead(environment)).autoClients;
+}
+
 function refusalOf(text: string, environment: Readonly<Record<string, string>> = {}) {
   return Effect.runSync(Effect.flip(settingRead({ ...environment, CONNECTIONS: text }))).message;
 }
@@ -251,5 +255,19 @@ describe('the references in CONNECTIONS that stop the start', () => {
   it('a setting that is no object or no JSON, refused at its root', () => {
     expect(refusalOf('[1]')).toMatch(/^The connection settings are invalid\. CONNECTIONS: \/: Expected /u);
     expect(refusalOf('{registered')).toBe('The connection settings are invalid. CONNECTIONS: /: Expected JSON');
+  });
+});
+
+describe('the switch of Auto’s clients in the setting of connections', () => {
+  it('reads whether Auto’s clients serve as well, and leaves it to the runtime where the setting says nothing', () => {
+    expect([
+      autoClientsOf({ CONNECTIONS: JSON.stringify({ auto_clients: true }) }),
+      autoClientsOf({ CONNECTIONS: JSON.stringify({ auto_clients: false }) }),
+      autoClientsOf({ CONNECTIONS: JSON.stringify({ people_may_add: true }) }),
+      autoClientsOf({}),
+    ]).toEqual([true, false, undefined, undefined]);
+    expect(refusalOf(JSON.stringify({ auto_clients: 'yes' }))).toBe(
+      'The connection settings are invalid. CONNECTIONS: /auto_clients: Expected boolean',
+    );
   });
 });

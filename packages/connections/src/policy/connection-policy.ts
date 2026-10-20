@@ -92,10 +92,16 @@ const ConnectionPolicyFieldsSchema = Schema.Struct(policyFields);
 export const ConnectionsSettingSchema = Schema.Struct({
   ...policyFields,
   registered_clients: Schema.optionalKey(RegisteredClientsSchema),
+  auto_clients: Schema.optionalKey(
+    Schema.Boolean.annotate({
+      description:
+        "Whether a provider whose way takes a registered client takes Auto's client too, through Auto's consent service, where none is registered at its issuer; true in local mode and false otherwise when left out. AUTO_CLIENTS wins over it",
+    }),
+  ),
   providers: Schema.optionalKey(AddedProvidersSchema),
 }).annotate({
   description:
-    'What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it',
+    "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers, and whether Auto's clients serve as well; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it",
 });
 
 export type ConnectionPolicyFields = typeof ConnectionPolicyFieldsSchema.Type;
@@ -116,6 +122,7 @@ export interface ConnectionPolicy {
 export interface ConnectionsSetting {
   readonly policy: ConnectionPolicy;
   readonly registeredClients: readonly RegisteredClient[];
+  readonly autoClients: boolean | undefined;
   readonly clientVariables: readonly string[];
   readonly providers: AddedProviders;
 }
@@ -242,6 +249,7 @@ function settingOf(
     Result.map(clientsResolved(fields.registered_clients ?? [], environment), (resolved) => ({
       policy: connectionPolicyOf(fields),
       registeredClients: registeredClientsOf(resolved),
+      autoClients: fields.auto_clients,
       clientVariables: referencedVariablesOf(clients),
       providers: fields.providers ?? [],
     })),
@@ -256,6 +264,7 @@ export function readConnectionsSetting(
     return Effect.succeed({
       policy: connectionPolicyOf({}),
       registeredClients: [],
+      autoClients: undefined,
       clientVariables: [],
       providers: [],
     });

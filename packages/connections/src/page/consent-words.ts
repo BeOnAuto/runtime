@@ -89,6 +89,29 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
     : conflictOf(named, refusal);
 }
 
+const throughAuto = (name: string) =>
+  `Expected handle: the consent of the connection ${name} began through Auto's consent service, which answers a handle, not a code`;
+
+const throughARegisteredClient = (name: string) =>
+  `Expected code: the consent of the connection ${name} began with the client whoever runs this runtime registered, which answers a code, not a handle`;
+
+export type Returned = 'code' | 'handle';
+
+export function wrongShapeOf({ name }: ConsentNamed, began: Returned, given: Returned): InvalidInput | undefined {
+  if (began === given) {
+    return undefined;
+  }
+  return given === 'code'
+    ? refusedAt('/code', throughAuto(name))
+    : refusedAt('/handle', throughARegisteredClient(name));
+}
+
+export function finishRefusalOf(named: ConsentNamed, refusal: ConsentRefusal, given: Returned): ConsentRefused {
+  return given === 'handle' && refusal.refused === 'code'
+    ? refusedAt('/handle', "Expected a handle Auto's consent service takes; it refused this one")
+    : consentRefusalOf(named, refusal);
+}
+
 export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFailure): string {
   if (failure.refused === 'not_revoked') {
     return `The authorization server of the connection ${name} refused to revoke its tokens, answering HTTP ${failure.status}, so they end on their own`;

@@ -14,21 +14,35 @@ import {
   type ConsentServices,
   type FinishedConsent,
 } from './consent-asking.ts';
-import { consentRefusalOf, type ConsentRefused } from './consent-words.ts';
+import { finishRefusalOf, wrongShapeOf, type ConsentRefused, type Returned } from './consent-words.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
 
-const FinishingSchema = Schema.Struct({
+const returnedFields = {
   id: ConnectionIdField,
   token: TokenField,
-  code: GivenField.annotate({ description: 'The code the authorization server sent the person back with' }),
-  state: GivenField.annotate({ description: 'The state the authorization server sent the person back with' }),
-  iss: Schema.optionalKey(
-    GivenField.annotate({
-      description: 'The issuer the authorization server sent the person back with, where it sent one',
+  state: GivenField.annotate({ description: 'The state the person was sent back with' }),
+};
+
+const FinishingSchema = Schema.Union([
+  Schema.Struct({
+    ...returnedFields,
+    code: GivenField.annotate({ description: 'The code the authorization server sent the person back with' }),
+    iss: Schema.optionalKey(
+      GivenField.annotate({
+        description: 'The issuer the authorization server sent the person back with, where it sent one',
+      }),
+    ),
+  }).annotate({
+    description: 'The finish of a consent begun with a client whoever runs the runtime registered, or one of its own',
+  }),
+  Schema.Struct({
+    ...returnedFields,
+    handle: GivenField.annotate({
+      description: "The handle Auto's consent service sent the person back with, which its tokens are handed over for",
     }),
-  ),
-});
+  }).annotate({ description: "The finish of a consent begun through Auto's consent service" }),
+]);
 
 type Finishing = typeof FinishingSchema.Type;
 
@@ -40,9 +54,17 @@ interface Recording {
   readonly kept: KeptWithConsent;
 }
 
+function returnedOf(finishing: Finishing): Returned {
+  return 'handle' in finishing ? 'handle' : 'code';
+}
+
+function returnedFieldsOf(finishing: Finishing) {
+  return 'handle' in finishing ? { handle: finishing.handle } : { code: finishing.code, iss: finishing.iss };
+}
+
 function redeemedOf(
   kept: KeptWithConsent,
-  { code, iss }: Finishing,
+  finishing: Finishing,
   services: ConsentServices,
 ): Effect.Effect<FinishedConsent, ConsentRefused | NotFound> {
   const { consent, secrets } = services;
@@ -54,9 +76,10 @@ function redeemedOf(
     }
     const asked = consentAskedOf(kept.connection, services);
     const client = { client_id: clientId, client_source: clientSource };
+    const named = namedOf(kept.connection);
     return yield* consent
-      .finish({ ...asked, client, code, iss, verifier: verifier.value })
-      .pipe(Effect.mapError((refusal) => consentRefusalOf(namedOf(kept.connection), refusal)));
+      .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier: verifier.value })
+      .pipe(Effect.mapError((refusal) => finishRefusalOf(named, refusal, returnedOf(finishing))));
   });
 }
 
@@ -91,6 +114,7 @@ export function defineFinishConsent(services: ConsentServices) {
     title: 'Finish consent',
     description: [
       'Finishes the consent of a connection with the code and the state its authorization server sent the person back with, which connects it, and answers it connected.',
+      "A consent begun through Auto's consent service is finished with the handle and the state the service sent the person back with instead.",
       'The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them.',
       'On a runtime that signs people in, only the person who added the connection may finish it.',
     ].join(' '),
@@ -106,6 +130,11 @@ export function defineFinishConsent(services: ConsentServices) {
       const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry, use, acted));
       const stateSha256 = tokenSha256Of(finishing.state);
       const kept = yield* openConsentOf(linked, { at: acted.at, stateSha256 }, services);
+      const began = kept.consent.client_source === 'auto' ? 'handle' : 'code';
+      const wrongShape = wrongShapeOf(namedOf(kept.connection), began, returnedOf(finishing));
+      if (wrongShape !== undefined) {
+        return yield* Effect.fail(wrongShape);
+      }
       const finished = yield* redeemedOf(kept, finishing, services);
       const connected = yield* connectedWith(finished, { use, stateSha256, kept }, services);
       return connectionShown(connected.connection, null);

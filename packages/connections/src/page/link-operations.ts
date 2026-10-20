@@ -1,11 +1,13 @@
 import { allPermissions, defineHttpOperation } from '@on.auto/operations';
+import type { ConsentClient } from '@on.auto/tool-servers';
 import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
-import { ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
+import { ClientSourceField, ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
-import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
+import { ConnectionSchema, connectionShown, type RecordedConnection } from '../registry/connection.ts';
 import { isOpenConsent, linkedConnectionOf } from '../registry/registry-lookup.ts';
+import { wayOf } from './consent-asking.ts';
 
 export const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
@@ -20,38 +22,59 @@ const LinkedSchema = Schema.Struct({
       expires_at: Schema.String.annotate({ description: 'When the consent must be finished by, in ISO 8601 UTC' }),
     }).annotate({ description: 'The consent started and not finished, while it is open' }),
   ),
+  client_source: Schema.optionalKey(
+    ClientSourceField.annotate({
+      description:
+        "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service. Left out where the runtime has no client the way takes",
+    }),
+  ),
 }).annotate({
   identifier: 'LinkedConnection',
   description: 'The connection an open link names, and when the link expires',
 });
 
-export const readLink = defineHttpOperation('org', 'query', {
-  name: 'read_link',
-  title: 'Read link',
-  description: [
-    "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
-    'A link is open for ten minutes from when add_connection gave it, until the connection is approved.',
-    'A token that is unknown, used up or expired is answered as not found.',
-  ].join(' '),
-  route: { method: 'GET', path: '/connections/{id}/link/{token}' },
-  body: { kind: 'none' },
-  permittedBy: allPermissions,
-  inputSchema: LinkSchema,
-  answer: { kind: 'json', outputSchema: LinkedSchema },
-  reasons: ['not_found'],
-  handle: Effect.fnUntraced(function* ({ id, token }) {
-    const registry = yield* loadRegistry;
-    const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };
-    const acted = yield* actedNow;
-    const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, acted)).pipe(
-      Effect.catchTag('forbidden', Effect.die),
-    );
-    const consent = isOpenConsent(kept, acted.at)
-      ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
-      : {};
-    return { ...connectionShown(kept.connection, null), link: { expires_at: kept.link.expires_at }, ...consent };
-  }),
-});
+function sourceOfAStart(connection: RecordedConnection, consent: Pick<ConsentClient, 'hadSources'>) {
+  return Effect.map(consent.hadSources, ({ sourceOf }) => {
+    const source = connection.credential.kind === 'authorization' ? sourceOf(wayOf(connection)) : undefined;
+    return source === undefined ? {} : { client_source: source };
+  });
+}
+
+export function defineReadLink(consent: Pick<ConsentClient, 'hadSources'>) {
+  return defineHttpOperation('org', 'query', {
+    name: 'read_link',
+    title: 'Read link',
+    description: [
+      "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
+      'A link is open for ten minutes from when add_connection gave it, until the connection is approved.',
+      'A token that is unknown, used up or expired is answered as not found.',
+    ].join(' '),
+    route: { method: 'GET', path: '/connections/{id}/link/{token}' },
+    body: { kind: 'none' },
+    permittedBy: allPermissions,
+    inputSchema: LinkSchema,
+    answer: { kind: 'json', outputSchema: LinkedSchema },
+    reasons: ['not_found'],
+    handle: Effect.fnUntraced(function* ({ id, token }) {
+      const registry = yield* loadRegistry;
+      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };
+      const acted = yield* actedNow;
+      const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, acted)).pipe(
+        Effect.catchTag('forbidden', Effect.die),
+      );
+      const started = isOpenConsent(kept, acted.at)
+        ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
+        : {};
+      const source = yield* sourceOfAStart(kept.connection, consent);
+      return {
+        ...connectionShown(kept.connection, null),
+        link: { expires_at: kept.link.expires_at },
+        ...started,
+        ...source,
+      };
+    }),
+  });
+}
 
 export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }) {
   return defineHttpOperation('org', 'command', {

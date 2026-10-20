@@ -1,4 +1,4 @@
-import { givenByTheProvider } from '@on.auto/tool-servers';
+import { ClientSourceSchema, givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from '../registry/connection-entry.ts';
@@ -9,6 +9,8 @@ import {
   credentialDescription,
   credentialFieldIssuesOf,
 } from '../registry/credential.ts';
+
+export const ClientSourceField = ClientSourceSchema;
 
 export const ExpiresAtField = Schema.String.annotate({ description: 'When the link expires, in ISO 8601 UTC' });
 

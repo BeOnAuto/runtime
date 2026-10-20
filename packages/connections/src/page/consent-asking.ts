@@ -35,22 +35,25 @@ function serverOf({ type, entry }: RecordedConnection): ConsentServer {
   return type === 'mcp' ? { type, url: required(entry.url) } : { type };
 }
 
+export function wayOf({ credential }: RecordedConnection): ConsentAsked['way'] {
+  return {
+    issuer: required(credential.issuer),
+    scope: credential.scope,
+    parameters: credential.parameters,
+    authorization_endpoint: credential.authorization_endpoint,
+    token_endpoint: credential.token_endpoint,
+    revocation_endpoint: credential.revocation_endpoint,
+    clients: credential.clients,
+  };
+}
+
 export function consentAskedOf(
   connection: RecordedConnection,
   services: Pick<ConnectionServices, 'policy' | 'pages'>,
 ): ConsentAsked {
-  const { credential } = connection;
   return {
     server: serverOf(connection),
-    way: {
-      issuer: required(credential.issuer),
-      scope: credential.scope,
-      parameters: credential.parameters,
-      authorization_endpoint: credential.authorization_endpoint,
-      token_endpoint: credential.token_endpoint,
-      revocation_endpoint: credential.revocation_endpoint,
-      clients: credential.clients,
-    },
+    way: wayOf(connection),
     returnAddress: returnAddressOf(services.pages),
     reaches: reachesUnder(services.policy),
   };
