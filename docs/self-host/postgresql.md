@@ -36,7 +36,7 @@ The URL holds the database's password, so it is a secret:
 - Put it with the other secrets in the container's environment, such as `auto-runtime.env`.
 - Never put it in the configuration file, which refuses a `database_url` key.
 
-Each `docker run` on this page starts a container named `auto-runtime` and is an alternative to the others. Run them in the folder from [Run with Docker](docker.md#start-the-server). Its `.env` names the release to run, such as `IMAGE=onauto/runtime:0.9.1`, and its `auto-runtime.env` holds `PUBLIC_URL`, without which the container stops at start, and `SECRETS_KEY`, which a ledger in PostgreSQL needs. If a container named `auto-runtime` exists, stop and remove it first with `docker stop auto-runtime && docker rm auto-runtime`. Then:
+Each `docker run` on this page starts a container named `auto-runtime` and is an alternative to the others. Run them in the folder from [Run with Docker](docker.md#start-the-server). Its `.env` names the release to run, such as `IMAGE=docker.on.auto/onauto/runtime:0.9.1`, and its `auto-runtime.env` holds `PUBLIC_URL`, without which the container stops at start, and `SECRETS_KEY`, which a ledger in PostgreSQL needs. If a container named `auto-runtime` exists, stop and remove it first with `docker stop auto-runtime && docker rm auto-runtime`. Then:
 
 ```bash
 echo 'DATABASE_URL=postgresql://auto_runtime:<password>@db.example.com:5432/auto_runtime?sslmode=verify-full' >> auto-runtime.env

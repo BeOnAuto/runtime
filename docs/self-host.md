@@ -2,7 +2,7 @@
 
 Auto Runtime is the software that runs your playbooks. It is one program, and every release is published in two forms:
 
-- the container image [`onauto/runtime`](https://hub.docker.com/r/onauto/runtime) on Docker Hub, for `linux/amd64` and `linux/arm64`. An image is Auto Runtime packaged with everything it needs, which Docker or another container platform runs;
+- the container image `docker.on.auto/onauto/runtime`, from [Docker Hub](https://hub.docker.com/r/onauto/runtime), for `linux/amd64` and `linux/arm64`. An image is Auto Runtime packaged with everything it needs, which Docker or another container platform runs;
 - the npm package `@on.auto/runtime`, which you start with `npx @on.auto/runtime` on a computer that has Node.js.
 
 Both are the same software, and both run every function type and workflows. Run it on one machine with Docker, or on any platform that runs Linux containers. Auto keeps its records in a SQLite file (a database held in a single file) or in a PostgreSQL database.

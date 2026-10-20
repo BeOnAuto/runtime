@@ -41,6 +41,8 @@ Settings are environment variables. The command reads them from the shell and fr
 
 The command shows only the server's errors; set `LOG_LEVEL=warn` to see its warnings too, or `LOG_LEVEL=info` to see everything it logs.
 
+Each time it starts, Auto Runtime sends one anonymous usage ping: its version, the operating system, the processor, the version of Node.js, how it was installed and a random id for this copy, kept in `~/.auto-runtime/install-id`, never anything of your work or your keys. `DO_NOT_TRACK=1` or `USAGE_PING=false` turns it off. [Usage ping](https://on.auto/docs/self-host/configuration#usage-ping) says exactly what it sends.
+
 The ledger, where playbooks and their runs are kept, is the SQLite file `~/.auto-runtime/ledger.db` unless `LEDGER_FILE` names another file or `DATABASE_URL` names a PostgreSQL database. The secrets it keeps are sealed under the key in `secrets.key` beside the ledger file, which the command makes at its first start, unless `SECRETS_KEY` gives one, as a ledger in PostgreSQL needs. `PORT` changes the port.
 
 ## Commands
@@ -60,8 +62,10 @@ npx @on.auto/runtime --help
 
 ## Run it in a container
 
-The same release is the image `onauto/runtime` on Docker Hub. See [Run with Docker](https://on.auto/docs/self-host/docker).
+The same release is the image `docker.on.auto/onauto/runtime`, from Docker Hub. See [Run with Docker](https://on.auto/docs/self-host/docker).
 
 ## License
 
 Auto Runtime is source-available under the [Elastic License 2.0](https://github.com/BeOnAuto/runtime/blob/main/LICENSE). [LICENSING.md](https://github.com/BeOnAuto/runtime/blob/main/LICENSING.md) explains the terms.
+
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.on.auto/a.png?x-pxid=75073a78-866c-42e4-b35f-8399450f7916&page=npm-readme" alt="" width="1" height="1" />

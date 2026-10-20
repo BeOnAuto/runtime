@@ -10,7 +10,7 @@ Your agent builds and directs the work. **Auto Runtime** stores and executes it;
 
 ## Get started
 
-Start Auto Runtime on your computer with `npx @on.auto/runtime`. It needs Node.js 26.10 or later on macOS or Linux, and listens on `http://localhost:5555` in local mode, where every request on your computer acts as you, with no sign-in; `PUBLIC_URL=http://localhost:5555` signs you in through the Auto identity service instead. Every release is also the image `onauto/runtime` on Docker Hub; see [Run with Docker](docs/self-host/docker.md) and the [self-hosting guides](docs/self-host.md).
+Start Auto Runtime on your computer with `npx @on.auto/runtime`. It needs Node.js 26.10 or later on macOS or Linux, and listens on `http://localhost:5555` in local mode, where every request on your computer acts as you, with no sign-in; `PUBLIC_URL=http://localhost:5555` signs you in through the Auto identity service instead. Every release is also the image `docker.on.auto/onauto/runtime`, from Docker Hub; see [Run with Docker](docs/self-host/docker.md) and the [self-hosting guides](docs/self-host.md). Auto sends an anonymous usage ping when it starts, which `DO_NOT_TRACK=1` turns off; [Usage ping](docs/self-host/configuration.md#usage-ping) lists exactly what it sends.
 
 Follow the [local setup guide](docs/get-started/local.md) or browse the [Auto documentation](https://on.auto/docs/). See [function availability](docs/concepts/functions.md#availability) for implemented capabilities.
 
@@ -25,3 +25,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and checks, and [do
 ## License
 
 Auto Runtime is source-available under the [Elastic License 2.0](LICENSE). [LICENSING.md](LICENSING.md) explains the terms. Contributions follow the [CLA](CLA.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
+
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.on.auto/a.png?x-pxid=0ad5939f-e30a-4f27-8890-a73394a8d294&page=github-readme" alt="" width="1" height="1" />

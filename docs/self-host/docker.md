@@ -19,7 +19,7 @@ Run one variant at a time. Both publish port `5555` on this machine, so a second
 
 ## The image
 
-[`onauto/runtime`](https://hub.docker.com/r/onauto/runtime) is published for `linux/amd64` and `linux/arm64`. Each release is published under three tags, the names you pull an image by:
+The image is `docker.on.auto/onauto/runtime`, published for `linux/amd64` and `linux/arm64`. Docker fetches it from [Docker Hub](https://hub.docker.com/r/onauto/runtime) through `docker.on.auto`, where [Scarf](https://scarf.sh) counts each pull for Auto. Each release is published under three tags, the names you pull an image by:
 
 | Tag      | Points to                                                |
 | -------- | -------------------------------------------------------- |
@@ -35,7 +35,8 @@ In the image, Auto:
 - runs as the unprivileged user `node`;
 - keeps a SQLite ledger on the volume at `/data`, unless you give it a PostgreSQL database;
 - checks its own health at `/health`;
-- stops cleanly on `SIGTERM`, the signal Docker sends to ask a program to stop.
+- stops cleanly on `SIGTERM`, the signal Docker sends to ask a program to stop;
+- sends an anonymous [usage ping](configuration.md#usage-ping) when it starts, which `DO_NOT_TRACK=1` in `auto-runtime.env` turns off.
 
 ## 1. Start Auto {#start-the-server}
 
@@ -43,7 +44,7 @@ Make a folder for Auto Runtime's files and work in it. Then choose the release, 
 
 ```bash
 mkdir auto-runtime && cd auto-runtime
-echo 'IMAGE=onauto/runtime:0.9.1' > .env
+echo 'IMAGE=docker.on.auto/onauto/runtime:0.9.1' > .env
 ```
 
 Replace `0.9.1` with the newest version on the [releases page](https://github.com/BeOnAuto/runtime/releases). Every command below takes the image from this line, so an upgrade changes only this line.
@@ -166,7 +167,7 @@ In this variant the database holds the ledger, and Auto's container keeps nothin
 
    ```bash
    mkdir auto-runtime && cd auto-runtime
-   echo 'IMAGE=onauto/runtime:0.9.1' > .env
+   echo 'IMAGE=docker.on.auto/onauto/runtime:0.9.1' > .env
    echo 'PUBLIC_URL=http://localhost:5555' > auto-runtime.env
    echo "SECRETS_KEY=$(openssl rand -base64 32)" >> auto-runtime.env
    ```
@@ -273,7 +274,7 @@ The [configuration reference](configuration.md) describes the file and every set
 The ledger stays on its volume or in its database, and the new version migrates it when it starts.
 
 1. Read the [release notes](https://github.com/BeOnAuto/runtime/releases) of the new version.
-2. Change the version on the `IMAGE` line of `.env`, such as `IMAGE=onauto/runtime:0.9.2`.
+2. Change the version on the `IMAGE` line of `.env`, such as `IMAGE=docker.on.auto/onauto/runtime:0.9.2`.
 3. Replace the container.
 
 For the single container, pull the new release, then run the script. It replaces the container with every flag it had:

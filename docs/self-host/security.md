@@ -83,10 +83,10 @@ The [Sign-in and token reference](../reference/authentication.md) sets out the t
 
 Give each machine, pipeline or agent that does not sign in its own key. Use a key, too, for a grant narrower than a signed-in person's, such as reading one playbook. Each key belongs to one org and carries its permissions and the playbooks it may access. Give each key only what it needs, so you can revoke one without disturbing the others.
 
-1. Create the key. With Docker, use the image your server runs, such as `onauto/runtime:0.9.1`:
+1. Create the key. With Docker, use the image your server runs, such as `docker.on.auto/onauto/runtime:0.9.1`:
 
    ```bash
-   docker run --rm --log-driver none onauto/runtime:<version> node packages/identity/src/key-command.ts --org <org>
+   docker run --rm --log-driver none docker.on.auto/onauto/runtime:<version> node packages/identity/src/key-command.ts --org <org>
    ```
 
    Without Docker:
