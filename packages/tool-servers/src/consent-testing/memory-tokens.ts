@@ -1,3 +1,4 @@
+import { valuesInTheClear, type ValueInTheClear } from '@on.auto/secrets/testing';
 import { Effect, Function, Option, type Redacted } from 'effect';
 
 import type { Timer } from '../clients/http-client.ts';
@@ -7,12 +8,10 @@ import type {
   ConnectionTokens,
   ConsentServed,
   ConsentWay,
-  KeptRow,
   TokensEnded,
 } from '../consent/consent-client.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import { everyHost, returnAddress } from './consent-fakes.ts';
-import { leasedRows } from './leased-rows.ts';
 
 export interface MemoryTokens extends ConnectionTokens {
   readonly kept: () => KeptTokens | undefined;
@@ -35,13 +34,13 @@ export const goneWords = 'The tokens of the connection are no longer in the secr
 
 const row = 'secret-1';
 
-function decoded(kept: KeptRow): KeptTokens {
-  return Option.getOrThrow(keptTokensIn(kept.value));
+function decoded({ value }: ValueInTheClear): KeptTokens {
+  return Option.getOrThrow(keptTokensIn(value));
 }
 
 export function memoryTokens(value: Redacted.Redacted, { now, mostCharacters = 8192 }: MemoryTokensOptions) {
-  const rows = leasedRows({ now: Effect.sync(now), mostCharacters });
-  Effect.runSync(Effect.orDie(rows.keep(value)));
+  const rows = valuesInTheClear({ now: Effect.sync(now), mostCharacters });
+  Effect.runSync(Effect.orDie(rows.keep(row, value)));
   const claims: number[] = [];
   const ends: TokensEnded[] = [];
   const tokens: MemoryTokens = {

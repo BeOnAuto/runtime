@@ -40,13 +40,13 @@ const theContentIndexes = [
 ];
 
 describe("the ledger's own schema on PostgreSQL", () => {
-  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the table of its sealed secrets, each only when missing", async () => {
+  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the table of its kept secrets, each only when missing", async () => {
     const empty = executorFinding([]);
     const found = executorFinding([
       ...contentTables.map(({ name }) => name),
       'recorded_content_heads_by_upload',
       'staged_content_by_upload',
-      'sealed_secrets',
+      'kept_secrets',
     ]);
 
     await postgresqlSchemaCreated(empty.execute);
@@ -58,8 +58,8 @@ describe("the ledger's own schema on PostgreSQL", () => {
     expect(empty.commands.slice(indexes.length)).toEqual([
       ...theContentTables,
       ...theContentIndexes,
-      'CREATE TABLE IF NOT EXISTS sealed_secrets',
+      'CREATE TABLE IF NOT EXISTS kept_secrets',
     ]);
-    expect(found.commands.filter((command) => /content|sealed_secrets/u.test(command))).toEqual([]);
+    expect(found.commands.filter((command) => /content|kept_secrets/u.test(command))).toEqual([]);
   });
 });

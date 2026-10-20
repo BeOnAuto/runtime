@@ -1,9 +1,14 @@
 import type { Environment } from '@on.auto/config';
-import { secretKeyBytes, type SecretKeys } from '@on.auto/ledger';
+import { secretKeyBytes } from '@on.auto/secrets';
 import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
 
 import { InvalidSettingsError } from './invalid-settings-error.ts';
 import { besideTheLedgerFile, readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
+
+export interface SecretKeys {
+  readonly current: Redacted.Redacted<Uint8Array>;
+  readonly previous?: Redacted.Redacted<Uint8Array> | undefined;
+}
 
 export type SecretsSettings =
   | { readonly key: 'set'; readonly keys: SecretKeys }

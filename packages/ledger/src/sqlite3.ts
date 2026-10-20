@@ -7,7 +7,7 @@ import type { Layer } from 'effect';
 
 import type { AppendSignal } from './appends/append-signal.ts';
 import type { AppendObserver } from './event-store.ts';
-import { sqliteSecretStoreOn, type SecretStoreOptions } from './secrets/sqlite-secret-store.ts';
+import { sqliteSecretRowsOn, type SecretRowsOptions } from './secrets/sqlite-secret-rows.ts';
 import { sqliteLedgerLayer } from './sqlite-event-store.ts';
 
 export interface LedgerOptions {
@@ -51,6 +51,6 @@ export function ledgerLayer({
   return sqliteLedgerLayer(() => sqlite3OptionsOf(fileName), { runOutcomes, projections, appends, content, observer });
 }
 
-export function sqliteSecretStore({ fileName, keys }: SecretStoreOptions) {
-  return sqliteSecretStoreOn(() => sqlite3OptionsOf(fileName), keys);
+export function sqliteSecretRows({ fileName }: SecretRowsOptions) {
+  return sqliteSecretRowsOn(() => sqlite3OptionsOf(fileName));
 }

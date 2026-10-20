@@ -3,11 +3,16 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, resolve } from 'node:path';
 
 import type { RetryStateKeys } from '@on.auto/api';
-import { secretKeyBytes, type SecretKeys } from '@on.auto/ledger';
+import { secretKeyBytes } from '@on.auto/secrets';
 import { Redacted } from 'effect';
 
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
-import { aSecretsKeyInWords, secretsKeyOfBase64, type SecretsSettings } from '../settings/secrets-settings.ts';
+import {
+  aSecretsKeyInWords,
+  secretsKeyOfBase64,
+  type SecretKeys,
+  type SecretsSettings,
+} from '../settings/secrets-settings.ts';
 
 const ownerOnly = 0o600;
 

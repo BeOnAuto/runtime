@@ -2,13 +2,13 @@ import { chmodSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { sqliteSecretStore } from '@on.auto/ledger/sqlite3';
 import { sha256Of } from '@on.auto/operations';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { messagesOf } from '../testing/processes/stderr-lines.ts';
+import { secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
@@ -30,9 +30,7 @@ function aLedgerFile(): string {
 }
 
 async function secretsKeptIn(fileName: string, values: readonly string[]): Promise<void> {
-  const store = await Effect.runPromise(
-    sqliteSecretStore({ fileName, keys: { current: Redacted.make(Uint8Array.from(previousKey)) } }),
-  );
+  const store = await secretStoreInFile(fileName, previousKey);
   await Effect.runPromise(Effect.forEach(values, (value) => store.keep(Redacted.make(value))));
   await store.close();
 }

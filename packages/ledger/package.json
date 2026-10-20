@@ -30,11 +30,11 @@
     "@event-driven-io/emmett-sqlite": "0.43.0-beta.50",
     "@on.auto/operations": "workspace:*",
     "effect": "catalog:",
-    "jose": "catalog:",
     "pg": "8.23.1",
     "sqlite3": "6.0.1"
   },
   "devDependencies": {
+    "@on.auto/secrets": "workspace:*",
     "@opentelemetry/sdk-trace-base": "2.9.0",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "catalog:",

@@ -3,8 +3,8 @@ import { describe, onTestFinished } from 'vitest';
 
 import { sqliteEventStore } from './index.ts';
 import { definitionStreamsIndexed, planOf, queried } from './recorded/sqlite-checks.ts';
-import { secretsBehaviour } from './secrets/secrets-behaviour.ts';
-import { ledgerLayer, sqliteSecretStore } from './sqlite3.ts';
+import { keptSecretsBehaviour } from './secrets/kept-secrets-behaviour.ts';
+import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
 import { ledgerBehaviour } from './testing/ledger-behaviour.ts';
 import type { LedgerEntry } from './testing/ledger-entry.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
@@ -34,5 +34,5 @@ const onSQLite: LedgerEntry = {
 
 describe('The ledger on SQLite', () => {
   ledgerBehaviour(onSQLite);
-  secretsBehaviour({ ...onSQLite, secretStoreOn: (fileName, keys) => sqliteSecretStore({ fileName, keys }) });
+  keptSecretsBehaviour({ ...onSQLite, secretRowsOn: (fileName) => sqliteSecretRows({ fileName }) });
 });

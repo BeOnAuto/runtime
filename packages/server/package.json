@@ -46,6 +46,7 @@
     "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",
     "@on.auto/recall": "workspace:*",
+    "@on.auto/secrets": "workspace:*",
     "@on.auto/tool-servers": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",
     "@on.auto/workflow-host": "workspace:*",
