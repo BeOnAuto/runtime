@@ -1,13 +1,14 @@
-import { sha256Of } from '@on.auto/operations';
-import { Effect, Option, Redacted, Schema } from 'effect';
+import { DateTime, Effect, Option, Redacted, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { onTestFinished } from 'vitest';
 
-import type { Custodians } from '../custodians/custodian.ts';
+import type { Custodian, Custodians } from '../custodians/custodian.ts';
 import { localCustodian } from '../custodians/local-custodian.ts';
 import { sealedKeeper } from '../keepers/sealed-keeper.ts';
 import type { SecretRows } from '../rows/secret-rows.ts';
 import { secretStoreOn, type SecretStore } from '../store/secret-store.ts';
+import { memoryRows, type MemoryRows } from './memory-rows.ts';
+import { aSecretsKey } from './recording-custodian.ts';
 
 export interface SecretsEntry {
   readonly aDatabase: () => Promise<string>;
@@ -15,12 +16,13 @@ export interface SecretsEntry {
   readonly rowsIn: (database: string) => Promise<readonly unknown[]>;
 }
 
-type Key = Redacted.Redacted<Uint8Array>;
-
-export interface Keys {
-  readonly current: Key;
-  readonly previous?: Key;
+export interface TestCustodians {
+  readonly aCustodian: () => Promise<Custodian>;
 }
+
+export const localCustodians: TestCustodians = {
+  aCustodian: () => Promise.resolve(localCustodian(aSecretsKey())),
+};
 
 const KeptRows = Schema.Array(
   Schema.Struct({
@@ -48,10 +50,6 @@ export function at<A, E>(moment: number, effect: Effect.Effect<A, E>): Promise<A
   return Effect.runPromise(Effect.andThen(TestClock.setTime(moment), effect).pipe(Effect.provide(TestClock.layer())));
 }
 
-export function kidOf(key: Key): string {
-  return sha256Of(Redacted.value(key)).slice(0, 16);
-}
-
 export async function rowsOpenedOn(entry: SecretsEntry, database: string): Promise<SecretRows> {
   const rows = await Effect.runPromise(entry.rowsOn(database));
   onTestFinished(() => rows.close());
@@ -60,13 +58,6 @@ export async function rowsOpenedOn(entry: SecretsEntry, database: string): Promi
 
 export async function storeWith(entry: SecretsEntry, database: string, custodians: Custodians): Promise<SecretStore> {
   return secretStoreOn(await rowsOpenedOn(entry, database), sealedKeeper(custodians), custodians);
-}
-
-export function storeOn(entry: SecretsEntry, database: string, { current, previous }: Keys): Promise<SecretStore> {
-  return storeWith(entry, database, {
-    current: localCustodian(current),
-    previous: previous === undefined ? undefined : localCustodian(previous),
-  });
 }
 
 export function kept(store: SecretStore, value: string): Promise<string> {
@@ -102,4 +93,18 @@ export async function kidsIn(entry: SecretsEntry, database: string): Promise<Rea
     counted[String(kid)] = (counted[String(kid)] ?? 0) + 1;
   }
   return counted;
+}
+
+export function inMemoryEntry(): SecretsEntry {
+  const databases = new Map<string, MemoryRows>();
+  const rowsNamed = (database: string) => Option.getOrThrow(Option.fromNullishOr(databases.get(database)));
+  return {
+    aDatabase: () => {
+      const database = `memory-${databases.size + 1}`;
+      databases.set(database, memoryRows({ now: Effect.map(DateTime.now, DateTime.toEpochMillis) }));
+      return Promise.resolve(database);
+    },
+    rowsOn: (database) => Effect.sync(() => rowsNamed(database)),
+    rowsIn: (database) => Promise.resolve(rowsNamed(database).kept()),
+  };
 }

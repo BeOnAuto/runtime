@@ -1,3 +1,12 @@
+export {
+  serveFakeKms,
+  type FakeKeyState,
+  type FakeKms,
+  type FakeKmsCall,
+  type FakeKmsError,
+  type FakeKmsOperation,
+  type FakeKmsOptions,
+} from './fake-kms.ts';
 export { memoryRows, type KeptColumns, type MemoryRows, type MemoryRowsOptions } from './memory-rows.ts';
 export { custodianRefusal, recordingCustodian, type RecordingCustodian } from './recording-custodian.ts';
 export { rowsBehaviour } from './rows-behaviour.ts';

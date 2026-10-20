@@ -1,3 +1,4 @@
+export { custodianProbed } from './custodians/custodian-probe.ts';
 export { CustodianRefused } from './custodians/custodian-refused.ts';
 export type { Custodian, Custodians } from './custodians/custodian.ts';
 export { localCustodian, secretKeyBytes } from './custodians/local-custodian.ts';

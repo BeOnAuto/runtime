@@ -167,7 +167,7 @@ describe('the log of a credential that cannot be read now', () => {
 });
 
 describe('a connection whose custodian does not answer', () => {
-  it('is unavailable once the store has waited 30 seconds, and never broken', async () => {
+  it('is unavailable once the store has waited 10 seconds, and never broken', async () => {
     const fake = await fakeServerAt();
     const h = harness();
     const { custodian, store } = sealedIn(memoryRows({ now }));
@@ -179,14 +179,14 @@ describe('a connection whose custodian does not answer', () => {
         const asked = custodian.stall();
         const serving = yield* Effect.forkChild(Effect.flip(served));
         yield* Effect.promise(() => asked);
-        yield* TestClock.adjust('30 seconds');
+        yield* TestClock.adjust('10 seconds');
         return yield* Fiber.join(serving);
       }).pipe(Effect.provide(TestClock.layer())),
     );
 
     expect(refused).toEqual({
       because: 'connection_unavailable',
-      detail: unreadableNow('The keeper of the secret, or the custodian of its key, did not answer within 30 seconds'),
+      detail: unreadableNow('The keeper of the secret, or the custodian of its key, did not answer within 10 seconds'),
     });
     expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_broken');
   });

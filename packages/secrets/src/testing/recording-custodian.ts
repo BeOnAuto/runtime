@@ -66,8 +66,7 @@ function answersOf(kid: string): Answers {
   };
 }
 
-export function recordingCustodian(key: Redacted.Redacted<Uint8Array> = aSecretsKey()): RecordingCustodian {
-  const custodian = localCustodian(key);
+export function recordingCustodian(custodian: Custodian = localCustodian(aSecretsKey())): RecordingCustodian {
   const { answered, refuse, stall, answer } = answersOf(custodian.kid);
   const asked = { wraps: 0, unwraps: 0 };
   const dataKeys: Readonly<Uint8Array>[] = [];
