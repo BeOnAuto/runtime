@@ -82,7 +82,7 @@ What the script does:
 - `--volume auto-runtime-data:/data` keeps the ledger on the named volume when the container is replaced. Without it, Docker gives each container an empty anonymous volume, and its playbooks last only as long as that container.
 - `--env-file auto-runtime.env` passes the settings and secrets. Docker reads the file when it creates the container, so `docker restart auto-runtime` does not pick up a change to it. Run `./start-runtime.sh` instead.
 
-`SECRETS_KEY` stays out of the volume, so a copy of the volume holds no secret anyone can read without it. Without `SECRETS_KEY` or `SECRETS_KEY_FILE`, Auto would make a key itself, in `secrets.key` on the volume beside the ledger, where a copy of the volume would carry it. Keep a copy of the key with your other secrets: a secret sealed under a lost key cannot be read again. Where there is no `openssl`, `. ./.env && docker run --rm "$IMAGE" node --print "require('node:crypto').randomBytes(32).toString('base64')"` makes one too.
+`SECRETS_KEY` stays out of the volume, so a copy of the volume holds no secret anyone can read without it. Without `SECRETS_KEY`, `SECRETS_KEY_FILE` or `SECRETS_KEY_KMS`, Auto would make a key itself, in `secrets.key` on the volume beside the ledger, where a copy of the volume would carry it. Keep a copy of the key with your other secrets: a secret sealed under a lost key cannot be read again. Where there is no `openssl`, `. ./.env && docker run --rm "$IMAGE" node --print "require('node:crypto').randomBytes(32).toString('base64')"` makes one too.
 
 ### On your own machine, without sign-in {#on-your-own-machine}
 
@@ -172,7 +172,7 @@ In this variant the database holds the ledger, and Auto's container keeps nothin
    echo "SECRETS_KEY=$(openssl rand -base64 32)" >> auto-runtime.env
    ```
 
-   Auto takes `SECRETS_KEY` from `auto-runtime.env`, as in [step 1](#start-the-server). A ledger in PostgreSQL needs it, or `SECRETS_KEY_FILE` naming a file that holds it, and Auto stops at start without either.
+   Auto takes `SECRETS_KEY` from `auto-runtime.env`, as in [step 1](#start-the-server). A ledger in PostgreSQL needs it, `SECRETS_KEY_FILE` naming a file that holds it, or `SECRETS_KEY_KMS` naming a key in AWS KMS, as [Hold the secrets key in a KMS](production.md#hold-the-secrets-key-in-a-kms) sets out, and Auto stops at start without one.
 
 3. Save this as `compose.yaml` beside `auto-runtime.env`:
 

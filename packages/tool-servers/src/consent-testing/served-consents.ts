@@ -6,6 +6,7 @@ import type { TokenSource } from '../clients/token-source.ts';
 import type { KeptTokens } from '../consent-tokens/kept-tokens.ts';
 import type {
   ChosenClient,
+  ConnectionTokens,
   ConsentClient,
   ConsentClientOptions,
   ConsentServed,
@@ -74,7 +75,7 @@ export function rowOf({ tokens }: ConsentConnected, now: () => number, mostChara
 
 export function servedOf(
   { fake, client }: ConsentConnected,
-  row: MemoryTokens,
+  row: ConnectionTokens,
   way: Partial<ConsentWay> = {},
 ): ConsentServed {
   return Effect.runSync(servedAt(fake, client, row, way));

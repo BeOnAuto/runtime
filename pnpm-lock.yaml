@@ -825,9 +825,18 @@ importers:
 
   packages/secrets:
     dependencies:
+      '@aws-sdk/client-kms':
+        specifier: 3.1149.0
+        version: 3.1149.0
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations
+      '@on.auto/outbound':
+        specifier: workspace:*
+        version: link:../outbound
+      '@smithy/core':
+        specifier: 3.35.2
+        version: 3.35.2
       effect:
         specifier: 'catalog:'
         version: 4.0.0
@@ -1270,6 +1279,10 @@ packages:
 
   '@aws-sdk/checksums@3.1001.2':
     resolution: {integrity: sha512-gKRj5IXZ/O0ehk2rwfb55YygdNKNhK5N1l/Ztg/w06tk21AJtCPuyErETk2RS/6XOmpBkcZY6CN3GlQ2fWTh1g==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-kms@3.1149.0':
+    resolution: {integrity: sha512-+nkx9W8OA4MAZAmDAvDsTSZ3lwidQyOF/lha5FwHUXxOcb5suwfkst2uSM3PsnB/dtYDvfCzGzRXouh+EWzQOg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-s3@3.1149.0':
@@ -5702,6 +5715,17 @@ snapshots:
       '@aws-sdk/core': 3.978.3
       '@aws-sdk/types': 3.974.6
       '@smithy/core': 3.35.2
+      '@smithy/types': 4.19.0
+      tslib: 2.8.1
+
+  '@aws-sdk/client-kms@3.1149.0':
+    dependencies:
+      '@aws-sdk/core': 3.978.3
+      '@aws-sdk/credential-provider-node': 3.972.86
+      '@aws-sdk/types': 3.974.6
+      '@smithy/core': 3.35.2
+      '@smithy/fetch-http-handler': 5.8.0
+      '@smithy/node-http-handler': 4.12.1
       '@smithy/types': 4.19.0
       tslib: 2.8.1
 

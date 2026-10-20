@@ -2,7 +2,12 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Clock, Deferred, Effect, Option, Redacted, Schema } from 'effect';
 
 import { ClientIdSchema, clientMetadataOf } from './client-sources.ts';
-import type { ClientRegistrations, ConsentRefusal, KeptRegistration } from './consent-client.ts';
+import type {
+  ClientRegistrations,
+  ConsentRefusal,
+  KeptRegistration,
+  RegistrationUnavailable,
+} from './consent-client.ts';
 import { refusalOf, unanswered } from './consent-failures.ts';
 
 const RegistrationFieldsSchema = Schema.Struct({
@@ -31,12 +36,30 @@ export type Registering = (
   register: Effect.Effect<KeptRegistration, ConsentRefusal>,
 ) => Effect.Effect<KeptRegistration, ConsentRefusal>;
 
+export interface UnkeptRegistrations {
+  readonly heldAt: (issuer: string) => KeptRegistration | undefined;
+  readonly hold: (issuer: string, kept: KeptRegistration) => void;
+  readonly release: (issuer: string) => void;
+}
+
+export interface RegistrationKeeping {
+  readonly registrations: ClientRegistrations;
+  readonly registeredOnce: Registering;
+  readonly unkept: UnkeptRegistrations;
+}
+
 export interface Registration {
   readonly issuer: string;
   readonly endpoint: string;
   readonly returnAddress: string;
   readonly fetch: FetchLike;
 }
+
+const unkeptWords = (issuer: string, clientId: string, detail: string) =>
+  `The client registered at ${issuer} as ${clientId} cannot be kept now, so this process keeps it at its next consent there: ${detail}`;
+
+const refusedWords = (issuer: string, clientId: string, detail: string) =>
+  `The client registered at ${issuer} as ${clientId} cannot be kept, so it stays registered there unused: ${detail}`;
 
 export function registrationFieldsOf({ registration }: KeptRegistration): RegistrationFields {
   return decodeRegistration(Redacted.value(registration));
@@ -90,22 +113,86 @@ export function singleFlight(): Registering {
     });
 }
 
+export function unkeptRegistrations(): UnkeptRegistrations {
+  const held = new Map<string, KeptRegistration>();
+  return {
+    heldAt: (issuer) => held.get(issuer),
+    hold: (issuer, kept) => {
+      held.set(issuer, kept);
+    },
+    release: (issuer) => {
+      held.delete(issuer);
+    },
+  };
+}
+
+export function registrationUnavailable({ detail }: RegistrationUnavailable): ConsentRefusal {
+  return { refused: 'registration_unavailable', detail };
+}
+
+function heldUntilKept(
+  issuer: string,
+  kept: KeptRegistration,
+  unkept: UnkeptRegistrations,
+  failure: RegistrationUnavailable,
+): Effect.Effect<never, ConsentRefusal> {
+  return Effect.sync(() => {
+    unkept.hold(issuer, kept);
+  }).pipe(
+    Effect.andThen(Effect.logWarning(unkeptWords(issuer, kept.clientId, failure.detail))),
+    Effect.andThen(Effect.fail(registrationUnavailable(failure))),
+  );
+}
+
+function leftUnkept(
+  issuer: string,
+  kept: KeptRegistration,
+  { detail }: RegistrationUnavailable,
+): Effect.Effect<never, ConsentRefusal> {
+  const refusal: ConsentRefusal = { refused: 'registration_refused', detail };
+  return Effect.andThen(Effect.logWarning(refusedWords(issuer, kept.clientId, detail)), Effect.fail(refusal));
+}
+
+function isRefused({ _tag }: RegistrationUnavailable): boolean {
+  return _tag === 'secret_refused';
+}
+
+function keptAt(
+  issuer: string,
+  kept: KeptRegistration,
+  { registrations, unkept }: RegistrationKeeping,
+): Effect.Effect<KeptRegistration, ConsentRefusal> {
+  return registrations.keep(issuer, kept).pipe(
+    Effect.matchEffect({
+      onFailure: (failure) =>
+        isRefused(failure) ? leftUnkept(issuer, kept, failure) : heldUntilKept(issuer, kept, unkept, failure),
+      onSuccess: () =>
+        Effect.sync(() => {
+          unkept.release(issuer);
+          return kept;
+        }),
+    }),
+  );
+}
+
 export function registrationFor(
   registration: Registration,
-  registrations: ClientRegistrations,
-  registeredOnce: Registering,
+  keeping: RegistrationKeeping,
 ): Effect.Effect<KeptRegistration, ConsentRefusal> {
   const { issuer } = registration;
-  return registeredOnce(
+  return keeping.registeredOnce(
     issuer,
     Effect.gen(function* () {
-      const latest = yield* registrations.latestAt(issuer);
-      if (latest !== undefined && isLasting(latest, yield* Clock.currentTimeMillis)) {
+      const now = yield* Clock.currentTimeMillis;
+      const waiting = keeping.unkept.heldAt(issuer);
+      if (waiting !== undefined && isLasting(waiting, now)) {
+        return yield* keptAt(issuer, waiting, keeping);
+      }
+      const latest = yield* Effect.mapError(keeping.registrations.latestAt(issuer), registrationUnavailable);
+      if (latest !== undefined && isLasting(latest, now)) {
         return latest;
       }
-      const kept = yield* answeredRegistration(registration);
-      yield* registrations.keep(issuer, kept);
-      return kept;
+      return yield* keptAt(issuer, yield* answeredRegistration(registration), keeping);
     }),
   );
 }

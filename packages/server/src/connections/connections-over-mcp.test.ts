@@ -181,7 +181,7 @@ describe('a server whose secrets key cannot read the key the runtime keeps for i
     );
 
     await expect(started).rejects.toThrow(
-      `The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${sha256Of(secretsKey).slice(0, 16)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS beside a new key`,
+      `The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${sha256Of(secretsKey).slice(0, 16)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key`,
     );
   });
 });

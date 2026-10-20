@@ -52,7 +52,7 @@ With `DATABASE_URL` the container needs no volume. At start:
 - The server logs that the ledger is kept in PostgreSQL, naming the database and its host, never the URL.
 - A database it cannot reach stops it, naming the host and port.
 - Setting `LEDGER_FILE` as well stops it, since the ledger can be in only one place.
-- Without `SECRETS_KEY` or `SECRETS_KEY_FILE` it stops, naming the setting.
+- Without `SECRETS_KEY`, `SECRETS_KEY_FILE` or `SECRETS_KEY_KMS` it stops, naming the setting.
 
 `SECRETS_KEY` is the key the secrets kept in the database are sealed under. Every server that shares the database takes the same key, as [Keep the secrets key](production.md#keep-the-secrets-key) describes.
 

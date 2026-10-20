@@ -217,7 +217,10 @@ describe('the store of the tokens of a connection connected by consent', () => {
     const refused = await Effect.runPromise(Effect.flip(tokens.replace(2, Redacted.make('x'.repeat(4097)))));
 
     expect(claims).toEqual([{ claimed: true, until: whileClaimed.claimedUntil }, { claimed: false }]);
-    expect(refused).toEqual({ detail: 'A secret to keep holds more than 4096 characters' });
+    expect(refused).toMatchObject({
+      _tag: 'secret_refused',
+      detail: 'A secret to keep holds more than 4096 characters',
+    });
     expect([replaced, moved]).toEqual([{ replaced: true, version: 2 }, { replaced: false }]);
     expect(read).toEqual({ tokens: renewed, version: 2, claimedUntil: undefined });
   });

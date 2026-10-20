@@ -101,6 +101,7 @@ export {
   type ManualTimer,
   type MemoryTokens,
 } from '../consent-testing/memory-tokens.ts';
+export { sealedTokens, type SealedTokens } from '../consent-testing/sealed-tokens.ts';
 export { gatedRequests, hostRefusedAt, type GatedRequests } from '../consent-testing/gated-requests.ts';
 export {
   clockAt,

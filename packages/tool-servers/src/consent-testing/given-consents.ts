@@ -1,4 +1,6 @@
-import { Effect, Option } from 'effect';
+import { sealedKeeper, secretStoreOn } from '@on.auto/secrets';
+import { memoryRows, recordingCustodian, type RecordingCustodian } from '@on.auto/secrets/testing';
+import { DateTime, Effect, Option } from 'effect';
 
 import { keptTokensIn } from '../consent-tokens/kept-tokens.ts';
 import type {
@@ -6,7 +8,6 @@ import type {
   ConsentClient,
   FinishAsked,
   FinishedConsent,
-  KeptRegistration,
   StartAsked,
 } from '../consent/consent-client.ts';
 
@@ -18,6 +19,13 @@ export interface Consented {
 
 export interface MemoryRegistrations extends ClientRegistrations {
   readonly kept: () => readonly (readonly [string, string])[];
+  readonly custodian: RecordingCustodian;
+}
+
+interface KeptAt {
+  readonly issuer: string;
+  readonly clientId: string;
+  readonly secretId: string;
 }
 
 export async function consentedAt(url: string): Promise<Consented> {
@@ -41,18 +49,26 @@ export async function finishAskedOf(client: ConsentClient, asked: StartAsked): P
   return { server, way, returnAddress, reaches, client: start.client, code, iss, verifier: start.verifier };
 }
 
-export function memoryRegistrations(): MemoryRegistrations {
-  const kept: (readonly [string, KeptRegistration])[] = [];
-  const at = (issuer: string): readonly KeptRegistration[] =>
-    kept.filter(([keptAt]) => keptAt === issuer).map(([, registration]) => registration);
+export function memoryRegistrations(custodian: RecordingCustodian = recordingCustodian()): MemoryRegistrations {
+  const rows = memoryRows({ now: Effect.map(DateTime.now, DateTime.toEpochMillis) });
+  const store = secretStoreOn(rows, sealedKeeper({ current: custodian }), { current: custodian });
+  const kept: KeptAt[] = [];
+  const readOf = (found: KeptAt | undefined) =>
+    found === undefined
+      ? Effect.undefined
+      : Effect.map(store.read(found.secretId), (stored) => ({
+          clientId: found.clientId,
+          registration: Option.getOrThrow(Option.fromNullishOr(stored)).value,
+        }));
+  const at = (issuer: string): readonly KeptAt[] => kept.filter((each) => each.issuer === issuer);
   return {
-    latestAt: (issuer) => Effect.sync(() => at(issuer).at(-1)),
-    named: (issuer, clientId) =>
-      Effect.sync(() => at(issuer).find((registration) => registration.clientId === clientId)),
-    keep: (issuer, registration) =>
-      Effect.sync(() => {
-        kept.push([issuer, registration]);
+    latestAt: (issuer) => Effect.suspend(() => readOf(at(issuer).at(-1))),
+    named: (issuer, clientId) => Effect.suspend(() => readOf(at(issuer).find((each) => each.clientId === clientId))),
+    keep: (issuer, { clientId, registration }) =>
+      Effect.map(store.keep(registration), (secretId) => {
+        kept.push({ issuer, clientId, secretId });
       }),
-    kept: () => kept.map(([issuer, { clientId }]): readonly [string, string] => [issuer, clientId]),
+    kept: () => kept.map(({ issuer, clientId }): readonly [string, string] => [issuer, clientId]),
+    custodian,
   };
 }

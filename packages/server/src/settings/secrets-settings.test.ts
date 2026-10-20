@@ -38,12 +38,14 @@ const refusedAs = 'InvalidSettingsError: The secrets settings are invalid.';
 const aKeyInWords = 'the base64 of 32 bytes, as openssl rand -base64 32 prints it';
 
 describe('the secrets settings', () => {
-  it('are the four variables the runtime reads for itself, a key and a file each for the current key and the previous one', () => {
+  it('are the six variables the runtime reads for itself, a key, a file and a key in KMS each for the current key and the previous one', () => {
     expect(secretsVariables).toEqual([
       'SECRETS_KEY',
       'SECRETS_KEY_FILE',
+      'SECRETS_KEY_KMS',
       'SECRETS_KEY_PREVIOUS',
       'SECRETS_KEY_FILE_PREVIOUS',
+      'SECRETS_KEY_KMS_PREVIOUS',
     ]);
   });
 
@@ -132,13 +134,13 @@ describe('the secrets settings that cannot be read', () => {
     );
   });
 
-  it('stop the server at start for a key in the environment and in a file both, of the current key or of the previous one, naming both', () => {
+  it('stop the server at start for a key in the environment and in a file both, of the current key or of the previous one, naming the settings', () => {
     expect([
       errorFrom({ SECRETS_KEY: current, SECRETS_KEY_FILE: 'secrets.key' }),
       errorFrom({ SECRETS_KEY: current, SECRETS_KEY_PREVIOUS: previous, SECRETS_KEY_FILE_PREVIOUS: 'previous.key' }),
     ]).toEqual([
-      `${refusedAs} SECRETS_KEY: Set SECRETS_KEY or SECRETS_KEY_FILE, not both`,
-      `${refusedAs} SECRETS_KEY_PREVIOUS: Set SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS, not both`,
+      `${refusedAs} SECRETS_KEY: Set one of SECRETS_KEY, SECRETS_KEY_FILE and SECRETS_KEY_KMS, not more`,
+      `${refusedAs} SECRETS_KEY_PREVIOUS: Set one of SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS and SECRETS_KEY_KMS_PREVIOUS, not more`,
     ]);
   });
 
@@ -147,17 +149,95 @@ describe('the secrets settings that cannot be read', () => {
       errorFrom({ SECRETS_KEY_PREVIOUS: previous }),
       errorFrom({ SECRETS_KEY_FILE_PREVIOUS: 'previous.key' }),
     ]).toEqual([
-      `${refusedAs} SECRETS_KEY_PREVIOUS: Set it only beside SECRETS_KEY or SECRETS_KEY_FILE, to the key that one replaces`,
-      `${refusedAs} SECRETS_KEY_FILE_PREVIOUS: Set it only beside SECRETS_KEY or SECRETS_KEY_FILE, to the key that one replaces`,
+      `${refusedAs} SECRETS_KEY_PREVIOUS: Set it only beside SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, to the key that one replaces`,
+      `${refusedAs} SECRETS_KEY_FILE_PREVIOUS: Set it only beside SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, to the key that one replaces`,
     ]);
   });
 
-  it('stop the server at start for a ledger in PostgreSQL without SECRETS_KEY or SECRETS_KEY_FILE, naming the setting and no URL', () => {
+  it('stop the server at start for a ledger in PostgreSQL without SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, naming the setting and no URL', () => {
     const error = errorFrom({ DATABASE_URL: databaseUrl });
 
     expect(error).toBe(
-      `${refusedAs} SECRETS_KEY: Set it, or SECRETS_KEY_FILE, when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks`,
+      `${refusedAs} SECRETS_KEY: Set it, SECRETS_KEY_FILE or SECRETS_KEY_KMS when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks`,
     );
     expect(error).not.toMatch(/a-secret-password|db\.example\.com/u);
+  });
+});
+
+const keyArn = 'arn:aws:kms:eu-central-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab';
+
+const aliasArn = 'arn:aws:kms:us-west-2:111122223333:alias/team/auto-runtime';
+
+const multiRegionArn = 'arn:aws:kms:ap-southeast-3:111122223333:key/mrk-1234abcd12ab34cd56ef1234567890ab';
+
+describe('the secrets settings that name a key in AWS KMS', () => {
+  it('read SECRETS_KEY_KMS as the ARN of a key, a multi-Region key or an alias, the region the ARN names, beside a ledger in PostgreSQL too', () => {
+    expect([
+      secretsOf({ SECRETS_KEY_KMS: ` ${keyArn}\n`, DATABASE_URL: databaseUrl }),
+      secretsOf({ SECRETS_KEY_KMS: aliasArn }),
+      secretsOf({ SECRETS_KEY_KMS: multiRegionArn }),
+    ]).toEqual([
+      {
+        current: { from: 'kms', setting: 'SECRETS_KEY_KMS', arn: keyArn, region: 'eu-central-1' },
+        previous: undefined,
+      },
+      {
+        current: { from: 'kms', setting: 'SECRETS_KEY_KMS', arn: aliasArn, region: 'us-west-2' },
+        previous: undefined,
+      },
+      {
+        current: { from: 'kms', setting: 'SECRETS_KEY_KMS', arn: multiRegionArn, region: 'ap-southeast-3' },
+        previous: undefined,
+      },
+    ]);
+  });
+});
+
+describe('the secrets settings that rotate to or from a key in AWS KMS', () => {
+  it('take a key in KMS as the key that replaces a key in hand, and a key in hand as the key that replaces one in KMS', () => {
+    expect([
+      secretsOf({ SECRETS_KEY_KMS: keyArn, SECRETS_KEY_PREVIOUS: previous }),
+      secretsOf({ SECRETS_KEY: current, SECRETS_KEY_KMS_PREVIOUS: aliasArn }),
+    ]).toEqual([
+      {
+        current: { from: 'kms', setting: 'SECRETS_KEY_KMS', arn: keyArn, region: 'eu-central-1' },
+        previous: { from: 'environment', setting: 'SECRETS_KEY_PREVIOUS', key: twos },
+      },
+      {
+        current: { from: 'environment', setting: 'SECRETS_KEY', key: ones },
+        previous: { from: 'kms', setting: 'SECRETS_KEY_KMS_PREVIOUS', arn: aliasArn, region: 'us-west-2' },
+      },
+    ]);
+  });
+});
+
+describe('the secrets settings that name a key in AWS KMS and cannot be read', () => {
+  it.each([
+    ['the id of a key alone', '1234abcd-12ab-34cd-56ef-1234567890ab'],
+    ['an alias name alone', 'alias/auto-runtime'],
+    ['the ARN of a key of another service', 'arn:aws:secretsmanager:eu-central-1:111122223333:secret:runtime'],
+    ['an ARN without its account', 'arn:aws:kms:eu-central-1::key/1234abcd-12ab-34cd-56ef-1234567890ab'],
+    ['an ARN without a region', 'arn:aws:kms::111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab'],
+    ['an ARN whose key is no key id', 'arn:aws:kms:eu-central-1:111122223333:key/runtime'],
+    ['an ARN of a resource other than a key or an alias', 'arn:aws:kms:eu-central-1:111122223333:grant/1234'],
+    ['an ARN of another partition', 'arn:aws-cn:kms:cn-north-1:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab'],
+  ])('stop the server at start for a SECRETS_KEY_KMS that is %s, naming the setting', (_, value) => {
+    expect(errorFrom({ SECRETS_KEY_KMS: value })).toBe(
+      `${refusedAs} SECRETS_KEY_KMS: Expected the ARN of a symmetric AWS KMS key, arn:aws:kms:<region>:<account>:key/<id>, or of an alias of one, arn:aws:kms:<region>:<account>:alias/<name>`,
+    );
+  });
+
+  it('stop the server at start for a key in KMS beside a key in hand, and for a previous key in KMS without a current one', () => {
+    expect([
+      errorFrom({ SECRETS_KEY_FILE: 'secrets.key', SECRETS_KEY_KMS: keyArn }),
+      errorFrom({ SECRETS_KEY: current, SECRETS_KEY_KMS_PREVIOUS: keyArn, SECRETS_KEY_PREVIOUS: previous }),
+      errorFrom({ SECRETS_KEY_KMS_PREVIOUS: keyArn }),
+      errorFrom({ SECRETS_KEY_KMS: keyArn, SECRETS_KEY_KMS_PREVIOUS: 'alias/auto-runtime' }),
+    ]).toEqual([
+      `${refusedAs} SECRETS_KEY: Set one of SECRETS_KEY, SECRETS_KEY_FILE and SECRETS_KEY_KMS, not more`,
+      `${refusedAs} SECRETS_KEY_PREVIOUS: Set one of SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS and SECRETS_KEY_KMS_PREVIOUS, not more`,
+      `${refusedAs} SECRETS_KEY_KMS_PREVIOUS: Set it only beside SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, to the key that one replaces`,
+      expect.stringContaining(`${refusedAs} SECRETS_KEY_KMS_PREVIOUS: Expected the ARN of a symmetric AWS KMS key`),
+    ]);
   });
 });

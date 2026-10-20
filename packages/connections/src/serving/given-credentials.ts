@@ -5,6 +5,7 @@ import {
   type ConsentAuth,
   type HeldTokens,
   type KeptRow,
+  type SecretReadingFailure,
   type TokensEnded,
 } from '@on.auto/tool-servers';
 import { DateTime, Effect, Option, type Context } from 'effect';
@@ -59,14 +60,21 @@ export function loggedCauses(): LoggedCauses {
   };
 }
 
-function unavailableNow({ org, kept, unreadable }: Serving, cause: string): Effect.Effect<never, ConnectionUnready> {
+function causeOf({ _tag, kid = '' }: SecretReadingFailure): string {
+  return `${_tag} ${kid}`;
+}
+
+function unavailableNow(
+  { org, kept, unreadable }: Serving,
+  failure: SecretReadingFailure,
+): Effect.Effect<never, ConnectionUnready> {
   const { id, name } = kept.connection;
   const unready: ConnectionUnready = {
     because: 'connection_unavailable',
-    detail: servingWords.unreadableNow(name, cause),
+    detail: servingWords.unreadableNow(name, failure.detail),
   };
   const loggedOnce = Effect.suspend(() =>
-    unreadable.isNew(id, cause)
+    unreadable.isNew(id, causeOf(failure))
       ? Effect.logWarning(unready.detail).pipe(Effect.annotateLogs({ org, connection: id }))
       : Effect.void,
   );
@@ -84,7 +92,7 @@ function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnread
   const { name } = serving.kept.connection;
   return serving.services.secrets.read(required(serving.kept.secretId)).pipe(
     Effect.matchEffect({
-      onFailure: ({ detail }) => unavailableNow(serving, detail),
+      onFailure: (failure) => unavailableNow(serving, failure),
       onSuccess: (stored) =>
         stored === undefined ? brokenWith(serving, servingWords.gone(name)) : readNow(serving, stored),
     }),

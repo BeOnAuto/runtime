@@ -1,11 +1,14 @@
+import { custodianRefusal } from '@on.auto/secrets/testing';
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
-import { admitted, hostRefusedAt, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { admitted, consentedAt, hostRefusedAt, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes } from '../testing/additions.ts';
 import { consentedOf, consentFake, consentHarnessAt, finishing } from '../testing/consents.ts';
 import { acmeReader, ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { sealedInMemory } from '../testing/sealed-connections.ts';
+import { calledThrough, sealedConsentAt, type SealedHarness } from '../testing/sealed-consents.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -179,5 +182,55 @@ describe('a removal whose revocation cannot be made', () => {
     expect(loggedClient).toContain(
       'The tokens of the connection files could not be revoked with the client and at the authorization server it was made with, so they end on their own',
     );
+  });
+});
+
+const StartedSchema = Schema.Struct({ output: Schema.Struct({ authorize: Schema.Struct({ url: Schema.String }) }) });
+
+async function connectedThrough(sealed: SealedHarness): Promise<string> {
+  const { id, token } = await added(sealed.h, { provider: 'files' });
+  const started = Schema.decodeUnknownSync(StartedSchema)(await calledThrough(sealed, 'start', { id, token }));
+  await calledThrough(sealed, 'finish', { id, token, ...(await consentedAt(started.output.authorize.url)) });
+  return id;
+}
+
+describe('a removal whose tokens the secret store cannot read now', () => {
+  it('logs in the words of the store that they were not revoked, and goes on to forget their row', async () => {
+    const fake = await consentServed();
+    const sealed = sealedConsentAt(fake);
+    const id = await connectedThrough(sealed);
+
+    sealed.custodian.refuse();
+    const removed = await calledThrough(sealed, 'remove_connection', { id });
+
+    expect(removed).toMatchObject({ status: 'succeeded', output: { status: 'removed' } });
+    expect(sealed.h.logged().join('\n')).toContain(
+      `The tokens of the connection files cannot be read now, so they were not revoked and end on their own: The custodian of the key ${sealed.custodian.kid} refused to unwrap a data key: ${custodianRefusal}`,
+    );
+    expect(revocationsAt(fake)).toBe(0);
+    expect(sealed.rows.kept()).toEqual([]);
+  });
+});
+
+describe('a removal whose client registration the secret store cannot read now', () => {
+  it('logs in the words of the store that the tokens were not revoked, and goes on to forget their row', async () => {
+    const fake = await consentFake({ dynamicRegistration: true });
+    closing.push(fake.close);
+    const registrations = sealedInMemory();
+    const sealed = sealedConsentAt(fake, {
+      way: { clients: ['dynamic'] },
+      consenting: { registeredClients: [] },
+      registrations: registrations.store,
+    });
+    const id = await connectedThrough(sealed);
+
+    registrations.custodian.refuse();
+    const removed = await calledThrough(sealed, 'remove_connection', { id });
+
+    expect(removed).toMatchObject({ status: 'succeeded', output: { status: 'removed' } });
+    expect(sealed.h.logged().join('\n')).toContain(
+      `The tokens of the connection files were not revoked, since the client they were given to cannot be read now, so they end on their own: The custodian of the key ${registrations.custodian.kid} refused to unwrap a data key: ${custodianRefusal}`,
+    );
+    expect(sealed.rows.kept()).toEqual([]);
   });
 });

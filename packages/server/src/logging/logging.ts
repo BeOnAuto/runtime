@@ -153,6 +153,9 @@ export function keyHeldBy(source: SecretsKeySource): string {
   if (source.from === 'environment') {
     return `that ${source.setting} holds`;
   }
+  if (source.from === 'kms') {
+    return `that the KMS key ${source.arn} holds`;
+  }
   return source.from === 'file' ? `that the file ${resolve(source.file)} holds` : 'that the server made at this start';
 }
 

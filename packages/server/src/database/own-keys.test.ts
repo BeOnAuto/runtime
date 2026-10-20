@@ -36,7 +36,7 @@ function started(services: Started[0]) {
 }
 
 const waysOut =
-  "Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS beside a new key";
+  "Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key";
 
 function storeOver(rows: SecretRows, custodian: RecordingCustodian): SecretStore {
   return secretStoreOn(rows, sealedKeeper({ current: custodian }), { current: custodian });

@@ -1,5 +1,5 @@
 import { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
-import type { ClientSource, ConsentRefusal, RevocationFailure } from '@on.auto/tool-servers';
+import type { ClientSource, ConsentRefusal, RevocationFailure, SecretKeepingFailure } from '@on.auto/tool-servers';
 
 import { servingWords } from '../serving/serving-words.ts';
 
@@ -30,6 +30,21 @@ type ConflictingRefusal = Extract<
 type Unnamed = Exclude<ConflictingRefusal['refused'], 'another_issuer' | 'another_resource'>;
 
 const notAsAdded = 'so it cannot be connected as it was added';
+
+export const unavailableWords = {
+  registration: (name: string, detail: string) =>
+    `The client the runtime registered for the connection ${name} cannot be kept or read now: ${detail}`,
+  verifierUnkept: (name: string, detail: string) =>
+    `The consent of the connection ${name} cannot be started now, since the runtime cannot keep its verifier: ${detail}`,
+  verifierUnread: (name: string, detail: string) =>
+    `The consent of the connection ${name} cannot be finished now, since the runtime cannot read its verifier; the same code may be tried again shortly: ${detail}`,
+  tokensUnkept: (name: string, detail: string) =>
+    `The tokens of the connection ${name} cannot be kept now, and the code they were given for is spent, so the person starts the consent again: ${detail}`,
+  credentialUnkept: (name: string, detail: string) =>
+    `The credential of the connection ${name} cannot be kept now, so the connection is not connected and its link stays open: ${detail}`,
+  tokensUnread: (name: string, detail: string) =>
+    `The tokens of the connection ${name} cannot be read now, so they were not revoked and end on their own: ${detail}`,
+} as const;
 
 const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = {
   no_metadata: ({ name, issuer }) =>
@@ -84,12 +99,26 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
       detail: `The authorization server of the connection ${named.name} did not answer as an authorization server does; try again in a moment`,
     });
   }
+  if (refusal.refused === 'registration_unavailable') {
+    return new Unavailable({ detail: unavailableWords.registration(named.name, refusal.detail) });
+  }
+  if (refusal.refused === 'registration_refused') {
+    return new Conflict({
+      detail: `The client the runtime registered for the connection ${named.name} cannot be kept: ${refusal.detail}`,
+    });
+  }
   if (refusal.refused === 'iss') {
     return refusedAt('/iss', `Expected the issuer of the authorization server of the connection, ${named.issuer}`);
   }
   return refusal.refused === 'code'
     ? refusedAt('/code', 'Expected a code the authorization server takes; it refused this one')
     : conflictOf(named, refusal);
+}
+
+export function tokensUnkeptOf({ name }: ConsentNamed, { _tag, detail }: SecretKeepingFailure): Conflict | Unavailable {
+  return _tag === 'secret_refused'
+    ? new Conflict({ detail })
+    : new Unavailable({ detail: unavailableWords.tokensUnkept(name, detail) });
 }
 
 const throughAuto = (name: string) =>
@@ -128,6 +157,9 @@ export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFail
   }
   if (failure.refused === 'unknown_key') {
     return `Auto's consent service does not know the key of the connection ${name}, so its tokens were not revoked and end on their own`;
+  }
+  if (failure.refused === 'registration_unavailable') {
+    return `The tokens of the connection ${name} were not revoked, since the client they were given to cannot be read now, so they end on their own: ${failure.detail}`;
   }
   return failure.refused === 'unanswered'
     ? unansweredRevocationOf(name, source)

@@ -3,22 +3,22 @@ import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import type { SecretStore } from '../store/secret-store.ts';
-import { aSecretsKey, custodianRefusal, recordingCustodian, type RecordingCustodian } from './recording-custodian.ts';
-import { kept, kidOf, readBack, rowsIn, storeOn, storeWith, type SecretsEntry } from './secrets-entry.ts';
+import { custodianRefusal, recordingCustodian, type RecordingCustodian } from './recording-custodian.ts';
+import { kept, readBack, rowsIn, storeWith, type SecretsEntry, type TestCustodians } from './secrets-entry.ts';
 
-function unknownKeyRefused(entry: SecretsEntry): void {
+function unknownKeyRefused(entry: SecretsEntry, custodians: TestCustodians): void {
   it('cannot read a value sealed under another key, and names that key and never the value', async () => {
     const database = await entry.aDatabase();
-    const sealing = aSecretsKey();
-    const id = await kept(await storeOn(entry, database, { current: sealing }), 'pasted-key');
-    const other = await storeOn(entry, database, { current: aSecretsKey() });
+    const sealing = await custodians.aCustodian();
+    const id = await kept(await storeWith(entry, database, { current: sealing }), 'pasted-key');
+    const other = await storeWith(entry, database, { current: await custodians.aCustodian() });
 
     const refused = await Effect.runPromise(Effect.flip(other.read(id)));
 
     expect(refused).toMatchObject({
       _tag: 'secret_key_unknown',
-      kid: kidOf(sealing),
-      detail: `The secret is sealed under the key ${kidOf(sealing)}, which is neither the current key nor the previous one`,
+      kid: sealing.kid,
+      detail: `The secret is sealed under the key ${sealing.kid}, which is neither the current key nor the previous one`,
     });
     expect(JSON.stringify(refused)).not.toContain('pasted-key');
   });
@@ -32,10 +32,10 @@ function refusedTo(custodian: RecordingCustodian, act: string) {
   };
 }
 
-function custodianRefusing(entry: SecretsEntry): void {
+function custodianRefusing(entry: SecretsEntry, custodians: TestCustodians): void {
   it('keeps nothing, as a value or as a replacement, whose data key the custodian refuses to wrap, failing in its words', async () => {
     const database = await entry.aDatabase();
-    const custodian = recordingCustodian();
+    const custodian = recordingCustodian(await custodians.aCustodian());
     const store = await storeWith(entry, database, { current: custodian });
     const id = await kept(store, 'pasted-key');
     const before = await rowsIn(entry, database);
@@ -60,7 +60,7 @@ function readStalled(store: SecretStore, id: string, custodian: RecordingCustodi
       const asked = custodian.stall();
       const reading = yield* Effect.forkChild(Effect.flip(store.read(id)));
       yield* Effect.promise(() => asked);
-      yield* TestClock.adjust('29999 millis');
+      yield* TestClock.adjust('9999 millis');
       const before = reading.pollUnsafe();
       yield* TestClock.adjust('1 millis');
       return { before, failure: yield* Fiber.join(reading) };
@@ -68,10 +68,10 @@ function readStalled(store: SecretStore, id: string, custodian: RecordingCustodi
   );
 }
 
-function unreadableNow(entry: SecretsEntry): void {
-  it('cannot read now, in words that name no value, a value whose custodian refuses or does not answer within 30 seconds, and reads it once the custodian answers again', async () => {
+function unreadableNow(entry: SecretsEntry, custodians: TestCustodians): void {
+  it('cannot read now, in words that name no value, a value whose custodian refuses or does not answer within 10 seconds, and reads it once the custodian answers again', async () => {
     const database = await entry.aDatabase();
-    const custodian = recordingCustodian();
+    const custodian = recordingCustodian(await custodians.aCustodian());
     const store = await storeWith(entry, database, { current: custodian });
     const id = await kept(store, 'pasted-key');
     const before = await rowsIn(entry, database);
@@ -86,7 +86,7 @@ function unreadableNow(entry: SecretsEntry): void {
     expect(stalled.before).toBeUndefined();
     expect(stalled.failure).toMatchObject({
       _tag: 'keeper_unavailable',
-      detail: 'The keeper of the secret, or the custodian of its key, did not answer within 30 seconds',
+      detail: 'The keeper of the secret, or the custodian of its key, did not answer within 10 seconds',
     });
     expect(answered).toBe('pasted-key');
     expect(JSON.stringify([refused, stalled])).not.toContain('pasted-key');
@@ -94,10 +94,10 @@ function unreadableNow(entry: SecretsEntry): void {
   });
 }
 
-export function storeFailureBehaviour(entry: SecretsEntry): void {
+export function storeFailureBehaviour(entry: SecretsEntry, custodians: TestCustodians): void {
   describe('the failures of the secret store', () => {
-    unknownKeyRefused(entry);
-    custodianRefusing(entry);
-    unreadableNow(entry);
+    unknownKeyRefused(entry, custodians);
+    custodianRefusing(entry, custodians);
+    unreadableNow(entry, custodians);
   });
 }

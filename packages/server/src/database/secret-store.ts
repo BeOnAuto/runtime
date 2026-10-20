@@ -4,6 +4,7 @@ import {
   localCustodian,
   sealedKeeper,
   secretStoreOn,
+  type Custodian,
   type Custodians,
   type SecretRows,
   type SecretStore,
@@ -11,12 +12,21 @@ import {
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import type { Effect } from 'effect';
 
-import type { SecretKeys } from './secrets-keys.ts';
+import type { SecretsKeySource, SecretsSettings } from '../settings/secrets-settings.ts';
+import { kmsCustodianOf, type CustodiansMaking } from './kms-custodians.ts';
+import { keyInHandOf } from './secrets-keys.ts';
 
-export function custodiansOf({ current, previous }: SecretKeys): Custodians {
+function custodianOf(source: SecretsKeySource, making: CustodiansMaking): Custodian | Promise<Custodian> {
+  return source.from === 'kms' ? kmsCustodianOf(source, making) : localCustodian(keyInHandOf(source));
+}
+
+export async function custodiansOf(
+  { current, previous }: SecretsSettings,
+  making: CustodiansMaking,
+): Promise<Custodians> {
   return {
-    current: localCustodian(current),
-    previous: previous === undefined ? undefined : localCustodian(previous),
+    current: await custodianOf(current, making),
+    previous: previous === undefined ? undefined : await custodianOf(previous, making),
   };
 }
 

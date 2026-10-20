@@ -5,8 +5,7 @@ import { join } from 'node:path';
 import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import type { SecretsKeyGiven, SecretsKeySource } from '../settings/secrets-settings.ts';
-import { secretsKeysOf } from './secrets-keys.ts';
+import { keyInHandOf, type KeyInHand } from './secrets-keys.ts';
 
 function aFolder(): string {
   const folder = mkdtempSync(join(tmpdir(), 'auto-runtime-secrets-'));
@@ -16,21 +15,21 @@ function aFolder(): string {
   return folder;
 }
 
-function besideTheLedger(file: string): SecretsKeyGiven {
+function besideTheLedger(file: string): KeyInHand {
   return { from: 'file', setting: 'SECRETS_KEY_FILE', file, madeByTheServer: true };
 }
 
-function named(file: string, setting = 'SECRETS_KEY_FILE'): SecretsKeyGiven {
+function named(file: string, setting = 'SECRETS_KEY_FILE'): KeyInHand {
   return { from: 'file', setting, file, madeByTheServer: false };
 }
 
-function bytesOfTheKeyIn(source: SecretsKeySource): readonly number[] {
-  return [...Redacted.value(secretsKeysOf({ current: source, previous: undefined }).current)];
+function bytesOfTheKeyIn(source: KeyInHand): readonly number[] {
+  return [...Redacted.value(keyInHandOf(source))];
 }
 
-function refusalOf(source: SecretsKeySource): string {
+function refusalOf(source: KeyInHand): string {
   try {
-    secretsKeysOf({ current: source, previous: undefined });
+    keyInHandOf(source);
   } catch (error) {
     return String(error);
   }
@@ -76,9 +75,9 @@ describe('the secrets key in a file a setting names', () => {
     writeFileSync(current, Buffer.alloc(32, 3).toString('base64'), { mode: 0o644 });
     writeFileSync(previous, `${Buffer.alloc(32, 4).toString('base64')}\n`, { mode: 0o444 });
 
-    const keys = secretsKeysOf({ current: named(current), previous: named(previous, 'SECRETS_KEY_FILE_PREVIOUS') });
+    const keys = [keyInHandOf(named(current)), keyInHandOf(named(previous, 'SECRETS_KEY_FILE_PREVIOUS'))];
 
-    expect([bytesOf(keys.current), bytesOf(keys.previous)]).toEqual([
+    expect(keys.map((key) => bytesOf(key))).toEqual([
       Array.from({ length: 32 }, () => 3),
       Array.from({ length: 32 }, () => 4),
     ]);
@@ -123,20 +122,18 @@ describe('the secrets keys of the other settings', () => {
   it('are the keys SECRETS_KEY and SECRETS_KEY_PREVIOUS give, or a key made at each start', () => {
     const [current, previous] = [Redacted.make(new Uint8Array(32)), Redacted.make(new Uint8Array(32).fill(1))];
 
-    const given = secretsKeysOf({
-      current: { from: 'environment', setting: 'SECRETS_KEY', key: current },
-      previous: { from: 'environment', setting: 'SECRETS_KEY_PREVIOUS', key: previous },
-    });
-    const [first, second] = [1, 2].map(() =>
-      Array.from(Redacted.value(secretsKeysOf({ current: { from: 'start' }, previous: undefined }).current)),
-    );
+    const given = [
+      keyInHandOf({ from: 'environment', setting: 'SECRETS_KEY', key: current }),
+      keyInHandOf({ from: 'environment', setting: 'SECRETS_KEY_PREVIOUS', key: previous }),
+    ];
+    const [first, second] = [1, 2].map(() => Array.from(Redacted.value(keyInHandOf({ from: 'start' }))));
 
-    expect(given).toEqual({ current, previous });
+    expect(given).toEqual([current, previous]);
     expect([first?.length, second?.length]).toEqual([32, 32]);
     expect(first).not.toEqual(second);
   });
 });
 
-function bytesOf(key: Redacted.Redacted<Uint8Array> | undefined): readonly number[] {
-  return key === undefined ? [] : Array.from(Redacted.value(key));
+function bytesOf(key: Redacted.Redacted<Uint8Array>): readonly number[] {
+  return Array.from(Redacted.value(key));
 }

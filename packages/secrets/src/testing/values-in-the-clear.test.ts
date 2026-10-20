@@ -1,6 +1,7 @@
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { SecretRefused } from '../store/secret-refused.ts';
 import { valuesInTheClear, type ValueInTheClear } from './values-in-the-clear.ts';
 
 function valuesAt(now: () => number) {
@@ -11,10 +12,13 @@ function revealed(read: ValueInTheClear | undefined) {
   return read === undefined ? read : { ...read, value: Redacted.value(read.value) };
 }
 
-const refusedAsTooLarge = { detail: 'A secret to keep holds more than 16 characters' };
+const refusedAsTooLarge = new SecretRefused({
+  because: 'too_large',
+  detail: 'A secret to keep holds more than 16 characters',
+});
 
 describe('the values a test keeps in the clear in memory', () => {
-  it('keep a value with its ending under the id they are given, refuse one past their bound, and forget a row', async () => {
+  it('keep a value with its ending under the id they are given, refuse one past their bound as the store refuses it, and forget a row', async () => {
     const values = valuesAt(() => 0);
 
     await Effect.runPromise(values.keep('secret-1', Redacted.make('first-tokens'), 'kens'));
