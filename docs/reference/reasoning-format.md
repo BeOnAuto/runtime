@@ -195,18 +195,19 @@ Do not guess tool names. Ask the runtime:
 
 A run checks its tools after it confirms that its model is offered, and before it calls the model. A run whose model is not offered contacts no tool server. A tool that cannot be used ends the run as `unavailable`, and the model is never called:
 
-| Kind                 | `because`                    | When                                                                                   |
-| -------------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
-| `tool_not_offered`   | `tool_server_not_configured` | The server is not configured for the playbook                                          |
-| `tool_not_offered`   | `tool_not_allowed`           | The tool is outside the server's `allowed`                                             |
-| `tool_not_offered`   | `tool_not_listed`            | The server does not list the tool                                                      |
-| `tool_not_offered`   | `connection_pending`         | The server is a connection nobody has approved yet                                     |
-| `tool_not_offered`   | `connection_broken`          | The server is a connection whose credential cannot be read; remove it and add it again |
-| `tool_not_offered`   | `connection_not_allowed`     | The server is a connection a rule of the operator no longer allows                     |
-| `tool_server_failed` | `unreachable`                | The server cannot be reached, or does not respond in time                              |
-| `tool_server_failed` | `failing`                    | The server fails, or refuses to list its tools                                         |
-| `tool_server_failed` | `rate_limited`               | The server asks the run to slow down                                                   |
-| `tool_server_failed` | `key_refused`                | The server did not accept the key the runtime gives it; check that key, do not retry   |
+| Kind                 | `because`                    | When                                                                                                                                                                                                                     |
+| -------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tool_not_offered`   | `tool_server_not_configured` | The server is not configured for the playbook                                                                                                                                                                            |
+| `tool_not_offered`   | `tool_not_allowed`           | The tool is outside the server's `allowed`                                                                                                                                                                               |
+| `tool_not_offered`   | `tool_not_listed`            | The server does not list the tool                                                                                                                                                                                        |
+| `tool_not_offered`   | `connection_pending`         | The server is a connection nobody has approved yet                                                                                                                                                                       |
+| `tool_not_offered`   | `connection_broken`          | The server is a connection whose credential is gone from the secret store or is not the tokens of a consent, whose consent was revoked or has ended, or whose client is no longer registered; remove it and add it again |
+| `tool_not_offered`   | `connection_not_allowed`     | The server is a connection a rule of the operator no longer allows                                                                                                                                                       |
+| `tool_not_offered`   | `connection_unavailable`     | The server is a connection whose credential cannot be read just now; try again later                                                                                                                                     |
+| `tool_server_failed` | `unreachable`                | The server cannot be reached, or does not respond in time                                                                                                                                                                |
+| `tool_server_failed` | `failing`                    | The server fails, or refuses to list its tools                                                                                                                                                                           |
+| `tool_server_failed` | `rate_limited`               | The server asks the run to slow down                                                                                                                                                                                     |
+| `tool_server_failed` | `key_refused`                | The server did not accept the key the runtime gives it; check that key, do not retry                                                                                                                                     |
 
 ### What the model sees
 

@@ -9,6 +9,7 @@ export const RejectionBecauseSchema = Schema.Literals([
   'connection_pending',
   'connection_broken',
   'connection_not_allowed',
+  'connection_unavailable',
   'failing',
   'rate_limited',
   'unreachable',

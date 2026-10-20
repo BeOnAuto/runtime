@@ -13,7 +13,7 @@ import { consentAskedOf } from '../page/consent-asking.ts';
 import { placesNoValue } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
 import type { GivenValue } from './placed-credentials.ts';
-import type { Serving } from './serving-services.ts';
+import type { LoggedCauses, Serving } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
 export type Given = Effect.Effect<GivenValue | undefined, ConnectionUnready>;
@@ -45,13 +45,48 @@ function brokenWith({ org, kept, services }: Serving, reason: string): Effect.Ef
   });
 }
 
+export function loggedCauses(): LoggedCauses {
+  const lastLogged = new Map<string, string>();
+  return {
+    isNew: (connection, cause) => {
+      const isNew = lastLogged.get(connection) !== cause;
+      lastLogged.set(connection, cause);
+      return isNew;
+    },
+    forget: (connection) => {
+      lastLogged.delete(connection);
+    },
+  };
+}
+
+function unavailableNow({ org, kept, unreadable }: Serving, cause: string): Effect.Effect<never, ConnectionUnready> {
+  const { id, name } = kept.connection;
+  const unready: ConnectionUnready = {
+    because: 'connection_unavailable',
+    detail: servingWords.unreadableNow(name, cause),
+  };
+  const loggedOnce = Effect.suspend(() =>
+    unreadable.isNew(id, cause)
+      ? Effect.logWarning(unready.detail).pipe(Effect.annotateLogs({ org, connection: id }))
+      : Effect.void,
+  );
+  return Effect.andThen(loggedOnce, Effect.fail(unready));
+}
+
+function readNow({ kept, unreadable }: Serving, stored: KeptRow): Effect.Effect<KeptRow> {
+  return Effect.sync(() => {
+    unreadable.forget(kept.connection.id);
+    return stored;
+  });
+}
+
 function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnready> {
   const { name } = serving.kept.connection;
   return serving.services.secrets.read(required(serving.kept.secretId)).pipe(
     Effect.matchEffect({
-      onFailure: ({ detail }) => brokenWith(serving, servingWords.unreadable(name, detail)),
+      onFailure: ({ detail }) => unavailableNow(serving, detail),
       onSuccess: (stored) =>
-        stored === undefined ? brokenWith(serving, servingWords.gone(name)) : Effect.succeed(stored),
+        stored === undefined ? brokenWith(serving, servingWords.gone(name)) : readNow(serving, stored),
     }),
   );
 }
@@ -79,7 +114,7 @@ function heldTokensOf(serving: Serving): Effect.Effect<HeldTokens, ConnectionUnr
   const { name } = serving.kept.connection;
   return Effect.flatMap(keptSecretOf(serving), ({ value, version, claimedUntil }) =>
     Option.match(keptTokensIn(value), {
-      onNone: () => brokenWith(serving, servingWords.unreadable(name, servingWords.notTokens)),
+      onNone: () => brokenWith(serving, servingWords.notTokens(name)),
       onSome: (tokens) => Effect.succeed({ tokens, version, claimedUntil }),
     }),
   );

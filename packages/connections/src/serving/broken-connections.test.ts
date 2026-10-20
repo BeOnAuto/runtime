@@ -9,8 +9,6 @@ import { ada, harness, operationNamed, type Harness, fixtureServing } from '../t
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
 
-const sealedElsewhere = 'The secret is sealed under the key k2, which is neither the current key nor the previous one';
-
 function sourceOf(h: Harness, changes: Partial<ServingServices> = {}): ConnectionSource {
   return makeConnectionSource({
     registry: h.ledger.service,
@@ -66,31 +64,33 @@ function loggedLines() {
   return { lines, logging };
 }
 
-function unreadableIn(h: Harness) {
-  return { ...h.secrets, read: () => Effect.fail({ detail: sealedElsewhere }) };
+function goneFrom(h: Harness) {
+  return { ...h.secrets, read: () => Effect.undefined };
 }
 
-function unreadableCounted(h: Harness) {
+function goneCounted(h: Harness) {
   const reads = { made: 0 };
   const secrets = {
     ...h.secrets,
     read: () =>
       Effect.suspend(() => {
         reads.made += 1;
-        return Effect.fail({ detail: sealedElsewhere });
+        return Effect.undefined;
       }),
   };
   return { reads, secrets };
 }
 
-const brokenReason = `The credential of the connection crm cannot be read, so the person who added it removes it and adds it again: ${sealedElsewhere}`;
+const brokenReason =
+  'The credential of the connection crm is no longer in the secret store, so the person who added it removes it and adds it again';
 
-describe('a connection whose credential the secret store cannot read', () => {
+describe('a connection whose credential the secret store no longer holds', () => {
   it('is broken by the runtime with the sentence of why, and answered broken from then on', async () => {
     const h = harness();
     const id = await connectedCrm(h);
+    await Effect.runPromise(h.secrets.forget('secret-1'));
 
-    const refused = await refusalOf(sourceOf(h, { secrets: unreadableIn(h) }), id);
+    const refused = await refusalOf(sourceOf(h), id);
 
     expect(refused).toEqual({ because: 'connection_broken', detail: brokenReason });
     expect((await h.facts()).at(-1)).toMatchObject({
@@ -101,18 +101,6 @@ describe('a connection whose credential the secret store cannot read', () => {
     expect((await connectionOf(sourceOf(h), id)).state).toEqual({
       status: 'unready',
       unready: { because: 'connection_broken', detail: brokenReason },
-    });
-  });
-
-  it('is broken when the secret store no longer holds its credential', async () => {
-    const h = harness();
-    const id = await connectedCrm(h);
-    await Effect.runPromise(h.secrets.forget('secret-1'));
-
-    expect(await refusalOf(sourceOf(h), id)).toEqual({
-      because: 'connection_broken',
-      detail:
-        'The credential of the connection crm is no longer in the secret store, so the person who added it removes it and adds it again',
     });
   });
 });
@@ -165,7 +153,7 @@ describe('a connection the runtime cannot record broken', () => {
     const unrecorded = { ...h.ledger.service, execute: () => Effect.die(new Error('The ledger is not reachable')) };
     const { lines, logging } = loggedLines();
 
-    const refused = await refusalOf(sourceOf(h, { secrets: unreadableIn(h), registry: unrecorded }), id, logging);
+    const refused = await refusalOf(sourceOf(h, { secrets: goneFrom(h), registry: unrecorded }), id, logging);
 
     expect(refused).toEqual({ because: 'connection_broken', detail: brokenReason });
     expect(lines).toEqual([expect.stringContaining('could not record it broken')]);
@@ -179,7 +167,7 @@ describe('a break the registry does not take', () => {
     const id = await connectedCrm(h);
     const concurrent = new Conflict({ detail: 'The registry changed meanwhile', kind: 'concurrent_change' });
     const changed = { ...h.ledger.service, execute: () => Effect.fail(concurrent) };
-    const { reads, secrets } = unreadableCounted(h);
+    const { reads, secrets } = goneCounted(h);
     const { lines, logging } = loggedLines();
     const source = sourceOf(h, { secrets, registry: changed });
 
@@ -192,7 +180,7 @@ describe('a break the registry does not take', () => {
   it('logs nothing when the connection was removed meanwhile', async () => {
     const h = harness();
     const id = await connectedCrm(h);
-    const listed = await connectionOf(sourceOf(h, { secrets: unreadableIn(h) }), id);
+    const listed = await connectionOf(sourceOf(h, { secrets: goneFrom(h) }), id);
     await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id });
     const { lines, logging } = loggedLines();
 

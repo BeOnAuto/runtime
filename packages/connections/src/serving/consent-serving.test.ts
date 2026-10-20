@@ -40,7 +40,7 @@ const keyUnknown =
   "Auto's consent service does not know the key of the connection files, so its tokens cannot be renewed, and the person who added it removes it and adds it again";
 
 const notTokens =
-  'The credential of the connection files cannot be read, so the person who added it removes it and adds it again: its value is not the tokens of a consent the runtime keeps';
+  'The credential of the connection files is not the tokens of a consent the runtime keeps, so the person who added it removes it and adds it again';
 
 const gone =
   'The credential of the connection files is no longer in the secret store, so the person who added it removes it and adds it again';

@@ -47,6 +47,12 @@ const toolEndings: ReadonlyArray<readonly [string, ExplainedRejection, string, s
     toolsNamed,
   ],
   [
+    'a connection whose credential cannot be read just now',
+    { reason: 'unavailable', kind: 'tool_not_offered', because: 'connection_unavailable' },
+    'this server does not offer a tool it names, because the credential of the connection it names cannot be read just now',
+    'Nothing needs to change in the connection: trying again later can work, once whoever runs the server puts right what the details say.',
+  ],
+  [
     'a tool server that kept failing before any call',
     { reason: 'unavailable', kind: 'tool_server_failed', because: 'failing' },
     'a tool server it needs could not be used, because the tool server kept failing',

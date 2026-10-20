@@ -18,8 +18,14 @@ export interface ServingServices {
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
 }
 
+export interface LoggedCauses {
+  readonly isNew: (connection: string, cause: string) => boolean;
+  readonly forget: (connection: string) => void;
+}
+
 export interface Serving {
   readonly org: string;
   readonly kept: KeptConnection;
   readonly services: ServingServices;
+  readonly unreadable: LoggedCauses;
 }
