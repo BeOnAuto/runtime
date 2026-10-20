@@ -37,6 +37,7 @@ export async function servingReasoning(
       PORT: '0',
       LEDGER_FILE: ledger.fileName,
       PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+      AUTO_CLIENTS: 'false',
       ...environment,
     },
     compositionRootWith(

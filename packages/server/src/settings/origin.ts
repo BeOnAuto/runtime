@@ -31,6 +31,10 @@ function aWebOriginSuchAs(example: string) {
 
 export const PublicOrigin = Schema.String.check(aWebOriginSuchAs('https://runtime.example.com'));
 
+export const defaultConsentService = 'https://consent.on.auto';
+
+export const ConsentServiceOrigin = Schema.String.check(aWebOriginSuchAs(defaultConsentService));
+
 export const StudioOrigin = Schema.String.annotate({
   description: `The origin Studio is served from, an https URL, or an http URL on localhost, 127.0.0.1 or [::1], with no path; a page there may call the API, and the runtime fetches Studio from it when it serves Studio. ${defaultStudioOrigin} when left out. STUDIO_ORIGIN wins over it`,
 }).check(aWebOriginSuchAs(defaultStudioOrigin));

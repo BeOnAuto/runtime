@@ -8,19 +8,31 @@ import {
   readConnectionSettings,
   type ConnectionSettings,
 } from '../connections/connection-settings.ts';
+import {
+  readAutoClientsSettings,
+  type AutoClientsDeciding,
+  type AutoClientsSettings,
+} from '../consent/consent-settings.ts';
 import { readFunctionSettings, type FunctionSettings } from '../function-settings/function-settings.ts';
 import { readWorkflowSettings, type WorkflowSettings } from './workflow-settings.ts';
 
 export interface ServedSettings extends FunctionSettings, ConnectionSettings {
   readonly workflows: WorkflowSettings;
+  readonly autoClients: AutoClientsSettings;
 }
 
-export function readServedSettings(environment: Environment, file: FileUse | undefined): ServedSettings {
+export function readServedSettings(
+  environment: Environment,
+  file: FileUse | undefined,
+  access: Omit<AutoClientsDeciding, 'written'>,
+): ServedSettings {
   const connections = readConnections(environment, file, Result.getOrThrow(readProviders()));
   const functions = readFunctionSettings(environment, file, makeProviderResolver(connections.providers));
+  const connectionSettings = readConnectionSettings(environment, file, functions, connections);
   return {
     ...functions,
-    ...readConnectionSettings(environment, file, functions, connections),
+    ...connectionSettings,
     workflows: Effect.runSync(readWorkflowSettings(environment)),
+    autoClients: readAutoClientsSettings(environment, { ...access, written: connectionSettings.autoClientsWritten }),
   };
 }

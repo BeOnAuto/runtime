@@ -29,6 +29,17 @@ const defaultPrediction = {
   cacheDirectory: '/var/tmp/auto-runtime',
 };
 
+const modelProvidersByDefault = [
+  'anthropic',
+  'openai',
+  'google',
+  'bedrock',
+  'bedrock-anthropic',
+  'azure',
+  'vertex',
+  'vertex-anthropic',
+];
+
 describe('readSettings', () => {
   it('listens on every interface at port 5555, allows no origin, has no API keys and keeps the ledger in data/ by default', () => {
     const { models, toolServers, interaction, ...server } = readSettings({});
@@ -52,16 +63,7 @@ describe('readSettings', () => {
       proxy: { enabled: false, environment: {} },
       logFormat: 'json',
       logLevel: 'info',
-      modelProviders: [
-        'anthropic',
-        'openai',
-        'google',
-        'bedrock',
-        'bedrock-anthropic',
-        'azure',
-        'vertex',
-        'vertex-anthropic',
-      ],
+      modelProviders: modelProvidersByDefault,
       reasoning: { mostInputTokens: 2_000_000 },
       workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
       computation: { workers: 4 },
@@ -69,6 +71,8 @@ describe('readSettings', () => {
       prediction: defaultPrediction,
       connections: { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] },
       registeredClients: [],
+      autoClientsWritten: undefined,
+      autoClients: { enabled: false, serviceUrl: 'https://consent.on.auto' },
       connectionVariables: new Map(),
       providers: shippedList,
       providerValues: new Map(),
@@ -95,7 +99,14 @@ const everySetting = {
   OPENAI_API_KEY: 'sk-test',
   INTERACTION_OPEN_REQUESTS: '250',
   REASONING_MAX_INPUT_TOKENS: '500000',
-  CONNECTIONS: JSON.stringify({ people_may_add: false, allowed_hosts: ['*.example.com'], credential_kinds: ['none'] }),
+  CONNECTIONS: JSON.stringify({
+    people_may_add: false,
+    allowed_hosts: ['*.example.com'],
+    credential_kinds: ['none'],
+    auto_clients: false,
+  }),
+  AUTO_CLIENTS: 'true',
+  CONSENT_SERVICE_URL: 'https://consent.example.com',
 };
 
 const everySettingRead = {
@@ -133,6 +144,8 @@ const everySettingRead = {
   prediction: defaultPrediction,
   connections: { peopleMayAdd: false, allowedHosts: ['*.example.com'], credentialKinds: ['none'], variables: [] },
   registeredClients: [],
+  autoClientsWritten: false,
+  autoClients: { enabled: true, serviceUrl: 'https://consent.example.com' },
   connectionVariables: new Map(),
   providers: shippedList,
   providerValues: new Map(),

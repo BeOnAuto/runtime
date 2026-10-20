@@ -17,6 +17,7 @@ import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';
 export interface ConnectionSettings {
   readonly connections: ConnectionPolicy;
   readonly registeredClients: readonly RegisteredClient[];
+  readonly autoClientsWritten: boolean | undefined;
   readonly connectionVariables: ReadonlyMap<string, Redacted.Redacted>;
   readonly providers: ProviderList;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
@@ -90,6 +91,7 @@ export function readConnectionSettings(
   return {
     connections,
     registeredClients,
+    autoClientsWritten: setting.autoClients,
     connectionVariables: valuesOf(environment, connections),
     providers,
     providerValues: operatorValuesIn(providers, environment),
