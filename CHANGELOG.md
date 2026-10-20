@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.15.0](https://github.com/BeOnAuto/runtime/compare/v0.14.0...v0.15.0) (2026-10-20)
+
+
+### Features
+
+* **connections:** a runtime with no client of its own takes consent through Auto's client ([#268](https://github.com/BeOnAuto/runtime/issues/268)) ([b2f38ea](https://github.com/BeOnAuto/runtime/commit/b2f38eacbd0a834b7ae15b7f5a9e3fb9ac2c28da))
+* **providers:** github, slack and profound take a sign-in ([#261](https://github.com/BeOnAuto/runtime/issues/261)) ([0655d3c](https://github.com/BeOnAuto/runtime/commit/0655d3c01f3dd6bad6dac4f91f2b569d85f3ad75))
+* **providers:** microsoft, amazon and adobe's six providers ([#264](https://github.com/BeOnAuto/runtime/issues/264)) ([f536378](https://github.com/BeOnAuto/runtime/commit/f536378f7c82ed111c10bbe4921b9ed9c430368a))
+* **providers:** the thirteen providers of Google, with their documents translated from Discovery ([#262](https://github.com/BeOnAuto/runtime/issues/262)) ([99f0f05](https://github.com/BeOnAuto/runtime/commit/99f0f05da27534566ee4e96cb64a7fdc1d1ac3f5))
+* **providers:** zoom takes a sign-in, over its HTTP API ([#263](https://github.com/BeOnAuto/runtime/issues/263)) ([2803ca1](https://github.com/BeOnAuto/runtime/commit/2803ca1f0a65c950832573daf842cfecaf3baa3c))
+* **secrets:** an unreadable credential fails the call; the retry-state key is the runtime's own ([#269](https://github.com/BeOnAuto/runtime/issues/269)) ([53bd32a](https://github.com/BeOnAuto/runtime/commit/53bd32a0e54813866b90c4b26452cca186b4d4e6))
+* **secrets:** each secret under its own key, wrapped by a custodian, in rows the ledger keeps ([#267](https://github.com/BeOnAuto/runtime/issues/267)) ([45e0bc6](https://github.com/BeOnAuto/runtime/commit/45e0bc68d8521264b47b5b1b9d21dbeedb8b98a5))
+
+
+### Bug Fixes
+
+* **api:** the runtime's page and icon show the Auto mark with its color bands, beside its name ([#270](https://github.com/BeOnAuto/runtime/issues/270)) ([be7fc82](https://github.com/BeOnAuto/runtime/commit/be7fc82db9ad57d543049be65ac8ccf96a0f066c))
+
 ## [0.14.0](https://github.com/BeOnAuto/runtime/compare/v0.13.0...v0.14.0) (2026-10-20)
 
 
