@@ -93,6 +93,6 @@ export function tokensRevokedOf(
         onSome: (tokens) => services.consent.revoke({ ...consentAskedOf(connection, services), client, tokens }),
       }),
     ),
-    Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure))),
+    Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure, client.client_source))),
   );
 }

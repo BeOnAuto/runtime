@@ -34,7 +34,7 @@ const FinishingSchema = Schema.Union([
       }),
     ),
   }).annotate({
-    description: 'The finish of a consent begun with a client whoever runs the runtime registered, or one of its own',
+    description: "The finish of a consent begun with a client of this runtime's, which answers a code",
   }),
   Schema.Struct({
     ...returnedFields,
@@ -83,8 +83,8 @@ function redeemedOf(
   });
 }
 
-function recordedWith(finished: FinishedConsent, secretId: string, { use, stateSha256, kept }: Recording) {
-  const { client_id: clientId, client_source: clientSource } = kept.consent;
+function recordedWith(finished: FinishedConsent, secretId: string, { use, stateSha256 }: Recording) {
+  const { client_id: clientId, client_source: clientSource } = finished.client;
   const granted = finished.scope === undefined ? {} : { scope: finished.scope };
   return recordInRegistry({
     type: 'finish',

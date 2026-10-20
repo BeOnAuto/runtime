@@ -1,5 +1,5 @@
 import { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
-import type { ConsentRefusal, RevocationFailure } from '@on.auto/tool-servers';
+import type { ClientSource, ConsentRefusal, RevocationFailure } from '@on.auto/tool-servers';
 
 import { servingWords } from '../serving/serving-words.ts';
 
@@ -95,8 +95,8 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
 const throughAuto = (name: string) =>
   `Expected handle: the consent of the connection ${name} began through Auto's consent service, which answers a handle, not a code`;
 
-const throughARegisteredClient = (name: string) =>
-  `Expected code: the consent of the connection ${name} began with the client whoever runs this runtime registered, which answers a code, not a handle`;
+const throughAClientOfItsOwn = (name: string) =>
+  `Expected code: the consent of the connection ${name} began with a client of this runtime's, which answers a code, not a handle`;
 
 export type Returned = 'code' | 'handle';
 
@@ -104,9 +104,7 @@ export function wrongShapeOf({ name }: ConsentNamed, began: Returned, given: Ret
   if (began === given) {
     return undefined;
   }
-  return given === 'code'
-    ? refusedAt('/code', throughAuto(name))
-    : refusedAt('/handle', throughARegisteredClient(name));
+  return given === 'code' ? refusedAt('/code', throughAuto(name)) : refusedAt('/handle', throughAClientOfItsOwn(name));
 }
 
 export function finishRefusalOf(named: ConsentNamed, refusal: ConsentRefusal, given: Returned): ConsentRefused {
@@ -115,14 +113,23 @@ export function finishRefusalOf(named: ConsentNamed, refusal: ConsentRefusal, gi
     : consentRefusalOf(named, refusal);
 }
 
-export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFailure): string {
+function unansweredRevocationOf(name: string, source: ClientSource): string {
+  return source === 'auto'
+    ? `Auto's consent service did not answer the revocation of the tokens of the connection ${name}, so they end on their own`
+    : `The authorization server of the connection ${name} did not answer the revocation of its tokens, so they end on their own`;
+}
+
+export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFailure, source: ClientSource): string {
   if (failure.refused === 'not_revoked') {
     return `The authorization server of the connection ${name} refused to revoke its tokens, answering HTTP ${failure.status}, so they end on their own`;
   }
   if (failure.refused === 'host') {
     return `The tokens of the connection ${name} were not revoked, so they end on their own: ${failure.rule}`;
   }
+  if (failure.refused === 'unknown_key') {
+    return `Auto's consent service does not know the key of the connection ${name}, so its tokens were not revoked and end on their own`;
+  }
   return failure.refused === 'unanswered'
-    ? `The authorization server of the connection ${name} did not answer the revocation of its tokens, so they end on their own`
+    ? unansweredRevocationOf(name, source)
     : `The tokens of the connection ${name} could not be revoked with the client and at the authorization server it was made with, so they end on their own`;
 }

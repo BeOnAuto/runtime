@@ -1,8 +1,14 @@
 import { servedStudio } from '@on.auto/identity/testing';
 import type { Outcome, Succeeded } from '@on.auto/operations';
-import { keptTokensIn } from '@on.auto/tool-servers';
-import { autoClientsOf, handleOf, servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/testing';
-import { Option, Redacted } from 'effect';
+import { keptTokensIn, type ConsentClientOptions, type KeptTokens, type ReturnKind } from '@on.auto/tool-servers';
+import {
+  autoClientsOf,
+  handleOf,
+  servedThroughAuto,
+  serviceCallsAt,
+  type ThroughAuto,
+} from '@on.auto/tool-servers/testing';
+import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, type Added } from '../testing/additions.ts';
@@ -21,11 +27,11 @@ interface Connecting {
   readonly link: Added;
 }
 
-async function throughAuto(): Promise<Connecting> {
+async function throughAuto(fetch: ConsentClientOptions['fetch'] = globalThis.fetch): Promise<Connecting> {
   const serving = await servedThroughAuto();
   closing.push(serving.close);
   const h = consentHarnessAt(serving.fake, {
-    consenting: { autoClients: autoClientsOf(serving.service) },
+    consenting: { autoClients: autoClientsOf(serving.service), fetch },
     pages: { studio: { origin: 'https://studio.example.com', served: false }, runtime: () => 'http://localhost:5555' },
   });
   return { serving, h, link: await added(h, { provider: 'files' }) };
@@ -42,6 +48,25 @@ function readingOf(h: Harness, { id, token }: Added): Promise<Outcome<Succeeded>
 async function returnedOf({ serving, h, link }: Connecting) {
   const { url } = await startedAt(h, link);
   return { state: String(new URL(url).searchParams.get('state')), handle: await handleOf(serving.service, url) };
+}
+
+async function listingAnotherClient(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
+  const answer = await globalThis.fetch(String(address), Object.assign({}, init));
+  const listing = new URL(String(address)).pathname === '/clients';
+  return listing
+    ? new Response((await answer.text()).replace('auto-runtime', 'a-client-listed-before'), answer)
+    : answer;
+}
+
+async function connectedAt(connecting: Connecting): Promise<KeptTokens> {
+  await finishedWith(connecting.h, connecting.link, await returnedOf(connecting));
+  const [kept = ''] = [...connecting.h.secrets.values().values()];
+  return Option.getOrThrow(keptTokensIn(Redacted.make(kept)));
+}
+
+async function loggedRemovalOf({ h, link }: Connecting): Promise<string> {
+  await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: link.id });
+  return h.logged().join('\n');
 }
 
 describe('the start of a consent through Auto’s consent service', () => {
@@ -91,6 +116,16 @@ describe('the finish of a consent through Auto’s consent service', () => {
     expect(JSON.stringify([finished, await connecting.h.facts(), connecting.h.logged()])).not.toContain(String(key));
   });
 
+  it('records the client the service redeemed with, which the handoff names, over the one the start recorded', async () => {
+    const connecting = await throughAuto(listingAnotherClient);
+
+    const finished = await finishedWith(connecting.h, connecting.link, await returnedOf(connecting));
+    const started = (await connecting.h.facts()).find(({ type }) => type === 'connection_consent_started');
+
+    expect(started).toMatchObject({ data: { client_id: 'a-client-listed-before', client_source: 'auto' } });
+    expect(finished).toMatchObject({ output: { credential: { client_id: 'auto-runtime', client_source: 'auto' } } });
+  });
+
   it('is refused at the handle where the service refuses it, as one taken already', async () => {
     const connecting = await throughAuto();
     const returned = await returnedOf(connecting);
@@ -136,7 +171,7 @@ describe('a finish of the shape its start did not begin with', () => {
           {
             pointer: '/handle',
             detail:
-              'Expected code: the consent of the connection files began with the client whoever runs this runtime registered, which answers a code, not a handle',
+              "Expected code: the consent of the connection files began with a client of this runtime's, which answers a code, not a handle",
           },
         ],
       },
@@ -174,5 +209,58 @@ describe('the removal of a connection connected through Auto’s consent service
 
     expect(connecting.serving.service.calls().map(({ path }) => path)).toContain('/tokens/revoke');
     expect(connecting.h.secrets.values().size).toBe(0);
+  });
+
+  it('goes on where the service no longer knows its key or does not answer, saying so in words of the service', async () => {
+    const [forgotten, gone] = await Promise.all([throughAuto(), throughAuto()]);
+    const tokens = await connectedAt(forgotten);
+    await connectedAt(gone);
+    const connectionKey = String(tokens.connection_key);
+    const { origin: issuer } = forgotten.serving.fake;
+    await Effect.runPromise(serviceCallsAt(forgotten.serving.service).revoke({ issuer, tokens, connectionKey }));
+    await gone.serving.service.close();
+
+    expect([await loggedRemovalOf(forgotten), await loggedRemovalOf(gone)]).toEqual([
+      expect.stringContaining(
+        "Auto's consent service does not know the key of the connection files, so its tokens were not revoked and end on their own",
+      ),
+      expect.stringContaining(
+        "Auto's consent service did not answer the revocation of the tokens of the connection files, so they end on their own",
+      ),
+    ]);
+    expect([forgotten.h.secrets.values().size, gone.h.secrets.values().size]).toEqual([0, 0]);
+  });
+});
+
+describe('a consent through a Studio neither Auto’s nor on this computer', () => {
+  it('leaves Auto’s client out of the link and the start, which the source the way lists next serves, asking the service nothing', async () => {
+    const serving = await servedThroughAuto({ dynamicRegistration: true });
+    closing.push(serving.close);
+    const h = consentHarnessAt(serving.fake, {
+      way: { scope: 'files.read', clients: ['registered', 'dynamic'] },
+      consenting: { autoClients: autoClientsOf(serving.service, 'elsewhere') },
+    });
+    const link = await added(h, { provider: 'files' });
+
+    expect([await readingOf(h, link), await starting(h, link)]).toMatchObject([
+      { output: { client_source: 'dynamic' } },
+      { output: { client_source: 'dynamic' } },
+    ]);
+    expect(serving.service.calls()).toEqual([]);
+  });
+
+  it('leaves the source out of a link whose way no other source serves', async () => {
+    const serving = await servedThroughAuto();
+    closing.push(serving.close);
+    const kinds: { now: ReturnKind } = { now: 'hosted' };
+    const autoClients = { ...autoClientsOf(serving.service), returnKindOf: () => kinds.now };
+    const h = consentHarnessAt(serving.fake, { consenting: { autoClients } });
+    const link = await added(h, { provider: 'files' });
+    kinds.now = 'elsewhere';
+
+    const read = await readingOf(h, link);
+
+    expect(read).toMatchObject({ status: 'succeeded', output: { name: 'files' } });
+    expect(read).not.toHaveProperty('output.client_source');
   });
 });

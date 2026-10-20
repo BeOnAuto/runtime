@@ -4341,7 +4341,7 @@
                   {
                     "type": "object",
                     "additionalProperties": false,
-                    "description": "The finish of a consent begun with a client whoever runs the runtime registered, or one of its own",
+                    "description": "The finish of a consent begun with a client of this runtime's, which answers a code",
                     "properties": {
                       "token": {
                         "type": "string",

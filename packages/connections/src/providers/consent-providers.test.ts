@@ -1,5 +1,5 @@
 import { adverts, drive, providersOf } from '@on.auto/providers/testing';
-import type { ConsentClientOptions } from '@on.auto/tool-servers';
+import type { ConsentClientOptions, ReturnKind } from '@on.auto/tool-servers';
 import {
   autoClientsOf,
   clockAt,
@@ -252,9 +252,14 @@ async function serviceOfDrive(): Promise<FakeConsentService> {
   return service;
 }
 
-function switchedOf(service: FakeConsentService, enabled: boolean): Partial<ConsentClientOptions> {
-  return { autoClients: { ...autoClientsOf(service), enabled } };
+function switchedOf(service: FakeConsentService, enabled: boolean, kind: ReturnKind = 'hosted') {
+  return { autoClients: { ...autoClientsOf(service, kind), enabled } };
 }
+
+const unservedBy = [
+  ['the source of Auto is switched off', false, 'hosted'],
+  ['Studio is neither Auto’s nor on this computer', true, 'elsewhere'],
+] as const;
 
 describe('a provider whose way is consent where Auto’s consent service serves its issuer', () => {
   it('is listed offered, added and offered to search, where whoever runs Auto registered no client', async () => {
@@ -272,14 +277,15 @@ describe('a provider whose way is consent where Auto’s consent service serves 
     ]);
   });
 
-  it('is set up first, and the service asked nothing, where the source of Auto is switched off', async () => {
+  it.each(unservedBy)('is set up first, and the service asked nothing, where %s', async (_, enabled, kind) => {
     const service = await serviceOfDrive();
-    const h = harness({ providers: consentProviders, consenting: switchedOf(service, false) });
+    const consenting = switchedOf(service, enabled, kind);
+    const h = harness({ providers: consentProviders, consenting });
 
     expect([
       await h.call(operationNamed(h.operations, 'list_providers'), ada),
       await adding(h, { provider: 'drive' }),
-      await offeredWith(switchedOf(service, false)),
+      await offeredWith(consenting),
     ]).toMatchObject([
       {
         output: {

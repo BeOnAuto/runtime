@@ -40,8 +40,11 @@ interface LinkReading {
 }
 
 function sourceOfAStart(connection: RecordedConnection, { consent, pages }: LinkReading) {
+  if (connection.credential.kind !== 'authorization') {
+    return Effect.succeed({});
+  }
   return Effect.map(consent.hadSources(studioBaseFor(pages)), ({ sourceOf }) => {
-    const source = connection.credential.kind === 'authorization' ? sourceOf(wayOf(connection)) : undefined;
+    const source = sourceOf(wayOf(connection));
     return source === undefined ? {} : { client_source: source };
   });
 }
