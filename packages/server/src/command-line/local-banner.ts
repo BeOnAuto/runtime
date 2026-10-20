@@ -1,7 +1,9 @@
-import { studioBaseOf, type AccessMode, type StudioSettings } from '@on.auto/identity';
+import { studioBaseOf, studioLinkOf, type AccessMode, type StudioSettings } from '@on.auto/identity';
 
+import type { Install } from '../lifecycle/lifecycle.ts';
 import { defaultRuntimePort } from '../local-runtime/local-control.ts';
 import { linkerFor, painterFor, type ColorDepth } from '../logging/terminal.ts';
+import { firstStartNotice } from '../usage-ping/usage-ping.ts';
 import { logoHeight, logoLines, type PaintingDepth } from './logo.ts';
 
 export interface Ready {
@@ -11,6 +13,7 @@ export interface Ready {
   readonly mode: AccessMode;
   readonly identityService: string | undefined;
   readonly studio: StudioSettings;
+  readonly install: Install | undefined;
 }
 
 const tagline = 'Runs the playbooks your agent builds';
@@ -63,14 +66,18 @@ function localModeNotice(url: string, depth: ColorDepth): readonly string[] {
   ];
 }
 
+function usagePingNotice(install: Install | undefined, depth: ColorDepth): readonly string[] {
+  return install?.isNew === true ? [`  ${painterFor(depth)('dim', firstStartNotice)}`, ''] : [];
+}
+
 export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
-  const { port, readyInMs, mode, identityService } = ready;
+  const { port, readyInMs, mode, identityService, install } = ready;
   const paint = painterFor(depth);
   const link = linkerFor(depth);
   const url = `http://localhost:${port}`;
   const mcp = `${url}/mcp`;
   const studioBase = studioBaseOf(ready.studio, url);
-  const studio = `${studioBase}?server=${encodeURIComponent(url)}`;
+  const studio = studioLinkOf(ready.studio, { ownOrigin: url, openedFrom: 'terminal', installId: install?.id });
   const studioShown = port === defaultRuntimePort ? studioBase : `${studioBase}?server=${url}`;
   const entry = (label: string, value: string): string => `     ${paint('dim', label.padEnd(8))} ${link(value, value)}`;
   const agent = (label: string, command: string): string => `    ${label.padEnd(13)} ${paint('dim', command)}`;
@@ -87,6 +94,7 @@ export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
     `  ${paint('dim', 'Connect your agent')}`,
     ...agentCommandsFor(ready, mcp).map(([label, command]) => agent(label, command)),
     '',
+    ...usagePingNotice(install, depth),
     `  ${paint('dim', 'Press Ctrl+C to stop.')}`,
     '',
   ].join('\n');

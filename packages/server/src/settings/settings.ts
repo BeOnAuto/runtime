@@ -4,6 +4,7 @@ import { Effect, Result } from 'effect';
 
 import { fileSettings } from '../config-file/file-settings.ts';
 import { readTelemetrySettings, type TelemetrySettings } from '../telemetry/telemetry-settings.ts';
+import { readUsagePingSettings, type UsagePingSettings } from '../usage-ping/usage-ping-settings.ts';
 import {
   readAccessSettings,
   readCredentialSettings,
@@ -26,6 +27,7 @@ export interface Settings extends ServedSettings, AccessSettings, CredentialSett
   readonly content: ContentSettings;
   readonly proxy: ProxySettings;
   readonly telemetry: TelemetrySettings | undefined;
+  readonly usagePing: UsagePingSettings | undefined;
   readonly configFile: ConfigFileSources | undefined;
   readonly providerSetup?: string | undefined;
 }
@@ -43,6 +45,7 @@ export function readSettings(given: Environment): Settings {
   const content = Effect.runSync(readContentSettings(environment));
   const served = readServedSettings(environment, file);
   const telemetry = Effect.runSync(readTelemetrySettings(environment));
+  const usagePing = Effect.runSync(readUsagePingSettings(environment));
   return {
     host,
     port,
@@ -56,6 +59,7 @@ export function readSettings(given: Environment): Settings {
     logLevel,
     ...served,
     telemetry,
+    usagePing,
     configFile: sourcesOf(file),
   };
 }

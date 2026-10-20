@@ -16,7 +16,13 @@ const ready = {
   mode: 'local',
   identityService: undefined,
   studio: servedStudio,
+  install: undefined,
 } as const;
+
+const newInstall = { id: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b', isNew: true };
+
+const firstStartLine =
+  '  Auto Runtime sends an anonymous usage ping when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. https://on.auto/docs/self-host/configuration#usage-ping';
 
 describe('the header of the auto-runtime command', () => {
   it('names the runtime and its version in plain text where there are no colors', () => {
@@ -65,12 +71,21 @@ describe('the notice that the server is ready', () => {
 });
 
 describe('the Studio entry of the notice that the server is ready', () => {
-  it('shows the Studio the server serves by its address alone for the default server, and links to it with the server', () => {
+  it('shows the Studio the server serves by its address alone for the default server, and links to it with the server and this terminal', () => {
     const notice = readyNoticeOf(ready, 24);
 
     expect(notice).toContain(
-      '\u001B]8;;http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555\u001B\\http://localhost:5555/studio/\u001B]8;;\u001B\\',
+      '\u001B]8;;http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555&src=terminal\u001B\\http://localhost:5555/studio/\u001B]8;;\u001B\\',
     );
+  });
+
+  it('links to Studio with the install of the server too, where it has one, and shows it no differently', () => {
+    const notice = readyNoticeOf({ ...ready, install: { ...newInstall, isNew: false } }, 24);
+
+    expect(notice).toContain(
+      '\u001B]8;;http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555&src=terminal&install=6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b\u001B\\http://localhost:5555/studio/\u001B]8;;\u001B\\',
+    );
+    expect(stripVTControlCharacters(notice)).toBe(readyNoticeOf(ready, 1));
   });
 
   it('shows the Studio host where the server serves no Studio, by its root alone or with the server', () => {
@@ -110,6 +125,34 @@ describe('the notice that a server in local mode is ready', () => {
     expect(lines).toContain(
       '  \u001B[2mSet PUBLIC_URL=http://localhost:6000, and no ACCESS_MODE, to sign people in.\u001B[22m',
     );
+  });
+});
+
+describe('the notice that the server is ready, the first time it starts with a usage ping', () => {
+  it('says once, above the way to stop it, that it sends an anonymous usage ping and how to turn it off', () => {
+    const lines = readyNoticeOf({ ...ready, install: newInstall }, 1).split('\n');
+
+    expect(lines.slice(-6)).toEqual([
+      '    Codex         codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.9.1 mcp',
+      '',
+      firstStartLine,
+      '',
+      '  Press Ctrl+C to stop.',
+      '',
+    ]);
+  });
+
+  it('dims the line where the terminal shows colors', () => {
+    expect(readyNoticeOf({ ...ready, install: newInstall }, 24)).toContain(
+      `  \u001B[2m${firstStartLine.trimStart()}\u001B[22m\n`,
+    );
+  });
+
+  it('says nothing of it once the install was made at an earlier start, or where the usage ping is off', () => {
+    expect([
+      readyNoticeOf({ ...ready, install: { ...newInstall, isNew: false } }, 1),
+      readyNoticeOf(ready, 1),
+    ]).not.toContainEqual(expect.stringContaining('usage ping'));
   });
 });
 

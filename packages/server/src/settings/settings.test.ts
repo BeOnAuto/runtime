@@ -69,6 +69,7 @@ describe('readSettings', () => {
       providers: shippedList,
       providerValues: new Map(),
       telemetry: undefined,
+      usagePing: { distribution: 'source' },
       configFile: undefined,
     });
   });
@@ -93,6 +94,49 @@ const everySetting = {
   CONNECTIONS: JSON.stringify({ people_may_add: false, allowed_hosts: ['*.example.com'], credential_kinds: ['none'] }),
 };
 
+const everySettingRead = {
+  host: '127.0.0.1',
+  port: 3000,
+  allowedOrigins: ['https://app.example.com', 'http://localhost:5173', 'http://[::1]:3000'],
+  apiKeys: [entry],
+  identityIssuer: 'https://identity.example',
+  signIn: { issuer: 'https://identity.example', publicUrl: 'https://runtime.example.com' },
+  ledger: { store: 'sqlite', file: '/data/ledger.db' },
+  secrets: { key: 'in-a-file', file: '/data/secrets.key' },
+  content: {
+    store: 'object-storage',
+    location: { bucket: 'playbook-content', prefix: 'production' },
+    endpoint: undefined,
+    region: undefined,
+  },
+  proxy: { enabled: true, environment: { HTTPS_PROXY: 'http://proxy.internal:3128' } },
+  logFormat: 'pretty',
+  logLevel: 'warn',
+  modelProviders: [
+    'openai',
+    'anthropic',
+    'google',
+    'bedrock',
+    'bedrock-anthropic',
+    'azure',
+    'vertex',
+    'vertex-anthropic',
+  ],
+  reasoning: { mostInputTokens: 500_000 },
+  workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
+  computation: { workers: 4 },
+  recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
+  prediction: defaultPrediction,
+  connections: { peopleMayAdd: false, allowedHosts: ['*.example.com'], credentialKinds: ['none'], variables: [] },
+  registeredClients: [],
+  connectionVariables: new Map(),
+  providers: shippedList,
+  providerValues: new Map(),
+  telemetry: undefined,
+  usagePing: { distribution: 'source' },
+  configFile: undefined,
+};
+
 describe('readSettings given every setting', () => {
   it('reads every setting from the environment it is given', () => {
     const { models, toolServers, interaction, studio, accessMode, publicUrl, ...server } = readSettings(everySetting);
@@ -100,47 +144,7 @@ describe('readSettings given every setting', () => {
     expect([interaction, studio.served, accessMode]).toEqual([{ mostOpenRequests: 250 }, false, undefined]);
     expect([models.openai.configured, publicUrl]).toEqual([true, 'https://runtime.example.com']);
     expect(toolServers.servers).toEqual([]);
-    expect(server).toEqual({
-      host: '127.0.0.1',
-      port: 3000,
-      allowedOrigins: ['https://app.example.com', 'http://localhost:5173', 'http://[::1]:3000'],
-      apiKeys: [entry],
-      identityIssuer: 'https://identity.example',
-      signIn: { issuer: 'https://identity.example', publicUrl: 'https://runtime.example.com' },
-      ledger: { store: 'sqlite', file: '/data/ledger.db' },
-      secrets: { key: 'in-a-file', file: '/data/secrets.key' },
-      content: {
-        store: 'object-storage',
-        location: { bucket: 'playbook-content', prefix: 'production' },
-        endpoint: undefined,
-        region: undefined,
-      },
-      proxy: { enabled: true, environment: { HTTPS_PROXY: 'http://proxy.internal:3128' } },
-      logFormat: 'pretty',
-      logLevel: 'warn',
-      modelProviders: [
-        'openai',
-        'anthropic',
-        'google',
-        'bedrock',
-        'bedrock-anthropic',
-        'azure',
-        'vertex',
-        'vertex-anthropic',
-      ],
-      reasoning: { mostInputTokens: 500_000 },
-      workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
-      computation: { workers: 4 },
-      recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
-      prediction: defaultPrediction,
-      connections: { peopleMayAdd: false, allowedHosts: ['*.example.com'], credentialKinds: ['none'], variables: [] },
-      registeredClients: [],
-      connectionVariables: new Map(),
-      providers: shippedList,
-      providerValues: new Map(),
-      telemetry: undefined,
-      configFile: undefined,
-    });
+    expect(server).toEqual(everySettingRead);
   });
 });
 

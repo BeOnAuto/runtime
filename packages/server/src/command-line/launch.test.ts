@@ -14,6 +14,7 @@ import { pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { distributionVariable } from '../usage-ping/usage-ping-settings.ts';
 import { installedRelease, launch, type LaunchingProcess } from './launch.ts';
 
 const made: string[] = [];
@@ -107,7 +108,7 @@ function execveCallOf(host: Readonly<LaunchingProcess>, packageRoot: string): Ex
 }
 
 describe('launching the runtime from its npm package', () => {
-  it('runs the command entry of an installed release with the arguments and environment it was given', () => {
+  it('runs the command entry of an installed release with the arguments and environment it was given, marked as the npm package', () => {
     const { packageRoot, cache } = installation();
     const env = { XDG_CACHE_HOME: cache, ANTHROPIC_API_KEY: 'sk-ant-test' };
 
@@ -122,7 +123,7 @@ describe('launching the runtime from its npm package', () => {
       '--org',
       'acme',
     ]);
-    expect(executed.env).toBe(env);
+    expect(executed.env).toEqual({ ...env, [distributionVariable]: 'npx' });
     expect(dirname(release)).toBe(join(cache, 'auto-runtime'));
   });
 
@@ -212,7 +213,7 @@ describe('what the launcher refuses', () => {
 
     expect(launch(host, urlOf(packageRoot))).toBe(1);
     expect(messages).toEqual([
-      'Auto Runtime runs on macOS and Linux. On Windows, run the onauto/runtime image with Docker.\n',
+      'Auto Runtime runs on macOS and Linux. On Windows, run the docker.on.auto/onauto/runtime image with Docker.\n',
     ]);
   });
 

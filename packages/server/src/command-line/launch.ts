@@ -48,7 +48,7 @@ function readinessOf({ versions, execve, env }: Readonly<LaunchingProcess>): Rea
     return `Auto Runtime needs Node.js ${requiredNode} or later, and this is Node.js ${versions.node}.`;
   }
   if (execve === undefined) {
-    return 'Auto Runtime runs on macOS and Linux. On Windows, run the onauto/runtime image with Docker.';
+    return 'Auto Runtime runs on macOS and Linux. On Windows, run the docker.on.auto/onauto/runtime image with Docker.';
   }
   if (cacheRoot === undefined) {
     return 'Auto Runtime keeps its files under XDG_CACHE_HOME or HOME, and neither is set.';
@@ -133,6 +133,6 @@ export function launch(host: Readonly<LaunchingProcess>, packageRoot: Readonly<U
   return readiness.execve(
     host.execPath,
     [host.execPath, join(release, 'packages', 'server', 'auto-runtime.ts'), ...host.argv.slice(2)],
-    host.env,
+    { ...host.env, RUNTIME_DISTRIBUTION: 'npx' },
   );
 }

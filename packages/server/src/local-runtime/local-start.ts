@@ -6,7 +6,7 @@ import { servedLocally, type LocalServerHost } from '../command-line/local-serve
 import { release } from '../composition/release.ts';
 import { stopInsistedBy, stopRequestedBy } from '../lifecycle/stop-request.ts';
 import { restartMarkIn } from './background-process.ts';
-import { localControlOf } from './local-control.ts';
+import { localControlOf, runtimeHomeIn } from './local-control.ts';
 import { runsInFlight } from './runs-in-flight.ts';
 
 const signalsOfOneStop = 1000;
@@ -54,7 +54,9 @@ export async function startedLocally(
     run: async () => {
       const { compositionRoot } = await import('../composition/composition-root.ts');
       const { runServer } = await import('../lifecycle/run-server.ts');
-      const options = { ...compositionRoot, localServingIn: local.servingIn };
+      const { usagePingOf } = await import('../usage-ping/usage-ping.ts');
+      const usagePing = usagePingOf({ fetch, runtimeHome: runtimeHomeIn(home), running: process });
+      const options = { ...compositionRoot, localServingIn: local.servingIn, usagePing };
       const server = await runServer(serverProcess, options, stopRequested, stopInsisted);
       restartMark.clear(process.pid);
       return server;

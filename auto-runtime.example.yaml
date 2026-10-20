@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=./auto-runtime.schema.json
 #
-# The settings of Auto Runtime that are lists or maps, and where Studio comes
-# from. Copy this file to auto-runtime.yaml at the root of the repository, which
-# git ignores, and pnpm dev passes it to the server. In a container, mount it and
-# set CONFIG_FILE to its path inside the container.
+# The settings of Auto Runtime that are lists or maps, where Studio comes from,
+# local mode and the usage ping. Copy this file to auto-runtime.yaml at the root
+# of the repository, which git ignores, and pnpm dev passes it to the server. In
+# a container, mount it and set CONFIG_FILE to its path inside the container.
 #
 # Each key stands for the environment variable of the same name in upper case,
 # which wins over the key when both are set. Secrets never go in this file:
@@ -150,3 +150,10 @@ allowed_origins:
 #     permissions: [org:read, org:write, playbook:read, playbook:write]
 #     playbooks: '*'
 #     sha256: <the digest pnpm key prints>
+
+# The anonymous usage ping Auto Runtime sends when it starts: its release, the
+# operating system, the processor, the version of Node.js, how it was installed
+# and a random install id, never anything of its work. On when left out;
+# DO_NOT_TRACK=1 in the environment turns it off as well. See
+# https://on.auto/docs/self-host/configuration#usage-ping
+# usage_ping: false

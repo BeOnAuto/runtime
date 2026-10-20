@@ -2,6 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import type { Environment } from '@on.auto/config';
 
+import { firstStartNotice } from '../usage-ping/usage-ping.ts';
 import { startServer, type RunningServer, type ServerOptions } from './lifecycle.ts';
 
 export interface ServerProcess {
@@ -46,6 +47,9 @@ export async function runServer<R>(
   const server = await startServer(serverProcess.env, options);
   void stopRequested.then(() => stopThenExit(server, serverProcess, options));
   serverProcess.stdout.write(`Auto Runtime listening on port ${server.port}\n`);
+  if (server.install?.isNew === true) {
+    serverProcess.stdout.write(`${firstStartNotice}\n`);
+  }
   return server;
 }
 

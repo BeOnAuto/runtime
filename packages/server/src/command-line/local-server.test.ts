@@ -4,6 +4,7 @@ import type { SignInSettings } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
 import { release } from '../composition/release.ts';
+import type { Install } from '../lifecycle/lifecycle.ts';
 import type { ColorDepth } from '../logging/terminal.ts';
 import { servedLocally, type LocalServerHost } from './local-server.ts';
 
@@ -20,14 +21,16 @@ interface Options {
   readonly depth?: ColorDepth;
   readonly run?: LocalServerHost['run'];
   readonly signIn?: SignInSettings;
+  readonly install?: Install;
 }
 
-function stoppable(count: () => void, signIn?: SignInSettings): ReturnType<LocalServerHost['run']> {
+function stoppable(count: () => void, signIn?: SignInSettings, install?: Install): ReturnType<LocalServerHost['run']> {
   return Promise.resolve({
     port: 5600,
     mode: signIn === undefined ? 'local' : 'credentials',
     signIn,
     studio: { origin: 'https://studio.on.auto', served: signIn === undefined },
+    install,
     stop: () => {
       count();
       return Promise.resolve();
@@ -35,7 +38,7 @@ function stoppable(count: () => void, signIn?: SignInSettings): ReturnType<Local
   });
 }
 
-function served({ depth = 1, run, signIn }: Options = {}): Served {
+function served({ depth = 1, run, signIn, install }: Options = {}): Served {
   const written: string[] = [];
   const { promise: stopRequested, resolve: stop } = Promise.withResolvers<void>();
   const clock = [1000, 1640];
@@ -69,9 +72,13 @@ function served({ depth = 1, run, signIn }: Options = {}): Served {
       run:
         run ??
         (() =>
-          stoppable(() => {
-            stops += 1;
-          }, signIn)),
+          stoppable(
+            () => {
+              stops += 1;
+            },
+            signIn,
+            install,
+          )),
       stopRequested,
     },
   };
@@ -116,6 +123,19 @@ describe('serving the runtime on this computer', () => {
 
     await expect(servedLocally(local.host)).rejects.toThrow('port 5600 is in use');
     expect(local.written).toHaveLength(1);
+  });
+});
+
+describe('serving the runtime on this computer for the first time', () => {
+  it('says in the ready notice that it sends a usage ping, the first time it starts', async () => {
+    const local = served({ install: { id: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b', isNew: true } });
+
+    const serving = servedLocally(local.host);
+    await expect.poll(() => local.written).toHaveLength(2);
+    local.stop();
+    await serving;
+
+    expect(local.written[1]).toContain('  Auto Runtime sends an anonymous usage ping when it starts.');
   });
 });
 

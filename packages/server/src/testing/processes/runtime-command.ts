@@ -91,6 +91,7 @@ export function spawnRuntimeCommand(
       PATH: process.env['PATH'],
       HOME: home,
       PORT: String(port),
+      DO_NOT_TRACK: '1',
       ...settings,
     },
     stdio: ['pipe', 'pipe', 'pipe'],
