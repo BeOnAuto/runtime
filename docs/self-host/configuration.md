@@ -215,7 +215,7 @@ The folder of `PREDICTION_CACHE_DIR` follows these rules:
 
 ## Usage ping {#usage-ping}
 
-Each time Auto starts, it sends one short message, the usage ping, so that the people who make Auto can count how many copies run and on what. The message is anonymous. It goes to `https://telemetry.on.auto/runtime/start`, a service that [Scarf](https://scarf.sh) runs for Auto, and it holds these facts and nothing else:
+Each time Auto starts, it sends one short message, the usage ping, so that the people who make Auto can count how many copies run and on what. The message is anonymous. It goes to `https://get.on.auto/runtime/start`, a service that [Scarf](https://scarf.sh) runs for Auto, and it holds these facts and nothing else:
 
 | Field          | What it holds                                                                                              |
 | -------------- | ---------------------------------------------------------------------------------------------------------- |

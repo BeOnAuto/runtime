@@ -21,7 +21,7 @@ interface Pings {
   readonly sent: readonly Ping[];
 }
 
-const startPing = 'https://telemetry.on.auto/runtime/start';
+const startPing = 'https://get.on.auto/runtime/start';
 
 const linuxOnArm = { platform: 'linux', arch: 'arm64', versions: { node: '26.11.1' } };
 
@@ -205,7 +205,7 @@ describe('a usage ping that fails', () => {
     };
 
     expect(() => startPingFor(host, { distribution: 'npx' }, ledgerIn(folder)).sent()).not.toThrow();
-    await expect(tried).resolves.toMatch(/^https:\/\/telemetry\.on\.auto\/runtime\/start\?/u);
+    await expect(tried).resolves.toMatch(/^https:\/\/get\.on\.auto\/runtime\/start\?/u);
   });
 });
 

@@ -47,5 +47,5 @@ export function pingsRecordedInto(folder: string): RecordedPings {
 export function startPingOf(distribution: string, install: string): string {
   const { platform, arch, versions } = process;
   const facts = `platform=${platform}&arch=${arch}&node=${versions.node}`;
-  return `https://telemetry.on.auto/runtime/start?version=${release.version}&${facts}&distribution=${distribution}&install=${install}`;
+  return `https://get.on.auto/runtime/start?version=${release.version}&${facts}&distribution=${distribution}&install=${install}`;
 }

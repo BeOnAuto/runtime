@@ -148,7 +148,7 @@ The server calls model providers and the tool servers you configure.
 
 - Behind an outbound proxy, set `NODE_USE_ENV_PROXY=1` and `HTTPS_PROXY`. Set `NO_PROXY` to the hosts to reach directly.
 - For a private certificate authority, mount its certificate and name it with `NODE_EXTRA_CA_CERTS`.
-- At each start the server also sends one anonymous [usage ping](configuration.md#usage-ping) to `telemetry.on.auto`. Where your network blocks it, the server gives up after 3 seconds and runs on. `DO_NOT_TRACK=1` stops it.
+- At each start the server also sends one anonymous [usage ping](configuration.md#usage-ping) to `get.on.auto`. Where your network blocks it, the server gives up after 3 seconds and runs on. `DO_NOT_TRACK=1` stops it.
 
 [Set up a model provider](models.md#behind-an-outbound-proxy-with-a-private-certificate-authority) has an example.
 

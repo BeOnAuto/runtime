@@ -27,7 +27,7 @@ interface Pinging {
   readonly deadlineMs: number;
 }
 
-const startPingEndpoint = 'https://telemetry.on.auto/runtime/start';
+const startPingEndpoint = 'https://get.on.auto/runtime/start';
 
 const usagePingDocumentation = 'https://on.auto/docs/self-host/configuration#usage-ping';
 
