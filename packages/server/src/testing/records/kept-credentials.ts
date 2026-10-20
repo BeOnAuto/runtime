@@ -1,9 +1,19 @@
 import { connectionsFold, connectionsStreamOfOrg } from '@on.auto/connections/testing';
-import { ledgerLayer, sqliteSecretStore } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer, sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { Ledger } from '@on.auto/operations';
+import type { SecretStore } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, Redacted } from 'effect';
 
+import { custodiansOf, secretStoreOver } from '../../database/secret-store.ts';
+
 export const secretsKey = Buffer.alloc(32, 7);
+
+export async function secretStoreInFile(fileName: string, key: Readonly<Uint8Array>): Promise<SecretStore> {
+  return secretStoreOver(
+    await Effect.runPromise(sqliteSecretRows({ fileName })),
+    custodiansOf({ current: Redacted.make(Uint8Array.from(key)) }),
+  );
+}
 
 export async function secretIdOf(fileName: string, org: string, connection: string): Promise<string | undefined> {
   const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
@@ -20,9 +30,7 @@ export interface KeptSecret {
 }
 
 export async function keptSecretOf(fileName: string, id: string): Promise<KeptSecret> {
-  const store = await Effect.runPromise(
-    sqliteSecretStore({ fileName, keys: { current: Redacted.make(Uint8Array.from(secretsKey)) } }),
-  );
+  const store = await secretStoreInFile(fileName, secretsKey);
   const stored = await Effect.runPromise(store.read(id));
   const endings = await Effect.runPromise(store.endingsOf([id]));
   await store.close();

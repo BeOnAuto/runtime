@@ -1,7 +1,7 @@
 import type { AppRuntime } from '@on.auto/api';
 import { makeClientRegistrations, returnAddressOf, type ConnectPages } from '@on.auto/connections';
-import type { SecretStore } from '@on.auto/ledger';
 import type { DispatcherServices } from '@on.auto/operations';
+import type { SecretStore } from '@on.auto/secrets';
 import {
   clientMetadataDocumentOf,
   makeConsentClient,

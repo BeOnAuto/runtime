@@ -6,14 +6,14 @@ import { describe, onTestFinished } from 'vitest';
 import type { RecordedStore } from '../event-store.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
-import { secretsBehaviour } from '../secrets/secrets-behaviour.ts';
+import { keptSecretsBehaviour } from '../secrets/kept-secrets-behaviour.ts';
 import { ledgerBehaviour } from '../testing/ledger-behaviour.ts';
 import type { LedgerEntry } from '../testing/ledger-entry.ts';
 import {
   plainPoolsOn,
   postgresqlEventStore,
   postgresqlLedgerLayer,
-  postgresqlSecretStore,
+  postgresqlSecretRows,
 } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -119,8 +119,8 @@ const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL o
 
 describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   ledgerBehaviour(onPostgreSQL);
-  secretsBehaviour({
+  keptSecretsBehaviour({
     ...onPostgreSQL,
-    secretStoreOn: (database, keys) => postgresqlSecretStore({ pools: plainPoolsOn(database), keys }),
+    secretRowsOn: (database) => postgresqlSecretRows({ pools: plainPoolsOn(database) }),
   });
 });

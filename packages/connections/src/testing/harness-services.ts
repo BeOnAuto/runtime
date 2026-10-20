@@ -1,6 +1,6 @@
 import type { StreamReader, StreamWriter } from '@on.auto/operations';
+import { valuesInTheClear } from '@on.auto/secrets/testing';
 import { makeConsentClient, type ConsentClient, type ConsentClientOptions } from '@on.auto/tool-servers';
-import { leasedRows } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
@@ -25,41 +25,31 @@ export function keptSecrets({
   beforeKeeping = () => Promise.resolve(),
   mostSecretCharacters = 64,
 }: Keeping): KeptSecrets {
-  const rows = leasedRows({ now: nowMillis, mostCharacters: mostSecretCharacters });
-  const endings = new Map<string, string>();
+  const values = valuesInTheClear({ now: nowMillis, mostCharacters: mostSecretCharacters });
+  const ids = { kept: 0 };
   return {
     keep: (value, endsWith) =>
       Effect.andThen(
         Effect.promise(beforeKeeping),
-        Effect.tap(rows.keep(value), (id) =>
-          Effect.sync(() => {
-            if (endsWith !== undefined) {
-              endings.set(id, endsWith);
-            }
-          }),
-        ),
-      ),
-    read: rows.read,
-    replace: (id, version, value) =>
-      Effect.tap(rows.replace(id, version, value), ({ replaced }) =>
-        Effect.sync(() => {
-          if (replaced) {
-            endings.delete(id);
-          }
+        Effect.suspend(() => {
+          const id = `secret-${ids.kept + 1}`;
+          return Effect.as(
+            Effect.tap(values.keep(id, value, endsWith), () =>
+              Effect.sync(() => {
+                ids.kept += 1;
+              }),
+            ),
+            id,
+          );
         }),
       ),
-    claim: rows.claim,
-    endingsOf: (ids) =>
-      Effect.sync(() => new Map([...endings].filter(([id]: readonly [string, string]) => ids.includes(id)))),
-    forget: (id) =>
-      Effect.andThen(
-        rows.forget(id),
-        Effect.sync(() => {
-          endings.delete(id);
-        }),
-      ),
-    values: rows.values,
-    endings: () => new Map(endings),
+    read: values.read,
+    replace: values.replace,
+    claim: values.claim,
+    endingsOf: values.endingsOf,
+    forget: values.forget,
+    values: values.values,
+    endings: values.endings,
   };
 }
 

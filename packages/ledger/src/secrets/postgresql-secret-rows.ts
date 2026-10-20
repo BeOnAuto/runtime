@@ -1,10 +1,10 @@
+import type { SecretRows } from '@on.auto/secrets';
 import { Effect } from 'effect';
 
 import { executorOn } from '../content/postgresql-content.ts';
 import { lostConnectionsLoggedWith } from '../postgresql/lost-connections.ts';
 import type { PoolBounds } from '../postgresql/postgresql-event-store.ts';
-import { keyringOf, type SecretKeys } from './secret-keys.ts';
-import { secretStoreOn, type SecretStore } from './secret-store.ts';
+import { secretRowsOn } from './secret-rows.ts';
 
 export interface SecretConnections {
   query(text: string, values: readonly unknown[]): Promise<{ readonly rows: readonly unknown[] }>;
@@ -12,18 +12,16 @@ export interface SecretConnections {
   end(): Promise<void>;
 }
 
-export interface PostgreSQLSecretStoreOptions {
+export interface PostgreSQLSecretRowsOptions {
   readonly pools: (bounds: PoolBounds) => SecretConnections;
-  readonly keys: SecretKeys;
 }
 
-const connectionsOfTheSecretStore = 2;
+const connectionsOfTheSecretRows = 2;
 
-export function postgresqlSecretStore({ pools, keys }: PostgreSQLSecretStoreOptions): Effect.Effect<SecretStore> {
+export function postgresqlSecretRows({ pools }: PostgreSQLSecretRowsOptions): Effect.Effect<SecretRows> {
   return Effect.map(Effect.context(), (context) => {
-    const keyring = keyringOf(keys);
-    const connections = pools({ max: connectionsOfTheSecretStore });
+    const connections = pools({ max: connectionsOfTheSecretRows });
     connections.on('error', lostConnectionsLoggedWith(context));
-    return secretStoreOn(executorOn(connections), keyring, () => connections.end());
+    return secretRowsOn(executorOn(connections), () => connections.end());
   });
 }

@@ -1,14 +1,14 @@
 import type { RetryStateKeys } from '@on.auto/api';
-import type { SecretKeys, SecretStore } from '@on.auto/ledger';
-import { postgresqlSecretStore } from '@on.auto/ledger/postgresql';
-import { sqliteSecretStore } from '@on.auto/ledger/sqlite3';
+import type { SecretStore } from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, type Context } from 'effect';
 
 import type { Served } from '../lifecycle/lifecycle.ts';
 import { logContentStore, logLedger, logSecretStore } from '../logging/logging.ts';
+import type { SecretsKeySource } from '../settings/secrets-settings.ts';
 import type { Settings } from '../settings/settings.ts';
-import { retryStateKeysOf, secretsKeysOf } from './secrets-keys.ts';
+import { custodiansOf, secretRowsOn, secretStoreOver } from './secret-store.ts';
+import { retryStateKeysOf, secretsKeysOf, type SecretKeys } from './secrets-keys.ts';
 
 export interface LedgerStores {
   readonly secrets: SecretStore;
@@ -16,17 +16,16 @@ export interface LedgerStores {
   readonly withSecretsClosed: (served: Served) => Served;
 }
 
-function secretStoreOn(database: DatabaseSettings, keys: SecretKeys): Effect.Effect<SecretStore> {
-  return database.store === 'postgresql'
-    ? postgresqlSecretStore({ pools: database.pools, keys })
-    : sqliteSecretStore({ fileName: database.file, keys });
-}
-
-function openedAndRotated(database: DatabaseSettings, keys: SecretKeys): Effect.Effect<SecretStore> {
+function openedAndRotated(
+  database: DatabaseSettings,
+  keys: SecretKeys,
+  keyFrom: SecretsKeySource,
+): Effect.Effect<SecretStore> {
   return Effect.gen(function* () {
-    const secrets = yield* secretStoreOn(database, keys);
+    const custodians = custodiansOf(keys);
+    const secrets = secretStoreOver(yield* secretRowsOn(database), custodians);
     const resealed = yield* secrets.rotated();
-    yield* logSecretStore({ kid: secrets.kid, resealed });
+    yield* logSecretStore({ kid: custodians.current.kid, resealed, keyFrom });
     return secrets;
   });
 }
@@ -39,7 +38,7 @@ export async function ledgerStoresOpenedBy(
   const run = Effect.runPromiseWith(context);
   await run(Effect.andThen(logLedger(ledger), logContentStore(content)));
   const keys = secretsKeysOf(secrets);
-  const store = await run(openedAndRotated(database, keys));
+  const store = await run(openedAndRotated(database, keys, secrets.current));
   return {
     secrets: store,
     retryStateKeys: retryStateKeysOf(keys),

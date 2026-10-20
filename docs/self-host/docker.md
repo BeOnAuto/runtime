@@ -82,7 +82,7 @@ What the script does:
 - `--volume auto-runtime-data:/data` keeps the ledger on the named volume when the container is replaced. Without it, Docker gives each container an empty anonymous volume, and its playbooks last only as long as that container.
 - `--env-file auto-runtime.env` passes the settings and secrets. Docker reads the file when it creates the container, so `docker restart auto-runtime` does not pick up a change to it. Run `./start-runtime.sh` instead.
 
-`SECRETS_KEY` stays out of the volume, so a copy of the volume holds no secret anyone can read without it. Without `SECRETS_KEY`, Auto would make a key itself, in `secrets.key` on the volume beside the ledger, where a copy of the volume would carry it. Keep a copy of the key with your other secrets: a secret sealed under a lost key cannot be read again. Where there is no `openssl`, `. ./.env && docker run --rm "$IMAGE" node --print "require('node:crypto').randomBytes(32).toString('base64')"` makes one too.
+`SECRETS_KEY` stays out of the volume, so a copy of the volume holds no secret anyone can read without it. Without `SECRETS_KEY` or `SECRETS_KEY_FILE`, Auto would make a key itself, in `secrets.key` on the volume beside the ledger, where a copy of the volume would carry it. Keep a copy of the key with your other secrets: a secret sealed under a lost key cannot be read again. Where there is no `openssl`, `. ./.env && docker run --rm "$IMAGE" node --print "require('node:crypto').randomBytes(32).toString('base64')"` makes one too.
 
 ### On your own machine, without sign-in {#on-your-own-machine}
 
@@ -172,7 +172,7 @@ In this variant the database holds the ledger, and Auto's container keeps nothin
    echo "SECRETS_KEY=$(openssl rand -base64 32)" >> auto-runtime.env
    ```
 
-   Auto takes `SECRETS_KEY` from `auto-runtime.env`, as in [step 1](#start-the-server). A ledger in PostgreSQL needs it, and Auto stops at start without it.
+   Auto takes `SECRETS_KEY` from `auto-runtime.env`, as in [step 1](#start-the-server). A ledger in PostgreSQL needs it, or `SECRETS_KEY_FILE` naming a file that holds it, and Auto stops at start without either.
 
 3. Save this as `compose.yaml` beside `auto-runtime.env`:
 
@@ -308,7 +308,7 @@ echo "SECRETS_KEY=$(openssl rand -base64 32)" >> auto-runtime.env.next
 mv auto-runtime.env.next auto-runtime.env
 ```
 
-Then replace the container: `./start-runtime.sh` for the single container, or `docker compose up --detach --force-recreate runtime` with Compose. At start Auto seals again under the new key what the old one sealed, and `docker logs auto-runtime`, or `docker compose logs runtime`, says how many: `Secrets are kept sealed under the key <id>, and <count> sealed under the previous key were sealed again under it`. Then delete the `SECRETS_KEY_PREVIOUS` line from `auto-runtime.env` and replace the container once more. [Rotate the secrets key](production.md#rotate-the-secrets-key) covers several servers.
+Then replace the container: `./start-runtime.sh` for the single container, or `docker compose up --detach --force-recreate runtime` with Compose. At start Auto seals again under the new key what the old one sealed, and `docker logs auto-runtime`, or `docker compose logs runtime`, says how many: `Secrets are kept in the ledger's database, sealed under the key <id> that SECRETS_KEY holds, and <count> sealed under the previous key were sealed again under it`. Then delete the `SECRETS_KEY_PREVIOUS` line from `auto-runtime.env` and replace the container once more. [Rotate the secrets key](production.md#rotate-the-secrets-key) covers several servers.
 
 ## Back up and restore {#back-up-and-restore}
 

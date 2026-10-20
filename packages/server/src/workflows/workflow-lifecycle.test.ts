@@ -69,7 +69,7 @@ describe('main with workflows', () => {
       `INFO The ledger is kept in the file ${ledger.fileName}`,
       "INFO Content is kept in the ledger's database",
       expect.stringMatching(
-        /^INFO Secrets are kept sealed under the key [\da-f]{16}, and 0 sealed under the previous key were sealed again under it$/u,
+        /^INFO Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the file \S+\/secrets\.key holds, and 0 sealed under the previous key were sealed again under it$/u,
       ),
       "INFO Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window",
       `INFO Prediction functions run in this server: a playbook keeps at most 32 active, each builds at most 4 times a day, and model processes may run at most 4 at once, at most 2 of them for the builds being scored, with 1,280 MiB of data each, which nothing bounds, since prlimit is not on the path, reading the files of their models from ${ledger.cacheDirectory}`,

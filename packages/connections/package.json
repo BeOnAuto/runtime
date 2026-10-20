@@ -22,6 +22,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@on.auto/secrets": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

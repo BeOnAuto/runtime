@@ -8,8 +8,8 @@ import {
   type RuntimeAccess,
 } from '@on.auto/connections';
 import { accessModeOf } from '@on.auto/identity';
-import type { SecretStore } from '@on.auto/ledger';
 import type { DispatcherServices } from '@on.auto/operations';
+import type { SecretStore } from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';

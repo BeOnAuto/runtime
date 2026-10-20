@@ -3,7 +3,7 @@ import { Schema } from 'effect';
 
 import { sqliteContent } from '../content/content-dialects.ts';
 import { createdContentTables } from '../content/content-tables.ts';
-import { createdSecretTable } from '../secrets/sealed-secrets.ts';
+import { createdSecretTable } from '../secrets/kept-secrets.ts';
 import { createMissingIndexes, type PlaybookIndex, type IndexExecutor } from './missing-indexes.ts';
 
 function prefixThroughSlashes(count: number): string {

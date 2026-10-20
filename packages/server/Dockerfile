@@ -19,6 +19,7 @@ COPY packages/object-storage/package.json packages/object-storage/
 COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
 COPY packages/providers/package.json packages/providers/
+COPY packages/secrets/package.json packages/secrets/
 COPY packages/tool-servers/package.json packages/tool-servers/
 COPY packages/workflow-engine/package.json packages/workflow-engine/
 COPY packages/workflow-host/package.json packages/workflow-host/
@@ -72,6 +73,7 @@ COPY packages/object-storage/src packages/object-storage/src
 COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src
 COPY packages/providers/src packages/providers/src
+COPY packages/secrets/src packages/secrets/src
 COPY packages/server/src packages/server/src
 COPY packages/tool-servers/src packages/tool-servers/src
 COPY packages/workflow-engine/src packages/workflow-engine/src

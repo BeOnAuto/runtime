@@ -56,7 +56,7 @@ Restrict access to the database, and to its backups, accordingly.
 
 ## Keep the secrets key
 
-The runtime seals the secrets it keeps in the ledger's database under `SECRETS_KEY`, as [Secrets at rest](security.md#secrets-at-rest) describes. A container sets it from your platform's secret store, as it does the other secrets, so the key is on no disk the ledger is on and in no backup of it; a ledger in PostgreSQL cannot start without it, and every server that shares the database takes the same key. Make one with either command, and keep a copy where your other secrets are kept, since a secret sealed under a lost key cannot be read again:
+The runtime seals the secrets it keeps in the ledger's database under the secrets key, as [Secrets at rest](security.md#secrets-at-rest) describes. A container takes it from your platform's secret store, as it does the other secrets: in `SECRETS_KEY`, or in a file the platform mounts into the container, whose path `SECRETS_KEY_FILE` names. A file a setting names is read as the platform mounts it, and the file the server makes beside a SQLite ledger is its owner's alone. Either way the key is on no disk the ledger is on and in no backup of it; a ledger in PostgreSQL cannot start without one of them, and every server that shares the database takes the same key. Make one with either command, and keep a copy where your other secrets are kept, since a secret sealed under a lost key cannot be read again:
 
 ```bash
 openssl rand -base64 32
@@ -65,7 +65,7 @@ docker run --rm docker.on.auto/onauto/runtime:0.9.1 node --print "require('node:
 
 ### Rotate the secrets key
 
-To replace the key, give its value to `SECRETS_KEY_PREVIOUS`, a new key to `SECRETS_KEY`, and restart the server. At start it reads with the old key what the old key sealed, seals it again under the new one, and logs `Secrets are kept sealed under the key <id>, and <count> sealed under the previous key were sealed again under it`, where the id is the new key's, the first 16 hex characters of its SHA-256. Then remove `SECRETS_KEY_PREVIOUS` and restart it again: nothing is sealed under the old key any more. With several servers, stop them all and start them with both keys, as for an [upgrade](#upgrades), since a server that still runs with the old key alone cannot read what the new key seals.
+To replace the key, give the old key to `SECRETS_KEY_PREVIOUS`, or the path of its file to `SECRETS_KEY_FILE_PREVIOUS`, the new key to `SECRETS_KEY` or the path of its file to `SECRETS_KEY_FILE`, and restart the server. At start it unwraps with the old key the key of each secret the old key wrapped, wraps it again under the new one, leaving the secrets themselves as they are, and logs `Secrets are kept in the ledger's database, sealed under the key <id> that SECRETS_KEY holds, and <count> sealed under the previous key were sealed again under it`, or `that the file <path> holds` for a key in a file, where the id is the new key's, the first 16 hex characters of its SHA-256. Then remove the previous key's setting and restart it again: nothing is sealed under the old key any more. With several servers, stop them all and start them with both keys, as for an [upgrade](#upgrades), since a server that still runs with the old key alone cannot read what the new key seals.
 
 ## Run it as an always-on service
 
