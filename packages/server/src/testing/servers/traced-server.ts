@@ -8,7 +8,7 @@ import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { receivingOtlp, type OtlpReceiver } from '../telemetry/otlp-receiver.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
-import { alpha } from './reasoning-server.ts';
+import { alpha, loopbackSettingsOver } from './reasoning-server.ts';
 
 export interface TracedServer {
   readonly receiver: OtlpReceiver;
@@ -44,10 +44,7 @@ export async function servingTraced(environment: Readonly<Record<string, string>
   const { fetch } = provider();
   const server = await startServer(
     {
-      HOST: '127.0.0.1',
-      PORT: '0',
-      LEDGER_FILE: ledger.fileName,
-      PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+      ...loopbackSettingsOver(ledger),
       ANTHROPIC_API_KEY: 'k',
       GRAPH_API_KEY: toolKey,
       TOOL_SERVERS: JSON.stringify({

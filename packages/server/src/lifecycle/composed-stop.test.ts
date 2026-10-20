@@ -10,6 +10,7 @@ import {
 } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
 import { startServer, type RunningServer } from './lifecycle.ts';
 
@@ -24,6 +25,7 @@ function composedWithALongShutdown(environment: Readonly<Record<string, string>>
       PORT: '0',
       LEDGER_FILE: ledger.fileName,
       PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+      ...noConsentThroughAuto,
       ...environment,
     },
     { ...compositionRoot, shutdownTimeoutMs: longerThanTheTestMs },

@@ -5,6 +5,7 @@ import { startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
+import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 
 const verdict = [
   '---',
@@ -39,6 +40,7 @@ async function executedVerdict(models: Readonly<Record<string, string>>): Promis
       PORT: '0',
       LEDGER_FILE: ledger.fileName,
       PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+      ...noConsentThroughAuto,
       ...models,
     },
     compositionRoot,

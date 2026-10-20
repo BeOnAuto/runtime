@@ -92,6 +92,7 @@ export function spawnRuntimeCommand(
       HOME: home,
       PORT: String(port),
       DO_NOT_TRACK: '1',
+      AUTO_CLIENTS: 'false',
       ...settings,
     },
     stdio: ['pipe', 'pipe', 'pipe'],

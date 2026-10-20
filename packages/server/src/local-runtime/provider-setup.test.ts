@@ -6,6 +6,7 @@ import { startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { request } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
+import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { providerSetupFor, restartWordsFor } from './local-control.ts';
 
 const setup = providerSetupFor('/Users/ada/.auto-runtime', restartWordsFor({ port: undefined, version: '0.9.1' }));
@@ -23,6 +24,7 @@ beforeEach(async () => {
       PORT: '0',
       LEDGER_FILE: ledger.fileName,
       PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+      ...noConsentThroughAuto,
     },
     { ...compositionRoot, localServingIn: () => ({ providerSetup: setup }) },
   );
