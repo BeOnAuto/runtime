@@ -41,6 +41,7 @@ export function spawnServer(entry: string, env: Readonly<Record<string, string>>
     env: {
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
       PREDICTION_CACHE_DIR: folderOfTheTest('auto-runtime-test-cache-'),
+      DO_NOT_TRACK: '1',
       ...env,
     },
     stdio: ['ignore', 'pipe', 'pipe'],

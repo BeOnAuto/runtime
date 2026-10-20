@@ -134,7 +134,7 @@ describe('a key the configuration file does not hold beside the tool servers', (
 
     expect(errorFrom({ CONFIG_FILE: path })).toBe(
       `ConfigFileInvalid: The configuration file ${path} is invalid: ${path}:2:20 tool_server_names: Not a setting this file holds; ` +
-        'it holds allowed_origins, studio_origin, serve_studio, api_keys, access_mode, model_gateways, model_aliases, declared_models, allowed_models, tool_servers, connections',
+        'it holds allowed_origins, studio_origin, serve_studio, api_keys, access_mode, model_gateways, model_aliases, declared_models, allowed_models, tool_servers, connections, usage_ping',
     );
   });
 });

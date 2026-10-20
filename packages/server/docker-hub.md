@@ -13,7 +13,7 @@ echo 'PUBLIC_URL=http://localhost:5555' > auto-runtime.env
 docker volume create auto-runtime-data
 docker run --detach --name auto-runtime --restart unless-stopped \
   --publish 127.0.0.1:5555:5555 --env-file auto-runtime.env --volume auto-runtime-data:/data \
-  onauto/runtime:latest
+  docker.on.auto/onauto/runtime:latest
 curl http://localhost:5555/health
 ```
 
@@ -39,6 +39,8 @@ claude mcp add --transport http auto-runtime http://localhost:5555/mcp
 
 Every setting is an environment variable; The [configuration reference](https://on.auto/docs/self-host/configuration) lists them all, with the configuration file for tool servers, gateways and model aliases. [Troubleshooting](https://on.auto/docs/self-host/troubleshooting) covers the common problems.
 
+Pull the image through `docker.on.auto/onauto/runtime`: it is this same image, and [Scarf](https://scarf.sh) counts each pull for Auto. When it starts, the runtime sends one anonymous usage ping: its version, platform, processor, Node.js version, that it runs from the image, and a random install id kept on the `/data` volume, never anything of its work. `DO_NOT_TRACK=1` turns it off. [Usage ping](https://on.auto/docs/self-host/configuration#usage-ping) lists exactly what it sends.
+
 ## Tags
 
 | Tag                      | Points to                              |
@@ -56,3 +58,5 @@ Every tag is published for `linux/amd64` and `linux/arm64`, built in GitHub Acti
 ## License
 
 Source-available under the [Elastic License 2.0](https://github.com/BeOnAuto/runtime/blob/main/LICENSE).
+
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.on.auto/a.png?x-pxid=0d7debcd-ffc1-4bad-8a19-78a38c6bcd57&page=dockerhub-description" alt="" width="1" height="1" />

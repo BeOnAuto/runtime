@@ -7,7 +7,7 @@ This page lists every setting of the runtime, the configuration file, and the to
 - Every setting is an environment variable. Keys and other secrets go in the environment alone.
 - A container takes its variables from its platform, or from a file of them with `docker run --env-file`.
 - `npx @on.auto/runtime` also reads `.env` in the folder it starts in. A variable set in the shell wins over `.env`.
-- Settings that are lists or maps, `ACCESS_MODE` and the two settings of Studio can also go in a YAML configuration file: `model_gateways`, `model_aliases`, `declared_models`, `allowed_models`, `tool_servers`, `connections`, `api_keys`, `access_mode`, `allowed_origins`, `studio_origin` and `serve_studio`.
+- Settings that are lists or maps, `ACCESS_MODE`, the two settings of Studio and `USAGE_PING` can also go in a YAML configuration file: `model_gateways`, `model_aliases`, `declared_models`, `allowed_models`, `tool_servers`, `connections`, `api_keys`, `access_mode`, `allowed_origins`, `studio_origin`, `serve_studio` and `usage_ping`.
 - `CONFIG_FILE` names that file. `npx @on.auto/runtime` reads `auto-runtime.yaml` in the folder it starts in when it is there, unless `.env` or the shell sets `CONFIG_FILE`. A container reads a file only when `CONFIG_FILE` names it, as [Use a configuration file](docker.md#use-a-configuration-file) shows.
 - Each key of the file stands for the environment variable of the same name in upper case. A variable that is set wins over the key, whole: `MODEL_GATEWAYS` replaces the file's `model_gateways`, and the two are not merged.
 - Precedence, highest first: the shell, `.env` (with `npx`), the configuration file, the default.
@@ -77,6 +77,7 @@ Inside an argument, only the value is judged, never the name the argument gives 
 | The requests interaction functions may keep open           | `INTERACTION_OPEN_REQUESTS`                                                                                                                  | [Interaction functions](#interaction-functions)                                         |
 | The model processes and the builds of prediction functions | `PREDICTION_PROCESSES`, `PREDICTION_PROCESS_MEMORY`, `PREDICTION_BUILDS_AT_ONCE`, `PREDICTION_BUILDS_PER_DAY` and `PREDICTION_MAX_FUNCTIONS` | [Prediction functions](#prediction-functions)                                           |
 | The folder prediction functions keep model files in        | `PREDICTION_CACHE_DIR`                                                                                                                       | [Prediction functions](#prediction-functions)                                           |
+| No usage ping when Auto starts                             | `DO_NOT_TRACK=1` or `USAGE_PING=false`                                                                                                       | [Usage ping](#usage-ping)                                                               |
 
 `list_models` (`GET /v1/orgs/{org}/models`, and the MCP tool of the same name) shows the models the server can call, leaving out what `allowed_models` does not allow. [Listing the models](../reference/model-settings.md#listing-the-models) sets out how it builds the list, and [Allowed models](../reference/model-settings.md#allowed-models) what a definition that names a model outside `allowed_models` returns.
 
@@ -93,6 +94,7 @@ Every setting is an environment variable. The tables below group them by area.
 | `CONFIG_FILE` | none; `auto-runtime.yaml` with `npx` when it is in the folder | The configuration file, absolute or relative to the working directory                                                                                                                                                                                                      |
 | `LOG_FORMAT`  | `json`, `console` with `npx`                                  | `json`: one JSON object per line on stderr. `pretty`: lines of text for a person. `console`: a time, a mark for the level and the message, in color at a terminal                                                                                                          |
 | `LOG_LEVEL`   | `info`, `error` with `npx`                                    | The least level logged: `debug`, `info`, `warn` or `error`                                                                                                                                                                                                                 |
+| `USAGE_PING`  | `true`                                                        | `true` or `false`: whether Auto sends its anonymous [usage ping](#usage-ping) when it starts. `DO_NOT_TRACK` and `SCARF_NO_ANALYTICS` turn it off too; `usage_ping` in the file                                                                                            |
 
 ### Sign-in and access
 
@@ -210,6 +212,46 @@ The folder of `PREDICTION_CACHE_DIR` follows these rules:
 - It refuses to start, naming the setting, when the folder cannot be made, belongs to another user, or other users may write to it. A folder another user may write to would let that user change a model before it is loaded.
 - The files found in the folder at start are read again, and kept only when their bytes match the digest in their name.
 - Each server keeps at most 1 GiB of model files and 1 GiB of rows, by its own count. Give two servers on one machine a folder each.
+
+## Usage ping {#usage-ping}
+
+Each time Auto starts, it sends one short message, the usage ping, so that the people who make Auto can count how many copies run and on what. The message is anonymous. It goes to `https://get.on.auto/runtime/start`, a service that [Scarf](https://scarf.sh) runs for Auto, and it holds these facts and nothing else:
+
+| Field          | What it holds                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| `version`      | The release of Auto, such as `0.13.0`                                                                      |
+| `platform`     | The operating system, such as `linux` or `darwin` (macOS)                                                  |
+| `arch`         | The kind of processor, such as `x64` or `arm64`                                                            |
+| `node`         | The version of Node.js that runs Auto                                                                      |
+| `distribution` | How Auto was installed: `npx` for the npm package, `docker` for the image, `source` for a copy of the code |
+| `install`      | A random id that Auto makes the first time it starts, so that a copy started many times counts once        |
+
+What it never sends:
+
+- your playbooks, definitions, runs or anything they hold;
+- prompts, model answers, or anything about the models you use;
+- API keys, passwords or other secrets;
+- your settings, names, email addresses or file paths.
+
+Like any request on the internet, the message comes from an address. Scarf uses that address to look up the company it belongs to, and does not store the address.
+
+Auto keeps the install id in a file named `install-id`, beside the ledger file, as it keeps `secrets.key`: `~/.auto-runtime/install-id` with `npx`, and on the `/data` volume in the image. Where the ledger is in PostgreSQL, the file is in `~/.auto-runtime` in the home folder of the user that runs Auto. Delete the file and Auto makes a new id at its next start. Where Auto cannot write the file, it sends the message without an id.
+
+The first time Auto makes the id, it says so in one line when it is ready, with how to turn the ping off. While the ping is on, the links to Studio in that ready message and on the page at `http://localhost:5555` carry the id, and say which of the two they came from, so that visits to Studio from one copy count as one.
+
+The ping never holds up a start or a stop: Auto gives up on it after 3 seconds, or as soon as it stops, and a ping that fails changes nothing and is not logged. Pulls of the image through `docker.on.auto`, as in [Run with Docker](docker.md#the-image), are counted by Scarf too.
+
+### Turn the usage ping off {#turn-the-usage-ping-off}
+
+Any one of these turns it off. Auto then sends nothing, makes no install id, and puts none in its links to Studio:
+
+- `DO_NOT_TRACK=1`, the setting many tools read to stop sending usage data. Any value other than empty, `0` or `false` counts;
+- `SCARF_NO_ANALYTICS=true`;
+- `USAGE_PING=false`, or `usage_ping: false` in the configuration file.
+
+Put the line where Auto reads its settings: in `~/.auto-runtime/.env` for the Auto your agent starts, in the `.env` of the folder you start `npx @on.auto/runtime` in, or in `auto-runtime.env` for a container. Then restart Auto.
+
+`pnpm dev`, which runs Auto from a copy of its code and starts it again at every save, always turns the ping off.
 
 ## Tool servers
 

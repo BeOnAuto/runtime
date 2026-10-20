@@ -6,7 +6,13 @@ export { listensOnlyOnLoopback } from './access/loopback.ts';
 export { InvalidApiKeysError } from './keys/invalid-api-keys-error.ts';
 export { ReachableWithoutCredentialsError } from './access/reachable-without-credentials-error.ts';
 export { pageOriginsOf, type PageSettings } from './access/page-origins.ts';
-export { defaultStudioOrigin, servedStudioPath, studioBaseOf, type StudioSettings } from './access/studio.ts';
+export {
+  defaultStudioOrigin,
+  servedStudioPath,
+  studioBaseOf,
+  studioLinkOf,
+  type StudioSettings,
+} from './access/studio.ts';
 export { isRefusal, isSignedInPerson, type Authentication, type Principal, type Refusal } from './access/principal.ts';
 export { runKeyCommand, type Console as KeyCommandConsole } from './key-command/run-key-command.ts';
 export { UnusableIdentityServiceError } from './identity-service/unusable-identity-service-error.ts';

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Auto Runtime configuration file",
-  "description": "The settings of Auto Runtime that are lists or maps, where Studio comes from and a declared local mode, read from the file that CONFIG_FILE names. Each key stands for the environment variable of the same name in upper case, which wins over it. Secrets are written as references such as ${GATEWAY_API_KEY}.",
+  "description": "The settings of Auto Runtime that are lists or maps, where Studio comes from, a declared local mode and the usage ping, read from the file that CONFIG_FILE names. Each key stands for the environment variable of the same name in upper case, which wins over it. Secrets are written as references such as ${GATEWAY_API_KEY}.",
   "type": "object",
   "properties": {
     "allowed_origins": {
@@ -584,6 +584,10 @@
       },
       "additionalProperties": false,
       "description": "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it"
+    },
+    "usage_ping": {
+      "type": "boolean",
+      "description": "Whether the runtime sends its anonymous usage ping when it starts: its release, the operating system, the processor, the version of Node.js, how it was installed and a random install id, and nothing of its work. On when left out; DO_NOT_TRACK or SCARF_NO_ANALYTICS in the environment turns it off too. USAGE_PING wins over it"
     }
   },
   "additionalProperties": false,

@@ -33,6 +33,7 @@ async function started(settings: Readonly<Record<string, string>> = {}): Promise
       PATH: process.env['PATH'],
       HOME: home,
       PORT: '0',
+      DO_NOT_TRACK: '1',
       ...settings,
     },
     stdio: ['ignore', 'pipe', 'pipe'],

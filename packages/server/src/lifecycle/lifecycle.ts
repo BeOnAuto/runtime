@@ -15,7 +15,7 @@ import {
   type SignInSettings,
   type StudioSettings,
 } from '@on.auto/identity';
-import { Data, Effect, Layer } from 'effect';
+import { Data, Effect, Function, Layer } from 'effect';
 
 import {
   logAccessMode,
@@ -37,11 +37,25 @@ class StartupError extends Data.TaggedError('StartupError')<{
   readonly message: string;
 }> {}
 
+export interface Install {
+  readonly id: string;
+  readonly isNew: boolean;
+}
+
+export interface StartPing {
+  readonly installId: () => string | undefined;
+  readonly sent: () => Install | undefined;
+  readonly stop: () => void;
+}
+
+export type UsagePing = (settings: Pick<Settings, 'usagePing' | 'ledger'>) => StartPing | undefined;
+
 export interface RunningServer {
   readonly port: number;
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
   readonly studio: StudioSettings;
+  readonly install: Install | undefined;
   stop(): Promise<void>;
 }
 
@@ -68,6 +82,7 @@ export interface ServerOptions<R> {
   readonly shutdownTimeoutMs: number;
   readonly exitDeadlineMs: number;
   readonly localServingIn?: (mode: AccessMode) => LocalServing;
+  readonly usagePing?: UsagePing;
 }
 
 export function servedBy(routes: readonly RegisterRoutes[]): Served {
@@ -136,9 +151,10 @@ interface Answering<R> {
   readonly runtime: AppRuntime<R>;
   readonly telemetry: Telemetry;
   readonly local: LocalServing | undefined;
+  readonly startPing: StartPing;
 }
 
-function apiOf<R>({ settings, authenticator, routes, runtime, telemetry, local }: Answering<R>): ApiHandler {
+function apiOf<R>({ settings, authenticator, routes, runtime, telemetry, local, startPing }: Answering<R>): ApiHandler {
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
     studio: servedStudioOf(settings, {
@@ -153,8 +169,15 @@ function apiOf<R>({ settings, authenticator, routes, runtime, telemetry, local }
     },
     ...(telemetry.requests === undefined ? {} : { requests: telemetry.requests }),
     ...(local?.runtimeControl === undefined ? {} : { runtimeControl: local.runtimeControl }),
+    installId: startPing.installId,
   });
 }
+
+const noStartPing: StartPing = {
+  installId: Function.constUndefined,
+  sent: Function.constUndefined,
+  stop: Function.constVoid,
+};
 
 async function started<R>({ settings, authenticator, telemetry, options }: Starting<R>): Promise<RunningServer> {
   const local = options.localServingIn?.(authenticator.mode);
@@ -170,7 +193,8 @@ async function started<R>({ settings, authenticator, telemetry, options }: Start
     runtime,
     () => settings.publicUrl ?? ownOriginOf(settings.host, listening.port),
   );
-  const api = apiOf({ settings, authenticator, routes: served.routes, runtime, telemetry, local });
+  const startPing = options.usagePing?.(settings) ?? noStartPing;
+  const api = apiOf({ settings, authenticator, routes: served.routes, runtime, telemetry, local, startPing });
   const server = createHttpServer(api.listener);
   try {
     await listen(server, settings.port, settings.host);
@@ -181,13 +205,16 @@ async function started<R>({ settings, authenticator, telemetry, options }: Start
     throw error;
   }
   listening.port = tcpPort(server.address());
+  const install = startPing.sent();
   let stopping: Promise<void> | undefined;
   return {
     port: listening.port,
     mode: authenticator.mode,
     signIn: settings.signIn,
     studio: settings.studio,
+    install,
     stop: async () => {
+      startPing.stop();
       stopping ??= shutDown(
         server,
         {

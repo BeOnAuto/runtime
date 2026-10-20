@@ -52,7 +52,7 @@ RUN case "$AZURE_IDENTITY" in \
 
 FROM node:26.11.1-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0
 LABEL org.opencontainers.image.licenses="Elastic-2.0"
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=5555
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=5555 RUNTIME_DISTRIBUTION=docker
 WORKDIR /app
 COPY --from=dependencies /app ./
 COPY LICENSE ./

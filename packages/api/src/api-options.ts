@@ -15,4 +15,5 @@ export interface ApiOptions {
   readonly reportIncident: ReportIncident;
   readonly requests?: MiddlewareHandler<ApiEnv>;
   readonly runtimeControl?: RuntimeControl;
+  readonly installId?: () => string | undefined;
 }

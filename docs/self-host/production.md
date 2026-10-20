@@ -60,7 +60,7 @@ The runtime seals the secrets it keeps in the ledger's database under `SECRETS_K
 
 ```bash
 openssl rand -base64 32
-docker run --rm onauto/runtime:0.9.1 node --print "require('node:crypto').randomBytes(32).toString('base64')"
+docker run --rm docker.on.auto/onauto/runtime:0.9.1 node --print "require('node:crypto').randomBytes(32).toString('base64')"
 ```
 
 ### Rotate the secrets key
@@ -134,7 +134,7 @@ To see where requests, runs and calls of models and tools spent their time, [sen
 
 ## Upgrades
 
-Pin a full version, such as `onauto/runtime:0.9.1`, and upgrade on purpose:
+Pin a full version, such as `docker.on.auto/onauto/runtime:0.9.1`, and upgrade on purpose:
 
 1. Read the [release notes](https://github.com/BeOnAuto/runtime/releases).
 2. Pull the new tag. With the files from [Run with Docker](docker.md#upgrade), change the `IMAGE` line of `.env`.
@@ -148,6 +148,7 @@ The server calls model providers and the tool servers you configure.
 
 - Behind an outbound proxy, set `NODE_USE_ENV_PROXY=1` and `HTTPS_PROXY`. Set `NO_PROXY` to the hosts to reach directly.
 - For a private certificate authority, mount its certificate and name it with `NODE_EXTRA_CA_CERTS`.
+- At each start the server also sends one anonymous [usage ping](configuration.md#usage-ping) to `get.on.auto`. Where your network blocks it, the server gives up after 3 seconds and runs on. `DO_NOT_TRACK=1` stops it.
 
 [Set up a model provider](models.md#behind-an-outbound-proxy-with-a-private-certificate-authority) has an example.
 

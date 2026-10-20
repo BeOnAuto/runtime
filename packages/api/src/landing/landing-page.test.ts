@@ -34,22 +34,40 @@ describe('the root of the server, opened in a browser', () => {
     expect(page).toContain('<span class="address">127.0.0.1:9090</span>');
   });
 
-  it('opens the studio on this server', async () => {
+  it('is served without a key', async () => {
+    const { handler } = await operationServer();
+
+    expect((await open(handler)).status).toBe(200);
+  });
+});
+
+describe('the studio the page at the root of the server opens', () => {
+  it('opens the studio on this server, from this page', async () => {
     const page = await (await open(createTestHandler().handler)).text();
 
-    expect(page).toContain('href="https://studio.on.auto/?server=http%3A%2F%2Flocalhost%3A5555"');
+    expect(page).toContain('href="https://studio.on.auto/?server=http%3A%2F%2Flocalhost%3A5555&amp;src=runtime-page"');
   });
 
   it('opens the Studio this server serves, where it serves one', async () => {
     const page = await (await open(createTestHandler({ studio: servedStudio }).handler)).text();
 
-    expect(page).toContain('href="http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555"');
+    expect(page).toContain(
+      'href="http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555&amp;src=runtime-page"',
+    );
   });
 
-  it('is served without a key', async () => {
-    const { handler } = await operationServer();
+  it('names the install of this server in the studio it opens, once the server has one', async () => {
+    const install: { id: string | undefined } = { id: undefined };
+    const { handler } = createTestHandler({ installId: () => install.id });
 
-    expect((await open(handler)).status).toBe(200);
+    const before = await (await open(handler)).text();
+    install.id = '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b';
+    const after = await (await open(handler)).text();
+
+    expect(before).toContain('?server=http%3A%2F%2Flocalhost%3A5555&amp;src=runtime-page"');
+    expect(after).toContain(
+      '?server=http%3A%2F%2Flocalhost%3A5555&amp;src=runtime-page&amp;install=6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b"',
+    );
   });
 });
 
@@ -108,7 +126,7 @@ describe('what the page at the root of the server loads', () => {
     const page = await (await open(createTestHandler().handler)).text();
 
     expect(page.match(/https?:\/\/[^"')\s]+/gu)).toEqual([
-      'https://studio.on.auto/?server=http%3A%2F%2Flocalhost%3A5555',
+      'https://studio.on.auto/?server=http%3A%2F%2Flocalhost%3A5555&amp;src=runtime-page',
     ]);
   });
 });

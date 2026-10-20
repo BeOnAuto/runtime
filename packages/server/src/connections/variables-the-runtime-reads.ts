@@ -6,6 +6,7 @@ import { secretsVariables } from '../settings/secrets-settings.ts';
 import { workflowVariables } from '../settings/workflow-settings.ts';
 import { studioVariables } from '../studio/studio-settings.ts';
 import { telemetryVariables } from '../telemetry/telemetry-settings.ts';
+import { usagePingVariables } from '../usage-ping/usage-ping-settings.ts';
 import { variablesOfTheLibraries } from './variables-of-the-libraries.ts';
 
 export const variablesTheRuntimeReads: readonly string[] = [
@@ -16,6 +17,7 @@ export const variablesTheRuntimeReads: readonly string[] = [
   ...contentVariables,
   ...workflowVariables,
   ...telemetryVariables,
+  ...usagePingVariables,
   ...functionVariables,
   ...variablesOfTheLibraries,
 ];
