@@ -251,6 +251,8 @@ Any one of these turns it off. Auto then sends nothing, makes no install id, and
 
 Put the line where Auto reads its settings: in `~/.auto-runtime/.env` for the Auto your agent starts, in the `.env` of the folder you start `npx @on.auto/runtime` in, or in `auto-runtime.env` for a container. Then restart Auto.
 
+`pnpm dev`, which runs Auto from a copy of its code and starts it again at every save, always turns the ping off.
+
 ## Tool servers
 
 A tool server gives functions tools to call. It comes from one of two places: an entry under `tool_servers` in the configuration file, which this section describes, or a [connection](#connections) a person added to an org. Add an entry under `tool_servers`; `TOOL_SERVERS`, the same list as JSON, wins over it. [Add a tool server](tool-servers.md) walks through adding one and checking it.

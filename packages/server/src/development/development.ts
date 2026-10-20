@@ -29,6 +29,8 @@ interface Serving {
 
 const stopWithRunner = fileURLToPath(new URL('stop-with-runner.ts', import.meta.url));
 
+const usagePingOff = { USAGE_PING: 'false' };
+
 function serverCommand(run: DevelopmentRun, output: Written): ChildCommand {
   return {
     command: run.execPath,
@@ -37,7 +39,7 @@ function serverCommand(run: DevelopmentRun, output: Written): ChildCommand {
       stopWithRunner,
       run.setup.serverEntry,
     ],
-    environment: { ...run.environment, ...rootConfigFile(run) },
+    environment: { ...run.environment, ...rootConfigFile(run), ...usagePingOff },
     stdin: 'pipe',
     stdout: output,
     stderr: 'inherit',

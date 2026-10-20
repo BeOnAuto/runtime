@@ -21,7 +21,7 @@ pnpm typecheck:watch  # TypeScript over the whole repo
 pnpm check            # everything CI checks; run it before you push
 ```
 
-Node runs the TypeScript sources directly, so there's no build step. `pnpm dev` runs in local mode, which trusts every request on your machine, with no sign-in; `PUBLIC_URL=http://localhost:5555` in `.env` signs you in through the Auto identity service when your agent connects.
+Node runs the TypeScript sources directly, so there's no build step. `pnpm dev` never sends the [usage ping](docs/self-host/configuration.md#usage-ping), and runs in local mode, which trusts every request on your machine, with no sign-in; `PUBLIC_URL=http://localhost:5555` in `.env` signs you in through the Auto identity service when your agent connects.
 
 ## Documentation
 
