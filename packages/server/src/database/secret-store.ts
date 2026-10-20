@@ -11,7 +11,7 @@ import {
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import type { Effect } from 'effect';
 
-import type { SecretKeys } from '../settings/secrets-settings.ts';
+import type { SecretKeys } from './secrets-keys.ts';
 
 export function custodiansOf({ current, previous }: SecretKeys): Custodians {
   return {

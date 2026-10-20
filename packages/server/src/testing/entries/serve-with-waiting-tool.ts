@@ -20,7 +20,7 @@ await runServer<DispatcherServices>(
         servedBy(
           routesServing([...playbookOperations, waitForeverAnnouncedIn(process.env)], {
             identityIssuer: settings.identityIssuer,
-            retryStateKeys: retryStateKeysOf(secretsKeysOf({ key: 'made-at-start' })),
+            retryStateKeys: retryStateKeysOf(secretsKeysOf({ current: { from: 'start' }, previous: undefined })),
           })(runtime),
         ),
     }),

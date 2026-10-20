@@ -16,6 +16,10 @@ function errorFrom(environment: Environment): unknown {
 
 const { entry } = createApiKey({ id: 'ci-1', org: 'acme', permissions: ['org:read'], playbooks: '*' });
 
+function aKeyFileAt(file: string) {
+  return { current: { from: 'file', setting: 'SECRETS_KEY_FILE', file, madeByTheServer: true }, previous: undefined };
+}
+
 const defaultPrediction = {
   processes: 4,
   processMemoryMebibytes: 1280,
@@ -43,7 +47,7 @@ describe('readSettings', () => {
       signIn: undefined,
       studio: { origin: 'https://studio.on.auto', served: false },
       ledger: { store: 'sqlite', file: 'data/ledger.db' },
-      secrets: { key: 'in-a-file', file: 'data/secrets.key' },
+      secrets: aKeyFileAt('data/secrets.key'),
       content: { store: 'ledger' },
       proxy: { enabled: false, environment: {} },
       logFormat: 'json',
@@ -102,7 +106,7 @@ const everySettingRead = {
   identityIssuer: 'https://identity.example',
   signIn: { issuer: 'https://identity.example', publicUrl: 'https://runtime.example.com' },
   ledger: { store: 'sqlite', file: '/data/ledger.db' },
-  secrets: { key: 'in-a-file', file: '/data/secrets.key' },
+  secrets: aKeyFileAt('/data/secrets.key'),
   content: {
     store: 'object-storage',
     location: { bucket: 'playbook-content', prefix: 'production' },
@@ -156,7 +160,9 @@ describe('readSettings with empty values', () => {
         API_KEYS: '',
         LEDGER_FILE: '',
         SECRETS_KEY: '',
+        SECRETS_KEY_FILE: '',
         SECRETS_KEY_PREVIOUS: '',
+        SECRETS_KEY_FILE_PREVIOUS: '',
         CONTENT_STORE_URL: '',
         LOG_FORMAT: '',
         LOG_LEVEL: '',
@@ -167,7 +173,7 @@ describe('readSettings with empty values', () => {
       allowedOrigins: [],
       apiKeys: undefined,
       ledger: { store: 'sqlite', file: 'data/ledger.db' },
-      secrets: { key: 'in-a-file', file: 'data/secrets.key' },
+      secrets: aKeyFileAt('data/secrets.key'),
       content: { store: 'ledger' },
       logFormat: 'json',
       logLevel: 'info',

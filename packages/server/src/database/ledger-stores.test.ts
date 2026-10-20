@@ -49,7 +49,7 @@ describe('the stores of a ledger in PostgreSQL, as the server opens them, withou
     expect(messagesOf(lines.join('\n'))).toEqual([
       `The ledger is kept in PostgreSQL, in the database playbooks on 127.0.0.1:${port}`,
       "Content is kept in the ledger's database",
-      `Secrets are kept sealed under the key ${sha256Of(Buffer.from(secretsKey, 'base64')).slice(0, 16)}, and 0 sealed under the previous key were sealed again under it`,
+      `Secrets are kept in the ledger's database, sealed under the key ${sha256Of(Buffer.from(secretsKey, 'base64')).slice(0, 16)} that SECRETS_KEY holds, and 0 sealed under the previous key were sealed again under it`,
     ]);
     expect({ bounds, ended: endedYet.map((ended) => ended()) }).toEqual({ bounds: [2], ended: [true] });
     expect(stopped).toEqual(['the work']);

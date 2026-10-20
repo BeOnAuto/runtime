@@ -1,5 +1,5 @@
 import { hkdfSync, randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import type { RetryStateKeys } from '@on.auto/api';
@@ -10,9 +10,16 @@ import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import {
   aSecretsKeyInWords,
   secretsKeyOfBase64,
-  type SecretKeys,
+  type SecretsKeySource,
   type SecretsSettings,
 } from '../settings/secrets-settings.ts';
+
+export interface SecretKeys {
+  readonly current: Redacted.Redacted<Uint8Array>;
+  readonly previous?: Redacted.Redacted<Uint8Array> | undefined;
+}
+
+type KeyFile = Extract<SecretsKeySource, { readonly from: 'file' }>;
 
 const ownerOnly = 0o600;
 
@@ -20,9 +27,9 @@ const permissions = 0o777;
 
 const groupAndOthers = 0o077;
 
-function refusedFile(file: string, detail: string): InvalidSettingsError {
+function refusedFile({ setting, file }: KeyFile, detail: string): InvalidSettingsError {
   return new InvalidSettingsError({
-    message: `The secrets settings are invalid. The key file ${resolve(file)} ${detail}`,
+    message: `The secrets settings are invalid. ${setting}: The key file ${resolve(file)} ${detail}`,
   });
 }
 
@@ -31,30 +38,54 @@ function keyWrittenTo(file: string): void {
   writeFileSync(file, `${randomBytes(secretKeyBytes).toString('base64')}\n`, { mode: ownerOnly, flag: 'wx' });
 }
 
-function keyReadFrom(file: string): Redacted.Redacted<Uint8Array> {
-  const mode = statSync(file).mode & permissions;
+function requireItsOwnerAlone(keyFile: KeyFile): void {
+  const mode = statSync(keyFile.file).mode & permissions;
   if ((mode & groupAndOthers) !== 0) {
     throw refusedFile(
-      file,
+      keyFile,
       `has the mode ${mode.toString(8).padStart(4, '0')}, so others than its owner may read it; set it to 0600`,
     );
   }
-  const key = secretsKeyOfBase64(readFileSync(file, 'utf8'));
+}
+
+function readableByTheServer(file: string): boolean {
+  try {
+    accessSync(file, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function keyReadFrom(keyFile: KeyFile): Redacted.Redacted<Uint8Array> {
+  if (keyFile.madeByTheServer) {
+    requireItsOwnerAlone(keyFile);
+  }
+  if (!readableByTheServer(keyFile.file)) {
+    throw refusedFile(keyFile, 'cannot be read by the user the server runs as');
+  }
+  const key = secretsKeyOfBase64(readFileSync(keyFile.file, 'utf8'));
   if (key === undefined) {
-    throw refusedFile(file, `holds something other than ${aSecretsKeyInWords}`);
+    throw refusedFile(keyFile, `holds something other than ${aSecretsKeyInWords}`);
   }
   return key;
 }
 
-function keyInFile(file: string): Redacted.Redacted<Uint8Array> {
-  if (!existsSync(file)) {
-    keyWrittenTo(file);
+function keyInFile(keyFile: KeyFile): Redacted.Redacted<Uint8Array> {
+  if (!existsSync(keyFile.file)) {
+    if (!keyFile.madeByTheServer) {
+      throw refusedFile(keyFile, 'does not exist, and a key file a setting names is read, never made');
+    }
+    keyWrittenTo(keyFile.file);
   }
-  return keyReadFrom(file);
+  return keyReadFrom(keyFile);
 }
 
-function keyMadeAtStart(): Redacted.Redacted<Uint8Array> {
-  return Redacted.make(Uint8Array.from(randomBytes(secretKeyBytes)));
+function keyOf(source: SecretsKeySource): Redacted.Redacted<Uint8Array> {
+  if (source.from === 'environment') {
+    return source.key;
+  }
+  return source.from === 'file' ? keyInFile(source) : Redacted.make(Uint8Array.from(randomBytes(secretKeyBytes)));
 }
 
 const retryStatePurpose = 'auto-runtime: the key that signs the state of a retry of an MCP tool';
@@ -71,9 +102,6 @@ export function retryStateKeysOf({ current, previous }: SecretKeys): RetryStateK
   };
 }
 
-export function secretsKeysOf(secrets: SecretsSettings): SecretKeys {
-  if (secrets.key === 'set') {
-    return secrets.keys;
-  }
-  return { current: secrets.key === 'in-a-file' ? keyInFile(secrets.file) : keyMadeAtStart() };
+export function secretsKeysOf({ current, previous }: SecretsSettings): SecretKeys {
+  return { current: keyOf(current), previous: previous === undefined ? undefined : keyOf(previous) };
 }

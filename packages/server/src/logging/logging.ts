@@ -6,6 +6,7 @@ import { Cause, Effect, Layer } from 'effect';
 
 import type { ContentSettings } from '../settings/content-settings.ts';
 import { privateMemory, type LedgerSettings, type PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
+import type { SecretsKeySource } from '../settings/secrets-settings.ts';
 import type { SignalExport, TelemetrySettings } from '../telemetry/telemetry-settings.ts';
 import { logsFrom, logsToStderr, type LogFormat, type LogLevelSetting } from './log-formats.ts';
 
@@ -145,12 +146,20 @@ export function logContentStore(content: ContentSettings): Effect.Effect<void> {
 export interface SecretStoreReport {
   readonly kid: string;
   readonly resealed: number;
+  readonly keyFrom: SecretsKeySource;
 }
 
-export function logSecretStore({ kid, resealed }: SecretStoreReport): Effect.Effect<void> {
+function keyHeldBy(source: SecretsKeySource): string {
+  if (source.from === 'environment') {
+    return `that ${source.setting} holds`;
+  }
+  return source.from === 'file' ? `that the file ${resolve(source.file)} holds` : 'that the server made at this start';
+}
+
+export function logSecretStore({ kid, resealed, keyFrom }: SecretStoreReport): Effect.Effect<void> {
   return Effect.logInfo(
-    `Secrets are kept sealed under the key ${kid}, and ${resealed} sealed under the previous key were sealed again under it`,
-  ).pipe(Effect.annotateLogs({ secrets_kid: kid, secrets_resealed: resealed }));
+    `Secrets are kept in the ledger's database, sealed under the key ${kid} ${keyHeldBy(keyFrom)}, and ${resealed} sealed under the previous key were sealed again under it`,
+  ).pipe(Effect.annotateLogs({ secrets_kid: kid, secrets_resealed: resealed, secrets_key_from: keyFrom.from }));
 }
 
 const causeNotFormattable = Effect.logError('Unexpected error whose cause could not be formatted');

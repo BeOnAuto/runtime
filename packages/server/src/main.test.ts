@@ -69,7 +69,7 @@ const keptIn: readonly unknown[] = [
   ledgerKept,
   "Content is kept in the ledger's database",
   expect.stringMatching(
-    /^Secrets are kept sealed under the key [\da-f]{16}, and 0 sealed under the previous key were sealed again under it$/u,
+    /^Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the file \S+\/secrets\.key holds, and 0 sealed under the previous key were sealed again under it$/u,
   ),
 ];
 

@@ -2,7 +2,7 @@ import type { Environment } from '@on.auto/config';
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { SecretsSettings } from './secrets-settings.ts';
+import { secretsVariables, type SecretsKeySource } from './secrets-settings.ts';
 import { readSettings } from './settings.ts';
 
 function errorFrom(environment: Environment): string {
@@ -14,20 +14,22 @@ function errorFrom(environment: Environment): string {
   return 'no error';
 }
 
-function revealed(secrets: SecretsSettings): unknown {
-  if (secrets.key !== 'set') {
-    return secrets;
-  }
-  const { current, previous } = secrets.keys;
-  return {
-    current: [...Redacted.value(current)],
-    previous: previous === undefined ? previous : [...Redacted.value(previous)],
-  };
+function revealed(source: SecretsKeySource | undefined): unknown {
+  return source?.from === 'environment' ? { ...source, key: [...Redacted.value(source.key)] } : source;
+}
+
+function secretsOf(environment: Environment) {
+  const { current, previous } = readSettings(environment).secrets;
+  return { current: revealed(current), previous: revealed(previous) };
 }
 
 const current = Buffer.alloc(32, 1).toString('base64');
 
 const previous = Buffer.alloc(32, 2).toString('base64');
+
+const ones = Array.from({ length: 32 }, () => 1);
+
+const twos = Array.from({ length: 32 }, () => 2);
 
 const databaseUrl = 'postgresql://playbooks:a-secret-password@db.example.com:5432/playbooks';
 
@@ -36,26 +38,77 @@ const refusedAs = 'InvalidSettingsError: The secrets settings are invalid.';
 const aKeyInWords = 'the base64 of 32 bytes, as openssl rand -base64 32 prints it';
 
 describe('the secrets settings', () => {
-  it('keep the key in secrets.key beside the ledger file when SECRETS_KEY is not set', () => {
-    expect([readSettings({}).secrets, readSettings({ LEDGER_FILE: '/data/playbooks.db' }).secrets]).toEqual([
-      { key: 'in-a-file', file: 'data/secrets.key' },
-      { key: 'in-a-file', file: '/data/secrets.key' },
+  it('are the four variables the runtime reads for itself, a key and a file each for the current key and the previous one', () => {
+    expect(secretsVariables).toEqual([
+      'SECRETS_KEY',
+      'SECRETS_KEY_FILE',
+      'SECRETS_KEY_PREVIOUS',
+      'SECRETS_KEY_FILE_PREVIOUS',
+    ]);
+  });
+
+  it('keep the key in secrets.key beside the ledger file, made when it is missing, when neither SECRETS_KEY nor SECRETS_KEY_FILE is set', () => {
+    expect([secretsOf({}), secretsOf({ LEDGER_FILE: '/data/playbooks.db' })]).toEqual([
+      {
+        current: { from: 'file', setting: 'SECRETS_KEY_FILE', file: 'data/secrets.key', madeByTheServer: true },
+        previous: undefined,
+      },
+      {
+        current: { from: 'file', setting: 'SECRETS_KEY_FILE', file: '/data/secrets.key', madeByTheServer: true },
+        previous: undefined,
+      },
     ]);
   });
 
   it('make a key at start for a private ledger in memory, which no file outlasts', () => {
-    expect(readSettings({ LEDGER_FILE: ':memory:' }).secrets).toEqual({ key: 'made-at-start' });
+    expect(secretsOf({ LEDGER_FILE: ':memory:' })).toEqual({ current: { from: 'start' }, previous: undefined });
   });
+});
 
+describe('the secrets settings that name the keys', () => {
   it('read SECRETS_KEY and SECRETS_KEY_PREVIOUS as the bytes their base64 gives, around any whitespace', () => {
     const given = readSettings({ SECRETS_KEY: ` ${current}\n`, SECRETS_KEY_PREVIOUS: previous }).secrets;
-    const alone = readSettings({ SECRETS_KEY: current, DATABASE_URL: databaseUrl }).secrets;
 
-    expect([revealed(given), revealed(alone)]).toEqual([
-      { current: Array.from({ length: 32 }, () => 1), previous: Array.from({ length: 32 }, () => 2) },
-      { current: Array.from({ length: 32 }, () => 1), previous: undefined },
+    expect([
+      { current: revealed(given.current), previous: revealed(given.previous) },
+      secretsOf({ SECRETS_KEY: current, DATABASE_URL: databaseUrl }),
+    ]).toEqual([
+      {
+        current: { from: 'environment', setting: 'SECRETS_KEY', key: ones },
+        previous: { from: 'environment', setting: 'SECRETS_KEY_PREVIOUS', key: twos },
+      },
+      { current: { from: 'environment', setting: 'SECRETS_KEY', key: ones }, previous: undefined },
     ]);
     expect(JSON.stringify(given)).not.toContain(current);
+  });
+
+  it('read SECRETS_KEY_FILE and SECRETS_KEY_FILE_PREVIOUS as files that are read and never made, beside a ledger in PostgreSQL too', () => {
+    expect(
+      secretsOf({
+        SECRETS_KEY_FILE: '/run/secrets/secrets-key',
+        SECRETS_KEY_FILE_PREVIOUS: 'previous.key',
+        DATABASE_URL: databaseUrl,
+      }),
+    ).toEqual({
+      current: { from: 'file', setting: 'SECRETS_KEY_FILE', file: '/run/secrets/secrets-key', madeByTheServer: false },
+      previous: { from: 'file', setting: 'SECRETS_KEY_FILE_PREVIOUS', file: 'previous.key', madeByTheServer: false },
+    });
+  });
+
+  it('take the current key from one variable and the key it replaces from the other kind', () => {
+    expect([
+      secretsOf({ SECRETS_KEY: current, SECRETS_KEY_FILE_PREVIOUS: 'previous.key' }),
+      secretsOf({ SECRETS_KEY_FILE: 'secrets.key', SECRETS_KEY_PREVIOUS: previous }),
+    ]).toEqual([
+      {
+        current: { from: 'environment', setting: 'SECRETS_KEY', key: ones },
+        previous: { from: 'file', setting: 'SECRETS_KEY_FILE_PREVIOUS', file: 'previous.key', madeByTheServer: false },
+      },
+      {
+        current: { from: 'file', setting: 'SECRETS_KEY_FILE', file: 'secrets.key', madeByTheServer: false },
+        previous: { from: 'environment', setting: 'SECRETS_KEY_PREVIOUS', key: twos },
+      },
+    ]);
   });
 });
 
@@ -79,17 +132,31 @@ describe('the secrets settings that cannot be read', () => {
     );
   });
 
-  it('stop the server at start for SECRETS_KEY_PREVIOUS without SECRETS_KEY', () => {
-    expect(errorFrom({ SECRETS_KEY_PREVIOUS: previous })).toBe(
-      `${refusedAs} SECRETS_KEY_PREVIOUS: Set it only beside SECRETS_KEY, to the key that SECRETS_KEY replaces`,
-    );
+  it('stop the server at start for a key in the environment and in a file both, of the current key or of the previous one, naming both', () => {
+    expect([
+      errorFrom({ SECRETS_KEY: current, SECRETS_KEY_FILE: 'secrets.key' }),
+      errorFrom({ SECRETS_KEY: current, SECRETS_KEY_PREVIOUS: previous, SECRETS_KEY_FILE_PREVIOUS: 'previous.key' }),
+    ]).toEqual([
+      `${refusedAs} SECRETS_KEY: Set SECRETS_KEY or SECRETS_KEY_FILE, not both`,
+      `${refusedAs} SECRETS_KEY_PREVIOUS: Set SECRETS_KEY_PREVIOUS or SECRETS_KEY_FILE_PREVIOUS, not both`,
+    ]);
   });
 
-  it('stop the server at start for a ledger in PostgreSQL without SECRETS_KEY, naming the setting and no URL', () => {
+  it('stop the server at start for a previous key without a current one, naming the setting given', () => {
+    expect([
+      errorFrom({ SECRETS_KEY_PREVIOUS: previous }),
+      errorFrom({ SECRETS_KEY_FILE_PREVIOUS: 'previous.key' }),
+    ]).toEqual([
+      `${refusedAs} SECRETS_KEY_PREVIOUS: Set it only beside SECRETS_KEY or SECRETS_KEY_FILE, to the key that one replaces`,
+      `${refusedAs} SECRETS_KEY_FILE_PREVIOUS: Set it only beside SECRETS_KEY or SECRETS_KEY_FILE, to the key that one replaces`,
+    ]);
+  });
+
+  it('stop the server at start for a ledger in PostgreSQL without SECRETS_KEY or SECRETS_KEY_FILE, naming the setting and no URL', () => {
     const error = errorFrom({ DATABASE_URL: databaseUrl });
 
     expect(error).toBe(
-      `${refusedAs} SECRETS_KEY: Set it when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks`,
+      `${refusedAs} SECRETS_KEY: Set it, or SECRETS_KEY_FILE, when the ledger is kept in PostgreSQL, since a database that runtimes share needs a key kept on none of their disks`,
     );
     expect(error).not.toMatch(/a-secret-password|db\.example\.com/u);
   });

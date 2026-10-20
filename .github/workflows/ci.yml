@@ -363,7 +363,7 @@ jobs:
           export API_KEYS DATABASE_URL SECRETS_KEY
           ledger_line='"message":"The ledger is kept in PostgreSQL, in the database postgres on postgresql:5432"'
           kid="$(printf '%s' "$SECRETS_KEY" | base64 --decode | sha256sum | cut --characters=1-16)"
-          secrets_line="\"message\":\"Secrets are kept sealed under the key $kid, and 0 sealed under the previous key"
+          secrets_line="\"message\":\"Secrets are kept in the ledger's database, sealed under the key $kid that SECRETS_KEY holds, and 0 sealed under the previous key"
           docker network create ledger
           docker run --detach --name postgresql --network ledger --env POSTGRES_PASSWORD="$password" \
             postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
