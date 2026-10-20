@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
@@ -18,10 +18,16 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { Function } from 'effect';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { until } from '../testing/waiting/until.ts';
-import { noticesFor, restartMarkIn, startInBackgroundOf, startingLockIn } from './background-process.ts';
+import {
+  noticesFor,
+  processesOfThisComputer,
+  restartMarkIn,
+  startInBackgroundOf,
+  startingLockIn,
+} from './background-process.ts';
 import { restartWaitMs, startWaitMs } from './background-start.ts';
 
 const recordingEntry = fileURLToPath(new URL('../testing/entries/record-background-start.ts', import.meta.url));
@@ -223,5 +229,23 @@ describe('the mark a runtime leaves while it restarts', () => {
     chmodSync(join(home, '.auto-runtime'), 0o500);
 
     expect(restartMarkIn(home).leave(process.pid)).toBe(false);
+  });
+});
+
+describe('the processes of this computer', () => {
+  it('signals one that runs, which is then gone, and signals none once it is gone', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
+    onTestFinished(() => {
+      child.kill('SIGKILL');
+    });
+    const running = Number(child.pid);
+
+    const aliveAtFirst = processesOfThisComputer.alive(running);
+    const killed = processesOfThisComputer.signal(running, 'SIGKILL');
+    await until(() => {
+      expect(processesOfThisComputer.alive(running)).toBe(false);
+    });
+
+    expect([aliveAtFirst, killed, processesOfThisComputer.signal(running, 'SIGTERM')]).toEqual([true, true, false]);
   });
 });

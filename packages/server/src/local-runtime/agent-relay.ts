@@ -5,11 +5,17 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import type { Environment } from '@on.auto/config';
 
 import { release } from '../composition/release.ts';
-import { noticesFor, restartMarkIn, startInBackgroundOf, startingLockIn } from './background-process.ts';
-import { impatient, runningRuntime, throughARestart } from './background-start.ts';
+import {
+  noticesFor,
+  processesOfThisComputer,
+  restartMarkIn,
+  startInBackgroundOf,
+  startingLockIn,
+} from './background-process.ts';
+import { briefly, impatient, runningRuntime, sightingsOfARelay } from './background-start.ts';
 import { logFileIn } from './local-control.ts';
-import { relay } from './mcp-relay.ts';
-import { runtimeAddressOf, type Waiting } from './runtime-probe.ts';
+import { relay, type Timer } from './mcp-relay.ts';
+import { isAnswering, probeAt, runtimeAddressOf, type Waiting } from './runtime-probe.ts';
 
 export interface AgentRelaying {
   readonly home: string;
@@ -21,6 +27,14 @@ function report(line: string): void {
   process.stderr.write(`${line}\n`);
 }
 
+const timer: Timer = (milliseconds, then) => {
+  const timeout = setTimeout(then, milliseconds);
+  timeout.unref();
+  return () => {
+    clearTimeout(timeout);
+  };
+};
+
 export async function relayedAgent(port: number, { home, environment, waiting }: AgentRelaying): Promise<void> {
   const starting = {
     ...waiting,
@@ -29,6 +43,8 @@ export async function relayedAgent(port: number, { home, environment, waiting }:
     startingLock: startingLockIn(home),
     notice: noticesFor(home, report),
     restartUnderWay: restartMarkIn(home).isUnderWay,
+    processes: processesOfThisComputer,
+    sightings: sightingsOfARelay(),
     startInBackground: startInBackgroundOf({
       execPath: process.execPath,
       execArgv: process.execArgv,
@@ -45,7 +61,9 @@ export async function relayedAgent(port: number, { home, environment, waiting }:
   await relay({
     agent: () => new StdioServerTransport(),
     runtime: () => new StreamableHTTPClientTransport(new URL(`${runtimeAddressOf(port)}/mcp`)),
-    recover: () => runningRuntime(port, starting, throughARestart),
+    recover: () => runningRuntime(port, starting, briefly),
+    answering: async () => isAnswering(await probeAt(port, waiting.fetch)),
+    timer,
     report,
   });
 }

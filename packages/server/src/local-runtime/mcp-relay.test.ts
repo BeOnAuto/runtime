@@ -1,27 +1,20 @@
-import { InMemoryTransport, parseJSONRPCMessage, type Transport } from '@modelcontextprotocol/server';
+import { parseJSONRPCMessage } from '@modelcontextprotocol/server';
 import { describe, expect, it } from 'vitest';
 
+import {
+  answeredWithStatus,
+  callATool,
+  fakeRuntime,
+  fakeRuntimeEnd,
+  idOf,
+  initialize,
+  initialized,
+  listTools,
+  refusedAtConnect,
+  relayed,
+  type Reply,
+} from '../testing/relays/fake-relays.ts';
 import { until } from '../testing/waiting/until.ts';
-import { relay } from './mcp-relay.ts';
-
-const listTools = parseJSONRPCMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
-
-const initialize = parseJSONRPCMessage({
-  jsonrpc: '2.0',
-  id: 1,
-  method: 'initialize',
-  params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'agent', version: '1.0.0' } },
-});
-
-const initialized = parseJSONRPCMessage({ jsonrpc: '2.0', method: 'notifications/initialized' });
-
-type Reply = (message: unknown) => unknown;
-
-function idOf(message: unknown): unknown {
-  return typeof message === 'object' && message !== null && 'id' in message ? message.id : undefined;
-}
-
-const echoTools: Reply = (message) => ({ jsonrpc: '2.0', id: idOf(message), result: { tools: [] } });
 
 const agreeOnAVersion: Reply = (message) =>
   idOf(message) === undefined
@@ -29,125 +22,6 @@ const agreeOnAVersion: Reply = (message) =>
     : { jsonrpc: '2.0', id: idOf(message), result: { protocolVersion: '2025-11-25', capabilities: {} } };
 
 const nameNoVersion: Reply = (message) => ({ jsonrpc: '2.0', id: idOf(message), result: {} });
-
-interface FakeRuntimeOptions {
-  readonly reply?: Reply;
-  readonly failures?: readonly Readonly<Error>[];
-  readonly negotiates?: boolean;
-}
-
-interface FakeRuntime {
-  readonly transport: Transport;
-  readonly received: unknown[];
-  readonly negotiated: string[];
-  readonly closed: () => boolean;
-  readonly sends: () => number;
-}
-
-function fakeRuntime({ reply = echoTools, failures = [], negotiates = true }: FakeRuntimeOptions = {}): FakeRuntime {
-  const received: unknown[] = [];
-  const negotiated: string[] = [];
-  const failing = [...failures];
-  let closed = false;
-  let sends = 0;
-  const transport: Transport = {
-    start: () => Promise.resolve(),
-    send: (message: unknown) => {
-      sends += 1;
-      const failure = failing.shift();
-      if (failure !== undefined) {
-        return Promise.reject(failure);
-      }
-      received.push(message);
-      const answer = reply(message);
-      if (answer !== undefined) {
-        queueMicrotask(() => transport.onmessage?.(parseJSONRPCMessage(answer)));
-      }
-      return Promise.resolve();
-    },
-    close: () => {
-      closed = true;
-      return Promise.resolve();
-    },
-    ...(negotiates
-      ? {
-          setProtocolVersion: (version: string) => {
-            negotiated.push(version);
-          },
-        }
-      : {}),
-  };
-  return { transport, received, negotiated, closed: () => closed, sends: () => sends };
-}
-
-const refusedAtConnect = new TypeError('fetch failed', {
-  cause: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:5555'), { code: 'ECONNREFUSED', syscall: 'connect' }),
-});
-
-const cutOffMidAnswer = new TypeError('terminated', {
-  cause: Object.assign(new Error('other side closed'), { code: 'UND_ERR_SOCKET' }),
-});
-
-const droppedAfterTheRequest = new TypeError('fetch failed', {
-  cause: Object.assign(new Error('other side closed'), { code: 'UND_ERR_SOCKET' }),
-});
-
-function fakeRuntimeEnd(options: FakeRuntimeOptions = {}): () => Transport {
-  const { transport } = fakeRuntime(options);
-  return () => transport;
-}
-
-interface Relayed {
-  readonly agent: Transport;
-  readonly relayEnd: Transport;
-  readonly reported: string[];
-  readonly recovered: () => number;
-  readonly ended: Promise<void>;
-  readonly next: () => Promise<unknown>;
-}
-
-async function relayed(runtimeEnd: () => Transport, recovery?: string): Promise<Relayed> {
-  const [agent, relayEnd] = InMemoryTransport.createLinkedPair();
-  const reported: string[] = [];
-  const answers: unknown[] = [];
-  const waiting: ((message: unknown) => void)[] = [];
-  let recovered = 0;
-  Object.assign(agent, {
-    onmessage: (message: unknown) => {
-      const waiter = waiting.shift();
-      if (waiter === undefined) {
-        answers.push(message);
-      } else {
-        waiter(message);
-      }
-    },
-  });
-  const ended = relay({
-    agent: () => relayEnd,
-    runtime: runtimeEnd,
-    recover: () => {
-      recovered += 1;
-      return Promise.resolve(recovery);
-    },
-    report: (line) => {
-      reported.push(line);
-    },
-  });
-  await agent.start();
-  return {
-    agent,
-    relayEnd,
-    reported,
-    recovered: () => recovered,
-    ended,
-    next: () =>
-      answers.length > 0
-        ? Promise.resolve(answers.shift())
-        : new Promise((resolve) => {
-            waiting.push(resolve);
-          }),
-  };
-}
 
 describe('relaying an agent to the runtime', () => {
   it('sends what the agent asks to the runtime, and its answer back', async () => {
@@ -192,6 +66,37 @@ describe('relaying an agent to the runtime', () => {
   });
 });
 
+const refuseTheCall: Reply = (message) => ({
+  jsonrpc: '2.0',
+  id: idOf(message),
+  error: { code: -32_602, message: 'Unknown tool: run_nothing' },
+});
+
+describe('what the runtime sends the agent', () => {
+  it('relays an error it answers a request with, as the answer to that request', async () => {
+    const runtime = fakeRuntime({ reply: refuseTheCall });
+    const { agent, next, recovered } = await relayed(() => runtime.transport);
+
+    await agent.send(callATool);
+
+    expect(await next()).toEqual({
+      jsonrpc: '2.0',
+      id: 3,
+      error: { code: -32_602, message: 'Unknown tool: run_nothing' },
+    });
+    expect([recovered(), runtime.sends()]).toEqual([0, 1]);
+  });
+
+  it('relays a notification it sends of its own accord', async () => {
+    const runtime = fakeRuntime();
+    const { next } = await relayed(() => runtime.transport);
+
+    runtime.transport.onmessage?.(parseJSONRPCMessage({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' }));
+
+    expect(await next()).toEqual({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+  });
+});
+
 describe('the end of a relay', () => {
   it('closes its connection to the runtime and ends once the agent leaves', async () => {
     const runtime = fakeRuntime();
@@ -204,23 +109,27 @@ describe('the end of a relay', () => {
   });
 });
 
-describe('relaying an agent to a runtime that does not answer', () => {
-  it('makes sure the runtime runs, then sends again a request whose connection could not be made', async () => {
-    const runtime = fakeRuntime({ failures: [refusedAtConnect] });
+describe('relaying an agent to a runtime its request never reached', () => {
+  it.each<readonly [string, Readonly<Error>]>([
+    ['whose connection could not be made', refusedAtConnect],
+    ['that asked for a credential', answeredWithStatus(401)],
+  ])('makes sure the runtime runs, then sends a request %s again', async (_case, failure) => {
+    const runtime = fakeRuntime({ turns: [failure] });
     const { agent, next, recovered } = await relayed(() => runtime.transport);
 
-    await agent.send(listTools);
+    await agent.send(callATool);
 
-    expect(await next()).toEqual({ jsonrpc: '2.0', id: 2, result: { tools: [] } });
+    expect(await next()).toEqual({ jsonrpc: '2.0', id: 3, result: { tools: [] } });
     expect(recovered()).toBe(1);
     expect(runtime.sends()).toBe(2);
   });
+});
 
-  it('answers the request with why the runtime could not be started', async () => {
-    const { agent, next } = await relayed(
-      fakeRuntimeEnd({ failures: [refusedAtConnect] }),
-      'Auto Runtime did not start on port 5555; its log is /Users/ada/.auto-runtime/runtime.log',
-    );
+describe('relaying an agent to a runtime it could not make sure of', () => {
+  it('answers the request with why the runtime could not be reached', async () => {
+    const { agent, next } = await relayed(fakeRuntimeEnd({ turns: [answeredWithStatus(401)] }), {
+      problem: 'Auto Runtime on port 5555 asks for a credential, which this MCP entry does not send',
+    });
 
     await agent.send(listTools);
 
@@ -229,26 +138,39 @@ describe('relaying an agent to a runtime that does not answer', () => {
       id: 2,
       error: {
         code: -32_603,
-        message: 'Auto Runtime did not start on port 5555; its log is /Users/ada/.auto-runtime/runtime.log',
+        message: 'Auto Runtime on port 5555 asks for a credential, which this MCP entry does not send',
       },
     });
   });
 
   it('answers the request with what went wrong when it fails again', async () => {
     const { agent, next } = await relayed(
-      fakeRuntimeEnd({ failures: [refusedAtConnect, new Error('Error POSTing to endpoint')] }),
+      fakeRuntimeEnd({ turns: [refusedAtConnect, new Error('Error POSTing to endpoint')] }),
     );
 
     await agent.send(listTools);
 
     expect(await next()).toMatchObject({ id: 2, error: { message: 'Error: Error POSTing to endpoint' } });
   });
+
+  it('answers the request with what the recovery failed with', async () => {
+    const { agent, next } = await relayed(fakeRuntimeEnd({ turns: [refusedAtConnect] }), {
+      recover: () => Promise.reject(new Error('EACCES: permission denied, open runtime.log')),
+    });
+
+    await agent.send(listTools);
+
+    expect(await next()).toMatchObject({
+      id: 2,
+      error: { message: 'Error: EACCES: permission denied, open runtime.log' },
+    });
+  });
 });
 
 describe('relaying a notification to a runtime that does not answer', () => {
   it('reports a notification it could not deliver, which has no one to answer', async () => {
     const { agent, reported } = await relayed(
-      fakeRuntimeEnd({ failures: [refusedAtConnect, new Error('refused again')] }),
+      fakeRuntimeEnd({ turns: [refusedAtConnect, new Error('refused again')] }),
     );
 
     await agent.send(initialized);
@@ -256,27 +178,6 @@ describe('relaying a notification to a runtime that does not answer', () => {
     await until(() => {
       expect(reported).toEqual(['Auto Runtime did not take a message: Error: refused again']);
     });
-  });
-});
-
-describe('relaying an agent to a runtime that may have taken the request', () => {
-  it.each<readonly [string, Readonly<Error>, string]>([
-    ['whose answer was cut off', cutOffMidAnswer, 'TypeError: terminated'],
-    ['whose connection closed after it went out', droppedAfterTheRequest, 'TypeError: fetch failed'],
-    [
-      'that the runtime answered with an error status',
-      new Error('Error POSTing to endpoint: busy'),
-      'Error: Error POSTing to endpoint: busy',
-    ],
-  ])('answers a request %s with what went wrong, and never sends it again', async (_case, failure, problem) => {
-    const runtime = fakeRuntime({ failures: [failure] });
-    const { agent, next, recovered } = await relayed(() => runtime.transport);
-
-    await agent.send(listTools);
-
-    expect(await next()).toEqual({ jsonrpc: '2.0', id: 2, error: { code: -32_603, message: problem } });
-    expect(runtime.sends()).toBe(1);
-    expect(recovered()).toBe(0);
   });
 });
 

@@ -31,36 +31,54 @@ const isHealthy = Schema.is(HealthSchema);
 export type Probe =
   | { readonly state: 'running'; readonly status: RunningStatus }
   | { readonly state: 'uncontrolled' }
+  | { readonly state: 'guarded' }
+  | { readonly state: 'unresponsive' }
   | { readonly state: 'foreign' }
   | { readonly state: 'down' };
 
-const probeTimeoutMs = 2000;
+const probeTimeoutMs = 1000;
+
+const unauthorized = 401;
 
 export function runtimeAddressOf(port: number): string {
   return `http://127.0.0.1:${port}`;
 }
 
-async function bodyOf(fetch: RuntimeFetch, address: string): Promise<unknown> {
+interface Answer {
+  readonly status: number;
+  readonly body: unknown;
+}
+
+async function answerOf(fetch: RuntimeFetch, address: string): Promise<Answer> {
   const response = await fetch(address, { method: 'GET', timeoutMs: probeTimeoutMs });
-  return response.ok ? response.json().catch(Function.constVoid) : undefined;
+  return { status: response.status, body: response.ok ? await response.json().catch(Function.constVoid) : undefined };
 }
 
 async function answeringProbe(fetch: RuntimeFetch, port: number): Promise<Probe> {
-  const status = await bodyOf(fetch, `${runtimeAddressOf(port)}/runtime`);
-  if (isRunningStatus(status)) {
-    return { state: 'running', status };
+  const runtime = await answerOf(fetch, `${runtimeAddressOf(port)}/runtime`);
+  if (isRunningStatus(runtime.body)) {
+    return { state: 'running', status: runtime.body };
   }
-  return isHealthy(await bodyOf(fetch, `${runtimeAddressOf(port)}/health`))
-    ? { state: 'uncontrolled' }
-    : { state: 'foreign' };
+  if (!isHealthy((await answerOf(fetch, `${runtimeAddressOf(port)}/health`)).body)) {
+    return { state: 'foreign' };
+  }
+  return runtime.status === unauthorized ? { state: 'guarded' } : { state: 'uncontrolled' };
+}
+
+function isTimeout(failure: unknown): boolean {
+  return failure instanceof DOMException && failure.name === 'TimeoutError';
 }
 
 export async function probeAt(port: number, fetch: RuntimeFetch): Promise<Probe> {
   try {
     return await answeringProbe(fetch, port);
-  } catch {
-    return { state: 'down' };
+  } catch (failure) {
+    return isTimeout(failure) ? { state: 'unresponsive' } : { state: 'down' };
   }
+}
+
+export function isAnswering(probe: Probe): boolean {
+  return probe.state === 'running' || probe.state === 'uncontrolled';
 }
 
 export async function askedTo(action: 'stop' | 'restart', port: number, fetch: RuntimeFetch): Promise<boolean> {
@@ -87,12 +105,13 @@ export async function waitedFor(
   waiting: Waiting,
   attempts: number,
   isWhatWeWait: (probe: Probe) => boolean,
-): Promise<boolean> {
+): Promise<Probe | undefined> {
   if (attempts <= 0) {
-    return false;
+    return undefined;
   }
-  if (isWhatWeWait(await probeAt(port, waiting.fetch))) {
-    return true;
+  const probe = await probeAt(port, waiting.fetch);
+  if (isWhatWeWait(probe)) {
+    return probe;
   }
   await waiting.sleep(probeEveryMs);
   return waitedFor(port, waiting, attempts - 1, isWhatWeWait);
@@ -105,5 +124,7 @@ function isDown(probe: Probe): boolean {
 }
 
 export async function stoppedWhenAsked(port: number, waiting: Waiting): Promise<boolean> {
-  return (await askedTo('stop', port, waiting.fetch)) && (await waitedFor(port, waiting, stopAttempts, isDown));
+  return (
+    (await askedTo('stop', port, waiting.fetch)) && (await waitedFor(port, waiting, stopAttempts, isDown)) !== undefined
+  );
 }

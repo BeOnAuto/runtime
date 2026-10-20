@@ -16,7 +16,7 @@ import { join } from 'node:path';
 import type { Environment } from '@on.auto/config';
 import { Option, Schema } from 'effect';
 
-import { restartWaitMs, startWaitMs, type StartingLock } from './background-start.ts';
+import { restartWaitMs, startWaitMs, type RuntimeProcesses, type StartingLock } from './background-start.ts';
 import { logFileIn, runtimeHomeIn } from './local-control.ts';
 
 export interface BackgroundCommand {
@@ -181,3 +181,13 @@ export function restartMarkIn(home: string, now: () => number = Date.now): Resta
     },
   };
 }
+
+function signalled(pid: number, signal: NodeJS.Signals): boolean {
+  try {
+    return process.kill(pid, signal);
+  } catch {
+    return false;
+  }
+}
+
+export const processesOfThisComputer: RuntimeProcesses = { signal: signalled, alive: isRunning };

@@ -19,6 +19,8 @@ codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.15.0 mcp
 
 When your agent connects, the command starts Auto Runtime in the background if it is not running yet, and relays your agent to it. The runtime it starts keeps running after your agent leaves, so the workflows it runs carry on and other agents reach the same one. It reads its settings from `~/.auto-runtime/.env`, where you put a model provider's key, such as `ANTHROPIC_API_KEY`, and writes its log to `~/.auto-runtime/runtime.log`. When no model provider is set up, your agent is told which file the key goes in and how to restart the runtime once it is there.
 
+If the runtime stops while your agent is connected, the next request starts it again within seconds, and is sent again unless it may already have run, in which case your agent is told to check before it repeats it. A runtime that stops answering is stopped and started again when the command started it; one you started yourself, or another program on the port, is left alone, and your agent is told what to stop. A runtime on the port that asks for a credential is left alone too, and your agent is told to stop it or connect over HTTP.
+
 ## Start it yourself
 
 ```bash

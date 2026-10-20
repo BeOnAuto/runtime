@@ -50,7 +50,7 @@ async function stopped(port: number, asking: RuntimeAsking): Promise<number> {
 async function restarted(port: number, before: RunningStatus, asking: RuntimeAsking): Promise<number> {
   const done =
     (await askedTo('restart', port, asking.fetch)) &&
-    (await waitedFor(port, asking, throughARestart.attempts, startedAgainSince(before)));
+    (await waitedFor(port, asking, throughARestart.attempts, startedAgainSince(before))) !== undefined;
   if (!done) {
     asking.console.error(`Auto Runtime on port ${port} did not come back after it was asked to restart`);
     return 1;
@@ -81,6 +81,9 @@ const refusals: Readonly<Record<Exclude<Probe['state'], 'running'>, (port: numbe
   down: (port) => `No Auto Runtime is running on port ${port}`,
   uncontrolled: (port) =>
     `The Auto Runtime on port ${port} cannot be controlled from here: only one the auto-runtime command started in local mode can`,
+  guarded: (port) =>
+    `The Auto Runtime on port ${port} asks for a credential, so it cannot be controlled from here: only one the auto-runtime command started in local mode can`,
+  unresponsive: (port) => `The Auto Runtime on port ${port} does not answer`,
   foreign: (port) => `Another program answers on port ${port}, not Auto Runtime`,
 };
 

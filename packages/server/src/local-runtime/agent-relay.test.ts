@@ -13,8 +13,15 @@ import {
   runtimeOnThePortEndedWithTheTest,
   spawnRuntimeCommand,
   type RuntimeCommandRun,
-  type RuntimeCommandPlace,
 } from '../testing/processes/runtime-command.ts';
+import {
+  answered,
+  answerWithId,
+  initializeLine,
+  lineOf,
+  placeOfTheTest,
+  readiesIn,
+} from '../testing/relays/relayed-processes.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const homePrefix = 'auto-runtime-agent-';
@@ -25,53 +32,13 @@ async function statusAt(port: number): Promise<ReturnType<typeof statusOf>> {
   return statusOf(await (await fetch(`http://127.0.0.1:${port}/runtime`)).json());
 }
 
-async function placeOfTheTest(): Promise<RuntimeCommandPlace> {
-  const home = homeOfTheTest(homePrefix);
-  const port = await aPortNothingListensOn();
-  runtimeOnThePortEndedWithTheTest(home, port);
-  return { home, port };
-}
-
-const initialize = {
-  jsonrpc: '2.0',
-  id: 1,
-  method: 'initialize',
-  params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'agent', version: '1.0.0' } },
-};
-
-function answersIn(stdout: string): readonly unknown[] {
-  return stdout
-    .split('\n')
-    .filter((line) => line !== '')
-    .map((line): unknown => JSON.parse(line));
-}
-
-function answerWithId(answers: readonly unknown[], id: number): unknown {
-  return answers.find((answer) => typeof answer === 'object' && answer !== null && 'id' in answer && answer.id === id);
-}
-
-function lineOf(message: object): string {
-  return `${JSON.stringify(message)}\n`;
-}
-
-async function answered(relay: Readonly<RuntimeCommandRun>, count: number): Promise<readonly unknown[]> {
-  await until(() => {
-    expect(answersIn(relay.stdout())).toHaveLength(count);
-  });
-  return answersIn(relay.stdout());
-}
-
-function readiesIn(text: string): number {
-  return text.split('Press Ctrl+C to stop.').length - 1;
-}
-
 function markedAsRestartingBy(home: string, pid: number): void {
   mkdirSync(join(home, '.auto-runtime'), { recursive: true });
   writeFileSync(join(home, '.auto-runtime', 'restart-mark.json'), JSON.stringify({ pid, at: Date.now() }));
 }
 
 async function leftAfterItsAgentLeft(relay: Readonly<RuntimeCommandRun>): Promise<unknown> {
-  relay.write(lineOf(initialize));
+  relay.write(lineOf(initializeLine));
   await answered(relay, 1);
   relay.end();
   return relay.exited;
@@ -86,7 +53,7 @@ describe('an agent that starts auto-runtime mcp', () => {
     const starting = spawnRuntimeCommand(['mcp'], { home, port, inAGroupOfItsOwn: true });
     const pid = await runtimes.pid();
 
-    starting.write(lineOf(initialize));
+    starting.write(lineOf(initializeLine));
     await answered(starting, 1);
     starting.write(lineOf({ jsonrpc: '2.0', method: 'notifications/initialized' }));
     starting.write(lineOf({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }));
@@ -126,13 +93,13 @@ describe('an agent that starts auto-runtime mcp', () => {
 
 describe('an agent whose runtime restarts', () => {
   it('has a request it sends while the runtime is down sent again once the runtime is back', async () => {
-    const { home, port } = await placeOfTheTest();
+    const { home, port } = await placeOfTheTest(homePrefix);
     const runtime = spawnRuntimeCommand([], { home, port });
     await until(() => {
       expect(readiesIn(runtime.stdout())).toBe(1);
     });
     const relay = spawnRuntimeCommand(['mcp'], { home, port });
-    relay.write(lineOf(initialize));
+    relay.write(lineOf(initializeLine));
     await answered(relay, 1);
     relay.write(lineOf({ jsonrpc: '2.0', method: 'notifications/initialized' }));
 
@@ -151,10 +118,10 @@ describe('an agent whose runtime restarts', () => {
 
 describe('an agent that starts while a runtime restarts', () => {
   it('waits for that runtime to come back instead of starting a second one', async () => {
-    const { home, port } = await placeOfTheTest();
+    const { home, port } = await placeOfTheTest(homePrefix);
     markedAsRestartingBy(home, process.pid);
     const relay = spawnRuntimeCommand(['mcp'], { home, port });
-    relay.write(lineOf(initialize));
+    relay.write(lineOf(initializeLine));
 
     const runtime = spawnRuntimeCommand([], { home, port });
     await answered(relay, 1);
@@ -170,7 +137,7 @@ describe('an agent that starts while a runtime restarts', () => {
 
 describe('an agent whose runtime port another program holds', () => {
   it('is told why it cannot reach the runtime, and answered once with what its request met', async () => {
-    const { home, port } = await placeOfTheTest();
+    const { home, port } = await placeOfTheTest(homePrefix);
     const other = createServer((_request, response) => {
       response.end('hello');
     }).listen(port, '127.0.0.1');
@@ -179,7 +146,7 @@ describe('an agent whose runtime port another program holds', () => {
     });
     const relay = spawnRuntimeCommand(['mcp'], { home, port });
 
-    relay.write(lineOf(initialize));
+    relay.write(lineOf(initializeLine));
     const answers = await answered(relay, 1);
     relay.end();
 

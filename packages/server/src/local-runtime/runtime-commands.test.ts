@@ -178,3 +178,30 @@ describe('what cannot be controlled from the command line', () => {
     expect(errors).toEqual(['Another program answers on port 3000, not Auto Runtime']);
   });
 });
+
+const guardedRuntime: RuntimeFetch = (address) =>
+  Promise.resolve(
+    address.endsWith('/health')
+      ? Response.json({ status: 'ok' })
+      : Response.json({ type: 'https://on.auto/problems/unauthenticated' }, { status: 401 }),
+  );
+
+describe('what cannot be controlled from the command line, though it runs', () => {
+  it('says a runtime that asks for a credential cannot be controlled', async () => {
+    const { asking, errors } = askingWith(guardedRuntime);
+
+    await expect(runRuntimeCommand('restart', 5555, asking)).resolves.toBe(1);
+    expect(errors).toEqual([
+      'The Auto Runtime on port 5555 asks for a credential, so it cannot be controlled from here: only one the auto-runtime command started in local mode can',
+    ]);
+  });
+
+  it('says a runtime that does not answer does not', async () => {
+    const { asking, errors } = askingWith(() =>
+      Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError')),
+    );
+
+    await expect(runRuntimeCommand('status', 5555, asking)).resolves.toBe(1);
+    expect(errors).toEqual(['The Auto Runtime on port 5555 does not answer']);
+  });
+});
