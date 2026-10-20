@@ -1,9 +1,11 @@
 import type { Effect, Redacted } from 'effect';
 
+import type { KeepingFailure } from '../keepers/keeper.ts';
+
 export interface Custodian {
   readonly kid: string;
-  readonly wrap: (dataKey: Redacted.Redacted<Uint8Array>) => Effect.Effect<string>;
-  readonly unwrap: (wrapped: string) => Effect.Effect<Redacted.Redacted<Uint8Array>>;
+  readonly wrap: (dataKey: Redacted.Redacted<Uint8Array>) => Effect.Effect<string, KeepingFailure>;
+  readonly unwrap: (wrapped: string) => Effect.Effect<Redacted.Redacted<Uint8Array>, KeepingFailure>;
 }
 
 export interface Custodians {

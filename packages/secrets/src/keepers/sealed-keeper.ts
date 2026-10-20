@@ -4,7 +4,7 @@ import { CompactEncrypt, compactDecrypt, type DecryptOptions } from 'jose';
 import { custodianNamed, type Custodians } from '../custodians/custodian.ts';
 import type { Holding } from '../rows/secret-rows.ts';
 import { aDataKey, zeroedAfter } from './data-key.ts';
-import type { Keeper } from './keeper.ts';
+import type { Keeper, ReadingFailure } from './keeper.ts';
 import { secretKeyUnknown } from './secret-key-unknown.ts';
 
 export const ledgerKeeper = 'ledger';
@@ -48,7 +48,7 @@ export function sealedKeeper(custodians: Custodians): Keeper {
         );
       }),
     reveal: ({ held, wrappedKey = '', kid = '' }) =>
-      Effect.suspend(() => {
+      Effect.suspend((): Effect.Effect<Redacted.Redacted, ReadingFailure> => {
         const custodian = custodianNamed(custodians, kid);
         return custodian === undefined
           ? Effect.fail(secretKeyUnknown(kid))

@@ -5,7 +5,7 @@ import { Effect, type Context } from 'effect';
 
 import type { Served } from '../lifecycle/lifecycle.ts';
 import { logContentStore, logLedger, logSecretStore } from '../logging/logging.ts';
-import type { SecretsKeySource } from '../settings/secrets-settings.ts';
+import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import type { Settings } from '../settings/settings.ts';
 import { custodiansOf, secretRowsOn, secretStoreOver } from './secret-store.ts';
 import { retryStateKeysOf, secretsKeysOf, type SecretKeys } from './secrets-keys.ts';
@@ -16,16 +16,37 @@ export interface LedgerStores {
   readonly withSecretsClosed: (served: Served) => Served;
 }
 
+type SecretsSettings = Settings['secrets'];
+
+type PreviousKeyGiven = NonNullable<SecretsSettings['previous']>;
+
+function sealedAgainRefused({ setting }: PreviousKeyGiven, detail: string): InvalidSettingsError {
+  return new InvalidSettingsError({
+    message: `The secrets settings are invalid. ${setting}: The secrets its key sealed could not be sealed again under the current key: ${detail}`,
+  });
+}
+
+function rotatedUnder(
+  secrets: SecretStore,
+  { previous }: SecretsSettings,
+): Effect.Effect<number, InvalidSettingsError> {
+  return previous === undefined
+    ? Effect.orDie(secrets.rotated())
+    : Effect.mapError(secrets.rotated(), (failure: { readonly detail: string }) =>
+        sealedAgainRefused(previous, failure.detail),
+      );
+}
+
 function openedAndRotated(
   database: DatabaseSettings,
   keys: SecretKeys,
-  keyFrom: SecretsKeySource,
-): Effect.Effect<SecretStore> {
+  settings: SecretsSettings,
+): Effect.Effect<SecretStore, InvalidSettingsError> {
   return Effect.gen(function* () {
     const custodians = custodiansOf(keys);
     const secrets = secretStoreOver(yield* secretRowsOn(database), custodians);
-    const resealed = yield* secrets.rotated();
-    yield* logSecretStore({ kid: custodians.current.kid, resealed, keyFrom });
+    const resealed = yield* rotatedUnder(secrets, settings);
+    yield* logSecretStore({ kid: custodians.current.kid, resealed, keyFrom: settings.current });
     return secrets;
   });
 }
@@ -38,7 +59,7 @@ export async function ledgerStoresOpenedBy(
   const run = Effect.runPromiseWith(context);
   await run(Effect.andThen(logLedger(ledger), logContentStore(content)));
   const keys = secretsKeysOf(secrets);
-  const store = await run(openedAndRotated(database, keys, secrets.current));
+  const store = await run(openedAndRotated(database, keys, secrets));
   return {
     secrets: store,
     retryStateKeys: retryStateKeysOf(keys),

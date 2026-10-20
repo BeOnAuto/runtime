@@ -4,8 +4,9 @@ import { compactDecrypt, decodeProtectedHeader } from 'jose';
 import { describe, expect, it } from 'vitest';
 
 import { localCustodian } from '../custodians/local-custodian.ts';
+import { storeFailureBehaviour } from './failure-behaviour.ts';
 import { storeLeaseBehaviour } from './lease-behaviour.ts';
-import { aSecretsKey, custodianRefusal, recordingCustodian } from './recording-custodian.ts';
+import { aSecretsKey, recordingCustodian } from './recording-custodian.ts';
 import {
   at,
   firstMoment,
@@ -138,24 +139,6 @@ function forgottenTwiceAsOnce(entry: SecretsEntry): void {
   });
 }
 
-function unknownKeyRefused(entry: SecretsEntry): void {
-  it('cannot read a value sealed under another key, and names that key and never the value', async () => {
-    const database = await entry.aDatabase();
-    const sealing = aSecretsKey();
-    const id = await kept(await storeOn(entry, database, { current: sealing }), 'pasted-key');
-    const other = await storeOn(entry, database, { current: aSecretsKey() });
-
-    const refused = await Effect.runPromise(Effect.flip(other.read(id)));
-
-    expect(refused).toMatchObject({
-      _tag: 'secret_key_unknown',
-      kid: kidOf(sealing),
-      detail: `The secret is sealed under the key ${kidOf(sealing)}, which is neither the current key nor the previous one`,
-    });
-    expect(JSON.stringify(refused)).not.toContain('pasted-key');
-  });
-}
-
 function valuesRefused(entry: SecretsEntry): void {
   it('refuses an empty value and one of more than 8 KiB of UTF-8 before anything is sealed, and keeps neither', async () => {
     const database = await entry.aDatabase();
@@ -178,21 +161,6 @@ function valuesRefused(entry: SecretsEntry): void {
     expect(wrapsBefore).toBe(0);
     expect(await Promise.all(largest.map((id) => readBack(store, id)))).toEqual(['x'.repeat(8192), 'é'.repeat(4096)]);
     expect(await rowsIn(entry, database)).toHaveLength(2);
-  });
-}
-
-function custodianRefusing(entry: SecretsEntry): void {
-  it('keeps nothing whose data key the custodian refuses to wrap, and reads nothing whose data key it refuses to unwrap', async () => {
-    const database = await entry.aDatabase();
-    const custodian = recordingCustodian();
-    const store = await storeWith(entry, database, { current: custodian });
-    const id = await kept(store, 'pasted-key');
-
-    custodian.refuse();
-
-    await expect(kept(store, 'second-key')).rejects.toThrow(custodianRefusal);
-    await expect(readBack(store, id)).rejects.toThrow(custodianRefusal);
-    expect((await rowsIn(entry, database)).map((row) => row.id)).toEqual([id]);
   });
 }
 
@@ -242,11 +210,10 @@ export function storeBehaviour(entry: SecretsEntry): void {
     sealedUnderADataKeyOfItsOwn(entry);
     unwrappedAtEachRead(entry);
     forgottenTwiceAsOnce(entry);
-    unknownKeyRefused(entry);
     valuesRefused(entry);
-    custodianRefusing(entry);
     rewrappedInBatches(entry);
     rewrappedNothing(entry);
+    storeFailureBehaviour(entry);
     storeLeaseBehaviour(entry);
   });
 }
