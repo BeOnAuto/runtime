@@ -11,7 +11,7 @@ import { validateHost } from './validate-host.ts';
 import { validateOrigin } from './validate-origin.ts';
 
 export function middlewareFor(
-  { allowedOrigins, studio, authenticator, requests, runtimeControl }: ApiOptions,
+  { allowedOrigins, studio, authenticator, requests, runtimeControl, installId }: ApiOptions,
   publicPaths: ReadonlySet<string>,
 ): readonly MiddlewareHandler<ApiEnv>[] {
   const isPublic = publicPathsOf(authenticator, publicPaths);
@@ -19,7 +19,7 @@ export function middlewareFor(
   const pages = { studio, allowedOrigins };
   return [
     ...(requests === undefined ? [] : [requests]),
-    landingPageFor(runtimeControl, studio),
+    landingPageFor({ control: runtimeControl, studio, installId }),
     ...requestIdAndSecurityHeadersFor(studio),
     ...[validateOrigin(pages, authenticator.resource), ...hostValidation].map((middleware) =>
       exceptOn(isPublic, middleware),

@@ -1,4 +1,4 @@
-import { studioBaseOf, type StudioSettings } from '@on.auto/identity';
+import { studioLinkOf, type StudioSettings } from '@on.auto/identity';
 import type { Context, MiddlewareHandler } from 'hono';
 import { html, raw } from 'hono/html';
 
@@ -25,10 +25,6 @@ const head = headOf('');
 
 type Page = ReturnType<typeof html>;
 
-function studioOn(studio: StudioSettings, server: Readonly<URL>): string {
-  return `${studioBaseOf(studio, server.origin)}?server=${encodeURIComponent(server.origin)}`;
-}
-
 function factsOf(status: RuntimeStatus): Page {
   const log =
     status.logFile === undefined
@@ -52,7 +48,7 @@ function factsOf(status: RuntimeStatus): Page {
     </div>`;
 }
 
-function pageOf(studio: StudioSettings, server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
+function pageOf(studioLink: string, server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
   return html`<!doctype html>
     <html lang="en">
       <head>
@@ -64,7 +60,7 @@ function pageOf(studio: StudioSettings, server: Readonly<URL>, status: RuntimeSt
           <h1>Auto Runtime is running</h1>
           <p>Create and manage your playbooks in the studio.</p>
           <span class="address">${server.host}</span>
-          <a class="open" href="${studioOn(studio, server)}">Open studio ${raw(arrow)}</a>
+          <a class="open" href="${studioLink}">Open studio ${raw(arrow)}</a>
           ${status === undefined ? '' : factsOf(status)}
         </main>
       </body>
@@ -118,13 +114,20 @@ function guarded(answer: Answer): Answer {
     }) ?? answer(c);
 }
 
-function landingAnswerOf(control: RuntimeControl | undefined, studio: StudioSettings): Answer {
-  return (c) =>
-    c.html(
-      pageOf(studio, new URL(c.req.url), control?.status()),
+function landingAnswerOf({ control, studio, installId }: Landing): Answer {
+  return (c) => {
+    const server = new URL(c.req.url);
+    const studioLink = studioLinkOf(studio, {
+      ownOrigin: server.origin,
+      openedFrom: 'runtime-page',
+      installId: installId?.(),
+    });
+    return c.html(
+      pageOf(studioLink, server, control?.status()),
       200,
       control === undefined ? readOnlyPageHeaders : controlPageHeaders,
     );
+  };
 }
 
 function actionAnswerOf(control: RuntimeControl, action: RuntimeAction): Answer {
@@ -147,21 +150,20 @@ function controlAnswersOf(control: RuntimeControl): ReadonlyMap<string, Answer> 
 interface Landing {
   readonly control: RuntimeControl | undefined;
   readonly studio: StudioSettings;
-  readonly controls: ReadonlyMap<string, Answer>;
+  readonly installId: (() => string | undefined) | undefined;
 }
 
-function answerFor(c: Context<ApiEnv>, { control, studio, controls }: Landing): Answer | undefined {
+function answerFor(c: Context<ApiEnv>, landing: Landing, controls: ReadonlyMap<string, Answer>): Answer | undefined {
   if (c.req.method === 'GET' && c.req.path === '/' && asksForAPage(c)) {
-    return landingAnswerOf(control, studio);
+    return landingAnswerOf(landing);
   }
   return controls.get(`${c.req.method} ${c.req.path}`);
 }
 
-export function landingPageFor(control: RuntimeControl | undefined, studio: StudioSettings): MiddlewareHandler<ApiEnv> {
-  const controls = control === undefined ? new Map<string, Answer>() : controlAnswersOf(control);
-  const landing = { control, studio, controls };
+export function landingPageFor(landing: Landing): MiddlewareHandler<ApiEnv> {
+  const controls = landing.control === undefined ? new Map<string, Answer>() : controlAnswersOf(landing.control);
   return (c, next) => {
-    const answer = answerFor(c, landing);
+    const answer = answerFor(c, landing, controls);
     return answer === undefined ? next() : Promise.resolve(answer(c));
   };
 }
