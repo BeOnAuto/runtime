@@ -96,6 +96,7 @@ jobs:
               - providers
               - reasoning
               - recall
+              - secrets
               - tool-servers
             services: false
     runs-on: ubuntu-latest
