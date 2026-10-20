@@ -83,6 +83,13 @@ function tileOf(icon: string): string | undefined {
   return /<path d="M512\.644 100H[^"]+" fill="([^"]+)"/u.exec(icon)?.[1];
 }
 
+const colorBands = ['#EC3F4A', '#FF8A1D', '#5EC72D', '#42C3F7'];
+
+function colorsBehindTheTileOf(drawing: string): readonly string[] {
+  const behind = drawing.slice(0, drawing.indexOf('M512.644 100H'));
+  return [...behind.matchAll(/fill="([^"]+)"/gu)].map(([, color = '']: readonly string[]) => color);
+}
+
 describe('the icon of the page at the root of the server', () => {
   it('is the Auto mark, dark on a light browser and light on a dark one', async () => {
     const page = await (await open(createTestHandler().handler)).text();
@@ -101,6 +108,33 @@ describe('the icon of the page at the root of the server', () => {
       .replaceAll('ink', '#FFFFFF');
 
     expect(iconFor(page, 'dark')).toBe(swapped);
+  });
+
+  it('draws the four color bands of the Auto mark behind the tile, in both', async () => {
+    const page = await (await open(createTestHandler().handler)).text();
+
+    expect({
+      onLight: colorsBehindTheTileOf(iconFor(page, 'light')),
+      onDark: colorsBehindTheTileOf(iconFor(page, 'dark')),
+    }).toEqual({ onLight: colorBands, onDark: colorBands });
+  });
+});
+
+function brandOf(page: string): string {
+  return /<span class="brand">.*?<\/span><\/span>/su.exec(page)?.[0] ?? '';
+}
+
+describe('the brand at the head of the page at the root of the server', () => {
+  it('is the Auto mark, with its four color bands behind the tile', async () => {
+    const page = await (await open(createTestHandler().handler)).text();
+
+    expect(colorsBehindTheTileOf(brandOf(page))).toEqual(colorBands);
+  });
+
+  it('names Auto beside the mark', async () => {
+    const page = await (await open(createTestHandler().handler)).text();
+
+    expect(brandOf(page)).toMatch(/<\/svg><span class="name">Auto<\/span><\/span>$/u);
   });
 });
 
