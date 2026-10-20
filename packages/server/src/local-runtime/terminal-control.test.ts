@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createApiKey } from '@on.auto/identity';
@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { homeOfTheTest, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
+import { aLedgerOfAnotherVersionAt } from '../testing/records/ledger-of-another-version.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const homePrefix = 'auto-runtime-terminal-';
@@ -81,5 +82,21 @@ describe('a runtime started in a terminal on a taken port', () => {
 
     expect(await second.exited).toBe(1);
     expect(second.stderr()).toContain('Auto Runtime could not start');
+  });
+});
+
+describe('a runtime started in a terminal on a ledger made by another version', () => {
+  it('says on stderr, in a notice of its own, where the ledger is, what to do and where to ask, and exits', async () => {
+    const home = homeOfTheTest(homePrefix);
+    const ledger = join(home, '.auto-runtime', 'ledger.db');
+    mkdirSync(join(home, '.auto-runtime'));
+    aLedgerOfAnotherVersionAt(ledger);
+
+    const runtime = spawnRuntimeCommand([], { home, port: await aPortNothingListensOn() });
+
+    expect(await runtime.exited).toBe(1);
+    expect(runtime.stderr()).toContain('  ✖ Auto Runtime could not start\n\n');
+    expect(runtime.stderr()).toContain(`\n      rm -f ${ledger}{,-wal,-shm}\n`);
+    expect(runtime.stderr()).toContain('\n  Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8\n');
   });
 });

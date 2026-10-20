@@ -20,6 +20,7 @@ export type {
   StoredPlace,
   StoredRecord,
 } from './event-store.ts';
+export { LedgerShapeRefused, type RefusedShape } from './content/ledger-shape-refused.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {
   decisionLoop,

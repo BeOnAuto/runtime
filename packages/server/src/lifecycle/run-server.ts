@@ -53,8 +53,15 @@ export async function runServer<R>(
   return server;
 }
 
-export function exitOnStartupFailure(serverProcess: ServerProcess): (failure: unknown) => void {
+function startupFailureLineOf(failure: unknown): string {
+  return `Auto Runtime could not start: ${String(failure).replaceAll(/\s*\n\s*/gu, ' ')}`;
+}
+
+export function exitOnStartupFailure(
+  serverProcess: ServerProcess,
+  noticeOf?: (failure: unknown) => string | undefined,
+): (failure: unknown) => void {
   return (failure) => {
-    sayThenExit(serverProcess, `Auto Runtime could not start: ${String(failure).replaceAll(/\s*\n\s*/gu, ' ')}`, 1);
+    sayThenExit(serverProcess, noticeOf?.(failure) ?? startupFailureLineOf(failure), 1);
   };
 }

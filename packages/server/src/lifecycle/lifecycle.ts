@@ -35,6 +35,7 @@ import { exitDeadlineMs, shutDown, shutdownTimeoutMs } from './shutdown.ts';
 
 class StartupError extends Data.TaggedError('StartupError')<{
   readonly message: string;
+  readonly cause: unknown;
 }> {}
 
 export interface Install {
@@ -119,7 +120,7 @@ async function startRuntime<R>(
   try {
     return await makeAppRuntime(services.pipe(Layer.provideMerge(telemetry), Layer.provideMerge(serverLogs(logs))));
   } catch (failure) {
-    throw new StartupError({ message: `The server's services could not start: ${String(failure)}` });
+    throw new StartupError({ message: `The server's services could not start: ${String(failure)}`, cause: failure });
   }
 }
 
