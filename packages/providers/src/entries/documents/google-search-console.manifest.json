@@ -1,0 +1,14 @@
+{
+  "discovery": "https://searchconsole.googleapis.com/$discovery/rest?version=v1",
+  "revision": "20261018",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "webmasters.searchanalytics.query",
+    "webmasters.sites.list",
+    "webmasters.sites.get",
+    "webmasters.sites.add",
+    "webmasters.sites.delete",
+    "webmasters.sitemaps.list",
+    "searchconsole.urlInspection.index.inspect"
+  ]
+}

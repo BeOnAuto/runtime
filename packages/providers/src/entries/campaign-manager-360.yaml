@@ -1,0 +1,15 @@
+name: campaign-manager-360
+title: Campaign Manager 360
+description: Create, run and list Campaign Manager 360 reports and their files, query dimension values and compatible fields, and read user profiles, campaigns, advertisers, placements, ads, creatives and sites. A report file's content is a download a call does not fetch.
+website: https://developers.google.com/doubleclick-advertisers/getting_started
+type: openapi
+document: documents/campaign-manager-360.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/dfareporting https://www.googleapis.com/auth/dfatrafficking
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Campaign Manager 360 reporting and trafficking.

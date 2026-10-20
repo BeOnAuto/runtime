@@ -1,9 +1,6 @@
-import { readFile, writeFile } from 'node:fs/promises';
-
 import {
-  authorizationServerOf,
+  byName,
   componentReferenceOf,
-  discoveryDocumentOf,
   methodsOf,
   referencesIn,
   translatedSchema,
@@ -32,15 +29,36 @@ const templatedSegment = /\{\+?([^{}]+)\}/gu;
 
 const singleSegment = '^[^/]+$';
 
-function keptMethodsOf(discovery: DiscoveryDocument, methodIds: readonly string[]): readonly DiscoveryMethod[] {
-  const wanted = new Set(methodIds);
-  const kept = methodsOf(discovery).filter(({ id }) => wanted.has(id));
-  const found = new Set(kept.map(({ id }) => id));
-  const missing = [...wanted].filter((id) => !found.has(id));
+interface KeptMethod extends DiscoveryMethod {
+  readonly scopes: readonly string[];
+}
+
+function isScoped(method: DiscoveryMethod): method is KeptMethod {
+  return method.scopes !== undefined && method.scopes.length > 0;
+}
+
+function keptMethodsOf(discovery: DiscoveryDocument, methodIds: readonly string[]): readonly KeptMethod[] {
+  const byId = new Map(methodsOf(discovery).map((method) => [method.id, method]));
+  const kept: DiscoveryMethod[] = [];
+  const missing: string[] = [];
+  for (const id of new Set(methodIds)) {
+    const method = byId.get(id);
+    if (method === undefined) {
+      missing.push(id);
+    } else {
+      kept.push(method);
+    }
+  }
   if (missing.length > 0) {
     throw new Error(`The Discovery document has no method ${missing.join(', ')}`);
   }
-  return kept;
+  const unscoped = kept.filter((method) => !isScoped(method)).map(({ id }) => id);
+  if (unscoped.length > 0) {
+    throw new Error(
+      `The Discovery document lists no scope for the method ${unscoped.join(', ')}, so a call of it would send no token`,
+    );
+  }
+  return kept.filter((method) => isScoped(method));
 }
 
 function pathOf(method: DiscoveryMethod): string {
@@ -127,7 +145,9 @@ function parametersOf(method: DiscoveryMethod, fields: readonly JsonObject[]): r
   const declared = method.parameters ?? {};
   return [
     ...pathParametersOf(method, declared),
-    ...Object.entries(declared).flatMap((each: readonly [string, JsonObject]) => queryParameterOf(each)),
+    ...Object.entries(declared)
+      .toSorted(byName)
+      .flatMap((each: readonly [string, JsonObject]) => queryParameterOf(each)),
     ...(Object.hasOwn(declared, fieldsParameterName) ? [] : fields),
   ];
 }
@@ -149,11 +169,11 @@ function responsesOf({ response }: DiscoveryMethod): JsonObject {
   };
 }
 
-function securityOf({ scopes = [] }: DiscoveryMethod): { readonly security?: readonly JsonObject[] } {
-  return scopes.length === 0 ? {} : { security: scopes.map((scope) => ({ [securitySchemeName]: [scope] })) };
+function securityOf({ scopes }: KeptMethod): readonly JsonObject[] {
+  return scopes.map((scope) => ({ [securitySchemeName]: [scope] }));
 }
 
-function operationOf(method: DiscoveryMethod, fields: readonly JsonObject[]): JsonObject {
+function operationOf(method: KeptMethod, fields: readonly JsonObject[]): JsonObject {
   return {
     operationId: method.id,
     ...(method.description === undefined ? {} : { description: method.description }),
@@ -161,11 +181,11 @@ function operationOf(method: DiscoveryMethod, fields: readonly JsonObject[]): Js
     parameters: parametersOf(method, fields),
     ...requestBodyOf(method),
     responses: responsesOf(method),
-    ...securityOf(method),
+    security: securityOf(method),
   };
 }
 
-function pathsOf(methods: readonly DiscoveryMethod[], fields: readonly JsonObject[]): JsonObject {
+function pathsOf(methods: readonly KeptMethod[], fields: readonly JsonObject[]): JsonObject {
   const paths: Record<string, Record<string, JsonObject>> = {};
   for (const method of methods) {
     const path = pathOf(method);
@@ -205,12 +225,12 @@ function componentSchemasOf(discovery: DiscoveryDocument, methods: readonly Disc
 
 function scopesOf(discovery: DiscoveryDocument): JsonObject {
   return Object.fromEntries(
-    Object.entries(discovery.auth?.oauth2.scopes ?? {}).map(
-      ([scope, { description }]: readonly [string, Required<Described>]): readonly [string, Json] => [
+    Object.entries(discovery.auth?.oauth2.scopes ?? {})
+      .toSorted(byName)
+      .map(([scope, { description }]: readonly [string, Required<Described>]): readonly [string, Json] => [
         scope,
         description,
-      ],
-    ),
+      ]),
   );
 }
 
@@ -244,41 +264,11 @@ export function curatedDocumentOf(
     info: infoOf(discovery),
     ...(discovery.documentationLink === undefined ? {} : { externalDocs: { url: discovery.documentationLink } }),
     servers: [{ url: `${discovery.rootUrl}${discovery.servicePath}`.replace(/\/+$/u, '') }],
+    security: [{ [securitySchemeName]: [] }],
     paths: pathsOf(methods, fieldsParameterOf(discovery)),
     components: {
       schemas: componentSchemasOf(discovery, methods),
       securitySchemes: securitySchemesOf(discovery, server),
     },
   };
-}
-
-async function jsonIn(path: string): Promise<unknown> {
-  const read: unknown = JSON.parse(await readFile(path, 'utf8'));
-  return read;
-}
-
-export async function translateDiscovery(
-  source: string,
-  metadata: string,
-  target: string,
-  methodIds: readonly string[],
-): Promise<void> {
-  const discovery = discoveryDocumentOf(await jsonIn(source));
-  const document = curatedDocumentOf(discovery, authorizationServerOf(await jsonIn(metadata)), methodIds);
-  await writeFile(target, `${JSON.stringify(document, null, 2)}\n`);
-}
-
-const usage =
-  'Usage: node translate-discovery.ts <discovery document> <authorization server metadata> <curated document> <method id>...';
-
-export async function runTranslation(commandArguments: readonly string[]): Promise<void> {
-  const [source, metadata, target, ...methodIds] = commandArguments;
-  if (source === undefined || metadata === undefined || target === undefined || methodIds.length === 0) {
-    throw new Error(usage);
-  }
-  await translateDiscovery(source, metadata, target, methodIds);
-}
-
-if (import.meta.main) {
-  await runTranslation(process.argv.slice(2));
 }

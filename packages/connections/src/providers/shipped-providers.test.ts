@@ -8,13 +8,20 @@ import {
   type Provider,
   type ProviderAddition,
 } from '@on.auto/providers';
-import { describedToolServers, type ServerSettings, type ToolServers } from '@on.auto/tool-servers';
+import {
+  describedToolServers,
+  isConnectionServerSettings,
+  type AuthSettings,
+  type ServerSettings,
+  type ToolServers,
+} from '@on.auto/tool-servers';
 import { Effect, Option, Redacted, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { additionIssuesOf, readAddition } from '../entries/entry-checks.ts';
-import { credentialFieldIssuesOf } from '../registry/credential.ts';
-import { harnessAtTheVendor, servedAsTheVendor, startedAtTheVendor, type Vendor } from '../testing/vendor-fakes.ts';
+import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
+import { vendorsOfTheShippedWays, type VendorOfTheWay } from '../testing/shipped-vendors.ts';
+import { consentedAtTheVendor, harnessAtTheVendor, servedAsTheVendor } from '../testing/vendor-fakes.ts';
 
 const shipped = Result.getOrThrow(readProviders());
 
@@ -46,8 +53,20 @@ function additionsOf(provider: Provider): readonly ProviderAddition[] {
 
 const additions = shipped.providers.flatMap((provider) => additionsOf(provider));
 
+function authOfTheConsent({ credential }: ProviderAddition): AuthSettings {
+  return {
+    issuer: credential.issuer ?? '',
+    client_id: 'a client whoever runs Auto registered',
+    scope: credential.scope ?? null,
+    credential: { kind: 'client_secret', client_secret: standIn.value },
+  };
+}
+
 function settingsOf(addition: ProviderAddition): ServerSettings {
-  return Result.getOrThrow(readAddition(addition, checking, standIn));
+  const { kind } = addition.credential;
+  const read = Result.getOrThrow(readAddition(addition, checking, placesNoValue(kind) ? undefined : standIn));
+  const settings = Option.getOrThrow(Option.liftPredicate(read, isConnectionServerSettings));
+  return kind === 'authorization' ? { ...settings, auth: authOfTheConsent(addition) } : settings;
 }
 
 function operationsIn(document = ''): number {
@@ -59,6 +78,7 @@ function operationsIn(document = ''): number {
 
 function documentsBesideTheEntries(): readonly string[] {
   return readdirSync(join(shipped.documents, 'documents'))
+    .filter((file) => file.endsWith('.openapi.json'))
     .map((file) => `documents/${file}`)
     .toSorted();
 }
@@ -79,7 +99,7 @@ describe('every way of every shipped provider, resolved with the examples of its
 });
 
 describe('the documents beside the shipped entries', () => {
-  it('are each offered whole by the reader of an HTTP API, every operation a tool within its bounds', async () => {
+  it('are each offered whole by the reader of an HTTP API, every operation a tool within its bounds, a way of consent with the auth its serving gives', async () => {
     const leftOut: string[] = [];
     const described = additions.filter(({ type }) => type === 'openapi');
     const servers = await Effect.runPromise(
@@ -114,50 +134,6 @@ function required<A>(value: A | undefined): A {
   return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
-interface VendorOfTheWay extends Vendor {
-  readonly resource: string;
-  readonly asked?: string;
-}
-
-const vendors: Readonly<Record<string, VendorOfTheWay>> = {
-  github: {
-    metadata: {
-      issuer: 'https://github.com/login/oauth',
-      authorizationServer: 'https://github.com/login/oauth',
-      protectedResource: 'https://api.githubcopilot.com/mcp',
-      scopesSupported: ['offline_access'],
-    },
-    protectedResourceAt: 'https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp',
-    authorizationServerAt: 'https://github.com/.well-known/oauth-authorization-server/login/oauth',
-    resource: 'https://api.githubcopilot.com/mcp',
-    asked: 'read:org repo offline_access',
-  },
-  profound: {
-    metadata: {
-      issuer: 'https://auth.tryprofound.com',
-      authorizationServer: 'https://auth.tryprofound.com/',
-      protectedResource: 'https://mcp.tryprofound.com/mcp',
-      scopesSupported: ['email', 'offline_access', 'openid', 'profile'],
-      dynamicRegistration: true,
-      clientMetadataDocuments: true,
-    },
-    protectedResourceAt: 'https://mcp.tryprofound.com/.well-known/oauth-protected-resource/mcp',
-    authorizationServerAt: 'https://auth.tryprofound.com/.well-known/oauth-authorization-server',
-    resource: 'https://mcp.tryprofound.com/mcp',
-  },
-  slack: {
-    metadata: {
-      issuer: 'https://mcp.slack.com',
-      authorizationServer: 'https://mcp.slack.com',
-      protectedResource: 'https://mcp.slack.com',
-      takesBasicSecrets: false,
-    },
-    protectedResourceAt: 'https://mcp.slack.com/.well-known/oauth-protected-resource',
-    authorizationServerAt: 'https://mcp.slack.com/.well-known/oauth-authorization-server',
-    resource: 'https://mcp.slack.com',
-  },
-};
-
 interface WayOfConsent {
   readonly name: string;
   readonly issuer: string;
@@ -169,7 +145,7 @@ interface WayOfConsent {
 const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
   entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'] }) =>
     kind === 'authorization' && issuer !== undefined
-      ? [{ name: entry.name, issuer, scope, clients, vendor: vendors[entry.name] }]
+      ? [{ name: entry.name, issuer, scope, clients, vendor: vendorsOfTheShippedWays[entry.name] }]
       : [],
   ),
 );
@@ -181,7 +157,23 @@ const startedSourceOf = Schema.decodeUnknownOption(
   }),
 );
 
-async function startOf({ name, issuer, vendor }: WayOfConsent, registered: boolean) {
+const connectedOf = Schema.decodeUnknownSync(
+  Schema.Struct({
+    output: Schema.Struct({
+      status: Schema.String,
+      credential: Schema.Struct({ scope: Schema.optionalKey(Schema.String), client_source: Schema.String }),
+    }),
+  }),
+);
+
+function parametersAsked(
+  asked: Readonly<URL>,
+  { parameters = {} }: VendorOfTheWay,
+): Readonly<Record<string, string | null>> {
+  return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
+}
+
+async function consentOf({ name, issuer, vendor }: WayOfConsent, registered: boolean) {
   const theVendor = required(vendor);
   const fake = await servedAsTheVendor(theVendor);
   closing.push(fake.close);
@@ -189,38 +181,68 @@ async function startOf({ name, issuer, vendor }: WayOfConsent, registered: boole
     providers: shipped,
     registeredIssuer: registered ? issuer : undefined,
   });
-  const asked = await startedAtTheVendor(h, name);
+  const { asked, finished } = await consentedAtTheVendor(h, name);
   const facts = await h.facts();
+  const { status, credential } = connectedOf(finished).output;
   return {
     provider: name,
     at_its_authorization_endpoint: `${asked.origin}${asked.pathname}` === `${fake.origin}/authorize`,
     scope: asked.searchParams.get('scope'),
     resource: asked.searchParams.get('resource'),
+    code_challenge_method: asked.searchParams.get('code_challenge_method'),
+    parameters: parametersAsked(asked, theVendor),
     client_sources: facts.flatMap((fact) =>
       Option.toArray(Option.map(startedSourceOf(fact), ({ data }) => data.client_source)),
     ),
+    connected: { status, scope: credential.scope, client_source: credential.client_source },
   };
 }
 
-function startExpectedOf({ name, scope, vendor }: WayOfConsent, source: string) {
-  const { asked = scope, resource } = required(vendor);
-  return { provider: name, at_its_authorization_endpoint: true, scope: asked, resource, client_sources: [source] };
+function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string) {
+  const { asked = scope, resource, parameters = {} } = required(vendor);
+  return {
+    provider: name,
+    at_its_authorization_endpoint: true,
+    scope: asked,
+    resource,
+    code_challenge_method: 'S256',
+    parameters,
+    client_sources: [source],
+    connected: { status: 'connected', scope: asked, client_source: source },
+  };
 }
 
 describe('every way of consent of a shipped provider, against the fake authorization server at its vendor’s addresses', () => {
-  it('starts at the issuer its server names, with its scope and what the metadata adds, by the client whoever runs Auto registered there', async () => {
-    const starts = await Promise.all(waysOfConsent.map((consenting) => startOf(consenting, true)));
+  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, and finishes connected with that scope', async () => {
+    const consents = await Promise.all(waysOfConsent.map((consenting) => consentOf(consenting, true)));
 
-    expect(starts).toEqual(waysOfConsent.map((consenting) => startExpectedOf(consenting, 'registered')));
-    expect(waysOfConsent.map(({ name }) => name)).toEqual(['github', 'profound', 'slack']);
+    expect(consents).toEqual(waysOfConsent.map((consenting) => consentExpectedOf(consenting, 'registered')));
+    expect(waysOfConsent.map(({ name }) => name)).toEqual([
+      'campaign-manager-360',
+      'display-video-360',
+      'display-video-360-reports',
+      'github',
+      'gmail',
+      'google-ads',
+      'google-analytics',
+      'google-analytics-admin',
+      'google-docs',
+      'google-drive',
+      'google-search-console',
+      'google-sheets',
+      'google-slides',
+      'profound',
+      'search-ads-360',
+      'slack',
+    ]);
   });
 
-  it('starts without a registered client where its client sources take one the runtime registers itself', async () => {
+  it('starts and finishes without a registered client where its client sources take one the runtime registers itself', async () => {
     const registering = waysOfConsent.filter(({ clients }) => clients.includes('dynamic'));
 
-    const starts = await Promise.all(registering.map((consenting) => startOf(consenting, false)));
+    const consents = await Promise.all(registering.map((consenting) => consentOf(consenting, false)));
 
-    expect(starts).toEqual(registering.map((consenting) => startExpectedOf(consenting, 'dynamic')));
+    expect(consents).toEqual(registering.map((consenting) => consentExpectedOf(consenting, 'dynamic')));
     expect(registering.map(({ name }) => name)).toEqual(['profound']);
   });
 });
