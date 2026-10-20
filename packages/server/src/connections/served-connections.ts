@@ -1,4 +1,4 @@
-import { clientMetadataRoutes, type AppRuntime, type RegisterRoutes } from '@on.auto/api';
+import { clientMetadataRoutes, type AppRuntime, type RegisterRoutes, type RetryStateKeys } from '@on.auto/api';
 import {
   makeConnectionOperations,
   makeConnectionSource,
@@ -9,16 +9,17 @@ import {
 } from '@on.auto/connections';
 import { accessModeOf } from '@on.auto/identity';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { SecretStore } from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/served-consent.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
+import { retryStateKeysOf } from '../database/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
 
 export interface StoresAndConnections {
   readonly stores: LedgerStores;
+  readonly retryStateKeys: RetryStateKeys;
   readonly consent: ReturnType<typeof consentClientOf>;
   readonly connections: ConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
@@ -50,7 +51,7 @@ function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): Runti
 }
 
 interface Composed {
-  readonly secrets: SecretStore;
+  readonly secrets: LedgerStores['secrets'];
   readonly consent: ReturnType<typeof consentClientOf>;
   readonly pages: ConnectionServices['pages'];
 }
@@ -93,11 +94,13 @@ export async function storesAndConnectionsOf(
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
+  const retryStateKeys = await retryStateKeysOf(runtime, stores.secrets, settings.secrets.current);
   const consent = consentClientOf(runtime, settings, stores.secrets);
   const pages = { studio: settings.studio, runtime: ownOrigin };
   const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages });
   return {
     stores,
+    retryStateKeys,
     consent,
     connections: makeConnectionOperations(services),
     source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),

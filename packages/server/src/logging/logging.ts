@@ -149,7 +149,7 @@ export interface SecretStoreReport {
   readonly keyFrom: SecretsKeySource;
 }
 
-function keyHeldBy(source: SecretsKeySource): string {
+export function keyHeldBy(source: SecretsKeySource): string {
   if (source.from === 'environment') {
     return `that ${source.setting} holds`;
   }

@@ -4,6 +4,7 @@ import { Ledger } from '@on.auto/operations';
 import type { SecretStore } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, Redacted } from 'effect';
 
+import { ownKeysDecider, ownKeysStream, type OwnKeyEvent } from '../../database/own-keys.ts';
 import { custodiansOf, secretStoreOver } from '../../database/secret-store.ts';
 
 export const secretsKey = Buffer.alloc(32, 7);
@@ -22,6 +23,20 @@ export async function secretIdOf(fileName: string, org: string, connection: stri
   );
   await runtime.dispose();
   return state.get(connection)?.secretId;
+}
+
+export async function ownKeyFactsIn(fileName: string): Promise<readonly OwnKeyEvent[]> {
+  const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
+  const collecting = {
+    ...ownKeysDecider,
+    initialState: [],
+    evolve: (facts: readonly OwnKeyEvent[], fact: OwnKeyEvent) => [...facts, fact],
+  };
+  const { state } = await runtime.runPromise(
+    Effect.flatMap(Ledger, (ledger) => ledger.load(ownKeysStream, collecting)),
+  );
+  await runtime.dispose();
+  return state;
 }
 
 export interface KeptSecret {

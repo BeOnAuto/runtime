@@ -6,7 +6,7 @@ import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { SecretsKeyGiven, SecretsKeySource } from '../settings/secrets-settings.ts';
-import { retryStateKeysOf, secretsKeysOf } from './secrets-keys.ts';
+import { secretsKeysOf } from './secrets-keys.ts';
 
 function aFolder(): string {
   const folder = mkdtempSync(join(tmpdir(), 'auto-runtime-secrets-'));
@@ -140,29 +140,3 @@ describe('the secrets keys of the other settings', () => {
 function bytesOf(key: Redacted.Redacted<Uint8Array> | undefined): readonly number[] {
   return key === undefined ? [] : Array.from(Redacted.value(key));
 }
-
-function derivedOf(bytes: Readonly<Uint8Array>): readonly number[] {
-  return bytesOf(retryStateKeysOf({ current: Redacted.make(Uint8Array.from(bytes)) }).current);
-}
-
-describe('the key that signs the state of a retry', () => {
-  it('is derived from the current secrets key, the same of the same key, and never the key itself', () => {
-    const key = new Uint8Array(32).fill(7);
-
-    const [first, again, ofAnother] = [derivedOf(key), derivedOf(key), derivedOf(new Uint8Array(32).fill(9))];
-
-    expect(first).toHaveLength(32);
-    expect(again).toEqual(first);
-    expect(ofAnother).not.toEqual(first);
-    expect(first).not.toEqual(Array.from(key));
-  });
-
-  it('is derived from the previous secrets key too, as a server that still has it as its current derives it', () => {
-    const [previous, current] = [new Uint8Array(32).fill(7), new Uint8Array(32).fill(9)];
-
-    const rotating = retryStateKeysOf({ current: Redacted.make(current), previous: Redacted.make(previous) });
-
-    expect([bytesOf(rotating.current), bytesOf(rotating.previous)]).toEqual([derivedOf(current), derivedOf(previous)]);
-    expect(bytesOf(retryStateKeysOf({ current: Redacted.make(current) }).previous)).toEqual([]);
-  });
-});

@@ -1,4 +1,3 @@
-import type { RetryStateKeys } from '@on.auto/api';
 import type { SecretStore } from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, type Context } from 'effect';
@@ -8,11 +7,10 @@ import { logContentStore, logLedger, logSecretStore } from '../logging/logging.t
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import type { Settings } from '../settings/settings.ts';
 import { custodiansOf, secretRowsOn, secretStoreOver } from './secret-store.ts';
-import { retryStateKeysOf, secretsKeysOf, type SecretKeys } from './secrets-keys.ts';
+import { secretsKeysOf, type SecretKeys } from './secrets-keys.ts';
 
 export interface LedgerStores {
   readonly secrets: SecretStore;
-  readonly retryStateKeys: RetryStateKeys;
   readonly withSecretsClosed: (served: Served) => Served;
 }
 
@@ -62,7 +60,6 @@ export async function ledgerStoresOpenedBy(
   const store = await run(openedAndRotated(database, keys, secrets));
   return {
     secrets: store,
-    retryStateKeys: retryStateKeysOf(keys),
     withSecretsClosed: ({ routes, stopWork }) => ({
       routes,
       stopWork: async () => {
