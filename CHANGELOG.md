@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/BeOnAuto/runtime/compare/v0.13.0...v0.14.0) (2026-10-20)
+
+
+### Features
+
+* **connections:** the runtime serves its client metadata document and places a consent's client id ([#259](https://github.com/BeOnAuto/runtime/issues/259)) ([57579bb](https://github.com/BeOnAuto/runtime/commit/57579bb3be8c455084854facdf65129376d98949))
+* **server:** the runtime sends an anonymous usage ping at start, which DO_NOT_TRACK turns off ([#265](https://github.com/BeOnAuto/runtime/issues/265)) ([486ed8f](https://github.com/BeOnAuto/runtime/commit/486ed8f5013543efe31228f4657584faf26d9f09))
+
 ## [0.13.0](https://github.com/BeOnAuto/runtime/compare/v0.12.0...v0.13.0) (2026-10-19)
 
 
