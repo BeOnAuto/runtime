@@ -246,7 +246,7 @@ jobs:
           . .github/smoke/calls.sh
           show_logs_on_failure smoke
           test "$(docker run --rm onauto/runtime:ci 2>&1 | grep --count '^Auto Runtime could not start: ReachableWithoutCredentialsError: ')" = 1
-          docker run --detach --name smoke --publish 5555:5555 --env 'API_KEYS=[]' onauto/runtime:ci
+          docker run --detach --name smoke --publish 5555:5555 --env DO_NOT_TRACK=1 --env 'API_KEYS=[]' onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail http://127.0.0.1:5555/health && break
             sleep 1
@@ -262,7 +262,7 @@ jobs:
         run: |
           . .github/smoke/calls.sh
           show_logs_on_failure telemetry
-          docker run --detach --name telemetry --publish 5556:5555 --env 'API_KEYS=[]' \
+          docker run --detach --name telemetry --publish 5556:5555 --env DO_NOT_TRACK=1 --env 'API_KEYS=[]' \
             --env OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:9 onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail http://127.0.0.1:5556/health && break
@@ -318,7 +318,7 @@ jobs:
             return 1
           }
           start_server() {
-            docker run --detach --name "$1" --publish 5555:5555 --env API_KEYS --volume playbooks:/data onauto/runtime:ci
+            docker run --detach --name "$1" --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume playbooks:/data onauto/runtime:ci
             wait_for_health
           }
           stop_server() {
@@ -381,7 +381,7 @@ jobs:
             test "$(answered "$1" --max-time 10 --header "authorization: Bearer $key" \
               http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke)" = 200
           }
-          docker run --detach --name ledger --network ledger --publish 5555:5555 --env API_KEYS --env DATABASE_URL \
+          docker run --detach --name ledger --network ledger --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --env DATABASE_URL \
             --env SECRETS_KEY onauto/runtime:ci
           wait_for_health
           test "$(answered created.json --max-time 10 \
@@ -414,7 +414,7 @@ jobs:
           echo "::add-mask::$read_key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p'),$(printf '%s\n' "$reading" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name mcp --publish 5555:5555 --env API_KEYS onauto/runtime:ci
+          docker run --detach --name mcp --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -497,7 +497,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name reasoning --publish 5555:5555 --env API_KEYS onauto/runtime:ci
+          docker run --detach --name reasoning --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -527,7 +527,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name computation --publish 5555:5555 --env API_KEYS onauto/runtime:ci
+          docker run --detach --name computation --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -566,7 +566,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name interaction --publish 5555:5555 --env API_KEYS onauto/runtime:ci
+          docker run --detach --name interaction --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -609,7 +609,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name prediction --publish 5555:5555 --env API_KEYS onauto/runtime:ci
+          docker run --detach --name prediction --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -699,7 +699,7 @@ jobs:
             return 1
           }
           start_server() {
-            docker run --detach --name "$1" --publish 5555:5555 --env API_KEYS --volume workflows:/data onauto/runtime:ci
+            docker run --detach --name "$1" --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume workflows:/data onauto/runtime:ci
             wait_for_health
           }
           stop_server() {
@@ -761,7 +761,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name analytics --publish 5555:5555 --env API_KEYS --volume workflows:/data onauto/runtime:ci
+          docker run --detach --name analytics --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume workflows:/data onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -792,7 +792,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name recall --publish 5555:5555 --env API_KEYS --volume workflows:/data onauto/runtime:ci
+          docker run --detach --name recall --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume workflows:/data onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -830,7 +830,7 @@ jobs:
           echo "::add-mask::$key"
           API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
           export API_KEYS
-          docker run --detach --name reactions --publish 5555:5555 --env API_KEYS onauto/runtime:ci
+          docker run --detach --name reactions --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
           for attempt in $(seq 1 30); do
             curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
             sleep 1
@@ -901,7 +901,7 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: |
           tarball="$(ls "$GITHUB_WORKSPACE"/dist/on.auto-runtime-*.tgz)"
-          export XDG_CACHE_HOME="$RUNNER_TEMP/cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db"
+          export XDG_CACHE_HOME="$RUNNER_TEMP/cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db" DO_NOT_TRACK=1
           runtime() {
             npx --yes --package="$tarball" auto-runtime "$@"
           }
