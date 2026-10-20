@@ -84,10 +84,12 @@ type AdditionServices = ProviderServices & Listing;
 type Consent = Listing['consent'];
 
 interface ClientListing {
-  readonly hadSources: Effect.Effect<Consent>;
+  readonly hadSources: (studioBase: string) => Effect.Effect<Consent>;
 }
 
-type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: ClientListing };
+type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: ClientListing } & {
+  readonly studioBase: string;
+};
 
 export function providingOf(
   { provider }: Pick<AdditionInput, 'provider'>,
@@ -169,7 +171,7 @@ export function checkedAdditionOf(
   checking: Checking,
   services: ListingServices,
 ): Effect.Effect<GivenAddition, InvalidInput> {
-  return Effect.flatMap(services.consent.hadSources, (consent) =>
+  return Effect.flatMap(services.consent.hadSources(services.studioBase), (consent) =>
     Effect.fromResult(additionCheckedWith(given, checking, { ...services, consent })),
   );
 }

@@ -70,6 +70,19 @@ describe('the finish of a consent through Auto’s consent service', () => {
     expect(JSON.stringify(done)).not.toContain(String(kept.connection_key));
   });
 
+  it('answers the client the service redeemed with, which the handoff names, whatever the start recorded', async () => {
+    const serving = await throughAuto();
+    const client = consentClientThrough(serving);
+    const asked = await handedOffAt(serving, client);
+
+    const done = await finished(client, {
+      ...asked,
+      client: { client_id: 'a-client-listed-before', client_source: 'auto' },
+    });
+
+    expect(done.client).toEqual({ client_id: 'auto-runtime', client_source: 'auto' });
+  });
+
   it('keeps no refresh token and no end where the authorization server gives neither', async () => {
     const serving = await throughAuto({ issuesRefreshTokens: false, expiresInSeconds: null });
     const client = consentClientThrough(serving);

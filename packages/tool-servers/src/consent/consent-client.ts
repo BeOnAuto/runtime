@@ -7,6 +7,7 @@ import type { ConsentTokenSources, TokenSource } from '../clients/token-source.t
 import {
   serviceClientsListed,
   throughAutoOf,
+  usableClientsOf,
   type AutoClients,
   type ThroughAuto,
 } from '../consent-through-auto/auto-clients.ts';
@@ -74,6 +75,7 @@ export interface HandleFinishAsked extends FinishAskedOfTheStart {
 export type FinishAsked = CodeFinishAsked | HandleFinishAsked;
 
 export interface FinishedConsent {
+  readonly client: ChosenClient;
   readonly tokens: Redacted.Redacted;
   readonly scope: string | undefined;
   readonly revoked: Effect.Effect<void>;
@@ -91,6 +93,7 @@ export type ConsentRefusal =
   | { readonly refused: 'iss' }
   | { readonly refused: 'code' }
   | { readonly refused: 'studio_elsewhere' }
+  | { readonly refused: 'start_refused' }
   | { readonly refused: 'no_scope' }
   | { readonly refused: 'malformed_scope' };
 
@@ -108,7 +111,7 @@ export type TokensReplaced = { readonly replaced: true; readonly version: number
 
 export type TokensClaimed = { readonly claimed: true; readonly until: string } | { readonly claimed: false };
 
-export type TokensEnded = 'consent_ended' | 'client_gone';
+export type TokensEnded = 'consent_ended' | 'client_gone' | 'key_unknown';
 
 export interface ConnectionTokens {
   readonly read: Effect.Effect<HeldTokens, ConnectionUnready>;
@@ -137,7 +140,10 @@ export interface RevokeAsked extends ConsentAsked {
   readonly tokens: KeptTokens;
 }
 
-export type RevocationFailure = ConsentRefusal | { readonly refused: 'not_revoked'; readonly status: number };
+export type RevocationFailure =
+  | ConsentRefusal
+  | { readonly refused: 'not_revoked'; readonly status: number }
+  | { readonly refused: 'unknown_key' };
 
 export interface KeptRegistration {
   readonly clientId: string;
@@ -160,7 +166,7 @@ export interface ConsentClientOptions extends Omit<ClientsHad, 'serviceClients'>
 }
 
 export interface ConsentClient extends ConsentTokenSources {
-  readonly hadSources: Effect.Effect<HadSources>;
+  readonly hadSources: (studioBase: string) => Effect.Effect<HadSources>;
   readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
   readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;
@@ -185,8 +191,9 @@ function loadedOf(options: ConsentClientOptions): LoadedOptions {
   return { ...options, auto, serviceClients: serviceClientsListed(auto), renewalSpreadMs };
 }
 
-function hadSourcesOf(options: LoadedOptions): Effect.Effect<HadSources> {
-  return Effect.map(options.serviceClients, (serviceClients) => ({
+function hadSourcesOf(options: LoadedOptions, studioBase: string): Effect.Effect<HadSources> {
+  const usable = usableClientsOf(options.auto, studioBase, options.serviceClients);
+  return Effect.map(usable, (serviceClients) => ({
     sourcesOf: (way: WayOfClients): readonly ClientSource[] => sourcesHad(way, { ...options, serviceClients }),
     sourceOf: (way: WayOfClients) => sourceTakenOf(way, { ...options, serviceClients }),
   }));
@@ -222,7 +229,7 @@ export function makeConsentClient(given: ConsentClientOptions): ConsentClient {
     return loading.requests;
   });
   return {
-    hadSources: hadSourcesOf(options),
+    hadSources: (studioBase) => hadSourcesOf(options, studioBase),
     start: (asked) => Effect.flatMap(loaded, (requests) => requests.start(asked)),
     finish: (asked) => Effect.flatMap(loaded, (requests) => requests.finish(asked)),
     tokenSource: (served, serving) => servedTokens(loaded, served, serving),

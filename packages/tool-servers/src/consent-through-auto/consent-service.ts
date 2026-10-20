@@ -2,9 +2,12 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect, Option, Redacted, Schema } from 'effect';
 
 import { HandedTokensSchema, type HandedTokens, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
-import { ClientIdSchema, type ServiceClient } from './client-sources.ts';
+import { ClientIdSchema, type ServiceClient } from '../consent/client-sources.ts';
 
-export type ConsentReturn = { readonly kind: 'hosted' } | { readonly kind: 'loopback'; readonly base: string };
+export interface ConsentReturn {
+  readonly kind: 'hosted' | 'loopback';
+  readonly base: string;
+}
 
 export interface ServiceRequesting {
   readonly fetch: FetchLike;
@@ -22,11 +25,6 @@ export interface ServiceStartAsked {
   readonly challenge: string;
 }
 
-interface ReturnedToStudio {
-  readonly code: string;
-  readonly iss?: string;
-}
-
 interface ServiceRefreshAsked {
   readonly issuer: string;
   readonly refreshToken: string;
@@ -37,6 +35,7 @@ interface ServiceRefreshAsked {
 interface ServiceRevokeAsked {
   readonly issuer: string;
   readonly tokens: KeptTokens;
+  readonly connectionKey: string;
 }
 
 const ClientsSchema = Schema.Struct({
@@ -47,12 +46,10 @@ const GivenSchema = Schema.String.check(Schema.isMinLength(1));
 
 const ServiceStartedSchema = Schema.Struct({ state: GivenSchema, url: GivenSchema, expires_at: GivenSchema });
 
-const ConsentReturnSchema = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal('hosted') }),
-  Schema.Struct({ kind: Schema.Literal('loopback'), base: GivenSchema }),
-]);
-
-const DescribedSchema = Schema.Struct({ issuer: Schema.String, return: ConsentReturnSchema });
+const DescribedSchema = Schema.Struct({
+  issuer: Schema.String,
+  return: Schema.Struct({ kind: Schema.Literals(['hosted', 'loopback']), base: Schema.optionalKey(GivenSchema) }),
+});
 
 const RedeemedSchema = Schema.Struct({ handle: GivenSchema, expires_at: GivenSchema });
 
@@ -64,7 +61,7 @@ const HandedOffSchema = Schema.Struct({
 
 const RefreshedSchema = Schema.Struct({ tokens: HandedTokensSchema });
 
-const ProblemSchema = Schema.Struct({ refused: Schema.String });
+const ProblemSchema = Schema.Struct({ refused: Schema.String, vendor_status: Schema.optionalKey(Schema.Int) });
 
 type ServiceStarted = typeof ServiceStartedSchema.Type;
 
@@ -76,19 +73,18 @@ type HandedOff = typeof HandedOffSchema.Type;
 
 type Unanswered = { readonly refused: 'unanswered' };
 
-type StartRefusal = Unanswered | { readonly refused: 'no_client' };
+type StartRefusal = Unanswered | { readonly refused: 'start_refused' };
 
-type RedeemRefusal =
-  | Unanswered
-  | { readonly refused: 'code' }
-  | { readonly refused: 'no_consent' }
-  | { readonly refused: 'redeemed' };
+type RedeemRefusal = Unanswered | { readonly refused: 'code' | 'no_consent' | 'redeemed' };
 
 type HandoffRefusal = Unanswered | { readonly refused: 'code' };
 
-type RefreshRefusal = Unanswered | { readonly refused: 'invalid_grant' };
+type RefreshRefusal = Unanswered | { readonly refused: 'invalid_grant' } | { readonly refused: 'unknown_key' };
 
-type RevokeRefusal = Unanswered | { readonly refused: 'not_revoked'; readonly status: number };
+type RevokeRefusal =
+  | Unanswered
+  | { readonly refused: 'unknown_key' }
+  | { readonly refused: 'not_revoked'; readonly status: number };
 
 export interface ConsentServiceCalls {
   readonly clients: Effect.Effect<readonly ServiceClient[], Unanswered>;
@@ -100,7 +96,7 @@ export interface ConsentServiceCalls {
   readonly redeem: (
     state: string,
     session: Redacted.Redacted,
-    returned: ReturnedToStudio,
+    returned: { readonly code: string; readonly iss?: string },
   ) => Effect.Effect<Redeemed, RedeemRefusal>;
   readonly takeHandoff: (handle: string, verifier: Redacted.Redacted) => Effect.Effect<HandedOff, HandoffRefusal>;
   readonly refresh: (asked: ServiceRefreshAsked) => Effect.Effect<HandedTokens, RefreshRefusal>;
@@ -123,7 +119,15 @@ const unanswered: Unanswered = { refused: 'unanswered' };
 
 const challengeMethod = 'S256';
 
-const status = { ok: 200, created: 201, refused: 400, forbidden: 403, notFound: 404, conflict: 409 } as const;
+const status = {
+  ok: 200,
+  created: 201,
+  refused: 400,
+  forbidden: 403,
+  notFound: 404,
+  conflict: 409,
+  badGateway: 502,
+} as const;
 
 const decodeProblem = Schema.decodeUnknownOption(Schema.fromJsonString(ProblemSchema));
 
@@ -171,8 +175,12 @@ function decodedAs<A>(decode: (text: string) => Option.Option<A>, { text }: Answ
   });
 }
 
-function refusedIn({ text }: Answered): string | undefined {
-  return Option.getOrUndefined(Option.map(decodeProblem(text), ({ refused }) => refused));
+function problemOf({ text }: Answered): typeof ProblemSchema.Type | undefined {
+  return Option.getOrUndefined(decodeProblem(text));
+}
+
+function isRefused(answered: Answered, atStatus: number, refused: string): boolean {
+  return answered.status === atStatus && problemOf(answered)?.refused === refused;
 }
 
 function pathOf(...parts: readonly string[]): string {
@@ -181,7 +189,7 @@ function pathOf(...parts: readonly string[]): string {
 
 function started(answered: Answered): Effect.Effect<ServiceStarted, StartRefusal> {
   if (answered.status === status.refused) {
-    return Effect.fail({ refused: 'no_client' });
+    return Effect.fail({ refused: 'start_refused' });
   }
   return answered.status === status.created ? decodedAs(decodeStarted, answered) : Effect.fail(unanswered);
 }
@@ -202,7 +210,7 @@ function redeemed(answered: Answered): Effect.Effect<Redeemed, RedeemRefusal> {
   if (answered.status === status.ok) {
     return decodedAs(decodeRedeemed, answered);
   }
-  if (answered.status === status.refused && refusedIn(answered) === 'code_refused') {
+  if (isRefused(answered, status.refused, 'code_refused')) {
     return Effect.fail({ refused: 'code' });
   }
   return Effect.fail(redeemRefusals.get(answered.status) ?? unanswered);
@@ -212,42 +220,45 @@ function handedOff(answered: Answered): Effect.Effect<HandedOff, HandoffRefusal>
   if (answered.status === status.ok) {
     return decodedAs(decodeHandedOff, answered);
   }
-  return Effect.fail(
-    answered.status === status.notFound || answered.status === status.forbidden ? { refused: 'code' } : unanswered,
-  );
+  const isRefusedHandle =
+    answered.status === status.notFound || isRefused(answered, status.forbidden, 'wrong_verifier');
+  return Effect.fail(isRefusedHandle ? { refused: 'code' } : unanswered);
 }
 
-function isRefusedGrant(answered: Answered): boolean {
-  return (
-    answered.status === status.forbidden ||
-    (answered.status === status.refused && refusedIn(answered) === 'invalid_grant')
-  );
+function refreshRefusalOf(answered: Answered): RefreshRefusal {
+  if (isRefused(answered, status.refused, 'invalid_grant')) {
+    return { refused: 'invalid_grant' };
+  }
+  return isRefused(answered, status.forbidden, 'unknown_key') ? { refused: 'unknown_key' } : unanswered;
 }
 
 function refreshed(answered: Answered): Effect.Effect<HandedTokens, RefreshRefusal> {
   if (answered.status === status.ok) {
     return Effect.map(decodedAs(decodeRefreshed, answered), ({ tokens }) => tokens);
   }
-  return Effect.fail(isRefusedGrant(answered) ? { refused: 'invalid_grant' } : unanswered);
+  return Effect.fail(refreshRefusalOf(answered));
 }
 
-function isNotRevoked(answered: Answered): boolean {
-  return answered.status === status.forbidden || refusedIn(answered) === 'not_revoked';
+function revokeRefusalOf(answered: Answered): RevokeRefusal {
+  if (isRefused(answered, status.forbidden, 'unknown_key')) {
+    return { refused: 'unknown_key' };
+  }
+  const vendorStatus = isRefused(answered, status.badGateway, 'not_revoked')
+    ? problemOf(answered)?.vendor_status
+    : undefined;
+  return vendorStatus === undefined ? unanswered : { refused: 'not_revoked', status: vendorStatus };
 }
 
 function revoked(answered: Answered): Effect.Effect<void, RevokeRefusal> {
-  if (answered.status >= status.ok && answered.status < 300) {
-    return Effect.void;
-  }
-  return Effect.fail(isNotRevoked(answered) ? { refused: 'not_revoked', status: answered.status } : unanswered);
+  return answered.status >= status.ok && answered.status < 300 ? Effect.void : Effect.fail(revokeRefusalOf(answered));
 }
 
 function startBodyOf({ issuer, scope, parameters, resource, returnTo, challenge }: ServiceStartAsked) {
   return { issuer, scope, parameters, resource, return: returnTo, challenge, challenge_method: challengeMethod };
 }
 
-function revokeBodyOf({ issuer, tokens }: ServiceRevokeAsked) {
-  const { access_token: accessToken, refresh_token: refreshToken, connection_key: connectionKey } = tokens;
+function revokeBodyOf({ issuer, tokens, connectionKey }: ServiceRevokeAsked) {
+  const { access_token: accessToken, refresh_token: refreshToken } = tokens;
   return { issuer, access_token: accessToken, refresh_token: refreshToken, connection_key: connectionKey };
 }
 

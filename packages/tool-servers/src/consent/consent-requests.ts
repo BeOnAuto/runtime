@@ -21,7 +21,7 @@ function consentOf(
   exchanged: unknown,
   asked: string | undefined,
   revoked: Effect.Effect<void>,
-): Effect.Effect<FinishedConsent, ConsentRefusal> {
+): Effect.Effect<Omit<FinishedConsent, 'client'>, ConsentRefusal> {
   return Effect.gen(function* () {
     const tokens = answeredTokensOf(exchanged);
     const scope = yield* grantedScopeOf(tokens.scope, asked);
@@ -80,7 +80,10 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
     });
     const tokens = { access_token: exchanged.access_token, refresh_token: exchanged.refresh_token };
     const revoking = Effect.ignore(revocationOf({ server, client, tokens, fetch }));
-    return yield* consentOf(exchanged, scopeAskedOf(asked.way, server), revoking).pipe(Effect.onError(() => revoking));
+    return yield* consentOf(exchanged, scopeAskedOf(asked.way, server), revoking).pipe(
+      Effect.map((consent) => ({ ...consent, client: asked.client })),
+      Effect.onError(() => revoking),
+    );
   });
 }
 

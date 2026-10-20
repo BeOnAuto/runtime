@@ -24,7 +24,10 @@ interface Connecting {
 async function throughAuto(): Promise<Connecting> {
   const serving = await servedThroughAuto();
   closing.push(serving.close);
-  const h = consentHarnessAt(serving.fake, { consenting: { autoClients: autoClientsOf(serving.service) } });
+  const h = consentHarnessAt(serving.fake, {
+    consenting: { autoClients: autoClientsOf(serving.service) },
+    pages: { studio: { origin: 'https://studio.example.com', served: false }, runtime: () => 'http://localhost:5555' },
+  });
   return { serving, h, link: await added(h, { provider: 'files' }) };
 }
 

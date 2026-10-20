@@ -4,7 +4,7 @@ import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
-import { consentServiceOf, type ServiceStartAsked } from '../consent/consent-service.ts';
+import { consentServiceOf, type ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import {
   postedToTheService,
@@ -14,6 +14,7 @@ import {
   studioSession,
   type ThroughAuto,
 } from './auto-consents.ts';
+import { studioBase } from './consent-fakes.ts';
 import { consentedAt } from './given-consents.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -80,7 +81,7 @@ describe('a start at the fake consent service', () => {
     expect(started.expires_at).toBe('1970-01-01T00:10:00.000Z');
   });
 
-  it('is refused for an issuer it has no client at, a base that is not loopback, a malformed request and when told to', async () => {
+  it('is refused for an issuer it has no client at, a malformed request and when told to', async () => {
     const { fake: vendor, service } = await serving();
     const calls = serviceCallsAt(service);
     service.refuseNext('start');
@@ -88,16 +89,33 @@ describe('a start at the fake consent service', () => {
     expect([
       await run(calls.start(startOf(vendor))),
       await run(calls.start(startOf(vendor, { issuer: 'https://elsewhere.example.com' }))),
-      await run(calls.start(startOf(vendor, { returnTo: { kind: 'loopback', base: 'https://studio.example.org/' } }))),
-      await run(calls.start(startOf(vendor, { returnTo: { kind: 'loopback', base: 'not an address' } }))),
       await postedToTheService(service, '/consents', '{"issuer":1}'),
-      await run(calls.start(startOf(vendor, { returnTo: { kind: 'hosted' }, scope: undefined }))),
+      await run(calls.start(startOf(vendor, { returnTo: { kind: 'hosted', base: studioBase }, scope: undefined }))),
     ]).toMatchObject([
-      { failure: { refused: 'no_client' } },
-      { failure: { refused: 'no_client' } },
-      { failure: { refused: 'no_client' } },
-      { failure: { refused: 'no_client' } },
+      { failure: { refused: 'start_refused' } },
+      { failure: { refused: 'start_refused' } },
       { status: 400 },
+      { _tag: 'Success' },
+    ]);
+  });
+});
+
+describe('a start at the fake consent service with a return base it does not send people back to', () => {
+  it('is refused for a Studio host other than its own, and a loopback base that is not one of http, a loopback host and a closing slash', async () => {
+    const { fake: vendor, service } = await serving();
+    const calls = serviceCallsAt(service);
+    const startsAt = (kind: 'hosted' | 'loopback', base: string) =>
+      run(calls.start(startOf(vendor, { returnTo: { kind, base } })));
+
+    expect([
+      await startsAt('hosted', 'https://studio.example.org/'),
+      await startsAt('loopback', 'https://127.0.0.1:5555/studio/'),
+      await startsAt('loopback', 'http://studio.example.org/'),
+      await startsAt('loopback', 'http://localhost:5555/studio'),
+      await startsAt('loopback', 'not an address'),
+      await startsAt('loopback', 'http://[::1]/'),
+    ]).toMatchObject([
+      ...Array.from({ length: 5 }, () => ({ failure: { refused: 'start_refused' } })),
       { _tag: 'Success' },
     ]);
   });
@@ -121,6 +139,15 @@ describe('a state the hosted Studio asks the fake consent service to describe', 
       { _tag: 'Success', success: undefined },
       { _tag: 'Success', success: undefined },
     ]);
+  });
+
+  it('is refused to a call without a session with 401, asking for a bearer', async () => {
+    const { service } = await serving();
+
+    const answer = await fetch(`${service.url}/consents/a-state`);
+    await answer.text();
+
+    expect([answer.status, answer.headers.get('www-authenticate')]).toEqual([401, 'Bearer']);
   });
 });
 

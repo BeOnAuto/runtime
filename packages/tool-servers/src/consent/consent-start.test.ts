@@ -243,7 +243,7 @@ describe('a start that cannot ask the server', () => {
 describe('the client sources a consent client judges', () => {
   it('are those of the way the runtime has, without asking anything where it takes no client of Auto’s', () => {
     const client = consentClientWith({ fetch: readsNothing, registeredClients: [registeredAt(accounts)] });
-    const { sourcesOf, sourceOf } = Effect.runSync(client.hadSources);
+    const { sourcesOf, sourceOf } = Effect.runSync(client.hadSources(studioBase));
 
     expect([
       sourcesOf({ issuer: accounts }),

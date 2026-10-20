@@ -2,6 +2,7 @@ import { Effect, Function, Redacted } from 'effect';
 
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { AutoClients, ReturnKind } from '../consent-through-auto/auto-clients.ts';
+import { consentServiceOf, type ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
 import type {
   ConsentClient,
   ConsentClientOptions,
@@ -9,7 +10,6 @@ import type {
   HandleFinishAsked,
   StartAsked,
 } from '../consent/consent-client.ts';
-import { consentServiceOf, type ServiceStartAsked } from '../consent/consent-service.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import { consentClientWith, servedForConsent, startAskedAt } from './consent-fakes.ts';
 import { serveFakeConsentService, type FakeConsentService } from './fake-consent-service.ts';

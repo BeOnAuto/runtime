@@ -2,6 +2,7 @@ import { permissionFor, permissionRefusalOf, type CallerIdentity } from '@on.aut
 import type { OfferedProvider, ProviderOffering } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
+import { studioBaseFor } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
 import type { ListedProvider } from './listed-providers.ts';
@@ -9,7 +10,7 @@ import { listedProviders } from './provider-listing.ts';
 
 export type OfferingServices = Pick<
   ConnectionServices,
-  'providers' | 'providerValues' | 'policy' | 'access' | 'consent'
+  'providers' | 'providerValues' | 'policy' | 'access' | 'consent' | 'pages'
 >;
 
 const addingPermissions = [permissionFor('command', 'org')];
@@ -38,6 +39,8 @@ function offeredAmong(listed: readonly ListedProvider[]): readonly OfferedProvid
 export function makeProviderOffering(services: OfferingServices): ProviderOffering {
   return (caller) =>
     refusalToAdd(services, caller) === null
-      ? Effect.map(services.consent.hadSources, (consent) => offeredAmong(listedProviders({ ...services, consent })))
+      ? Effect.map(services.consent.hadSources(studioBaseFor(services.pages)), (consent) =>
+          offeredAmong(listedProviders({ ...services, consent })),
+        )
       : Effect.undefined;
 }

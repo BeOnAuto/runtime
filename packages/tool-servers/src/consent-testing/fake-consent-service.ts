@@ -1,7 +1,7 @@
 import { Option, Schema } from 'effect';
 
 import { serveOnLoopback, type FetchHandler } from '../testing/loopback-server.ts';
-import { returnAddress } from './consent-fakes.ts';
+import { returnAddress, studioBase } from './consent-fakes.ts';
 import {
   answer,
   client,
@@ -14,9 +14,11 @@ import {
   problem,
   randomText,
   refreshed,
+  refusalOfTheVendor,
   refuses,
   ReturnSchema,
   revoked,
+  signInFirst,
   tenMinutesMs,
   type Asked,
   type FakeConsentServiceOptions,
@@ -89,8 +91,12 @@ function authorizationUrlOf(
   return url.href;
 }
 
-function isServedBase(returnTo: Return): boolean {
-  return returnTo.kind === 'hosted' || loopbackHosts.has(String(URL.parse(returnTo.base)?.hostname));
+function isServedBase({ kind, base }: Return): boolean {
+  if (kind === 'hosted') {
+    return base === studioBase;
+  }
+  const url = URL.parse(base);
+  return url?.protocol === 'http:' && loopbackHosts.has(url.hostname) && base.endsWith('/');
 }
 
 function started({ text }: Asked, store: Store): Response {
@@ -99,7 +105,7 @@ function started({ text }: Asked, store: Store): Response {
     return problem(400, 'The consent cannot be started as it is asked');
   }
   if (asked.issuer !== store.options.vendor.origin || !isServedBase(asked.return)) {
-    return problem(400, 'Auto has no client at this issuer, or the return base is neither hosted nor loopback');
+    return problem(400, 'Auto has no client at this issuer, or does not send people back to this base');
   }
   const state = randomText();
   const { now } = store.options;
@@ -131,7 +137,7 @@ function openStartOf({ segments }: Asked, store: Store): readonly [string, Start
 
 function described(asked: Asked, store: Store): Response {
   if (sessionOf(asked) === undefined) {
-    return problem(401, 'Sign in to Auto first');
+    return signInFirst();
   }
   const open = openStartOf(asked, store);
   return open === undefined
@@ -146,10 +152,7 @@ async function exchangedAtTheVendor(store: Store, code: string, start: Start): P
     code_verifier: start.vendorVerifier,
     redirect_uri: returnAddress,
   });
-  const text = await vendor.text();
-  return vendor.ok
-    ? keptOfTheVendor(store, text)
-    : problem(400, `The authorization server refused the code: ${text}`, 'code_refused');
+  return vendor.ok ? keptOfTheVendor(store, await vendor.text()) : refusalOfTheVendor(vendor, 'code_refused');
 }
 
 async function redeemedWith(asked: Asked, store: Store, person: string): Promise<Response> {
@@ -163,7 +166,7 @@ async function redeemedWith(asked: Asked, store: Store, person: string): Promise
     return problem(409, 'The consent of this state was redeemed already');
   }
   if (refuses(store, 'redeem')) {
-    return problem(400, 'The authorization server refused the code', 'code_refused');
+    return problem(400, 'The authorization server refused the code', { refused: 'code_refused' });
   }
   const tokens = await exchangedAtTheVendor(store, returned.code, start);
   if (tokens instanceof Response) {
@@ -178,7 +181,7 @@ async function redeemedWith(asked: Asked, store: Store, person: string): Promise
 
 function redeemed(asked: Asked, store: Store): Promise<Response> | Response {
   const person = sessionOf(asked);
-  return person === undefined ? problem(401, 'Sign in to Auto first') : redeemedWith(asked, store, person);
+  return person === undefined ? signInFirst() : redeemedWith(asked, store, person);
 }
 
 function listed(_asked: Asked, store: Store): Response {

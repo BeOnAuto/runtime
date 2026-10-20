@@ -15,10 +15,9 @@ export interface FakeConsentServiceOptions {
 
 export const GivenSchema = Schema.String.check(Schema.isMinLength(1));
 
-export const ReturnSchema = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal('hosted') }),
-  Schema.Struct({ kind: Schema.Literal('loopback'), base: GivenSchema }),
-]);
+export const ReturnSchema = Schema.Struct({ kind: Schema.Literals(['hosted', 'loopback']), base: GivenSchema });
+
+const decodeVendorError = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ error: Schema.String })));
 
 const decodeHandoff = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ verifier: GivenSchema })));
 
@@ -116,12 +115,27 @@ const titles: ReadonlyMap<number, string> = new Map([
   [502, 'Bad Gateway'],
 ]);
 
-export function problem(status: number, detail: string, refused?: string): Response {
-  const document = { type: 'about:blank', status, title: titles.get(status), detail };
-  return new Response(JSON.stringify(refused === undefined ? document : { ...document, refused }), {
-    status,
-    headers: problemHeaders,
-  });
+export function problem(
+  status: number,
+  detail: string,
+  members: Readonly<Record<string, unknown>> = {},
+  headers: Readonly<Record<string, string>> = {},
+): Response {
+  const document = { type: 'about:blank', status, title: titles.get(status), detail, ...members };
+  return new Response(JSON.stringify(document), { status, headers: { ...problemHeaders, ...headers } });
+}
+
+export function signInFirst(): Response {
+  return problem(401, 'Sign in to Auto first', {}, { 'www-authenticate': 'Bearer' });
+}
+
+export async function refusalOfTheVendor(vendor: Readonly<Response>, refused: string): Promise<Response> {
+  const text = await vendor.text();
+  const isRefusedGrant =
+    vendor.status === 400 && Option.getOrUndefined(decodeVendorError(text))?.error === 'invalid_grant';
+  return isRefusedGrant
+    ? problem(400, `The authorization server refused it: ${text}`, { refused })
+    : problem(502, `The authorization server answered HTTP ${vendor.status}`);
 }
 
 export function answer(body: unknown, status = 200): Response {
@@ -177,7 +191,7 @@ export function handedOff({ segments, text }: Asked, store: Store): Response {
     return problem(404, 'There is no handoff of this handle');
   }
   if (digestOf(presented.verifier) !== handoff.challenge) {
-    return problem(403, 'The verifier is not the one the consent was started with');
+    return problem(403, 'The verifier is not the one the consent was started with', { refused: 'wrong_verifier' });
   }
   store.handoffs.delete(handle);
   const key = randomText();
@@ -189,34 +203,54 @@ function isKeptKey(store: Store, issuer: string, key: string | undefined): boole
   return key !== undefined && store.keys.get(digestOf(key))?.issuer === issuer;
 }
 
+const malformed = 'The request is not one this call takes';
+
+const unknownKey = 'The connection key is not one Auto keeps for this issuer';
+
+const askedOfTheVendor = 503;
+
 export async function refreshed({ text }: Asked, store: Store): Promise<Response> {
   const asked = Option.getOrUndefined(decodeRefresh(text));
-  if (asked === undefined || !isKeptKey(store, asked.issuer, asked.connection_key)) {
-    return problem(403, 'The connection key is not one Auto issued for this issuer');
+  if (asked === undefined) {
+    return problem(400, malformed);
+  }
+  if (!isKeptKey(store, asked.issuer, asked.connection_key)) {
+    return problem(403, unknownKey, { refused: 'unknown_key' });
   }
   if (refuses(store, 'refresh')) {
-    return problem(400, 'The authorization server refused the refresh token', 'invalid_grant');
+    return problem(400, 'The authorization server refused the refresh token', { refused: 'invalid_grant' });
   }
   const vendor = await postedToTheVendor(store, '/token', {
     grant_type: 'refresh_token',
     refresh_token: asked.refresh_token,
     ...(asked.resource === undefined ? {} : { resource: asked.resource }),
   });
-  const answered = await vendor.text();
   return vendor.ok
-    ? answer({ tokens: keptOfTheVendor(store, answered) })
-    : problem(400, `The authorization server refused the refresh token: ${answered}`, 'invalid_grant');
+    ? answer({ tokens: keptOfTheVendor(store, await vendor.text()) })
+    : refusalOfTheVendor(vendor, 'invalid_grant');
+}
+
+async function statusOfTheRevocation(store: Store, token: string): Promise<number> {
+  if (refuses(store, 'revoke')) {
+    return askedOfTheVendor;
+  }
+  const vendor = await postedToTheVendor(store, '/revoke', { token });
+  await vendor.text();
+  return vendor.status;
 }
 
 export async function revoked({ text }: Asked, store: Store): Promise<Response> {
   const asked = Option.getOrUndefined(decodeRevoke(text));
-  if (asked === undefined || !isKeptKey(store, asked.issuer, asked.connection_key)) {
-    return problem(403, 'The connection key is not one Auto issued for this issuer');
+  if (asked === undefined) {
+    return problem(400, malformed);
   }
-  const token = asked.refresh_token ?? String(asked.access_token);
-  const done = !refuses(store, 'revoke') && (await postedToTheVendor(store, '/revoke', { token })).ok;
-  if (!done) {
-    return problem(502, 'The authorization server did not revoke the tokens', 'not_revoked');
+  if (!isKeptKey(store, asked.issuer, asked.connection_key)) {
+    return problem(403, unknownKey, { refused: 'unknown_key' });
+  }
+  const vendorStatus = await statusOfTheRevocation(store, asked.refresh_token ?? String(asked.access_token));
+  if (vendorStatus < 200 || vendorStatus >= 300) {
+    const detail = `The authorization server answered HTTP ${vendorStatus} to the revocation`;
+    return problem(502, detail, { refused: 'not_revoked', vendor_status: vendorStatus });
   }
   store.keys.delete(digestOf(String(asked.connection_key)));
   return new Response(null, { status: 204 });

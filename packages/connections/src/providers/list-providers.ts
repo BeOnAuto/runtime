@@ -1,6 +1,7 @@
 import { Caller, defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
+import { studioBaseFor } from '../links/connect-page.ts';
 import { ProvidersSchema } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
 import { refusalToAdd, type OfferingServices } from './provider-offering.ts';
@@ -21,7 +22,7 @@ export function defineListProviders(listing: OfferingServices) {
     reasons: [],
     handle: Effect.fnUntraced(function* () {
       const refusal = refusalToAdd(listing, yield* Caller);
-      const consent = yield* listing.consent.hadSources;
+      const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
       return { providers: listedProviders({ ...listing, consent }), may_add: refusal === null, refusal };
     }),
   });

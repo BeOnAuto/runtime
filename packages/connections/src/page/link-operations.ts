@@ -2,6 +2,7 @@ import { allPermissions, defineHttpOperation } from '@on.auto/operations';
 import type { ConsentClient } from '@on.auto/tool-servers';
 import { Effect, Schema } from 'effect';
 
+import { studioBaseFor, type ConnectPages } from '../links/connect-page.ts';
 import { tokenSha256Of } from '../links/link-token.ts';
 import { ClientSourceField, ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
@@ -33,14 +34,19 @@ const LinkedSchema = Schema.Struct({
   description: 'The connection an open link names, and when the link expires',
 });
 
-function sourceOfAStart(connection: RecordedConnection, consent: Pick<ConsentClient, 'hadSources'>) {
-  return Effect.map(consent.hadSources, ({ sourceOf }) => {
+interface LinkReading {
+  readonly consent: Pick<ConsentClient, 'hadSources'>;
+  readonly pages: ConnectPages;
+}
+
+function sourceOfAStart(connection: RecordedConnection, { consent, pages }: LinkReading) {
+  return Effect.map(consent.hadSources(studioBaseFor(pages)), ({ sourceOf }) => {
     const source = connection.credential.kind === 'authorization' ? sourceOf(wayOf(connection)) : undefined;
     return source === undefined ? {} : { client_source: source };
   });
 }
 
-export function defineReadLink(consent: Pick<ConsentClient, 'hadSources'>) {
+export function defineReadLink(reading: LinkReading) {
   return defineHttpOperation('org', 'query', {
     name: 'read_link',
     title: 'Read link',
@@ -65,7 +71,7 @@ export function defineReadLink(consent: Pick<ConsentClient, 'hadSources'>) {
       const started = isOpenConsent(kept, acted.at)
         ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
         : {};
-      const source = yield* sourceOfAStart(kept.connection, consent);
+      const source = yield* sourceOfAStart(kept.connection, reading);
       return {
         ...connectionShown(kept.connection, null),
         link: { expires_at: kept.link.expires_at },

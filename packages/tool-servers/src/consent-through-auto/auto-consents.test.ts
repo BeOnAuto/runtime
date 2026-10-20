@@ -10,6 +10,8 @@ import {
   returnAddress,
   servedThroughAuto,
   startAskedAt,
+  studioBase,
+  type ClientRegistration,
   type FakeConsentService,
   type ThroughAuto,
 } from '../testing/index.ts';
@@ -20,8 +22,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function throughAuto(): Promise<ThroughAuto> {
-  const serving = await servedThroughAuto();
+async function throughAuto(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
+  const serving = await servedThroughAuto(changes);
   closing.push(serving.close);
   return serving;
 }
@@ -103,8 +105,17 @@ describe('the start of a consent through Auto’s consent service from the hoste
 
     const start = await started(client, { ...startAskedAt(fake), reaches: refusingTheHostOf(service.url) });
 
-    expect(service.calls().at(-1)?.body).toMatchObject({ return: { kind: 'hosted' } });
+    expect(service.calls().at(-1)?.body).toMatchObject({ return: { kind: 'hosted', base: studioBase } });
     expect(start.client.client_source).toBe('auto');
+  });
+
+  it('is refused by the service, as a start it will not make, where the Studio host is not its own', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'hosted') });
+
+    expect(await refused(client, { ...startAskedAt(fake), studioBase: 'https://studio.example.org/' })).toEqual({
+      refused: 'start_refused',
+    });
   });
 
   it('is refused in the rule’s words where the rules refuse the host of the authorization server', async () => {
@@ -119,30 +130,40 @@ describe('the start of a consent through Auto’s consent service from the hoste
   });
 });
 
-describe('a start through Auto’s consent service refused before anything is sent', () => {
-  it('is refused where the link opens a Studio neither hosted nor on this computer', async () => {
+describe('a start for a Studio neither hosted nor on this computer', () => {
+  it('is refused before anything is sent where no other source the way takes remains', async () => {
     const { fake, service } = await throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'elsewhere') });
 
     expect(await refused(client, startAskedAt(fake))).toEqual({ refused: 'studio_elsewhere' });
     expect([pathsHeardBy(service), fake.heard()]).toEqual([['/clients'], []]);
   });
+
+  it('is made with a later source the way takes, leaving Auto’s client out and asking the service nothing', async () => {
+    const { fake, service } = await throughAuto({ dynamicRegistration: true });
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'elsewhere') });
+
+    const start = await started(client, startAskedAt(fake, { clients: ['registered', 'dynamic'] }));
+
+    expect(start.client.client_source).toBe('dynamic');
+    expect(pathsHeardBy(service)).toEqual([]);
+  });
 });
 
 describe('a start the consent service refuses or does not answer', () => {
-  it('is refused as having no client where the service refuses it, and unanswered where it is gone or stalls', async () => {
+  it('is refused as a start the service will not make where it refuses it, and unanswered where it is gone or stalls', async () => {
     const [refusing, gone, stalling] = await Promise.all([throughAuto(), throughAuto(), throughAuto()]);
     const asking = [refusing, gone, stalling].map((serving): Asking => ({
       asked: startAskedAt(serving.fake),
       client: consentClientWith({ autoClients: autoClientsOf(serving.service), requestMs: 200 }),
     }));
-    await Effect.runPromise(Effect.all(asking.map(({ client }) => client.hadSources)));
+    await Effect.runPromise(Effect.all(asking.map(({ client }) => client.hadSources(studioBase))));
     refusing.service.refuseNext('start');
     await gone.service.close();
     stalling.service.stall();
 
     const answers = await Promise.all(asking.map(({ client, asked }) => refused(client, asked)));
 
-    expect(answers).toEqual([{ refused: 'no_client' }, { refused: 'unanswered' }, { refused: 'unanswered' }]);
+    expect(answers).toEqual([{ refused: 'start_refused' }, { refused: 'unanswered' }, { refused: 'unanswered' }]);
   });
 });

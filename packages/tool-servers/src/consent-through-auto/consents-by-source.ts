@@ -3,7 +3,7 @@ import { Effect, Option } from 'effect';
 import { requestBoundsOf } from '../bounds/call-bounds.ts';
 import { tokenRequestsOf, type TokenRequests } from '../consent-tokens/token-requests.ts';
 import { isServerSource, requestsOf, type Requests } from '../consent/acting-clients.ts';
-import { serviceClientAt, sourcesHad, sourceTakenOf } from '../consent/client-sources.ts';
+import { serviceClientAt, sourcesHad, sourceTakenOf, type ServiceClient } from '../consent/client-sources.ts';
 import type {
   ConsentRefusal,
   FinishAsked,
@@ -13,6 +13,7 @@ import type {
   StartedConsent,
 } from '../consent/consent-client.ts';
 import { serverConsentsOf, type ServerConsents } from '../consent/consent-requests.ts';
+import { servedKindOf } from './auto-clients.ts';
 import { handedOff, startedThroughAuto } from './auto-consents.ts';
 import { autoRenewalsOf } from './auto-renewals.ts';
 
@@ -27,22 +28,38 @@ interface Consenting {
   readonly server: ServerConsents;
 }
 
+const studioElsewhere: ConsentRefusal = { refused: 'studio_elsewhere' };
+
+const noServiceClients: readonly ServiceClient[] = [];
+
 function required<A>(value: A | undefined): A {
   return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
+function takenThroughAutoAlone(asked: StartAsked, options: LoadedOptions): Effect.Effect<boolean> {
+  return Effect.map(
+    options.serviceClients,
+    (listed) => sourceTakenOf(asked.way, { ...options, serviceClients: listed }) === 'auto',
+  );
+}
+
 function started(asked: StartAsked, { options, requests, server }: Consenting) {
   return Effect.gen(function* () {
-    const serviceClients = yield* options.serviceClients;
-    const had = { ...options, serviceClients };
     const { auto } = options;
-    if (sourceTakenOf(asked.way, had) === 'auto' && auto.enabled) {
-      const { client_id: clientId } = required(serviceClientAt(serviceClients, asked.way.issuer));
-      return yield* startedThroughAuto(asked, requests.fetchFor, auto, clientId);
+    const kind = servedKindOf(auto, asked.studioBase);
+    const listed = kind === undefined ? noServiceClients : yield* options.serviceClients;
+    const had = { ...options, serviceClients: listed };
+    if (sourceTakenOf(asked.way, had) === 'auto' && auto.enabled && kind !== undefined) {
+      const { client_id: clientId } = required(serviceClientAt(listed, asked.way.issuer));
+      return yield* startedThroughAuto(asked, requests.fetchFor, { auto, clientId, kind });
+    }
+    const sources = sourcesHad(asked.way, had);
+    if (sources.length === 0 && kind === undefined && (yield* takenThroughAutoAlone(asked, options))) {
+      return yield* Effect.fail(studioElsewhere);
     }
     return yield* server.start(
       asked,
-      sourcesHad(asked.way, had).filter((source) => isServerSource(source)),
+      sources.filter((source) => isServerSource(source)),
     );
   });
 }

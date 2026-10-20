@@ -1,19 +1,18 @@
-import { Effect, Option, Redacted } from 'effect';
+import { Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted, postedTo } from '../authorization-testing/authorization-requests.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import { keptValueOf, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
 import { renewalWords } from '../consent-tokens/renewal-words.ts';
-import type { ConsentClient, RevokeAsked } from '../consent/consent-client.ts';
+import type { ConsentClient } from '../consent/consent-client.ts';
 import {
+  autoClientsOf,
   brokenWords,
   connectedThroughAuto,
   consentClientThrough,
   consentClientWith,
-  everyHost,
   memoryTokens,
-  returnAddress,
   rowOf,
   servedOf,
   servedThroughAuto,
@@ -23,6 +22,7 @@ import {
   type MemoryTokens,
   type ThroughAuto,
 } from '../testing/index.ts';
+import { serveOnLoopback } from '../testing/loopback-server.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -66,19 +66,14 @@ function unauthorizedAt({ fake }: Pick<Connected, 'fake'>) {
   return { response: new Response(null, { status: 401 }), serverUrl: new URL(fake.url), fetchFn: globalThis.fetch };
 }
 
-function revokedBy(consent: ConsentClient, asked: Connected) {
-  return Effect.runPromise(Effect.flip(consent.revoke(revokeAskedOf(asked))));
+function rowHolding(connected: Connected, tokens: KeptTokens): MemoryTokens {
+  return memoryTokens(keptValueOf(tokens), { now: connected.clock.now });
 }
 
-function revokeAskedOf({ fake, connection }: Connected): RevokeAsked {
-  return {
-    server: { type: 'mcp', url: fake.url },
-    way: { issuer: fake.origin, scope: 'files.read' },
-    returnAddress,
-    reaches: everyHost,
-    client: connection.client,
-    tokens: connection.kept,
-  };
+async function forbiddingEverything(): Promise<string> {
+  const forbidding = await serveOnLoopback(() => () => Promise.resolve(new Response('Forbidden', { status: 403 })));
+  closing.push(forbidding.close);
+  return forbidding.origin;
 }
 
 describe('the renewal of the tokens of a consent through Auto’s consent service', () => {
@@ -136,22 +131,35 @@ describe('a renewal through Auto’s consent service that is refused', () => {
     ]);
     expect([revoked.row.ends(), refusing.row.ends()]).toEqual([['consent_ended'], ['consent_ended']]);
   });
+});
 
-  it('breaks the connection where its row holds no connection key, and asks the service nothing', async () => {
+describe('a renewal through Auto’s consent service without a key it knows', () => {
+  it('breaks the connection in the words of a key the service does not know, where it refuses the key the row holds', async () => {
     const connected = await connectedAt();
-    const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = connected.first;
-    const unkeyed = keptValueOf({
-      access_token: accessToken,
-      refresh_token: required(refreshToken),
-      token_type: tokenType,
-    });
-    const row = memoryTokens(unkeyed, { now: connected.clock.now });
+    const row = rowHolding(connected, { ...connected.first, connection_key: 'a-key-the-service-never-gave' });
 
     const failed = await sourceOf({ ...connected, row })
       .onUnauthorized(unauthorizedAt(connected))
       .catch((error: unknown) => error);
 
-    expect(failed).toEqual(new Error(brokenWords('consent_ended')));
+    expect(failed).toEqual(new Error(brokenWords('key_unknown')));
+    expect(heardAt(connected, '/tokens/refresh')).toHaveLength(1);
+  });
+
+  it('breaks the connection so too where its row holds no key, and asks the service nothing', async () => {
+    const connected = await connectedAt();
+    const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = connected.first;
+    const row = rowHolding(connected, {
+      access_token: accessToken,
+      refresh_token: required(refreshToken),
+      token_type: tokenType,
+    });
+
+    const failed = await sourceOf({ ...connected, row })
+      .onUnauthorized(unauthorizedAt(connected))
+      .catch((error: unknown) => error);
+
+    expect(failed).toEqual(new Error(brokenWords('key_unknown')));
     expect(heardAt(connected, '/tokens/refresh')).toEqual([]);
   });
 });
@@ -166,14 +174,27 @@ describe('a renewal through Auto’s consent service that cannot ask it', () => 
     expect(heardAt(connected, '/tokens/refresh')).toEqual([]);
   });
 
-  it('fails the call within the bound of its request where the service stalls, and breaks nothing', async () => {
+  it('fails the call within the bound of its request where the service stalls, in its own words, and breaks nothing', async () => {
     const connected = await connectedAt();
     connected.service.stall();
 
     const failed = await renewed(connected, sourceOf(connected, consentClientThrough(connected, { requestMs: 50 })));
 
-    expect(failed).toEqual(new Error(renewalWords.unanswered('files')));
+    expect(failed).toEqual(new Error(renewalWords.serviceUnanswered('files')));
     expect([connected.row.ends(), connected.row.version(), connected.row.claims()]).toEqual([[], 1, [15_050]]);
+  });
+
+  it('fails the call and breaks nothing where something answers 403 without a refusal of the service', async () => {
+    const connected = await connectedAt();
+    const forbidding = consentClientWith({
+      autoClients: autoClientsOf({ url: await forbiddingEverything() }),
+      renewalSpreadMs: 0,
+    });
+
+    const failed = await renewed(connected, sourceOf(connected, forbidding));
+
+    expect(failed).toEqual(new Error(renewalWords.serviceUnanswered('files')));
+    expect([connected.row.ends(), connected.row.version()]).toEqual([[], 1]);
   });
 });
 
@@ -196,40 +217,5 @@ describe('tokens renewed through Auto’s consent service that the store refuses
 
     expect(failed).toEqual(new Error(`A secret to keep holds more than ${mostCharacters} characters`));
     expect(heardAt(connected, '/tokens/revoke')).toHaveLength(1);
-  });
-});
-
-describe('the revocation through Auto’s consent service a removal asks for', () => {
-  it('revokes the tokens with the connection key, and with them the grant at the authorization server', async () => {
-    const connected = await connectedAt();
-
-    const revoked = await Effect.runPromise(
-      Effect.result(consentClientThrough(connected).revoke(revokeAskedOf(connected))),
-    );
-
-    expect(revoked).toMatchObject({ _tag: 'Success' });
-    expect(await admitted(connected.fake, connected.first.access_token)).toBe(false);
-    expect(heardAt(connected, '/tokens/revoke').map(({ body }) => body)).toEqual([
-      {
-        issuer: connected.fake.origin,
-        access_token: connected.first.access_token,
-        refresh_token: connected.first.refresh_token,
-        connection_key: connected.first.connection_key,
-      },
-    ]);
-  });
-
-  it('is refused as not revoked where the service could not, unanswered where it is gone, and as gone where the source of Auto is off', async () => {
-    const connected = await connectedAt();
-    const gone = await connectedAt();
-    connected.service.refuseNext('revoke');
-    await gone.service.close();
-
-    expect([
-      await revokedBy(consentClientThrough(connected), connected),
-      await revokedBy(consentClientThrough(gone), gone),
-      await revokedBy(consentClientWith(), connected),
-    ]).toEqual([{ refused: 'not_revoked', status: 502 }, { refused: 'unanswered' }, { refused: 'client_gone' }]);
-    expect(await admitted(connected.fake, connected.first.access_token)).toBe(true);
   });
 });

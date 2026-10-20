@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, adding } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, harness, harnessPages, operationNamed, type Harness } from '../testing/harness.ts';
 
 const consentProviders = providersOf(adverts, drive);
 
@@ -229,6 +229,7 @@ function offeredWith(consenting: Partial<ConsentClientOptions>) {
       providerValues: new Map(),
       policy: connectionPolicyOf({}),
       access: 'people',
+      pages: harnessPages,
       consent: consentClientWith(consenting),
     })(ada),
   );

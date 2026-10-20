@@ -30,7 +30,7 @@ const start: ServiceStartAsked = {
   scope: undefined,
   parameters: undefined,
   resource: undefined,
-  returnTo: { kind: 'hosted' },
+  returnTo: { kind: 'hosted', base: 'https://studio.example.com/' },
   challenge: 'a-challenge',
 };
 
@@ -44,7 +44,7 @@ function everyCallAt(url: string) {
     outcomeOf(calls.redeem('a-state', studioSession, { code: 'a-code' })),
     outcomeOf(calls.takeHandoff('a-handle', Redacted.make('a-verifier'))),
     outcomeOf(calls.refresh({ issuer, refreshToken: 'r', connectionKey: 'k', resource: undefined })),
-    outcomeOf(calls.revoke({ issuer, tokens })),
+    outcomeOf(calls.revoke({ issuer, tokens, connectionKey: 'k' })),
   ]);
 }
 
@@ -57,12 +57,12 @@ describe('a consent service that answers a status the contract does not hold', (
     expect(await everyCallAt(url)).toEqual(Array.from({ length: 7 }, () => unanswered));
   });
 
-  it('answers a start it refuses as having no client, and every other refusal without a word of its own as unanswered', async () => {
+  it('answers a start it refuses as one it will not make, and every other refusal without a word of its own as unanswered', async () => {
     const url = await answeringEvery(() => new Response('not a document', { status: 400 }));
 
     expect(await everyCallAt(url)).toEqual([
       unanswered,
-      { refused: 'no_client' },
+      { refused: 'start_refused' },
       unanswered,
       unanswered,
       unanswered,
@@ -86,5 +86,59 @@ describe('a consent service that answers what the contract does not hold', () =>
     expect(await outcomeOf(serviceCallsAt({ url }).takeHandoff('a-handle', Redacted.make('a-verifier')))).toEqual(
       unanswered,
     );
+  });
+});
+
+function problemAnswer(status: number, members: Readonly<Record<string, unknown>>): () => Response {
+  return () =>
+    Response.json({ type: 'about:blank', status, title: 'Refused', detail: 'Refused', ...members }, { status });
+}
+
+async function refreshAt(answer: () => Response) {
+  const calls = serviceCallsAt({ url: await answeringEvery(answer) });
+  return outcomeOf(calls.refresh({ issuer, refreshToken: 'r', connectionKey: 'k', resource: undefined }));
+}
+
+async function revokeAt(answer: () => Response) {
+  const calls = serviceCallsAt({ url: await answeringEvery(answer) });
+  return outcomeOf(calls.revoke({ issuer, tokens: { access_token: 'a', token_type: 'Bearer' }, connectionKey: 'k' }));
+}
+
+async function handoffAt(answer: () => Response) {
+  return outcomeOf(serviceCallsAt({ url: await answeringEvery(answer) }).takeHandoff('h', Redacted.make('v')));
+}
+
+describe('the refusals a consent service names', () => {
+  it('end a renewal only where they name the refusal at the status the contract gives it, and are unanswered otherwise', async () => {
+    expect([
+      await refreshAt(problemAnswer(400, { refused: 'invalid_grant' })),
+      await refreshAt(problemAnswer(403, { refused: 'unknown_key' })),
+      await refreshAt(problemAnswer(403, {})),
+      await refreshAt(problemAnswer(400, { refused: 'unknown_key' })),
+      await refreshAt(() => new Response('Forbidden', { status: 403 })),
+    ]).toEqual([{ refused: 'invalid_grant' }, { refused: 'unknown_key' }, unanswered, unanswered, unanswered]);
+  });
+
+  it('say a revocation did not happen only with the status of the authorization server on a 502, and a key unknown on a 403', async () => {
+    expect([
+      await revokeAt(problemAnswer(502, { refused: 'not_revoked', vendor_status: 401 })),
+      await revokeAt(problemAnswer(502, { refused: 'not_revoked' })),
+      await revokeAt(problemAnswer(400, { refused: 'not_revoked', vendor_status: 401 })),
+      await revokeAt(problemAnswer(403, { refused: 'unknown_key' })),
+      await revokeAt(problemAnswer(403, {})),
+    ]).toEqual([
+      { refused: 'not_revoked', status: 401 },
+      unanswered,
+      unanswered,
+      { refused: 'unknown_key' },
+      unanswered,
+    ]);
+  });
+
+  it('refuse a handoff for a wrong verifier only where they name it', async () => {
+    expect([
+      await handoffAt(problemAnswer(403, { refused: 'wrong_verifier' })),
+      await handoffAt(problemAnswer(403, {})),
+    ]).toEqual([{ refused: 'code' }, unanswered]);
   });
 });

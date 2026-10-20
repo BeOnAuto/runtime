@@ -12,14 +12,18 @@ import type {
   StartAsked,
   StartedConsent,
 } from '../consent/consent-client.ts';
-import type { ConsentReturn } from '../consent/consent-service.ts';
 import { grantedScopeOf } from '../consent/scopes.ts';
 import { scopeAskedOf, serverMetadataOf } from '../consent/server-metadata.ts';
-import { autoOf, type AutoOn, type ReturnKind, type ThroughAuto } from './auto-clients.ts';
+import { autoOf, type AutoOn, type ThroughAuto } from './auto-clients.ts';
+import type { ConsentReturn } from './consent-service.ts';
 
 type FetchFor = Requests['fetchFor'];
 
-const studioElsewhere: ConsentRefusal = { refused: 'studio_elsewhere' };
+interface StartingThrough {
+  readonly auto: AutoOn;
+  readonly clientId: string;
+  readonly kind: ConsentReturn['kind'];
+}
 
 const clientGone: ConsentRefusal = { refused: 'client_gone' };
 
@@ -30,21 +34,16 @@ function handoffVerifier(): { readonly verifier: string; readonly challenge: str
   return { verifier, challenge: createHash('sha256').update(verifier).digest('base64url') };
 }
 
-function returnTo(base: string, kind: Exclude<ReturnKind, 'elsewhere'>): ConsentReturn {
-  return kind === 'hosted' ? { kind } : { kind, base };
+function chosenOf(clientId: string): ChosenClient {
+  return { client_id: clientId, client_source: 'auto' };
 }
 
 export function startedThroughAuto(
   asked: StartAsked,
   fetchFor: FetchFor,
-  auto: AutoOn,
-  clientId: string,
+  { auto, clientId, kind }: StartingThrough,
 ): Effect.Effect<StartedConsent, ConsentRefusal> {
   return Effect.gen(function* () {
-    const kind = auto.returnKindOf(asked.studioBase);
-    if (kind === 'elsewhere') {
-      return yield* Effect.fail(studioElsewhere);
-    }
     const { server, resource } = yield* serverMetadataOf(asked, fetchFor(asked.reaches));
     const { verifier, challenge } = handoffVerifier();
     const { url, state } = yield* auto.service.start({
@@ -52,11 +51,10 @@ export function startedThroughAuto(
       scope: scopeAskedOf(asked.way, server),
       parameters: asked.way.parameters,
       resource,
-      returnTo: returnTo(asked.studioBase, kind),
+      returnTo: { kind, base: asked.studioBase },
       challenge,
     });
-    const client: ChosenClient = { client_id: clientId, client_source: 'auto' };
-    return { url, state, verifier: Redacted.make(verifier), client };
+    return { url, state, verifier: Redacted.make(verifier), client: chosenOf(clientId) };
   });
 }
 
@@ -71,13 +69,23 @@ export function handedOff(
     if (auto === undefined) {
       return yield* Effect.fail(clientGone);
     }
-    const { tokens, connection_key: key } = yield* auto.service.takeHandoff(asked.handle, asked.verifier);
+    const handoff = yield* auto.service.takeHandoff(asked.handle, asked.verifier);
+    const { tokens, connection_key: key } = handoff;
     const revoked = Effect.ignore(
-      auto.service.revoke({ issuer: asked.way.issuer, tokens: keptHandedOf(tokens, undefined, key) }),
+      auto.service.revoke({
+        issuer: asked.way.issuer,
+        tokens: keptHandedOf(tokens, undefined, key),
+        connectionKey: key,
+      }),
     );
     const scope = yield* grantedScopeOf(tokens.scope, scopeAskedOf(asked.way, server)).pipe(
       Effect.onError(() => revoked),
     );
-    return { tokens: keptValueOf(keptHandedOf(tokens, scope, key)), scope, revoked };
+    return {
+      tokens: keptValueOf(keptHandedOf(tokens, scope, key)),
+      scope,
+      revoked,
+      client: chosenOf(handoff.client_id),
+    };
   });
 }

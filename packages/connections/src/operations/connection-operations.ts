@@ -23,7 +23,7 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     defineListConnections(services),
     defineGetConnection(services),
     defineRemoveConnection(services),
-    defineReadLink(services.consent),
+    defineReadLink(services),
     defineApprove(binding),
     defineGiveCredential({ ...services, ...binding }),
     ...consentOperationsOf({ ...services, ...binding }),
