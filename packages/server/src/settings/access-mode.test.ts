@@ -9,6 +9,7 @@ import { startServer } from '../lifecycle/lifecycle.ts';
 import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
 
@@ -44,7 +45,14 @@ async function statusesOn(
   credentials: readonly (string | undefined)[],
 ): Promise<readonly number[]> {
   const server = await startServer(
-    { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ledger.fileName, PREDICTION_CACHE_DIR: ledger.cacheDirectory, ...env },
+    {
+      HOST: '127.0.0.1',
+      PORT: '0',
+      LEDGER_FILE: ledger.fileName,
+      PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+      ...noConsentThroughAuto,
+      ...env,
+    },
     compositionRoot,
   );
   const responses = await Promise.all(

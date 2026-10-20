@@ -3,7 +3,7 @@ import { secretKeyBytes } from '@on.auto/secrets';
 import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
 
 import { InvalidSettingsError } from './invalid-settings-error.ts';
-import { besideTheLedgerFile, readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
+import { besideTheLedgerFile, ledgerVariables, readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
 
 export type SecretsKeyGiven =
   | { readonly from: 'environment'; readonly setting: string; readonly key: Redacted.Redacted<Uint8Array> }
@@ -31,6 +31,8 @@ const currentKey: KeySettings = { key: 'SECRETS_KEY', file: 'SECRETS_KEY_FILE' }
 const previousKey: KeySettings = { key: 'SECRETS_KEY_PREVIOUS', file: 'SECRETS_KEY_FILE_PREVIOUS' };
 
 export const secretsVariables: readonly string[] = [currentKey, previousKey].flatMap(({ key, file }) => [key, file]);
+
+export const ledgerAndSecretsVariables: readonly string[] = [...ledgerVariables, ...secretsVariables];
 
 function sourcesOf({ key, file }: KeySettings) {
   return Config.all({

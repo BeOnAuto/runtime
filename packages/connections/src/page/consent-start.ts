@@ -1,8 +1,9 @@
 import { allPermissions, defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
+import { studioBaseFor } from '../links/connect-page.ts';
 import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts';
-import { ExpiresAtField } from '../operations/connection-fields.ts';
+import { ClientSourceField, ExpiresAtField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
 import { startableConnectionOf } from '../registry/registry-decisions.ts';
 import { consentAskedOf, forgottenVerifierOf, namedOf, type ConsentServices } from './consent-asking.ts';
@@ -17,6 +18,10 @@ const StartedSchema = Schema.Struct({
     expires_at: ExpiresAtField.annotate({
       description: 'When the consent must be finished by, ten minutes on, in ISO 8601 UTC',
     }),
+  }),
+  client_source: ClientSourceField.annotate({
+    description:
+      "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code",
   }),
 }).annotate({ identifier: 'StartedConsent', description: 'Where the person signs in to the provider and allows Auto' });
 
@@ -43,20 +48,20 @@ export function defineStartConsent(services: ConsentServices) {
       const asked = consentAskedOf(kept.connection, services);
       const state = issuedToken();
       const started = yield* consent
-        .start({ ...asked, state: state.token })
+        .start({ ...asked, state: state.token, studioBase: studioBaseFor(services.pages) })
         .pipe(Effect.mapError((refusal) => consentRefusalOf(namedOf(kept.connection), refusal)));
       const verifierSecretId = yield* Effect.orDie(secrets.keep(started.verifier));
       const expiresAt = yield* tenMinutesOn;
       yield* recordInRegistry({
         type: 'start',
         ...use,
-        state_sha256: state.token_sha256,
+        state_sha256: tokenSha256Of(started.state),
         verifier_secret_id: verifierSecretId,
         ...started.client,
         expires_at: expiresAt,
       }).pipe(Effect.onError(() => secrets.forget(verifierSecretId)));
       yield* forgottenVerifierOf(kept, services);
-      return { authorize: { url: started.url, expires_at: expiresAt } };
+      return { authorize: { url: started.url, expires_at: expiresAt }, client_source: started.client.client_source };
     }),
   });
 }

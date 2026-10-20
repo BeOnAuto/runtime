@@ -21,6 +21,7 @@ export type Given = Effect.Effect<GivenValue | undefined, ConnectionUnready>;
 const endedWords: Readonly<Record<TokensEnded, (name: string) => string>> = {
   consent_ended: servingWords.consentEnded,
   client_gone: servingWords.clientGone,
+  key_unknown: servingWords.keyUnknown,
 };
 
 function required<A>(value: A | undefined): A {

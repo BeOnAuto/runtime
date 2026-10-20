@@ -36,6 +36,9 @@ const consentEnded =
 const clientGone =
   'The client the connection files was made with is no longer registered, so the person who added it removes it and adds it again';
 
+const keyUnknown =
+  "Auto's consent service does not know the key of the connection files, so its tokens cannot be renewed, and the person who added it removes it and adds it again";
+
 const notTokens =
   'The credential of the connection files cannot be read, so the person who added it removes it and adds it again: its value is not the tokens of a consent the runtime keeps';
 
@@ -219,18 +222,20 @@ describe('the store of the tokens of a connection connected by consent', () => {
     expect(read).toEqual({ tokens: renewed, version: 2, claimedUntil: undefined });
   });
 
-  it('breaks the connection in the words of an ended consent or of a client gone, recording the break once', async () => {
+  it('breaks the connection in the words of an ended consent, a client gone or a key Auto’s consent service does not know, recording the break once', async () => {
     const { h, id } = await connectedByConsent();
     const { tokens } = await consentOf(h);
 
     const ended = await Effect.runPromise(Effect.flip(tokens.broken('consent_ended')));
     const withoutItsClient = await Effect.runPromise(Effect.flip(tokens.broken('client_gone')));
+    const withoutItsKey = await Effect.runPromise(Effect.flip(tokens.broken('key_unknown')));
     const [listed] = await Effect.runPromise(sourceOf(h).connectionsOf('acme'));
     const breaks = (await h.facts()).filter(({ type }) => type === 'connection_broken');
 
-    expect([ended, withoutItsClient]).toEqual([
+    expect([ended, withoutItsClient, withoutItsKey]).toEqual([
       { because: 'connection_broken', detail: consentEnded },
       { because: 'connection_broken', detail: clientGone },
+      { because: 'connection_broken', detail: keyUnknown },
     ]);
     expect(listed?.state).toEqual({
       status: 'unready',

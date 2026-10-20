@@ -43,7 +43,7 @@ export function readSettings(given: Environment): Settings {
   const credentials = readCredentialSettings(environment, host);
   const { ledger, secrets } = Effect.runSync(readLedgerAndSecrets(environment));
   const content = Effect.runSync(readContentSettings(environment));
-  const served = readServedSettings(environment, file);
+  const served = readServedSettings(environment, file, { host, ...credentials });
   const telemetry = Effect.runSync(readTelemetrySettings(environment));
   const usagePing = Effect.runSync(readUsagePingSettings(environment));
   return {

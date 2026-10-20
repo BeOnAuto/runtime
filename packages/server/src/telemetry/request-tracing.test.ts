@@ -4,6 +4,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { compositionRoot } from '../composition/composition-root.ts';
 import { defaultServerOptions, startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { metricNamesIn, spansIn } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp, type OtlpReceiver } from '../testing/telemetry/otlp-receiver.ts';
 import { tracedRequestOf } from './request-tracing.ts';
@@ -84,6 +85,7 @@ describe('a request that reads a link', () => {
         PORT: '0',
         LEDGER_FILE: ledger.fileName,
         PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+        ...noConsentThroughAuto,
         OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
         OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
       },

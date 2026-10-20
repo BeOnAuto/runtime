@@ -12,7 +12,9 @@ import {
 import { serveFakeMcp, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import { memoryRegistrations } from './given-consents.ts';
 
-export const returnAddress = 'https://studio.example.com/connect-return';
+export const studioBase = 'https://studio.example.com/';
+
+export const returnAddress = `${studioBase}connect-return`;
 
 export const consentSecret = 'auto-runtime-client-secret-3c9e';
 
@@ -59,5 +61,6 @@ export function startAskedAt(fake: FakeMcpServer, way: Partial<ConsentWay> = {},
     returnAddress,
     reaches: everyHost,
     state,
+    studioBase,
   };
 }

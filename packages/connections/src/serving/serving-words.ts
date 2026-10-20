@@ -17,6 +17,8 @@ export const servingWords = {
   consentEnded: (name: string) => `The consent of the connection ${name} was revoked or has ended, so ${removeAndAdd}`,
   clientGone: (name: string) =>
     `The client the connection ${name} was made with is no longer registered, so ${removeAndAdd}`,
+  keyUnknown: (name: string) =>
+    `Auto's consent service does not know the key of the connection ${name}, so its tokens cannot be renewed, and ${removeAndAdd}`,
   unchecked: (name: string, details: readonly string[]) =>
     `The entry of the connection ${name} is not one this runtime takes any more: ${listed(details)}`,
 } as const;

@@ -1,5 +1,5 @@
 import { alternatives, articled, listed } from '@on.auto/operations';
-import { ClientSourceSchema, clientSources, isScope } from '@on.auto/tool-servers';
+import { WayClientSourceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { wayAddresses, type WayAddress } from './templates.ts';
@@ -16,7 +16,7 @@ export const wayFields = {
   authorization_endpoint: Schema.String,
   token_endpoint: Schema.String,
   revocation_endpoint: Schema.String,
-  clients: Schema.Array(ClientSourceSchema),
+  clients: Schema.Array(WayClientSourceSchema),
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
@@ -153,7 +153,7 @@ function endpointIssuesOf(fields: ConsentFields): readonly WayIssue[] {
         }));
 }
 
-const runtimeOrder: readonly string[] = clientSources;
+const runtimeOrder: readonly string[] = wayClientSources;
 
 function isInTheRuntimesOrder(clients: readonly string[]): boolean {
   const places = clients.map((source) => runtimeOrder.indexOf(source));
@@ -168,7 +168,7 @@ function clientIssuesOf({ clients }: ConsentFields): readonly WayIssue[] {
     ? [
         {
           path: ['clients'],
-          issue: `Expected at least one client source, each once, in the order the runtime takes them: ${listed(clientSources)}`,
+          issue: `Expected at least one client source, each once, in the order the runtime takes them: ${listed(wayClientSources)}`,
         },
       ]
     : [];

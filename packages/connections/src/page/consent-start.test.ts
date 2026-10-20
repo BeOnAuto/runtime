@@ -1,7 +1,14 @@
 import { createHash } from 'node:crypto';
 
 import { servedStudio } from '@on.auto/identity/testing';
-import { consentedAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import type { ReturnKind } from '@on.auto/tool-servers';
+import {
+  autoClientsOf,
+  consentedAt,
+  servedThroughAuto,
+  type ClientRegistration,
+  type FakeMcpServer,
+} from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -244,5 +251,42 @@ describe('a start refused where the server cannot proceed', () => {
       detail: 'A connection may not reach the host localhost on this runtime, which allows 127.0.0.1',
     });
     expect(harness().operations.map(({ registration }) => registration.name)).toContain('start');
+  });
+});
+
+describe('a start through Auto’s consent service for a Studio neither hosted nor on this computer', () => {
+  it('is refused before the person is sent anywhere where no other source remains, saying whoever runs the runtime registers a client', async () => {
+    const serving = await servedThroughAuto();
+    closing.push(serving.close);
+    const kinds: { now: ReturnKind } = { now: 'hosted' };
+    const autoClients = { ...autoClientsOf(serving.service), returnKindOf: () => kinds.now };
+    const h = consentHarnessAt(serving.fake, { consenting: { autoClients } });
+    const link = await added(h, { provider: 'files' });
+    kinds.now = 'elsewhere';
+
+    expect(await starting(h, link)).toMatchObject({
+      reason: 'conflict',
+      detail:
+        "The connection files takes consent through Auto's client only where Studio is Auto's or on this computer, so whoever runs this runtime registers a client",
+    });
+    expect([serving.service.calls().map(({ path }) => path), serving.fake.heard()]).toEqual([['/clients'], []]);
+  });
+});
+
+describe('a start through Auto’s consent service from a Studio host the service does not send people back to', () => {
+  it('is refused by the service before the person is sent anywhere, saying whoever runs the runtime registers a client', async () => {
+    const serving = await servedThroughAuto();
+    closing.push(serving.close);
+    const h = consentHarnessAt(serving.fake, { consenting: { autoClients: autoClientsOf(serving.service) } });
+
+    expect(await starting(h, await added(h, { provider: 'files' }))).toMatchObject({
+      reason: 'conflict',
+      detail:
+        "Auto's consent service did not start the consent of the connection files: Auto has no client at its authorization server, or the service does not send people back to the Studio its link opens, so whoever runs this runtime registers a client",
+    });
+    expect(serving.service.calls().at(-1)?.body).toMatchObject({
+      return: { kind: 'hosted', base: 'https://studio.on.auto/' },
+    });
+    expect(serving.fake.heard().map(({ path }) => path)).not.toContain('/authorize');
   });
 });

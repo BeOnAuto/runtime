@@ -9,6 +9,7 @@ import {
   type ConsentClient,
 } from '@on.auto/tool-servers';
 
+import { autoClientsOf } from '../consent/consent-settings.ts';
 import type { Settings } from '../settings/settings.ts';
 import { outboundFetch } from './outbound-fetch.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
@@ -21,7 +22,7 @@ function publicUrlOf({ signIn }: PublicAddressing): string | undefined {
 
 export function consentClientOf(
   runtime: AppRuntime<DispatcherServices>,
-  settings: Pick<Settings, 'registeredClients' | 'signIn'>,
+  settings: Pick<Settings, 'registeredClients' | 'signIn' | 'autoClients' | 'studio'>,
   secrets: SecretStore,
 ): ConsentClient {
   return makeConsentClient({
@@ -29,6 +30,7 @@ export function consentClientOf(
     registeredClients: settings.registeredClients,
     publicUrl: publicUrlOf(settings),
     registrations: makeClientRegistrations({ registry: runtimeLedger(runtime), secrets }),
+    autoClients: autoClientsOf(settings.autoClients, settings.studio),
   });
 }
 

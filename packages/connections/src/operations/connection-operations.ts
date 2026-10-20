@@ -2,7 +2,7 @@ import type { RouteRegistration } from '@on.auto/operations';
 
 import { consentOperationsOf } from '../page/consent-operations.ts';
 import { defineGiveCredential } from '../page/give-credential.ts';
-import { defineApprove, readLink } from '../page/link-operations.ts';
+import { defineApprove, defineReadLink } from '../page/link-operations.ts';
 import { bindsPerson } from '../policy/policy-rules.ts';
 import { defineListProviders } from '../providers/list-providers.ts';
 import { defineAddConnection } from './add-connection.ts';
@@ -23,7 +23,7 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     defineListConnections(services),
     defineGetConnection(services),
     defineRemoveConnection(services),
-    readLink,
+    defineReadLink(services),
     defineApprove(binding),
     defineGiveCredential({ ...services, ...binding }),
     ...consentOperationsOf({ ...services, ...binding }),

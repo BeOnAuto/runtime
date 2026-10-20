@@ -1,5 +1,5 @@
 import type { CallerIdentity } from '@on.auto/operations';
-import { Function, Order } from 'effect';
+import { Effect, Order } from 'effect';
 
 import type { OrgListing } from '../listing/listing-ways.ts';
 import type { ServerFields } from '../listing/tool-server.ts';
@@ -12,9 +12,9 @@ export interface OfferedProvider {
   readonly description: string;
 }
 
-export type ProviderOffering = (caller: CallerIdentity) => readonly OfferedProvider[] | undefined;
+export type ProviderOffering = (caller: CallerIdentity) => Effect.Effect<readonly OfferedProvider[] | undefined>;
 
-export const offersNoProvider: ProviderOffering = Function.constUndefined;
+export const offersNoProvider: ProviderOffering = () => Effect.undefined;
 
 const byName: Order.Order<OfferedProvider> = Order.mapInput(Order.String, ({ name }: OfferedProvider) => name);
 

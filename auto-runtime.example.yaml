@@ -100,9 +100,12 @@ model_aliases:
 # leaving the section out lets people add any connection. providers adds
 # providers of your own beside those the runtime ships, which a person connects
 # by name and an entry of tool_servers may name; one named as a shipped
-# provider takes its place.
+# provider takes its place. auto_clients lets a provider take Auto's client,
+# through Auto's consent service, where you register none at its vendor: on in
+# local mode and off otherwise when left out.
 # connections:
 #   people_may_add: true
+#   auto_clients: true
 #   allowed_hosts: ['*.example.com', 'crm.example.com']
 #   credential_kinds: [none, reference, secret, client_credentials, authorization]
 #   providers:

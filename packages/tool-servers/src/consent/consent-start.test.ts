@@ -11,6 +11,7 @@ import {
   returnAddress,
   servedForConsent,
   startAskedAt,
+  studioBase,
   type ClientRegistration,
   type FakeMcpServer,
 } from '../testing/index.ts';
@@ -77,6 +78,7 @@ const explicitWay: StartAsked = {
   returnAddress,
   reaches: everyHost,
   state: 'state-2',
+  studioBase,
 };
 
 describe('the start of a consent at an MCP server', () => {
@@ -239,14 +241,19 @@ describe('a start that cannot ask the server', () => {
 });
 
 describe('the client sources a consent client judges', () => {
-  it('are those of the way the runtime has, without asking anything', () => {
-    const client = consentClientWith({ registeredClients: [registeredAt(accounts)] });
+  it('are those of the way the runtime has, without asking anything where it takes no client of Auto’s', () => {
+    const client = consentClientWith({ fetch: readsNothing, registeredClients: [registeredAt(accounts)] });
+    const { sourcesOf, sourceOf } = Effect.runSync(client.hadSources(studioBase));
 
     expect([
-      client.sourcesOf({ issuer: accounts }),
-      client.sourcesOf({ issuer: accounts, clients: ['metadata_document', 'dynamic'] }),
-      client.sourcesOf({ issuer: 'https://elsewhere.example.com' }),
+      sourcesOf({ issuer: accounts }),
+      sourcesOf({ issuer: accounts, clients: ['metadata_document', 'dynamic'] }),
+      sourcesOf({ issuer: 'https://elsewhere.example.com' }),
     ]).toEqual([['registered'], ['dynamic'], []]);
+    expect([sourceOf({ issuer: accounts }), sourceOf({ issuer: 'https://elsewhere.example.com' })]).toEqual([
+      'registered',
+      undefined,
+    ]);
   });
 });
 

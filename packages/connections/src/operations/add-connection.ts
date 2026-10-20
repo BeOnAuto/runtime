@@ -1,7 +1,7 @@
 import { Caller, OrgContext, defineCommand, quoted } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { connectPageOf } from '../links/connect-page.ts';
+import { connectPageOf, studioBaseFor } from '../links/connect-page.ts';
 import { issuedLink } from '../links/link-token.ts';
 import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { checkedAdditionOf, refusalOfTheAddition } from '../providers/provider-additions.ts';
@@ -39,7 +39,8 @@ export function defineAddConnection({
         return yield* Effect.fail(adderRefusal);
       }
       const { org } = yield* OrgContext;
-      const given = yield* Effect.fromResult(checkedAdditionOf(input, { org, modelProviders }, { ...serving, policy }));
+      const studioBase = studioBaseFor(pages);
+      const given = yield* checkedAdditionOf(input, { org, modelProviders }, { ...serving, policy, studioBase });
       const refusal = refusalOfTheAddition(given, policy, fileEntries, serving);
       if (refusal !== undefined) {
         return yield* Effect.fail(refusal);

@@ -7,6 +7,7 @@ import { spawnForTheTest } from '@on.auto/operations/testing';
 import { onTestFinished } from 'vitest';
 
 import { callInFlightFileVariable } from '../entries/calls-in-flight.ts';
+import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 import { until } from '../waiting/until.ts';
 
 export interface SpawnedServer {
@@ -42,6 +43,7 @@ export function spawnServer(entry: string, env: Readonly<Record<string, string>>
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
       PREDICTION_CACHE_DIR: folderOfTheTest('auto-runtime-test-cache-'),
       DO_NOT_TRACK: '1',
+      ...noConsentThroughAuto,
       ...env,
     },
     stdio: ['ignore', 'pipe', 'pipe'],

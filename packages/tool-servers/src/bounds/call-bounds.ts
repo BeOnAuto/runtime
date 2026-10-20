@@ -30,6 +30,18 @@ export const defaultTiming: Timing = {
   longestRetryWaitMs: toolBounds.longestRetryWaitMs,
 };
 
+export interface RequestBounds {
+  readonly requestMs: number;
+  readonly requestTimeout: (ms: number) => AbortSignal;
+}
+
+export function requestBoundsOf(given: Partial<RequestBounds>): RequestBounds {
+  return {
+    requestMs: given.requestMs ?? toolBounds.callMs,
+    requestTimeout: given.requestTimeout ?? ((ms) => AbortSignal.timeout(ms)),
+  };
+}
+
 export interface CallTally {
   readonly calls: number;
   readonly failures: number;

@@ -1,5 +1,5 @@
 import { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
-import type { ConsentRefusal, RevocationFailure } from '@on.auto/tool-servers';
+import type { ClientSource, ConsentRefusal, RevocationFailure } from '@on.auto/tool-servers';
 
 import { servingWords } from '../serving/serving-words.ts';
 
@@ -20,6 +20,8 @@ type ConflictingRefusal = Extract<
       | 'no_challenge'
       | 'no_client'
       | 'client_gone'
+      | 'studio_elsewhere'
+      | 'start_refused'
       | 'no_scope'
       | 'malformed_scope';
   }
@@ -37,6 +39,10 @@ const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = 
   no_client: ({ name }) =>
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
   client_gone: ({ name }) => servingWords.clientGone(name),
+  start_refused: ({ name }) =>
+    `Auto's consent service did not start the consent of the connection ${name}: Auto has no client at its authorization server, or the service does not send people back to the Studio its link opens, so whoever runs this runtime registers a client`,
+  studio_elsewhere: ({ name }) =>
+    `The connection ${name} takes consent through Auto's client only where Studio is Auto's or on this computer, so whoever runs this runtime registers a client`,
   malformed_scope: ({ name }) =>
     `The authorization server of the connection ${name} granted a scope written with characters a scope does not hold, ${notAsAdded}`,
   no_scope: ({ name }) =>
@@ -86,14 +92,44 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
     : conflictOf(named, refusal);
 }
 
-export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFailure): string {
+const throughAuto = (name: string) =>
+  `Expected handle: the consent of the connection ${name} began through Auto's consent service, which answers a handle, not a code`;
+
+const throughAClientOfItsOwn = (name: string) =>
+  `Expected code: the consent of the connection ${name} began with a client of this runtime's, which answers a code, not a handle`;
+
+export type Returned = 'code' | 'handle';
+
+export function wrongShapeOf({ name }: ConsentNamed, began: Returned, given: Returned): InvalidInput | undefined {
+  if (began === given) {
+    return undefined;
+  }
+  return given === 'code' ? refusedAt('/code', throughAuto(name)) : refusedAt('/handle', throughAClientOfItsOwn(name));
+}
+
+export function finishRefusalOf(named: ConsentNamed, refusal: ConsentRefusal, given: Returned): ConsentRefused {
+  return given === 'handle' && refusal.refused === 'code'
+    ? refusedAt('/handle', "Expected a handle Auto's consent service takes; it refused this one")
+    : consentRefusalOf(named, refusal);
+}
+
+function unansweredRevocationOf(name: string, source: ClientSource): string {
+  return source === 'auto'
+    ? `Auto's consent service did not answer the revocation of the tokens of the connection ${name}, so they end on their own`
+    : `The authorization server of the connection ${name} did not answer the revocation of its tokens, so they end on their own`;
+}
+
+export function unrevokedWordsOf({ name }: ConsentNamed, failure: RevocationFailure, source: ClientSource): string {
   if (failure.refused === 'not_revoked') {
     return `The authorization server of the connection ${name} refused to revoke its tokens, answering HTTP ${failure.status}, so they end on their own`;
   }
   if (failure.refused === 'host') {
     return `The tokens of the connection ${name} were not revoked, so they end on their own: ${failure.rule}`;
   }
+  if (failure.refused === 'unknown_key') {
+    return `Auto's consent service does not know the key of the connection ${name}, so its tokens were not revoked and end on their own`;
+  }
   return failure.refused === 'unanswered'
-    ? `The authorization server of the connection ${name} did not answer the revocation of its tokens, so they end on their own`
+    ? unansweredRevocationOf(name, source)
     : `The tokens of the connection ${name} could not be revoked with the client and at the authorization server it was made with, so they end on their own`;
 }

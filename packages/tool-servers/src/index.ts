@@ -65,15 +65,19 @@ export {
 export {
   ClientIdSchema,
   ClientSourceSchema,
+  WayClientSourceSchema,
   clientMetadataDocumentOf,
-  clientSources,
   isSameIssuer,
+  wayClientSources,
   type ClientMetadataDocument,
   type ClientSource,
+  type HadSources,
   type RegisteredClient,
   type RegisteredCredential,
   type TokenEndpointAuthMethod,
+  type WayClientSource,
 } from './consent/client-sources.ts';
+export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
 export {
   makeConsentClient,
   type ChosenClient,
@@ -86,7 +90,9 @@ export {
   type ConsentServed,
   type ConsentServer,
   type ConsentWay,
+  type CodeFinishAsked,
   type FinishAsked,
+  type HandleFinishAsked,
   type FinishedConsent,
   type HeldTokens,
   type KeptRow,

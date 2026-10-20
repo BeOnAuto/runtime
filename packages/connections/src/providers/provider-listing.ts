@@ -8,18 +8,19 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
+import type { HadSources } from '@on.auto/tool-servers';
 import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { hostRefusalOf } from '../policy/policy-rules.ts';
-import { consentUnsetUp, isConsentUnsetUp, type ClientSourcesHad } from './consent-offered.ts';
+import { consentUnsetUp, isConsentUnsetUp } from './consent-offered.ts';
 import { listedWayOf, type ListedPlaceholder, type ListedProvider, type ListedWay } from './listed-providers.ts';
 
 export interface Listing {
   readonly providers: ProviderList;
   readonly policy: ConnectionPolicy;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
-  readonly consent: ClientSourcesHad;
+  readonly consent: HadSources;
 }
 
 type Offering = Pick<ListedWay, 'offered' | 'because'>;

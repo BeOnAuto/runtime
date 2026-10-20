@@ -11,6 +11,10 @@ export interface PageOfALink {
   readonly token: string;
 }
 
+export function studioBaseFor({ studio, runtime }: ConnectPages): string {
+  return studioBaseOf(studio, runtime());
+}
+
 export function connectPageOf({ studio, runtime }: ConnectPages, { org, connection, token }: PageOfALink): string {
   const server = runtime();
   const page = new URL('connect', studioBaseOf(studio, server));
@@ -21,6 +25,6 @@ export function connectPageOf({ studio, runtime }: ConnectPages, { org, connecti
   return page.href;
 }
 
-export function returnAddressOf({ studio, runtime }: ConnectPages): string {
-  return new URL('connect-return', studioBaseOf(studio, runtime())).href;
+export function returnAddressOf(pages: ConnectPages): string {
+  return new URL('connect-return', studioBaseFor(pages)).href;
 }

@@ -4,7 +4,8 @@ import { Effect } from 'effect';
 
 import { compositionRootWith } from '../../composition/composition-root.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
-import { temporaryLedger } from '../records/temporary-ledger.ts';
+import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
+import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
 import type { ServedParts } from './served-parts.ts';
 import { patientWorkerPool } from './worker-pools.ts';
@@ -19,6 +20,16 @@ export interface ReasoningServer {
 
 export const alpha = '/v1/orgs/acme/playbooks/alpha';
 
+export function loopbackSettingsOver(ledger: TemporaryLedger): Readonly<Record<string, string>> {
+  return {
+    HOST: '127.0.0.1',
+    PORT: '0',
+    LEDGER_FILE: ledger.fileName,
+    PREDICTION_CACHE_DIR: ledger.cacheDirectory,
+    ...noConsentThroughAuto,
+  };
+}
+
 type Fetch = typeof globalThis.fetch;
 
 export const noNetwork: Fetch = () => Promise.reject(new TypeError('fetch failed: the tests reach no network'));
@@ -32,13 +43,7 @@ export async function servingReasoning(
   const ledger = temporaryLedger();
   const scripted = scriptedLanguageModel(...replies);
   const server = await startServer(
-    {
-      HOST: '127.0.0.1',
-      PORT: '0',
-      LEDGER_FILE: ledger.fileName,
-      PREDICTION_CACHE_DIR: ledger.cacheDirectory,
-      ...environment,
-    },
+    { ...loopbackSettingsOver(ledger), ...environment },
     compositionRootWith(
       (settings) =>
         Effect.map(makeModelAccess(settings, { fetch }), (access) => ({

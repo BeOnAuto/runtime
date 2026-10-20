@@ -9,9 +9,9 @@ import type {
   TokenServing,
   TokensEnded,
 } from '../consent/consent-client.ts';
-import { isInvalidGrant } from '../consent/consent-failures.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
 import { heldAmongSecrets, keptValueOf, type KeptTokens } from './kept-tokens.ts';
+import { endingOf } from './refresh-endings.ts';
 import { renewalWords } from './renewal-words.ts';
 
 export interface Refreshing {
@@ -24,7 +24,7 @@ export interface Refreshing {
 }
 
 export interface Renewal {
-  readonly refreshing: (served: ConsentServed) => Effect.Effect<Refreshing, ConsentRefusal>;
+  readonly refreshing: (served: ConsentServed, name: string) => Effect.Effect<Refreshing, ConsentRefusal>;
   readonly leaseMs: number;
   readonly waitMs: number;
   readonly spreadMs: number;
@@ -127,9 +127,9 @@ function takenFrom(row: HeldTokens, renewing: Renewing): Held {
   return heldOf(row.tokens, row.version, renewing);
 }
 
-function afterRefusedGrant(held: Held, renewing: Renewing): Effect.Effect<Held, Error> {
+function afterRefusedGrant(held: Held, renewing: Renewing, end: TokensEnded): Effect.Effect<Held, Error> {
   return Effect.flatMap(readOf(renewing), (row) =>
-    row.version === held.version ? ended(renewing, 'consent_ended') : Effect.succeed(takenFrom(row, renewing)),
+    row.version === held.version ? ended(renewing, end) : Effect.succeed(takenFrom(row, renewing)),
   );
 }
 
@@ -161,8 +161,10 @@ function exchangedFor(claimed: Claimed, renewing: Renewing): Effect.Effect<Held,
   const { held, refreshToken, refreshing } = claimed;
   return refreshing.refreshed(refreshToken, held.tokens, renewing.serving.now()).pipe(
     Effect.matchEffect({
-      onFailure: (failure) =>
-        isInvalidGrant(failure) ? afterRefusedGrant(held, renewing) : failedUnder(claimed, failure),
+      onFailure: (failure) => {
+        const end = endingOf(failure);
+        return end === undefined ? failedUnder(claimed, failure) : afterRefusedGrant(held, renewing, end);
+      },
       onSuccess: (renewed) => keptIn(claimed, renewed, renewing),
     }),
   );
@@ -175,7 +177,7 @@ function refreshedFrom(held: Held, renewing: Renewing): Effect.Effect<Held, unkn
       return yield* ended(renewing, 'consent_ended');
     }
     const refreshing = yield* renewing.renewal
-      .refreshing(renewing.served)
+      .refreshing(renewing.served, renewing.serving.name)
       .pipe(Effect.catch((refusal) => refusedWith(refusal, renewing)));
     const claim = yield* renewing.served.tokens.claim(held.version, renewing.renewal.leaseMs);
     return claim.claimed

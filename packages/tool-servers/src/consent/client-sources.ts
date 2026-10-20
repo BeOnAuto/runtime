@@ -1,15 +1,21 @@
 import { placeholdersIn, placeholdersReplaced } from '@on.auto/config';
 import { Schema, type Redacted } from 'effect';
 
-export const clientSources = ['registered', 'metadata_document', 'dynamic'] as const;
+const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic'] as const;
 
 export const ClientSourceSchema = Schema.Literals(clientSources);
 
 export type ClientSource = typeof ClientSourceSchema.Type;
 
+export const wayClientSources = ['registered', 'metadata_document', 'dynamic'] as const;
+
+export const WayClientSourceSchema = Schema.Literals(wayClientSources);
+
+export type WayClientSource = typeof WayClientSourceSchema.Type;
+
 export const ClientIdSchema = Schema.String.check(Schema.isMinLength(1));
 
-const defaultClientSources: readonly ClientSource[] = ['registered'];
+const defaultClientSources: readonly WayClientSource[] = ['registered'];
 
 export type RegisteredCredential =
   | { readonly kind: 'client_secret'; readonly clientSecret: Redacted.Redacted }
@@ -25,14 +31,25 @@ export interface RegisteredClient {
   readonly tokenEndpointAuthMethod: TokenEndpointAuthMethod | null;
 }
 
+export interface ServiceClient {
+  readonly issuer: string;
+  readonly client_id: string;
+}
+
 export interface ClientsHad {
   readonly registeredClients: readonly RegisteredClient[];
   readonly publicUrl: string | undefined;
+  readonly serviceClients: readonly ServiceClient[];
 }
 
 export interface WayOfClients {
   readonly issuer: string;
-  readonly clients?: readonly ClientSource[] | undefined;
+  readonly clients?: readonly WayClientSource[] | undefined;
+}
+
+export interface HadSources {
+  readonly sourcesOf: (way: WayOfClients) => readonly ClientSource[];
+  readonly sourceOf: (way: WayOfClients) => ClientSource | undefined;
 }
 
 type ClientMetadata = Readonly<{
@@ -82,6 +99,10 @@ export function registeredClientAt(clients: readonly RegisteredClient[], issuer:
   return clients.find(({ issuers }) => issuers.some((registered) => isRegisteredAt(registered, issuer)));
 }
 
+export function serviceClientAt(clients: readonly ServiceClient[], issuer: string): ServiceClient | undefined {
+  return clients.find((client) => isRegisteredAt(client.issuer, issuer));
+}
+
 export function metadataDocumentOf(publicUrl: string | undefined): string | undefined {
   return publicUrl?.startsWith('https://') === true ? new URL(metadataDocumentPath, publicUrl).href : undefined;
 }
@@ -113,14 +134,23 @@ function isHad(source: ClientSource, { issuer }: WayOfClients, had: ClientsHad):
   if (source === 'registered') {
     return registeredClientAt(had.registeredClients, issuer) !== undefined;
   }
+  if (source === 'auto') {
+    return serviceClientAt(had.serviceClients, issuer) !== undefined;
+  }
   return source === 'dynamic' || metadataDocumentOf(had.publicUrl) !== undefined;
 }
 
 function clientSourcesOf({ clients }: WayOfClients): readonly ClientSource[] {
-  return clients ?? defaultClientSources;
+  const listed = clients ?? defaultClientSources;
+  return listed.includes('registered') ? [...listed, 'auto'] : listed;
 }
 
 export function sourcesHad(way: WayOfClients, had: ClientsHad): readonly ClientSource[] {
   const listed = clientSourcesOf(way);
   return clientSources.filter((source) => listed.includes(source) && isHad(source, way, had));
+}
+
+export function sourceTakenOf(way: WayOfClients, had: ClientsHad): ClientSource | undefined {
+  const [first] = sourcesHad(way, had);
+  return first;
 }

@@ -8,6 +8,7 @@ import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Option, Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
+import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 import { until } from '../waiting/until.ts';
 
 export interface DevelopmentFiles {
@@ -83,6 +84,7 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
       LEDGER_FILE: files.ledgerFile,
       PREDICTION_CACHE_DIR: join(files.directory, 'prediction-cache'),
       DO_NOT_TRACK: '1',
+      ...noConsentThroughAuto,
       ...options.environment,
     },
     stdio: ['ignore', 'pipe', 'pipe'],

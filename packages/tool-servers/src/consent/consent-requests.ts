@@ -2,48 +2,26 @@ import { exchangeAuthorization, startAuthorization } from '@modelcontextprotocol
 import { DateTime, Effect, Redacted } from 'effect';
 
 import { answeredTokensOf, keptOf, keptValueOf } from '../consent-tokens/kept-tokens.ts';
-import { tokenRequestsOf, type TokenRequesting, type TokenRequests } from '../consent-tokens/token-requests.ts';
-import { libraryClientOf, requestsOf, type Requests } from './acting-clients.ts';
-import type {
-  ConsentClientOptions,
-  ConsentRefusal,
-  FinishAsked,
-  FinishedConsent,
-  StartAsked,
-  StartedConsent,
-} from './consent-client.ts';
+import { libraryClientOf, type Requests, type ServerSource } from './acting-clients.ts';
+import type { CodeFinishAsked, ConsentRefusal, FinishedConsent, StartAsked, StartedConsent } from './consent-client.ts';
 import { exchangeRefusalOf } from './consent-failures.ts';
 import { revocationOf } from './revocation.ts';
-import { isScope, normalizedScopeOf } from './scopes.ts';
+import { grantedScopeOf } from './scopes.ts';
 import { libraryMetadataOf, scopeAskedOf, serverMetadataOf } from './server-metadata.ts';
 
-export interface ConsentRequests extends TokenRequests {
-  readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
-  readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
-}
-
-type Requesting = ConsentClientOptions & TokenRequesting & { readonly requestTimeout: (ms: number) => AbortSignal };
-
-const noScope: ConsentRefusal = { refused: 'no_scope' };
-
-const malformedScope: ConsentRefusal = { refused: 'malformed_scope' };
-
-function grantedScopeOf(granted: string | undefined, asked: string | undefined) {
-  if (granted === undefined) {
-    return Effect.succeed(asked);
-  }
-  const scope = normalizedScopeOf(granted);
-  if (scope === '') {
-    return asked === undefined ? Effect.undefined : Effect.fail(noScope);
-  }
-  return isScope(scope) ? Effect.succeed(scope) : Effect.fail(malformedScope);
+export interface ServerConsents {
+  readonly start: (
+    asked: StartAsked,
+    sources: readonly ServerSource[],
+  ) => Effect.Effect<StartedConsent, ConsentRefusal>;
+  readonly finish: (asked: CodeFinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
 }
 
 function consentOf(
   exchanged: unknown,
   asked: string | undefined,
   revoked: Effect.Effect<void>,
-): Effect.Effect<FinishedConsent, ConsentRefusal> {
+): Effect.Effect<Omit<FinishedConsent, 'client'>, ConsentRefusal> {
   return Effect.gen(function* () {
     const tokens = answeredTokensOf(exchanged);
     const scope = yield* grantedScopeOf(tokens.scope, asked);
@@ -52,11 +30,15 @@ function consentOf(
   });
 }
 
-function started(asked: StartAsked, { clients, fetchFor }: Requests): Effect.Effect<StartedConsent, ConsentRefusal> {
+function started(
+  asked: StartAsked,
+  { clients, fetchFor }: Requests,
+  sources: readonly ServerSource[],
+): Effect.Effect<StartedConsent, ConsentRefusal> {
   return Effect.gen(function* () {
     const fetch = fetchFor(asked.reaches);
     const { server, resource } = yield* serverMetadataOf(asked, fetch);
-    const client = yield* clients.chosenAt({ asked, server, fetch });
+    const client = yield* clients.chosenAt({ asked, server, fetch, sources });
     const scope = scopeAskedOf(asked.way, server);
     const { authorizationUrl, codeVerifier } = yield* Effect.promise(() =>
       startAuthorization(asked.way.issuer, {
@@ -71,11 +53,12 @@ function started(asked: StartAsked, { clients, fetchFor }: Requests): Effect.Eff
     for (const [name, value] of Object.entries(asked.way.parameters ?? {})) {
       authorizationUrl.searchParams.set(name, value);
     }
-    return { url: authorizationUrl.href, verifier: Redacted.make(codeVerifier), client: client.chosen };
+    const verifier = Redacted.make(codeVerifier);
+    return { url: authorizationUrl.href, state: asked.state, verifier, client: client.chosen };
   });
 }
 
-function finished(asked: FinishAsked, { clients, fetchFor }: Requests): Effect.Effect<FinishedConsent, ConsentRefusal> {
+function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
   return Effect.gen(function* () {
     const fetch = fetchFor(asked.reaches);
     const { server, resource } = yield* serverMetadataOf(asked, fetch);
@@ -97,15 +80,16 @@ function finished(asked: FinishAsked, { clients, fetchFor }: Requests): Effect.E
     });
     const tokens = { access_token: exchanged.access_token, refresh_token: exchanged.refresh_token };
     const revoking = Effect.ignore(revocationOf({ server, client, tokens, fetch }));
-    return yield* consentOf(exchanged, scopeAskedOf(asked.way, server), revoking).pipe(Effect.onError(() => revoking));
+    return yield* consentOf(exchanged, scopeAskedOf(asked.way, server), revoking).pipe(
+      Effect.map((consent) => ({ ...consent, client: asked.client })),
+      Effect.onError(() => revoking),
+    );
   });
 }
 
-export function consentRequests(options: Requesting): ConsentRequests {
-  const requests = requestsOf(options);
+export function serverConsentsOf(requests: Requests): ServerConsents {
   return {
-    start: (asked) => started(asked, requests),
+    start: (asked, sources) => started(asked, requests, sources),
     finish: (asked) => finished(asked, requests),
-    ...tokenRequestsOf(requests, options),
   };
 }

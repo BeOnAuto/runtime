@@ -6,7 +6,7 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
-import { Option, Result, type Redacted } from 'effect';
+import { Effect, Option, Result, type Redacted } from 'effect';
 
 import {
   additionIssuesOf,
@@ -19,7 +19,7 @@ import type { AdditionGiven } from '../operations/connection-fields.ts';
 import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
-import { consentUnsetUp, isConsentUnsetUp, type ClientSourcesHad } from './consent-offered.ts';
+import { consentUnsetUp, isConsentUnsetUp } from './consent-offered.ts';
 import { isOfferedWay, type Listing } from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
@@ -81,6 +81,16 @@ export interface ProviderServices {
 
 type AdditionServices = ProviderServices & Listing;
 
+type Consent = Listing['consent'];
+
+interface ClientListing {
+  readonly hadSources: (studioBase: string) => Effect.Effect<Consent>;
+}
+
+type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: ClientListing } & {
+  readonly studioBase: string;
+};
+
 export function providingOf(
   { provider }: Pick<AdditionInput, 'provider'>,
   { providers, providerValues }: ProviderServices,
@@ -113,10 +123,10 @@ function placedIssuesOf(issues: readonly Issue[], given: AdditionGiven): readonl
 interface Checked {
   readonly given: AdditionGiven;
   readonly checking: EntryChecking;
-  readonly consent: ClientSourcesHad;
+  readonly consent: Consent;
 }
 
-function consentIssuesOf({ provider, credential }: GivenAddition, consent: ClientSourcesHad): readonly Issue[] {
+function consentIssuesOf({ provider, credential }: GivenAddition, consent: Consent): readonly Issue[] {
   return isConsentUnsetUp(credential, consent)
     ? [{ pointer: '/credential/kind', detail: consentUnsetUp(String(provider)) }]
     : [];
@@ -140,7 +150,7 @@ function issuesOf(addition: GivenAddition, checked: Checked): readonly Issue[] {
     : providerIssuesOf(addition, checked);
 }
 
-export function checkedAdditionOf(
+function additionCheckedWith(
   given: AdditionGiven,
   checking: Checking,
   services: AdditionServices,
@@ -154,6 +164,16 @@ export function checkedAdditionOf(
     const issues = issuesOf(addition, { given, checking: { ...checking, providing }, consent: services.consent });
     return issues.length > 0 ? Result.fail(invalidAddition(issues)) : Result.succeed(addition);
   });
+}
+
+export function checkedAdditionOf(
+  given: AdditionGiven,
+  checking: Checking,
+  services: ListingServices,
+): Effect.Effect<GivenAddition, InvalidInput> {
+  return Effect.flatMap(services.consent.hadSources(services.studioBase), (consent) =>
+    Effect.fromResult(additionCheckedWith(given, checking, { ...services, consent })),
+  );
 }
 
 export function refusalOfTheAddition(

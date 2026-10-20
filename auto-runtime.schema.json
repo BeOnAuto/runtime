@@ -407,6 +407,10 @@
           },
           "description": "The clients whoever runs the runtime registered at authorization servers, each with the issuers it is registered at, its client_id, and its client_secret, or its private_key with its algorithm, as a reference, or neither for a public client"
         },
+        "auto_clients": {
+          "type": "boolean",
+          "description": "Whether a provider whose way takes a registered client takes Auto's client too, through Auto's consent service, where none is registered at its issuer; true in local mode and false otherwise when left out. AUTO_CLIENTS wins over it"
+        },
         "providers": {
           "type": "array",
           "items": {
@@ -583,7 +587,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it"
+      "description": "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers, and whether Auto's clients serve as well; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it"
     },
     "usage_ping": {
       "type": "boolean",

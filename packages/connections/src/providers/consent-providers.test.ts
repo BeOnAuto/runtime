@@ -1,14 +1,28 @@
 import { adverts, drive, providersOf } from '@on.auto/providers/testing';
-import type { RegisteredClient } from '@on.auto/tool-servers';
-import { consentClientWith, registeredAt } from '@on.auto/tool-servers/testing';
-import { describe, expect, it } from 'vitest';
+import type { ConsentClientOptions, ReturnKind } from '@on.auto/tool-servers';
+import {
+  autoClientsOf,
+  clockAt,
+  consentClientWith,
+  registeredAt,
+  serveFakeConsentService,
+  type FakeConsentService,
+} from '@on.auto/tool-servers/testing';
+import { Effect } from 'effect';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, adding } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, harness, harnessPages, operationNamed, type Harness } from '../testing/harness.ts';
 
 const consentProviders = providersOf(adverts, drive);
+
+const closing: (() => Promise<void>)[] = [];
+
+afterEach(async () => {
+  await Promise.all(closing.splice(0).map((close) => close()));
+});
 
 const registeredClients = [
   registeredAt('https://accounts.drive.example.com'),
@@ -208,21 +222,79 @@ describe('a connection of consent given by hand', () => {
   });
 });
 
-function offeredWith(clients: readonly RegisteredClient[]) {
-  return makeProviderOffering({
-    providers: providersOf(drive),
-    providerValues: new Map(),
-    policy: connectionPolicyOf({}),
-    access: 'people',
-    consent: consentClientWith({ registeredClients: clients }),
-  })(ada);
+function offeredWith(consenting: Partial<ConsentClientOptions>) {
+  return Effect.runPromise(
+    makeProviderOffering({
+      providers: providersOf(drive),
+      providerValues: new Map(),
+      policy: connectionPolicyOf({}),
+      access: 'people',
+      pages: harnessPages,
+      consent: consentClientWith(consenting),
+    })(ada),
+  );
 }
 
+const driveOffered = { name: 'drive', title: 'Drive', description: 'Read and change the files of an account.' };
+
 describe('the providers search offers a caller who may add', () => {
-  it('leave out a provider whose way of consent takes no client the runtime has, and take it in once one is registered', () => {
-    expect([offeredWith([]), offeredWith(registeredClients)]).toEqual([
-      [],
-      [{ name: 'drive', title: 'Drive', description: 'Read and change the files of an account.' }],
+  it('leave out a provider whose way of consent takes no client the runtime has, and take it in once one is registered', async () => {
+    expect([await offeredWith({}), await offeredWith({ registeredClients })]).toEqual([[], [driveOffered]]);
+  });
+});
+
+async function serviceOfDrive(): Promise<FakeConsentService> {
+  const service = await serveFakeConsentService({
+    vendor: { origin: 'https://accounts.drive.example.com' },
+    now: clockAt(0).now,
+  });
+  closing.push(service.close);
+  return service;
+}
+
+function switchedOf(service: FakeConsentService, enabled: boolean, kind: ReturnKind = 'hosted') {
+  return { autoClients: { ...autoClientsOf(service, kind), enabled } };
+}
+
+const unservedBy = [
+  ['the source of Auto is switched off', false, 'hosted'],
+  ['Studio is neither Auto’s nor on this computer', true, 'elsewhere'],
+] as const;
+
+describe('a provider whose way is consent where Auto’s consent service serves its issuer', () => {
+  it('is listed offered, added and offered to search, where whoever runs Auto registered no client', async () => {
+    const service = await serviceOfDrive();
+    const h = harness({ providers: consentProviders, consenting: switchedOf(service, true) });
+
+    expect([
+      await h.call(operationNamed(h.operations, 'list_providers'), ada),
+      await adding(h, { provider: 'drive' }),
+      await offeredWith(switchedOf(service, true)),
+    ]).toMatchObject([
+      { output: { providers: [{ name: 'adverts' }, { name: 'drive', credentials: [{ offered: true }] }] } },
+      { status: 'succeeded', output: { status: 'pending', credential: { kind: 'authorization' } } },
+      [driveOffered],
     ]);
+  });
+
+  it.each(unservedBy)('is set up first, and the service asked nothing, where %s', async (_, enabled, kind) => {
+    const service = await serviceOfDrive();
+    const consenting = switchedOf(service, enabled, kind);
+    const h = harness({ providers: consentProviders, consenting });
+
+    expect([
+      await h.call(operationNamed(h.operations, 'list_providers'), ada),
+      await adding(h, { provider: 'drive' }),
+      await offeredWith(consenting),
+    ]).toMatchObject([
+      {
+        output: {
+          providers: [{ name: 'adverts' }, { name: 'drive', credentials: [{ offered: false, because: unsetUp }] }],
+        },
+      },
+      { status: 'rejected', issues: [{ pointer: '/credential/kind', detail: unsetUp }] },
+      [],
+    ]);
+    expect(service.calls()).toEqual([]);
   });
 });

@@ -5,7 +5,7 @@ import type { TokenSource } from '../clients/token-source.ts';
 import { libraryClientOf, type ActingClient, type Requests } from '../consent/acting-clients.ts';
 import type { ConsentRefusal, ConsentServed, RevocationFailure, RevokeAsked } from '../consent/consent-client.ts';
 import { revocationOf } from '../consent/revocation.ts';
-import { normalizedScopeOf } from '../consent/scopes.ts';
+import { scopeRenewedOf } from '../consent/scopes.ts';
 import { libraryMetadataOf, serverMetadataOf, type ServerMetadata } from '../consent/server-metadata.ts';
 import { answeredTokensOf, keptOf, type AnsweredTokens, type KeptTokens } from './kept-tokens.ts';
 import { renewedTokens, type Refreshing, type Sourced } from './renewed-tokens.ts';
@@ -18,6 +18,11 @@ export interface TokenRequests {
 export interface TokenRequesting {
   readonly requestMs: number;
   readonly renewalSpreadMs: number;
+}
+
+export interface ServiceRenewals {
+  readonly refreshing: (served: ConsentServed, name: string) => Effect.Effect<Refreshing, ConsentRefusal>;
+  readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;
 }
 
 interface Refreshed extends ServerMetadata {
@@ -56,10 +61,6 @@ function refreshedWith(
   });
 }
 
-function scopeRenewedOf({ scope }: AnsweredTokens, previous: KeptTokens): string | undefined {
-  return scope === undefined ? previous.scope : normalizedScopeOf(scope);
-}
-
 function refreshingOf(
   served: ConsentServed,
   { clients, fetchFor }: Requests,
@@ -89,15 +90,24 @@ function revocationAsked(asked: RevokeAsked, { clients, fetchFor }: Requests): E
   });
 }
 
-export function tokenRequestsOf(requests: Requests, { requestMs, renewalSpreadMs }: TokenRequesting): TokenRequests {
+function isThroughTheService({ client }: Pick<ConsentServed, 'client'>): boolean {
+  return client.client_source === 'auto';
+}
+
+export function tokenRequestsOf(
+  requests: Requests,
+  { requestMs, renewalSpreadMs }: TokenRequesting,
+  service: ServiceRenewals,
+): TokenRequests {
   const renewal = {
-    refreshing: (served: ConsentServed) => refreshingOf(served, requests),
+    refreshing: (served: ConsentServed, name: string) =>
+      isThroughTheService(served) ? service.refreshing(served, name) : refreshingOf(served, requests),
     leaseMs: leaseOf(requestMs),
     waitMs: requestMs,
     spreadMs: renewalSpreadMs,
   };
   return {
     tokenSource: (sourced) => renewedTokens(sourced, renewal),
-    revoke: (asked) => revocationAsked(asked, requests),
+    revoke: (asked) => (isThroughTheService(asked) ? service.revoke(asked) : revocationAsked(asked, requests)),
   };
 }

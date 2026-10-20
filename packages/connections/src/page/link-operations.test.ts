@@ -54,6 +54,28 @@ describe('reading a link', () => {
   });
 });
 
+describe('reading the link of a connection whose credential is not consent', () => {
+  it('asks the consent client for no client source, where its addition asked with the base of the Studio its link opens', async () => {
+    const studioBases: string[] = [];
+    const { consent } = harness();
+    const h = harness({
+      consent: {
+        ...consent,
+        hadSources: (studioBase) => {
+          studioBases.push(studioBase);
+          return consent.hadSources(studioBase);
+        },
+      },
+    });
+    const { id, token } = await added(h, crm);
+    const askedByTheAddition = [...studioBases];
+
+    await reading(h, id, token);
+
+    expect([askedByTheAddition, studioBases]).toEqual([['https://studio.on.auto/'], ['https://studio.on.auto/']]);
+  });
+});
+
 describe('approving a connection', () => {
   it('connects one that takes no credential to give, and uses its link up', async () => {
     const h = harness({ policy: connectionPolicyOf({ variables: ['NOTES_API_KEY'] }) });
