@@ -39,7 +39,7 @@ export function defineAddConnection({
         return yield* Effect.fail(adderRefusal);
       }
       const { org } = yield* OrgContext;
-      const given = yield* Effect.fromResult(checkedAdditionOf(input, { org, modelProviders }, serving));
+      const given = yield* Effect.fromResult(checkedAdditionOf(input, { org, modelProviders }, { ...serving, policy }));
       const refusal = refusalOfTheAddition(given, policy, fileEntries, serving);
       if (refusal !== undefined) {
         return yield* Effect.fail(refusal);

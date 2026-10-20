@@ -1,4 +1,4 @@
-import { readProviders } from '@on.auto/providers';
+import { readProviders, type CredentialWay } from '@on.auto/providers';
 import type { OfferedProvider } from '@on.auto/tool-servers';
 import { Option, Result, Schema } from 'effect';
 
@@ -14,11 +14,13 @@ export function required<A>(value: A | undefined): A {
   return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
-export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders.map(({ entry }) => ({
-  name: entry.name,
-  title: entry.title,
-  description: entry.description,
-}));
+function isOfferedWithoutAClient({ kind, clients = [] }: CredentialWay): boolean {
+  return kind !== 'authorization' || clients.includes('dynamic');
+}
+
+export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders
+  .filter(({ entry }) => entry.credentials.some((way) => isOfferedWithoutAClient(way)))
+  .map(({ entry }) => ({ name: entry.name, title: entry.title, description: entry.description }));
 
 const AnswerSchema = Schema.Record(Schema.String, Schema.Unknown);
 

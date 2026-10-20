@@ -1,4 +1,4 @@
-import type { Issue } from '@on.auto/operations';
+import { alternatives, type Issue } from '@on.auto/operations';
 import {
   additionOfProvider,
   providerNamed,
@@ -21,34 +21,18 @@ interface Credentialled {
 
 const takesNone = 'Expected no credential: the way none takes none';
 
-const consentAnotherWay =
-  "Expected another way, named with kind: the way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give";
-
-const consentAlone =
-  "The way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give, so the provider is connected on Studio's page alone";
-
 const theProvider = '/provider';
+
+const byConsent = 'authorization';
 
 function underTheCredential(issues: readonly Issue[]): readonly Issue[] {
   return issues.map(({ pointer, detail }) => ({ pointer: `/credential${pointer}`, detail }));
 }
 
-function consentRefusalOf({ credentials }: ProviderEntry, { kind }: CredentialGiven): Issue {
-  return {
-    pointer: kind === undefined ? '/credential' : '/credential/kind',
-    detail: credentials.some((way) => way.kind !== 'authorization') ? consentAnotherWay : consentAlone,
-  };
-}
-
 function credentialledOf(
   credential: Credential,
-  given: CredentialGiven,
-  provider: ProviderEntry,
+  { kind: _kind, ...fields }: CredentialGiven,
 ): Result.Result<Credentialled, readonly Issue[]> {
-  const { kind: _kind, ...fields } = given;
-  if (credential.kind === 'authorization') {
-    return Result.fail([consentRefusalOf(provider, given)]);
-  }
   if (credential.kind === 'none') {
     return Object.values(fields).every((field) => field === undefined)
       ? Result.succeed({ credential, reference: undefined })
@@ -63,11 +47,36 @@ function credentialledOf(
   });
 }
 
+function isGivenInTheSettings({ kind }: { readonly kind: string }): boolean {
+  return kind !== byConsent;
+}
+
+function consentRefusalOf({ name, credentials }: ProviderEntry, { kind }: CredentialGiven): readonly Issue[] {
+  const others = credentials.filter((way) => isGivenInTheSettings(way)).map((way) => way.kind);
+  const detail =
+    others.length === 0
+      ? `The provider ${name} takes authorization alone, a consent a person gives on Studio's page, which an entry of the settings file cannot give, so a person connects it there`
+      : `The provider ${name} takes no authorization credential in the settings file, since a person gives that consent on Studio's page; it takes ${alternatives(others)}`;
+  return [{ pointer: kind === undefined ? '/credential' : '/credential/kind', detail }];
+}
+
 function placedWhereTheWayGoes(addition: ProviderAddition): Result.Result<ProviderAddition, readonly Issue[]> {
   const issues = credentialIssuesOf(addition.credential, addition.type, addition.entry);
   return issues.length === 0
     ? Result.succeed(addition)
     : Result.fail(issues.map(({ detail }) => ({ pointer: theProvider, detail })));
+}
+
+function additionOfTheSettings(
+  entry: ProviderEntry,
+  { placeholders, credential }: ProviderNamed,
+): Result.Result<ProviderAddition, readonly Issue[]> {
+  const added = additionOfProvider(entry, { placeholders, kind: credential.kind, canBeGiven: isGivenInTheSettings });
+  return Result.flatMap(added, (addition) =>
+    isGivenInTheSettings(addition.credential)
+      ? placedWhereTheWayGoes(addition)
+      : Result.fail(consentRefusalOf(entry, credential)),
+  );
 }
 
 function writtenAtOf({ placedAt }: Placing): (pointer: string) => string {
@@ -90,14 +99,12 @@ function resolvedOf(addition: ProviderAddition, { credential, reference }: Crede
 }
 
 export function makeProviderResolver(providers: ProviderList): ProviderResolver {
-  return ({ provider, placeholders, credential }: ProviderNamed) =>
-    Result.flatMap(providerNamed(providers, provider), ({ entry }) =>
-      Result.flatMap(
-        Result.flatMap(additionOfProvider(entry, { placeholders, kind: credential.kind }), placedWhereTheWayGoes),
-        (addition) =>
-          Result.map(credentialledOf(addition.credential, credential, entry), (credentialled) =>
-            resolvedOf(addition, credentialled, providers.documents),
-          ),
+  return (named: ProviderNamed) =>
+    Result.flatMap(providerNamed(providers, named.provider), ({ entry }) =>
+      Result.flatMap(additionOfTheSettings(entry, named), (addition) =>
+        Result.map(credentialledOf(addition.credential, named.credential), (credentialled) =>
+          resolvedOf(addition, credentialled, providers.documents),
+        ),
       ),
     );
 }

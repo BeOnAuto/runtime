@@ -225,18 +225,16 @@ describe('a provider named in the settings, refused', () => {
 });
 
 const consentAnotherWay =
-  "Expected another way, named with kind: the way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give";
+  "The provider adverts takes no authorization credential in the settings file, since a person gives that consent on Studio's page; it takes secret";
 
 const consentAlone =
-  "The way authorization is a consent a person gives on Studio's page, which an entry of the settings file cannot give, so the provider is connected on Studio's page alone";
+  "The provider drive takes authorization alone, a consent a person gives on Studio's page, which an entry of the settings file cannot give, so a person connects it there";
 
 const acmeAdverts = { provider: 'adverts', placeholders: { tenant: 'acme' }, org: 'acme' };
 
 type Refusal = readonly [string, Readonly<Record<string, unknown>>, string];
 
 const consentRefusals: readonly Refusal[] = [
-  ['/credential', { ...acmeAdverts, credential: '${ADVERTS_KEY}' }, consentAnotherWay],
-  ['/credential', acmeAdverts, consentAnotherWay],
   ['/credential/kind', { ...acmeAdverts, credential: { kind: 'authorization' } }, consentAnotherWay],
   ['/credential', { provider: 'drive', credential: '${DRIVE_TOKEN}', org: 'acme' }, consentAlone],
   ['/credential', { provider: 'drive', org: 'acme' }, consentAlone],
@@ -251,10 +249,13 @@ describe('a provider whose way is consent, named in the settings', () => {
     },
   );
 
-  it('is its server by another way it takes, named with kind', () => {
-    const server = serverOf({ ...acmeAdverts, credential: { kind: 'secret', value: '${BILLING_KEY}' } });
+  it('is its server by the way kind names, or by the first the settings can give where it names none', () => {
+    const named = serverOf({ ...acmeAdverts, credential: { kind: 'secret', value: '${BILLING_KEY}' } });
+    const taken = serverOf({ ...acmeAdverts, credential: '${BILLING_KEY}' });
+    const byTheKey = [{ 'X-Api-Key': billingKey }, [billingKey]];
 
-    expect([headersOf(server), secretsOf(server)]).toEqual([{ 'X-Api-Key': billingKey }, [billingKey]]);
+    expect([named, taken].map((server) => [headersOf(server), secretsOf(server)])).toEqual([byTheKey, byTheKey]);
+    expect(problemsOf(acmeAdverts)).toEqual([`TOOL_SERVERS: /named/credential: ${wordsOfTheSettings.secretAlone}`]);
   });
 });
 
