@@ -14,7 +14,7 @@ import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/served-consent.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
-import { retryStateKeysOf } from '../database/own-keys.ts';
+import { retryStateKeysOf, secretsKeptBy } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
 
 export interface StoresAndConnections {
@@ -94,7 +94,7 @@ export async function storesAndConnectionsOf(
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
-  const retryStateKeys = await retryStateKeysOf(runtime, stores.secrets, settings.secrets.current);
+  const retryStateKeys = await retryStateKeysOf(runtime, stores.secrets, secretsKeptBy(settings));
   const consent = consentClientOf(runtime, settings, stores.secrets);
   const pages = { studio: settings.studio, runtime: ownOrigin };
   const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages });

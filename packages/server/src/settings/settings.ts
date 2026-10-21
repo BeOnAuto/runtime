@@ -41,7 +41,7 @@ export function readSettings(given: Environment): Settings {
   const { host, port } = readServerConfig(environment);
   const { allowedOrigins, logFormat, logLevel } = Effect.runSync(readAccessSettings(environment));
   const credentials = readCredentialSettings(environment, host);
-  const { ledger, secrets } = Effect.runSync(readLedgerAndSecrets(environment));
+  const { ledger, secrets, keepers } = Effect.runSync(readLedgerAndSecrets(environment));
   const content = Effect.runSync(readContentSettings(environment));
   const served = readServedSettings(environment, file, { host, ...credentials });
   const telemetry = Effect.runSync(readTelemetrySettings(environment));
@@ -53,6 +53,7 @@ export function readSettings(given: Environment): Settings {
     ...credentials,
     ledger,
     secrets,
+    keepers,
     content,
     proxy: proxySettingsOf(environment),
     logFormat,

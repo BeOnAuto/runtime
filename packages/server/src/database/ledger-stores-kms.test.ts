@@ -1,6 +1,6 @@
 import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { sha256Of } from '@on.auto/operations';
-import { kmsCustodian, type KmsCustodianOptions } from '@on.auto/secrets/aws';
+import { kmsCustodian, parameterStoreKeeper, type KmsCustodianOptions } from '@on.auto/secrets/aws';
 import { serveFakeKms, type FakeKeyState } from '@on.auto/secrets/testing';
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -34,6 +34,7 @@ afterAll(fake.close);
 const credentials = { accessKeyId: 'an-access-key-of-the-tests', secretAccessKey: 'a-secret-access-key-of-the-tests' };
 
 const onTheFake = {
+  parameterStoreKeeper,
   kmsCustodian: (options: KmsCustodianOptions) =>
     kmsCustodian({ ...options, credentials, endpoint: fake.url, waits: { connectionMs: 100, requestMs: 100 } }),
 };

@@ -2,8 +2,15 @@ import { makeAppRuntime } from '@on.auto/api';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Conflict, type StreamReader, type StreamWriter } from '@on.auto/operations';
 import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
-import { sealedSecretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
-import { custodianRefusal, memoryRows, recordingCustodian, type RecordingCustodian } from '@on.auto/secrets/testing';
+import { sealedSecretStoreOn, secretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
+import {
+  custodianRefusal,
+  memoryKeeper,
+  memoryKeeperRefusal,
+  memoryRows,
+  recordingCustodian,
+  type RecordingCustodian,
+} from '@on.auto/secrets/testing';
 import { DateTime, Effect, Redacted, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -13,6 +20,7 @@ import {
   ownKeysStream,
   retryStateKeysKeptBy,
   retryStateKeysOf,
+  secretsKeptBy,
   type OwnKeyEvent,
   type OwnKeyKeeping,
 } from './own-keys.ts';
@@ -25,11 +33,27 @@ const keeping: OwnKeyKeeping = { purpose: 'retry_state', secret_id: 'secret-1', 
 
 type Started = Parameters<typeof retryStateKeysKeptBy>;
 
-const fromTheEnvironment: Started[1] = {
-  from: 'environment',
-  setting: 'SECRETS_KEY',
-  key: Redacted.make(new Uint8Array(32)),
-};
+const fromTheEnvironment: Started[1] = secretsKeptBy({
+  secrets: {
+    current: { from: 'environment', setting: 'SECRETS_KEY', key: Redacted.make(new Uint8Array(32)) },
+    previous: undefined,
+  },
+  keepers: { current: { kind: 'ledger', setting: 'SECRETS_KEEPER' }, previous: undefined },
+});
+
+const inTheManager: Started[1] = secretsKeptBy({
+  secrets: undefined,
+  keepers: {
+    current: {
+      kind: 'aws-parameter-store',
+      setting: 'SECRETS_KEEPER',
+      prefix: '/auto-runtime/secrets',
+      region: 'eu-west-1',
+      regionSetting: 'AWS_REGION',
+    },
+    previous: undefined,
+  },
+});
 
 function started(services: Started[0]) {
   return retryStateKeysKeptBy(services, fromTheEnvironment);
@@ -195,6 +219,36 @@ describe('a start whose key that signs the state of a retry is gone or kept nowh
       `OwnKeyUnavailable: The key the runtime keeps for retry_state cannot be kept under the key that SECRETS_KEY holds, so the server does not start: The custodian of the key ${custodian.kid} refused to wrap a data key: ${custodianRefusal}`,
     );
     expect(await factsIn(ledger)).toEqual([]);
+  });
+});
+
+describe('a start under a secret manager that cannot have the key that signs the state of a retry', () => {
+  it("stops in words that name the manager and its prefix, the store's words and the way out, where the key cannot be kept or read", async () => {
+    const [ledger, other] = [memoryLedger(), memoryLedger()];
+    const rows = memoryRows({ now });
+    const keeper = memoryKeeper();
+    keeper.refuse();
+    const unkept = await failureOf(
+      retryStateKeysKeptBy(
+        { registry: ledger.service, secrets: secretStoreOn(rows, { current: keeper }) },
+        inTheManager,
+      ),
+    );
+    await Effect.runPromise(started({ registry: other.service, secrets: storeOver(rows, recordingCustodian()) }));
+
+    const unread = await failureOf(
+      retryStateKeysKeptBy(
+        { registry: other.service, secrets: secretStoreOn(rows, { current: memoryKeeper() }) },
+        inTheManager,
+      ),
+    );
+
+    expect(unkept).toBe(
+      `OwnKeyUnavailable: The key the runtime keeps for retry_state cannot be kept in AWS Parameter Store under /auto-runtime/secrets in eu-west-1, so the server does not start: ${memoryKeeperRefusal}`,
+    );
+    expect(unread).toBe(
+      "OwnKeyUnavailable: The key the runtime keeps for retry_state cannot be read in AWS Parameter Store under /auto-runtime/secrets in eu-west-1: The secret is kept by the keeper ledger, which is neither the current keeper nor the previous one. Start the server with the keeper the ledger's secrets were kept by, or name that keeper as SECRETS_KEEPER_PREVIOUS beside SECRETS_KEEPER",
+    );
   });
 });
 

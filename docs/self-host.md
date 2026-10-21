@@ -17,14 +17,15 @@ Someone comfortable with a terminal installs and starts Auto Runtime once. After
 
 ## What you need
 
-| Need                               | Required                                                                                     | Options                                                                 | Guide                                                         |
-| ---------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
-| A place to run it                  | Yes                                                                                          | Docker, Kubernetes, Amazon ECS or another platform for Linux containers | [Run with Docker](self-host/docker.md)                        |
-| Storage for the ledger             | Yes                                                                                          | A volume for a SQLite file, or a PostgreSQL database                    | [Use PostgreSQL](self-host/postgresql.md)                     |
-| Sign-in, and API keys for machines | For a container: `PUBLIC_URL`, `API_KEYS` or both. `npx` runs in local mode until one is set | `PUBLIC_URL` for people, and one key for each machine or pipeline       | [Authentication and security](self-host/security.md)          |
-| A model provider                   | For reasoning functions                                                                      | A provider's API key, a cloud provider, or your own gateway             | [Set up a model provider](self-host/models.md)                |
-| HTTPS                              | Before anything outside the machine connects                                                 | A reverse proxy or load balancer in front of port `5555`                | [Deploy for your team](self-host/production.md)               |
-| Object storage                     | No                                                                                           | An S3-compatible bucket                                                 | [Keep content on object storage](self-host/object-storage.md) |
+| Need                               | Required                                                                                     | Options                                                                 | Guide                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| A place to run it                  | Yes                                                                                          | Docker, Kubernetes, Amazon ECS or another platform for Linux containers | [Run with Docker](self-host/docker.md)                             |
+| Storage for the ledger             | Yes                                                                                          | A volume for a SQLite file, or a PostgreSQL database                    | [Use PostgreSQL](self-host/postgresql.md)                          |
+| Sign-in, and API keys for machines | For a container: `PUBLIC_URL`, `API_KEYS` or both. `npx` runs in local mode until one is set | `PUBLIC_URL` for people, and one key for each machine or pipeline       | [Authentication and security](self-host/security.md)               |
+| A model provider                   | For reasoning functions                                                                      | A provider's API key, a cloud provider, or your own gateway             | [Set up a model provider](self-host/models.md)                     |
+| HTTPS                              | Before anything outside the machine connects                                                 | A reverse proxy or load balancer in front of port `5555`                | [Deploy for your team](self-host/production.md)                    |
+| Object storage                     | No                                                                                           | An S3-compatible bucket                                                 | [Keep content on object storage](self-host/object-storage.md)      |
+| A secret manager                   | No                                                                                           | AWS Systems Manager Parameter Store, in place of the ledger's database  | [Keep secrets in your secret manager](self-host/secret-manager.md) |
 
 What each row means:
 
@@ -34,6 +35,7 @@ What each row means:
 - **A model provider.** Reasoning functions call a language model through a provider: Anthropic, OpenAI or Google with an API key; Amazon Bedrock; Azure OpenAI; Google Vertex AI; or a gateway of your own, a service that passes model calls on and speaks OpenAI's API.
 - **HTTPS.** A reverse proxy is a web server, such as nginx or Caddy, that takes HTTPS requests and passes them on to Auto.
 - **Object storage.** A bucket in Amazon S3, or in a store that works like it, keeps uploaded datasets, model files and tool content out of the database.
+- **A secret manager.** AWS Systems Manager Parameter Store can keep the secrets Auto holds for connections, such as pasted keys and the tokens of a consent, so none rests in the ledger's database and no secrets key is needed.
 
 ## Choose a setup
 
@@ -52,6 +54,7 @@ With PostgreSQL, the container keeps nothing of its own. [Run with PostgreSQL](s
 - [Run with Docker](self-host/docker.md): a first container, an agent connected and signed in, keys for machines and pipelines, and a Compose file with PostgreSQL
 - [Use PostgreSQL](self-host/postgresql.md): get a database, create its user, connect over TLS, and sign in without a password on Amazon RDS
 - [Keep content on object storage](self-host/object-storage.md): Amazon S3 or any S3-compatible store
+- [Keep secrets in your secret manager](self-host/secret-manager.md): each secret a parameter of AWS Systems Manager Parameter Store, its permissions, the probe at start and the move from the ledger and back
 - [Deploy for your team](self-host/production.md): HTTPS and the public address, keys, memory, health checks, one server or a standby, logs and upgrades
 - [Authentication and security](self-host/security.md): sign-in, API keys, local mode and calls from a browser
 - [Set up a model provider](self-host/models.md): choose a provider, set its credentials, and check that Auto can call a model

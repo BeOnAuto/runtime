@@ -4,7 +4,7 @@ import { Ledger } from '@on.auto/operations';
 import { localCustodian, sealedSecretStoreOn, type SecretStore } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, Redacted } from 'effect';
 
-import { ownKeysDecider, ownKeysStream, type OwnKeyEvent } from '../../database/own-keys.ts';
+import { ownKeysDecider, ownKeysStream, type OwnKeyEvent } from '../../secrets/own-keys.ts';
 
 export const secretsKey = Buffer.alloc(32, 7);
 

@@ -59,6 +59,7 @@ describe('readSettings', () => {
       studio: { origin: 'https://studio.on.auto', served: false },
       ledger: { store: 'sqlite', file: 'data/ledger.db' },
       secrets: aKeyFileAt('data/secrets.key'),
+      keepers: { current: { kind: 'ledger', setting: 'SECRETS_KEEPER' }, previous: undefined },
       content: { store: 'ledger' },
       proxy: { enabled: false, environment: {} },
       logFormat: 'json',
@@ -118,6 +119,7 @@ const everySettingRead = {
   signIn: { issuer: 'https://identity.example', publicUrl: 'https://runtime.example.com' },
   ledger: { store: 'sqlite', file: '/data/ledger.db' },
   secrets: aKeyFileAt('/data/secrets.key'),
+  keepers: { current: { kind: 'ledger', setting: 'SECRETS_KEEPER' }, previous: undefined },
   content: {
     store: 'object-storage',
     location: { bucket: 'playbook-content', prefix: 'production' },

@@ -1,5 +1,5 @@
 import type { Environment } from '@on.auto/config';
-import { Redacted } from 'effect';
+import { Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { secretsVariables, type SecretsKeySource } from './secrets-settings.ts';
@@ -18,8 +18,12 @@ function revealed(source: SecretsKeySource | undefined): unknown {
   return source?.from === 'environment' ? { ...source, key: [...Redacted.value(source.key)] } : source;
 }
 
+function custodiansIn(environment: Environment) {
+  return Option.getOrThrow(Option.fromNullishOr(readSettings(environment).secrets));
+}
+
 function secretsOf(environment: Environment) {
-  const { current, previous } = readSettings(environment).secrets;
+  const { current, previous } = custodiansIn(environment);
   return { current: revealed(current), previous: revealed(previous) };
 }
 
@@ -38,7 +42,7 @@ const refusedAs = 'InvalidSettingsError: The secrets settings are invalid.';
 const aKeyInWords = 'the base64 of 32 bytes, as openssl rand -base64 32 prints it';
 
 describe('the secrets settings', () => {
-  it('are the six variables the runtime reads for itself, a key, a file and a key in KMS each for the current key and the previous one', () => {
+  it('are the eight variables the runtime reads for itself, a key, a file and a key in KMS each for the current key and the previous one, and the current keeper and the previous one', () => {
     expect(secretsVariables).toEqual([
       'SECRETS_KEY',
       'SECRETS_KEY_FILE',
@@ -46,6 +50,8 @@ describe('the secrets settings', () => {
       'SECRETS_KEY_PREVIOUS',
       'SECRETS_KEY_FILE_PREVIOUS',
       'SECRETS_KEY_KMS_PREVIOUS',
+      'SECRETS_KEEPER',
+      'SECRETS_KEEPER_PREVIOUS',
     ]);
   });
 
@@ -69,7 +75,7 @@ describe('the secrets settings', () => {
 
 describe('the secrets settings that name the keys', () => {
   it('read SECRETS_KEY and SECRETS_KEY_PREVIOUS as the bytes their base64 gives, around any whitespace', () => {
-    const given = readSettings({ SECRETS_KEY: ` ${current}\n`, SECRETS_KEY_PREVIOUS: previous }).secrets;
+    const given = custodiansIn({ SECRETS_KEY: ` ${current}\n`, SECRETS_KEY_PREVIOUS: previous });
 
     expect([
       { current: revealed(given.current), previous: revealed(given.previous) },

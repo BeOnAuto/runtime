@@ -113,6 +113,10 @@
             "link": "/self-host/object-storage"
           },
           {
+            "text": "Keep secrets in your secret manager",
+            "link": "/self-host/secret-manager"
+          },
+          {
             "text": "Deploy for your team",
             "link": "/self-host/production"
           }
