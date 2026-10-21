@@ -20,6 +20,8 @@ const tagline = 'Runs the playbooks your agent builds';
 
 const documentation = 'https://on.auto/docs/';
 
+export const discordInvite = 'https://discord.gg/B8BKcKMRm8';
+
 function agentCommandsFor({ version, port, mode }: Ready, mcp: string): readonly (readonly [string, string])[] {
   if (mode !== 'local') {
     return [

@@ -2,6 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import type { Environment } from '@on.auto/config';
 
+import { ledgerOfAnotherVersionIn } from '../database/ledger-of-another-version.ts';
 import { firstStartNotice } from '../usage-ping/usage-ping.ts';
 import { startServer, type RunningServer, type ServerOptions } from './lifecycle.ts';
 
@@ -53,8 +54,20 @@ export async function runServer<R>(
   return server;
 }
 
-export function exitOnStartupFailure(serverProcess: ServerProcess): (failure: unknown) => void {
+function startupFailureLineOf(failure: unknown): string {
+  return `Auto Runtime could not start: ${String(failure).replaceAll(/\s*\n\s*/gu, ' ')}`;
+}
+
+function ledgerRefusalLineOf(failure: unknown): string | undefined {
+  const refusal = ledgerOfAnotherVersionIn(failure);
+  return refusal === undefined ? undefined : startupFailureLineOf(refusal.message);
+}
+
+export function exitOnStartupFailure(
+  serverProcess: ServerProcess,
+  noticeOf: (failure: unknown) => string | undefined = ledgerRefusalLineOf,
+): (failure: unknown) => void {
   return (failure) => {
-    sayThenExit(serverProcess, `Auto Runtime could not start: ${String(failure).replaceAll(/\s*\n\s*/gu, ' ')}`, 1);
+    sayThenExit(serverProcess, noticeOf(failure) ?? startupFailureLineOf(failure), 1);
   };
 }

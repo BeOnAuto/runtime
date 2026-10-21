@@ -1,7 +1,7 @@
 import type { DispatcherServices } from '@on.auto/operations';
 
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
-import { ledgerDatabaseOf } from '../database/ledger-database.ts';
+import { ledgerDatabaseOf, withARefusedShapeExplained } from '../database/ledger-database.ts';
 import { defaultServerOptions, type ServerOptions } from '../lifecycle/lifecycle.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer } from './application-layer.ts';
@@ -22,7 +22,9 @@ export function compositionRootWith(
     composed: (settings, telemetry) => {
       const database = ledgerDatabaseOf(settings, telemetry.appended);
       return {
-        services: applicationLayer(ledgerLayerFor(settings, database, wiring.projections.appends)),
+        services: applicationLayer(
+          withARefusedShapeExplained(ledgerLayerFor(settings, database, wiring.projections.appends), settings),
+        ),
         serve: async (runtime, ownOrigin) => {
           const { ledger, workflows, identityIssuer } = settings;
           const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata } =

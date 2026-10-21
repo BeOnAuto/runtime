@@ -5,6 +5,7 @@ import type { StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import { createMissingIndexes, type PlaybookIndex } from '../recorded/missing-indexes.ts';
 import type { ContentDialect } from './content-dialects.ts';
+import { ledgerShapeRefused } from './ledger-shape-refused.ts';
 
 export interface Shelf {
   readonly chunks: string;
@@ -115,10 +116,6 @@ export async function namesFound(execute: StatementExecutor, sql: SQL): Promise<
   return Schema.decodeUnknownSync(NameRows)(rows).map(({ name }) => name);
 }
 
-function listed(columns: readonly string[]): string {
-  return columns.toSorted().join(', ');
-}
-
 export interface KeptTable {
   readonly name: string;
   readonly columns: readonly string[];
@@ -130,11 +127,10 @@ export async function requireTheShapeKept(
   dialect: ContentDialect,
   { name, columns, holds }: KeptTable,
 ): Promise<void> {
-  const found = await namesFound(execute, dialect.columnsOf(name));
-  if (listed(found) !== listed(columns)) {
-    throw new Error(
-      `The ledger's database keeps ${holds} in a shape this server no longer reads: ${name} has the columns ${listed(found)}, where this server keeps ${listed(columns)}. Nothing stored before launch is carried over, so delete the local database and start the server again`,
-    );
+  const found = (await namesFound(execute, dialect.columnsOf(name))).toSorted();
+  const kept = columns.toSorted();
+  if (found.join() !== kept.join()) {
+    throw ledgerShapeRefused({ table: name, holds, found, kept });
   }
 }
 

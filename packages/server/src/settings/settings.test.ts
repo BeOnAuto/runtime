@@ -79,6 +79,7 @@ describe('readSettings', () => {
       providerValues: new Map(),
       telemetry: undefined,
       usagePing: { distribution: 'source' },
+      distribution: 'source',
       configFile: undefined,
     });
   });
@@ -153,8 +154,18 @@ const everySettingRead = {
   providerValues: new Map(),
   telemetry: undefined,
   usagePing: { distribution: 'source' },
+  distribution: 'source',
   configFile: undefined,
 };
+
+describe('readSettings given the distribution', () => {
+  it('reads where the runtime came from even when the usage ping is turned off', () => {
+    expect(readSettings({ RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' })).toMatchObject({
+      usagePing: undefined,
+      distribution: 'docker',
+    });
+  });
+});
 
 describe('readSettings given every setting', () => {
   it('reads every setting from the environment it is given', () => {

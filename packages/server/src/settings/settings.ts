@@ -4,7 +4,12 @@ import { Effect, Result } from 'effect';
 
 import { fileSettings } from '../config-file/file-settings.ts';
 import { readTelemetrySettings, type TelemetrySettings } from '../telemetry/telemetry-settings.ts';
-import { readUsagePingSettings, type UsagePingSettings } from '../usage-ping/usage-ping-settings.ts';
+import {
+  distributionIn,
+  readUsagePingSettings,
+  type Distribution,
+  type UsagePingSettings,
+} from '../usage-ping/usage-ping-settings.ts';
 import {
   readAccessSettings,
   readCredentialSettings,
@@ -28,6 +33,7 @@ export interface Settings extends ServedSettings, AccessSettings, CredentialSett
   readonly proxy: ProxySettings;
   readonly telemetry: TelemetrySettings | undefined;
   readonly usagePing: UsagePingSettings | undefined;
+  readonly distribution: Distribution;
   readonly configFile: ConfigFileSources | undefined;
   readonly providerSetup?: string | undefined;
 }
@@ -61,6 +67,7 @@ export function readSettings(given: Environment): Settings {
     ...served,
     telemetry,
     usagePing,
+    distribution: distributionIn(environment),
     configFile: sourcesOf(file),
   };
 }

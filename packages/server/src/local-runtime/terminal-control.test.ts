@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createApiKey } from '@on.auto/identity';
@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { homeOfTheTest, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
+import { aLedgerOfAnotherVersionAt } from '../testing/records/a-ledger-of-another-version.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const homePrefix = 'auto-runtime-terminal-';
@@ -81,5 +82,40 @@ describe('a runtime started in a terminal on a taken port', () => {
 
     expect(await second.exited).toBe(1);
     expect(second.stderr()).toContain('Auto Runtime could not start');
+  });
+});
+
+function aHomeWithALedgerOfAnotherVersion(): { readonly home: string; readonly ledger: string } {
+  const home = homeOfTheTest(homePrefix);
+  const ledger = join(home, '.auto-runtime', 'ledger.db');
+  mkdirSync(join(home, '.auto-runtime'));
+  aLedgerOfAnotherVersionAt(ledger);
+  return { home, ledger };
+}
+
+describe('a runtime started in a terminal on a ledger made by another version', () => {
+  it('says on stderr, in a notice of its own, where the ledger is, what to do and where to ask, and exits', async () => {
+    const { home, ledger } = aHomeWithALedgerOfAnotherVersion();
+
+    const runtime = spawnRuntimeCommand([], { home, port: await aPortNothingListensOn() });
+
+    expect(await runtime.exited).toBe(1);
+    expect(runtime.stderr()).toContain('  ✖ Auto Runtime could not start\n\n');
+    expect(runtime.stderr()).toContain(`\n      rm -f ${ledger} ${ledger}-wal ${ledger}-shm\n`);
+    expect(runtime.stderr()).toContain('\n  Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8\n');
+  });
+
+  it('writes the notice into a file that stderr is sent to with no color or link code', async () => {
+    const { home, ledger } = aHomeWithALedgerOfAnotherVersion();
+    const written = join(home, 'stderr.txt');
+
+    const runtime = spawnRuntimeCommand([], { home, port: await aPortNothingListensOn(), stderrInto: written });
+    const exitCode = await runtime.exited;
+    const notice = readFileSync(written, 'utf8');
+
+    expect(exitCode).toBe(1);
+    expect(notice).toContain('  ✖ Auto Runtime could not start\n\n');
+    expect(notice).toContain(`\n      rm -f ${ledger} ${ledger}-wal ${ledger}-shm\n`);
+    expect(notice).not.toContain('\u001B');
   });
 });
