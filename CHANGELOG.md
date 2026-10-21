@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.16.0](https://github.com/BeOnAuto/runtime/compare/v0.15.0...v0.16.0) (2026-10-21)
+
+
+### Features
+
+* **api:** an agent asked to connect a service knows the runtime does it ([#277](https://github.com/BeOnAuto/runtime/issues/277)) ([d4e9d1f](https://github.com/BeOnAuto/runtime/commit/d4e9d1fd8b252080823de1e3531b7ccc068b7ba3))
+* **secrets:** secrets kept in AWS Parameter Store, moved there and back at start ([#275](https://github.com/BeOnAuto/runtime/issues/275)) ([eae2d70](https://github.com/BeOnAuto/runtime/commit/eae2d702cc77da8969ce7b6f10a36bf0f55a14e1))
+* **secrets:** the secrets key in AWS KMS; a store that cannot answer now fails the call ([#271](https://github.com/BeOnAuto/runtime/issues/271)) ([374c1b2](https://github.com/BeOnAuto/runtime/commit/374c1b2230f32b145a01aa4b1944bdea5b45034d))
+* **server:** the agent's relay reaches its runtime again within seconds, on the protocol's means ([#278](https://github.com/BeOnAuto/runtime/issues/278)) ([92da8a1](https://github.com/BeOnAuto/runtime/commit/92da8a1b7311d69782256f427456cae912d3060d))
+
+
+### Bug Fixes
+
+* **server:** a ledger of another version says where it is, what to do and where to ask ([#273](https://github.com/BeOnAuto/runtime/issues/273)) ([168a756](https://github.com/BeOnAuto/runtime/commit/168a756377e930f56ef8ecb6e4608997678503ee))
+* **tool-servers:** a path argument that holds a slash is sent encoded as one segment, not refused ([#276](https://github.com/BeOnAuto/runtime/issues/276)) ([9942eda](https://github.com/BeOnAuto/runtime/commit/9942edad149d70fc2f786bf020d23e11e6aac585))
+
 ## [0.15.0](https://github.com/BeOnAuto/runtime/compare/v0.14.0...v0.15.0) (2026-10-20)
 
 
