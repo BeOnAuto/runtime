@@ -40,7 +40,7 @@ const noChangesAnnounced = { listChanged: false };
 export const serverTitle = 'Auto Runtime';
 
 function instructionsOf({ endpoint, shelf }: Connection, served: ServedTools): string {
-  return instructionsFor(endpoint, served, shelf.definitionTypes, shelf.recipes);
+  return instructionsFor(endpoint, served, shelf.definitionTypes);
 }
 
 export interface EveryTool {
@@ -54,7 +54,8 @@ export function connectionOf(endpoint: McpEndpoint, serving: McpServing, { serve
     serving,
     shelf: serving.shelf,
   };
-  const listing = [...listed, { name: guideToolName, definition: guideToolDefinitionOf(connection.shelf) }];
+  const guideTool = guideToolDefinitionOf(connection.shelf, recipesFollowedWith(served, connection.shelf.recipes));
+  const listing = [...listed, { name: guideToolName, definition: guideTool }];
   requireWithin(`The ${endpoint} endpoint`, listing.length, mostToolsOnAConnection, 'tools');
   requireWithin(
     `The listing of the ${endpoint} endpoint`,

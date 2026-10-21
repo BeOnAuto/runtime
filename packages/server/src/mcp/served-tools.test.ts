@@ -137,6 +137,14 @@ describe('the descriptions of the tools that find and connect a provider', () =>
   });
 });
 
+describe('the descriptions that say what the instructions leave to them', () => {
+  it('name in get_guide the recipes the tools of /mcp can follow', () => {
+    expect(descriptionOf('get_guide')).toContain(
+      'It holds the recipes first-playbook, remember, give-tools and schedule, which the tools listed here can follow.',
+    );
+  });
+});
+
 function everyArgument(): readonly Argument[] {
   return tools.flatMap((tool) => argumentsOf(tool));
 }

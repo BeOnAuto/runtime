@@ -4,7 +4,7 @@
   "info": {
     "title": "Auto Runtime",
     "version": "0.15.0",
-    "description": "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or through workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
+    "description": "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
     {

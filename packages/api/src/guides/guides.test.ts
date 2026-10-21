@@ -1,7 +1,8 @@
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { testGuides, testRecipes } from '../testing/guides.ts';
+import { recipesFollowedWith } from '../mcp/instructions.ts';
+import { testGuides, testRecipes, testShelf } from '../testing/guides.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import {
   mcpClientKinds,
@@ -12,7 +13,9 @@ import {
   type McpSession,
 } from '../testing/mcp-clients.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
+import { playbookEndpoint, recipes } from '../testing/served-instructions.ts';
 import { guideToolName, listedTools } from '../testing/tool-listing.ts';
+import { guideToolDefinitionOf, guideToolDescription } from './guide-tool.ts';
 
 let server: OperationServer;
 let listening: Listening;
@@ -74,6 +77,36 @@ describe('the guide tool', () => {
       });
     },
   );
+});
+
+function guideDescribedOn(path: string, key = acmeAdmin.key): Promise<string | undefined> {
+  return on(
+    path,
+    async (session) => listedTools(await session.listTools()).find(({ name }) => name === guideToolName)?.description,
+    key,
+  );
+}
+
+describe('what the guide tool says of the recipes', () => {
+  const following = `${guideToolDescription} It holds the recipe take-a-note, which the tools listed here can follow.`;
+
+  it('names the recipe the tools of /mcp and of the playbook endpoint can follow, and none on the org endpoint, which can follow none', async () => {
+    expect(await Promise.all(endpoints.map((path) => guideDescribedOn(path)))).toEqual([
+      following,
+      guideToolDescription,
+      following,
+    ]);
+  });
+
+  it('names no recipe to a key that may only read, whose tools can follow none', async () => {
+    expect(await guideDescribedOn('/mcp', acmeReader.key)).toBe(guideToolDescription);
+  });
+
+  it('names in turn the recipes a playbook endpoint can follow', () => {
+    expect(guideToolDefinitionOf(testShelf, recipesFollowedWith(playbookEndpoint, recipes)).description).toBe(
+      `${guideToolDescription} It holds the recipes remember, give-tools and schedule, which the tools listed here can follow.`,
+    );
+  });
 });
 
 describe('the guide tool, for any key', () => {

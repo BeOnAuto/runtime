@@ -120,7 +120,7 @@ describe('episode 9: asked to send the person a draft in the chat and take their
     const seen = await meetings.onMcp(askedToSendADraft);
 
     expect(sentenceNaming(meetings.surfaces.instructions, 'An interaction function')).toBe(
-      'An interaction function asks a system and answers at once, or asks a person and answers started.',
+      'An interaction function asks a system and answers at once, or a person and answers started.',
     );
     expect([seen.sent.structuredContent, seen.read.structuredContent]).toMatchObject([
       { outcome: 'result', text: namingTheMessage },
@@ -184,7 +184,7 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
     const seen = await meetings.onMcp(askedForTheRepliesOfAThread);
 
     expect(sentenceNaming(meetings.surfaces.instructions, 'An interaction function')).toBe(
-      'An interaction function asks a system and answers at once, or asks a person and answers started.',
+      'An interaction function asks a system and answers at once, or a person and answers started.',
     );
     expect(seen.recipe).toContain(
       'When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead',

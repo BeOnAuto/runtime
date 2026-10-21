@@ -82,7 +82,7 @@ describe('episode 3: asked to use Slack', () => {
     const listed = await onMcp((session) => session.callTool('search', { playbook: 'meetings' }));
 
     expect(sentenceNaming(surfaces.instructions, 'search finds')).toBe(
-      'A reasoning function names a model that list_models lists and may name tools that search finds; execute calls one and shows its answer, and dry_run what it would check.',
+      'A reasoning function names a model that list_models lists and may name tools that search finds.',
     );
     expect(plainTextIn(listed)).toMatch(/^This playbook's functions may use 2 tool servers\. /u);
     expect(plainTextIn(listed)).toContain('“slack” offers');
@@ -244,11 +244,14 @@ async function lookedAtOverMcp(session: McpSession) {
 }
 
 describe('episode 8: asked what a gateway-style tool server offers, and then to post to #random', () => {
-  it('finds the clause in the instructions, finds the search tool by its words, calls it, and makes no function to look', async () => {
+  it('finds search in the instructions and what execute answers in its description, finds the search tool by its words, calls it, and makes no function to look', async () => {
     const seen = await onMcp(lookedAtOverMcp);
 
-    expect(sentenceNaming(surfaces.instructions, 'search finds', 'execute')).toBe(
-      'A reasoning function names a model that list_models lists and may name tools that search finds; execute calls one and shows its answer, and dry_run what it would check.',
+    expect(sentenceNaming(surfaces.instructions, 'search finds')).toBe(
+      'A reasoning function names a model that list_models lists and may name tools that search finds.',
+    );
+    expect(descriptionOf('execute')).toContain(
+      "as a run of a reasoning function would call it, and answers what that run's model would see.",
     );
     expect(seen.found.structuredContent).toMatchObject({
       servers: [{ name: 'slack' }],

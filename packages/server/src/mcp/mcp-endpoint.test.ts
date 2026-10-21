@@ -127,13 +127,6 @@ const definitionTypes = [
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];
 
-const recipes = [
-  { name: 'first-playbook', calls: ['create_playbook', 'create_definition', 'run_definition'] },
-  { name: 'remember', calls: ['create_definition', 'run_definition'] },
-  { name: 'give-tools', calls: ['search', 'create_definition'] },
-  { name: 'schedule', calls: ['create_definition', 'list_runs'] },
-];
-
 const terminology = readFileSync(new URL('../../../../docs/concepts/terminology.md', import.meta.url), 'utf8');
 
 const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
@@ -183,7 +176,7 @@ describe('the instructions an agent receives when it connects', () => {
 
       const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
 
-      expect(instructions).toBe(instructionsFor(endpoint, served, definitionTypes, recipes));
+      expect(instructions).toBe(instructionsFor(endpoint, served, definitionTypes));
       expect(instructions).toContain(sentence);
       expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);
     },

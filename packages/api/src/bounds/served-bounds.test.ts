@@ -135,7 +135,7 @@ function workflowCalled(noun: string): DefinitionType {
 }
 
 function instructionLengthWith(noun: string): number {
-  return instructionsFor('own org', { orgTools: [], playbookTools: ['get_run'] }, [workflowCalled(noun)], []).length;
+  return instructionsFor('own org', { orgTools: [], playbookTools: ['get_run'] }, [workflowCalled(noun)]).length;
 }
 
 function servingTypeOf(noun: string): Serving {
