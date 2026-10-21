@@ -137,11 +137,13 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toHaveLength(798);
   });
 
-  it('say in add_connection that search lists the providers, at 345 characters', () => {
+  it("open add_connection with a person's account at a service that search lists, at 357 characters", () => {
     const adding = descriptionOf('add_connection');
 
-    expect(adding).toContain('a provider search lists, by its name and placeholders');
-    expect(adding).toHaveLength(345);
+    expect(adding).toMatch(
+      /^Starts connecting a person's account at a service, named by a provider that search lists, /u,
+    );
+    expect(adding).toHaveLength(357);
   });
 });
 
