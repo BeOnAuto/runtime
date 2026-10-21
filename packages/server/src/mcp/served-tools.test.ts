@@ -154,9 +154,9 @@ describe('the descriptions that say what the instructions leave to them', () => 
     );
   });
 
-  it('say in list_runs and list_playbook_events that its pages are read on only as the person needs', () => {
+  it('say in each paged tool that its pages are read on only as the person needs', () => {
     expect(
-      ['list_runs', 'list_playbook_events'].filter(
+      ['list_runs', 'list_playbook_events', 'list_interactions'].filter(
         (name) =>
           !descriptionOf(name).includes('the next_cursor of the page before, to read on only as the person needs.'),
       ),

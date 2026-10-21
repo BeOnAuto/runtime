@@ -73,10 +73,10 @@ const FilterText = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength
 const description = [
   'Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool, or in the inbox,',
   'until when and how its delivery stands, with the `run_id` that answer_interaction takes.',
-  'Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when it was asked,',
+  'Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when asked,',
   'which get_definition may no longer show; null for a notification.',
   'Use it when the person asks what the playbook is waiting on, or to find the request they answer.',
-  '`to` keeps the requests to one party, `type` to one type of function and `function` to one name, which with `type` names one function; `cursor` is the next_cursor of the page before.',
+  '`to` keeps the requests to one party, `type` to one type of function and `function` to one name, which with `type` names one function; `cursor` is the next_cursor of the page before, to read on only as the person needs.',
   'Every reader of the playbook sees each party and message, as a run’s input is seen.',
 ].join(' ');
 
