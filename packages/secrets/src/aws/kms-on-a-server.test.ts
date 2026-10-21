@@ -13,12 +13,12 @@ import { inMemoryEntry, kept, readBack, storeWith, type TestCustodians } from '.
 import { storeBehaviour } from '../testing/store-behaviour.ts';
 import { kmsCustodian } from './kms-custodian.ts';
 
-const server = process.env['SECRETS_TEST_KMS_URL'] ?? '';
+const server = process.env['SECRETS_TEST_AWS_URL'] ?? '';
 
 const skipped = server === '';
 
 const notice = skipped
-  ? ', skipped: set SECRETS_TEST_KMS_URL to the URL of a server that answers the KMS API, with its credentials, such as http://access:secret@127.0.0.1:19760, to run it'
+  ? ', skipped: set SECRETS_TEST_AWS_URL to the URL of a server that answers the AWS APIs of KMS and Parameter Store, with its credentials, such as http://access:secret@127.0.0.1:19760, to run it'
   : '';
 
 const region = 'us-east-1';

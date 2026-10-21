@@ -5,7 +5,7 @@ import { heldElsewhere, rewrapped, sealedHolding } from './holdings.ts';
 import { aLease, at, firstMoment, isoOf, rowsIn, rowsOpenedOn, type SecretsEntry } from './secrets-entry.ts';
 
 function heldByAKeeper(entry: SecretsEntry): void {
-  it('answer the rows a keeper holds in the order of their ids, under a kid where one is named, at most as many as asked', async () => {
+  it('answer the rows a keeper holds in the order of their ids, under a kid where one is named, after an id where one is named, at most as many as asked', async () => {
     const database = await entry.aDatabase();
     const rows = await rowsOpenedOn(entry, database);
     await Effect.runPromise(
@@ -30,6 +30,9 @@ function heldByAKeeper(entry: SecretsEntry): void {
         rows.heldBy({ keptBy: 'ledger' }, 100),
         rows.heldBy({ keptBy: 'another-keeper' }, 100),
         rows.heldBy({ keptBy: 'ledger', kid: 'kid-c' }, 100),
+        rows.heldBy({ keptBy: 'ledger' }, 100, 'secret-1'),
+        rows.heldBy({ keptBy: 'ledger', kid: 'kid-a' }, 1, 'secret-1'),
+        rows.heldBy({ keptBy: 'ledger' }, 100, 'secret-3'),
       ]),
     );
 
@@ -38,6 +41,9 @@ function heldByAKeeper(entry: SecretsEntry): void {
       [first],
       [first, second, third],
       [{ id: 'secret-4', version: 1, holding: heldElsewhere }],
+      [],
+      [second, third],
+      [third],
       [],
     ]);
   });

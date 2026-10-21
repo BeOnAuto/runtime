@@ -107,6 +107,10 @@ SECRETS_KEY_FILE_PREVIOUS=/run/secrets/secrets-key
 
 Moving back is the same with `SECRETS_KEY` or `SECRETS_KEY_FILE` and the ARN in `SECRETS_KEY_KMS_PREVIOUS`, for which the identity needs `kms:Decrypt` alone. To move to another key in KMS, restart once with the new key's ARN, or the alias once you have pointed it at the new key, in `SECRETS_KEY_KMS`, and the old key's ARN in `SECRETS_KEY_KMS_PREVIOUS`. The rotation of a key's material that KMS makes itself, on its schedule or on demand, needs nothing of the runtime, since KMS decrypts with the material that encrypted.
 
+### Keep the secrets in your secret manager
+
+The secrets need not rest in the ledger's database at all: with `SECRETS_KEEPER` naming a prefix in AWS Systems Manager Parameter Store, each secret is a parameter of its own there, under the manager's encryption, and the runtime needs no secrets key. [Keep secrets in your secret manager](secret-manager.md) sets out the setting, the identity's permissions, the probe at start and the move from the ledger and back.
+
 ## Run it as an always-on service
 
 These all run inside the server: workflows, their timers and retries, the deliveries of interaction functions, and the folding of recall views.

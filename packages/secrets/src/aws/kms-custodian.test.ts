@@ -6,9 +6,10 @@ import { Effect, Redacted, Schema } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import type { Custodian } from '../custodians/custodian.ts';
+import { serveFakeKms, type FakeKeyState } from '../fakes/fake-kms.ts';
 import type { KeepingFailure } from '../keepers/keeper.ts';
-import { serveFakeKms, type FakeKeyState } from '../testing/fake-kms.ts';
-import { encryptionContext, kidOfKey, kmsCustodian, type KmsWaits } from './kms-custodian.ts';
+import type { AwsWaits } from './aws-requests.ts';
+import { encryptionContext, kidOfKey, kmsCustodian } from './kms-custodian.ts';
 
 const account = '111122223333';
 
@@ -39,11 +40,11 @@ const credentials = { accessKeyId: 'an-access-key', secretAccessKey: 'a-secret-a
 
 const noProxy = { enabled: false, environment: {} };
 
-function madeOf(keyId: string, endpoint = fake.url, waits?: KmsWaits): Effect.Effect<Custodian, KeepingFailure> {
+function madeOf(keyId: string, endpoint = fake.url, waits?: AwsWaits): Effect.Effect<Custodian, KeepingFailure> {
   return kmsCustodian({ keyId, region: 'eu-west-1', proxy: noProxy, credentials, endpoint, waits });
 }
 
-function custodianOf(keyId: string, endpoint = fake.url, waits?: KmsWaits): Promise<Custodian> {
+function custodianOf(keyId: string, endpoint = fake.url, waits?: AwsWaits): Promise<Custodian> {
   return Effect.runPromise(madeOf(keyId, endpoint, waits));
 }
 
@@ -70,7 +71,7 @@ function idOf(arn: string): string {
   return arn.slice(arn.lastIndexOf('/') + 1);
 }
 
-const waitsOf100Ms: KmsWaits = { connectionMs: 100, requestMs: 100 };
+const waitsOf100Ms: AwsWaits = { connectionMs: 100, requestMs: 100 };
 
 describe('the custodian of a key in KMS', () => {
   it('is named by the id of the key its ARN names, and is made without reaching anything', async () => {

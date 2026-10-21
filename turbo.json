@@ -29,7 +29,7 @@
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
         "!$TURBO_ROOT$/docs/.vitepress/dist/**"
       ],
-      "env": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL", "SECRETS_TEST_KMS_URL"],
+      "env": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL", "SECRETS_TEST_AWS_URL"],
       "outputs": ["coverage/**"]
     },
     "test:shard": {

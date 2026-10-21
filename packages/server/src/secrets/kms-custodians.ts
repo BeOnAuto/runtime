@@ -1,24 +1,10 @@
-import type { ProxySettings } from '@on.auto/outbound';
 import { awsCredentialChain } from '@on.auto/outbound/aws';
-import type { Custodian, KeepingFailure } from '@on.auto/secrets';
-import type { KmsCustodianOptions } from '@on.auto/secrets/aws';
+import type { Custodian } from '@on.auto/secrets';
 import { Effect } from 'effect';
 
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import type { SecretsKeySource } from '../settings/secrets-settings.ts';
-
-export interface KmsCustodians {
-  readonly kmsCustodian: (options: KmsCustodianOptions) => Effect.Effect<Custodian, KeepingFailure>;
-}
-
-export type KmsCustodiansLoader = () => Promise<KmsCustodians>;
-
-export const loadKmsCustodians: KmsCustodiansLoader = () => import('@on.auto/secrets/aws');
-
-export interface CustodiansMaking {
-  readonly proxy: ProxySettings;
-  readonly loadKms: KmsCustodiansLoader;
-}
+import type { AwsMaking } from './aws-adapters.ts';
 
 export type KeyInKms = Extract<SecretsKeySource, { readonly from: 'kms' }>;
 
@@ -29,8 +15,8 @@ function unresolved({ setting, arn }: KeyInKms, detail: string): InvalidSettings
   });
 }
 
-export async function kmsCustodianOf(source: KeyInKms, { proxy, loadKms }: CustodiansMaking): Promise<Custodian> {
-  const { kmsCustodian } = await loadKms();
+export async function kmsCustodianOf(source: KeyInKms, { proxy, loadAws }: AwsMaking): Promise<Custodian> {
+  const { kmsCustodian } = await loadAws();
   const made = kmsCustodian({
     keyId: source.arn,
     region: source.region,

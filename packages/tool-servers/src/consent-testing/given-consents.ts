@@ -1,4 +1,4 @@
-import { sealedKeeper, secretStoreOn } from '@on.auto/secrets';
+import { sealedSecretStoreOn } from '@on.auto/secrets';
 import { memoryRows, recordingCustodian, type RecordingCustodian } from '@on.auto/secrets/testing';
 import { DateTime, Effect, Option } from 'effect';
 
@@ -51,7 +51,7 @@ export async function finishAskedOf(client: ConsentClient, asked: StartAsked): P
 
 export function memoryRegistrations(custodian: RecordingCustodian = recordingCustodian()): MemoryRegistrations {
   const rows = memoryRows({ now: Effect.map(DateTime.now, DateTime.toEpochMillis) });
-  const store = secretStoreOn(rows, sealedKeeper({ current: custodian }), { current: custodian });
+  const store = sealedSecretStoreOn(rows, { current: custodian });
   const kept: KeptAt[] = [];
   const readOf = (found: KeptAt | undefined) =>
     found === undefined

@@ -147,6 +147,13 @@ export interface SecretStoreReport {
   readonly kid: string;
   readonly resealed: number;
   readonly keyFrom: SecretsKeySource;
+  readonly moved?: number | undefined;
+}
+
+export interface ParameterStoreReport {
+  readonly prefix: string;
+  readonly region: string;
+  readonly moved: number;
 }
 
 export function keyHeldBy(source: SecretsKeySource): string {
@@ -159,10 +166,34 @@ export function keyHeldBy(source: SecretsKeySource): string {
   return source.from === 'file' ? `that the file ${resolve(source.file)} holds` : 'that the server made at this start';
 }
 
-export function logSecretStore({ kid, resealed, keyFrom }: SecretStoreReport): Effect.Effect<void> {
+function movedThere(moved: number | undefined): string {
+  return moved === undefined ? '' : `, and ${moved} kept by the previous keeper were moved there`;
+}
+
+export function logSecretStore({ kid, resealed, keyFrom, moved }: SecretStoreReport): Effect.Effect<void> {
   return Effect.logInfo(
-    `Secrets are kept in the ledger's database, sealed under the key ${kid} ${keyHeldBy(keyFrom)}, and ${resealed} sealed under the previous key were sealed again under it`,
-  ).pipe(Effect.annotateLogs({ secrets_kid: kid, secrets_resealed: resealed, secrets_key_from: keyFrom.from }));
+    `Secrets are kept in the ledger's database, sealed under the key ${kid} ${keyHeldBy(keyFrom)}, and ${resealed} sealed under the previous key were sealed again under it${movedThere(moved)}`,
+  ).pipe(
+    Effect.annotateLogs({
+      secrets_kid: kid,
+      secrets_resealed: resealed,
+      secrets_key_from: keyFrom.from,
+      ...(moved === undefined ? {} : { secrets_moved: moved }),
+    }),
+  );
+}
+
+export function logSecretsInParameterStore({ prefix, region, moved }: ParameterStoreReport): Effect.Effect<void> {
+  return Effect.logInfo(
+    `Secrets are kept in AWS Parameter Store under ${prefix} in ${region}${movedThere(moved)}`,
+  ).pipe(
+    Effect.annotateLogs({
+      secrets_keeper: 'aws-parameter-store',
+      secrets_prefix: prefix,
+      secrets_region: region,
+      secrets_moved: moved,
+    }),
+  );
 }
 
 const causeNotFormattable = Effect.logError('Unexpected error whose cause could not be formatted');

@@ -35,7 +35,7 @@ export interface SecretRows {
   readonly claim: (id: string, version: number, lastingMs: number) => Effect.Effect<Claim>;
   readonly endingsOf: (ids: readonly string[]) => Effect.Effect<ReadonlyMap<string, string>>;
   readonly forget: (id: string) => Effect.Effect<Holding | undefined>;
-  readonly heldBy: (holder: Holder, limit: number) => Effect.Effect<readonly HeldRow[]>;
+  readonly heldBy: (holder: Holder, limit: number, after?: string) => Effect.Effect<readonly HeldRow[]>;
   readonly reheld: (read: HeldRow, holding: Holding) => Effect.Effect<boolean>;
   readonly close: () => Promise<void>;
 }

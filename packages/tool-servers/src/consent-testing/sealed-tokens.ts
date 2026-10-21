@@ -1,4 +1,4 @@
-import { sealedKeeper, secretStoreOn } from '@on.auto/secrets';
+import { sealedSecretStoreOn } from '@on.auto/secrets';
 import { memoryRows, recordingCustodian, type RecordingCustodian } from '@on.auto/secrets/testing';
 import { Effect, type Redacted } from 'effect';
 
@@ -20,7 +20,7 @@ function unreadableNow({ detail }: { readonly detail: string }): ConnectionUnrea
 export async function sealedTokens(value: Redacted.Redacted, now: () => number): Promise<SealedTokens> {
   const custodian = recordingCustodian();
   const rows = memoryRows({ now: Effect.sync(now) });
-  const store = secretStoreOn(rows, sealedKeeper({ current: custodian }), { current: custodian });
+  const store = sealedSecretStoreOn(rows, { current: custodian });
   const id = await Effect.runPromise(Effect.orDie(store.keep(value)));
   const claims: number[] = [];
   const { broken, ends } = recordedBreaks();

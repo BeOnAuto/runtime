@@ -3,10 +3,10 @@ import { playbookOperations } from '@on.auto/playbooks';
 
 import { compositionRoot } from '../../composition/composition-root.ts';
 import { routesServing } from '../../composition/served-routes.ts';
-import { keyInHandOf } from '../../database/secrets-keys.ts';
 import { servedBy } from '../../lifecycle/lifecycle.ts';
 import { exitOnStartupFailure, runServer } from '../../lifecycle/run-server.ts';
 import { stopInsistedBy, stopRequestedBy } from '../../lifecycle/stop-request.ts';
+import { keyInHandOf } from '../../secrets/secrets-keys.ts';
 import { shortShutdownTimeoutMs } from '../processes/shutdown-timeouts.ts';
 import { waitForeverAnnouncedIn } from './calls-in-flight.ts';
 

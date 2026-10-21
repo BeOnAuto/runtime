@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Custodian } from '../custodians/custodian.ts';
 import { storeFailureBehaviour } from './failure-behaviour.ts';
+import { keeperBehaviour } from './keeper-behaviour.ts';
 import { storeLeaseBehaviour } from './lease-behaviour.ts';
 import { recordingCustodian } from './recording-custodian.ts';
 import {
@@ -221,5 +222,6 @@ export function storeBehaviour(entry: SecretsEntry, custodians: TestCustodians =
     rewrappedNothing(entry, custodians);
     storeFailureBehaviour(entry, custodians);
     storeLeaseBehaviour(entry, custodians);
+    keeperBehaviour(entry);
   });
 }

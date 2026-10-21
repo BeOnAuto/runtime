@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { kmsCustodian, type KmsCustodianOptions } from '@on.auto/secrets/aws';
+import { kmsCustodian, parameterStoreKeeper, type KmsCustodianOptions } from '@on.auto/secrets/aws';
 import { serveFakeKms } from '@on.auto/secrets/testing';
 import { Effect, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -95,6 +95,7 @@ const fake = await serveFakeKms({ keys: [keyArn] });
 afterAll(fake.close);
 
 const onTheFake = {
+  parameterStoreKeeper,
   kmsCustodian: (options: KmsCustodianOptions) =>
     kmsCustodian({
       ...options,

@@ -7,7 +7,6 @@ import {
   type KMSClientConfig,
 } from '@aws-sdk/client-kms';
 import type { ProxySettings } from '@on.auto/outbound';
-import { awsClientSettingsOf } from '@on.auto/outbound/aws';
 import { isThrottlingError } from '@smithy/core/retry';
 import { Effect, Option, Redacted, Schema } from 'effect';
 
@@ -15,12 +14,8 @@ import { CustodianRefused, custodianRefused, type CustodianAct } from '../custod
 import type { Custodian } from '../custodians/custodian.ts';
 import { custodianUnanswered, KeeperUnavailable } from '../keepers/keeper-unavailable.ts';
 import type { KeepingFailure } from '../keepers/keeper.ts';
-import { answerBoundMs, answeredWithinItsBound } from '../store/answer-bound.ts';
-
-export interface KmsWaits {
-  readonly connectionMs: number;
-  readonly requestMs: number;
-}
+import { answeredWithinItsBound } from '../store/answer-bound.ts';
+import { awsWaits, requestHandlerWithin, wordsWithoutTheAccount, type AwsWaits } from './aws-requests.ts';
 
 export type KmsCredentials = NonNullable<KMSClientConfig['credentials']>;
 
@@ -30,18 +25,14 @@ export interface KmsCustodianOptions {
   readonly proxy: ProxySettings;
   readonly credentials: KmsCredentials;
   readonly endpoint?: string | undefined;
-  readonly waits?: KmsWaits | undefined;
+  readonly waits?: AwsWaits | undefined;
 }
-
-export const kmsWaits: KmsWaits = { connectionMs: 5000, requestMs: answerBoundMs };
 
 export const encryptionContext: Readonly<Record<string, string>> = { 'on.auto/runtime': 'secret data key' };
 
 const keyResource = 'key/';
 
 const aliasResource = 'alias/';
-
-const accountOfAnArn = /arn:aws[\w-]*:[\w-]+:[\w-]*:\d{12}:/gu;
 
 function resourceOf(arn: string): string {
   return arn.slice(arn.lastIndexOf(':') + 1);
@@ -50,10 +41,6 @@ function resourceOf(arn: string): string {
 export function kidOfKey(keyArn: string): string {
   const resource = resourceOf(keyArn);
   return resource.startsWith(keyResource) ? resource.slice(keyResource.length) : resource;
-}
-
-function wordsOf(failure: unknown): string {
-  return String(failure).replaceAll(accountOfAnArn, '');
 }
 
 function isRefusal(failure: unknown): boolean {
@@ -66,12 +53,12 @@ function isRefusal(failure: unknown): boolean {
 
 function failureOf(kid: string, act: CustodianAct, failure: unknown): KeepingFailure {
   return isRefusal(failure)
-    ? custodianRefused(kid, act, wordsOf(failure))
-    : custodianUnanswered(kid, act, wordsOf(failure));
+    ? custodianRefused(kid, act, wordsWithoutTheAccount(failure))
+    : custodianUnanswered(kid, act, wordsWithoutTheAccount(failure));
 }
 
 function aliasFailureOf(alias: string, failure: unknown): KeepingFailure {
-  const words = wordsOf(failure);
+  const words = wordsWithoutTheAccount(failure);
   return isRefusal(failure)
     ? new CustodianRefused({
         kid: alias,
@@ -83,15 +70,9 @@ function aliasFailureOf(alias: string, failure: unknown): KeepingFailure {
       });
 }
 
-function kmsClientOf({ region, proxy, credentials, endpoint, waits = kmsWaits }: KmsCustodianOptions): KMSClient {
-  const { requestHandler } = awsClientSettingsOf(proxy);
+function kmsClientOf({ region, proxy, credentials, endpoint, waits = awsWaits }: KmsCustodianOptions): KMSClient {
   return new KMSClient({
-    requestHandler: {
-      ...requestHandler,
-      connectionTimeout: waits.connectionMs,
-      requestTimeout: waits.requestMs,
-      throwOnRequestTimeout: true,
-    },
+    requestHandler: requestHandlerWithin(proxy, waits),
     credentials,
     region,
     ...(endpoint === undefined ? {} : { endpoint }),

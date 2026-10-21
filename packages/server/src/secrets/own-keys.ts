@@ -18,7 +18,8 @@ import { Data, DateTime, Effect, Option, Redacted, Result, Schema } from 'effect
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { keyHeldBy } from '../logging/logging.ts';
-import { secretsKeyOfBase64, type SecretsKeySource } from '../settings/secrets-settings.ts';
+import { secretsKeyOfBase64 } from '../settings/secrets-settings.ts';
+import type { Settings } from '../settings/settings.ts';
 
 export const ownKeysStream = 'runtime/own-keys';
 
@@ -66,20 +67,53 @@ interface Worded {
   readonly detail: string;
 }
 
-interface Asked {
-  readonly purpose: OwnKeyPurpose;
-  readonly keyFrom: SecretsKeySource;
+export interface SecretsKept {
+  readonly where: string;
+  readonly gone: string;
+  readonly waysOut: string;
+  readonly logKeyRead: (purpose: OwnKeyPurpose, secretId: string) => Effect.Effect<void>;
 }
 
-function unreadableUnder({ purpose, keyFrom }: Asked, words: string): OwnKeyUnavailable {
+interface Asked {
+  readonly purpose: OwnKeyPurpose;
+  readonly kept: SecretsKept;
+}
+
+const keyWaysOut =
+  "Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key";
+
+export function secretsKeptBy({ secrets, keepers }: Pick<Settings, 'secrets' | 'keepers'>): SecretsKept {
+  const { current } = keepers;
+  if (current.kind === 'aws-parameter-store') {
+    const where = `in AWS Parameter Store under ${current.prefix} in ${current.region}`;
+    return {
+      where,
+      gone: `${where}, the region ${current.regionSetting} names`,
+      waysOut: `Start the server with the keeper the ledger's secrets were kept by, or name that keeper as SECRETS_KEEPER_PREVIOUS beside ${current.setting}`,
+      logKeyRead: (purpose, secretId) =>
+        Effect.logInfo(`The runtime read the key it keeps for ${purpose} ${where}`).pipe(
+          Effect.annotateLogs({ own_key: purpose, own_key_id: secretId }),
+        ),
+    };
+  }
+  const { current: keyFrom } = Option.getOrThrow(Option.fromNullishOr(secrets));
+  return {
+    where: `under the key ${keyHeldBy(keyFrom)}`,
+    gone: 'in the secret store',
+    waysOut: keyWaysOut,
+    logKeyRead: () => Effect.void,
+  };
+}
+
+function unreadableUnder({ purpose, kept }: Asked, words: string): OwnKeyUnavailable {
   return new OwnKeyUnavailable({
-    message: `The key the runtime keeps for ${purpose} cannot be read under the key ${keyHeldBy(keyFrom)}: ${words}. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key`,
+    message: `The key the runtime keeps for ${purpose} cannot be read ${kept.where}: ${words}. ${kept.waysOut}`,
   });
 }
 
-function unkeptUnder({ purpose, keyFrom }: Asked, words: string): OwnKeyUnavailable {
+function unkeptUnder({ purpose, kept }: Asked, words: string): OwnKeyUnavailable {
   return new OwnKeyUnavailable({
-    message: `The key the runtime keeps for ${purpose} cannot be kept under the key ${keyHeldBy(keyFrom)}, so the server does not start: ${words}`,
+    message: `The key the runtime keeps for ${purpose} cannot be kept ${kept.where}, so the server does not start: ${words}`,
   });
 }
 
@@ -132,7 +166,7 @@ function ownKeyIn(
     Effect.mapError((failure: Worded) => unreadableUnder(asked, failure.detail)),
     Effect.flatMap((stored) =>
       stored === undefined
-        ? Effect.fail(unusable(asked, 'is no longer in the secret store'))
+        ? Effect.fail(unusable(asked, `is no longer ${asked.kept.gone}`))
         : Option.match(Option.fromNullishOr(secretsKeyOfBase64(Redacted.value(stored.value))), {
             onNone: () => Effect.fail(unusable(asked, `holds something other than ${secretKeyBytes} bytes`)),
             onSome: Effect.succeed,
@@ -143,23 +177,25 @@ function ownKeyIn(
 
 export function retryStateKeysKeptBy(
   services: OwnKeyServices,
-  keyFrom: SecretsKeySource,
+  kept: SecretsKept,
 ): Effect.Effect<RetryStateKeys, OwnKeyUnavailable> {
-  const asked: Asked = { purpose: 'retry_state', keyFrom };
+  const asked: Asked = { purpose: 'retry_state', kept };
   return Effect.gen(function* () {
     const secretId = yield* ownKeyIdOf(services, asked);
-    return { current: yield* ownKeyIn(services, asked, secretId) };
+    const key = yield* ownKeyIn(services, asked, secretId);
+    yield* kept.logKeyRead(asked.purpose, secretId);
+    return { current: key };
   });
 }
 
 export async function retryStateKeysOf(
   runtime: AppRuntime<DispatcherServices>,
   secrets: SecretStore,
-  keyFrom: SecretsKeySource,
+  kept: SecretsKept,
 ): Promise<RetryStateKeys> {
   try {
     return await Effect.runPromiseWith(runtime.context)(
-      retryStateKeysKeptBy({ registry: runtimeLedger(runtime), secrets }, keyFrom),
+      retryStateKeysKeptBy({ registry: runtimeLedger(runtime), secrets }, kept),
     );
   } catch (failure) {
     await secrets.close();

@@ -133,10 +133,19 @@ function forgottenIn(table: Table, id: string): Holding | undefined {
   return holding;
 }
 
-function heldIn(table: Table, { keptBy, kid }: Holder, limit: number): readonly HeldRow[] {
+interface Held {
+  readonly limit: number;
+  readonly after: string | undefined;
+}
+
+function isHeldBy({ keptBy, kid }: Holder, { holding }: Row): boolean {
+  return holding.keptBy === keptBy && (kid === undefined || holding.kid === kid);
+}
+
+function heldIn(table: Table, holder: Holder, { limit, after }: Held): readonly HeldRow[] {
   return table
     .inOrder()
-    .filter(({ holding }) => holding.keptBy === keptBy && (kid === undefined || holding.kid === kid))
+    .filter((row) => isHeldBy(holder, row) && (after === undefined || row.id.localeCompare(after) > 0))
     .slice(0, limit)
     .map(({ id, version, holding }) => ({ id, version, holding }));
 }
@@ -167,7 +176,7 @@ export function memoryRows({ now }: MemoryRowsOptions): MemoryRows {
       Effect.map(now, (moment) => claimedIn(table, moment, { id, version }, lastingMs)),
     endingsOf: (ids) => Effect.sync(() => endingsIn(table, ids)),
     forget: (id) => Effect.sync(() => forgottenIn(table, id)),
-    heldBy: (holder, limit) => Effect.sync(() => heldIn(table, holder, limit)),
+    heldBy: (holder, limit, after) => Effect.sync(() => heldIn(table, holder, { limit, after })),
     reheld: (read, holding) => Effect.sync(() => reheldIn(table, read, holding)),
     close: () => Promise.resolve(),
     kept: () => table.inOrder().map((row) => columnsOf(row)),

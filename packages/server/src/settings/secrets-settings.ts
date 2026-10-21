@@ -3,6 +3,15 @@ import { secretKeyBytes } from '@on.auto/secrets';
 import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
 
 import { InvalidSettingsError } from './invalid-settings-error.ts';
+import {
+  currentKeeper,
+  defaultRegion,
+  isLedgerNamed,
+  keeperVariables,
+  previousKeeper,
+  readKeeperSettings,
+  type KeeperSettings,
+} from './keeper-settings.ts';
 import { besideTheLedgerFile, ledgerVariables, readLedgerSettings, type LedgerSettings } from './ledger-settings.ts';
 
 type SecretsKeyGiven =
@@ -19,7 +28,8 @@ export interface SecretsSettings {
 
 export interface LedgerAndSecrets {
   readonly ledger: LedgerSettings;
-  readonly secrets: SecretsSettings;
+  readonly secrets: SecretsSettings | undefined;
+  readonly keepers: KeeperSettings;
 }
 
 interface KeySettings {
@@ -40,11 +50,12 @@ function settingsOf({ key, file, kms }: KeySettings): readonly string[] {
   return [key, file, kms];
 }
 
-export const secretsVariables: readonly string[] = [currentKey, previousKey].flatMap((settings) =>
-  settingsOf(settings),
-);
+export const secretsVariables: readonly string[] = [
+  ...[currentKey, previousKey].flatMap((settings) => settingsOf(settings)),
+  ...keeperVariables,
+];
 
-export const ledgerAndSecretsVariables: readonly string[] = [...ledgerVariables, ...secretsVariables];
+export const ledgerAndSecretsVariables: readonly string[] = [...ledgerVariables, ...secretsVariables, defaultRegion];
 
 function sourcesOf({ key, file, kms }: KeySettings) {
   return Config.all({
@@ -140,12 +151,41 @@ function previousAlone({ setting }: SecretsKeyGiven): InvalidSettingsError {
   );
 }
 
+function custodianWithoutTheLedger(setting: string): InvalidSettingsError {
+  return invalid(
+    `${setting}: Set it only while the ledger keeps secrets, as ${currentKeeper} or ${previousKeeper} names it, since AWS Parameter Store keeps each value under its own encryption and no key of the runtime's`,
+  );
+}
+
+function settingNamedIn({
+  current,
+  previous,
+}: {
+  readonly current: Given;
+  readonly previous: Given;
+}): string | undefined {
+  const named: readonly (readonly [string, unknown])[] = [
+    [currentKey.key, current.key],
+    [currentKey.file, current.file],
+    [currentKey.kms, current.kms],
+    [previousKey.key, previous.key],
+    [previousKey.file, previous.file],
+    [previousKey.kms, previous.kms],
+  ];
+  return named.find(([, value]) => value !== undefined)?.[0];
+}
+
 function readSecretsSettings(
   environment: Environment,
   ledger: LedgerSettings,
-): Effect.Effect<SecretsSettings, InvalidSettingsError> {
+  keepers: KeeperSettings,
+): Effect.Effect<SecretsSettings | undefined, InvalidSettingsError> {
   return Effect.gen(function* () {
     const given = yield* Effect.orDie(sources.parse(ConfigProvider.fromEnvRecord(environment)));
+    if (!isLedgerNamed(keepers)) {
+      const named = settingNamedIn(given);
+      return named === undefined ? undefined : yield* Effect.fail(custodianWithoutTheLedger(named));
+    }
     const current = yield* sourceGiven(currentKey, given.current);
     const previous = yield* sourceGiven(previousKey, given.previous);
     if (current !== undefined) {
@@ -158,7 +198,9 @@ function readSecretsSettings(
 }
 
 export function readLedgerAndSecrets(environment: Environment): Effect.Effect<LedgerAndSecrets, InvalidSettingsError> {
-  return Effect.flatMap(readLedgerSettings(environment), (ledger) =>
-    Effect.map(readSecretsSettings(environment, ledger), (secrets) => ({ ledger, secrets })),
-  );
+  return Effect.gen(function* () {
+    const ledger = yield* readLedgerSettings(environment);
+    const keepers = yield* readKeeperSettings(environment);
+    return { ledger, secrets: yield* readSecretsSettings(environment, ledger, keepers), keepers };
+  });
 }
