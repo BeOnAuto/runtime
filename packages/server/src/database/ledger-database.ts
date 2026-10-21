@@ -1,4 +1,4 @@
-import { LedgerShapeRefused, type AppendObserver } from '@on.auto/ledger';
+import { LedgerLayoutRefused, type AppendObserver } from '@on.auto/ledger';
 import { Ledger } from '@on.auto/operations';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Cause, Effect, Layer } from 'effect';
@@ -16,7 +16,7 @@ export function ledgerDatabaseOf(
     : { store: 'postgresql', pools: databasePoolsOf(ledger, proxy), observer };
 }
 
-export function withARefusedShapeExplained(
+export function withARefusedLayoutExplained(
   ledgerLayer: Layer.Layer<Ledger>,
   settings: Pick<Settings, 'ledger' | 'distribution'>,
 ): Layer.Layer<Ledger> {
@@ -24,7 +24,7 @@ export function withARefusedShapeExplained(
     const failure = Cause.squash(cause);
     return Layer.effect(
       Ledger,
-      failure instanceof LedgerShapeRefused
+      failure instanceof LedgerLayoutRefused
         ? Effect.die(ledgerOfAnotherVersion(failure, settings))
         : Effect.failCause(cause),
     );

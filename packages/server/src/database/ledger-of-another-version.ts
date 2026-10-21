@@ -1,6 +1,6 @@
 import { basename, dirname } from 'node:path';
 
-import type { RefusedShape } from '@on.auto/ledger';
+import type { LedgerLayoutRefused } from '@on.auto/ledger';
 import { Data } from 'effect';
 
 import { discordInvite } from '../command-line/local-banner.ts';
@@ -12,8 +12,10 @@ interface LedgerRemedy {
   readonly command: string | undefined;
 }
 
+type RefusedLayout = Pick<LedgerLayoutRefused, 'found' | 'kept'>;
+
 export class LedgerOfAnotherVersion extends Data.TaggedError('LedgerOfAnotherVersion')<
-  RefusedShape & { readonly happened: string; readonly remedy: LedgerRemedy; readonly message: string }
+  RefusedLayout & { readonly happened: string; readonly remedy: LedgerRemedy; readonly message: string }
 > {}
 
 export function helpOfferedAt(invite: string): string {
@@ -26,12 +28,12 @@ function shellWord(text: string): string {
   return unquotedInAShell.test(text) ? text : `'${text.replaceAll("'", String.raw`'\''`)}'`;
 }
 
-function whatHappened(ledger: LedgerSettings, holds: string): string {
-  return `${whereTheLedgerIsKept(ledger)}, and was made by another version of Auto Runtime. This version keeps ${holds} in a different shape and cannot read the ${holds} this ledger holds.`;
+function aLedgerIn(found: number | undefined): string {
+  return found === undefined ? 'a ledger that carries no layout number' : `a ledger in layout ${found}`;
 }
 
-export function columnsCompared({ table, found, kept }: RefusedShape): string {
-  return `${table} has the columns ${found.join(', ')}, where this version keeps ${kept.join(', ')}.`;
+function whatHappened(ledger: LedgerSettings, { found, kept }: RefusedLayout): string {
+  return `${whereTheLedgerIsKept(ledger)}, and was made by another version of Auto Runtime. This version keeps the ledger in layout ${kept} and cannot read ${aLedgerIn(found)}.`;
 }
 
 const everythingInItGoes =
@@ -74,17 +76,18 @@ function remedyFor({ ledger, distribution }: Pick<Settings, 'ledger' | 'distribu
 }
 
 export function ledgerOfAnotherVersion(
-  shape: RefusedShape,
+  refused: RefusedLayout,
   settings: Pick<Settings, 'ledger' | 'distribution'>,
 ): LedgerOfAnotherVersion {
-  const happened = whatHappened(settings.ledger, shape.holds);
+  const happened = whatHappened(settings.ledger, refused);
   const remedy = remedyFor(settings);
   const deleting = remedy.command === undefined ? [] : [`To delete the ledger, run: ${remedy.command}`];
   return new LedgerOfAnotherVersion({
-    ...shape,
+    found: refused.found,
+    kept: refused.kept,
     happened,
     remedy,
-    message: [happened, columnsCompared(shape), remedy.says, helpOfferedAt(discordInvite), ...deleting].join(' '),
+    message: [happened, remedy.says, helpOfferedAt(discordInvite), ...deleting].join(' '),
   });
 }
 

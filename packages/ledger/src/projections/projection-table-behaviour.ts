@@ -11,6 +11,7 @@ import {
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { runOutcomeTableBehaviour } from '../outcomes/run-outcome-table-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { projectionsBehaviour, topicsOf } from './projections-behaviour.ts';
 
@@ -158,6 +159,7 @@ function aKeyedTableNotThereYet(entry: LedgerEntry): void {
 }
 
 export function projectionTableBehaviour(entry: LedgerEntry): void {
+  runOutcomeTableBehaviour(entry);
   projectionsBehaviour((projections) => aLedger(entry, undefined, undefined, projections));
   anAppendThatBreaksDown(entry);
   aTableNotThereYet(entry);

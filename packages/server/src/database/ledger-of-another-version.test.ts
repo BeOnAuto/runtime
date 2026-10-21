@@ -8,12 +8,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { ledgerOfAnotherVersion } from './ledger-of-another-version.ts';
 
-const secretsOfAnOlderShape = {
-  table: 'kept_secrets',
-  holds: 'secrets',
-  found: ['held', 'id', 'kept_at', 'kept_by', 'version'],
-  kept: ['claimed_until', 'ends_with', 'held', 'id', 'kept_at', 'kept_by', 'kid', 'version', 'wrapped_key'],
-};
+const inAnotherLayout = { found: 2, kept: 1 };
 
 const inPostgreSQL = {
   store: 'postgresql',
@@ -24,7 +19,7 @@ const inPostgreSQL = {
 } as const;
 
 function refusedFileAt(file: string, distribution: 'npx' | 'docker' = 'npx') {
-  return ledgerOfAnotherVersion(secretsOfAnOlderShape, { ledger: { store: 'sqlite', file }, distribution });
+  return ledgerOfAnotherVersion(inAnotherLayout, { ledger: { store: 'sqlite', file }, distribution });
 }
 
 const awkwardFolder = "Application Support/ada's $HOME";
@@ -34,9 +29,10 @@ describe('a ledger made by another version of Auto Runtime', () => {
     const refused = refusedFileAt('/Users/ada/.auto-runtime/ledger.db');
 
     expect(refused.message).toBe(
-      'The ledger is kept in the file /Users/ada/.auto-runtime/ledger.db, and was made by another version of Auto Runtime. This version keeps secrets in a different shape and cannot read the secrets this ledger holds. kept_secrets has the columns held, id, kept_at, kept_by, version, where this version keeps claimed_until, ends_with, held, id, kept_at, kept_by, kid, version, wrapped_key. Delete the ledger and start Auto Runtime again. Everything in the ledger goes with it, every playbook, definition, run and connection among it. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8 To delete the ledger, run: rm -f /Users/ada/.auto-runtime/ledger.db /Users/ada/.auto-runtime/ledger.db-wal /Users/ada/.auto-runtime/ledger.db-shm',
+      'The ledger is kept in the file /Users/ada/.auto-runtime/ledger.db, and was made by another version of Auto Runtime. This version keeps the ledger in layout 1 and cannot read a ledger in layout 2. Delete the ledger and start Auto Runtime again. Everything in the ledger goes with it, every playbook, definition, run and connection among it. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8 To delete the ledger, run: rm -f /Users/ada/.auto-runtime/ledger.db /Users/ada/.auto-runtime/ledger.db-wal /Users/ada/.auto-runtime/ledger.db-shm',
     );
     expect(String(refused)).toMatch(/^LedgerOfAnotherVersion: The ledger is kept in the file /u);
+    expect(refused).toMatchObject(inAnotherLayout);
   });
 
   it('places a ledger file given as a relative path in the directory the server started in', () => {
@@ -49,10 +45,10 @@ describe('a ledger made by another version of Auto Runtime', () => {
   });
 
   it('names the PostgreSQL database and its host, never the URL, and says to point DATABASE_URL at an empty one', () => {
-    const refused = ledgerOfAnotherVersion(secretsOfAnOlderShape, { ledger: inPostgreSQL, distribution: 'npx' });
+    const refused = ledgerOfAnotherVersion(inAnotherLayout, { ledger: inPostgreSQL, distribution: 'npx' });
 
     expect(refused.message).toBe(
-      'The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and was made by another version of Auto Runtime. This version keeps secrets in a different shape and cannot read the secrets this ledger holds. kept_secrets has the columns held, id, kept_at, kept_by, version, where this version keeps claimed_until, ends_with, held, id, kept_at, kept_by, kid, version, wrapped_key. Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8',
+      'The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and was made by another version of Auto Runtime. This version keeps the ledger in layout 1 and cannot read a ledger in layout 2. Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8',
     );
     expect(refused.remedy.command).toBeUndefined();
     expect(refused.message).not.toContain('a-secret-password');
@@ -66,7 +62,20 @@ describe('a ledger made by another version of Auto Runtime', () => {
       command: undefined,
     });
     expect(refused.message).toBe(
-      "The ledger is kept in the file /app/data/ledger.db, and was made by another version of Auto Runtime. This version keeps secrets in a different shape and cannot read the secrets this ledger holds. kept_secrets has the columns held, id, kept_at, kept_by, version, where this version keeps claimed_until, ends_with, held, id, kept_at, kept_by, kid, version, wrapped_key. Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume, and start Auto Runtime again. Everything in the ledger goes with it, every playbook, definition, run and connection among it. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8",
+      "The ledger is kept in the file /app/data/ledger.db, and was made by another version of Auto Runtime. This version keeps the ledger in layout 1 and cannot read a ledger in layout 2. Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume, and start Auto Runtime again. Everything in the ledger goes with it, every playbook, definition, run and connection among it. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8",
+    );
+  });
+});
+
+describe('a ledger made before the ledger carried a layout number', () => {
+  it('says this version cannot read a ledger that carries no layout number', () => {
+    const refused = ledgerOfAnotherVersion(
+      { found: undefined, kept: 1 },
+      { ledger: { store: 'sqlite', file: '/data/ledger.db' }, distribution: 'npx' },
+    );
+
+    expect(refused.happened).toBe(
+      'The ledger is kept in the file /data/ledger.db, and was made by another version of Auto Runtime. This version keeps the ledger in layout 1 and cannot read a ledger that carries no layout number.',
     );
   });
 });

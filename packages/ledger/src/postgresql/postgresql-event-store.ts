@@ -1,31 +1,14 @@
 import { getPostgreSQLEventStore } from '@event-driven-io/emmett-postgresql';
 import { pgEventStoreDriver } from '@event-driven-io/emmett-postgresql/pg';
-import type { RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
-import { Pool } from 'pg';
 
 import { emmettEventStore } from '../emmett/emmett-event-store.ts';
-import type { AppendObserver, LedgerStore } from '../event-store.ts';
+import type { LedgerStore } from '../event-store.ts';
 import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgresql-reads/postgresql-recorded.ts';
 import { dataAsJsonText } from './json-text.ts';
+import type { PostgreSQLOptions } from './postgresql-options.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
-import { migrationLockTakenWithin, postgresqlRunOutcomesOf } from './postgresql-run-outcomes.ts';
-
-export interface PoolBounds {
-  readonly max: number;
-}
-
-export type PostgreSQLPools = (bounds: PoolBounds) => Pool;
-
-export function plainPoolsOn(connectionString: string): PostgreSQLPools {
-  return ({ max }) => new Pool({ connectionString, max });
-}
-
-export interface PostgreSQLOptions {
-  readonly pools: PostgreSQLPools;
-  readonly runOutcomes?: RunOutcomeMapping;
-  readonly projections?: readonly KeyedProjection[];
-  readonly observer?: AppendObserver | undefined;
-}
+import { postgresqlRunOutcomesOf } from './postgresql-run-outcomes.ts';
+import { beforeTheSchema } from './postgresql-schema.ts';
 
 export interface PostgreSQLStoreOptions extends PostgreSQLOptions {
   readonly reportLostConnection: (error: Readonly<Error>) => void;
@@ -51,7 +34,7 @@ export function postgresqlEventStore({
       connectionOptions: { pool },
       schema: { autoMigration: 'None' },
       projections: [...kept.registrations],
-      hooks: { onBeforeSchemaCreated: migrationLockTakenWithin(), onAfterSchemaCreated: kept.afterTheSchema },
+      hooks: { onBeforeSchemaCreated: beforeTheSchema, onAfterSchemaCreated: kept.afterTheSchema },
     }),
     { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, observer },
   );

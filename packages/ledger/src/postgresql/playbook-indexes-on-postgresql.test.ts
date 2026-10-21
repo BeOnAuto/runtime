@@ -84,7 +84,10 @@ describe.skipIf(skipped)(`The playbook's indexes on PostgreSQL${notice}`, () => 
     await open.query('COMMIT');
 
     expect(
-      await queried(database, "SELECT count(*)::int AS indexes FROM pg_indexes WHERE indexname LIKE 'ledger%'"),
+      await queried(
+        database,
+        "SELECT count(*)::int AS indexes FROM pg_indexes WHERE tablename IN ('emt_messages', 'emt_streams') AND indexname LIKE 'ledger%'",
+      ),
     ).toEqual([{ indexes: 7 }]);
   });
 });

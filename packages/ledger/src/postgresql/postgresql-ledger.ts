@@ -4,16 +4,11 @@ import { Effect, Layer } from 'effect';
 import type { AppendSignal } from '../appends/append-signal.ts';
 import { ledgerLayerOver } from '../ledger-layer.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
-import { postgresqlEventStore, type PostgreSQLOptions } from './postgresql-event-store.ts';
+import { postgresqlEventStore } from './postgresql-event-store.ts';
+import type { PostgreSQLOptions } from './postgresql-options.ts';
 
-export {
-  plainPoolsOn,
-  postgresqlEventStore,
-  type PoolBounds,
-  type PostgreSQLOptions,
-  type PostgreSQLPools,
-  type PostgreSQLStoreOptions,
-} from './postgresql-event-store.ts';
+export { postgresqlEventStore, type PostgreSQLStoreOptions } from './postgresql-event-store.ts';
+export { plainPoolsOn, type PoolBounds, type PostgreSQLOptions, type PostgreSQLPools } from './postgresql-options.ts';
 export {
   postgresqlSecretRows,
   type PostgreSQLSecretRowsOptions,

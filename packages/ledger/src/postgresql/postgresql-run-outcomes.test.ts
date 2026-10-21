@@ -3,10 +3,10 @@ import { pgFormatter } from '@event-driven-io/dumbo/pg';
 import { runTallies, type RunFact } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
+import { contentTableNames } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { aRecordedFillOf, mebibyte, runIdsOf, type RecordedFill } from '../outcomes/recorded-fill.ts';
 import type { Query } from '../postgresql-reads/postgresql-recorded.ts';
-import { columnsOrNames } from '../secrets/kept-table-columns.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
 import {
   emmettsMigrationLock,
@@ -56,22 +56,20 @@ const indexes = [
   'ledger_messages_by_id',
 ].map((name) => ({ name }));
 
-const contentIndexesAndSecrets = ['recorded_content_heads_by_upload', 'staged_content_by_upload', 'kept_secrets'];
-
-function contentAnswering(statement: string): readonly { readonly name: string }[] {
-  return columnsOrNames(statement);
-}
+const contentAndSecrets = [
+  ...contentTableNames,
+  'recorded_content_heads_by_upload',
+  'staged_content_by_upload',
+  'kept_secrets',
+].map((name) => ({ name }));
 
 function aLedgerWithOneRun(tables: readonly string[]): Answers {
   return (statement) => {
     if (statement.includes('ledger_messages_by_playbook')) {
       return indexes;
     }
-    if (statement.includes('recorded_content_chunks') || statement.includes('pg_attribute')) {
-      return contentAnswering(statement);
-    }
-    if (/_by_upload|kept_secrets/u.test(statement)) {
-      return contentIndexesAndSecrets.map((name) => ({ name }));
+    if (/recorded_content_chunks|_by_upload|kept_secrets/u.test(statement)) {
+      return contentAndSecrets;
     }
     if (statement.includes('pg_class')) {
       return tables.map((name) => ({ name }));

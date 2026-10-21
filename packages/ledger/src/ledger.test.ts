@@ -2,7 +2,8 @@ import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3'
 import { describe, onTestFinished } from 'vitest';
 
 import { sqliteEventStore } from './index.ts';
-import { definitionStreamsIndexed, planOf, queried } from './recorded/sqlite-checks.ts';
+import { sqliteLayout } from './layout/layout-dialects.ts';
+import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
 import { keptSecretsBehaviour } from './secrets/kept-secrets-behaviour.ts';
 import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
 import { ledgerBehaviour } from './testing/ledger-behaviour.ts';
@@ -22,6 +23,8 @@ const onSQLite: LedgerEntry = {
     ledgerLayer({ fileName, projections, ...(runOutcomes === undefined ? {} : { runOutcomes }) }),
   storeOn: (fileName) => sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName })),
   queried,
+  executedOn,
+  layout: sqliteLayout,
   definitionStreamsIndexed,
   planOf,
   throughTheKindIndex: 'USING INDEX ledger_first_messages_by_kind',

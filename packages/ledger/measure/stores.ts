@@ -5,7 +5,7 @@ import { Function } from 'effect';
 import { Client } from 'pg';
 
 import type { LedgerStore } from '../src/event-store.ts';
-import { plainPoolsOn, postgresqlEventStore } from '../src/postgresql/postgresql-event-store.ts';
+import { plainPoolsOn, postgresqlEventStore } from '../src/postgresql/postgresql-ledger.ts';
 import { sqliteEventStore } from '../src/sqlite-event-store.ts';
 import type { modestConnections } from '../src/sqlite3.ts';
 import { temporaryDatabase } from '../src/testing/temporary-database.ts';
