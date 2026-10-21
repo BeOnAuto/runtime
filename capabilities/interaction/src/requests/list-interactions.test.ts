@@ -38,6 +38,14 @@ async function listed(playbook: Awaited<ReturnType<typeof playbookWithThreeReque
   return { ids: page.output.interactions.map(({ run_id: id }) => id), page: page.output };
 }
 
+describe('the description of the open requests', () => {
+  it('says that their pages are read on only as the person needs', () => {
+    expect(listInteractions.registration.description).toContain(
+      '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
+    );
+  });
+});
+
 describe('the open requests of a playbook', () => {
   it('are listed newest first, kept to one party or one function when asked', async () => {
     const playbook = await playbookWithThreeRequests();

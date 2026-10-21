@@ -11,7 +11,7 @@ import { connectionNamed, linkWords } from './connection-words.ts';
 import { additionOf, recordInRegistry } from './registry-access.ts';
 
 const description = [
-  "Connects a service the org's functions should reach: a provider search lists, by its name and placeholders, answered pending with a link to Studio's page.",
+  "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page.",
   'A server given by hand takes name, type, entry and credential instead, none holding a secret.',
   'The person approves it, and gives its credential, on the page the link opens within ten minutes.',
 ].join(' ');

@@ -7,16 +7,15 @@ import {
   orgEndpoint,
   ownOrg,
   queriesInsideAPlaybook,
-  recipes,
   withConnections,
 } from '../testing/served-instructions.ts';
 import { instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,997 characters on /mcp, 1,680 on the org endpoint and 1,876 on the playbook endpoint', () => {
+  it('take 1,993 characters on /mcp, 1,912 on the org endpoint and 1,618 on the playbook endpoint', () => {
     expect(
-      everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes, recipes).length),
-    ).toEqual([1680, 1876, 1997]);
+      everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
+    ).toEqual([1912, 1618, 1993]);
   });
 });
 
@@ -26,65 +25,63 @@ describe('what the instructions say of calling a tool', () => {
     playbookTools: queriesInsideAPlaybook,
   };
 
-  it('say what execute and dry_run do in the sentence on tools, where they are listed, and keep the closing sentence', () => {
-    const sentence =
-      'may name tools that search finds; execute calls one and shows its answer, and dry_run what it would check.';
-
-    expect(instructionsFor('own org', ownOrg, definitionTypes, recipes)).toContain(
-      `A reasoning function names a model that list_models lists and ${sentence}`,
+  it('end the sentence on tools at what search finds, leaving execute and dry_run to their own descriptions, and keep the closing sentence', () => {
+    expect(instructionsFor('own org', ownOrg, definitionTypes)).toContain(
+      'A reasoning function names a model that list_models lists and may name tools that search finds. A run of a workflow',
     );
-    expect(instructionsFor('playbook', playbookEndpoint, definitionTypes, recipes)).toContain(
-      `A reasoning function names a model this server can call, as the reasoning-function guide says, and ${sentence}`,
+    expect(instructionsFor('playbook', playbookEndpoint, definitionTypes)).toContain(
+      'A reasoning function names a model this server can call, as the reasoning-function guide says, and may name tools that search finds. A run of a workflow',
     );
+    expect(
+      everyEndpoint.filter(([endpoint, served]) =>
+        /\b(?:execute|dry_run)\b/u.test(instructionsFor(endpoint, served, definitionTypes)),
+      ),
+    ).toEqual([]);
     expect(
       everyEndpoint.filter(
         ([endpoint, served]) =>
-          !instructionsFor(endpoint, served, definitionTypes, recipes).endsWith(
+          !instructionsFor(endpoint, served, definitionTypes).endsWith(
             'A tool that cannot do what was asked says why and what to change.',
           ),
       ),
     ).toEqual([]);
   });
 
-  it('name dry_run alone for a key that may only read, whose instructions keep within their bound', () => {
+  it('keep within their bound for a key that may only read', () => {
     const lengths = [
-      instructionsFor('own org', reading, definitionTypes, recipes),
-      instructionsFor(
-        'own org',
-        { ...reading, orgTools: ['list_playbooks', 'search', 'get_guide'] },
-        definitionTypes,
-        recipes,
-      ),
-      instructionsFor('org', { orgTools: reading.orgTools, playbookTools: [] }, definitionTypes, recipes),
-      instructionsFor('playbook', { orgTools: [], playbookTools: queriesInsideAPlaybook }, definitionTypes, recipes),
+      instructionsFor('own org', reading, definitionTypes),
+      instructionsFor('own org', { ...reading, orgTools: ['list_playbooks', 'search', 'get_guide'] }, definitionTypes),
+      instructionsFor('org', { orgTools: reading.orgTools, playbookTools: [] }, definitionTypes),
+      instructionsFor('playbook', { orgTools: [], playbookTools: queriesInsideAPlaybook }, definitionTypes),
     ];
 
-    expect(lengths.filter((instructions) => /\bexecute\b/u.test(instructions))).toEqual([]);
-    expect(lengths[0]).toContain('may name tools that search finds; dry_run shows what a call of one would check.');
-    expect(lengths.map(({ length }) => length)).toEqual([1673, 1710, 1578, 1670]);
+    expect(lengths.map(({ length }) => length)).toEqual([1507, 1544, 1540, 1504]);
   });
 });
 
-describe('what the instructions say of calling a tool, to a key that may only write', () => {
-  it('name execute alone for a key that may change a playbook but not read it', () => {
-    const writing = { orgTools: ['list_models', 'search'], playbookTools: ['execute'] };
+describe('the instructions of an endpoint that lists search and add_connection', () => {
+  const connecting = [
+    "Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links.",
+    'Say a service cannot be connected only when no provider or server matches.',
+  ].join(' ');
 
-    expect(instructionsFor('own org', writing, definitionTypes, [])).toContain(
-      'may name tools that search finds; execute calls one and shows its answer.',
+  it('say after the sentence on tools that a service is connected through search and add_connection, on /mcp and the org endpoint', () => {
+    expect(instructionsFor('own org', withConnections(ownOrg), definitionTypes)).toContain(
+      `may name tools that search finds. ${connecting} A run of a workflow`,
+    );
+    expect(instructionsFor('org', withConnections(orgEndpoint), definitionTypes)).toContain(
+      `may name tools that search finds. ${connecting} Say what was done`,
     );
   });
-});
 
-describe('the instructions of an endpoint that lists add_connection', () => {
-  const connectionSentence = 'add_connection adds a provider, or a server by hand; a person approves.';
+  it('say nothing of connecting a service where search or add_connection is not listed', () => {
+    const notConnecting = [
+      instructionsFor('own org', ownOrg, definitionTypes),
+      instructionsFor('org', orgEndpoint, definitionTypes),
+      instructionsFor('playbook', playbookEndpoint, definitionTypes),
+      instructionsFor('org', { orgTools: ['add_connection', 'list_connections'], playbookTools: [] }, definitionTypes),
+    ];
 
-  it('say what a connection is after the sentence on tools, and an endpoint that does not list it does not', () => {
-    const listing = instructionsFor('own org', withConnections(ownOrg), definitionTypes, recipes);
-
-    expect(listing).toContain(`and dry_run what it would check. ${connectionSentence} A run of a workflow`);
-    expect(instructionsFor('org', withConnections(orgEndpoint), definitionTypes, recipes)).toContain(
-      `may name tools that search finds. ${connectionSentence} Say what was done`,
-    );
-    expect(instructionsFor('own org', ownOrg, definitionTypes, recipes)).not.toContain('add_connection');
+    expect(notConnecting.filter((instructions) => /connected|add_connection/u.test(instructions))).toEqual([]);
   });
 });

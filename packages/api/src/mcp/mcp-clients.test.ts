@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { instructionsFor, type RegisterRoutes } from '../index.ts';
 import { createTestHandler } from '../testing/api-calls.ts';
-import { testDefinitionTypes, testRecipes } from '../testing/guides.ts';
+import { testDefinitionTypes } from '../testing/guides.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import {
   expectedProtocolVersion,
@@ -93,7 +93,7 @@ describe.each(mcpClientKinds)('the %s client connecting to a playbook endpoint',
     expect(connected).toEqual({
       protocolVersion: expectedProtocolVersion[kind],
       serverVersion: { ...testServerInfo, title: 'Auto Runtime' },
-      instructions: instructionsFor('playbook', { orgTools: [], playbookTools }, testDefinitionTypes, testRecipes),
+      instructions: instructionsFor('playbook', { orgTools: [], playbookTools }, testDefinitionTypes),
     });
   });
 

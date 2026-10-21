@@ -23,7 +23,6 @@ interface Serving {
   readonly listed: (name: string) => boolean;
   readonly definitionTypes: readonly DefinitionType[];
   readonly reasoning: DefinitionType | undefined;
-  readonly recipes: readonly RecipeCalls[];
 }
 
 type Sentences = (serving: Serving) => readonly string[];
@@ -32,35 +31,27 @@ const reasoningFunctionType = 'reasoning';
 
 const purposesByType: Readonly<Record<string, readonly string[]>> = {
   reasoning: ['A reasoning function has a prompt and calls a language model.'],
-  interaction: ['An interaction function asks a system and answers at once, or asks a person and answers started.'],
-  computation: ['A computation function runs a program on its input and gives the same output every time.'],
+  interaction: ['An interaction function asks a system and answers at once, or a person and answers started.'],
+  computation: ['A computation function runs a program whose output is the same for the same input.'],
   recall: [
-    'Recall retrieves retained run results, definitions and events, never run inputs or tool calls.',
-    'What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your own notes.',
+    'Recall retrieves run results, definitions and events, never run inputs or tool calls.',
+    'What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes.',
   ],
   prediction: [
-    "A prediction function answers from a model trained on the playbook's history; a build, the input { build: {} }, answers started.",
+    "A prediction function answers from a model trained on the playbook's history; a build, input { build: {} }, answers started.",
   ],
-  workflow: ['A workflow runs functions in steps, waits for input and can start on a schedule or on an event.'],
+  workflow: ['A workflow runs functions in steps, waits for input and can start on a schedule or an event.'],
 };
 
 export const whatAPlaybookIs = [
   'Auto Runtime executes playbooks; Studio manages them; your agent is a separate client.',
-  'A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or through workflows; runs belong to the playbook.',
+  'A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook.',
 ];
 
-const pagedReads = ['list_runs', 'list_playbook_events', 'list_interactions'];
-
-const howToAnswer = [
-  'Say what was done and what the person can do next in the words of playbooks, functions, workflows and runs,',
-  "not the tools' names, fields or rules, and an id or status only when needed to act.",
-].join(' ');
+const howToAnswer =
+  "Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act.";
 
 const whenAToolCannot = 'A tool that cannot do what was asked says why and what to change.';
-
-function inTurn(items: readonly string[]): string {
-  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${String(items.at(-1))}`;
-}
 
 function playbooksClause({ listed }: Serving, shows: string): readonly string[] {
   const shown = listed('list_playbooks') ? [`list_playbooks shows ${shows}`] : [];
@@ -93,32 +84,17 @@ const modelsBeforeWriting: Sentences = ({ reasoning, listed }) =>
     ? ['list_models lists the models this server can call, which a reasoning function names.']
     : [];
 
-const guides: Sentences = ({ listed, recipes }) => {
-  if (!listed('create_definition')) {
-    return ['get_guide holds what these words mean and how each kind of definition is written.'];
-  }
-  const served = recipes.map(({ name }) => name);
-  const reading = 'Before writing a definition, read its format with get_guide';
-  return [served.length === 0 ? `${reading}.` : `${reading}, which also holds the recipes: ${inTurn(served)}.`];
-};
-
-function callingWords(listed: Serving['listed']): string {
-  const executing = listed('execute');
-  const dryRunning = listed('dry_run');
-  if (executing && dryRunning) {
-    return '; execute calls one and shows its answer, and dry_run what it would check';
-  }
-  if (executing) {
-    return '; execute calls one and shows its answer';
-  }
-  return dryRunning ? '; dry_run shows what a call of one would check' : '';
-}
+const guides: Sentences = ({ listed }) => [
+  listed('create_definition')
+    ? 'Before writing a definition, read its format with get_guide.'
+    : 'get_guide holds what these words mean and how each kind of definition is written.',
+];
 
 const modelsAndTools: Sentences = ({ reasoning, listed }) => {
   if (reasoning === undefined || !listed('search')) {
     return [];
   }
-  const tools = `may name tools that search finds${callingWords(listed)}`;
+  const tools = 'may name tools that search finds';
   return [
     listed('list_models')
       ? `A reasoning function names a model that list_models lists and ${tools}.`
@@ -126,8 +102,12 @@ const modelsAndTools: Sentences = ({ reasoning, listed }) => {
   ];
 };
 
-const connections: Sentences = ({ listed }) =>
-  listed('add_connection') ? ['add_connection adds a provider, or a server by hand; a person approves.'] : [];
+const connectingAService = [
+  "Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links.",
+  'Say a service cannot be connected only when no provider or server matches.',
+];
+
+const connections: Sentences = ({ listed }) => (listed('search') && listed('add_connection') ? connectingAService : []);
 
 const typesThatFinishLater: ReadonlySet<string> = new Set(['workflow']);
 
@@ -147,13 +127,6 @@ const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
       ]
     : [];
 
-const paging: Sentences = ({ listed }) => {
-  const paged = listed('list_interactions') ? 'Runs, events and requests' : 'Runs and events';
-  return pagedReads.some((name) => listed(name))
-    ? [`${paged} come in pages; read on only when the person needs more.`]
-    : [];
-};
-
 const closing: Sentences = () => [howToAnswer, whenAToolCannot];
 
 const orientation: readonly Sentences[] = [
@@ -165,7 +138,6 @@ const orientation: readonly Sentences[] = [
   connections,
   runsThatFinishLater,
   answeringWhatRunsWaitOn,
-  paging,
   closing,
 ];
 
@@ -185,7 +157,6 @@ export function instructionsFor(
   endpoint: McpEndpoint,
   tools: ServedTools,
   definitionTypes: readonly DefinitionType[],
-  recipes: readonly RecipeCalls[],
 ): string {
   const names = namesOf(tools);
   const serving: Serving = {
@@ -193,7 +164,6 @@ export function instructionsFor(
     listed: (name) => names.includes(name),
     definitionTypes,
     reasoning: definitionTypes.find(({ type }) => type === reasoningFunctionType),
-    recipes: recipesFollowedWith(tools, recipes),
   };
   return [...whatAPlaybookIs, ...orientation.flatMap((sentences) => sentences(serving))].join(' ');
 }

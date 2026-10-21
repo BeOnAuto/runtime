@@ -4,7 +4,7 @@
   "info": {
     "title": "Auto Runtime",
     "version": "0.15.0",
-    "description": "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or through workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
+    "description": "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
     {
@@ -987,7 +987,7 @@
       "get": {
         "operationId": "search_in_org",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first. Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole. Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves. `providers` lists what a person may connect that no server serves yet.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first. Each server is asked at each call, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole. Without `playbook` it searches every tool server of the org, with the playbooks each serves. With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name.",
         "tags": [
           "tool-servers"
         ],
@@ -1315,7 +1315,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Connects a service the org's functions should reach: a provider search lists, by its name and placeholders, answered pending with a link to Studio's page. A server given by hand takes name, type, entry and credential instead, none holding a secret. The person approves it, and gives its credential, on the page the link opens within ten minutes.",
+        "description": "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page. A server given by hand takes name, type, entry and credential instead, none holding a secret. The person approves it, and gives its credential, on the page the link opens within ten minutes.",
         "tags": [
           "connections"
         ],
@@ -7873,7 +7873,7 @@
       "get": {
         "operationId": "list_runs",
         "summary": "List runs",
-        "description": "Lists the runs of the playbook a page at a time, newest first, each with its definition, its status, who started it and when it ended, without its output. Use it to find a run the person means, such as the runs of a scheduled workflow; get_run reads one run in full. `type` and `name` keep the runs of one definition and `status` those in one status. A filtered page looks at up to 1000 runs, so it may hold fewer runs than `limit`, or none, while has_more is true. `cursor` is the next_cursor of the page before.",
+        "description": "Lists the runs of the playbook a page at a time, newest first, each with its definition, its status, who started it and when it ended, without its output. Use it to find a run the person means, such as the runs of a scheduled workflow; get_run reads one run in full. `type` and `name` keep the runs of one definition and `status` those in one status. A filtered page looks at up to 1000 runs, so it may hold fewer runs than `limit`, or none, while has_more is true. `cursor` is the next_cursor of the page before, to read on only as the person needs.",
         "tags": [
           "runs"
         ],
@@ -8890,7 +8890,7 @@
       "get": {
         "operationId": "list_playbook_events",
         "summary": "List playbook events",
-        "description": "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a recall function or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
+        "description": "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a recall function or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before, to read on only as the person needs. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
         "tags": [
           "events"
         ],
@@ -9709,7 +9709,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first. Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first. Each server is asked at each call, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole.",
         "tags": [
           "tool-servers"
         ],
@@ -10855,7 +10855,7 @@
       "get": {
         "operationId": "list_interactions",
         "summary": "List open requests",
-        "description": "Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool, or in the inbox, until when and how its delivery stands, with the `run_id` that answer_interaction takes. Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when it was asked, which get_definition may no longer show; null for a notification. Use it when the person asks what the playbook is waiting on, or to find the request they answer. `to` keeps the requests to one party, `type` to one type of function and `function` to one name, which with `type` names one function; `cursor` is the next_cursor of the page before. Every reader of the playbook sees each party and message, as a run’s input is seen.",
+        "description": "Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool, or in the inbox, until when and how its delivery stands, with the `run_id` that answer_interaction takes. Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when asked, which get_definition may no longer show; null for a notification. Use it when the person asks what the playbook is waiting on, or to find the request they answer. `to` keeps the requests to one party, `type` to one type of function and `function` to one name, which with `type` names one function; `cursor` is the next_cursor of the page before, to read on only as the person needs. Every reader of the playbook sees each party and message, as a run’s input is seen.",
         "tags": [
           "interactions"
         ],

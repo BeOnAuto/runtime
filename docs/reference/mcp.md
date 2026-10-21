@@ -35,13 +35,15 @@ An agent that connects receives instructions written for the tools its key or to
 - what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and one for workflows;
 - that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
-- that `get_guide` returns the format of each definition and the recipes;
+- that `get_guide` returns the format of each definition;
 - how a reasoning function names its model and its tools;
-- where `add_connection` is listed, that it adds a provider, or a server by hand, and that a person approves;
+- where `search` and `add_connection` are both listed, that a person's accounts at services are connected through Auto Runtime: asked to connect, link, sign in to or use a service, the agent calls `search` with the service's words, which lists the providers that match, then `add_connection` with a provider's name, which the person approves on the page it links. The agent says that a service cannot be connected only when no provider or server matches;
 - that `get_run` shows whether a run that finishes later has ended or is still waiting;
 - that when the person answers what a run waits on, such as an approval, the agent answers the request with `answer_interaction` and starts no new run for it. The tool's description gives the shape of the answer;
-- that runs, events and requests come one page at a time;
-- how to reply to the person: what was done and what they can do next, in the words of playbooks, functions, workflows and runs. An id or a status appears only when the person needs it to act.
+- how to reply to the person: what was done and what they can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules. An id or a status appears only where the person needs it to act;
+- that a tool that cannot do what was asked says why and what to change.
+
+What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs.
 
 The recall sentence says that a recall function reads run results, definitions and events from the playbook's history, never a run's input or its tool calls. The prediction sentence says that a prediction function predicts from a model a trainer built on the playbook's history. It also says that a build (the input `{ build: {} }`) returns `started`.
 
@@ -177,7 +179,7 @@ Four tools work with the tool servers of the playbook, those set up in the confi
 - A call that names a server or a tool the playbook may not use is refused, and the refusal's words say what `search` shows.
 - A connection is listed with `connection`, its id, and named by its name. One that is not ready is refused, and listed unavailable, with `because` `connection_pending` while nobody has approved it, `connection_broken` once its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, `connection_not_allowed` when a rule of the operator no longer takes it, or `connection_unavailable` while its credential cannot be read just now, which a later call may find put right.
 - Each server carries `provider`: the name of the provider a connection was added from or an entry of the configuration names, or `null` for a server given by hand.
-- On `/mcp` and the org endpoint, to a caller who may add a connection, `search` also lists in `providers` the [providers](http.md#providers) a person may connect that no server serves yet, each with its `name`, `title` and `description`, found by `terms` as tools are. A provider none of whose ways is offered, as while a value whoever runs Auto sets for it is not set, is left out. An agent asked for a service no server serves can then offer to connect one with `add_connection`. A key, a caller who may only read and a runtime where nobody may add get no `providers`, and neither does `search` with `server`.
+- On `/mcp` and the org endpoint, to a caller who may add a connection, `search` also lists in `providers` the [providers](http.md#providers) a person may connect that no server serves yet, each with its `name`, `title` and `description`, found by `terms` as tools are. A provider none of whose ways is offered, as while a value whoever runs Auto sets for it is not set, is left out. An agent asked to connect a service, or for one no server serves, finds its provider there by the service's words and connects it with `add_connection`. A key, a caller who may only read and a runtime where nobody may add get no `providers`, and neither does `search` with `server`.
 - When no server serves the playbook, the words of `search` say that whoever runs the server sets one up. Where people may add connections, they also say that a person adds one, or, where `search` lists a provider, that a person connects a provider it lists.
 
 [Tool servers](http.md#tool-servers) gives the fields, limits and refusals of all five.
@@ -214,7 +216,7 @@ A connection is a tool server that a person adds to the org through their agent,
 | `reasoning-function`, `interaction-function`, `prediction-function`, `recall-function`, `computation-function` and `workflow` | The reference page of each format, as the documentation publishes it. `reasoning-function` ends with what this runtime offers |
 | `first-playbook`, `remember`, `give-tools` and `schedule`                                                                     | Recipes for common tasks, listed below                                                                                        |
 
-The recipes are also prompts, which a client that shows MCP prompts offers in its menu. A connection offers a prompt only when it lists every tool the recipe's steps call. So a playbook endpoint offers no `first-playbook`, the org endpoint offers none, and a key that may only read gets none.
+The recipes are also prompts, which a client that shows MCP prompts offers in its menu. A connection offers a prompt only when it lists every tool the recipe's steps call, and the description of `get_guide` names the same recipes. So a playbook endpoint offers no `first-playbook`, the org endpoint offers none, and a key that may only read gets none.
 
 | Prompt           | Title                                | Arguments                            | What the recipe does                                                                   |
 | ---------------- | ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |

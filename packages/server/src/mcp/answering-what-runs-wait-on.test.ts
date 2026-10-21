@@ -194,11 +194,11 @@ describe('the shape of the answer an open request takes, as the agent reads it',
     const description = descriptionIn(meetings.surfaces, 'list_interactions');
 
     expect(sentenceNaming(description, 'answer_schema')).toBe(
-      'Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when it was asked, which get_definition may no longer show; null for a notification.',
+      'Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when asked, which get_definition may no longer show; null for a notification.',
     );
     expect(descriptionIn(meetings.surfaces, 'answer_interaction')).toContain(
       "`answer` takes the shape of the request's answer_schema, which list_interactions shows,",
     );
-    expect([description.length, sentencesOf(description).length]).toEqual([765, 5]);
+    expect([description.length, sentencesOf(description).length]).toEqual([795, 5]);
   });
 });

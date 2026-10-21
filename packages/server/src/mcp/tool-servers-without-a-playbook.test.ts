@@ -58,7 +58,7 @@ describe('episode 9: asked for the tool servers on the connection of the whole o
     expect(required).not.toContain('playbook');
     expect(properties.playbook.description).toContain('without it, every tool server of the org');
     expect(sentenceNaming(descriptionIn(meetings.surfaces, 'search'), 'Without `playbook`')).toBe(
-      'Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves.',
+      'Without `playbook` it searches every tool server of the org, with the playbooks each serves.',
     );
   });
 

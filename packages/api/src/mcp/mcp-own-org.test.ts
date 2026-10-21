@@ -59,8 +59,10 @@ function listingOn(path: string): Promise<readonly ListedTool[]> {
   );
 }
 
+const followingTheNoteRecipe = ' It holds the recipe take-a-note, which the tools listed here can follow.';
+
 describe('the tools of /mcp', () => {
-  it('are the tools of the org endpoint as they are, then those of a playbook endpoint taking a playbook', async () => {
+  it('are the tools of the org endpoint as they are, then those of a playbook endpoint taking a playbook, and get_guide as the playbook endpoint lists it', async () => {
     const [own, org, playbook] = await Promise.all([
       listingOn('/mcp'),
       listingOn('/orgs/acme/mcp'),
@@ -75,7 +77,11 @@ describe('the tools of /mcp', () => {
       ...playbook.filter(({ name }) => name !== guideToolName).map((tool) => takingPlaybook(tool)),
       guide,
     ]);
-    expect([org.at(-1), playbook.at(-1)]).toEqual([guide, guide]);
+    expect(guide?.description).toContain(followingTheNoteRecipe);
+    expect([org.at(-1), playbook.at(-1)]).toEqual([
+      { ...guide, description: guide?.description?.replace(followingTheNoteRecipe, '') },
+      guide,
+    ]);
   });
 
   it('have self-contained input schemas with an object root, and no output schema', async () => {
@@ -91,12 +97,7 @@ describe('the tools of /mcp', () => {
     const instructions = await asKey(acmeAdmin.key, (session) => Promise.resolve(session.instructions));
 
     expect(instructions).toBe(
-      instructionsFor(
-        'own org',
-        { orgTools, playbookTools },
-        [{ type: 'notes', noun: 'note', guide: 'notebook' }],
-        [{ name: 'take-a-note', calls: ['add_note'] }],
-      ),
+      instructionsFor('own org', { orgTools, playbookTools }, [{ type: 'notes', noun: 'note', guide: 'notebook' }]),
     );
     expect(instructions).toContain("This connection acts in the caller's own org.");
   });

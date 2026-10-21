@@ -128,12 +128,39 @@ describe('the descriptions of the tools of /mcp', () => {
 });
 
 describe('the descriptions of the tools that find and connect a provider', () => {
-  it('name providers in search, at 761 of its 800 characters, and say in add_connection that search lists them', () => {
-    const [searching, adding] = [descriptionOf('search'), descriptionOf('add_connection')];
+  it('name in search the providers that match a service and no server serves yet, at 798 of its 800 characters', () => {
+    const searching = descriptionOf('search');
 
-    expect(searching).toContain('`providers` lists what a person may connect that no server serves yet.');
-    expect(adding).toContain('a provider search lists, by its name and placeholders');
-    expect([searching.length, adding.length]).toEqual([761, 345]);
+    expect(searching).toContain(
+      'With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name.',
+    );
+    expect(searching).toHaveLength(798);
+  });
+
+  it("open add_connection with a person's account at a service that search lists, at 357 characters", () => {
+    const adding = descriptionOf('add_connection');
+
+    expect(adding).toMatch(
+      /^Starts connecting a person's account at a service, named by a provider that search lists, /u,
+    );
+    expect(adding).toHaveLength(357);
+  });
+});
+
+describe('the descriptions that say what the instructions leave to them', () => {
+  it('name in get_guide the recipes the tools of /mcp can follow', () => {
+    expect(descriptionOf('get_guide')).toContain(
+      'It holds the recipes first-playbook, remember, give-tools and schedule, which the tools listed here can follow.',
+    );
+  });
+
+  it('say in each paged tool that its pages are read on only as the person needs', () => {
+    expect(
+      ['list_runs', 'list_playbook_events', 'list_interactions'].filter(
+        (name) =>
+          !descriptionOf(name).includes('the next_cursor of the page before, to read on only as the person needs.'),
+      ),
+    ).toEqual([]);
   });
 });
 

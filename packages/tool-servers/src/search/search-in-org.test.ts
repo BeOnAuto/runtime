@@ -100,7 +100,7 @@ describe('search of the org', () => {
       mayChangeOutside: false,
     });
     expect(registration.description).toMatch(
-      /^Searches the tools of the tool servers this playbook's functions may use, .* Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves\. `providers` lists what a person may connect that no server serves yet\.$/u,
+      /^Searches the tools of the tool servers this playbook's functions may use, .* Without `playbook` it searches every tool server of the org, with the playbooks each serves\. With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name\.$/u,
     );
   });
 

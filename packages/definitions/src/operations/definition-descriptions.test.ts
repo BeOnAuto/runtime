@@ -102,6 +102,14 @@ describe('the JSON Schema of the input of the operations', () => {
   });
 });
 
+describe('the description of list_runs', () => {
+  it('says that its pages are read on only as the person needs', () => {
+    expect(described('list_runs')).toContain(
+      '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
+    );
+  });
+});
+
 describe('the JSON Schema of the filters of the runs', () => {
   it('describes the runs a filter keeps', () => {
     const listing = operations.find(({ name }) => name === 'list_runs');

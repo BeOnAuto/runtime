@@ -34,6 +34,12 @@ describe('list_playbook_events', () => {
     );
   });
 
+  it('says that its pages are read on only as the person needs', () => {
+    expect(listPlaybookEvents.registration.description).toContain(
+      'and `cursor` is the next_cursor of the page before, to read on only as the person needs.',
+    );
+  });
+
   it('needs a presenter that shows at least one type of event', () => {
     expect(() => defineListPlaybookEvents([presenterOf('notes', { added: null })])).toThrow(
       'The events of a playbook need a presenter that shows at least one type of event',

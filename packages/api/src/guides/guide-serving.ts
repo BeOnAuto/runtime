@@ -8,7 +8,7 @@ import { serveRecipePrompts } from './recipe-prompts.ts';
 export type GuideRegistry = Readonly<Pick<McpServer, 'registerTool' | 'registerResource' | 'registerPrompt'>>;
 
 export function serveGuides(server: GuideRegistry, shelf: GuideShelf, prompts: readonly ShelvedRecipe[]): void {
-  serveGuideTool(server, shelf);
+  serveGuideTool(server, shelf, prompts);
   serveGuideResources(server, shelf);
   serveRecipePrompts(server, prompts);
 }

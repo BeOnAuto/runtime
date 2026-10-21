@@ -178,6 +178,18 @@ describe('the name of a connection', () => {
   });
 });
 
+describe('the description of adding a connection', () => {
+  it("opens with a person's account at a service, named by a provider search lists, and keeps a server given by hand and the page the person finishes on", () => {
+    expect(operationNamed(harness().operations, 'add_connection').registration.description).toBe(
+      [
+        "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page.",
+        'A server given by hand takes name, type, entry and credential instead, none holding a secret.',
+        'The person approves it, and gives its credential, on the page the link opens within ten minutes.',
+      ].join(' '),
+    );
+  });
+});
+
 describe('the permission to add a connection', () => {
   it('is org:write', async () => {
     expect(await adding(harness(), crm, acmeReader)).toMatchObject({ status: 'rejected', reason: 'forbidden' });
