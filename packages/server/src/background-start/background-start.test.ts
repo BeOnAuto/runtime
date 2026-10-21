@@ -122,12 +122,12 @@ describe('a runtime an agent finds restarting', () => {
       }),
     ));
 
-  it('waits through a restart a runtime marked, as long as a restart can take, before it takes the lock', () =>
+  it('waits through a restart a runtime marked on its port, as long as a restart can take, before it takes the lock', () =>
     ranOnATestClock(
       Effect.gen(function* () {
         const computer = computerWith();
         const starting = yield* Effect.forkChild(
-          runningRuntime(5555, startingOn(computer, { restarting: true }), impatient),
+          runningRuntime(5555, startingOn(computer, { restartingOn: 5555 }), impatient),
         );
         yield* settled;
         yield* after(restartWaitMs - 1);
@@ -136,6 +136,16 @@ describe('a runtime an agent finds restarting', () => {
 
         expect(yield* Fiber.join(starting)).toBeUndefined();
         expect([throughTheRestart, computer.events()]).toEqual([[], ['locked', 'started', 'unlocked']]);
+      }),
+    ));
+
+  it('starts one at once past a restart marked on another port, which is not its runtime restarting', () =>
+    ranOnATestClock(
+      Effect.gen(function* () {
+        const computer = computerWith();
+
+        expect(yield* runningRuntime(5555, startingOn(computer, { restartingOn: 19_700 }), impatient)).toBeUndefined();
+        expect(computer.events()).toEqual(['locked', 'started', 'unlocked']);
       }),
     ));
 });

@@ -28,7 +28,7 @@ const noMark = { leave: () => true };
 
 function controlOf(
   run: LocalRun = inATerminal,
-  restartMark: { readonly leave: (pid: number) => boolean } = noMark,
+  restartMark: { readonly leave: (pid: number, port: number) => boolean } = noMark,
 ): { readonly control: RuntimeControl; readonly asked: Promise<unknown> } {
   const local = localControlOf(run, runsInFlight(), restartMark);
   const { runtimeControl } = local.servingIn('local');
@@ -70,22 +70,31 @@ describe('asking a runtime to stop or restart', () => {
     await expect(asked).resolves.toBe('restart');
   });
 
-  it('leaves the mark of its process before it restarts, and none when it stops', async () => {
-    const left: number[] = [];
+  it('leaves the mark of its process and of the port it serves before it restarts, and none when it stops', async () => {
+    const left: { readonly pid: number; readonly port: number }[] = [];
     const recording = {
-      leave: (pid: number) => {
-        left.push(pid);
+      leave: (pid: number, port: number) => {
+        left.push({ pid, port });
         return true;
       },
     };
-    const toRestart = controlOf(inATerminal, recording);
+    const onTheDefaultPort = controlOf(inATerminal, recording);
+    const onAnotherPort = controlOf({ ...inATerminal, port: '6060' }, recording);
     const toStop = controlOf(inATerminal, { leave: () => false });
 
-    toRestart.control.restart();
+    onTheDefaultPort.control.restart();
+    onAnotherPort.control.restart();
     toStop.control.stop();
 
-    await expect(Promise.all([toRestart.asked, toStop.asked])).resolves.toEqual(['restart', 'stop']);
-    expect(left).toEqual([4242]);
+    await expect(Promise.all([onTheDefaultPort.asked, onAnotherPort.asked, toStop.asked])).resolves.toEqual([
+      'restart',
+      'restart',
+      'stop',
+    ]);
+    expect(left).toEqual([
+      { pid: 4242, port: 5555 },
+      { pid: 4242, port: 6060 },
+    ]);
   });
 
   it('says it was asked to stop', async () => {

@@ -14,6 +14,7 @@ export interface DevelopmentSetup {
 }
 
 export interface Restarting {
+  readonly servedOn: (port: number) => void;
   readonly leave: () => void;
   readonly clear: () => void;
 }

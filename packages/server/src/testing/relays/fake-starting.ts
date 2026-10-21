@@ -114,7 +114,7 @@ export interface Options {
   readonly startsFrozen?: boolean;
   readonly comesBackAfter?: number;
   readonly lockTaken?: boolean;
-  readonly restarting?: boolean;
+  readonly restartingOn?: number;
   readonly endsAtItsStart?: boolean;
   readonly pausing?: boolean;
 }
@@ -155,7 +155,7 @@ export function startingOn(computer: Computer, options: Options = {}): Backgroun
     notice: (line) => {
       computer.record(`noticed ${line}`);
     },
-    restartUnderWay: () => options.restarting === true,
+    restartUnderWay: (port) => port === options.restartingOn,
     saw: (probe) => {
       computer.sight(probe.state);
     },

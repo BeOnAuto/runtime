@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { restartMarkIn } from '../local-runtime/runtime-restarts.ts';
 import {
   runtimesStartedInTheBackgroundEndedWithTheTest,
   startedInTheBackgroundIn,
@@ -61,9 +62,8 @@ function readiesIn(text: string): number {
   return text.split('Press Ctrl+C to stop.').length - 1;
 }
 
-function markedAsRestartingBy(home: string, pid: number): void {
-  mkdirSync(join(home, '.auto-runtime'), { recursive: true });
-  writeFileSync(join(home, '.auto-runtime', 'restart-mark.json'), JSON.stringify({ pid, at: Date.now() }));
+function markedAsRestartingBy(home: string, pid: number, port: number): void {
+  restartMarkIn(home).leave(pid, port);
 }
 
 async function leftAfterItsAgentLeft(relay: Readonly<RuntimeCommandRun>): Promise<unknown> {
@@ -78,7 +78,7 @@ describe('an agent that starts auto-runtime mcp', () => {
     const home = homeOfTheTest(homePrefix);
     const port = await aPortNothingListensOn();
     const runtimes = runtimesStartedInTheBackgroundEndedWithTheTest(home);
-    markedAsRestartingBy(home, spawnSync(process.execPath, ['-e', '']).pid);
+    markedAsRestartingBy(home, spawnSync(process.execPath, ['-e', '']).pid, port);
     const starting = spawnRuntimeCommand(['mcp'], { home, port, inAGroupOfItsOwn: true });
     const pid = await runtimes.pid();
 
@@ -172,7 +172,7 @@ describe('an agent whose runtime was stopped', () => {
 describe('an agent that starts while a runtime restarts', () => {
   it('waits for that runtime to come back instead of starting a second one', async () => {
     const { home, port } = await placeOfTheTest();
-    markedAsRestartingBy(home, process.pid);
+    markedAsRestartingBy(home, process.pid, port);
     const relay = spawnRuntimeCommand(['mcp'], { home, port });
     relay.write(lineOf(initialize));
 

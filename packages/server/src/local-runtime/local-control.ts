@@ -39,9 +39,13 @@ export function logFileIn(home: string): string {
   return join(runtimeHomeIn(home), 'runtime.log');
 }
 
-export function restartWordsFor({ port, version }: Pick<LocalRun, 'port' | 'version'>): string {
-  const command = `${port === undefined ? '' : `PORT=${port} `}npx -y @on.auto/runtime@${version} restart`;
-  return `restart Auto Runtime with ${command} or at http://localhost:${port ?? defaultRuntimePort}`;
+function portServedBy({ port }: Pick<LocalRun, 'port'>): number {
+  return port === undefined ? defaultRuntimePort : Number(port);
+}
+
+export function restartWordsFor(run: Pick<LocalRun, 'port' | 'version'>): string {
+  const command = `${run.port === undefined ? '' : `PORT=${run.port} `}npx -y @on.auto/runtime@${run.version} restart`;
+  return `restart Auto Runtime with ${command} or at http://localhost:${portServedBy(run)}`;
 }
 
 export function providerSetupFor(directory: string, restart = 'restart Auto Runtime'): string {
@@ -77,7 +81,7 @@ export function localControlOf(
       resolve('stop');
     },
     restart: () => {
-      restartMark.leave(run.pid);
+      restartMark.leave(run.pid, portServedBy(run));
       resolve('restart');
     },
   };

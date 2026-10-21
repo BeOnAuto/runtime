@@ -17,13 +17,13 @@ export const restartWaitMs = longestStopMs + startWaitMs;
 export const throughARestart: Patience = { waitMs: restartWaitMs };
 
 export interface RestartMark {
-  readonly leave: (pid: number) => boolean;
+  readonly leave: (pid: number, port: number) => boolean;
   readonly clear: (pid: number) => void;
-  readonly isUnderWay: () => boolean;
+  readonly isUnderWay: (port: number) => boolean;
 }
 
 const restartMarkOf = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ pid: Schema.Number, at: Schema.Number })),
+  Schema.fromJsonString(Schema.Struct({ pid: Schema.Number, at: Schema.Number, port: Schema.Number })),
 );
 
 function textIn(file: string): string | undefined {
@@ -56,18 +56,18 @@ export function restartMarkIn(home: string, now: () => number = Date.now): Resta
   const file = join(runtimeHomeIn(home), 'restart-mark.json');
   const markLeft = () => Option.getOrUndefined(restartMarkOf(textIn(file)));
   return {
-    leave: (pid) => {
+    leave: (pid, port) => {
       mkdirSync(runtimeHomeIn(home), { recursive: true });
-      return leftIn(file, JSON.stringify({ pid, at: now() }));
+      return leftIn(file, JSON.stringify({ pid, at: now(), port }));
     },
     clear: (pid) => {
       if (markLeft()?.pid === pid) {
         rmSync(file, { force: true });
       }
     },
-    isUnderWay: () => {
+    isUnderWay: (port) => {
       const mark = markLeft();
-      return mark !== undefined && isRunning(mark.pid) && now() - mark.at <= restartWaitMs;
+      return mark?.port === port && isRunning(mark.pid) && now() - mark.at <= restartWaitMs;
     },
   };
 }

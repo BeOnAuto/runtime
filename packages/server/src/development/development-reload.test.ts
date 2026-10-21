@@ -1,4 +1,4 @@
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -19,6 +19,14 @@ import { until } from '../testing/waiting/until.ts';
 
 const runnerSays = /changed, so the server restarts$|^The server stopped/u;
 
+function serverThatNeverSaysItsPort(startedFile: string): string {
+  return [
+    "import { writeFileSync } from 'node:fs';",
+    `writeFileSync(${JSON.stringify(startedFile)}, '');`,
+    'setInterval(() => {}, 60_000);',
+  ].join('\n');
+}
+
 describe('saving a file under pnpm dev', () => {
   it('restarts the server once through its clean shutdown, and leaves nothing running when stopped', async () => {
     const development = await runningDevelopment();
@@ -36,8 +44,9 @@ describe('saving a file under pnpm dev', () => {
 });
 
 describe('the restart mark under pnpm dev', () => {
-  it('is left with the pid of the runner while the server restarts, so an agent waits for it, and cleared once the server serves again', async () => {
+  it('is left with the pid of the runner and the port its server served while the server restarts, so an agent on that port waits for it, and cleared once the server serves again', async () => {
     const development = await runningDevelopment();
+    const served = await untilListening(development);
     const leftBefore = restartMarkLeftBy(development);
 
     writeServerEntryStartingAfter(development.files, 1000);
@@ -52,7 +61,7 @@ describe('the restart mark under pnpm dev', () => {
 
     expect({ leftBefore, left, leftAfter }).toMatchObject({
       leftBefore: undefined,
-      left: { pid: development.pid },
+      left: { pid: development.pid, port: served },
       leftAfter: undefined,
     });
   });
@@ -62,6 +71,27 @@ describe('the restart mark under pnpm dev', () => {
 
     writeServerEntry(development.files, 'this is not TypeScript (\n');
     await untilWritten(development.stderr, /The server stopped \(exit code 1\)/u);
+    const left = restartMarkLeftBy(development);
+    development.signal('SIGTERM');
+    await endingOf(development);
+
+    expect(left).toBeUndefined();
+  });
+});
+
+describe('the restart mark under pnpm dev, before its server ever said which port it serves', () => {
+  it('is not left, since no agent could have reached the server on any port', async () => {
+    const files = developmentFiles();
+    const startedFile = join(files.directory, 'started');
+    writeServerEntry(files, serverThatNeverSaysItsPort(startedFile));
+    const development = startDevelopment(files);
+    await until(
+      () => existsSync(startedFile),
+      (started) => started,
+    );
+
+    appendFileSync(files.envFile, '# saved\n');
+    await untilWritten(development.stderr, /changed, so the server restarts/u);
     const left = restartMarkLeftBy(development);
     development.signal('SIGTERM');
     await endingOf(development);

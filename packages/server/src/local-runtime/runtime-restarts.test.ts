@@ -33,37 +33,55 @@ const markFile = (): string => join(home, '.auto-runtime', 'restart-mark.json');
 
 const goneProcess = (): number => spawnSync(process.execPath, ['-e', '']).pid;
 
+const port = 5555;
+
+const anotherPort = 19_700;
+
 describe('the mark a runtime leaves while it restarts', () => {
-  it('says a restart is under way while the process that left it runs, within the restart wait', () => {
+  it('says a restart is under way on its port while the process that left it runs, within the restart wait', () => {
     const at = Date.now();
     const mark = restartMarkIn(home, () => at);
 
-    expect(mark.leave(process.pid)).toBe(true);
+    expect(mark.leave(process.pid, port)).toBe(true);
     const left: unknown = JSON.parse(readFileSync(markFile(), 'utf8'));
-    expect(left).toEqual({ pid: process.pid, at });
-    expect(mark.isUnderWay()).toBe(true);
+    expect(left).toEqual({ pid: process.pid, at, port });
+    expect(mark.isUnderWay(port)).toBe(true);
+  });
+
+  it('says no restart is under way on another port, whose relay has no restart to wait through', () => {
+    const mark = restartMarkIn(home);
+
+    mark.leave(process.pid, anotherPort);
+
+    expect([mark.isUnderWay(port), mark.isUnderWay(anotherPort)]).toEqual([false, true]);
   });
 
   it('is stale once its process is gone, or once it is older than the restart wait', () => {
-    restartMarkIn(home).leave(goneProcess());
-    const gone = restartMarkIn(home).isUnderWay();
-    restartMarkIn(home, () => Date.now() - restartWaitMs - 1).leave(process.pid);
+    restartMarkIn(home).leave(goneProcess(), port);
+    const gone = restartMarkIn(home).isUnderWay(port);
+    restartMarkIn(home, () => Date.now() - restartWaitMs - 1).leave(process.pid, port);
 
-    expect([gone, restartMarkIn(home).isUnderWay()]).toEqual([false, false]);
+    expect([gone, restartMarkIn(home).isUnderWay(port)]).toEqual([false, false]);
   });
+});
 
-  it('says no restart is under way where there is no mark, or one that is not a mark', () => {
+describe('what is no mark of a restart', () => {
+  it('is no file, a file that is not a mark, or a mark that names no port', () => {
     const mark = restartMarkIn(home);
-    const without = mark.isUnderWay();
+    const without = mark.isUnderWay(port);
     mkdirSync(join(home, '.auto-runtime'));
     writeFileSync(markFile(), 'restarting');
+    const notAMark = mark.isUnderWay(port);
+    writeFileSync(markFile(), JSON.stringify({ pid: process.pid, at: Date.now() }));
 
-    expect([without, mark.isUnderWay()]).toEqual([false, false]);
+    expect([without, notAMark, mark.isUnderWay(port)]).toEqual([false, false, false]);
   });
+});
 
+describe('the end of the mark a runtime leaves while it restarts', () => {
   it('is cleared by the process that left it, once it answers again, and by no other', () => {
     const mark = restartMarkIn(home);
-    mark.leave(process.pid);
+    mark.leave(process.pid, port);
 
     mark.clear(process.pid + 1);
     const keptForAnother = existsSync(markFile());
@@ -76,7 +94,7 @@ describe('the mark a runtime leaves while it restarts', () => {
     mkdirSync(join(home, '.auto-runtime'));
     chmodSync(join(home, '.auto-runtime'), 0o500);
 
-    expect(restartMarkIn(home).leave(process.pid)).toBe(false);
+    expect(restartMarkIn(home).leave(process.pid, port)).toBe(false);
   });
 });
 

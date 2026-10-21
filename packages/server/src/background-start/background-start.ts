@@ -28,7 +28,7 @@ export interface BackgroundStarting {
   readonly startingLock: StartingLock;
   readonly logFile: string;
   readonly notice: (line: string) => void;
-  readonly restartUnderWay: () => boolean;
+  readonly restartUnderWay: (port: number) => boolean;
   readonly saw: (probe: Probe) => void;
   readonly remember: (runtime: StartedRuntime) => void;
   readonly pausing: () => boolean;
@@ -46,8 +46,8 @@ function outdatedOf(probe: Probe, version: string): RunningStatus | undefined {
   return outdated ? probe.status : undefined;
 }
 
-function patienceFor(patience: Patience, starting: BackgroundStarting): Patience {
-  return starting.restartUnderWay() ? throughARestart : patience;
+function patienceFor(patience: Patience, port: number, starting: BackgroundStarting): Patience {
+  return starting.restartUnderWay(port) ? throughARestart : patience;
 }
 
 function isAnswering(probe: Probe): boolean {
@@ -151,7 +151,7 @@ function replaced(
 }
 
 function answeredWithin(patience: Patience, port: number, starting: BackgroundStarting): Effect.Effect<boolean> {
-  return waitedFor(port, starting.fetch, patienceFor(patience, starting).waitMs, seenAnswering(starting));
+  return waitedFor(port, starting.fetch, patienceFor(patience, port, starting).waitMs, seenAnswering(starting));
 }
 
 export function runningRuntime(

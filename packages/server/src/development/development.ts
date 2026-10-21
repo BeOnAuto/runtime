@@ -85,23 +85,38 @@ async function served(run: DevelopmentRun, serving: Serving): Promise<number> {
   return served(run, { ...serving, server: undefined });
 }
 
+const listeningLine = /listening on port (\d+)/gu;
+
+function portsListenedOnIn(text: string): readonly number[] {
+  return [...text.matchAll(listeningLine)].map(([, port]: readonly string[]) => Number(port));
+}
+
 function announcingReadiness(host: DevelopmentProcess, run: DevelopmentRun): Written {
-  const { promise: listening, resolve: heard } = Promise.withResolvers<string>();
+  const { promise: listening, resolve: heard } = Promise.withResolvers<number>();
   void (async () => {
-    const line = await listening;
-    run.log.info(readyNotice(Number(/port (\d+)/u.exec(line)?.[1]), { ...run.settings, ...rootConfigFile(run) }));
+    const port = await listening;
+    run.log.info(readyNotice(port, { ...run.settings, ...rootConfigFile(run) }));
   })();
   return (text) => {
     run.restarting.clear();
     host.stdout.write(text);
-    heard(text);
+    for (const port of portsListenedOnIn(text)) {
+      run.restarting.servedOn(port);
+      heard(port);
+    }
   };
 }
 
 function restartingAs(host: DevelopmentProcess, setup: DevelopmentSetup): Restarting {
+  let servedPort: number | undefined;
   return {
+    servedOn: (port) => {
+      servedPort = port;
+    },
     leave: () => {
-      setup.restartMark.leave(host.pid);
+      if (servedPort !== undefined) {
+        setup.restartMark.leave(host.pid, servedPort);
+      }
     },
     clear: () => {
       setup.restartMark.clear(host.pid);
