@@ -1,9 +1,7 @@
-import { once } from 'node:events';
-import { createServer } from 'node:http';
-
-import { Effect, Redacted, Schema } from 'effect';
+import { Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { aClosedPort } from '../fakes/closed-port.ts';
 import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
 import type { Keeper } from '../keepers/keeper.ts';
 import type { Holding } from '../rows/secret-rows.ts';
@@ -41,17 +39,6 @@ async function revealed(keeper: Keeper, holding: Holding): Promise<string | unde
 
 function failureOf<A, E>(effect: Effect.Effect<A, E>): Promise<E> {
   return Effect.runPromise(Effect.flip(effect));
-}
-
-const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
-
-async function aClosedPort(): Promise<string> {
-  const server = createServer().listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  const { port } = decodeAddress(server.address());
-  server.close();
-  await once(server, 'close');
-  return `http://127.0.0.1:${String(port)}`;
 }
 
 function callsSince(before: number) {
@@ -218,32 +205,43 @@ describe('the keeper of values in a Parameter Store that throttles it', { timeou
 });
 
 describe('the keeper of values in a Parameter Store that does not answer', () => {
-  it('gives up within the waits of its client where the service stalls, faults or cannot be reached, as a keeper that does not answer', async () => {
+  it('gives up within the waits of 100 ms its client is given, the bound this test is about, where the service stalls, as a keeper that does not answer', async () => {
     const prefix = aPrefix();
+    const holding = await held(keeperOn(prefix), 'secret-1', 'pasted-key');
     const stalling = keeperOn(prefix, fake.url, waitsOf100Ms);
-    const unreachable = keeperOn(prefix, await aClosedPort(), waitsOf100Ms);
-    const holding = await held(stalling, 'secret-1', 'pasted-key');
+    fake.tell('stalling', ['GetParameter']);
+    onTestFinished(() => {
+      fake.tell('answering');
+    });
     const started = performance.now();
 
-    fake.tell('stalling', ['GetParameter']);
     const stalled = await failureOf(stalling.reveal(holding));
-    fake.tell('faulting', ['GetParameter']);
-    const faulted = await failureOf(stalling.reveal(holding));
-    fake.tell('answering');
-    const unreached = await failureOf(unreachable.hold('secret-2', Redacted.make('pasted-key')));
 
-    expect([stalled, faulted, unreached]).toMatchObject([
-      { _tag: 'keeper_unavailable' },
-      { _tag: 'keeper_unavailable' },
-      { _tag: 'keeper_unavailable' },
-    ]);
+    expect(stalled).toMatchObject({ _tag: 'keeper_unavailable' });
     expect(stalled.detail).toMatch(
       new RegExp(`^AWS Parameter Store could not read the parameter ${holding.held}: TimeoutError`, 'u'),
     );
+    expect(performance.now() - started).toBeLessThan(20_000);
+  });
+
+  it('does not answer where the service faults or cannot be reached, as a keeper that does not answer, in the words of each', async () => {
+    const prefix = aPrefix();
+    const keeper = keeperOn(prefix);
+    const holding = await held(keeper, 'secret-1', 'pasted-key');
+    fake.tell('faulting', ['GetParameter']);
+    onTestFinished(() => {
+      fake.tell('answering');
+    });
+
+    const faulted = await failureOf(keeper.reveal(holding));
+    const unreached = await failureOf(
+      keeperOn(prefix, await aClosedPort()).hold('secret-2', Redacted.make('pasted-key')),
+    );
+
+    expect([faulted, unreached]).toMatchObject([{ _tag: 'keeper_unavailable' }, { _tag: 'keeper_unavailable' }]);
     expect(faulted.detail).toBe(
       `AWS Parameter Store could not read the parameter ${holding.held}: InternalServerError: An error occurred on the server side`,
     );
     expect(unreached.detail).toMatch(/could not write the parameter .*: .*ECONNREFUSED/u);
-    expect(performance.now() - started).toBeLessThan(20_000);
   });
 });

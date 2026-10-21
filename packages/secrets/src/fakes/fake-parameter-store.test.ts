@@ -7,11 +7,17 @@ const fake = await serveFakeParameterStore({ region: 'eu-central-1', account: '4
 
 afterAll(fake.close);
 
-const client = new SSMClient({
+const clientSettings = {
   endpoint: fake.url,
   region: 'eu-central-1',
   credentials: { accessKeyId: 'an-access-key', secretAccessKey: 'a-secret-access-key' },
   maxAttempts: 1,
+};
+
+const client = new SSMClient(clientSettings);
+
+const clientGivingUpAt200Ms = new SSMClient({
+  ...clientSettings,
   requestHandler: { requestTimeout: 200, throwOnRequestTimeout: true },
 });
 
@@ -130,14 +136,12 @@ describe('the tiers of the fake Parameter Store', () => {
 });
 
 describe('the fake Parameter Store told how to answer', () => {
-  it('denies, stalls or faults on the operations it is told, throttles the next writes, and forgets a parameter it is told is gone', async () => {
+  it('denies or faults on the operations it is told, throttles the next writes, and forgets a parameter it is told is gone', async () => {
     await written({ Name: '/fake/three', Value: 'first' });
     fake.tell('denied', ['GetParameter']);
     const denied = await refusalOf(() => read('/fake/three'));
     fake.tell('faulting');
     const faulted = await refusalOf(() => deleted('/fake/three'));
-    fake.tell('stalling', ['PutParameter']);
-    const stalled = await refusalOf(() => written({ Name: '/fake/three', Value: 'second', Overwrite: true }));
     fake.tell('answering');
     fake.throttle(2);
     const throttled = [
@@ -151,9 +155,27 @@ describe('the fake Parameter Store told how to answer', () => {
       'AccessDeniedException: User: arn:aws:iam::444455556666:user/runtime is not authorized to perform: ssm:GetParameter on resource: arn:aws:ssm:eu-central-1:444455556666:parameter/fake/three because no identity-based policy allows the ssm:GetParameter action',
     );
     expect(faulted).toBe('InternalServerError: An error occurred on the server side');
-    expect(stalled).toMatch(/^TimeoutError/u);
     expect(throttled).toEqual(['ThrottlingException: Rate exceeded', 'ThrottlingException: Rate exceeded', 'answered']);
     expect(fake.parameter('/fake/three')).toBeUndefined();
+  });
+});
+
+describe('the fake Parameter Store told to stall', () => {
+  it('leaves the operations it is told unanswered, so a client with a request timeout of 200 ms, the bound this test is about, gives up on them', async () => {
+    await written({ Name: '/fake/stalled', Value: 'first' });
+    fake.tell('stalling', ['PutParameter']);
+    onTestFinished(() => {
+      fake.tell('answering');
+    });
+
+    const stalled = await refusalOf(() =>
+      clientGivingUpAt200Ms.send(
+        new PutParameterCommand({ Type: 'SecureString', Name: '/fake/stalled', Value: 'second', Overwrite: true }),
+      ),
+    );
+
+    expect(stalled).toMatch(/^TimeoutError/u);
+    expect(fake.parameter('/fake/stalled')?.versions).toEqual(['first']);
   });
 });
 
