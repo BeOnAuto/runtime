@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 import type { Environment } from '@on.auto/config';
 import { Config, ConfigProvider, Effect, Option, Redacted } from 'effect';
@@ -23,10 +23,20 @@ export type LedgerSettings = { readonly store: 'sqlite'; readonly file: string }
 
 const defaultFile = 'data/ledger.db';
 
-export const privateMemory = ':memory:';
+const privateMemory = ':memory:';
 
 export function besideTheLedgerFile(ledger: LedgerSettings, name: string): string | undefined {
   return ledger.store === 'sqlite' && ledger.file !== privateMemory ? join(dirname(ledger.file), name) : undefined;
+}
+
+export function resolvedLedgerFile(file: string): string {
+  return file === privateMemory ? file : resolve(file);
+}
+
+export function whereTheLedgerIsKept(ledger: LedgerSettings): string {
+  return ledger.store === 'postgresql'
+    ? `The ledger is kept in PostgreSQL, in the database ${ledger.database} on ${ledger.host}`
+    : `The ledger is kept in the file ${resolvedLedgerFile(ledger.file)}`;
 }
 
 const postgresqlSchemes: ReadonlySet<string> = new Set(['postgres:', 'postgresql:']);

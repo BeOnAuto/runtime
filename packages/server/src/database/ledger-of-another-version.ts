@@ -1,24 +1,20 @@
-import { resolve } from 'node:path';
+import { basename, dirname } from 'node:path';
 
 import type { RefusedShape } from '@on.auto/ledger';
 import { Data } from 'effect';
 
-import type { LedgerSettings } from '../settings/ledger-settings.ts';
+import { discordInvite } from '../command-line/local-banner.ts';
+import { resolvedLedgerFile, whereTheLedgerIsKept, type LedgerSettings } from '../settings/ledger-settings.ts';
+import type { Settings } from '../settings/settings.ts';
 
-export type LedgerPlace =
-  | { readonly store: 'sqlite'; readonly file: string }
-  | { readonly store: 'postgresql'; readonly database: string; readonly host: string };
-
-export class LedgerOfAnotherVersion extends Data.TaggedError('LedgerOfAnotherVersion')<
-  RefusedShape & { readonly place: LedgerPlace; readonly message: string }
-> {}
-
-export interface LedgerRemedy {
+interface LedgerRemedy {
   readonly says: string;
   readonly command: string | undefined;
 }
 
-export const discordInvite = 'https://discord.gg/B8BKcKMRm8';
+export class LedgerOfAnotherVersion extends Data.TaggedError('LedgerOfAnotherVersion')<
+  RefusedShape & { readonly happened: string; readonly remedy: LedgerRemedy; readonly message: string }
+> {}
 
 export function helpOfferedAt(invite: string): string {
   return `Need a hand? Ask us on Discord: ${invite}`;
@@ -30,51 +26,71 @@ function shellWord(text: string): string {
   return unquotedInAShell.test(text) ? text : `'${text.replaceAll("'", String.raw`'\''`)}'`;
 }
 
-function placeOf(ledger: LedgerSettings): LedgerPlace {
-  return ledger.store === 'sqlite'
-    ? { store: 'sqlite', file: resolve(ledger.file) }
-    : { store: 'postgresql', database: ledger.database, host: ledger.host };
-}
-
-function whereKept(place: LedgerPlace): string {
-  return place.store === 'sqlite'
-    ? `at ${place.file}`
-    : `in the PostgreSQL database ${place.database} on ${place.host}`;
-}
-
-export function whatHappened({ place, holds }: Pick<LedgerOfAnotherVersion, 'place' | 'holds'>): string {
-  return `The ledger ${whereKept(place)} was made by another version of Auto Runtime. This version keeps ${holds} in a different shape, and it does not yet carry a ledger over from one version to the next.`;
+function whatHappened(ledger: LedgerSettings, holds: string): string {
+  return `${whereTheLedgerIsKept(ledger)}, and was made by another version of Auto Runtime. This version keeps ${holds} in a different shape and cannot read the ${holds} this ledger holds.`;
 }
 
 export function columnsCompared({ table, found, kept }: RefusedShape): string {
   return `${table} has the columns ${found.join(', ')}, where this version keeps ${kept.join(', ')}.`;
 }
 
-export function remedyFor(place: LedgerPlace): LedgerRemedy {
-  return place.store === 'sqlite'
-    ? {
-        says: 'Delete the ledger and start Auto Runtime again. Every playbook, definition and run it holds goes with it, so if it holds work you want to keep, ask us before you delete it.',
-        command: `rm -f ${shellWord(place.file)}{,-wal,-shm}`,
-      }
-    : {
-        says: 'Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs, so if this one holds work you want to keep, ask us before you do.',
-        command: undefined,
-      };
+const everythingInItGoes =
+  'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
+
+function deletingTheFiles(file: string): LedgerRemedy {
+  return {
+    says: `Delete the ledger and start Auto Runtime again. ${everythingInItGoes}`,
+    command: `rm -f ${[file, `${file}-wal`, `${file}-shm`].map((word) => shellWord(word)).join(' ')}`,
+  };
 }
 
-export function ledgerOfAnotherVersion(shape: RefusedShape, ledger: LedgerSettings): LedgerOfAnotherVersion {
-  const place = placeOf(ledger);
-  const { says, command } = remedyFor(place);
-  const deleting = command === undefined ? [] : [`To delete the ledger, run: ${command}`];
+const ledgerFolderOfTheImage = '/app/data';
+
+function volumeHolding(folder: string): string {
+  return folder === ledgerFolderOfTheImage
+    ? `the volume mounted at /data, the ledger's folder ${folder} in the image`
+    : `the volume that holds ${folder}`;
+}
+
+function deletingTheFilesOnTheVolume(file: string): LedgerRemedy {
+  const name = basename(file);
+  return {
+    says: `Delete ${name}, ${name}-wal and ${name}-shm from ${volumeHolding(dirname(file))}, or remove the volume, and start Auto Runtime again. ${everythingInItGoes}`,
+    command: undefined,
+  };
+}
+
+const emptyingTheDatabase: LedgerRemedy = {
+  says: 'Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs.',
+  command: undefined,
+};
+
+function remedyFor({ ledger, distribution }: Pick<Settings, 'ledger' | 'distribution'>): LedgerRemedy {
+  if (ledger.store === 'postgresql') {
+    return emptyingTheDatabase;
+  }
+  const file = resolvedLedgerFile(ledger.file);
+  return distribution === 'docker' ? deletingTheFilesOnTheVolume(file) : deletingTheFiles(file);
+}
+
+export function ledgerOfAnotherVersion(
+  shape: RefusedShape,
+  settings: Pick<Settings, 'ledger' | 'distribution'>,
+): LedgerOfAnotherVersion {
+  const happened = whatHappened(settings.ledger, shape.holds);
+  const remedy = remedyFor(settings);
+  const deleting = remedy.command === undefined ? [] : [`To delete the ledger, run: ${remedy.command}`];
   return new LedgerOfAnotherVersion({
     ...shape,
-    place,
-    message: [
-      whatHappened({ place, holds: shape.holds }),
-      columnsCompared(shape),
-      says,
-      helpOfferedAt(discordInvite),
-      ...deleting,
-    ].join(' '),
+    happened,
+    remedy,
+    message: [happened, columnsCompared(shape), remedy.says, helpOfferedAt(discordInvite), ...deleting].join(' '),
   });
+}
+
+export function ledgerOfAnotherVersionIn(failure: unknown): LedgerOfAnotherVersion | undefined {
+  if (failure instanceof LedgerOfAnotherVersion) {
+    return failure;
+  }
+  return failure instanceof Error ? ledgerOfAnotherVersionIn(failure.cause) : undefined;
 }

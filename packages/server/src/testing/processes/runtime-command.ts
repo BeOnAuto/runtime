@@ -29,6 +29,7 @@ export interface RuntimeCommandPlace {
   readonly port: number;
   readonly settings?: Readonly<Record<string, string>>;
   readonly inAGroupOfItsOwn?: boolean;
+  readonly stderrInto?: string;
 }
 
 export interface RuntimeOnThePort {
@@ -79,11 +80,17 @@ export function homeOfTheTest(prefix: string): string {
   return home;
 }
 
+function commandLineOf(args: readonly string[], stderrInto: string | undefined): readonly [string, readonly string[]] {
+  return stderrInto === undefined
+    ? [process.execPath, [command, ...args]]
+    : ['/bin/sh', ['-c', 'exec "$@" 2>"$0"', stderrInto, process.execPath, command, ...args]];
+}
+
 export function spawnRuntimeCommand(
   args: readonly string[],
-  { home, port, settings = {}, inAGroupOfItsOwn = false }: RuntimeCommandPlace,
+  { home, port, settings = {}, inAGroupOfItsOwn = false, stderrInto }: RuntimeCommandPlace,
 ): RuntimeCommandRun {
-  const child = spawnForTheTest(process.execPath, [command, ...args], {
+  const child = spawnForTheTest(...commandLineOf(args, stderrInto), {
     detached: inAGroupOfItsOwn,
     cwd: home,
     env: {

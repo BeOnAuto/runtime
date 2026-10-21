@@ -1,12 +1,11 @@
 import {
   columnsCompared,
-  discordInvite,
   helpOfferedAt,
-  LedgerOfAnotherVersion,
-  remedyFor,
-  whatHappened,
+  ledgerOfAnotherVersionIn,
+  type LedgerOfAnotherVersion,
 } from '../database/ledger-of-another-version.ts';
-import { linkerFor, painterFor, type ColorDepth } from '../logging/terminal.ts';
+import { colorDepthOf, linkerFor, painterFor, type ColorDepth, type ColorStream } from '../logging/terminal.ts';
+import { discordInvite } from './local-banner.ts';
 
 const noticeWidth = 76;
 
@@ -26,17 +25,17 @@ function wrapped(text: string, indent: string): readonly string[] {
   return lines.map((line) => `${indent}${line}`);
 }
 
-type Refusal = Pick<LedgerOfAnotherVersion, 'place' | 'holds' | 'table' | 'found' | 'kept'>;
+type Refusal = Pick<LedgerOfAnotherVersion, 'happened' | 'remedy' | 'table' | 'holds' | 'found' | 'kept'>;
 
 function ledgerNotice(refusal: Refusal, depth: ColorDepth): string {
   const paint = painterFor(depth);
   const link = linkerFor(depth);
-  const { says, command } = remedyFor(refusal.place);
+  const { says, command } = refusal.remedy;
   const shown = command === undefined ? [] : ['', `      ${paint('cyan', command)}`];
   return [
     `  ${paint('red', '✖')} ${paint('bold', 'Auto Runtime could not start')}`,
     '',
-    ...wrapped(whatHappened(refusal), '  '),
+    ...wrapped(refusal.happened, '  '),
     '',
     `  ${paint('bold', 'What you can do')}`,
     ...wrapped(says, '    '),
@@ -48,16 +47,10 @@ function ledgerNotice(refusal: Refusal, depth: ColorDepth): string {
   ].join('\n');
 }
 
-function refusalIn(failure: unknown): Refusal | undefined {
-  if (failure instanceof LedgerOfAnotherVersion) {
-    return failure;
-  }
-  return failure instanceof Error ? refusalIn(failure.cause) : undefined;
-}
-
-export function startupFailureNoticeIn(depth: ColorDepth): (failure: unknown) => string | undefined {
+export function startupFailureNoticeFor(stderr: ColorStream): (failure: unknown) => string | undefined {
+  const depth = colorDepthOf(stderr);
   return (failure) => {
-    const refusal = refusalIn(failure);
+    const refusal = ledgerOfAnotherVersionIn(failure);
     return refusal === undefined ? undefined : ledgerNotice(refusal, depth);
   };
 }

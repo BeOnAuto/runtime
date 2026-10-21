@@ -1,12 +1,14 @@
-import { resolve } from 'node:path';
-
 import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
 import type { Incident } from '@on.auto/operations';
 import { Cause, Effect, Layer } from 'effect';
 
 import type { ContentSettings } from '../settings/content-settings.ts';
-import { privateMemory, type LedgerSettings, type PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
-import type { SecretsKeySource } from '../settings/secrets-settings.ts';
+import {
+  resolvedLedgerFile,
+  whereTheLedgerIsKept,
+  type LedgerSettings,
+  type PostgreSQLLedgerSettings,
+} from '../settings/ledger-settings.ts';
 import type { SignalExport, TelemetrySettings } from '../telemetry/telemetry-settings.ts';
 import { logsFrom, logsToStderr, type LogFormat, type LogLevelSetting } from './log-formats.ts';
 
@@ -100,12 +102,11 @@ export function logConfigFile(report?: ConfigFileReport): Effect.Effect<void> {
   );
 }
 
-function ledgerFileLine(file: string): Effect.Effect<void> {
-  return Effect.logInfo(`The ledger is kept in the file ${file}`).pipe(Effect.annotateLogs({ ledger_file: file }));
+function ledgerFileLine(kept: string, file: string): Effect.Effect<void> {
+  return Effect.logInfo(kept).pipe(Effect.annotateLogs({ ledger_file: file }));
 }
 
-function postgresqlLine({ database, host, credentials }: PostgreSQLLedgerSettings): Effect.Effect<void> {
-  const kept = `The ledger is kept in PostgreSQL, in the database ${database} on ${host}`;
+function postgresqlLine(kept: string, { database, host, credentials }: PostgreSQLLedgerSettings): Effect.Effect<void> {
   const annotations = { database, database_host: host, database_credentials: credentials.kind };
   if (credentials.kind === 'url') {
     return Effect.logInfo(kept).pipe(Effect.annotateLogs(annotations));
@@ -117,9 +118,10 @@ function postgresqlLine({ database, host, credentials }: PostgreSQLLedgerSetting
 }
 
 export function logLedger(ledger: LedgerSettings): Effect.Effect<void> {
+  const kept = whereTheLedgerIsKept(ledger);
   return ledger.store === 'postgresql'
-    ? postgresqlLine(ledger)
-    : ledgerFileLine(ledger.file === privateMemory ? ledger.file : resolve(ledger.file));
+    ? postgresqlLine(kept, ledger)
+    : ledgerFileLine(kept, resolvedLedgerFile(ledger.file));
 }
 
 function objectStorageLine(bucket: string, prefix: string, endpoint: string | undefined): Effect.Effect<void> {
@@ -141,59 +143,6 @@ export function logContentStore(content: ContentSettings): Effect.Effect<void> {
   return content.store === 'ledger'
     ? Effect.logInfo("Content is kept in the ledger's database").pipe(Effect.annotateLogs({ content_store: 'ledger' }))
     : objectStorageLine(content.location.bucket, content.location.prefix, content.endpoint);
-}
-
-export interface SecretStoreReport {
-  readonly kid: string;
-  readonly resealed: number;
-  readonly keyFrom: SecretsKeySource;
-  readonly moved?: number | undefined;
-}
-
-export interface ParameterStoreReport {
-  readonly prefix: string;
-  readonly region: string;
-  readonly moved: number;
-}
-
-export function keyHeldBy(source: SecretsKeySource): string {
-  if (source.from === 'environment') {
-    return `that ${source.setting} holds`;
-  }
-  if (source.from === 'kms') {
-    return `that the KMS key ${source.arn} holds`;
-  }
-  return source.from === 'file' ? `that the file ${resolve(source.file)} holds` : 'that the server made at this start';
-}
-
-function movedThere(moved: number | undefined): string {
-  return moved === undefined ? '' : `, and ${moved} kept by the previous keeper were moved there`;
-}
-
-export function logSecretStore({ kid, resealed, keyFrom, moved }: SecretStoreReport): Effect.Effect<void> {
-  return Effect.logInfo(
-    `Secrets are kept in the ledger's database, sealed under the key ${kid} ${keyHeldBy(keyFrom)}, and ${resealed} sealed under the previous key were sealed again under it${movedThere(moved)}`,
-  ).pipe(
-    Effect.annotateLogs({
-      secrets_kid: kid,
-      secrets_resealed: resealed,
-      secrets_key_from: keyFrom.from,
-      ...(moved === undefined ? {} : { secrets_moved: moved }),
-    }),
-  );
-}
-
-export function logSecretsInParameterStore({ prefix, region, moved }: ParameterStoreReport): Effect.Effect<void> {
-  return Effect.logInfo(
-    `Secrets are kept in AWS Parameter Store under ${prefix} in ${region}${movedThere(moved)}`,
-  ).pipe(
-    Effect.annotateLogs({
-      secrets_keeper: 'aws-parameter-store',
-      secrets_prefix: prefix,
-      secrets_region: region,
-      secrets_moved: moved,
-    }),
-  );
 }
 
 const causeNotFormattable = Effect.logError('Unexpected error whose cause could not be formatted');

@@ -10,11 +10,11 @@ import {
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, Option } from 'effect';
 
-import { logSecretsInParameterStore, logSecretStore } from '../logging/logging.ts';
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import { currentKeeper, type KeeperGiven, type KeeperSettings } from '../settings/keeper-settings.ts';
 import type { SecretsSettings } from '../settings/secrets-settings.ts';
 import { secretRowsOn } from './secret-store.ts';
+import { logSecretsInParameterStore, logSecretStore } from './secrets-logging.ts';
 
 export interface SecretsMade {
   readonly custodians: Custodians | undefined;

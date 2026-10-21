@@ -2,6 +2,7 @@ import type { Environment } from '@on.auto/config';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { ledgerOfAnotherVersion } from '../database/ledger-of-another-version.ts';
 import { optionsComposing, optionsServing } from '../testing/entries/serving-options.ts';
 import { isAcceptingConnections } from '../testing/processes/accepting-connections.ts';
 import { defaultServerOptions, servedBy } from './lifecycle.ts';
@@ -193,6 +194,32 @@ describe('a server that cannot start', () => {
       expect({ written, errors }).toEqual({ written: [], errors: [`Auto Runtime could not start: ${error}\n`] });
     },
   );
+});
+
+describe('a server that cannot start on a ledger of another version', () => {
+  const refused = ledgerOfAnotherVersion(
+    {
+      table: 'kept_secrets',
+      holds: 'secrets',
+      found: ['held', 'id', 'kept_at', 'kept_by', 'version'],
+      kept: ['claimed_until', 'ends_with', 'held', 'id', 'kept_at', 'kept_by', 'kid', 'version', 'wrapped_key'],
+    },
+    { ledger: { store: 'sqlite', file: '/data/ledger.db' }, distribution: 'source' },
+  );
+
+  it('says the refusal in its own words on one line of stderr, with no name of an error before them', async () => {
+    const { serverProcess, written, errors, exited } = fakeProcess();
+    const servicesFailed = new Error("The server's services could not start", { cause: refused });
+
+    exitOnStartupFailure(serverProcess)(servicesFailed);
+
+    expect(await exited).toBe(1);
+    expect({ written, errors }).toEqual({
+      written: [],
+      errors: [`Auto Runtime could not start: ${refused.message}\n`],
+    });
+    expect(errors[0]).toMatch(/^Auto Runtime could not start: The ledger is kept in the file \/data\/ledger\.db, /u);
+  });
 });
 
 describe('runServer told to stop twice', () => {

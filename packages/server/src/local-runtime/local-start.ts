@@ -2,7 +2,7 @@ import type { RuntimeAction, StartedBy } from '@on.auto/api';
 import { Function } from 'effect';
 
 import { coalescedSignals } from '../command-line/coalesced-signals.ts';
-import { startupFailureNoticeIn } from '../command-line/failure-notice.ts';
+import { startupFailureNoticeFor } from '../command-line/failure-notice.ts';
 import { servedLocally, type LocalServerHost } from '../command-line/local-server.ts';
 import { release } from '../composition/release.ts';
 import { stopInsistedBy, stopRequestedBy } from '../lifecycle/stop-request.ts';
@@ -65,7 +65,7 @@ export async function startedLocally(
     stopRequested,
   }).catch(async (failure: unknown) => {
     const { exitOnStartupFailure } = await import('../lifecycle/run-server.ts');
-    exitOnStartupFailure(serverProcess, startupFailureNoticeIn(terminal.depth))(failure);
+    exitOnStartupFailure(serverProcess, startupFailureNoticeFor(serverProcess.stderr))(failure);
   });
   return asked;
 }

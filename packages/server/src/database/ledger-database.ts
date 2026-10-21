@@ -18,14 +18,14 @@ export function ledgerDatabaseOf(
 
 export function withARefusedShapeExplained(
   ledgerLayer: Layer.Layer<Ledger>,
-  { ledger }: Pick<Settings, 'ledger'>,
+  settings: Pick<Settings, 'ledger' | 'distribution'>,
 ): Layer.Layer<Ledger> {
   return Layer.catchCause(ledgerLayer, (cause) => {
     const failure = Cause.squash(cause);
     return Layer.effect(
       Ledger,
       failure instanceof LedgerShapeRefused
-        ? Effect.die(ledgerOfAnotherVersion(failure, ledger))
+        ? Effect.die(ledgerOfAnotherVersion(failure, settings))
         : Effect.failCause(cause),
     );
   });

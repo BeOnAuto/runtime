@@ -54,10 +54,26 @@ describe('a ledger that refuses the shape of its database as it opens', () => {
 
     expect(refused).toBeInstanceOf(LedgerOfAnotherVersion);
     expect(refused).toMatchObject({
-      place: { store: 'sqlite', file: '/data/ledger.db' },
       table: 'kept_secrets',
       found: refusedShape.found,
       kept: refusedShape.kept,
+      remedy: { command: 'rm -f /data/ledger.db /data/ledger.db-wal /data/ledger.db-shm' },
+    });
+  });
+
+  it('says in the image which files to delete from the volume, from the distribution the settings name', async () => {
+    const refused = await builtFrom(
+      withARefusedShapeExplained(
+        Layer.effect(Ledger, Effect.die(refusedShape)),
+        readSettings({ LEDGER_FILE: '/app/data/ledger.db', RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' }),
+      ),
+    );
+
+    expect(refused).toMatchObject({
+      remedy: {
+        says: "Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume, and start Auto Runtime again. Everything in the ledger goes with it, every playbook, definition, run and connection among it.",
+        command: undefined,
+      },
     });
   });
 

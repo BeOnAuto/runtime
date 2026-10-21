@@ -6,7 +6,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { compositionRoot } from '../composition/composition-root.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
-import { aLedgerOfAnotherVersionAt } from '../testing/records/ledger-of-another-version.ts';
+import { aLedgerOfAnotherVersionAt } from '../testing/records/a-ledger-of-another-version.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { startServer } from './lifecycle.ts';
 
@@ -64,18 +64,46 @@ describe('a server given both DATABASE_URL and LEDGER_FILE', () => {
   });
 });
 
+function refusedFor(file: string): string {
+  return `Auto Runtime could not start: The ledger is kept in the file ${file}, and was made by another version of Auto Runtime. This version keeps secrets in a different shape and cannot read the secrets this ledger holds. kept_secrets has the columns held, id, kept_at, kept_by, version, where this version keeps claimed_until, ends_with, held, id, kept_at, kept_by, kid, version, wrapped_key.`;
+}
+
+const goesWithIt = 'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
+
+const askedAt = 'Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8';
+
 describe('a ledger file made by another version of Auto Runtime', () => {
-  it('stops the process with one line of stderr that says where the ledger is, what to do and where to ask, ending with the command that deletes it', async () => {
+  it('stops the process with one line of stderr, its words alone, that says where the ledger is, what to do and where to ask, ending with the command that deletes it', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
     aLedgerOfAnotherVersionAt(ledger.fileName);
+    const file = ledger.fileName;
 
-    const child = spawnServer(mainModule, { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ledger.fileName });
+    const child = spawnServer(mainModule, { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: file });
 
     expect(await child.exited).toBe(1);
     expect(child.output()).toEqual({
       stdout: '',
-      stderr: `Auto Runtime could not start: StartupError: The server's services could not start: LedgerOfAnotherVersion: The ledger at ${ledger.fileName} was made by another version of Auto Runtime. This version keeps secrets in a different shape, and it does not yet carry a ledger over from one version to the next. kept_secrets has the columns held, id, kept_at, kept_by, version, where this version keeps claimed_until, ends_with, held, id, kept_at, kept_by, kid, version, wrapped_key. Delete the ledger and start Auto Runtime again. Every playbook, definition and run it holds goes with it, so if it holds work you want to keep, ask us before you delete it. Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8 To delete the ledger, run: rm -f ${ledger.fileName}{,-wal,-shm}\n`,
+      stderr: `${refusedFor(file)} Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
+    });
+  });
+
+  it('says in the image which files to delete from the volume, with no command', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    aLedgerOfAnotherVersionAt(ledger.fileName);
+
+    const child = spawnServer(mainModule, {
+      HOST: '127.0.0.1',
+      PORT: '0',
+      LEDGER_FILE: ledger.fileName,
+      RUNTIME_DISTRIBUTION: 'docker',
+    });
+
+    expect(await child.exited).toBe(1);
+    expect(child.output()).toEqual({
+      stdout: '',
+      stderr: `${refusedFor(ledger.fileName)} Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume that holds ${ledger.directory}, or remove the volume, and start Auto Runtime again. ${goesWithIt} ${askedAt}\n`,
     });
   });
 });

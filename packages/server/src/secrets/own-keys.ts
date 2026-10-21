@@ -17,9 +17,9 @@ import { secretKeyBytes, type SecretStore } from '@on.auto/secrets';
 import { Data, DateTime, Effect, Option, Redacted, Result, Schema } from 'effect';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
-import { keyHeldBy } from '../logging/logging.ts';
 import { secretsKeyOfBase64 } from '../settings/secrets-settings.ts';
 import type { Settings } from '../settings/settings.ts';
+import { keyHeldBy } from './secrets-logging.ts';
 
 export const ownKeysStream = 'runtime/own-keys';
 

@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 
-type Distribution = 'npx' | 'docker' | 'source';
+export type Distribution = 'npx' | 'docker' | 'source';
 
 export interface UsagePingSettings {
   readonly distribution: Distribution;
@@ -28,7 +28,7 @@ function valueIn(environment: Environment, name: string): string {
   return (environment[name] ?? '').trim().toLowerCase();
 }
 
-function distributionIn(environment: Environment): Distribution {
+export function distributionIn(environment: Environment): Distribution {
   const given = valueIn(environment, distributionVariable);
   return given === 'npx' || given === 'docker' ? given : 'source';
 }
