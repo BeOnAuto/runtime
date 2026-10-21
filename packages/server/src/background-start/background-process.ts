@@ -1,23 +1,13 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import {
-  appendFileSync,
-  closeSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { appendFileSync, closeSync, mkdirSync, openSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { Environment } from '@on.auto/config';
-import { Option, Schema } from 'effect';
 
-import { restartWaitMs, startWaitMs, type StartingLock } from './background-start.ts';
-import { logFileIn, runtimeHomeIn } from './local-control.ts';
+import { logFileIn, runtimeHomeIn } from '../local-runtime/local-control.ts';
+import { startWaitMs } from '../local-runtime/runtime-restarts.ts';
+import type { StartingLock } from './background-start.ts';
 
 export interface BackgroundCommand {
   readonly execPath: string;
@@ -122,62 +112,6 @@ export function startingLockIn(home: string, now: () => number = Date.now): Star
     },
     release: () => {
       rmSync(file, { force: true });
-    },
-  };
-}
-
-export interface RestartMark {
-  readonly leave: (pid: number) => boolean;
-  readonly clear: (pid: number) => void;
-  readonly isUnderWay: () => boolean;
-}
-
-const restartMarkOf = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ pid: Schema.Number, at: Schema.Number })),
-);
-
-function textIn(file: string): string | undefined {
-  try {
-    return readFileSync(file, 'utf8');
-  } catch {
-    return undefined;
-  }
-}
-
-function isRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function leftIn(file: string, text: string): boolean {
-  try {
-    writeFileSync(file, text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function restartMarkIn(home: string, now: () => number = Date.now): RestartMark {
-  const file = join(runtimeHomeIn(home), 'restart-mark.json');
-  const markLeft = () => Option.getOrUndefined(restartMarkOf(textIn(file)));
-  return {
-    leave: (pid) => {
-      mkdirSync(runtimeHomeIn(home), { recursive: true });
-      return leftIn(file, JSON.stringify({ pid, at: now() }));
-    },
-    clear: (pid) => {
-      if (markLeft()?.pid === pid) {
-        rmSync(file, { force: true });
-      }
-    },
-    isUnderWay: () => {
-      const mark = markLeft();
-      return mark !== undefined && isRunning(mark.pid) && now() - mark.at <= restartWaitMs;
     },
   };
 }

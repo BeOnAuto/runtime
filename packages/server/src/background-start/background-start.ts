@@ -1,4 +1,3 @@
-import { longestStopMs } from '../lifecycle/shutdown.ts';
 import {
   probeAt,
   probeEveryMs,
@@ -7,7 +6,8 @@ import {
   type Probe,
   type RunningStatus,
   type Waiting,
-} from './runtime-probe.ts';
+} from '../local-runtime/runtime-probe.ts';
+import { startWaitMs, throughARestart, type Patience } from '../local-runtime/runtime-restarts.ts';
 
 export interface StartingLock {
   readonly take: () => boolean;
@@ -23,19 +23,9 @@ export interface BackgroundStarting extends Waiting {
   readonly restartUnderWay: () => boolean;
 }
 
-export interface Patience {
-  readonly attempts: number;
-}
-
-export const startWaitMs = 60_000;
-
 const startAttempts = Math.ceil(startWaitMs / probeEveryMs);
 
 export const impatient: Patience = { attempts: 0 };
-
-export const restartWaitMs = longestStopMs + startWaitMs;
-
-export const throughARestart: Patience = { attempts: Math.ceil(restartWaitMs / probeEveryMs) };
 
 function isNewer(version: string, than: string): boolean {
   return version.localeCompare(than, 'en', { numeric: true }) > 0;

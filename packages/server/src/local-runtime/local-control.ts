@@ -5,8 +5,8 @@ import type { Environment } from '@on.auto/config';
 import type { AccessMode } from '@on.auto/identity';
 
 import type { LocalServing } from '../lifecycle/lifecycle.ts';
-import type { RestartMark } from './background-process.ts';
 import type { RunsInFlight } from './runs-in-flight.ts';
+import type { RestartMark } from './runtime-restarts.ts';
 
 export const defaultRuntimePort = 5555;
 

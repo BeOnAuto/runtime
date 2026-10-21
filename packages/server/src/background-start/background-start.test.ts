@@ -1,16 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { defaultServerOptions } from '../lifecycle/lifecycle.ts';
-import { longestStopMs } from '../lifecycle/shutdown.ts';
-import {
-  impatient,
-  restartWaitMs,
-  runningRuntime,
-  startWaitMs,
-  throughARestart,
-  type BackgroundStarting,
-} from './background-start.ts';
-import { probeEveryMs, type RuntimeFetch } from './runtime-probe.ts';
+import type { RuntimeFetch } from '../local-runtime/runtime-probe.ts';
+import { throughARestart } from '../local-runtime/runtime-restarts.ts';
+import { impatient, runningRuntime, type BackgroundStarting } from './background-start.ts';
 
 const startedForAnAgent = {
   version: '0.9.1',
@@ -236,15 +228,5 @@ describe('a newer release of the runtime for an agent, while the older one has r
     expect(computer.events()).toEqual([
       'noticed Auto Runtime 0.10.0 waits for Auto Runtime 0.9.1 on port 5555 to be idle before it replaces it, and relays to 0.9.1 until then',
     ]);
-  });
-});
-
-describe('the patience of an agent for a runtime that restarts', () => {
-  it('lasts as long as the runtime takes to stop, by the bounds of its shutdown, and then to start', () => {
-    const { shutdownTimeoutMs, exitDeadlineMs } = defaultServerOptions;
-
-    expect(throughARestart.attempts * probeEveryMs).toBe(restartWaitMs);
-    expect(restartWaitMs).toBe(longestStopMs + startWaitMs);
-    expect(longestStopMs).toBeGreaterThan(shutdownTimeoutMs + exitDeadlineMs);
   });
 });

@@ -1,7 +1,6 @@
 import { startedInWords } from '@on.auto/api';
 import type { KeyCommandConsole } from '@on.auto/identity';
 
-import { throughARestart } from './background-start.ts';
 import {
   askedTo,
   probeAt,
@@ -11,6 +10,7 @@ import {
   type RunningStatus,
   type Waiting,
 } from './runtime-probe.ts';
+import { throughARestart } from './runtime-restarts.ts';
 
 export type RuntimeCommand = 'status' | 'stop' | 'restart';
 

@@ -2,8 +2,8 @@ import type { StartedBy } from '@on.auto/api';
 import type { Environment } from '@on.auto/config';
 import { runKeyCommand, type KeyCommandConsole } from '@on.auto/identity';
 
+import { backgroundArguments } from '../background-start/background-process.ts';
 import { release } from '../composition/release.ts';
-import { backgroundArguments } from '../local-runtime/background-process.ts';
 import { isRuntimeCommand, runRuntimeCommand } from '../local-runtime/runtime-commands.ts';
 import { runtimePortOf } from '../local-runtime/runtime-port.ts';
 import type { Waiting } from '../local-runtime/runtime-probe.ts';

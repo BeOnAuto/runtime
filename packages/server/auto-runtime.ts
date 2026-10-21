@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
 import { setTimeout } from 'node:timers/promises';
 
+import { relayedAgent } from './src/agent-relay/agent-relay.ts';
 import { runCommandLine } from './src/command-line/command-line.ts';
-import { relayedAgent } from './src/local-runtime/agent-relay.ts';
 import { restartIn } from './src/local-runtime/local-control.ts';
 import { overTheNetwork } from './src/local-runtime/runtime-probe.ts';
 import { colorDepthOf } from './src/logging/terminal.ts';
