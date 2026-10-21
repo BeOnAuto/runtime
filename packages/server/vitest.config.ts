@@ -1,5 +1,8 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
 
-import { sharedConfig } from '../../vitest.shared.ts';
+import { sharedConfigSetUpBy } from '../../vitest.shared.ts';
 
-export default mergeConfig(sharedConfig, defineConfig({ test: { name: 'server' } }));
+export default mergeConfig(
+  sharedConfigSetUpBy('src/testing/test-run/test-run-folder.ts'),
+  defineConfig({ test: { name: 'server' } }),
+);
