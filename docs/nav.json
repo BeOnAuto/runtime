@@ -85,6 +85,10 @@
           {
             "text": "Use Auto with Apollo",
             "link": "/integrations/apollo"
+          },
+          {
+            "text": "Connect Zoom",
+            "link": "/integrations/zoom"
           }
         ]
       }
