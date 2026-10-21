@@ -149,6 +149,30 @@ describe('an agent whose runtime restarts', () => {
   });
 });
 
+describe('an agent whose runtime was stopped', () => {
+  it('has a runtime started again once the grace for the one it heard passed, and its request sent to it', async () => {
+    const home = homeOfTheTest(homePrefix);
+    const port = await aPortNothingListensOn();
+    const runtimes = runtimeOnThePortEndedWithTheTest(home, port);
+    const relay = spawnRuntimeCommand(['mcp'], { home, port });
+    const first = await runtimes.pid();
+    relay.write(lineOf(initialize));
+    await answered(relay, 1);
+    relay.write(lineOf({ jsonrpc: '2.0', method: 'notifications/initialized' }));
+    const stopped = await ranToEnd(['stop'], { home, port });
+
+    relay.write(lineOf({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }));
+    const answers = await answered(relay, 2);
+    const second = await runtimes.pid();
+    relay.end();
+
+    expect(stopped).toEqual({ code: 0, stdout: 'Auto Runtime has stopped\n' });
+    expect(JSON.stringify(answerWithId(answers, 2))).toContain('"name":"list_playbooks"');
+    expect(second).not.toBe(first);
+    expect(await relay.exited).toBe(0);
+  });
+});
+
 describe('an agent that starts while a runtime restarts', () => {
   it('waits for that runtime to come back instead of starting a second one', async () => {
     const { home, port } = await placeOfTheTest();
@@ -169,7 +193,7 @@ describe('an agent that starts while a runtime restarts', () => {
 });
 
 describe('an agent whose runtime port another program holds', () => {
-  it('is told why it cannot reach the runtime, and answered once with what its request met', async () => {
+  it('is told why it cannot reach the runtime, and has its request answered once with what to do', async () => {
     const { home, port } = await placeOfTheTest();
     const other = createServer((_request, response) => {
       response.end('hello');
@@ -184,7 +208,14 @@ describe('an agent whose runtime port another program holds', () => {
     relay.end();
 
     expect(answers).toEqual([
-      { jsonrpc: '2.0', id: 1, error: { code: -32_603, message: 'SdkError: Unexpected content type: null' } },
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        error: {
+          code: -32_603,
+          message: `Another program answers on port ${port}; set PORT to start Auto Runtime on a free port`,
+        },
+      },
     ]);
     expect(relay.stderr()).toContain(
       `Another program answers on port ${port}; set PORT to start Auto Runtime on a free port\n`,

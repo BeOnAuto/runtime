@@ -4,6 +4,7 @@ import { Schema } from 'effect';
 
 import { startChild, type RunningChild, type StartChild } from '../../development/children.ts';
 import { runDevelopment } from '../../development/development.ts';
+import { restartMarkIn } from '../../local-runtime/runtime-restarts.ts';
 
 const TestSetupSchema = Schema.Struct({
   envFiles: Schema.Array(Schema.String),
@@ -11,6 +12,7 @@ const TestSetupSchema = Schema.Struct({
   serverEntry: Schema.String,
   configFile: Schema.String,
   pidsFile: Schema.String,
+  home: Schema.String,
 });
 
 const servers: RunningChild[] = [];
@@ -38,4 +40,5 @@ process.exitCode = await runDevelopment(process, {
   serverEntry: setup.serverEntry,
   configFile: setup.configFile,
   startChild: recordingPidsIn(setup.pidsFile),
+  restartMark: restartMarkIn(setup.home),
 });

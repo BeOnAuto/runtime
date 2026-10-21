@@ -45,6 +45,10 @@ function isAnswering(probe: Probe): boolean {
   return probe.state === 'running' || probe.state === 'uncontrolled';
 }
 
+export async function answersOn(port: number, starting: BackgroundStarting): Promise<boolean> {
+  return isAnswering(await probeAt(port, starting.fetch));
+}
+
 async function startedHere(port: number, starting: BackgroundStarting): Promise<string | undefined> {
   const took = starting.startingLock.take();
   if (took) {
@@ -59,6 +63,10 @@ async function startedHere(port: number, starting: BackgroundStarting): Promise<
       starting.startingLock.release();
     }
   }
+}
+
+export function anotherProgramOn(port: number): string {
+  return `Another program answers on port ${port}; set PORT to start Auto Runtime on a free port`;
 }
 
 async function replaced(
@@ -88,7 +96,7 @@ export async function runningRuntime(
     return replaced(port, outdated, starting);
   }
   if (probe.state === 'foreign') {
-    return `Another program answers on port ${port}; set PORT to start Auto Runtime on a free port`;
+    return anotherProgramOn(port);
   }
   if (isAnswering(probe) || (await waitedFor(port, starting, patienceFor(patience, starting).attempts, isAnswering))) {
     return undefined;

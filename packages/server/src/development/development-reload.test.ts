@@ -7,12 +7,15 @@ import { endingOf, runningDevelopment } from '../testing/processes/development-e
 import {
   developmentFiles,
   pidsOf,
+  restartMarkLeftBy,
   startDevelopment,
   untilListening,
   untilWritten,
   writeServerEntry,
+  writeServerEntryStartingAfter,
 } from '../testing/processes/development-process.ts';
 import { gatewayThatHangsFirst, settledOver, welcomingStarted } from '../testing/processes/workflow-process.ts';
+import { until } from '../testing/waiting/until.ts';
 
 const runnerSays = /changed, so the server restarts$|^The server stopped/u;
 
@@ -29,6 +32,41 @@ describe('saving a file under pnpm dev', () => {
       said: [`${join(development.files.sourceDirectory, 'saved.ts')} changed, so the server restarts`],
     });
     expect(pidsOf(development)).toHaveLength(2);
+  });
+});
+
+describe('the restart mark under pnpm dev', () => {
+  it('is left with the pid of the runner while the server restarts, so an agent waits for it, and cleared once the server serves again', async () => {
+    const development = await runningDevelopment();
+    const leftBefore = restartMarkLeftBy(development);
+
+    writeServerEntryStartingAfter(development.files, 1000);
+    const left = await until(
+      () => restartMarkLeftBy(development),
+      (mark) => mark !== undefined,
+    );
+    await untilListening(development, 2);
+    const leftAfter = restartMarkLeftBy(development);
+    development.signal('SIGTERM');
+    await endingOf(development);
+
+    expect({ leftBefore, left, leftAfter }).toMatchObject({
+      leftBefore: undefined,
+      left: { pid: development.pid },
+      leftAfter: undefined,
+    });
+  });
+
+  it('is cleared when the server it restarts stops before it serves', async () => {
+    const development = await runningDevelopment();
+
+    writeServerEntry(development.files, 'this is not TypeScript (\n');
+    await untilWritten(development.stderr, /The server stopped \(exit code 1\)/u);
+    const left = restartMarkLeftBy(development);
+    development.signal('SIGTERM');
+    await endingOf(development);
+
+    expect(left).toBeUndefined();
   });
 });
 
