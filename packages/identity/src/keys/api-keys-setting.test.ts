@@ -1,9 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { InvalidApiKeysError, createApiKey, readApiKeys, type ApiKey } from '../index.ts';
 
@@ -59,6 +59,9 @@ describe('readApiKeys', () => {
 
   it('reads an unquoted compact JSON line from an env file unchanged', () => {
     const directory = mkdtempSync(join(tmpdir(), 'api-keys-'));
+    onTestFinished(() => {
+      rmSync(directory, { recursive: true, force: true });
+    });
     const line = JSON.stringify([entry, everything]);
     writeFileSync(join(directory, 'keys.env'), `API_KEYS=${line}\n`);
 
