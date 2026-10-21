@@ -64,7 +64,12 @@ export function rethrownNamingAllocation(error: unknown): never {
   throw error;
 }
 
+function turnOffTheTelemetryOfOnnxRuntime(): void {
+  process.env['ORT_DISABLE_TELEMETRY'] = '1';
+}
+
 export const loadWithOnnxRuntime: LoadModel = async (path, threads) => {
+  turnOffTheTelemetryOfOnnxRuntime();
   const session = await InferenceSession.create(path, {
     intraOpNumThreads: threads,
     interOpNumThreads: 1,
