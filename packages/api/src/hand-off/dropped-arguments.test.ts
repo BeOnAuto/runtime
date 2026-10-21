@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { droppedArgumentsOf, withDroppedArgument } from './dropped-arguments.ts';
+import { droppedArgumentsIn, postedMessagesOf, withDroppedArgument } from './dropped-arguments.ts';
 
 function posted(body: string, headers: Readonly<Record<string, string>> = {}): Request {
   return new Request('http://localhost/mcp', {
@@ -13,7 +13,11 @@ function posted(body: string, headers: Readonly<Record<string, string>> = {}): R
 const callWithProto =
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"x","arguments":{"__proto__":{"admin":true}}}}';
 
-describe('droppedArgumentsOf', () => {
+async function droppedArgumentsOf(request: Request): Promise<readonly unknown[]> {
+  return droppedArgumentsIn(await postedMessagesOf(request));
+}
+
+describe('the arguments dropped from the messages posted to an MCP endpoint', () => {
   it('finds a __proto__ argument of a tool call by its request id, and leaves the body for the SDK', async () => {
     const request = posted(callWithProto);
 

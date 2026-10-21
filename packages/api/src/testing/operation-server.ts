@@ -20,6 +20,8 @@ import {
   type ApiHandler,
   type ApiStudio,
   type AppRuntime,
+  type McpRoutesOptions,
+  type RegisterRoutes,
   type RetryStateKeys,
 } from '../index.ts';
 import { createTestHandler, type ReportedThrown } from './api-calls.ts';
@@ -84,10 +86,28 @@ export interface OperationServerOptions {
   readonly requests?: MiddlewareHandler<ApiEnv>;
   readonly tracer?: Tracer.Tracer;
   readonly retryStateKeys?: RetryStateKeys;
+  readonly heartbeatEveryMs?: number;
 }
 
 function tracingWith(tracer: Tracer.Tracer | undefined): Layer.Layer<never> {
   return tracer === undefined ? Layer.empty : Layer.succeed(Tracer.Tracer, tracer);
+}
+
+type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys'> & {
+  readonly heartbeatEveryMs: number | undefined;
+};
+
+function mcpRoutesServing(
+  { heartbeatEveryMs, ...served }: McpServed,
+  reportError: McpRoutesOptions['reportError'],
+): RegisterRoutes {
+  return mcpRoutes({
+    ...served,
+    serverInfo: testServerInfo,
+    shelf: testShelf,
+    ...(heartbeatEveryMs === undefined ? {} : { heartbeatEveryMs }),
+    reportError,
+  });
 }
 
 export async function operationServer({
@@ -98,6 +118,7 @@ export async function operationServer({
   requests,
   tracer,
   retryStateKeys = testRetryStateKeys,
+  heartbeatEveryMs,
 }: OperationServerOptions = {}): Promise<OperationServer> {
   const ledger = memoryLedger();
   const recording = recordingReporter();
@@ -112,16 +133,8 @@ export async function operationServer({
     openApiDocumentRoutes({ catalog, ...documented }),
     guideRoutes(testShelf),
     apiCatalogRoutes(testShelf),
-    mcpRoutes({
-      catalog,
-      dispatcher,
-      runCall: runtime.run,
-      serverInfo: testServerInfo,
-      shelf: testShelf,
-      retryStateKeys,
-      reportError: (error) => {
-        mcpErrors.push(error.message);
-      },
+    mcpRoutesServing({ catalog, dispatcher, runCall: runtime.run, retryStateKeys, heartbeatEveryMs }, (error) => {
+      mcpErrors.push(error.message);
     }),
   ];
   const { handler, reported } = createTestHandler({

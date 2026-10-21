@@ -5,7 +5,7 @@ import { internalErrorProblem, problemOf } from './problem.ts';
 
 export type Unsuccessful = Rejected | Failed | Cancelled;
 
-const serverStopping = problemOf('unavailable', 'The server is stopping');
+export const serverStopping = problemOf('unavailable', 'The server is stopping');
 
 export const clientClosed = problemOf('client_closed_request', 'The client closed the request before it was answered');
 

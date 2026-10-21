@@ -1,4 +1,9 @@
-import { Client, StreamableHTTPClientTransport, type jsonSchemaValidator } from '@modelcontextprotocol/client';
+import {
+  Client,
+  StreamableHTTPClientTransport,
+  type FetchLike,
+  type jsonSchemaValidator,
+} from '@modelcontextprotocol/client';
 import { Client as PreviousMajorClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport as PreviousMajorTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
@@ -17,6 +22,7 @@ export const expectedProtocolVersion: Readonly<Record<McpClientKind, string>> = 
 export interface McpConnection {
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
+  readonly fetch?: FetchLike;
 }
 
 export interface McpSession {
@@ -105,8 +111,11 @@ class PreviousMajorHttpTransport implements Transport {
   readonly setProtocolVersion: NonNullable<Transport['setProtocolVersion']>;
   readonly #inner: PreviousMajorTransport;
 
-  constructor({ url, headers }: McpConnection) {
-    this.#inner = new PreviousMajorTransport(new URL(url), { requestInit: { headers: { ...headers } } });
+  constructor({ url, headers, fetch }: McpConnection) {
+    this.#inner = new PreviousMajorTransport(new URL(url), {
+      requestInit: { headers: { ...headers } },
+      ...(fetch === undefined ? {} : { fetch }),
+    });
     this.send = this.#inner.send.bind(this.#inner);
     this.close = this.#inner.close.bind(this.#inner);
     this.setProtocolVersion = (version) => {
@@ -147,14 +156,19 @@ async function connectPreviousMajor(connection: McpConnection): Promise<McpSessi
   };
 }
 
-async function connectCurrentMajor(kind: McpClientKind, { url, headers }: McpConnection): Promise<McpSession> {
+async function connectCurrentMajor(kind: McpClientKind, { url, headers, fetch }: McpConnection): Promise<McpSession> {
   const versionNegotiation = kind === 'current revision' ? { mode: { pin: '2026-07-28' } } : {};
   const { validator, compiled } = recordingValidator();
   const client = new Client(
     { name: 'auto-runtime-tests', version: '2.0.0' },
     { versionNegotiation, jsonSchemaValidator: validator },
   );
-  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: { ...headers } } }));
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: { ...headers } },
+      ...(fetch === undefined ? {} : { fetch }),
+    }),
+  );
   return {
     protocolVersion: client.getNegotiatedProtocolVersion(),
     serverVersion: client.getServerVersion(),
