@@ -5,17 +5,16 @@ import { Option, Schema } from 'effect';
 
 import { longestStopMs } from '../lifecycle/shutdown.ts';
 import { runtimeHomeIn } from './local-control.ts';
-import { probeEveryMs } from './runtime-probe.ts';
 
 export interface Patience {
-  readonly attempts: number;
+  readonly waitMs: number;
 }
 
 export const startWaitMs = 60_000;
 
 export const restartWaitMs = longestStopMs + startWaitMs;
 
-export const throughARestart: Patience = { attempts: Math.ceil(restartWaitMs / probeEveryMs) };
+export const throughARestart: Patience = { waitMs: restartWaitMs };
 
 export interface RestartMark {
   readonly leave: (pid: number) => boolean;

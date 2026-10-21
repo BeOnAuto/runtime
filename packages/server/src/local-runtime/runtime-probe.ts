@@ -1,14 +1,16 @@
-import { Function, Schema } from 'effect';
+import type { RuntimeAction } from '@on.auto/api';
+import { Effect, Function, Option, Schedule, Schema } from 'effect';
 
 interface RuntimeRequest {
   readonly method: 'GET' | 'POST';
   readonly timeoutMs: number;
+  readonly signal: Readonly<AbortSignal>;
 }
 
 export type RuntimeFetch = (address: string, request: RuntimeRequest) => Promise<Response>;
 
-export const overTheNetwork: RuntimeFetch = (address, { method, timeoutMs }) =>
-  fetch(address, { method, signal: AbortSignal.timeout(timeoutMs) });
+export const overTheNetwork: RuntimeFetch = (address, { method, timeoutMs, signal }) =>
+  fetch(address, { method, signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) });
 
 const RunningStatusSchema = Schema.Struct({
   version: Schema.String,
@@ -37,38 +39,52 @@ export type Probe =
 
 const probeTimeoutMs = 2000;
 
+export const probeEveryMs = 100;
+
+export const stopWaitMs = 15_000;
+
 export function runtimeAddressOf(port: number): string {
   return `http://127.0.0.1:${port}`;
 }
 
-async function bodyOf(fetch: RuntimeFetch, address: string): Promise<unknown> {
-  const response = await fetch(address, { method: 'GET', timeoutMs: probeTimeoutMs });
+async function bodyOf(fetch: RuntimeFetch, address: string, signal: Readonly<AbortSignal>): Promise<unknown> {
+  const response = await fetch(address, { method: 'GET', timeoutMs: probeTimeoutMs, signal });
   return response.ok ? response.json().catch(Function.constVoid) : undefined;
 }
 
-async function answeringProbe(fetch: RuntimeFetch, port: number): Promise<Probe> {
-  const status = await bodyOf(fetch, `${runtimeAddressOf(port)}/runtime`);
+async function answeringProbe(fetch: RuntimeFetch, port: number, signal: Readonly<AbortSignal>): Promise<Probe> {
+  const status = await bodyOf(fetch, `${runtimeAddressOf(port)}/runtime`, signal);
   if (isRunningStatus(status)) {
     return { state: 'running', status };
   }
-  return isHealthy(await bodyOf(fetch, `${runtimeAddressOf(port)}/health`))
+  return isHealthy(await bodyOf(fetch, `${runtimeAddressOf(port)}/health`, signal))
     ? { state: 'uncontrolled' }
     : { state: 'foreign' };
 }
 
-export async function probeAt(port: number, fetch: RuntimeFetch): Promise<Probe> {
+async function probed(port: number, fetch: RuntimeFetch, signal: Readonly<AbortSignal>): Promise<Probe> {
   try {
-    return await answeringProbe(fetch, port);
+    return await answeringProbe(fetch, port, signal);
   } catch {
     return { state: 'down' };
   }
 }
 
-export async function askedTo(action: 'stop' | 'restart', port: number, fetch: RuntimeFetch): Promise<boolean> {
+export function probeAt(port: number, fetch: RuntimeFetch): Effect.Effect<Probe> {
+  return Effect.promise((signal) => probed(port, fetch, signal));
+}
+
+async function accepted(
+  action: RuntimeAction,
+  port: number,
+  fetch: RuntimeFetch,
+  signal: Readonly<AbortSignal>,
+): Promise<boolean> {
   try {
     const response = await fetch(`${runtimeAddressOf(port)}/runtime/${action}`, {
       method: 'POST',
       timeoutMs: probeTimeoutMs,
+      signal,
     });
     return response.status === 202;
   } catch {
@@ -76,35 +92,32 @@ export async function askedTo(action: 'stop' | 'restart', port: number, fetch: R
   }
 }
 
-export interface Waiting {
-  readonly fetch: RuntimeFetch;
-  readonly sleep: (milliseconds: number) => Promise<void>;
+export function askedTo(action: RuntimeAction, port: number, fetch: RuntimeFetch): Effect.Effect<boolean> {
+  return Effect.promise((signal) => accepted(action, port, fetch, signal));
 }
 
-export const probeEveryMs = 100;
-
-export async function waitedFor(
+export function waitedFor(
   port: number,
-  waiting: Waiting,
-  attempts: number,
+  fetch: RuntimeFetch,
+  waitMs: number,
   isWhatWeWait: (probe: Probe) => boolean,
-): Promise<boolean> {
-  if (attempts <= 0) {
-    return false;
+): Effect.Effect<boolean> {
+  if (waitMs <= 0) {
+    return Effect.succeed(false);
   }
-  if (isWhatWeWait(await probeAt(port, waiting.fetch))) {
-    return true;
-  }
-  await waiting.sleep(probeEveryMs);
-  return waitedFor(port, waiting, attempts - 1, isWhatWeWait);
+  return probeAt(port, fetch).pipe(
+    Effect.repeat({ schedule: Schedule.spaced(probeEveryMs), until: isWhatWeWait }),
+    Effect.timeoutOption(waitMs),
+    Effect.map(Option.isSome),
+  );
 }
-
-const stopAttempts = 150;
 
 function isDown(probe: Probe): boolean {
   return probe.state === 'down';
 }
 
-export async function stoppedWhenAsked(port: number, waiting: Waiting): Promise<boolean> {
-  return (await askedTo('stop', port, waiting.fetch)) && (await waitedFor(port, waiting, stopAttempts, isDown));
+export function stoppedWhenAsked(port: number, fetch: RuntimeFetch): Effect.Effect<boolean> {
+  return Effect.gen(function* () {
+    return (yield* askedTo('stop', port, fetch)) && (yield* waitedFor(port, fetch, stopWaitMs, isDown));
+  });
 }

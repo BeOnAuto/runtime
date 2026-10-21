@@ -1,7 +1,10 @@
+import { Effect, Fiber } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { after, ranOnATestClock, settled } from '../testing/relays/relayed-agent.ts';
 import { runRuntimeCommand, type RuntimeAsking, type RuntimeCommand } from './runtime-commands.ts';
-import type { RuntimeFetch } from './runtime-probe.ts';
+import { stopWaitMs, type RuntimeFetch } from './runtime-probe.ts';
+import { restartWaitMs } from './runtime-restarts.ts';
 
 const runningInATerminal = {
   version: '0.9.1',
@@ -66,7 +69,6 @@ function askingWith(fetch: RuntimeFetch): Asked {
     errors,
     asking: {
       fetch,
-      sleep: () => Promise.resolve(),
       console: {
         log: (line) => {
           logged.push(line);
@@ -79,11 +81,27 @@ function askingWith(fetch: RuntimeFetch): Asked {
   };
 }
 
+function answeredOnATestClock(
+  command: RuntimeCommand,
+  port: number,
+  asking: RuntimeAsking,
+  waitedMs = 0,
+): Promise<number> {
+  return ranOnATestClock(
+    Effect.gen(function* () {
+      const answering = yield* Effect.forkChild(runRuntimeCommand(command, port, asking));
+      yield* settled;
+      yield* after(waitedMs);
+      return yield* Fiber.join(answering);
+    }),
+  );
+}
+
 describe('the status of the runtime on this computer', () => {
   it('names its release, process, start and directory', async () => {
     const { asking, logged } = askingWith(fakeRuntime(runningInATerminal).fetch);
 
-    await expect(runRuntimeCommand('status', 5555, asking)).resolves.toBe(0);
+    await expect(answeredOnATestClock('status', 5555, asking)).resolves.toBe(0);
     expect(logged).toEqual([
       'Auto Runtime 0.9.1 is running at http://localhost:5555',
       '  Process    4242',
@@ -95,7 +113,7 @@ describe('the status of the runtime on this computer', () => {
   it('names its log when an agent started it', async () => {
     const { asking, logged } = askingWith(fakeRuntime(runningForAnAgent).fetch);
 
-    await runRuntimeCommand('status', 5555, asking);
+    await answeredOnATestClock('status', 5555, asking);
 
     expect(logged.slice(2)).toEqual([
       '  Started    2026-10-14 09:41 UTC, by your agent',
@@ -110,22 +128,22 @@ describe('stopping the runtime on this computer', () => {
     const runtime = fakeRuntime(runningInATerminal);
     const { asking, logged } = askingWith(runtime.fetch);
 
-    await expect(runRuntimeCommand('stop', 6060, asking)).resolves.toBe(0);
+    await expect(answeredOnATestClock('stop', 6060, asking)).resolves.toBe(0);
     expect(runtime.posted).toEqual(['http://127.0.0.1:6060/runtime/stop']);
     expect(logged).toEqual(['Auto Runtime has stopped']);
   });
 
-  it('says so when it does not stop', async () => {
+  it('says so when it does not stop within the wait for a stop', async () => {
     const { asking, errors } = askingWith(fakeRuntime(runningInATerminal, 'stays up').fetch);
 
-    await expect(runRuntimeCommand('stop', 5555, asking)).resolves.toBe(1);
+    await expect(answeredOnATestClock('stop', 5555, asking, stopWaitMs)).resolves.toBe(1);
     expect(errors).toEqual(['Auto Runtime on port 5555 did not stop']);
   });
 
   it('says so when it refuses to', async () => {
     const { asking, errors } = askingWith(fakeRuntime(runningInATerminal, 'refuses').fetch);
 
-    await expect(runRuntimeCommand('stop', 5555, asking)).resolves.toBe(1);
+    await expect(answeredOnATestClock('stop', 5555, asking)).resolves.toBe(1);
     expect(errors).toEqual(['Auto Runtime on port 5555 did not stop']);
   });
 });
@@ -135,15 +153,15 @@ describe('restarting the runtime on this computer', () => {
     const runtime = fakeRuntime(runningInATerminal, 'comes back');
     const { asking, logged } = askingWith(runtime.fetch);
 
-    await expect(runRuntimeCommand('restart', 5555, asking)).resolves.toBe(0);
+    await expect(answeredOnATestClock('restart', 5555, asking)).resolves.toBe(0);
     expect(runtime.posted).toEqual(['http://127.0.0.1:5555/runtime/restart']);
     expect(logged).toEqual(['Auto Runtime has restarted']);
   });
 
-  it('says so when it does not come back', async () => {
+  it('says so when it does not come back within the wait for a restart', async () => {
     const { asking, errors } = askingWith(fakeRuntime(runningInATerminal, 'goes down').fetch);
 
-    await expect(runRuntimeCommand('restart', 5555, asking)).resolves.toBe(1);
+    await expect(answeredOnATestClock('restart', 5555, asking, restartWaitMs)).resolves.toBe(1);
     expect(errors).toEqual(['Auto Runtime on port 5555 did not come back after it was asked to restart']);
   });
 });
@@ -157,7 +175,7 @@ describe('what cannot be controlled from the command line', () => {
     async (command) => {
       const { asking, errors } = askingWith(() => Promise.reject(new TypeError('fetch failed')));
 
-      await expect(runRuntimeCommand(command, 5555, asking)).resolves.toBe(1);
+      await expect(answeredOnATestClock(command, 5555, asking)).resolves.toBe(1);
       expect(errors).toEqual(['No Auto Runtime is running on port 5555']);
     },
   );
@@ -165,7 +183,7 @@ describe('what cannot be controlled from the command line', () => {
   it('says a runtime started another way cannot be controlled', async () => {
     const { asking, errors } = askingWith(healthyWithoutControls);
 
-    await expect(runRuntimeCommand('stop', 5555, asking)).resolves.toBe(1);
+    await expect(answeredOnATestClock('stop', 5555, asking)).resolves.toBe(1);
     expect(errors).toEqual([
       'The Auto Runtime on port 5555 cannot be controlled from here: only one the auto-runtime command started in local mode can',
     ]);
@@ -174,7 +192,7 @@ describe('what cannot be controlled from the command line', () => {
   it('says another program answers on the port', async () => {
     const { asking, errors } = askingWith(() => Promise.resolve(new Response('<html></html>')));
 
-    await expect(runRuntimeCommand('status', 3000, asking)).resolves.toBe(1);
+    await expect(answeredOnATestClock('status', 3000, asking)).resolves.toBe(1);
     expect(errors).toEqual(['Another program answers on port 3000, not Auto Runtime']);
   });
 });
