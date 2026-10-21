@@ -1,6 +1,6 @@
 import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { sha256Of } from '@on.auto/operations';
-import { kmsCustodian, parameterStoreKeeper, type KmsCustodianOptions } from '@on.auto/secrets/aws';
+import { kmsCustodian, parameterStoreKeeper, type AwsWaits, type KmsCustodianOptions } from '@on.auto/secrets/aws';
 import { serveFakeKms, type FakeKeyState } from '@on.auto/secrets/testing';
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -33,11 +33,17 @@ afterAll(fake.close);
 
 const credentials = { accessKeyId: 'an-access-key-of-the-tests', secretAccessKey: 'a-secret-access-key-of-the-tests' };
 
-const onTheFake = {
-  parameterStoreKeeper,
-  kmsCustodian: (options: KmsCustodianOptions) =>
-    kmsCustodian({ ...options, credentials, endpoint: fake.url, waits: { connectionMs: 100, requestMs: 100 } }),
-};
+const waitsOf100Ms: AwsWaits = { connectionMs: 100, requestMs: 100 };
+
+function adaptersWithin(waits?: AwsWaits) {
+  return {
+    parameterStoreKeeper,
+    kmsCustodian: (options: KmsCustodianOptions) =>
+      kmsCustodian({ ...options, credentials, endpoint: fake.url, waits }),
+  };
+}
+
+const onTheFake = adaptersWithin();
 
 const keyInHand = Buffer.alloc(32, 4);
 
@@ -56,13 +62,13 @@ function aLedgerFile(): string {
   return fileName;
 }
 
-async function openedWith(fileName: string, environment: Readonly<Record<string, string>>) {
+async function openedWith(fileName: string, environment: Readonly<Record<string, string>>, waits?: AwsWaits) {
   const { context, lines } = await aContextLogging();
   const stores = await ledgerStoresOpenedBy(
     context,
     readSettings({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
-    () => Promise.resolve(onTheFake),
+    () => Promise.resolve(adaptersWithin(waits)),
   );
   await stores.secrets.close();
   return lines;
@@ -155,13 +161,13 @@ describe('the stores of a ledger whose key in KMS cannot be used', () => {
     );
   });
 
-  it('stop the start for a key in a KMS that does not answer, naming the setting and the key', async () => {
+  it('stop the start for a key in a KMS that does not answer within the waits of 100 ms its custodian is given, the bound this test is about, naming the setting and the key', async () => {
     fake.tell(keyArn, 'stalling');
     onTestFinished(() => {
       fake.tell(keyArn, 'enabled');
     });
 
-    await expect(openedWith(aLedgerFile(), { SECRETS_KEY_KMS: keyArn })).rejects.toThrow(
+    await expect(openedWith(aLedgerFile(), { SECRETS_KEY_KMS: keyArn }, waitsOf100Ms)).rejects.toThrow(
       `${unprobed}: The custodian of the key ${keyId} did not answer a request to wrap a data key: TimeoutError`,
     );
   });

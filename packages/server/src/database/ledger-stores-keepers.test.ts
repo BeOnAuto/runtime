@@ -1,7 +1,12 @@
 import { existsSync } from 'node:fs';
 
 import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
-import { kmsCustodian, parameterStoreKeeper, type ParameterStoreKeeperOptions } from '@on.auto/secrets/aws';
+import {
+  kmsCustodian,
+  parameterStoreKeeper,
+  type AwsWaits,
+  type ParameterStoreKeeperOptions,
+} from '@on.auto/secrets/aws';
 import { serveFakeParameterStore, type FakeParameterOperation } from '@on.auto/secrets/testing';
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -19,11 +24,13 @@ afterAll(fake.close);
 
 const credentials = { accessKeyId: 'an-access-key-of-the-tests', secretAccessKey: 'a-secret-access-key-of-the-tests' };
 
-function adaptersOn(url: string) {
+const waitsOf100Ms: AwsWaits = { connectionMs: 100, requestMs: 100 };
+
+function adaptersOn(url: string, waits?: AwsWaits) {
   return {
     kmsCustodian,
     parameterStoreKeeper: (options: ParameterStoreKeeperOptions) =>
-      parameterStoreKeeper({ ...options, credentials, endpoint: url, waits: { connectionMs: 100, requestMs: 100 } }),
+      parameterStoreKeeper({ ...options, credentials, endpoint: url, waits }),
   };
 }
 
@@ -61,13 +68,14 @@ async function openedWith(
   fileName: string,
   environment: Readonly<Record<string, string>>,
   parameterStoreUrl = fake.url,
+  waits?: AwsWaits,
 ): Promise<Opened> {
   const { context, lines } = await aContextLogging();
   const stores = await ledgerStoresOpenedBy(
     context,
     readSettings({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
-    () => Promise.resolve(adaptersOn(parameterStoreUrl)),
+    () => Promise.resolve(adaptersOn(parameterStoreUrl, waits)),
   );
   onTestFinished(() => stores.secrets.close());
   return { stores, lines };
@@ -159,13 +167,13 @@ describe('the stores of a ledger whose prefix in AWS Parameter Store cannot be u
     },
   );
 
-  it('stop the start for a manager that does not answer within the waits of its client, naming the setting and the prefix', async () => {
+  it('stop the start for a manager that does not answer within the waits of 100 ms its client is given, the bound this test is about, naming the setting and the prefix', async () => {
     fake.tell('stalling', ['PutParameter']);
     onTestFinished(() => {
       fake.tell('answering');
     });
 
-    await expect(openedWith(aLedger().fileName, inTheManager)).rejects.toThrow(
+    await expect(openedWith(aLedger().fileName, inTheManager, fake.url, waitsOf100Ms)).rejects.toThrow(
       new RegExp(`^${unprobed} write the parameter ${prefix}/probe-[\\da-f-]{36}: TimeoutError`, 'u'),
     );
   });
