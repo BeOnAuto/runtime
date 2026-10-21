@@ -126,7 +126,7 @@ const variablesOfTheTests = testEnvironmentOf(textOf('turbo.json')).tasks.test.e
 
 const jobs = stepsOf(workflow).jobs;
 
-const kmsJob = 'kms';
+const awsJob = 'secrets-aws';
 
 function variablesSetBy(job: string): readonly string[] {
   return (jobs[job]?.steps ?? [])
@@ -136,9 +136,9 @@ function variablesSetBy(job: string): readonly string[] {
 
 const variablesOfTheServices = variablesSetBy('test');
 
-const variablesOfKms = variablesSetBy(kmsJob);
+const variablesOfAws = variablesSetBy(awsJob);
 
-const variablesSetByAJob = new Set([...variablesOfTheServices, ...variablesOfKms]);
+const variablesSetByAJob = new Set([...variablesOfTheServices, ...variablesOfAws]);
 
 function readsAnyOf({ folder }: TestedPackage, variables: readonly string[]): boolean {
   const sources = join(root, folder, 'src');
@@ -205,10 +205,10 @@ await test('a group starts PostgreSQL and the object store exactly when the test
 });
 
 await test('the job against moto runs the tests of exactly the packages that read the variables it sets, and every variable that reaches the tests is set by it or by the test job', () => {
-  const readers = testedPackages.filter((tested) => readsAnyOf(tested, variablesOfKms)).map(({ name }) => name);
-  assert.ok(variablesOfKms.length > 0);
+  const readers = testedPackages.filter((tested) => readsAnyOf(tested, variablesOfAws)).map(({ name }) => name);
+  assert.ok(variablesOfAws.length > 0);
   assert.ok(readers.length > 0);
-  assert.deepEqual(packagesRunBy(kmsJob), readers);
+  assert.deepEqual(packagesRunBy(awsJob), readers);
   assert.deepEqual(
     variablesOfTheTests.filter((name) => !variablesSetByAJob.has(name)),
     [],
