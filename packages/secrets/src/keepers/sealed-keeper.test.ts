@@ -13,8 +13,8 @@ const previous = custodianOf(5);
 
 const current = custodianOf(6);
 
-function revealed(value: Redacted.Redacted): string {
-  return Redacted.value(value);
+function revealed(value: Redacted.Redacted | undefined): string | undefined {
+  return value === undefined ? undefined : Redacted.value(value);
 }
 
 describe("the ledger's keeper", () => {

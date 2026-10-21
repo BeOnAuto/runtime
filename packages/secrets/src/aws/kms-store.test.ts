@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Effect } from 'effect';
 import { afterAll, describe } from 'vitest';
 
-import { serveFakeKms } from '../testing/fake-kms.ts';
+import { serveFakeKms } from '../fakes/fake-kms.ts';
 import { inMemoryEntry, type TestCustodians } from '../testing/secrets-entry.ts';
 import { storeBehaviour } from '../testing/store-behaviour.ts';
 import { kmsCustodian } from './kms-custodian.ts';

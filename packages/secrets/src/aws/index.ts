@@ -1,9 +1,13 @@
+export { awsWaits, type AwsWaits } from './aws-requests.ts';
 export {
   encryptionContext,
   kidOfKey,
   kmsCustodian,
-  kmsWaits,
   type KmsCredentials,
   type KmsCustodianOptions,
-  type KmsWaits,
 } from './kms-custodian.ts';
+export {
+  parameterStoreKeeper,
+  type ParameterStoreCredentials,
+  type ParameterStoreKeeperOptions,
+} from './parameter-store-keeper.ts';

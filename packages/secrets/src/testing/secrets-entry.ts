@@ -3,12 +3,12 @@ import { TestClock } from 'effect/testing';
 import { onTestFinished } from 'vitest';
 
 import type { Custodian, Custodians } from '../custodians/custodian.ts';
-import { localCustodian } from '../custodians/local-custodian.ts';
-import { sealedKeeper } from '../keepers/sealed-keeper.ts';
-import type { SecretRows } from '../rows/secret-rows.ts';
+import type { Keepers } from '../keepers/keeper.ts';
+import type { Holding, SecretRows } from '../rows/secret-rows.ts';
+import { sealedSecretStoreOn } from '../store/sealed-store.ts';
 import { secretStoreOn, type SecretStore } from '../store/secret-store.ts';
 import { memoryRows, type MemoryRows } from './memory-rows.ts';
-import { aSecretsKey } from './recording-custodian.ts';
+import { recordingCustodian } from './recording-custodian.ts';
 
 export interface SecretsEntry {
   readonly aDatabase: () => Promise<string>;
@@ -21,7 +21,7 @@ export interface TestCustodians {
 }
 
 export const localCustodians: TestCustodians = {
-  aCustodian: () => Promise.resolve(localCustodian(aSecretsKey())),
+  aCustodian: () => Promise.resolve(recordingCustodian()),
 };
 
 const KeptRows = Schema.Array(
@@ -57,7 +57,20 @@ export async function rowsOpenedOn(entry: SecretsEntry, database: string): Promi
 }
 
 export async function storeWith(entry: SecretsEntry, database: string, custodians: Custodians): Promise<SecretStore> {
-  return secretStoreOn(await rowsOpenedOn(entry, database), sealedKeeper(custodians), custodians);
+  return sealedSecretStoreOn(await rowsOpenedOn(entry, database), custodians);
+}
+
+export function holdingOf(row: { readonly kept_by: string; readonly held: string } | undefined): Holding {
+  return { keptBy: String(row?.kept_by), held: String(row?.held) };
+}
+
+export async function storeKeptBy(
+  entry: SecretsEntry,
+  database: string,
+  keepers: Keepers,
+  custodians?: Custodians,
+): Promise<SecretStore> {
+  return secretStoreOn(await rowsOpenedOn(entry, database), keepers, custodians);
 }
 
 export function kept(store: SecretStore, value: string): Promise<string> {

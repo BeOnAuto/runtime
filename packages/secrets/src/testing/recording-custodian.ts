@@ -30,7 +30,7 @@ interface Answers extends Pick<RecordingCustodian, 'refuse' | 'stall' | 'answer'
 
 export const custodianRefusal = 'the key is disabled';
 
-export function aSecretsKey(): Redacted.Redacted<Uint8Array> {
+function aSecretsKey(): Redacted.Redacted<Uint8Array> {
   return Redacted.make(new Uint8Array(randomBytes(32)));
 }
 

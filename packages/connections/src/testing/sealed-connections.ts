@@ -1,4 +1,4 @@
-import { sealedKeeper, secretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
+import { sealedSecretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
 import { memoryRows, recordingCustodian, type MemoryRows, type RecordingCustodian } from '@on.auto/secrets/testing';
 import type { ConnectionSource, OrgConnection } from '@on.auto/tool-servers';
 import { DateTime, Effect, type Layer } from 'effect';
@@ -20,7 +20,11 @@ export function sealedIn<Rows extends SecretRows>(
   rows: Rows,
   custodian: RecordingCustodian = recordingCustodian(),
 ): Sealed<Rows> {
-  return { rows, custodian, store: secretStoreOn(rows, sealedKeeper({ current: custodian }), { current: custodian }) };
+  return {
+    rows,
+    custodian,
+    store: sealedSecretStoreOn(rows, { current: custodian }),
+  };
 }
 
 export function sealedInMemory(): Sealed<MemoryRows> {

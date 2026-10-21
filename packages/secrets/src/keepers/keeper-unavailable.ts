@@ -19,3 +19,9 @@ export function custodianUnanswered(kid: string, act: CustodianAct, words: strin
     detail: `The custodian of the key ${kid} did not answer a request to ${act} a data key: ${words}`,
   });
 }
+
+export function keeperUnknown(name: string): KeeperUnavailable {
+  return new KeeperUnavailable({
+    detail: `The secret is kept by the keeper ${name}, which is neither the current keeper nor the previous one`,
+  });
+}

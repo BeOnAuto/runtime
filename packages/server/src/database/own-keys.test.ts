@@ -2,7 +2,7 @@ import { makeAppRuntime } from '@on.auto/api';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Conflict, type StreamReader, type StreamWriter } from '@on.auto/operations';
 import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
-import { sealedKeeper, secretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
+import { sealedSecretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
 import { custodianRefusal, memoryRows, recordingCustodian, type RecordingCustodian } from '@on.auto/secrets/testing';
 import { DateTime, Effect, Redacted, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -39,7 +39,7 @@ const waysOut =
   "Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key";
 
 function storeOver(rows: SecretRows, custodian: RecordingCustodian): SecretStore {
-  return secretStoreOn(rows, sealedKeeper({ current: custodian }), { current: custodian });
+  return sealedSecretStoreOn(rows, { current: custodian });
 }
 
 function bytesOf(key: Redacted.Redacted<Uint8Array> | undefined): readonly number[] {

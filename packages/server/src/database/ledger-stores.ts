@@ -1,4 +1,10 @@
-import { custodianProbed, type Custodian, type Custodians, type SecretStore } from '@on.auto/secrets';
+import {
+  custodianProbed,
+  sealedSecretStoreOn,
+  type Custodian,
+  type Custodians,
+  type SecretStore,
+} from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, type Context } from 'effect';
 
@@ -7,7 +13,7 @@ import { logContentStore, logLedger, logSecretStore } from '../logging/logging.t
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import type { Settings } from '../settings/settings.ts';
 import { loadKmsCustodians, type KmsCustodiansLoader } from './kms-custodians.ts';
-import { custodiansOf, secretRowsOn, secretStoreOver } from './secret-store.ts';
+import { custodiansOf, secretRowsOn } from './secret-store.ts';
 
 export interface LedgerStores {
   readonly secrets: SecretStore;
@@ -55,7 +61,7 @@ function openedAndRotated(
 ): Effect.Effect<SecretStore, InvalidSettingsError> {
   return Effect.gen(function* () {
     yield* probedAtStart(custodians.current, settings);
-    const secrets = secretStoreOver(yield* secretRowsOn(database), custodians);
+    const secrets = sealedSecretStoreOn(yield* secretRowsOn(database), custodians);
     const resealed = yield* rotatedUnder(secrets, settings);
     yield* logSecretStore({ kid: custodians.current.kid, resealed, keyFrom: settings.current });
     return secrets;

@@ -142,12 +142,22 @@ function forgottenOn(execute: StatementExecutor, id: string): Effect.Effect<Hold
   );
 }
 
-function heldOn(execute: StatementExecutor, { keptBy, kid }: Holder, limit: number): Effect.Effect<readonly HeldRow[]> {
+interface Asked {
+  readonly limit: number;
+  readonly after: string | undefined;
+}
+
+function heldOn(
+  execute: StatementExecutor,
+  { keptBy, kid }: Holder,
+  { limit, after }: Asked,
+): Effect.Effect<readonly HeldRow[]> {
   const underTheKid = kid === undefined ? SQL.EMPTY : SQL` AND kid = ${kid}`;
+  const afterTheId = after === undefined ? SQL.EMPTY : SQL` AND id > ${after}`;
   return Effect.map(
     queried(
       execute,
-      SQL`SELECT id, version, ${holdingColumns} FROM ${keptSecrets} WHERE kept_by = ${keptBy}${underTheKid}
+      SQL`SELECT id, version, ${holdingColumns} FROM ${keptSecrets} WHERE kept_by = ${keptBy}${underTheKid}${afterTheId}
         ORDER BY id LIMIT ${limit}`,
     ),
     (rows) =>
@@ -174,7 +184,7 @@ export function secretRowsOn(execute: StatementExecutor, close: () => Promise<vo
     claim: (id, version, lastingMs) => claimedOn(execute, id, version, lastingMs),
     endingsOf: (ids) => endingsOn(execute, ids),
     forget: (id) => forgottenOn(execute, id),
-    heldBy: (holder, limit) => heldOn(execute, holder, limit),
+    heldBy: (holder, limit, after) => heldOn(execute, holder, { limit, after }),
     reheld: (read, holding) => reheldOn(execute, read, holding),
     close,
   };

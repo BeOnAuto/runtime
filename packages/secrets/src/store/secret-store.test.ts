@@ -7,6 +7,7 @@ import { sealedKeeper } from '../keepers/sealed-keeper.ts';
 import type { Holding, SecretRows } from '../rows/secret-rows.ts';
 import { memoryRows } from '../testing/memory-rows.ts';
 import { custodianRefusal, recordingCustodian } from '../testing/recording-custodian.ts';
+import { sealedSecretStoreOn } from './sealed-store.ts';
 import { secretStoreOn, type SecretStore } from './secret-store.ts';
 
 const now = Effect.map(DateTime.now, DateTime.toEpochMillis);
@@ -35,13 +36,11 @@ async function stateOf(store: SecretStore, id: string) {
 describe('the secret store and its keeper', () => {
   it('hands its keeper the id it keeps a value under, and releases with it the holding of a row it forgets, and nothing for an id it does not keep', async () => {
     const released: Holding[] = [];
-    const store = secretStoreOn(
-      memoryRows({ now }),
-      keeperInTheClear((holding) => {
+    const store = secretStoreOn(memoryRows({ now }), {
+      current: keeperInTheClear((holding) => {
         released.push(holding);
       }),
-      { current: custodianOf(5) },
-    );
+    });
 
     const id = await Effect.runPromise(store.keep(Redacted.make('pasted-key')));
     const state = await stateOf(store, id);
@@ -73,7 +72,7 @@ describe('the rotation of the secret store', () => {
   it('never writes over a replacement made between its read of a row and its write, which stays under the current key', async () => {
     const rows = memoryRows({ now });
     const [previous, current] = [custodianOf(5), custodianOf(6)];
-    const before = secretStoreOn(rows, sealedKeeper({ current: previous }), { current: previous });
+    const before = sealedSecretStoreOn(rows, { current: previous });
     const ids = await Effect.runPromise(
       Effect.forEach(['first-tokens', 'second-key'], (value) => before.keep(Redacted.make(value))),
     );
@@ -82,12 +81,12 @@ describe('the rotation of the secret store', () => {
       [ids[0], 'first-tokens'],
       [ids[1], 'second-key'],
     ]);
-    const replacing = secretStoreOn(rows, sealedKeeper({ current }), { current });
+    const replacing = sealedSecretStoreOn(rows, { current });
     const rotating = secretStoreOn(
       replacedBeforeItsFirstRehold(rows, (id) =>
         Effect.runPromise(replacing.replace(id, 1, Redacted.make('renewed-tokens'))),
       ),
-      sealedKeeper({ current, previous }),
+      { current: sealedKeeper({ current, previous }) },
       { current, previous },
     );
 
@@ -104,9 +103,9 @@ describe('the rotation of the secret store', () => {
   it('fills with zeros each data key it unwrapped with the previous key once the current key wrapped it again', async () => {
     const rows = memoryRows({ now });
     const [previous, current] = [recordingCustodian(), recordingCustodian()];
-    const before = secretStoreOn(rows, sealedKeeper({ current: previous }), { current: previous });
+    const before = sealedSecretStoreOn(rows, { current: previous });
     const id = await Effect.runPromise(before.keep(Redacted.make('pasted-key')));
-    const rotating = secretStoreOn(rows, sealedKeeper({ current, previous }), { current, previous });
+    const rotating = sealedSecretStoreOn(rows, { current, previous });
 
     const rewrapped = await Effect.runPromise(rotating.rotated());
     const unwrapped = previous.dataKeys().slice(1);
@@ -122,9 +121,9 @@ describe('a rotation whose previous custodian refuses', () => {
   it('fails with the refusal of the custodian in its words, holding nothing again', async () => {
     const rows = memoryRows({ now });
     const [previous, current] = [recordingCustodian(), recordingCustodian()];
-    const before = secretStoreOn(rows, sealedKeeper({ current: previous }), { current: previous });
+    const before = sealedSecretStoreOn(rows, { current: previous });
     await Effect.runPromise(before.keep(Redacted.make('pasted-key')));
-    const rotating = secretStoreOn(rows, sealedKeeper({ current, previous }), { current, previous });
+    const rotating = sealedSecretStoreOn(rows, { current, previous });
 
     previous.refuse();
 
