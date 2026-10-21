@@ -21,9 +21,9 @@ export async function shutDown(server: Server, hooks: ShutdownHooks, timeoutMs: 
   const closed = once(server, 'close');
   server.close();
   await Promise.all([Promise.race([closed, elapsed(timeoutMs)]), hooks.stopWork()]);
+  await hooks.closeApi();
   await hooks.disposeRuntime();
   await hooks.stopTelemetry();
-  await hooks.closeApi();
   await Promise.race([closed, elapsed(graceMs)]);
   server.closeAllConnections();
   await closed;
