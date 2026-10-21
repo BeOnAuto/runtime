@@ -987,7 +987,7 @@
       "get": {
         "operationId": "search_in_org",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first. Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole. Without `playbook` it searches the tool servers of the whole org, naming the playbooks each serves. `providers` lists what a person may connect that no server serves yet.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first. Each server is asked at each call, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole. Without `playbook` it searches every tool server of the org, with the playbooks each serves. With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name.",
         "tags": [
           "tool-servers"
         ],
@@ -9709,7 +9709,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first. Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first. Each server is asked at each call, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole.",
         "tags": [
           "tool-servers"
         ],

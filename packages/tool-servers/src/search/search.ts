@@ -7,10 +7,10 @@ import { FoundSchema, SearchInputSchema } from './search-schemas.ts';
 import { searchAttempted, searchTask, searched } from './search-words.ts';
 
 export const searchSentences = [
-  "Searches the tools of the tool servers this playbook's functions may use, which a function names in its tools as server/tool or server/*, and execute calls.",
-  'Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold the words, best first.',
-  'Each server is asked for its tools when this is called, and one that cannot be asked just now says why in place of its tools.',
-  '`server` keeps one server, `only` the tools that read or those that may write, and introspect describes a tool whole.',
+  "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute.",
+  'Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first.',
+  'Each server is asked at each call, and one that cannot be asked just now says why in place of its tools.',
+  '`server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole.',
 ];
 
 export function noServerNamed(server: string, holder: string): InvalidInput {
