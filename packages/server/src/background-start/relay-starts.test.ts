@@ -1,9 +1,10 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { impatient } from '../local-runtime/runtime-probe.ts';
 import { computerWith, startingOn } from '../testing/relays/fake-starting.ts';
 import { ranOnATestClock } from '../testing/relays/relayed-agent.ts';
-import { impatient, runningRuntime } from './background-start.ts';
+import { runningRuntime } from './background-start.ts';
 
 describe('what the relay of an agent sees and starts on the port', () => {
   it('sees each answer of the port, and remembers the runtime it started', () =>

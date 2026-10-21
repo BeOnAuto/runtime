@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { restartMarkIn } from '../local-runtime/runtime-restarts.ts';
+import { restartMarkIn } from '../local-runtime/local-control.ts';
 import {
   runtimesStartedInTheBackgroundEndedWithTheTest,
   startedInTheBackgroundIn,

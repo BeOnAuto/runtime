@@ -6,12 +6,12 @@ import {
   askedTo,
   probeAt,
   stoppedWhenAsked,
+  throughARestart,
   waitedFor,
   type Probe,
   type RunningStatus,
   type RuntimeFetch,
 } from './runtime-probe.ts';
-import { throughARestart } from './runtime-restarts.ts';
 
 export type RuntimeCommand = 'status' | 'stop' | 'restart';
 

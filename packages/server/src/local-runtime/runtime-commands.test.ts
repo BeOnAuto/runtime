@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { after, ranOnATestClock, settled } from '../testing/relays/relayed-agent.ts';
 import { runRuntimeCommand, type RuntimeAsking, type RuntimeCommand } from './runtime-commands.ts';
-import { stopWaitMs, type RuntimeFetch } from './runtime-probe.ts';
-import { restartWaitMs } from './runtime-restarts.ts';
+import { restartWaitMs, stopWaitMs, type RuntimeFetch } from './runtime-probe.ts';
 
 const runningInATerminal = {
   version: '0.9.1',

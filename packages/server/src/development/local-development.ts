@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { restartMarkIn } from '../local-runtime/runtime-restarts.ts';
+import { restartMarkIn } from '../local-runtime/local-control.ts';
 import { startChild } from './children.ts';
 import type { DevelopmentSetup } from './development-run.ts';
 

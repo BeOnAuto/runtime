@@ -1,6 +1,8 @@
 import type { RuntimeAction } from '@on.auto/api';
 import { Effect, Function, Option, Schedule, Schema } from 'effect';
 
+import { longestStopMs } from '../lifecycle/shutdown.ts';
+
 interface RuntimeRequest {
   readonly method: 'GET' | 'POST';
   readonly timeoutMs: number;
@@ -42,6 +44,18 @@ const probeTimeoutMs = 2000;
 export const probeEveryMs = 100;
 
 export const stopWaitMs = 15_000;
+
+export const startWaitMs = 60_000;
+
+export const restartWaitMs = longestStopMs + startWaitMs;
+
+export interface Patience {
+  readonly waitMs: number;
+}
+
+export const impatient: Patience = { waitMs: 0 };
+
+export const throughARestart: Patience = { waitMs: restartWaitMs };
 
 export function runtimeAddressOf(port: number): string {
   return `http://127.0.0.1:${port}`;

@@ -16,7 +16,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { startWaitMs } from '../local-runtime/runtime-restarts.ts';
+import { startWaitMs } from '../local-runtime/runtime-probe.ts';
 import { noticesFor, startingLockIn } from './background-process.ts';
 
 let home: string;

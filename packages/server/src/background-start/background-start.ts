@@ -2,13 +2,15 @@ import { Effect, type Scope } from 'effect';
 
 import {
   probeAt,
+  startWaitMs,
   stoppedWhenAsked,
+  throughARestart,
   waitedFor,
+  type Patience,
   type Probe,
   type RunningStatus,
   type RuntimeFetch,
 } from '../local-runtime/runtime-probe.ts';
-import { startWaitMs, throughARestart, type Patience } from '../local-runtime/runtime-restarts.ts';
 import { pausedWords, type StartedRuntime } from './started-runtimes.ts';
 
 export interface NotRunning {
@@ -33,8 +35,6 @@ export interface BackgroundStarting {
   readonly remember: (runtime: StartedRuntime) => void;
   readonly pausing: () => boolean;
 }
-
-export const impatient: Patience = { waitMs: 0 };
 
 function isNewer(version: string, than: string): boolean {
   return version.localeCompare(than, 'en', { numeric: true }) > 0;

@@ -1,8 +1,14 @@
 import { Effect, Fiber } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { stopWaitMs, type RuntimeFetch } from '../local-runtime/runtime-probe.ts';
-import { restartWaitMs, startWaitMs, throughARestart } from '../local-runtime/runtime-restarts.ts';
+import {
+  impatient,
+  restartWaitMs,
+  startWaitMs,
+  stopWaitMs,
+  throughARestart,
+  type RuntimeFetch,
+} from '../local-runtime/runtime-probe.ts';
 import {
   computerWith,
   ranProbeByProbe,
@@ -11,7 +17,7 @@ import {
   type Computer,
 } from '../testing/relays/fake-starting.ts';
 import { after, ranOnATestClock, settled } from '../testing/relays/relayed-agent.ts';
-import { impatient, runningRuntime } from './background-start.ts';
+import { runningRuntime } from './background-start.ts';
 
 function refusingToStop(fetch: RuntimeFetch): RuntimeFetch {
   return (address, request) =>

@@ -3,9 +3,8 @@ import { fileURLToPath } from 'node:url';
 import type { Environment } from '@on.auto/config';
 
 import { release } from '../composition/release.ts';
-import { logFileIn } from '../local-runtime/local-control.ts';
+import { logFileIn, restartMarkIn } from '../local-runtime/local-control.ts';
 import type { RuntimeFetch } from '../local-runtime/runtime-probe.ts';
-import { restartMarkIn } from '../local-runtime/runtime-restarts.ts';
 import { loggedTo, noticesFor, startInBackgroundOf, startingLockIn } from './background-process.ts';
 import type { BackgroundStarting } from './background-start.ts';
 import { Sighting } from './sighting.ts';

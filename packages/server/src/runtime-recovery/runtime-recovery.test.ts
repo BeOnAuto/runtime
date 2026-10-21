@@ -2,10 +2,10 @@ import { Effect, Fiber, Function } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { impatient, type NotRunning } from '../background-start/background-start.ts';
+import type { NotRunning } from '../background-start/background-start.ts';
 import type { Sighted } from '../background-start/sighting.ts';
 import type { StartedRuntime } from '../background-start/started-runtimes.ts';
-import type { Patience } from '../local-runtime/runtime-restarts.ts';
+import { impatient, type Patience } from '../local-runtime/runtime-probe.ts';
 import { recovered, type Recovering, type Recovery } from './runtime-recovery.ts';
 
 const ownInstance = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';

@@ -1,6 +1,6 @@
 import type { Environment } from '@on.auto/config';
 
-import type { RestartMark } from '../local-runtime/runtime-restarts.ts';
+import type { RestartMark } from '../local-runtime/local-control.ts';
 import type { ChildCommand, RunningChild, StartChild } from './children.ts';
 import type { RunnerLog } from './runner-log.ts';
 

@@ -6,9 +6,8 @@ import { startupFailureNoticeFor } from '../command-line/failure-notice.ts';
 import { servedLocally, type LocalServerHost } from '../command-line/local-server.ts';
 import { release } from '../composition/release.ts';
 import { stopInsistedBy, stopRequestedBy } from '../lifecycle/stop-request.ts';
-import { localControlOf, runtimeHomeIn, type LocalStarting } from './local-control.ts';
+import { localControlOf, restartMarkIn, runtimeHomeIn, type LocalStarting } from './local-control.ts';
 import { runsInFlight } from './runs-in-flight.ts';
-import { restartMarkIn } from './runtime-restarts.ts';
 
 const signalsOfOneStop = 1000;
 

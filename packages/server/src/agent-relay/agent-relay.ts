@@ -2,7 +2,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { Effect } from 'effect';
 
 import { reportedOnStderr, startingFor, type AgentRelaying } from '../background-start/agent-starting.ts';
-import { answersOn, impatient, lookedAt, runningRuntime } from '../background-start/background-start.ts';
+import { answersOn, lookedAt, runningRuntime } from '../background-start/background-start.ts';
+import { impatient } from '../local-runtime/runtime-probe.ts';
 import { pingOf, runtimeConnectionTo } from '../runtime-recovery/runtime-connection.ts';
 import { recovered, type Recovering } from '../runtime-recovery/runtime-recovery.ts';
 import { stoppedRuntime } from '../runtime-recovery/runtime-stop.ts';
