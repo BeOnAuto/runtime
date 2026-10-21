@@ -143,6 +143,12 @@ describe('the descriptions that say what the instructions leave to them', () => 
       'It holds the recipes first-playbook, remember, give-tools and schedule, which the tools listed here can follow.',
     );
   });
+
+  it('say in list_playbook_events that its pages are read on only as the person needs', () => {
+    expect(descriptionOf('list_playbook_events')).toContain(
+      'the next_cursor of the page before, to read on only as the person needs.',
+    );
+  });
 });
 
 function everyArgument(): readonly Argument[] {

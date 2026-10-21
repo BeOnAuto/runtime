@@ -25,7 +25,7 @@ const description = [
   'its fact as data with a large field as its size, and its metadata; get_event reads one event whole.',
   "Use it to follow the playbook's activity, to see what one run did, or to find the events a recall function or a workflow's schedule can take.",
   '`type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on,',
-  'and `cursor` is the next_cursor of the page before.',
+  'and `cursor` is the next_cursor of the page before, to read on only as the person needs.',
   "The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
 ].join(' ');
 
