@@ -20,7 +20,7 @@ For a managed service or a server you run, create a database and a user for the 
 
 ## Create the database and its user
 
-The server creates its tables in the database's `public` schema at every start, and migrates them there after an upgrade. Its user needs `CREATE` on that schema every time, not only the first. A user that owns the database has it:
+The server creates its tables in the database's `public` schema at its first start and any it lacks at every later start; before launch it migrates nothing, and refuses a database made in another layout of the ledger. Its user needs `CREATE` on that schema every time, not only the first. A user that owns the database has it:
 
 ```sql
 CREATE ROLE auto_runtime LOGIN PASSWORD '<a long random password>';
