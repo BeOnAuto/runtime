@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -29,6 +29,7 @@ export interface ScriptedModels {
 
 interface ScriptFiles {
   readonly script: string;
+  readonly nextScript: string;
   readonly sleeping: string;
 }
 
@@ -39,6 +40,8 @@ const processLoop = import.meta.resolve('@on.auto/workflow-engine/process-loop')
 const realJobs = new URL('../model-jobs/model-jobs.ts', import.meta.url).href;
 
 const scriptFile = 'script';
+
+const nextScriptFile = 'script.next';
 
 const sleepingFile = 'sleeping';
 
@@ -89,21 +92,30 @@ function sourceOf(): string {
   ].join('\n');
 }
 
+function scriptNamed(files: ScriptFiles, script: Script): void {
+  writeFileSync(files.nextScript, script);
+  renameSync(files.nextScript, files.script);
+}
+
 function sleepingIn(files: ScriptFiles): readonly string[] {
   return readFileSync(files.sleeping, 'utf8').split('\n').slice(0, -1);
 }
 
 export function scriptedModels(): ScriptedModels {
   const directory = scratchDirectory();
-  const files = { script: join(directory, scriptFile), sleeping: join(directory, sleepingFile) };
+  const files = {
+    script: join(directory, scriptFile),
+    nextScript: join(directory, nextScriptFile),
+    sleeping: join(directory, sleepingFile),
+  };
   const module = pathToFileURL(join(directory, 'scripted-model-process.mjs'));
-  writeFileSync(files.script, 'real');
+  scriptNamed(files, 'real');
   writeFileSync(files.sleeping, '');
   writeFileSync(module, sourceOf());
   return {
     module,
     next: (script) => {
-      writeFileSync(files.script, script);
+      scriptNamed(files, script);
     },
     untilSleeping: (jobs) =>
       vi.waitFor(() => {
