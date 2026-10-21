@@ -448,7 +448,7 @@ An operation that needs a header the entry's `headers` name, in any case, is off
 A call:
 
 - fills the path and the query, with an array sent as repeated keys, or as one key of comma-joined items when the document writes the parameter with `explode: false`;
-- refuses a path argument that is empty, holds a `/`, or is `.` or `..`;
+- sends a path argument encoded as one segment, a `/` it holds as `%2F`, and refuses one that is empty or is `.` or `..`;
 - sends nothing to an address that would leave the origin or the path of `base_url`;
 - sends the body as JSON, with the entry's headers and query parameters.
 

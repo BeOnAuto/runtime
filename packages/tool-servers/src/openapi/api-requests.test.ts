@@ -54,12 +54,13 @@ function refusalOf(operation: ApiOperation, input: Readonly<Record<string, unkno
 }
 
 describe('the path of a call of an HTTP API', () => {
-  it('refuses an argument of . or .., alone or joined in one segment, which would climb out of the operation', () => {
+  it('refuses an argument that reads as . or .. once encoded, alone or joined in one segment, which would climb out of the operation', () => {
     expect([
       refusalOf(listing, { folder: '..', id: 'b' }),
       refusalOf(listing, { folder: 'a', id: '.' }),
+      refusalOf(listing, { folder: ['..'], id: 'b' }),
       refusalOf(pair, { a: '.', b: '.' }),
-    ]).toEqual([climbedOut, climbedOut, climbedOut]);
+    ]).toEqual([climbedOut, climbedOut, climbedOut, climbedOut]);
   });
 
   it('keeps a dot that is not a whole segment, and a character an address reserves, inside its segment', () => {
@@ -68,15 +69,41 @@ describe('the path of a call of an HTTP API', () => {
     );
   });
 
-  it('refuses an argument that is empty or holds a /, unsent, however its segments would read', () => {
-    const emptyOrSlashed = 'The argument folder is empty or holds a /, which a path argument may not';
+  it('refuses an empty argument, or a list that holds one, unsent', () => {
+    const empty = 'The argument folder is empty, which a path argument may not be';
 
-    expect([
-      refusalOf(listing, { folder: '../../admin', id: 'b' }),
-      refusalOf(listing, { folder: 'a/../b', id: 'b' }),
-      refusalOf(listing, { folder: '', id: 'b' }),
-      refusalOf(listing, { folder: ['a', 'b/c'], id: 'b' }),
-    ]).toEqual([emptyOrSlashed, emptyOrSlashed, emptyOrSlashed, emptyOrSlashed]);
+    expect([refusalOf(listing, { folder: '', id: 'b' }), refusalOf(listing, { folder: ['a', ''], id: 'b' })]).toEqual([
+      empty,
+      empty,
+    ]);
+  });
+});
+
+describe('the path of a call of an HTTP API whose argument holds a /', () => {
+  it('sends the / encoded inside the one segment of the argument, which leaves the path of the operation as it is', () => {
+    const given = ['https://www.example.com/', '../../admin', 'a/../b', '..\\..\\admin', '/'];
+    const sent = given.map((folder) =>
+      Result.getOrThrow(Result.map(apiRequestOf(listing, { folder, id: 'b' }, endpoint), ({ url }) => url)),
+    );
+    const paths = sent.map((url) => new URL(url).pathname);
+
+    expect(paths).toEqual([
+      '/v1/notes/https%3A%2F%2Fwww.example.com%2F/b',
+      '/v1/notes/..%2F..%2Fadmin/b',
+      '/v1/notes/a%2F..%2Fb/b',
+      '/v1/notes/..%5C..%5Cadmin/b',
+      '/v1/notes/%2F/b',
+    ]);
+    expect(paths.map((path) => path.split('/').map((segment) => decodeURIComponent(segment)))).toEqual(
+      given.map((folder) => ['', 'v1', 'notes', folder, 'b']),
+    );
+    expect(sent.every((url) => isUnderBase(endpoint.baseUrl, url))).toBe(true);
+  });
+
+  it('joins a list whose items hold a /, each item encoded and the commas between them not', () => {
+    expect(Result.map(apiRequestOf(listing, { folder: ['a', 'b/c'], id: 'd' }, endpoint), ({ url }) => url)).toEqual(
+      Result.succeed('https://graph.example.com/v1/notes/a,b%2Fc/d?tenant=acme'),
+    );
   });
 });
 
