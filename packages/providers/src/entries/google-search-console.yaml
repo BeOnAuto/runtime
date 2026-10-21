@@ -1,6 +1,6 @@
 name: google-search-console
 title: Google Search Console
-description: Query search clicks, impressions, click-through rates and positions for your Search Console properties, inspect how Google indexes a URL, list sitemaps, and add or remove properties. It reaches domain properties, named sc-domain:example.com.
+description: Query clicks, impressions, click-through rates and positions, inspect how Google indexes a URL, list sitemaps, and add or remove properties. It reaches domain properties, named sc-domain:example.com, and URL-prefix properties, named with their scheme and trailing slash, https://www.example.com/.
 website: https://developers.google.com/webmaster-tools
 type: openapi
 document: documents/google-search-console.openapi.json

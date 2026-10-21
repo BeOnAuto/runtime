@@ -132,6 +132,23 @@ describe('the address of a call of an HTTP API, checked before it is sent', () =
   });
 });
 
+function calledThrough(
+  baseUrl: string,
+  document: ReturnType<typeof documentOf>,
+  tool: string,
+  input: Readonly<Record<string, unknown>>,
+): Promise<CallSettled> {
+  const client = apiClient(
+    {
+      ...settings,
+      headers: new Map([['X-Api-Key', Redacted.make(apiKey)]]),
+      api: { baseUrl, operations: toolsOf(document).operations },
+    },
+    { fetch: globalThis.fetch, tokens: undefined, now: Date.now },
+  );
+  return client.call({ tool, input, meta: {}, signal: new AbortController().signal, timeoutMs: 1000 });
+}
+
 const unexploded = documentOf({
   '/rows': {
     get: {
@@ -144,24 +161,32 @@ const unexploded = documentOf({
 describe('the query of a call of an HTTP API whose document writes a list with explode false', () => {
   it('reaches the API as one key, its items joined by commas and a comma inside an item encoded', async () => {
     const api = await elsewhere();
-    const client = apiClient(
-      {
-        ...settings,
-        headers: new Map([['X-Api-Key', Redacted.make(apiKey)]]),
-        api: { baseUrl: api.baseUrl, operations: toolsOf(unexploded).operations },
-      },
-      { fetch: globalThis.fetch, tokens: undefined, now: Date.now },
-    );
 
-    const settled = await client.call({
-      tool: 'rows',
-      input: { tag: ['open', 'mine, too'] },
-      meta: {},
-      signal: new AbortController().signal,
-      timeoutMs: 1000,
-    });
+    const settled = await calledThrough(api.baseUrl, unexploded, 'rows', { tag: ['open', 'mine, too'] });
 
     expect(settled).toMatchObject({ result: { structuredContent: { tags: ['open,mine, too'] } } });
     expect(api.seen()).toMatchObject([{ path: '/v1/rows', query: '?tag=open,mine%2C+too' }]);
+  });
+});
+
+const profiles = documentOf({
+  '/profiles/{id}': {
+    get: {
+      operationId: 'profile',
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+    },
+  },
+});
+
+describe('the path of a call of an HTTP API whose argument holds a /', () => {
+  it('reaches the API with the argument encoded inside its one segment, and so at no route above it', async () => {
+    const api = await elsewhere();
+
+    const settled = await calledThrough(api.baseUrl, profiles, 'profile', { id: '../search' });
+
+    expect(settled).toMatchObject({
+      result: { isError: true, content: [{ type: 'text', text: 'No such route: GET /v1/profiles/..%2Fsearch' }] },
+    });
+    expect(api.seen()).toMatchObject([{ method: 'GET', path: '/v1/profiles/..%2Fsearch' }]);
   });
 });
