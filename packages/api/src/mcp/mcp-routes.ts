@@ -2,8 +2,8 @@ import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/ser
 import type { OperationScope } from '@on.auto/operations';
 
 import { admissionAt } from '../authentication/endpoint-admission.ts';
-import { authInfoFor, tracedBy, type PlaybookCall, type OrgCall } from '../hand-off/caller-hand-off.ts';
-import { droppedArgumentsOf } from '../hand-off/dropped-arguments.ts';
+import { tracedBy } from '../hand-off/caller-hand-off.ts';
+import { EndpointHandOffs, type HandOff } from '../hand-off/endpoint-hand-off.ts';
 import { requestBodyLimit } from '../operations/request-body.ts';
 import type { RegisterRoutes, RouteHandler, Routes } from '../routes.ts';
 import { linkedAnswers, type RetryStateKeys } from '../tools/linked-answers.ts';
@@ -18,22 +18,14 @@ import {
 export interface McpRoutesOptions extends McpServing {
   readonly reportError: (error: Readonly<Error>) => void;
   readonly retryStateKeys: RetryStateKeys;
+  readonly heartbeatEveryMs?: number;
 }
 
-type FetchMcp = McpHttpHandler['fetch'];
+export const heartbeatEveryMs = 5000;
 
 type Resource = Routes['resource'];
 
-async function handedOff(
-  fetchMcp: FetchMcp,
-  request: Request,
-  call: Omit<OrgCall, 'dropped'> | Omit<PlaybookCall, 'dropped'>,
-): Promise<Response> {
-  const dropped = await droppedArgumentsOf(request);
-  return fetchMcp(request, { authInfo: authInfoFor({ ...call, dropped }) });
-}
-
-function endpoint(fetchMcp: FetchMcp, scope: OperationScope, resource: Resource): RouteHandler {
+function endpoint(handedOff: HandOff, scope: OperationScope, resource: Resource): RouteHandler {
   return (c) => {
     const org = String(c.req.param('org'));
     const playbook = scope === 'playbook' ? String(c.req.param('playbook')) : undefined;
@@ -44,14 +36,14 @@ function endpoint(fetchMcp: FetchMcp, scope: OperationScope, resource: Resource)
     const { caller } = admission;
     const handedOver = { caller, org, requestId: c.get('requestId'), ...tracedBy(c.get('traceParent')) };
     const call = playbook === undefined ? handedOver : { ...handedOver, playbook };
-    return handedOff(fetchMcp, c.req.raw, call);
+    return handedOff(c.req.raw, call);
   };
 }
 
-function ownOrgEndpoint(fetchMcp: FetchMcp): RouteHandler {
+function ownOrgEndpoint(handedOff: HandOff): RouteHandler {
   return (c) => {
     const { own } = c.get('principal');
-    return handedOff(fetchMcp, c.req.raw, {
+    return handedOff(c.req.raw, {
       caller: own,
       org: own.org,
       requestId: c.get('requestId'),
@@ -60,8 +52,17 @@ function ownOrgEndpoint(fetchMcp: FetchMcp): RouteHandler {
   };
 }
 
-function handlerFor(factory: McpServerFactory, { reportError }: McpRoutesOptions): McpHttpHandler {
-  return createMcpHandler(factory, { legacy: 'stateless', maxRequestBodySize: requestBodyLimit, onerror: reportError });
+function handlerFor(
+  factory: McpServerFactory,
+  { reportError, heartbeatEveryMs: every = heartbeatEveryMs }: McpRoutesOptions,
+): McpHttpHandler {
+  return createMcpHandler(factory, {
+    legacy: 'stateless',
+    responseMode: 'sse',
+    keepAliveMs: every,
+    maxRequestBodySize: requestBodyLimit,
+    onerror: reportError,
+  });
 }
 
 export function mcpRoutes(options: McpRoutesOptions): RegisterRoutes {
@@ -71,13 +72,19 @@ export function mcpRoutes(options: McpRoutesOptions): RegisterRoutes {
       reportThrown: routes.reportThrown,
       linkedAnswers: linkedAnswers(options.retryStateKeys),
     };
+    const handOffs = new EndpointHandOffs();
     const catalog = handlerFor(catalogServerFactory(serving), options);
     const org = handlerFor(orgServerFactory(serving), options);
     const playbook = handlerFor(playbookServerFactory(serving), options);
-    routes.add('POST', '/mcp', ownOrgEndpoint(catalog.fetch));
-    routes.add('POST', '/orgs/:org/mcp', endpoint(org.fetch, 'org', routes.resource));
-    routes.add('POST', '/orgs/:org/playbooks/:playbook/mcp', endpoint(playbook.fetch, 'playbook', routes.resource));
+    routes.add('POST', '/mcp', ownOrgEndpoint(handOffs.to(catalog.fetch)));
+    routes.add('POST', '/orgs/:org/mcp', endpoint(handOffs.to(org.fetch), 'org', routes.resource));
+    routes.add(
+      'POST',
+      '/orgs/:org/playbooks/:playbook/mcp',
+      endpoint(handOffs.to(playbook.fetch), 'playbook', routes.resource),
+    );
     routes.onClose(async () => {
+      handOffs.stop();
       await Promise.all([catalog.close(), org.close(), playbook.close()]);
     });
   };

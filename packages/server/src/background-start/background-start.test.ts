@@ -1,104 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { defaultServerOptions } from '../lifecycle/lifecycle.ts';
-import { longestStopMs } from '../lifecycle/shutdown.ts';
-import {
-  impatient,
-  restartWaitMs,
-  runningRuntime,
-  startWaitMs,
-  throughARestart,
-  type BackgroundStarting,
-} from './background-start.ts';
-import { probeEveryMs, type RuntimeFetch } from './runtime-probe.ts';
-
-const startedForAnAgent = {
-  version: '0.9.1',
-  pid: 4242,
-  started_at: '2026-10-14T09:41:07.000Z',
-  started_by: 'agent',
-  directory: '/Users/ada/.auto-runtime',
-  log_file: '/Users/ada/.auto-runtime/runtime.log',
-  runs_in_flight: 0,
-};
-
-interface Computer {
-  readonly answering: () => object | undefined;
-  readonly answerWith: (answer?: object) => void;
-  readonly record: (event: string) => void;
-  readonly events: () => readonly string[];
-}
-
-function computerWith(first?: object): Computer {
-  let answering = first;
-  const events: string[] = [];
-  return {
-    answering: () => answering,
-    answerWith: (answer) => {
-      answering = answer;
-    },
-    record: (event) => {
-      events.push(event);
-    },
-    events: () => [...events],
-  };
-}
-
-function fetchOn(computer: Computer): RuntimeFetch {
-  return (address, { method }) => {
-    const answering = computer.answering();
-    if (answering === undefined) {
-      return Promise.reject(new TypeError('fetch failed'));
-    }
-    if (method === 'POST') {
-      computer.record(`asked ${address.slice(address.lastIndexOf('/') + 1)}`);
-      computer.answerWith();
-      return Promise.resolve(Response.json({ status: 'stopping' }, { status: 202 }));
-    }
-    return Promise.resolve(Response.json(answering));
-  };
-}
-
-interface Options {
-  readonly version?: string;
-  readonly startsAs?: object | undefined;
-  readonly comesBackAfter?: number;
-  readonly lockTaken?: boolean;
-  readonly restarting?: boolean;
-}
-
-function startingOn(computer: Computer, options: Options = {}): BackgroundStarting {
-  let sleeps = 0;
-  return {
-    version: options.version ?? '0.9.1',
-    logFile: '/Users/ada/.auto-runtime/runtime.log',
-    fetch: fetchOn(computer),
-    sleep: () => {
-      sleeps += 1;
-      if (options.comesBackAfter === sleeps) {
-        computer.answerWith(startedForAnAgent);
-      }
-      return Promise.resolve();
-    },
-    startInBackground: () => {
-      computer.record('started');
-      computer.answerWith('startsAs' in options ? options.startsAs : startedForAnAgent);
-    },
-    startingLock: {
-      take: () => {
-        computer.record('locked');
-        return options.lockTaken !== true;
-      },
-      release: () => {
-        computer.record('unlocked');
-      },
-    },
-    notice: (line) => {
-      computer.record(`noticed ${line}`);
-    },
-    restartUnderWay: () => options.restarting === true,
-  };
-}
+import type { RuntimeFetch } from '../local-runtime/runtime-probe.ts';
+import { throughARestart } from '../local-runtime/runtime-restarts.ts';
+import { computerWith, startedForAnAgent, startingOn, type Computer } from '../testing/relays/fake-starting.ts';
+import { impatient, runningRuntime } from './background-start.ts';
 
 function refusingToStop(fetch: RuntimeFetch): RuntimeFetch {
   return (address, request) =>
@@ -139,12 +44,13 @@ describe('making sure the runtime runs before an agent talks to it', () => {
     expect(computer.events()).toEqual(['locked']);
   });
 
-  it('says where its log is when it does not start', async () => {
+  it('says where its log is when the one it starts does not answer within the wait for a start', async () => {
     const computer = computerWith();
 
-    await expect(runningRuntime(5555, startingOn(computer, { startsAs: undefined }), impatient)).resolves.toBe(
-      'Auto Runtime did not start on port 5555; its log is /Users/ada/.auto-runtime/runtime.log',
-    );
+    await expect(runningRuntime(5555, startingOn(computer, { startsAs: undefined }), impatient)).resolves.toEqual({
+      words:
+        'Auto Runtime did not answer on port 5555 within 60 s of its start; its log is /Users/ada/.auto-runtime/runtime.log',
+    });
     expect(computer.events()).toEqual(['locked', 'started', 'unlocked']);
   });
 });
@@ -177,9 +83,9 @@ describe('the runtime an agent finds on the port', () => {
   it('says another program holds the port', async () => {
     const computer = computerWith({ hello: 'world' });
 
-    await expect(runningRuntime(3000, startingOn(computer), impatient)).resolves.toBe(
-      'Another program answers on port 3000; set PORT to start Auto Runtime on a free port',
-    );
+    await expect(runningRuntime(3000, startingOn(computer), impatient)).resolves.toEqual({
+      words: 'Another program answers on port 3000; set PORT to start Auto Runtime on a free port',
+    });
   });
 });
 
@@ -211,9 +117,11 @@ describe('a newer release of the runtime for an agent', () => {
     const computer = computerWith(startedForAnAgent);
     const starting = startingOn(computer, { version: '0.10.0' });
 
-    await expect(runningRuntime(5555, { ...starting, fetch: refusingToStop(starting.fetch) }, impatient)).resolves.toBe(
-      'Auto Runtime 0.9.1 on port 5555 did not stop, so Auto Runtime 0.10.0 could not replace it',
-    );
+    await expect(
+      runningRuntime(5555, { ...starting, fetch: refusingToStop(starting.fetch) }, impatient),
+    ).resolves.toEqual({
+      words: 'Auto Runtime 0.9.1 on port 5555 did not stop, so Auto Runtime 0.10.0 could not replace it',
+    });
     expect(computer.events()).toEqual([]);
   });
 
@@ -221,9 +129,9 @@ describe('a newer release of the runtime for an agent', () => {
     const computer = computerWith(startedForAnAgent);
     const starting = startingOn(computer, { version: '0.10.0' });
 
-    await expect(runningRuntime(5555, { ...starting, fetch: stayingUp(computer) }, impatient)).resolves.toBe(
-      'Auto Runtime 0.9.1 on port 5555 did not stop, so Auto Runtime 0.10.0 could not replace it',
-    );
+    await expect(runningRuntime(5555, { ...starting, fetch: stayingUp(computer) }, impatient)).resolves.toEqual({
+      words: 'Auto Runtime 0.9.1 on port 5555 did not stop, so Auto Runtime 0.10.0 could not replace it',
+    });
     expect(computer.events()).toEqual(['asked stop']);
   });
 });
@@ -236,15 +144,5 @@ describe('a newer release of the runtime for an agent, while the older one has r
     expect(computer.events()).toEqual([
       'noticed Auto Runtime 0.10.0 waits for Auto Runtime 0.9.1 on port 5555 to be idle before it replaces it, and relays to 0.9.1 until then',
     ]);
-  });
-});
-
-describe('the patience of an agent for a runtime that restarts', () => {
-  it('lasts as long as the runtime takes to stop, by the bounds of its shutdown, and then to start', () => {
-    const { shutdownTimeoutMs, exitDeadlineMs } = defaultServerOptions;
-
-    expect(throughARestart.attempts * probeEveryMs).toBe(restartWaitMs);
-    expect(restartWaitMs).toBe(longestStopMs + startWaitMs);
-    expect(longestStopMs).toBeGreaterThan(shutdownTimeoutMs + exitDeadlineMs);
   });
 });

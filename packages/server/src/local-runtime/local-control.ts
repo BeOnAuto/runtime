@@ -5,19 +5,25 @@ import type { Environment } from '@on.auto/config';
 import type { AccessMode } from '@on.auto/identity';
 
 import type { LocalServing } from '../lifecycle/lifecycle.ts';
-import type { RestartMark } from './background-process.ts';
 import type { RunsInFlight } from './runs-in-flight.ts';
+import type { RestartMark } from './runtime-restarts.ts';
 
 export const defaultRuntimePort = 5555;
 
 export interface LocalRun {
   readonly version: string;
   readonly pid: number;
+  readonly instance: string;
   readonly startedAt: Date;
   readonly directory: string;
   readonly home: string;
   readonly startedBy: StartedBy;
   readonly port: string | undefined;
+}
+
+export interface LocalStarting {
+  readonly startedBy: StartedBy;
+  readonly instance: string;
 }
 
 export interface LocalControl {
@@ -50,6 +56,7 @@ export function runtimeStatusOf(run: LocalRun, runsInFlight: number): RuntimeSta
   return {
     version: run.version,
     pid: run.pid,
+    instance: run.instance,
     startedAt: run.startedAt,
     directory: run.directory,
     startedBy: run.startedBy,

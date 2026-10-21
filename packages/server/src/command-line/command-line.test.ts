@@ -2,13 +2,15 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { StartedBy } from '@on.auto/api';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { release } from '../composition/release.ts';
+import type { LocalStarting } from '../local-runtime/local-control.ts';
 import { runCommandLine, type CommandLineHost } from './command-line.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-command-line-'));
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
 afterAll(() => {
   rmSync(directory, { recursive: true, force: true });
@@ -19,7 +21,7 @@ interface Recorded {
   readonly logged: string[];
   readonly errors: string[];
   readonly started: Readonly<Record<string, string>>[];
-  readonly startedBy: StartedBy[];
+  readonly startedAs: LocalStarting[];
   readonly relayed: number[];
   readonly asked: string[];
 }
@@ -37,14 +39,14 @@ function recordedHost(): Recorded {
   const logged: string[] = [];
   const errors: string[] = [];
   const started: Readonly<Record<string, string>>[] = [];
-  const startedBy: StartedBy[] = [];
+  const startedAs: LocalStarting[] = [];
   const relayed: number[] = [];
   const asked: string[] = [];
   return {
     logged,
     errors,
     started,
-    startedBy,
+    startedAs,
     relayed,
     asked,
     host: {
@@ -65,9 +67,9 @@ function recordedHost(): Recorded {
         },
         sleep: () => Promise.resolve(),
       },
-      startServer: (settings, by) => {
+      startServer: (settings, starting) => {
         started.push(settings);
-        startedBy.push(by);
+        startedAs.push(starting);
         return Promise.resolve();
       },
       relay: (port) => {
@@ -94,21 +96,35 @@ describe('starting the server with the auto-runtime command', () => {
     expect(started).toEqual([startedSettings]);
   });
 
-  it('starts it with start, as started in a terminal', async () => {
-    const { host, started, startedBy } = recordedHost();
+  it('starts it with start, as started in a terminal, which names its own instance', async () => {
+    const { host, started, startedAs } = recordedHost();
 
     await runCommandLine(['start'], host);
 
     expect(started).toEqual([startedSettings]);
-    expect(startedBy).toEqual(['terminal']);
+    const [starting] = startedAs;
+    expect(starting?.startedBy).toBe('terminal');
+    expect(starting?.instance).toMatch(uuid);
   });
 
-  it('starts it in the background for an agent', async () => {
-    const { host, startedBy } = recordedHost();
+  it('starts it in the background for an agent, as the instance the relay that starts it names', async () => {
+    const { host, startedAs } = recordedHost();
 
-    await runCommandLine(['start', '--background'], host);
+    await runCommandLine(['start', '--background', '--instance', '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a'], host);
 
-    expect(startedBy).toEqual(['agent']);
+    expect(startedAs).toEqual([{ startedBy: 'agent', instance: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' }]);
+  });
+
+  it.each<readonly [string, readonly string[]]>([
+    ['without an instance', ['start', '--background']],
+    ['with an instance that is no id', ['start', '--background', '--instance', 'mine']],
+    ['with a word that is not --instance', ['start', '--background', '--name', '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a']],
+  ])('starts nothing in the background %s, and says so', async (_case, args) => {
+    const { host, startedAs, errors } = recordedHost();
+
+    await expect(runCommandLine(args, host)).resolves.toBe(1);
+    expect(startedAs).toEqual([]);
+    expect(errors[0]).toBe(`auto-runtime has no command "${args.join(' ')}"`);
   });
 });
 

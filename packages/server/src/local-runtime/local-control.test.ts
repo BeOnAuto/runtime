@@ -16,6 +16,7 @@ import { runsInFlight } from './runs-in-flight.ts';
 const inATerminal: LocalRun = {
   version: '0.9.1',
   pid: 4242,
+  instance: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
   startedAt: new Date('2026-10-14T09:41:07.000Z'),
   directory: '/Users/ada/playbooks',
   home: '/Users/ada',
@@ -42,6 +43,7 @@ describe('the status of a runtime the auto-runtime command started', () => {
     expect(runtimeStatusOf(inATerminal, 0)).toEqual({
       version: '0.9.1',
       pid: 4242,
+      instance: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
       startedAt: new Date('2026-10-14T09:41:07.000Z'),
       directory: '/Users/ada/playbooks',
       startedBy: 'terminal',

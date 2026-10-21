@@ -1,9 +1,11 @@
-import type { StartedBy } from '@on.auto/api';
+import { randomUUID } from 'node:crypto';
+
 import type { Environment } from '@on.auto/config';
 import { runKeyCommand, type KeyCommandConsole } from '@on.auto/identity';
 
+import { instanceStartedInBackground } from '../background-start/background-process.ts';
 import { release } from '../composition/release.ts';
-import { backgroundArguments } from '../local-runtime/background-process.ts';
+import type { LocalStarting } from '../local-runtime/local-control.ts';
 import { isRuntimeCommand, runRuntimeCommand } from '../local-runtime/runtime-commands.ts';
 import { runtimePortOf } from '../local-runtime/runtime-port.ts';
 import type { Waiting } from '../local-runtime/runtime-probe.ts';
@@ -14,7 +16,7 @@ export interface CommandLineHost {
   readonly place: LocalPlace;
   readonly console: KeyCommandConsole;
   readonly waiting: Waiting;
-  readonly startServer: (settings: Readonly<Record<string, string>>, startedBy: StartedBy) => Promise<unknown>;
+  readonly startServer: (settings: Readonly<Record<string, string>>, starting: LocalStarting) => Promise<unknown>;
   readonly relay: (port: number) => Promise<unknown>;
 }
 
@@ -64,16 +66,17 @@ function answered(args: readonly string[], host: CommandLineHost): number {
   return answer(rest, host);
 }
 
-function startedByOf(args: readonly string[]): StartedBy | undefined {
+function startingOf(args: readonly string[]): LocalStarting | undefined {
   const given = args.join(' ');
   if (given === '' || given === 'start') {
-    return 'terminal';
+    return { startedBy: 'terminal', instance: randomUUID() };
   }
-  return given === backgroundArguments.join(' ') ? 'agent' : undefined;
+  const instance = instanceStartedInBackground(args);
+  return instance === undefined ? undefined : { startedBy: 'agent', instance };
 }
 
-async function startedServer(host: CommandLineHost, startedBy: StartedBy): Promise<undefined> {
-  await host.startServer(localSettings(host.environment, host.place), startedBy);
+async function startedServer(host: CommandLineHost, starting: LocalStarting): Promise<undefined> {
+  await host.startServer(localSettings(host.environment, host.place), starting);
 }
 
 async function relayed(host: CommandLineHost): Promise<number> {
@@ -82,9 +85,9 @@ async function relayed(host: CommandLineHost): Promise<number> {
 }
 
 export function runCommandLine(args: readonly string[], host: CommandLineHost): Promise<number | undefined> {
-  const startedBy = startedByOf(args);
-  if (startedBy !== undefined) {
-    return startedServer(host, startedBy);
+  const starting = startingOf(args);
+  if (starting !== undefined) {
+    return startedServer(host, starting);
   }
   const [name = ''] = args;
   if (args.length === 1 && name === 'mcp') {

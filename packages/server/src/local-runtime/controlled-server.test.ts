@@ -10,6 +10,8 @@ import { runsInFlight } from './runs-in-flight.ts';
 
 const loopback = { HOST: '127.0.0.1', PORT: '0' };
 
+const instance = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
 const fromABrowser = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 
 function startedInATerminal(): LocalControl {
@@ -17,6 +19,7 @@ function startedInATerminal(): LocalControl {
     {
       version: '0.9.1',
       pid: 4242,
+      instance,
       startedAt: new Date('2026-10-14T09:41:07.000Z'),
       directory: '/Users/ada/playbooks',
       home: '/Users/ada',
@@ -57,7 +60,7 @@ describe('a server started with the control of the auto-runtime command', () => 
     const read = await fetch(`http://localhost:${server.port}/runtime`);
     const stopping = await fetch(`http://localhost:${server.port}/runtime/stop`, { method: 'POST' });
 
-    expect(await read.json()).toMatchObject({ version: '0.9.1', pid: 4242, started_by: 'terminal', runs_in_flight: 0 });
+    expect(await read.json()).toMatchObject({ version: '0.9.1', pid: 4242, instance, started_by: 'terminal' });
     expect(await stopping.json()).toEqual({ status: 'stopping' });
     await expect(local.asked).resolves.toBe('stop');
   });

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import type { Environment } from '@on.auto/config';
 
 import type { ChildCommand, RunningChild, Written } from './children.ts';
-import type { DevelopmentRun, DevelopmentSetup } from './development-run.ts';
+import type { DevelopmentRun, DevelopmentSetup, Restarting } from './development-run.ts';
 import { readyNotice } from './ready-notice.ts';
 import { runnerLogFor } from './runner-log.ts';
 import { presentEnvFiles, rootConfigFile, settingsOf, watchedConfigFile } from './settings-files.ts';
@@ -13,6 +13,7 @@ import { stopRequestedThrough, type DevelopmentStopSignal } from './stop-signals
 export interface DevelopmentProcess {
   readonly env: Environment;
   readonly execPath: string;
+  readonly pid: number;
   readonly stdout: { write(text: string): unknown };
   on(signal: DevelopmentStopSignal, listener: () => void): unknown;
 }
@@ -53,9 +54,11 @@ async function stopped(signal: NodeJS.Signals, children: readonly (RunningChild 
 
 async function restarted(run: DevelopmentRun, serving: Serving, file: string): Promise<number> {
   run.log.info(`${file} changed, so the server restarts`);
+  run.restarting.leave();
   await stopped('SIGTERM', [serving.server]);
   const stopping = await Promise.race([run.stopRequested, Promise.resolve('restart')]);
   if (stopping === 'stop') {
+    run.restarting.clear();
     return 0;
   }
   return served(run, { ...serving, server: run.start(serverCommand(run, serving.output)) });
@@ -69,12 +72,14 @@ async function served(run: DevelopmentRun, serving: Serving): Promise<number> {
     (server?.ended ?? never).then((reason) => ({ server: reason })),
   ]);
   if (event === 'stop') {
+    run.restarting.clear();
     await stopped('SIGTERM', [server]);
     return 0;
   }
   if ('changed' in event) {
     return restarted(run, serving, event.changed);
   }
+  run.restarting.clear();
   run.log.warn(`The server stopped (${event.server}); it starts again when a file changes`);
   await stopped('SIGTERM', [server]);
   return served(run, { ...serving, server: undefined });
@@ -87,8 +92,20 @@ function announcingReadiness(host: DevelopmentProcess, run: DevelopmentRun): Wri
     run.log.info(readyNotice(Number(/port (\d+)/u.exec(line)?.[1]), { ...run.settings, ...rootConfigFile(run) }));
   })();
   return (text) => {
+    run.restarting.clear();
     host.stdout.write(text);
     heard(text);
+  };
+}
+
+function restartingAs(host: DevelopmentProcess, setup: DevelopmentSetup): Restarting {
+  return {
+    leave: () => {
+      setup.restartMark.leave(host.pid);
+    },
+    clear: () => {
+      setup.restartMark.clear(host.pid);
+    },
   };
 }
 
@@ -103,6 +120,7 @@ export async function runDevelopment(host: DevelopmentProcess, setup: Developmen
     log: runnerLogFor(settings),
     stopRequested,
     start: setup.startChild,
+    restarting: restartingAs(host, setup),
   };
   const changes = watchSources(
     sourcesOf(setup.sourceDirectories, [...setup.envFiles, watchedConfigFile(settings, setup)]),

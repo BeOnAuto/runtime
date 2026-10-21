@@ -10,6 +10,7 @@ const fromABrowser = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;
 const startedInATerminal: RuntimeStatus = {
   version: '0.9.1',
   pid: 4242,
+  instance: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
   startedAt: new Date('2026-10-14T09:41:07.000Z'),
   directory: '/Users/ada/playbooks',
   startedBy: 'terminal',
@@ -164,6 +165,7 @@ describe('the status of the runtime', () => {
       body: {
         version: '0.9.1',
         pid: 4242,
+        instance: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
         started_at: '2026-10-14T09:41:07.000Z',
         started_by: 'agent',
         directory: '/Users/ada/.auto-runtime',

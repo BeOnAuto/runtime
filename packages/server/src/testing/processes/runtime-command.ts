@@ -1,17 +1,15 @@
 import { once } from 'node:events';
-import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { endWithTheTest, spawnForTheTest } from '@on.auto/operations/testing';
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { onTestFinished } from 'vitest';
 
-import { runtimeHomeIn } from '../../local-runtime/local-control.ts';
-import { overTheNetwork, probeAt } from '../../local-runtime/runtime-probe.ts';
-
 const command = fileURLToPath(new URL('../../../auto-runtime.ts', import.meta.url));
+
+const relayWithShortBounds = fileURLToPath(new URL('../entries/relay-with-short-bounds.ts', import.meta.url));
 
 export interface RuntimeCommandRun {
   readonly pid: number | undefined;
@@ -32,46 +30,6 @@ export interface RuntimeCommandPlace {
   readonly stderrInto?: string;
 }
 
-export interface RuntimeOnThePort {
-  readonly pid: () => Promise<number>;
-}
-
-const startedRuntimeReadWithinMs = 30_000;
-
-const answeredEveryMs = 50;
-
-function isInside(home: string, directory: string): boolean {
-  return directory === home || directory.startsWith(`${home}${sep}`);
-}
-
-async function pidOfTheHomeAnsweringOn(home: string, port: number): Promise<number | undefined> {
-  const probe = await probeAt(port, overTheNetwork);
-  return probe.state === 'running' && isInside(home, probe.status.directory) ? probe.status.pid : undefined;
-}
-
-async function pidOnceAnswering(home: string, port: number, polling: AbortSignal): Promise<number> {
-  const pid = await pidOfTheHomeAnsweringOn(home, port);
-  if (pid !== undefined) {
-    return pid;
-  }
-  polling.throwIfAborted();
-  await setTimeout(answeredEveryMs);
-  return pidOnceAnswering(home, port, polling);
-}
-
-export function runtimeOnThePortEndedWithTheTest(home: string, port: number): RuntimeOnThePort {
-  const polling = new AbortController();
-  endWithTheTest({
-    read: () => pidOfTheHomeAnsweringOn(home, port),
-    stillToCome: () => existsSync(join(runtimeHomeIn(home), 'starting.lock')),
-    readWithinMs: startedRuntimeReadWithinMs,
-  });
-  onTestFinished(() => {
-    polling.abort();
-  });
-  return { pid: () => pidOnceAnswering(home, port, polling.signal) };
-}
-
 export function homeOfTheTest(prefix: string): string {
   const home = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   onTestFinished(() => {
@@ -80,17 +38,22 @@ export function homeOfTheTest(prefix: string): string {
   return home;
 }
 
-function commandLineOf(args: readonly string[], stderrInto: string | undefined): readonly [string, readonly string[]] {
+function commandLineOf(
+  entry: string,
+  args: readonly string[],
+  stderrInto: string | undefined,
+): readonly [string, readonly string[]] {
   return stderrInto === undefined
-    ? [process.execPath, [command, ...args]]
-    : ['/bin/sh', ['-c', 'exec "$@" 2>"$0"', stderrInto, process.execPath, command, ...args]];
+    ? [process.execPath, [entry, ...args]]
+    : ['/bin/sh', ['-c', 'exec "$@" 2>"$0"', stderrInto, process.execPath, entry, ...args]];
 }
 
-export function spawnRuntimeCommand(
+function spawnedEntry(
+  entry: string,
   args: readonly string[],
   { home, port, settings = {}, inAGroupOfItsOwn = false, stderrInto }: RuntimeCommandPlace,
 ): RuntimeCommandRun {
-  const child = spawnForTheTest(...commandLineOf(args, stderrInto), {
+  const child = spawnForTheTest(...commandLineOf(entry, args, stderrInto), {
     detached: inAGroupOfItsOwn,
     cwd: home,
     env: {
@@ -129,6 +92,14 @@ export function spawnRuntimeCommand(
     stderr: () => output.stderr,
     exited: once(child, 'exit').then(([code]: readonly unknown[]) => code),
   };
+}
+
+export function spawnRuntimeCommand(args: readonly string[], place: RuntimeCommandPlace): RuntimeCommandRun {
+  return spawnedEntry(command, args, place);
+}
+
+export function spawnRelayWithShortBounds(place: RuntimeCommandPlace): RuntimeCommandRun {
+  return spawnedEntry(relayWithShortBounds, [], place);
 }
 
 export async function ranToEnd(

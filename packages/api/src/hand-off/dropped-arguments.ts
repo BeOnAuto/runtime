@@ -36,10 +36,14 @@ function droppedArgumentOf(message: unknown): readonly DroppedArgument[] {
   });
 }
 
-export async function droppedArgumentsOf(request: Request): Promise<readonly DroppedArgument[]> {
+export async function postedMessagesOf(request: Request): Promise<readonly unknown[]> {
   const text = await bodyTextOf(request.clone());
   const body = Result.isSuccess(text) ? parsed(text.success) : undefined;
-  return Option.getOrElse(batchOf(body), () => [body]).flatMap((message) => droppedArgumentOf(message));
+  return Option.getOrElse(batchOf(body), () => [body]);
+}
+
+export function droppedArgumentsIn(messages: readonly unknown[]): readonly DroppedArgument[] {
+  return messages.flatMap((message) => droppedArgumentOf(message));
 }
 
 export function withDroppedArgument(

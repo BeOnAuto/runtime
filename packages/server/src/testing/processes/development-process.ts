@@ -33,6 +33,7 @@ export interface Development {
   readonly stdout: () => string;
   readonly stderr: () => string;
   readonly signal: (name: NodeJS.Signals) => void;
+  readonly pid: number | undefined;
 }
 
 const runner = fileURLToPath(new URL('run-development.ts', import.meta.url));
@@ -67,6 +68,21 @@ export function writeServerEntry({ serverEntry }: DevelopmentFiles, source = `im
   writeFileSync(serverEntry, source);
 }
 
+export function writeServerEntryStartingAfter(files: DevelopmentFiles, milliseconds: number): void {
+  writeServerEntry(
+    files,
+    `await new Promise((resolve) => {\n  setTimeout(resolve, ${milliseconds});\n});\nawait import('${mainModule}');\n`,
+  );
+}
+
+export function restartMarkLeftBy({ files }: Development): unknown {
+  try {
+    return JSON.parse(readFileSync(join(files.directory, '.auto-runtime', 'restart-mark.json'), 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
 export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOptions = {}): Development {
   const setup = {
     envFiles: [files.envFile, files.localEnvFile],
@@ -74,6 +90,7 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
     serverEntry: files.serverEntry,
     configFile: files.configFile,
     pidsFile: files.pidsFile,
+    home: files.directory,
   };
   const child = spawnForTheTest(process.execPath, [runner, JSON.stringify(setup)], {
     env: {
@@ -107,6 +124,7 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
     signal: (name) => {
       child.kill(name);
     },
+    pid: child.pid,
   };
 }
 

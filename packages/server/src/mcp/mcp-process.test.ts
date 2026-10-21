@@ -10,7 +10,13 @@ import { temporaryLedger, type TemporaryLedger } from '../testing/records/tempor
 
 const serveWithWaitingTool = fileURLToPath(new URL('../testing/entries/serve-with-waiting-tool.ts', import.meta.url));
 
-const clientKinds: readonly McpClientKind[] = ['current revision', 'previous revision', 'previous major'];
+const stopped = 'Auto Runtime stopped while it handled this request, so it may or may not have taken effect';
+
+const clientsCutOff: ReadonlyArray<readonly [McpClientKind, string]> = [
+  ['current revision', `ProtocolError: ${stopped}`],
+  ['previous revision', `ProtocolError: ${stopped}`],
+  ['previous major', `McpError: MCP error -32603: ${stopped}`],
+];
 
 const clientsClosing: ReadonlyArray<readonly [McpClientKind, string]> = [
   ['current revision', 'SdkError: Connection closed'],
@@ -60,9 +66,9 @@ async function waitingCallOn(kind: McpClientKind): Promise<WaitingCall> {
 }
 
 describe('a server process with an MCP call in flight', () => {
-  it.each(clientKinds)(
-    'answers the %s client, whose call the shutdown cuts off, with a 503 problem as isError, and exits 0',
-    async (kind) => {
+  it.each(clientsCutOff)(
+    'answers the %s client, whose call the shutdown cuts off, with an error that says it may or may not have taken effect, and exits 0',
+    async (kind, answered) => {
       const { child, session, waiting } = await waitingCallOn(kind);
 
       child.signal('SIGTERM');
@@ -70,19 +76,7 @@ describe('a server process with an MCP call in flight', () => {
       const exitCode = await child.exited;
       await session.close();
 
-      expect({ answer, exitCode }).toEqual({
-        answer: {
-          isError: true,
-          problem: {
-            type: 'https://on.auto/problems/unavailable',
-            title: 'Unavailable',
-            status: 503,
-            detail: 'The server is stopping',
-            reason: 'unavailable',
-          },
-        },
-        exitCode: 0,
-      });
+      expect({ answer, exitCode }).toEqual({ answer: { ended: answered }, exitCode: 0 });
     },
   );
 
