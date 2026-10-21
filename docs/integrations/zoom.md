@@ -80,7 +80,7 @@ Sign in to the [Zoom App Marketplace](https://marketplace.zoom.us), open Manage,
 
 ### What remains
 
-Removing Zoom does not remove what Zoom answered before. The playbook's history keeps what earlier calls answered, for anyone who may read the playbook, for as long as whoever runs your Auto keeps it. Where you allowed Auto's own app, Auto's consent service keeps a line for each time you allowed access, each renewal and each revocation, naming you, Zoom and the Studio you went back to, and no token.
+Removing Zoom does not remove what Zoom answered before. The playbook's history keeps what earlier calls answered, for anyone who may read the playbook, for as long as whoever runs your Auto keeps it. Where you allowed Auto's own app, Auto's consent service keeps a line for each time you allowed access, each renewal and each revocation, naming you, Zoom and the Studio you went back to, and no token. It also keeps a line for each notice Zoom sends it that you removed the app, naming your Zoom user and account, the app and the time Zoom gives.
 
 ## Get help
 

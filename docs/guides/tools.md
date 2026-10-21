@@ -173,4 +173,5 @@ When they confirm, start again at [Find the tools](#find-the-tools).
 - [Reasoning function format](../reference/reasoning-format.md#tools) has the rules and limits of `tools`.
 - [Add a tool server](../self-host/tool-servers.md) is for whoever runs Auto. It adds a server, limits its tools and keeps its key out of the settings file.
 - [Use Auto with Apollo](../integrations/apollo.md) connects a function to your business graph as a tool server.
+- [Connect Zoom](../integrations/zoom.md) and [Connect Slack](../integrations/slack.md) let a function use your own Zoom or Slack account through its tools.
 - [Interaction function format](../reference/interaction-format.md) shows an interaction function that calls one tool, or sends its request through one, without a model.
