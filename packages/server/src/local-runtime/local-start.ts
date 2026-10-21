@@ -1,4 +1,4 @@
-import type { RuntimeAction, StartedBy } from '@on.auto/api';
+import type { RuntimeAction } from '@on.auto/api';
 import { Function } from 'effect';
 
 import { coalescedSignals } from '../command-line/coalesced-signals.ts';
@@ -6,7 +6,7 @@ import { startupFailureNoticeFor } from '../command-line/failure-notice.ts';
 import { servedLocally, type LocalServerHost } from '../command-line/local-server.ts';
 import { release } from '../composition/release.ts';
 import { stopInsistedBy, stopRequestedBy } from '../lifecycle/stop-request.ts';
-import { localControlOf, runtimeHomeIn } from './local-control.ts';
+import { localControlOf, runtimeHomeIn, type LocalStarting } from './local-control.ts';
 import { runsInFlight } from './runs-in-flight.ts';
 import { restartMarkIn } from './runtime-restarts.ts';
 
@@ -28,7 +28,7 @@ export interface LocalStart {
 
 export async function startedLocally(
   settings: Readonly<Record<string, string>>,
-  startedBy: StartedBy,
+  { startedBy, instance }: LocalStarting,
   { home, terminal }: LocalStart,
 ): Promise<RuntimeAction> {
   const signals = coalescedSignals(process, signalsOfOneStop, () => performance.now());
@@ -37,6 +37,7 @@ export async function startedLocally(
     {
       version: release.version,
       pid: process.pid,
+      instance,
       startedAt: new Date(),
       directory: process.cwd(),
       home,

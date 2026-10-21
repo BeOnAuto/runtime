@@ -40,9 +40,9 @@ process.exitCode =
       },
     },
     waiting,
-    startServer: async (settings, startedBy) => {
+    startServer: async (settings, starting) => {
       const { startedLocally } = await import('./src/local-runtime/local-start.ts');
-      if ((await startedLocally(settings, startedBy, { home, terminal })) === 'restart') {
+      if ((await startedLocally(settings, starting, { home, terminal })) === 'restart') {
         restartIn(process, environmentAtStart);
       }
     },

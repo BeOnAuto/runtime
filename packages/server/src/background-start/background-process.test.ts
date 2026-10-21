@@ -49,7 +49,12 @@ describe('starting the runtime in the background', () => {
     const runtimeHome = join(home, '.auto-runtime');
     await until(() => {
       expect(JSON.parse(readFileSync(join(runtimeHome, 'started.json'), 'utf8'))).toEqual({
-        arguments: ['start', '--background'],
+        arguments: [
+          'start',
+          '--background',
+          '--instance',
+          expect.stringMatching(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-/u),
+        ],
         directory: runtimeHome,
       });
     });

@@ -6,6 +6,7 @@ export type StartedBy = 'terminal' | 'agent';
 export interface RuntimeStatus {
   readonly version: string;
   readonly pid: number;
+  readonly instance: string;
   readonly startedAt: Date;
   readonly directory: string;
   readonly startedBy: StartedBy;
@@ -65,6 +66,7 @@ export function statusDocumentOf(status: RuntimeStatus): Readonly<Record<string,
   return {
     version: status.version,
     pid: status.pid,
+    instance: status.instance,
     started_at: status.startedAt.toISOString(),
     started_by: status.startedBy,
     directory: status.directory,

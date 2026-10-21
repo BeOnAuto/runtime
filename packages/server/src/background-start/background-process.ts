@@ -18,7 +18,21 @@ export interface BackgroundCommand {
   readonly report: (line: string) => void;
 }
 
-export const backgroundArguments: readonly string[] = ['start', '--background'];
+const backgroundStart: readonly string[] = ['start', '--background', '--instance'];
+
+const instancePattern = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/u;
+
+function backgroundArgumentsFor(instance: string): readonly string[] {
+  return [...backgroundStart, instance];
+}
+
+export function instanceStartedInBackground(args: readonly string[]): string | undefined {
+  const asked = args.slice(0, backgroundStart.length).join(' ') === backgroundStart.join(' ');
+  const given = args.slice(backgroundStart.length);
+  return asked && given.length === 1 && given.every((instance) => instancePattern.test(instance))
+    ? given.join('')
+    : undefined;
+}
 
 export function startInBackgroundOf(command: BackgroundCommand): () => void {
   return () => {
@@ -26,7 +40,7 @@ export function startInBackgroundOf(command: BackgroundCommand): () => void {
     mkdirSync(runtimeHome, { recursive: true });
     const log = openSync(logFileIn(command.home), 'a');
     try {
-      spawn(command.execPath, [...command.execArgv, command.entry, ...backgroundArguments], {
+      spawn(command.execPath, [...command.execArgv, command.entry, ...backgroundArgumentsFor(randomUUID())], {
         cwd: runtimeHome,
         detached: true,
         stdio: ['ignore', log, log],

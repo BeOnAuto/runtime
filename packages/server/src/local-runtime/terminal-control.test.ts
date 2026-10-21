@@ -13,7 +13,13 @@ import { until } from '../testing/waiting/until.ts';
 const homePrefix = 'auto-runtime-terminal-';
 
 const statusOf = Schema.decodeUnknownSync(
-  Schema.Struct({ pid: Schema.Number, started_at: Schema.String, started_by: Schema.String, directory: Schema.String }),
+  Schema.Struct({
+    pid: Schema.Number,
+    instance: Schema.String,
+    started_at: Schema.String,
+    started_by: Schema.String,
+    directory: Schema.String,
+  }),
 );
 
 async function statusAt(port: number): Promise<ReturnType<typeof statusOf>> {
@@ -42,6 +48,7 @@ describe('a runtime started in a terminal', () => {
     await fetch(`http://127.0.0.1:${port}/runtime/stop`, { method: 'POST' });
 
     expect(before).toMatchObject({ pid: runtime.pid, started_by: 'terminal', directory: home });
+    expect(before.instance).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[\da-f]{4}-[\da-f]{12}$/u);
     expect(after.pid).toBe(runtime.pid);
     expect(after.started_at).not.toBe(before.started_at);
     expect(existsSync(join(home, '.auto-runtime', 'restart-mark.json'))).toBe(false);
