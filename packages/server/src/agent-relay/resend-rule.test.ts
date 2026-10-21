@@ -60,6 +60,11 @@ const runs: Recovery = { runs: true };
 
 const leftAlone: Recovery = { runs: false, words: 'Auto Runtime did not start on port 5555; its log is runtime.log' };
 
+const tookThePortWords =
+  'Another Auto Runtime took port 5555 first, so the one this connection started ended. Send the request again: it goes to the one on the port.';
+
+const tookThePort: Recovery = { runs: false, words: tookThePortWords, anotherAnswers: true };
+
 const sentAgain: Decision = { kind: 'sent again' };
 
 const refusal: Decision = { kind: 'answered with its refusal' };
@@ -73,6 +78,7 @@ const said = 'Auto Runtime turned this request away: The body is too large';
 interface Held {
   readonly recovery: Recovery | undefined;
   readonly reached: boolean;
+  readonly replacing?: boolean;
   readonly words: string | undefined;
 }
 
@@ -94,16 +100,29 @@ describe('the words a request held to be sent again is answered with', () => {
       case: 'that it was not sent, at the cap, when it never reached the runtime',
       recovery: undefined,
       reached: false,
-      words: heldTooLongWords(false),
+      words: heldTooLongWords(false, false),
     },
     {
       case: 'that it was not answered, at the cap, when it may have reached it',
       recovery: undefined,
       reached: true,
-      words: heldTooLongWords(true),
+      words: heldTooLongWords(true, false),
     },
-  ])('are $case', ({ recovery, reached, words }) => {
-    expect(wordsAfter(sentAgain, recovery, { reached, said })).toBe(words);
+    {
+      case: 'that the runtime is being started again, at the cap, while a frozen one is replaced',
+      recovery: undefined,
+      reached: true,
+      replacing: true,
+      words: heldTooLongWords(true, true),
+    },
+    {
+      case: 'none, so it is sent to the runtime on the port, when another runtime took the port first',
+      recovery: tookThePort,
+      reached: false,
+      words: undefined,
+    },
+  ])('are $case', ({ recovery, reached, replacing = false, words }) => {
+    expect(wordsAfter(sentAgain, recovery, { reached, said, replacing })).toBe(words);
   });
 });
 
@@ -117,8 +136,8 @@ describe('the words a request the runtime turned away is answered with', () => {
       words: leftAlone.words,
     },
     { case: 'what the runtime said, at the cap', recovery: undefined, reached: true, words: said },
-  ])('are $case', ({ recovery, reached, words }) => {
-    expect(wordsAfter(refusal, recovery, { reached, said })).toBe(words);
+  ])('are $case', ({ recovery, reached, replacing = false, words }) => {
+    expect(wordsAfter(refusal, recovery, { reached, said, replacing })).toBe(words);
   });
 });
 
@@ -142,16 +161,30 @@ describe('the words a call that may have taken effect is answered with', () => {
       reached: true,
       words: `${checkedWords} Auto Runtime is still being started.`,
     },
-  ])('are $case', ({ recovery, reached, words }) => {
-    expect(wordsAfter(checked, recovery, { reached, said })).toBe(words);
+    {
+      case: 'the check, and that the runtime is being started again, at the cap, while a frozen one is replaced',
+      recovery: undefined,
+      reached: true,
+      replacing: true,
+      words: `${checkedWords} Auto Runtime is being started again.`,
+    },
+    {
+      case: 'the check, and that another runtime took the port first',
+      recovery: tookThePort,
+      reached: true,
+      words: `${checkedWords} ${tookThePortWords}`,
+    },
+  ])('are $case', ({ recovery, reached, replacing = false, words }) => {
+    expect(wordsAfter(checked, recovery, { reached, said, replacing })).toBe(words);
   });
 });
 
 describe('the words for a request held past the cap', () => {
-  it('say whether it was sent, and to send it again in a few seconds', () => {
-    expect([heldTooLongWords(false), heldTooLongWords(true)]).toEqual([
+  it('say whether it was sent, whether a frozen runtime is being replaced, and to send it again in a few seconds', () => {
+    expect([heldTooLongWords(false, false), heldTooLongWords(true, false), heldTooLongWords(true, true)]).toEqual([
       'Auto Runtime is still being started, so this request was not sent. Send it again in a few seconds.',
       'Auto Runtime is still being started, so this request was not answered. Send it again in a few seconds.',
+      'Auto Runtime is being started again, so this request was not answered. Send it again in a few seconds.',
     ]);
   });
 });

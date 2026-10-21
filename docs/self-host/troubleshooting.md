@@ -28,6 +28,20 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 - Restart the agent session.
 - Confirm that the agent runs on the same computer as Auto Runtime.
 
+## A call answers that Auto Runtime stopped or does not answer {#runtime-stopped-answering}
+
+**Symptom.** Your agent's call is answered with `Auto Runtime stopped while it handled this request`, `Auto Runtime stopped answering while it handled this request`, `Auto Runtime on port 5555 does not answer`, or `Another Auto Runtime took port 5555 first`.
+
+**Cause.** The runtime on the port ended, froze or was replaced while the call ran. The `mcp` command of the MCP entry watches each call: while the runtime works on one, it sends a heartbeat every 5 seconds, and when 15 seconds pass with none, the command pings it three times before it gives the call up.
+
+**Fix.**
+
+- A call answered with `may or may not have taken effect` was not sent again, so a definition never runs twice. Look at the playbook, its definitions and its runs to see whether it took effect before you repeat it. The same answer says whether Auto Runtime runs again, or why it does not.
+- When the MCP entry started the runtime, it stops one that does not answer, with `SIGTERM` and then `SIGKILL`, and starts another. `~/.auto-runtime/runtime.log` says what it did.
+- When the runtime was started in a terminal, or by another agent's connection, the entry leaves it alone. Stop it there, or end the process the answer names, then send the request again. The answer names a process only when the runtime still told the entry who it is after the call was lost; otherwise it says that the runtime on the port does not answer and that the entry did not start it, and you stop the program that holds the port.
+- When another Auto Runtime took the port first, the one the entry started ended because the port was taken. A request that never reached a runtime, or one that is safe to send twice, goes to the runtime on the port. A call that may have taken effect is answered that another Auto Runtime took the port first: check it as above, then send it again, and it goes to the runtime on the port.
+- When the answer says the runtime stopped soon after each of its last three starts, read `~/.auto-runtime/runtime.log`, fix what it says, and start your agent session again.
+
 ## A reasoning function reports `provider_not_configured` {#provider-not-configured}
 
 **Symptom.** A run of a reasoning function fails with `provider_not_configured`, or is rejected as `unavailable` of the kind `model_not_offered` with `because: "provider_not_configured"`.

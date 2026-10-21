@@ -13,8 +13,8 @@ const listTools = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
 
 const threeSilentPings = 3 * pingTimeoutMs + 2 * pingSpacingMs;
 
-const unanswered =
-  'Auto Runtime stopped answering while it handled this request, so it may or may not have taken effect. Look at the playbook, its definitions and its runs to see whether it did before you send it again. Auto Runtime runs again.';
+const unansweredCheck =
+  'Auto Runtime stopped answering while it handled this request, so it may or may not have taken effect. Look at the playbook, its definitions and its runs to see whether it did before you send it again.';
 
 describe('a call the runtime is still answering', () => {
   it('is waited for as long as its stream carries a heartbeat, with no ping', () =>
@@ -72,12 +72,45 @@ describe('a call whose runtime stopped answering', () => {
         const answer = yield* relayed.next;
         yield* settled;
 
-        expect(answer).toEqual({ jsonrpc: '2.0', id: 3, error: { code: -32_603, message: unanswered } });
+        expect(answer).toEqual({
+          jsonrpc: '2.0',
+          id: 3,
+          error: { code: -32_603, message: `${unansweredCheck} Auto Runtime runs again.` },
+        });
         expect(runtime.aborted()).toEqual([3]);
         expect(relayed.recoveries()).toEqual([{ seen: 'silent', heardBefore: false }]);
       }),
     ));
+});
 
+describe('a call whose runtime stopped answering and is being replaced', () => {
+  it('is answered at the cap from its arrival, with words that the runtime is being started again', () =>
+    ranOnATestClock(
+      Effect.gen(function* () {
+        const runtime = fakeRuntime(['stays silent']);
+        const relayed = yield* relayedTo(runtime, {
+          pings: ['silent', 'silent', 'silent'],
+          recoveries: [{ recovery: runs, afterMs: 60_000 }],
+        });
+
+        yield* relayed.send(callTool);
+        yield* after(silenceMs);
+        yield* after(threeSilentPings);
+        yield* after(relayBounds.heardBackWithinMs - silenceMs - threeSilentPings);
+        const answer = yield* relayed.next;
+        yield* after(60_000);
+
+        expect(answer).toEqual({
+          jsonrpc: '2.0',
+          id: 3,
+          error: { code: -32_603, message: `${unansweredCheck} Auto Runtime is being started again.` },
+        });
+        expect(runtime.sent()).toEqual([callTool]);
+      }),
+    ));
+});
+
+describe('a call whose runtime stopped answering, as the ping finds it', () => {
   it('is given up when the ping finds the port refusing, which the recovery is told', () =>
     ranOnATestClock(
       Effect.gen(function* () {

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, closeSync, mkdirSync, openSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -8,6 +8,7 @@ import type { Environment } from '@on.auto/config';
 import { logFileIn, runtimeHomeIn } from '../local-runtime/local-control.ts';
 import { startWaitMs } from '../local-runtime/runtime-restarts.ts';
 import type { StartingLock } from './background-start.ts';
+import type { StartedRuntime } from './started-runtimes.ts';
 
 export interface BackgroundCommand {
   readonly execPath: string;
@@ -16,6 +17,7 @@ export interface BackgroundCommand {
   readonly home: string;
   readonly environment: Environment;
   readonly report: (line: string) => void;
+  readonly log: (line: string) => void;
 }
 
 const backgroundStart: readonly string[] = ['start', '--background', '--instance'];
@@ -34,25 +36,54 @@ export function instanceStartedInBackground(args: readonly string[]): string | u
     : undefined;
 }
 
-export function startInBackgroundOf(command: BackgroundCommand): () => void {
+function spawnedFor(command: BackgroundCommand, instance: string): ChildProcess {
+  const runtimeHome = runtimeHomeIn(command.home);
+  mkdirSync(runtimeHome, { recursive: true });
+  const log = openSync(logFileIn(command.home), 'a');
+  try {
+    return spawn(command.execPath, [...command.execArgv, command.entry, ...backgroundArgumentsFor(instance)], {
+      cwd: runtimeHome,
+      detached: true,
+      stdio: ['ignore', log, log],
+      env: { ...command.environment },
+    });
+  } finally {
+    closeSync(log);
+  }
+}
+
+export function startInBackgroundOf(command: BackgroundCommand): () => StartedRuntime {
   return () => {
-    const runtimeHome = runtimeHomeIn(command.home);
-    mkdirSync(runtimeHome, { recursive: true });
-    const log = openSync(logFileIn(command.home), 'a');
-    try {
-      spawn(command.execPath, [...command.execArgv, command.entry, ...backgroundArgumentsFor(randomUUID())], {
-        cwd: runtimeHome,
-        detached: true,
-        stdio: ['ignore', log, log],
-        env: { ...command.environment },
+    const instance = randomUUID();
+    const startedAt = Date.now();
+    const child = spawnedFor(command, instance);
+    const ending = Promise.withResolvers<void>();
+    const times: { endedAt: number | undefined } = { endedAt: undefined };
+    const ended = () => {
+      times.endedAt = Date.now();
+      ending.resolve();
+    };
+    child
+      .on('error', (error: Readonly<Error>) => {
+        command.report(`Auto Runtime could not be started: ${error.message}`);
+        ended();
       })
-        .on('error', (error: Readonly<Error>) => {
-          command.report(`Auto Runtime could not be started: ${error.message}`);
-        })
-        .unref();
-    } finally {
-      closeSync(log);
+      .on('exit', () => {
+        command.log(`Auto Runtime, process ${String(child.pid)}, ended`);
+        ended();
+      })
+      .unref();
+    if (child.pid !== undefined) {
+      command.log(`Auto Runtime was started in the background as process ${child.pid}, instance ${instance}`);
     }
+    return {
+      instance,
+      pid: child.pid,
+      startedAt,
+      endedAt: () => times.endedAt,
+      signal: (name) => child.kill(name),
+      ended: ending.promise,
+    };
   };
 }
 
@@ -65,17 +96,24 @@ function written(file: string, line: string): boolean {
   }
 }
 
+export function loggedTo(home: string, report: (line: string) => void): (line: string) => void {
+  return (line) => {
+    report(line);
+    if (!written(logFileIn(home), line)) {
+      report(`Auto Runtime could not write to ${logFileIn(home)}`);
+    }
+  };
+}
+
 export function noticesFor(home: string, report: (line: string) => void): (line: string) => void {
   const told = new Set<string>();
+  const logged = loggedTo(home, report);
   return (line) => {
     if (told.has(line)) {
       return;
     }
     told.add(line);
-    report(line);
-    if (!written(logFileIn(home), line)) {
-      report(`Auto Runtime could not write to ${logFileIn(home)}`);
-    }
+    logged(line);
   };
 }
 

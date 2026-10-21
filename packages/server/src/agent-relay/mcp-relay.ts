@@ -165,7 +165,11 @@ class McpRelay {
       }
       const reached = held.reached || ending.loss !== 'refused';
       const decision = decisionFor(asked.method, ending.loss);
-      const words = wordsAfter(decision, Option.getOrUndefined(outcome), { reached, said: ending.said });
+      const words = wordsAfter(decision, Option.getOrUndefined(outcome), {
+        reached,
+        said: ending.said,
+        replacing: this.#recovery.replacing(),
+      });
       if (words !== undefined) {
         this.#refused(asked.id, words);
         return;

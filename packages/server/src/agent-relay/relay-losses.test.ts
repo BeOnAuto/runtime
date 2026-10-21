@@ -11,8 +11,6 @@ const listTools = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
 
 const callTool = { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'run_definition', arguments: {} } };
 
-const initialized = { jsonrpc: '2.0', method: 'notifications/initialized' };
-
 const leftAlone: Recovery = {
   runs: false,
   words: 'Auto Runtime did not start on port 5555; its log is ~/.auto-runtime/runtime.log',
@@ -26,6 +24,15 @@ const check = (mayHaveTakenEffect: string) =>
   `${mayHaveTakenEffect}. Look at the playbook, its definitions and its runs to see whether it did before you send it again.`;
 
 const stoppedMidCall = check(stoppedWords);
+
+const pausedFor =
+  'Auto Runtime stopped soon after each of the last 3 times this connection started it, within 10 minutes, so it starts it no more until those minutes have passed. Ask the person to read ~/.auto-runtime/runtime.log, which says why, and to fix what it says.';
+
+const notKilled =
+  'Auto Runtime on port 5555 does not answer, and process 4343, which this connection started, did not end even after SIGKILL. Ask the person to end it, then send the request again.';
+
+const notStartedHere =
+  'Auto Runtime on port 5555 does not answer, and this connection did not start it, so it leaves it alone. Ask the person to stop the program that holds port 5555, then send the request again.';
 
 describe('a request the runtime refused to connect for', () => {
   it('never reached it, so it is sent again once the shared recovery makes sure the runtime runs', () =>
@@ -95,15 +102,9 @@ describe('a tool call that may have reached the runtime before it stopped, once 
   it.each<readonly [string, Recovery, string]>([
     ['runs again', runs, 'Auto Runtime runs again.'],
     ['could not be started', leftAlone, leftAlone.words],
-    [
-      'is left alone',
-      {
-        runs: false,
-        words:
-          'Auto Runtime on port 5555 does not answer, and this connection did not start it, so it leaves it alone. Ask the person to stop the program that holds port 5555, then send the request again.',
-      },
-      'Auto Runtime on port 5555 does not answer, and this connection did not start it, so it leaves it alone. Ask the person to stop the program that holds port 5555, then send the request again.',
-    ],
+    ['starts no more while its starts keep ending', { runs: false, words: pausedFor }, pausedFor],
+    ['did not end even after SIGKILL', { runs: false, words: notKilled }, notKilled],
+    ['is left alone', { runs: false, words: notStartedHere }, notStartedHere],
   ])('is answered once, after the recovery, with words to check and that the runtime %s', (_case, recovery, outcome) =>
     ranOnATestClock(
       Effect.gen(function* () {
@@ -160,41 +161,10 @@ describe('a list that may have reached the runtime before it stopped', () => {
     ));
 });
 
-describe('a notification the runtime did not take', () => {
-  it('is sent again once the runtime runs, when the connection was refused', () =>
-    ranOnATestClock(
-      Effect.gen(function* () {
-        const runtime = fakeRuntime(['refuses']);
-        const relayed = yield* relayedTo(runtime);
-
-        yield* relayed.send(initialized);
-
-        expect(runtime.sent()).toEqual([initialized, initialized]);
-        expect(relayed.reported()).toEqual([]);
-      }),
-    ));
-
-  it('is reported, with no one to answer, when it fails again or the runtime does not run', () =>
-    ranOnATestClock(
-      Effect.gen(function* () {
-        const runtime = fakeRuntime(['refuses', 'refuses', 'refuses']);
-        const relayed = yield* relayedTo(runtime, { recoveries: [{ recovery: runs }, { recovery: leftAlone }] });
-
-        yield* relayed.send(initialized);
-        yield* relayed.send(initialized);
-
-        expect(relayed.reported()).toEqual([
-          'Auto Runtime did not take a message: TypeError: fetch failed',
-          leftAlone.words,
-        ]);
-      }),
-    ));
-});
-
 describe('a request the relay holds while the runtime is being started', () => {
   it.each<readonly [string, Turn, string]>([
-    ['was not sent, when it never reached the runtime', 'refuses', heldTooLongWords(false)],
-    ['was not answered, when it may have reached it', 'cuts', heldTooLongWords(true)],
+    ['was not sent, when it never reached the runtime', 'refuses', heldTooLongWords(false, false)],
+    ['was not answered, when it may have reached it', 'cuts', heldTooLongWords(true, false)],
   ])(
     'is answered within the time the agent waits, and not sent after it, with words that it %s',
     (_case, turn, words) =>
@@ -271,6 +241,27 @@ describe('a request a stopping runtime turned away before it handled it', () => 
       Effect.gen(function* () {
         const runtime = fakeRuntime(['turns away while it stops']);
         const relayed = yield* relayedTo(runtime);
+
+        yield* relayed.send(callTool);
+
+        expect(yield* relayed.next).toMatchObject({ id: 3, result: { tools: [] } });
+        expect(runtime.sent()).toEqual([callTool, callTool]);
+      }),
+    ));
+});
+
+describe('a request refused while another runtime took the port first', () => {
+  it('is sent to the runtime on the port, since it never reached one', () =>
+    ranOnATestClock(
+      Effect.gen(function* () {
+        const runtime = fakeRuntime(['refuses']);
+        const tookThePort: Recovery = {
+          runs: false,
+          words:
+            'Another Auto Runtime took port 5555 first, so the one this connection started ended. Send the request again: it goes to the one on the port.',
+          anotherAnswers: true,
+        };
+        const relayed = yield* relayedTo(runtime, { pings: ['refused'], recoveries: [{ recovery: tookThePort }] });
 
         yield* relayed.send(callTool);
 

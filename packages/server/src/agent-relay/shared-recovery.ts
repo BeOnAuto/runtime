@@ -10,10 +10,15 @@ export class SharedRecovery {
   readonly #liveness: Liveness;
   readonly #recover: Recover;
   #underWay: Deferred.Deferred<Recovery> | undefined;
+  #replacing = false;
 
   constructor(liveness: Liveness, recover: Recover) {
     this.#liveness = liveness;
     this.#recover = recover;
+  }
+
+  replacing(): boolean {
+    return this.#replacing;
   }
 
   recovered(seen?: PingOutcome): Effect.Effect<Recovery, never, Scope.Scope> {
@@ -29,6 +34,7 @@ export class SharedRecovery {
         Effect.ensuring(
           Effect.sync(() => {
             this.#underWay = undefined;
+            this.#replacing = false;
           }),
         ),
       );
@@ -39,6 +45,7 @@ export class SharedRecovery {
   #recovery(seen: PingOutcome | undefined): Effect.Effect<Recovery> {
     return Effect.gen({ self: this }, function* () {
       const observed = seen ?? (yield* this.#liveness.pinged());
+      this.#replacing = observed === 'silent';
       return yield* this.#recover(observed, yield* this.#liveness.heardBefore());
     });
   }

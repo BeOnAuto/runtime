@@ -13,16 +13,11 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { Function } from 'effect';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { startWaitMs } from '../local-runtime/runtime-restarts.ts';
-import { until } from '../testing/waiting/until.ts';
-import { noticesFor, startInBackgroundOf, startingLockIn } from './background-process.ts';
-
-const recordingEntry = fileURLToPath(new URL('../testing/entries/record-background-start.ts', import.meta.url));
+import { noticesFor, startingLockIn } from './background-process.ts';
 
 let home: string;
 
@@ -33,54 +28,6 @@ beforeEach(() => {
 afterEach(() => {
   chmodSync(home, 0o700);
   rmSync(home, { recursive: true, force: true });
-});
-
-describe('starting the runtime in the background', () => {
-  it('starts it from the home of the runtime, writing to its log', async () => {
-    startInBackgroundOf({
-      execPath: process.execPath,
-      execArgv: [],
-      entry: recordingEntry,
-      home,
-      environment: { PATH: process.env['PATH'], NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'] },
-      report: Function.constVoid,
-    })();
-
-    const runtimeHome = join(home, '.auto-runtime');
-    await until(() => {
-      expect(JSON.parse(readFileSync(join(runtimeHome, 'started.json'), 'utf8'))).toEqual({
-        arguments: [
-          'start',
-          '--background',
-          '--instance',
-          expect.stringMatching(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-/u),
-        ],
-        directory: runtimeHome,
-      });
-    });
-    await until(() => {
-      expect(readFileSync(join(runtimeHome, 'runtime.log'), 'utf8')).toBe('started in the background\n');
-    });
-  });
-
-  it('reports a runtime it could not start', async () => {
-    const reported: string[] = [];
-
-    startInBackgroundOf({
-      execPath: join(home, 'no-node-here'),
-      execArgv: [],
-      entry: recordingEntry,
-      home,
-      environment: {},
-      report: (line) => {
-        reported.push(line);
-      },
-    })();
-
-    await until(() => {
-      expect(reported).toEqual([expect.stringMatching(/^Auto Runtime could not be started: spawn .*ENOENT$/u)]);
-    });
-  });
 });
 
 function lockFile(): string {

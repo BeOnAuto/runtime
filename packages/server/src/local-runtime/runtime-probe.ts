@@ -13,6 +13,7 @@ export const overTheNetwork: RuntimeFetch = (address, { method, timeoutMs }) =>
 const RunningStatusSchema = Schema.Struct({
   version: Schema.String,
   pid: Schema.Number,
+  instance: Schema.optionalKey(Schema.String),
   started_at: Schema.String,
   started_by: Schema.Literals(['terminal', 'agent']),
   directory: Schema.String,

@@ -1,8 +1,9 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { Recovery } from '../runtime-recovery/runtime-recovery.ts';
 import { fakeRuntime } from '../testing/relays/fake-runtime.ts';
-import { ranOnATestClock, relayedTo } from '../testing/relays/relayed-agent.ts';
+import { ranOnATestClock, relayedTo, runs } from '../testing/relays/relayed-agent.ts';
 
 const listTools = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
 
@@ -14,6 +15,10 @@ const initialize = {
 };
 
 const initialized = { jsonrpc: '2.0', method: 'notifications/initialized' };
+
+const startProblem = 'Auto Runtime did not start on port 5555; its log is ~/.auto-runtime/runtime.log';
+
+const leftAlone: Recovery = { runs: false, words: startProblem };
 
 const answerToTheAgent = { jsonrpc: '2.0', id: 'a-1', result: { action: 'accept' } };
 
@@ -168,6 +173,37 @@ describe('a request the agent cancels', () => {
         expect(yield* relayed.next).toMatchObject({ id: 2 });
         expect(runtime.aborted()).toEqual([3]);
         expect(runtime.sent()).toHaveLength(2);
+      }),
+    ));
+});
+
+describe('a notification the runtime did not take', () => {
+  it('is sent again once the runtime runs, when the connection was refused', () =>
+    ranOnATestClock(
+      Effect.gen(function* () {
+        const runtime = fakeRuntime(['refuses']);
+        const relayed = yield* relayedTo(runtime);
+
+        yield* relayed.send(initialized);
+
+        expect(runtime.sent()).toEqual([initialized, initialized]);
+        expect(relayed.reported()).toEqual([]);
+      }),
+    ));
+
+  it('is reported, with no one to answer, when it fails again or the runtime does not run', () =>
+    ranOnATestClock(
+      Effect.gen(function* () {
+        const runtime = fakeRuntime(['refuses', 'refuses', 'refuses']);
+        const relayed = yield* relayedTo(runtime, { recoveries: [{ recovery: runs }, { recovery: leftAlone }] });
+
+        yield* relayed.send(initialized);
+        yield* relayed.send(initialized);
+
+        expect(relayed.reported()).toEqual([
+          'Auto Runtime did not take a message: TypeError: fetch failed',
+          startProblem,
+        ]);
       }),
     ));
 });

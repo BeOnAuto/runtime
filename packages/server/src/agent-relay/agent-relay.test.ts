@@ -3,14 +3,16 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 
-import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import {
+  runtimesStartedInTheBackgroundEndedWithTheTest,
+  startedInTheBackgroundIn,
+} from '../testing/processes/background-runtimes.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import {
   homeOfTheTest,
   ranToEnd,
-  runtimeOnThePortEndedWithTheTest,
   spawnRuntimeCommand,
   type RuntimeCommandRun,
   type RuntimeCommandPlace,
@@ -19,16 +21,10 @@ import { until } from '../testing/waiting/until.ts';
 
 const homePrefix = 'auto-runtime-agent-';
 
-const statusOf = Schema.decodeUnknownSync(Schema.Struct({ pid: Schema.Number, directory: Schema.String }));
-
-async function statusAt(port: number): Promise<ReturnType<typeof statusOf>> {
-  return statusOf(await (await fetch(`http://127.0.0.1:${port}/runtime`)).json());
-}
-
 async function placeOfTheTest(): Promise<RuntimeCommandPlace> {
   const home = homeOfTheTest(homePrefix);
   const port = await aPortNothingListensOn();
-  runtimeOnThePortEndedWithTheTest(home, port);
+  runtimesStartedInTheBackgroundEndedWithTheTest(home);
   return { home, port };
 }
 
@@ -81,7 +77,7 @@ describe('an agent that starts auto-runtime mcp', () => {
   it('starts a runtime in the background, past a restart mark whose process is gone, reaches it, and leaves it running outside its own process group, through the kill of that group and the agents that leave, until it is stopped, and starts one again once it was', async () => {
     const home = homeOfTheTest(homePrefix);
     const port = await aPortNothingListensOn();
-    const runtimes = runtimeOnThePortEndedWithTheTest(home, port);
+    const runtimes = runtimesStartedInTheBackgroundEndedWithTheTest(home);
     markedAsRestartingBy(home, spawnSync(process.execPath, ['-e', '']).pid);
     const starting = spawnRuntimeCommand(['mcp'], { home, port, inAGroupOfItsOwn: true });
     const pid = await runtimes.pid();
@@ -153,7 +149,7 @@ describe('an agent whose runtime was stopped', () => {
   it('has a runtime started again once the grace for the one it heard passed, and its request sent to it', async () => {
     const home = homeOfTheTest(homePrefix);
     const port = await aPortNothingListensOn();
-    const runtimes = runtimeOnThePortEndedWithTheTest(home, port);
+    const runtimes = runtimesStartedInTheBackgroundEndedWithTheTest(home);
     const relay = spawnRuntimeCommand(['mcp'], { home, port });
     const first = await runtimes.pid();
     relay.write(lineOf(initialize));
@@ -224,19 +220,33 @@ describe('an agent whose runtime port another program holds', () => {
   });
 });
 
-describe('the end of the runtime of a test by its port', () => {
-  it('leaves alone a runtime of another home that answers on that port once the test finished', async () => {
-    const elsewhere = homeOfTheTest(homePrefix);
-    const port = await aPortNothingListensOn();
-    const another = spawnRuntimeCommand([], { home: elsewhere, port });
+describe('the end of the runtimes a relay started in the home of a test', () => {
+  it('leaves alone a process the log of that home says has ended, and one whose command is no longer the runtime started', async () => {
+    const home = homeOfTheTest(homePrefix);
+    const another = spawnRuntimeCommand([], { home: homeOfTheTest(homePrefix), port: await aPortNothingListensOn() });
     await until(() => {
       expect(readiesIn(another.stdout())).toBe(1);
     });
-    onTestFinished(async () => {
-      expect(await statusAt(port)).toEqual({ pid: another.pid, directory: elsewhere });
+    const instance = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+    mkdirSync(join(home, '.auto-runtime'), { recursive: true });
+    writeFileSync(
+      join(home, '.auto-runtime', 'runtime.log'),
+      [
+        `Auto Runtime was started in the background as process ${String(another.pid)}, instance ${instance}`,
+        `Auto Runtime was started in the background as process ${process.pid}, instance ${instance}`,
+        `Auto Runtime, process ${process.pid}, ended`,
+        '',
+      ].join('\n'),
+    );
+    onTestFinished(() => {
+      expect(() => process.kill(Number(another.pid), 0)).not.toThrow();
     });
-    runtimeOnThePortEndedWithTheTest(homeOfTheTest(homePrefix), port);
 
-    expect(await statusAt(port)).toEqual({ pid: another.pid, directory: elsewhere });
+    runtimesStartedInTheBackgroundEndedWithTheTest(home);
+
+    expect(startedInTheBackgroundIn(home)).toEqual([
+      { pid: another.pid, instance },
+      { pid: process.pid, instance },
+    ]);
   });
 });

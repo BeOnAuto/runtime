@@ -11,6 +11,7 @@ export type Decision =
 export interface Holding {
   readonly reached: boolean;
   readonly said: string;
+  readonly replacing: boolean;
 }
 
 const safeToRepeat: ReadonlySet<string> = new Set([
@@ -26,7 +27,9 @@ const safeToRepeat: ReadonlySet<string> = new Set([
   'completion/complete',
 ]);
 
-const stillBeingStarted = 'Auto Runtime is still being started';
+function beingStarted(replacing: boolean): string {
+  return replacing ? 'Auto Runtime is being started again' : 'Auto Runtime is still being started';
+}
 
 const runsAgain = 'Auto Runtime runs again.';
 
@@ -56,22 +59,22 @@ export function decisionFor(method: string, loss: Loss): Decision {
   return decisions[loss](method);
 }
 
-export function heldTooLongWords(reached: boolean): string {
-  return `${stillBeingStarted}, so this request was not ${reached ? 'answered' : 'sent'}. Send it again in a few seconds.`;
+export function heldTooLongWords(reached: boolean, replacing: boolean): string {
+  return `${beingStarted(replacing)}, so this request was not ${reached ? 'answered' : 'sent'}. Send it again in a few seconds.`;
 }
 
-function outcomeWords(recovery: Recovery | undefined): string {
+function outcomeWords(recovery: Recovery | undefined, replacing: boolean): string {
   if (recovery === undefined) {
-    return `${stillBeingStarted}.`;
+    return `${beingStarted(replacing)}.`;
   }
   return recovery.runs ? runsAgain : recovery.words;
 }
 
-function sentAgainUnless(recovery: Recovery | undefined, reached: boolean): string | undefined {
+function sentAgainUnless(recovery: Recovery | undefined, { reached, replacing }: Holding): string | undefined {
   if (recovery === undefined) {
-    return heldTooLongWords(reached);
+    return heldTooLongWords(reached, replacing);
   }
-  return recovery.runs ? undefined : recovery.words;
+  return recovery.runs || recovery.anotherAnswers === true ? undefined : recovery.words;
 }
 
 function refusalAfter(recovery: Recovery | undefined, said: string): string {
@@ -80,9 +83,7 @@ function refusalAfter(recovery: Recovery | undefined, said: string): string {
 
 export function wordsAfter(decision: Decision, recovery: Recovery | undefined, holding: Holding): string | undefined {
   if (decision.kind === 'answered with the check') {
-    return `${decision.words} ${outcomeWords(recovery)}`;
+    return `${decision.words} ${outcomeWords(recovery, holding.replacing)}`;
   }
-  return decision.kind === 'sent again'
-    ? sentAgainUnless(recovery, holding.reached)
-    : refusalAfter(recovery, holding.said);
+  return decision.kind === 'sent again' ? sentAgainUnless(recovery, holding) : refusalAfter(recovery, holding.said);
 }
