@@ -23,7 +23,7 @@ const description = [
   'Use it to find a run the person means, such as the runs of a scheduled workflow; get_run reads one run in full.',
   '`type` and `name` keep the runs of one definition and `status` those in one status.',
   `A filtered page looks at up to ${mostExaminedInAPage} runs, so it may hold fewer runs than \`limit\`, or none, while has_more is true.`,
-  '`cursor` is the next_cursor of the page before.',
+  '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
 ].join(' ');
 
 function listRunsInputOf(typeField: KnownCapabilities['field']) {
