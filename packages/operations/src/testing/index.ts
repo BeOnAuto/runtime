@@ -33,4 +33,5 @@ export {
   type Unread,
 } from '../content-testing/content-samples.ts';
 export { internalTerms, internalTermsIn } from '../plain-language/internal-terms.ts';
-export { endWithTheTest, spawnForTheTest, stoppedWithinMs, type PidReader } from '../process-testing/test-processes.ts';
+export { stoppedWithinMs } from '../process-testing/process-endings.ts';
+export { endWithTheTest, spawnForTheTest, type PidReader } from '../process-testing/test-processes.ts';

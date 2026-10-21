@@ -1,7 +1,12 @@
+import { join } from 'node:path';
+
 import { defineConfig } from 'vitest/config';
+
+const theFolderOfTheTestRun = join(import.meta.dirname, 'packages/operations/src/process-testing/test-run-folder.ts');
 
 export const sharedConfig = defineConfig({
   test: {
+    globalSetup: [theFolderOfTheTestRun],
     testTimeout: 60_000,
     hookTimeout: 60_000,
     experimental: {
