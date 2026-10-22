@@ -87,26 +87,54 @@ describe('the issuers of a registered client', () => {
       ].join('; '),
     );
   });
+});
 
-  it('are the issuers of one client, two that differ by a trailing slash alone being one issuer', () => {
-    expect(
-      refusalOf(
-        withASecret,
-        { ...publicClient, issuers: ['https://other.example.com', 'https://accounts.example.com/'] },
-        {
-          ...withAKey,
-          issuers: ['https://accounts.example.com'],
-        },
-      ),
-    ).toBe(
-      [
-        'The connection settings are invalid. CONNECTIONS: /registered_clients/1/issuers/1: Names an issuer an earlier registered client names too, a trailing slash aside; register each issuer under one client',
-        'CONNECTIONS: /registered_clients/2/issuers/0: Names an issuer an earlier registered client names too, a trailing slash aside; register each issuer under one client',
-      ].join('; '),
-    );
+const scopesUnnamed =
+  'Expected scopes, the scopes the client may ask, since another registered client names one of its issuers too, a trailing slash aside: a client that names none would serve every way there that no client before it covers, and a client after it never';
+
+describe('the scopes of a registered client', () => {
+  it('are read where a client names them, and left out of a client that may ask any', () => {
+    const reading = { ...withASecret, scopes: ['files.read'] };
+    const sending = {
+      ...publicClient,
+      issuers: ['https://accounts.example.com/'],
+      scopes: ['mail.send', 'files.read'],
+    };
+
+    expect(clientsOf(reading, sending, withAKey).map(({ clientId, scopes }) => ({ clientId, scopes }))).toEqual([
+      { clientId: '1234.apps.example.com', scopes: ['files.read'] },
+      { clientId: 'auto-runtime', scopes: ['mail.send', 'files.read'] },
+      { clientId: '9f1c', scopes: undefined },
+    ]);
+  });
+
+  it('are named by each client at an issuer another client names, a trailing slash aside, whichever stands first', () => {
+    const sharing = { ...publicClient, issuers: ['https://other.example.com', 'https://accounts.example.com/'] };
+
+    expect([
+      refusalOf(withASecret, { ...sharing, scopes: ['files.read'] }),
+      refusalOf({ ...withASecret, scopes: ['files.read'] }, sharing),
+      refusalOf(withASecret, withAKey, sharing),
+    ]).toEqual([
+      `${prefix}/scopes: ${scopesUnnamed}`,
+      `The connection settings are invalid. CONNECTIONS: /registered_clients/1/scopes: ${scopesUnnamed}`,
+      `${prefix}/scopes: ${scopesUnnamed}; CONNECTIONS: /registered_clients/2/scopes: ${scopesUnnamed}`,
+    ]);
     expect(clientsOf(withASecret, { ...publicClient, issuers: ['https://accounts.example.com/other'] })).toHaveLength(
       2,
     );
+  });
+
+  it('are one at least, each written out and not empty', () => {
+    expect([
+      refusalOf({ ...withASecret, scopes: [] }),
+      refusalOf({ ...withASecret, scopes: ['files.read', ''] }),
+      refusalOf({ ...withASecret, scopes: ['${EXAMPLE_SCOPE}'] }),
+    ]).toEqual([
+      `${prefix}/scopes: Expected at least one scope the client may ask; leave scopes out for a client that may ask any`,
+      `${prefix}/scopes/1: Expected a value with a length of at least 1`,
+      `${prefix}/scopes/0: Holds a reference to an environment variable, which only the client_secret and the private_key of a registered client may hold`,
+    ]);
   });
 });
 

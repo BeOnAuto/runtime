@@ -8,6 +8,7 @@ import { secretsOf } from '../bounds/secrets.ts';
 import {
   connectedByConsent,
   consentClientAt,
+  registeredAfterAnother,
   registeredAt,
   rowOf,
   servedForConsent,
@@ -145,6 +146,23 @@ describe('the renewal of the tokens of a connection connected by consent', () =>
 
     expect(keptIn(row).refresh_token).toMatch(/^refresh-/u);
     expect(keptIn(row).refresh_token).not.toBe(first.refresh_token);
+  });
+});
+
+describe('the renewal of a connection at an issuer where another registered client stands first', () => {
+  it('is made with the client the connection was made with', async () => {
+    const fake = await served();
+    const connected = await connectedByConsent(fake);
+    const clock = clockAt(0);
+    const row = rowOf(connected, clock.now);
+    const consent = consentClientAt(fake, { registeredClients: registeredAfterAnother(fake.origin) });
+    const { source } = servedTokensOf(servedOf(connected, row), clock.now, consent);
+
+    clock.setTo(anHourLess.minute);
+    const renewed = await source.token();
+
+    expect(await admitted(fake, renewed)).toBe(true);
+    expect([fake.tokenRequests(), row.version()]).toEqual([2, 2]);
   });
 });
 

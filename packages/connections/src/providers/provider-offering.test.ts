@@ -1,6 +1,7 @@
 import type { CallerIdentity } from '@on.auto/operations';
-import { fixtureProviders } from '@on.auto/providers/testing';
-import { consentClientWith } from '@on.auto/tool-servers/testing';
+import { drive, fixtureProviders, providersOf } from '@on.auto/providers/testing';
+import type { ConsentClient } from '@on.auto/tool-servers';
+import { consentClientWith, registeredAt } from '@on.auto/tool-servers/testing';
 import { Effect, type Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -16,16 +17,24 @@ const adaReading: CallerIdentity = { ...ada, permissions: ['org:read'] };
 interface RuntimeSettings {
   readonly policy?: ConnectionPolicyFields;
   readonly providerValues?: ReadonlyMap<string, Redacted.Redacted>;
+  readonly providers?: typeof fixtureProviders;
+  readonly consent?: ConsentClient;
 }
 
-function offeredBy(access: RuntimeAccess, { policy = {}, providerValues = new Map() }: RuntimeSettings = {}) {
+function offeredBy(access: RuntimeAccess, settings: RuntimeSettings = {}) {
+  const {
+    policy = {},
+    providerValues = new Map(),
+    providers = fixtureProviders,
+    consent = consentClientWith(),
+  } = settings;
   const offering = makeProviderOffering({
-    providers: fixtureProviders,
+    providers,
     providerValues,
     policy: connectionPolicyOf(policy),
     access,
     pages: harnessPages,
-    consent: consentClientWith(),
+    consent,
   });
   return (caller: CallerIdentity) => Effect.runSync(offering(caller));
 }
@@ -71,5 +80,20 @@ describe('the providers offered to a caller', () => {
       offeredBy('keys')(ada),
       offeredBy('people', { policy: { people_may_add: false } })(ada),
     ]).toEqual([undefined, undefined, undefined, undefined]);
+  });
+});
+
+function driveOfferedWith(scopes: readonly string[]) {
+  const registered = registeredAt('https://accounts.drive.example.com', { scopes });
+  const consent = consentClientWith({ registeredClients: [registered] });
+  return namesOf(offeredBy('people', { providers: providersOf(drive), consent })(ada));
+}
+
+describe('the providers of consent offered to a caller', () => {
+  it('take in a provider once a client registered at its issuer names every scope its way asks', () => {
+    expect([driveOfferedWith(['files.read']), driveOfferedWith(['files.write', 'files.read'])]).toEqual([
+      [],
+      ['drive'],
+    ]);
   });
 });

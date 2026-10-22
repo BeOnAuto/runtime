@@ -69,6 +69,7 @@ export {
   consentRegistration,
   consentSecret,
   everyHost,
+  registeredAfterAnother,
   registeredAt,
   returnAddress,
   servedForConsent,
@@ -90,6 +91,7 @@ export {
   servedThroughAuto,
   serviceCallsAt,
   studioSession,
+  type ServiceListing,
   type ThroughAuto,
 } from '../consent-testing/auto-consents.ts';
 export {

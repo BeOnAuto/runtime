@@ -23,6 +23,8 @@ export interface ThroughAuto {
   readonly close: () => Promise<void>;
 }
 
+export type ServiceListing = Pick<Parameters<typeof serveFakeConsentService>[0], 'scopes'>;
+
 export const studioSession = Redacted.make('session-of-a-person-signed-in-to-auto');
 
 export function autoClientsOf(service: Pick<FakeConsentService, 'url'>, kind: ReturnKind = 'hosted'): AutoClients {
@@ -53,10 +55,13 @@ export async function handedOffAskedOf(
   return { server, way, returnAddress, reaches, client: start.client, verifier: start.verifier, handle };
 }
 
-export async function servedThroughAuto(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
+export async function servedThroughAuto(
+  changes: Partial<ClientRegistration> = {},
+  listing: ServiceListing = {},
+): Promise<ThroughAuto> {
   const fake = await servedForConsent(changes);
   const clock = clockAt(0);
-  const service = await serveFakeConsentService({ vendor: fake, now: clock.now });
+  const service = await serveFakeConsentService({ vendor: fake, now: clock.now, ...listing });
   return {
     fake,
     service,

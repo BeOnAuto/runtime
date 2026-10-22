@@ -2,7 +2,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect, Option, Redacted, Schema } from 'effect';
 
 import { HandedTokensSchema, type HandedTokens, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
-import { ClientIdSchema, type ServiceClient } from '../consent/client-sources.ts';
+import { ClientIdSchema, ServiceClientSchema, type ServiceClient } from '../consent/client-sources.ts';
 
 export interface ConsentReturn {
   readonly kind: 'hosted' | 'loopback';
@@ -38,9 +38,7 @@ interface ServiceRevokeAsked {
   readonly connectionKey: string;
 }
 
-const ClientsSchema = Schema.Struct({
-  clients: Schema.Array(Schema.Struct({ issuer: Schema.String, client_id: ClientIdSchema })),
-});
+const ClientsSchema = Schema.Struct({ clients: Schema.Array(ServiceClientSchema) });
 
 const GivenSchema = Schema.String.check(Schema.isMinLength(1));
 

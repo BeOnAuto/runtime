@@ -95,7 +95,7 @@ export const ConnectionsSettingSchema = Schema.Struct({
   auto_clients: Schema.optionalKey(
     Schema.Boolean.annotate({
       description:
-        "Whether a provider whose way takes a registered client takes Auto's client too, through Auto's consent service, where none is registered at its issuer; true in local mode and false otherwise when left out. AUTO_CLIENTS wins over it",
+        "Whether a provider whose way takes a registered client takes Auto's client too, through Auto's consent service, where no client registered at its issuer covers the scope the way asks; true in local mode and false otherwise when left out. AUTO_CLIENTS wins over it",
     }),
   ),
   providers: Schema.optionalKey(AddedProvidersSchema),

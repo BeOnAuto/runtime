@@ -3,7 +3,7 @@ import { Effect, Option } from 'effect';
 import { requestBoundsOf } from '../bounds/call-bounds.ts';
 import { tokenRequestsOf, type TokenRequests } from '../consent-tokens/token-requests.ts';
 import { isServerSource, requestsOf, type Requests } from '../consent/acting-clients.ts';
-import { serviceClientAt, sourcesHad, sourceTakenOf, type ServiceClient } from '../consent/client-sources.ts';
+import { serviceClientFor, sourcesHad, sourceTakenOf, type ServiceClient } from '../consent/client-sources.ts';
 import type {
   ConsentRefusal,
   FinishAsked,
@@ -50,7 +50,7 @@ function started(asked: StartAsked, { options, requests, server }: Consenting) {
     const listed = kind === undefined ? noServiceClients : yield* options.serviceClients;
     const had = { ...options, serviceClients: listed };
     if (sourceTakenOf(asked.way, had) === 'auto' && auto.enabled && kind !== undefined) {
-      const { client_id: clientId } = required(serviceClientAt(listed, asked.way.issuer));
+      const { client_id: clientId } = required(serviceClientFor(listed, asked.way));
       return yield* startedThroughAuto(asked, requests.fetchFor, { auto, clientId, kind });
     }
     const sources = sourcesHad(asked.way, had);

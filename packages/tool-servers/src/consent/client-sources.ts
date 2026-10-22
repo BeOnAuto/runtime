@@ -29,12 +29,16 @@ export interface RegisteredClient {
   readonly clientId: string;
   readonly credential: RegisteredCredential;
   readonly tokenEndpointAuthMethod: TokenEndpointAuthMethod | null;
+  readonly scopes?: readonly string[];
 }
 
-export interface ServiceClient {
-  readonly issuer: string;
-  readonly client_id: string;
-}
+export const ServiceClientSchema = Schema.Struct({
+  issuer: Schema.String,
+  client_id: ClientIdSchema,
+  scopes: Schema.optionalKey(Schema.Array(Schema.String.check(Schema.isMinLength(1)))),
+});
+
+export type ServiceClient = typeof ServiceClientSchema.Type;
 
 export interface ClientsHad {
   readonly registeredClients: readonly RegisteredClient[];
@@ -44,6 +48,7 @@ export interface ClientsHad {
 
 export interface WayOfClients {
   readonly issuer: string;
+  readonly scope?: string | undefined;
   readonly clients?: readonly WayClientSource[] | undefined;
 }
 
@@ -95,12 +100,31 @@ function isRegisteredAt(registered: string, issuer: string): boolean {
   );
 }
 
-export function registeredClientAt(clients: readonly RegisteredClient[], issuer: string): RegisteredClient | undefined {
-  return clients.find(({ issuers }) => issuers.some((registered) => isRegisteredAt(registered, issuer)));
+function isRegisteredClientAt({ issuers }: RegisteredClient, issuer: string): boolean {
+  return issuers.some((registered) => isRegisteredAt(registered, issuer));
 }
 
-export function serviceClientAt(clients: readonly ServiceClient[], issuer: string): ServiceClient | undefined {
-  return clients.find((client) => isRegisteredAt(client.issuer, issuer));
+function covers({ scopes }: { readonly scopes?: readonly string[] }, { scope }: WayOfClients): boolean {
+  return scopes === undefined || (scope?.split(' ') ?? []).every((asked) => scopes.includes(asked));
+}
+
+export function registeredClientFor(
+  clients: readonly RegisteredClient[],
+  way: WayOfClients,
+): RegisteredClient | undefined {
+  return clients.find((client) => isRegisteredClientAt(client, way.issuer) && covers(client, way));
+}
+
+export function registeredClientNamed(
+  clients: readonly RegisteredClient[],
+  issuer: string,
+  clientId: string,
+): RegisteredClient | undefined {
+  return clients.find((client) => client.clientId === clientId && isRegisteredClientAt(client, issuer));
+}
+
+export function serviceClientFor(clients: readonly ServiceClient[], way: WayOfClients): ServiceClient | undefined {
+  return clients.find((client) => isRegisteredAt(client.issuer, way.issuer) && covers(client, way));
 }
 
 export function metadataDocumentOf(publicUrl: string | undefined): string | undefined {
@@ -130,12 +154,12 @@ export function clientMetadataDocumentOf(
       };
 }
 
-function isHad(source: ClientSource, { issuer }: WayOfClients, had: ClientsHad): boolean {
+function isHad(source: ClientSource, way: WayOfClients, had: ClientsHad): boolean {
   if (source === 'registered') {
-    return registeredClientAt(had.registeredClients, issuer) !== undefined;
+    return registeredClientFor(had.registeredClients, way) !== undefined;
   }
   if (source === 'auto') {
-    return serviceClientAt(had.serviceClients, issuer) !== undefined;
+    return serviceClientFor(had.serviceClients, way) !== undefined;
   }
   return source === 'dynamic' || metadataDocumentOf(had.publicUrl) !== undefined;
 }

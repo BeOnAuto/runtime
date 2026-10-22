@@ -11,6 +11,7 @@ import {
   startAskedAt,
   studioBase,
   type FakeConsentService,
+  type ServiceListing,
   type ThroughAuto,
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
@@ -22,8 +23,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function throughAuto(): Promise<ThroughAuto> {
-  const serving = await servedThroughAuto();
+async function throughAuto(listing: ServiceListing = {}): Promise<ThroughAuto> {
+  const serving = await servedThroughAuto({}, listing);
   closing.push(serving.close);
   return serving;
 }
@@ -156,5 +157,32 @@ describe('a start at an issuer both a registered client and Auto’s consent ser
       'state-1',
     ]);
     expect(pathsHeardBy(service)).toEqual(['/clients']);
+  });
+});
+
+describe('the clients Auto’s consent service lists with the scopes each may ask', () => {
+  it('serve a way whose scope they cover, and leave a way they do not cover to be set up first', async () => {
+    const { fake, service } = await throughAuto({ scopes: ['files.read'] });
+    const client = consentClientWith({ autoClients: autoClientsOf(service) });
+
+    const { sourcesOf } = await Effect.runPromise(client.hadSources(studioBase));
+
+    expect([
+      sourcesOf({ issuer: fake.origin, scope: 'files.read' }),
+      sourcesOf({ issuer: fake.origin, scope: 'files.read mail.send' }),
+    ]).toEqual([['auto'], []]);
+  });
+
+  it('take a start whose scope the registered client at the issuer does not cover', async () => {
+    const { fake, service } = await throughAuto({ scopes: ['files.read'] });
+    const client = consentClientWith({
+      registeredClients: [registeredAt(fake.origin, { scopes: ['mail.send'] })],
+      autoClients: autoClientsOf(service),
+    });
+
+    const start = await Effect.runPromise(client.start(startAskedAt(fake, { scope: 'files.read' })));
+
+    expect(start.client).toEqual({ client_id: 'auto-runtime', client_source: 'auto' });
+    expect(pathsHeardBy(service)).toEqual(['/clients', '/consents']);
   });
 });

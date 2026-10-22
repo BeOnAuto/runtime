@@ -12,6 +12,7 @@ import {
   servedThroughAuto,
   serviceCallsAt,
   studioSession,
+  type ServiceListing,
   type ThroughAuto,
 } from './auto-consents.ts';
 import { studioBase } from './consent-fakes.ts';
@@ -24,8 +25,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function serving(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
-  const served = await servedThroughAuto(changes);
+async function serving(changes: Partial<ClientRegistration> = {}, listing: ServiceListing = {}): Promise<ThroughAuto> {
+  const served = await servedThroughAuto(changes, listing);
   closing.push(served.close);
   return served;
 }
@@ -53,11 +54,16 @@ function redeemedAt(served: ThroughAuto) {
 }
 
 describe('the clients the fake consent service lists', () => {
-  it('are its one client, at the issuer of the fake authorization server', async () => {
+  it('are its one client, at the issuer of the fake authorization server, with the scopes it names where it names them', async () => {
     const { fake: vendor, service } = await serving();
+    const naming = await serving({}, { scopes: ['files.read'] });
 
-    expect(await Effect.runPromise(serviceCallsAt(service).clients)).toEqual([
-      { issuer: vendor.origin, client_id: 'auto-runtime' },
+    expect([
+      await Effect.runPromise(serviceCallsAt(service).clients),
+      await Effect.runPromise(serviceCallsAt(naming.service).clients),
+    ]).toEqual([
+      [{ issuer: vendor.origin, client_id: 'auto-runtime' }],
+      [{ issuer: naming.fake.origin, client_id: 'auto-runtime', scopes: ['files.read'] }],
     ]);
   });
 });
