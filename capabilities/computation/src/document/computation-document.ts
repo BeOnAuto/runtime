@@ -7,7 +7,6 @@ export interface OutputContract extends ValueContract {
 
 export interface ComputationFunctionDefinitionDocument {
   readonly description?: string;
-  readonly about?: string;
   readonly language: 'typescript';
   readonly input: ValueContract;
   readonly output: OutputContract;

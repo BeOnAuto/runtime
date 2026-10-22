@@ -4,7 +4,7 @@ import type { Schema } from 'effect';
 import { amount, closedRecord, highest, label, lowest, shapeOf, type OutputShape } from './output-shape.ts';
 import { itemsOf, rangeIssues, recordOf, repeatedNameIssues } from './shape-values.ts';
 
-export const categoriesBounds = { mostValues: 200 } as const;
+const categoriesBounds = { mostValues: 200 } as const;
 
 const category = closedRecord({ name: label, value: amount, low: lowest, high: highest }, ['name', 'value']);
 

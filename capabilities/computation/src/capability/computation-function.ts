@@ -14,7 +14,6 @@ import { Effect, Result } from 'effect';
 import type { ComputationFunctionDefinitionDocument } from '../document/computation-document.ts';
 import { documentCheck, invalidDefinition } from '../document/document-check.ts';
 import { parseComputationDocument } from '../document/document-parsing.ts';
-import { computationOverview } from '../overview/computation-overview.ts';
 import { computationRun } from '../run/computation-run.ts';
 import { computationBounds } from '../run/run-bounds.ts';
 
@@ -32,10 +31,9 @@ function parse(source: string): Effect.Effect<ComputationFunctionDefinitionDocum
   });
 }
 
-function summarize({ description, about, input, output }: ComputationFunctionDefinitionDocument): DefinitionSummary {
+function summarize({ description, input, output }: ComputationFunctionDefinitionDocument): DefinitionSummary {
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     ...(input.schema === undefined ? {} : { inputSchema: input.schema.document }),
     ...publishedOutputOf({ schema: output.schema?.document, shape: output.shape }),
   };
@@ -58,7 +56,6 @@ export function makeComputationFunctionAdapter({
     parse,
     check: documentCheck(pool),
     summarize,
-    overview: computationOverview,
     run: (document, input, _run, stripped) => run(document, input, stripped),
     longestAnyRunMs: deadlineMs,
   });

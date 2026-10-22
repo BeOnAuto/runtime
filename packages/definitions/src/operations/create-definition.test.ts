@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { overviewOfAProbe, probe } from '../testing/capabilities/probe.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
@@ -13,12 +13,21 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 const hello = '{"greeting": "Hello", "description": "Greets the caller"}';
 
+const greetOverview = [
+  'Greets each guest who arrives at the front desk, so nobody waits unnoticed.',
+  '```mermaid\nflowchart LR\n  guest[A guest arrives] --> greet[Greet them]\n```',
+].join('\n\n');
+
 function creating(input: object) {
   return harness().call(createDefinition, toAlpha(acmeAdmin, input));
 }
 
 function creatingFrom(source: string) {
   return creating({ type: 'probe', name: 'plain', source });
+}
+
+function creatingWithOverview(overview: string) {
+  return creating({ type: 'probe', name: 'plain', source: 'text', overview });
 }
 
 describe('create_definition', () => {
@@ -34,8 +43,8 @@ describe('create_definition', () => {
     });
   });
 
-  it('creates an active definition at version 1 with what its capability says about it', async () => {
-    expect(await creating({ type: 'echo', name: 'greet', source: hello })).toStrictEqual({
+  it('creates an active definition at version 1 with what its capability says about it and the overview its author gave', async () => {
+    expect(await creating({ type: 'echo', name: 'greet', source: hello, overview: greetOverview })).toStrictEqual({
       status: 'succeeded',
       output: {
         type: 'echo',
@@ -54,14 +63,7 @@ describe('create_definition', () => {
         created_by: 'acme-admin',
         updated_at: firstMoment,
         source: hello,
-        overview: [
-          '# greet',
-          'Greets the caller',
-          '## What it needs',
-          'A record.',
-          '## What it produces',
-          '| Field | Required | What it is |\n| --- | --- | --- |\n| **greeting** | yes | Exactly Hello. |\n| **input** | yes | A record. |\n',
-        ].join('\n\n'),
+        overview: greetOverview,
       },
     });
   });
@@ -85,7 +87,7 @@ describe('the warnings of a definition', () => {
 });
 
 describe('the definition create_definition records', () => {
-  it('leaves out what the capability does not say about a definition', async () => {
+  it('leaves out what the capability does not say about a definition, and an overview its author did not give', async () => {
     expect(await creating({ type: 'probe', name: 'plain', source: 'just text' })).toStrictEqual({
       status: 'succeeded',
       output: {
@@ -98,7 +100,6 @@ describe('the definition create_definition records', () => {
         created_by: 'acme-admin',
         updated_at: firstMoment,
         source: 'just text',
-        overview: overviewOfAProbe('plain'),
       },
     });
   });
@@ -146,6 +147,26 @@ describe('create_definition rejecting a document', () => {
     expect(await creatingFrom('é'.repeat(32_768))).toMatchObject({ status: 'succeeded' });
     expect(await creatingFrom('a'.repeat(65_537))).toEqual(tooLong);
     expect(await creatingFrom('é'.repeat(32_769))).toEqual(tooLong);
+  });
+});
+
+describe('the overview create_definition takes', () => {
+  it('is Markdown of at least one character and at most 16384 bytes in UTF-8, whatever its length in characters', async () => {
+    const tooLong = {
+      status: 'rejected',
+      reason: 'invalid_input',
+      detail: 'The input does not match the input schema',
+      issues: [{ detail: 'Expected an overview of at most 16384 bytes in UTF-8', pointer: '/overview' }],
+    };
+
+    expect(await creatingWithOverview('a'.repeat(16_384))).toMatchObject({ status: 'succeeded' });
+    expect(await creatingWithOverview('é'.repeat(8192))).toMatchObject({ status: 'succeeded' });
+    expect(await creatingWithOverview('a'.repeat(16_385))).toEqual(tooLong);
+    expect(await creatingWithOverview('é'.repeat(8193))).toEqual(tooLong);
+    expect(await creatingWithOverview('')).toMatchObject({
+      reason: 'invalid_input',
+      issues: [{ pointer: '/overview' }],
+    });
   });
 });
 

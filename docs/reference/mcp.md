@@ -35,7 +35,7 @@ An agent that connects receives instructions written for the tools its key or to
 - what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and one for workflows;
 - that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
-- that `get_guide` returns the format of each definition;
+- that `get_guide` returns the format of each definition, and that each definition is given an overview;
 - how a reasoning function names its model and its tools;
 - where `search` and `add_connection` are both listed, that a person's accounts at services are connected through Auto Runtime: asked to connect, link, sign in to or use a service, the agent calls `search` with the service's words, which lists the providers that match, then `add_connection` with a provider's name, which the person approves on the page it links. The agent says that a service cannot be connected only when no provider or server matches;
 - that `get_run` shows whether a run that finishes later has ended or is still waiting;
@@ -112,15 +112,15 @@ Each playbook `list_playbooks` returns holds every field of the playbook, a reti
 
 These tools are listed on `/mcp` and a playbook endpoint. Their routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`, where `{type}` is the tool's `type` argument.
 
-| Tool                | HTTP operation                           | What it is for                                                       |
-| ------------------- | ---------------------------------------- | -------------------------------------------------------------------- |
-| `create_definition` | `POST /definitions/{type}`               | Save a new function or workflow from its document, given as `source` |
-| `list_definitions`  | `GET /definitions/{type}`                | List the definitions of one type, without their `overview`           |
-| `get_definition`    | `GET /definitions/{type}/{name}`         | Read a definition, with its document and its `overview`              |
-| `update_definition` | `PUT /definitions/{type}/{name}`         | Save a new version from a changed document                           |
-| `retire_definition` | `POST /definitions/{type}/{name}/retire` | Retire a definition for good                                         |
+| Tool                | HTTP operation                           | What it is for                                                                           |
+| ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `create_definition` | `POST /definitions/{type}`               | Save a new function or workflow from its document, given as `source`, and its `overview` |
+| `list_definitions`  | `GET /definitions/{type}`                | List the definitions of one type, without their `overview` and `used_by`                 |
+| `get_definition`    | `GET /definitions/{type}/{name}`         | Read a definition, with its document, its `overview` and `used_by`                       |
+| `update_definition` | `PUT /definitions/{type}/{name}`         | Save a new version from a changed document or overview                                   |
+| `retire_definition` | `POST /definitions/{type}/{name}/retire` | Retire a definition for good                                                             |
 
-The `overview` describes a definition in plain words, so an agent can show a person what it does without its source. `get_definition`, `create_definition`, `update_definition` and `retire_definition` return it. It is written each time it is returned, from what the version's document says and what the playbook holds then: for a workflow, **What it calls**, each definition it names with its description; then **Used by**, the active definitions of the playbook that use this one, a workflow with the steps that call it; and last, under **Details**, their exact names with their types. [Reasoning functions](http.md#reasoning-functions) gives the rules every type of definition follows, and the section of each type adds its own.
+`create_definition` and `update_definition` take an `overview` beside `source`: Markdown for the person who runs the business, written from everything the agent knows of them and of the playbook, on why the definition exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture. The agent writes it after the document and again with every update; one left out of an update stays as saved. `get_definition`, `create_definition`, `update_definition` and `retire_definition` return it as written, and with it `used_by`, the active definitions of the playbook that use this one, each with its `type`, its `name` and its `relation`, a workflow with the `steps` that call it, such as `{ "type": "workflow", "name": "weekly-build", "relation": "calls", "steps": [{ "number": 1, "name": "send" }] }`. [Reasoning functions](http.md#reasoning-functions) gives the rules every type of definition follows and each relation of `used_by`, and the section of each type adds its own.
 
 ### Runs
 

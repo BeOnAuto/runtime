@@ -1,4 +1,3 @@
-import { overviewTitled } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -46,11 +45,7 @@ async function projected() {
       {
         type: 'definition_created',
         data: {
-          content: {
-            source: 'runs',
-            overview: overviewTitled('runs'),
-            details: { counts: 'run_succeeded' },
-          },
+          content: { source: 'runs', details: { counts: 'run_succeeded' } },
         },
       },
     ],

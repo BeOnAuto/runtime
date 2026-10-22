@@ -22,7 +22,6 @@ import { Effect, Result } from 'effect';
 import { dslProblems, type Problem } from './dsl-validation.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from './workflow-functions.ts';
 import { outputShapeRejections } from './workflow-output.ts';
-import { aboutRejections, headerOf, textIssuesIn } from './workflow-texts.ts';
 
 const thirtyDays = 2_592_000_000;
 
@@ -68,24 +67,14 @@ function compiledInputOf(document: JsonObject, rejections: readonly Rejection[])
   });
 }
 
-function refusedIn(locate: ReadWorkflow['locate'], placed: readonly LocatedIssue[]) {
+function refusedIn(locate: ReadWorkflow['locate']) {
   return (problems: readonly Problem[]): Effect.Effect<never, InvalidInput> =>
     Effect.fail(
-      invalidDocument(notRunnable, [
-        ...problems.map(({ pointer, detail }) => ({
-          position: locate(pointer),
-          detail: `${placeOf(pointer)}${detail}`,
-        })),
-        ...placed,
-      ]),
+      invalidDocument(
+        notRunnable,
+        problems.map(({ pointer, detail }) => ({ position: locate(pointer), detail: `${placeOf(pointer)}${detail}` })),
+      ),
     );
-}
-
-function writtenIssuesIn(header: JsonObject, source: string, locate: ReadWorkflow['locate']): readonly LocatedIssue[] {
-  return textIssuesIn(header, source, locate).map(({ pointer, position, detail }) => ({
-    position,
-    detail: `${placeOf(pointer)}${detail}`,
-  }));
 }
 
 function readWorkflowDocument(
@@ -99,7 +88,6 @@ function readWorkflowDocument(
       return Effect.fail(invalidDocument('The workflow document is not YAML this runtime reads', reading.problems));
     }
     const { value, locate } = reading.document;
-    const header = headerOf(value);
     const rejections = policy(value);
     const unreadable =
       nestingRejections(value).length > 0 || rejections.some(({ pointer }) => pointer === '/document/dsl');
@@ -112,16 +100,12 @@ function readWorkflowDocument(
       ...rejections,
       ...(unreadable ? [] : durationLimitRejections(value, mostDuration)),
       ...outputShapeRejections(value),
-      ...aboutRejections(header),
     ];
-    const written = writtenIssuesIn(header, source, locate);
-    const refused = refusedIn(locate, written);
+    const refused = refusedIn(locate);
     return Result.match(compiledInputOf(value, rejections), {
       onFailure: (issues) => refused([...found, ...issues]),
       onSuccess: (input) =>
-        found.length === 0 && written.length === 0
-          ? Effect.succeed({ document: value, ...input, locate })
-          : refused(found),
+        found.length === 0 ? Effect.succeed({ document: value, ...input, locate }) : refused(found),
     });
   });
 }

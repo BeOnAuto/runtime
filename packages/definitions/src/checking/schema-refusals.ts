@@ -9,9 +9,8 @@ import { articled, asSentence, InvalidInput, type Issue } from '@on.auto/operati
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine';
 import { Effect, JsonPointer, type Schema } from 'effect';
 
-import { plainTextOf } from '../overview/markdown-text.ts';
-import { trailingWords } from '../overview/schema-bounds.ts';
-import { forms } from '../overview/schema-nouns.ts';
+import { trailingWords } from '../schema-words/schema-bounds.ts';
+import { forms } from '../schema-words/schema-nouns.ts';
 import {
   isItemOf,
   listOf,
@@ -20,8 +19,8 @@ import {
   type JsonSchema,
   type PlaceStep,
   type SchemaPlace,
-} from '../overview/schema-reading.ts';
-import { descriptionOf, examplesWordsOf, expectedWordsOf, givesAnExample } from '../overview/schema-words.ts';
+} from '../schema-words/schema-reading.ts';
+import { descriptionOf, examplesWordsOf, expectedWordsOf, givesAnExample } from '../schema-words/schema-words.ts';
 
 const kindKeywords = ['type', 'enum', 'const', 'anyOf', 'oneOf', 'properties', 'items', 'prefixItems'];
 
@@ -97,7 +96,7 @@ function refusedWords(steps: readonly PlaceStep[]): string {
 
 function kindWords(schemas: readonly JsonSchema[], root: JsonSchema, detail: string): string {
   const said = schemas.find((schema) => kindKeywords.some((keyword) => schema[keyword] !== undefined));
-  return said === undefined ? asPhrase(detail) : `expected ${plainTextOf(expectedWordsOf(said, root))}`;
+  return said === undefined ? asPhrase(detail) : `expected ${expectedWordsOf(said, root)}`;
 }
 
 function holderSentence({ document, what }: CompiledSchema, tokens: readonly string[], breach: Breach): string {

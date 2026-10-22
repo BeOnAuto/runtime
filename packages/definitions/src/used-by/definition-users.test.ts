@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import { overviewTitled } from '../testing/overview-sections.ts';
-import { definitionsCalled, usersOf } from './definition-users.ts';
+import { usersOf } from './definition-users.ts';
 
 const at = '2026-10-01T09:00:00.000Z';
 
@@ -14,7 +13,6 @@ function saved(name: string, details?: Schema.JsonObject, status: 'active' | 're
     version: 1,
     status,
     source: '',
-    overview: overviewTitled(name),
     created_at: at,
     created_by: 'acme-admin',
     updated_at: at,
@@ -141,7 +139,6 @@ const steppedRegistries = new Map([
     'workflow',
     registryOf(
       saved('monthly-report', {
-        title: 'Monthly website report',
         calls: [
           {
             ...reviewBrief,
@@ -156,20 +153,17 @@ const steppedRegistries = new Map([
           { ...sendBuild, role: 'trainer' },
         ],
       }),
-      saved('weekly-review', { title: 7, calls: [{ ...reviewBrief, ...inStep(2, 'review') }] }),
+      saved('weekly-review', { calls: [{ ...reviewBrief, ...inStep(2, 'review') }] }),
     ),
   ],
-  ['reasoning', registryOf({ ...saved('review-brief'), description: 'Reviews a brief' })],
-  ['interaction', registryOf(saved('send-draft', undefined, 'retired'))],
 ]);
 
 describe('the users of a definition that a workflow calls by its steps', () => {
-  it('are the workflow once, with the steps that call it, each its number and its name, and the title of the workflow', () => {
+  it('are the workflow once, with the steps that call it, each its number and its name', () => {
     expect(usersOf(steppedRegistries, reviewBrief)).toEqual([
       {
         type: 'workflow',
         name: 'monthly-report',
-        title: 'Monthly website report',
         relation: 'calls',
         steps: [
           { number: 3, name: 'review' },
@@ -178,35 +172,5 @@ describe('the users of a definition that a workflow calls by its steps', () => {
       },
       { type: 'workflow', name: 'weekly-review', relation: 'calls', steps: [{ number: 2, name: 'review' }] },
     ]);
-  });
-});
-
-describe('the definitions a definition calls', () => {
-  it('are those its calls name with the steps that call them, in their order, each as the playbook holds it', () => {
-    expect(
-      definitionsCalled(steppedRegistries, steppedRegistries.get('workflow')?.get('monthly-report')?.details),
-    ).toEqual([
-      { type: 'reasoning', name: 'review-brief', standing: 'active', description: 'Reviews a brief' },
-      { type: 'interaction', name: 'send-draft', standing: 'retired' },
-      { type: 'computation', name: 'month-window', standing: 'missing' },
-      { type: 'workflow', name: 'weekly-review', standing: 'active' },
-    ]);
-  });
-
-  it('are none for a definition whose calls each have a role, or whose details name none', () => {
-    expect([
-      definitionsCalled(registries, registries.get('prediction')?.get('weekly-orders')?.details),
-      definitionsCalled(registries),
-    ]).toEqual([[], []]);
-  });
-
-  it('carry the title a called workflow records', () => {
-    const titled = new Map([['workflow', registryOf(saved('weekly-review', { title: 'The weekly review' }))]]);
-
-    expect(
-      definitionsCalled(titled, {
-        calls: [{ type: 'workflow', name: 'weekly-review', steps: [{ number: 1, name: 'go' }] }],
-      }),
-    ).toEqual([{ type: 'workflow', name: 'weekly-review', title: 'The weekly review', standing: 'active' }]);
   });
 });

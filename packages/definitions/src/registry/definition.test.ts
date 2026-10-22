@@ -15,7 +15,7 @@ const reasoningFunction: Definition = {
   status: 'active',
   media_type: 'text/markdown',
   source: 'Review the brief against the criteria.',
-  overview: '# review-campaign\n\nReviews a campaign.\n',
+  overview: 'Reviews each campaign against its criteria before it goes out.',
   created_at: '2026-09-01T00:00:00.000Z',
   created_by: 'author',
   updated_at: '2026-09-02T00:00:00.000Z',

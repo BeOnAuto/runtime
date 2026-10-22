@@ -86,7 +86,7 @@ const modelsBeforeWriting: Sentences = ({ reasoning, listed }) =>
 
 const guides: Sentences = ({ listed }) => [
   listed('create_definition')
-    ? 'Before writing a definition, read its format with get_guide.'
+    ? "Read a definition's format with get_guide; give it an overview."
     : 'get_guide holds what these words mean and how each kind of definition is written.',
 ];
 

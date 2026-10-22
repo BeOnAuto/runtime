@@ -5,9 +5,13 @@ export interface NamedDefinition {
   readonly name: string;
 }
 
-export type UserRelation = 'calls' | 'sends-builds' | 'asks-approval' | 'remembers-runs' | 'remembers-changes';
-
-const CallingStepSchema = Schema.Struct({ number: Schema.Int, name: Schema.String });
+export const CallingStepSchema = Schema.Struct({
+  number: Schema.Int.annotate({
+    description:
+      "The step's number: its place among the workflow's tasks in the order of its document, nested ones included",
+  }),
+  name: Schema.String.annotate({ description: 'The name of its task' }),
+});
 
 export type CallingStep = typeof CallingStepSchema.Type;
 

@@ -15,7 +15,7 @@ import { makeDefinitionPresenters } from '../index.ts';
 import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { mostInputBytes, mostResultBytes } from '../runs/recorded-size.ts';
 import { coreRunFactTypes, type RunEvent } from '../runs/run-events.ts';
-import { asking, echo, overviewTitled } from '../testing/index.ts';
+import { asking, echo } from '../testing/index.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -136,7 +136,7 @@ const largestRunEvents: readonly RunEvent[] = [
 
 const largestContent = {
   source: '😀'.repeat(16 * 1024),
-  overview: overviewTitled('largest', '😀'.repeat(16 * 1024)),
+  overview: '😀'.repeat(4 * 1024),
   description: awkward,
   input_schema: largestJson,
   output_schema: largestJson,

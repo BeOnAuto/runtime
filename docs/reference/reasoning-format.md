@@ -36,8 +36,7 @@ A function document contains instructions, never model credentials. Each change 
 
 | Field                      | Required    | Value                                                                                                                                                                           |
 | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`              | No          | Text of 1 to 1,000 characters. `list_definitions`, `get_definition` and the [overview](#the-overview) show it                                                                   |
-| `about`                    | No          | Markdown of 1 to 4,000 characters, without headings, for a business reader; the [overview](#the-overview) shows it after the `description`                                      |
+| `description`              | No          | Text of 1 to 1,000 characters. `list_definitions` and `get_definition` show it                                                                                                  |
 | `model`                    | Yes         | A model reference in `provider/model` form, such as `anthropic/claude-sonnet-4-5`                                                                                               |
 | `config.max_output_tokens` | No          | A whole number from 1 to 64,000; 1,024 when left out. The most tokens the answer may use                                                                                        |
 | `config.temperature`       | No          | A finite number: the sampling temperature. Each provider accepts its own range                                                                                                  |
@@ -359,32 +358,9 @@ More rules:
 
 ## The overview
 
-`get_definition` returns a saved function with its `overview`: a plain-words description for a person who does not read Liquid or YAML. Auto Studio shows it before the document. The overview says, in order:
+`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value. Write it after the document, and write it again with every update.
 
-1. The `description`, or that the function has none yet, then the `about` as it is written.
-2. What the function needs: each field of `input.schema`, with its type, its bounds and the value `input.default` gives it.
-3. What it produces: text, each field of `output.schema`, or the shape `output.shape` names, in a sentence.
-4. The model, and each tool it may call. When the function names any tools, a diagram draws the function, its model and those tools.
-5. What the model is told: the instructions and the message, as a person reads them.
-6. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
-
-In the instructions and the message:
-
-- Each value the template reads, such as `{{ input.brief }}`, appears as its name in bold, **brief**, without its filters.
-- A condition or a loop that ends on a later line than it opens reads as lines. `{% if input.vip %}` becomes an italic line, _When input.vip:_. `{% unless %}` becomes _Unless …:_, `{% elsif %}` _Or when …:_ and `{% else %}` _Otherwise:_. `{% for item in input.items %}` becomes _For each item of input.items:_.
-- A condition or a loop that opens and ends within one line reads as a phrase of that line. `{% if input.vip %}Dear {% else %}Hello {% endif %}` reads as Dear when input.vip, otherwise Hello. `{% for item in input.items %}{{ item.name }}{% unless forloop.last %}, {% endunless %}{% endfor %}` reads as each item of input.items as **name**, separated by commas.
-- Comments are left out, a `raw` block keeps its text, and any other tag stays as it is written.
-- The instructions and the message are each cut past 8,192 characters, with the line of the document where they continue.
-
-The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences. Give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The brief to review`, and put each field's default value in `input.default`, so the overview can show it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
-
-```yaml
-about: |
-  The campaign team uses it to check each brief before it goes to a client.
-  It runs when someone asks for a review, and answers with the evidence the brief lacks.
-```
-
-A function without them still has an overview, with only the types.
+An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Provider options
 

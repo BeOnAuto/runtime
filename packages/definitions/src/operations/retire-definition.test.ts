@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { overviewOfAProbe, probe } from '../testing/capabilities/probe.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
@@ -28,7 +28,6 @@ const retiredPlain = {
   updated_at: later,
   retired_at: later,
   source: 'text',
-  overview: overviewOfAProbe('plain'),
 };
 
 async function withPlain() {

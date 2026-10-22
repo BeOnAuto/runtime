@@ -1,5 +1,4 @@
 import type { Trigger } from '@on.auto/definitions';
-import { overviewTitled } from '@on.auto/definitions/testing';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -44,9 +43,7 @@ function about(name: string, version: number, at: string) {
 }
 
 function saved({ id, name, version, triggers, at = first }: Saved): DefinitionRecord {
-  const overview = overviewTitled(name);
-  const content =
-    triggers.length === 0 ? { source: 'do: []', overview } : { source: 'schedule: {}', overview, triggers };
+  const content = triggers.length === 0 ? { source: 'do: []' } : { source: 'schedule: {}', triggers };
   return {
     id,
     type: version === 1 ? 'definition_created' : 'definition_updated',
@@ -272,7 +269,7 @@ describe('the records of the definitions read back from their stream', () => {
         messages: [
           {
             type: 'definition_created',
-            data: { content: { source: 'do: []', overview: overviewTitled('close') } },
+            data: { content: { source: 'do: []' } },
             context,
             lineage: { id: 'm1', causationId: null, correlationId: null },
           },
@@ -288,7 +285,7 @@ describe('the records of the definitions read back from their stream', () => {
       {
         id: 'm1',
         type: 'definition_created',
-        data: { content: { source: 'do: []', overview: overviewTitled('close') } },
+        data: { content: { source: 'do: []' } },
         context,
       },
       { id: 'm2', type: 'definition_retired', data: {}, context },

@@ -78,16 +78,16 @@ describe('the front matter of a recall function definition', () => {
     const front = `${succeeded}\nmodel: anthropic/claude-sonnet-4-5\nconfig: {temperature: 0}\ntools: [graph/*]\ninput: {default: {}}\noutput: {format: json}\nview: {limit: 3}\nsource2: x`;
 
     expect(issuesIn(recallDocument(adding, front))).toEqual([
-      'Line 6, /model: model is not a key of the front matter; it takes description, about, language, source, view, input, output',
-      'Line 7, /config: config is not a key of the front matter; it takes description, about, language, source, view, input, output',
-      'Line 8, /tools: tools is not a key of the front matter; it takes description, about, language, source, view, input, output',
+      'Line 6, /model: model is not a key of the front matter; it takes description, language, source, view, input, output',
+      'Line 7, /config: config is not a key of the front matter; it takes description, language, source, view, input, output',
+      'Line 8, /tools: tools is not a key of the front matter; it takes description, language, source, view, input, output',
       'Line 9, /input/default: default is not a key of input; it takes schema',
       'Line 10, /output/format: format is not a key of output; it takes schema',
       'Line 11, /view/limit: limit is not a key of view; it takes initial, schema',
-      'Line 12, /source2: source2 is not a key of the front matter; it takes description, about, language, source, view, input, output',
+      'Line 12, /source2: source2 is not a key of the front matter; it takes description, language, source, view, input, output',
     ]);
     expect(issuesIn(recallDocument(adding, `${succeeded}\nanswer: '.'`))).toEqual([
-      'Line 6, /answer: answer is not a key of the front matter; it takes description, about, language, source, view, input, output',
+      'Line 6, /answer: answer is not a key of the front matter; it takes description, language, source, view, input, output',
     ]);
   });
 
@@ -148,22 +148,5 @@ describe('the module of a recall function definition', () => {
       parsed(recallDocument('export function fold(view: View, event: Event): View {\n  return view.perod;\n}')).details
         .fold,
     ).toBe('export function fold(view: View, event: Event): View {\n  return view.perod;\n}');
-  });
-});
-
-describe('the about of a recall function definition', () => {
-  it('is kept as its author wrote it', () => {
-    expect(parsed(recallDocument(adding, `${succeeded}\nabout: |\n  The campaign team asks it.`)).about).toBe(
-      'The campaign team asks it.\n',
-    );
-  });
-
-  it('takes no heading, nor does the description, each refused at its line', () => {
-    const written = `${succeeded}\ndescription: '# Reviews'\nabout: |\n  The campaign team asks it.\n\n  ## When`;
-
-    expect(issuesIn(recallDocument(adding, written))).toEqual([
-      'Line 6, /description: description takes no heading, since an overview writes its own: the line that begins “# Reviews” makes one, with # before its words or as a line of = or - under the words above it',
-      'Line 10, /about: about takes no heading, since an overview writes its own: this line makes one, with # before its words or as a line of = or - under the words above it',
-    ]);
   });
 });

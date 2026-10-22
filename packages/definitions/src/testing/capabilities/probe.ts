@@ -111,17 +111,6 @@ function answerTo(input: Schema.Json, run: RunContext, runs: number): Effect.Eff
   });
 }
 
-export function overviewOfAProbe(name: string): string {
-  return [
-    `# ${name}`,
-    'This probe has no description yet.',
-    '## What it needs',
-    'It takes any input, which its document does not describe.',
-    '## What it produces',
-    'It produces any output, which its document does not describe.\n',
-  ].join('\n\n');
-}
-
 export function probe(): Probe {
   let runs = 0;
   let nextMishap: Mishap | undefined;

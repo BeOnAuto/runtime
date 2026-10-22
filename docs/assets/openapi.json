@@ -5003,7 +5003,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function or workflow definition in the playbook from its document and returns it without running it. Use it once the person has agreed to the definition; update_definition changes one that exists, and a name is never reused in a playbook. `type` is the definition's type and `name` is how workflows and tools refer to it: reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow. `source` is the whole document in that type's format, which get_guide gives. A document that does not fit its format is refused with the line and what is wrong, and nothing is saved.",
+        "description": "Saves a new function or workflow definition in the playbook from its document and returns it without running it. Use it once the person has agreed to the definition; update_definition changes one that exists, and a name is never reused in a playbook. `type` is the definition's type and `name` is how workflows and tools refer to it: reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow. `source` is the whole document in that type's format, which get_guide gives, and `overview` the Markdown written after it for the person who runs the business. A document that does not fit its format is refused with the line and what is wrong, and nothing is saved.",
         "tags": [
           "definitions"
         ],
@@ -5051,6 +5051,12 @@
                     "type": "string",
                     "description": "The definition document in its type's format, at most 65536 bytes in UTF-8",
                     "maxLength": 65536
+                  },
+                  "overview": {
+                    "type": "string",
+                    "description": "Markdown for the person who runs the business, written from everything you know of them and of the playbook: why this exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value.",
+                    "minLength": 1,
+                    "maxLength": 16384
                   }
                 },
                 "required": [
@@ -5082,7 +5088,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
                     },
                     "status": {
                       "type": "string",
@@ -5255,7 +5261,7 @@
                     },
                     "overview": {
                       "type": "string",
-                      "description": "The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying, after its description and its about, as their author wrote them, what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the definitions a workflow calls, each with its description, and the active definitions of the playbook that use this one, a workflow with the steps that call it, and their exact names under Details at the end"
+                      "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -5264,6 +5270,92 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "calls"
+                                ],
+                                "description": "calls, for a workflow that runs this one in its steps"
+                              },
+                              "steps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "number": {
+                                      "type": "integer",
+                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "The name of its task"
+                                    }
+                                  },
+                                  "required": [
+                                    "number",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The steps of the workflow that call this one"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation",
+                              "steps"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "sends-builds",
+                                  "asks-approval",
+                                  "remembers-runs",
+                                  "remembers-changes"
+                                ],
+                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -5275,8 +5367,7 @@
                     "created_at",
                     "created_by",
                     "updated_at",
-                    "source",
-                    "overview"
+                    "source"
                   ],
                   "additionalProperties": false,
                   "description": "A saved definition, with its document"
@@ -5406,7 +5497,7 @@
                         "version": {
                           "type": "integer",
                           "minimum": 1,
-                          "description": "The definition version: 1 when created, and one more for every update that changes its document"
+                          "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
                         },
                         "status": {
                           "type": "string",
@@ -5699,7 +5790,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
                     },
                     "status": {
                       "type": "string",
@@ -5872,7 +5963,7 @@
                     },
                     "overview": {
                       "type": "string",
-                      "description": "The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying, after its description and its about, as their author wrote them, what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the definitions a workflow calls, each with its description, and the active definitions of the playbook that use this one, a workflow with the steps that call it, and their exact names under Details at the end"
+                      "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -5881,6 +5972,92 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "calls"
+                                ],
+                                "description": "calls, for a workflow that runs this one in its steps"
+                              },
+                              "steps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "number": {
+                                      "type": "integer",
+                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "The name of its task"
+                                    }
+                                  },
+                                  "required": [
+                                    "number",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The steps of the workflow that call this one"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation",
+                              "steps"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "sends-builds",
+                                  "asks-approval",
+                                  "remembers-runs",
+                                  "remembers-changes"
+                                ],
+                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -5892,8 +6069,7 @@
                     "created_at",
                     "created_by",
                     "updated_at",
-                    "source",
-                    "overview"
+                    "source"
                   ],
                   "additionalProperties": false,
                   "description": "A saved definition, with its document"
@@ -5946,7 +6122,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the whole document of an active function or workflow definition and returns its new version, which every run uses from then on. Use it when the person changes a saved definition; create_definition saves a new one, and a retired definition cannot change. `type` and `name` say which definition, and `source` is the whole new document in its type's format, which get_guide gives. A document that does not fit its format is refused with the line and what is wrong, and one the same as the saved document records nothing. A new version of a recall function builds its view again from the playbook's history.",
+        "description": "Replaces the whole document of an active function or workflow definition and returns its new version, which every run uses from then on. Use it when the person changes a saved definition; create_definition saves a new one, and a retired definition cannot change. `type` and `name` say which definition, `source` is the whole new document in its type's format, which get_guide gives, and `overview` the Markdown for the person who runs the business, written again with every update; left out, the saved overview stays. A document that does not fit its format is refused with the line and what is wrong, and one the same as the saved document, with its overview the same or left out, records nothing. A new version of a recall function builds its view again from the playbook's history.",
         "tags": [
           "definitions"
         ],
@@ -5999,6 +6175,12 @@
                     "type": "string",
                     "description": "The definition document in its type's format, at most 65536 bytes in UTF-8",
                     "maxLength": 65536
+                  },
+                  "overview": {
+                    "type": "string",
+                    "description": "Markdown for the person who runs the business, written from everything you know of them and of the playbook: why this exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value.",
+                    "minLength": 1,
+                    "maxLength": 16384
                   }
                 },
                 "required": [
@@ -6029,7 +6211,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
                     },
                     "status": {
                       "type": "string",
@@ -6202,7 +6384,7 @@
                     },
                     "overview": {
                       "type": "string",
-                      "description": "The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying, after its description and its about, as their author wrote them, what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the definitions a workflow calls, each with its description, and the active definitions of the playbook that use this one, a workflow with the steps that call it, and their exact names under Details at the end"
+                      "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -6211,6 +6393,92 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "calls"
+                                ],
+                                "description": "calls, for a workflow that runs this one in its steps"
+                              },
+                              "steps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "number": {
+                                      "type": "integer",
+                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "The name of its task"
+                                    }
+                                  },
+                                  "required": [
+                                    "number",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The steps of the workflow that call this one"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation",
+                              "steps"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "sends-builds",
+                                  "asks-approval",
+                                  "remembers-runs",
+                                  "remembers-changes"
+                                ],
+                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -6222,8 +6490,7 @@
                     "created_at",
                     "created_by",
                     "updated_at",
-                    "source",
-                    "overview"
+                    "source"
                   ],
                   "additionalProperties": false,
                   "description": "A saved definition, with its document"
@@ -6355,7 +6622,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
                     },
                     "status": {
                       "type": "string",
@@ -6528,7 +6795,7 @@
                     },
                     "overview": {
                       "type": "string",
-                      "description": "The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying, after its description and its about, as their author wrote them, what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the definitions a workflow calls, each with its description, and the active definitions of the playbook that use this one, a workflow with the steps that call it, and their exact names under Details at the end"
+                      "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -6537,6 +6804,92 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "calls"
+                                ],
+                                "description": "calls, for a workflow that runs this one in its steps"
+                              },
+                              "steps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "number": {
+                                      "type": "integer",
+                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "The name of its task"
+                                    }
+                                  },
+                                  "required": [
+                                    "number",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The steps of the workflow that call this one"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation",
+                              "steps"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "sends-builds",
+                                  "asks-approval",
+                                  "remembers-runs",
+                                  "remembers-changes"
+                                ],
+                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -6548,8 +6901,7 @@
                     "created_at",
                     "created_by",
                     "updated_at",
-                    "source",
-                    "overview"
+                    "source"
                   ],
                   "additionalProperties": false,
                   "description": "A saved definition, with its document"

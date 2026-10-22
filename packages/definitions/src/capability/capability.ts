@@ -12,7 +12,6 @@ import type {
 import type { CallEnded, CallStarted } from '@on.auto/tool-servers';
 import { Effect, type Schema } from 'effect';
 
-import { composedOverview, type OverviewParts, type ToldParts } from '../overview/definition-overview.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
@@ -22,7 +21,6 @@ import { noStrippedForms, type StrippedForms } from './stripped-forms.ts';
 
 export interface DefinitionSummary {
   readonly description?: string;
-  readonly about?: string;
   readonly inputSchema?: Schema.JsonObject;
   readonly outputSchema?: Schema.JsonObject;
   readonly warnings?: readonly string[];
@@ -115,10 +113,6 @@ export interface AnsweringRun {
 
 export type AnswerIssues = (answer: Schema.Json, run: AnsweringRun) => readonly Issue[];
 
-export type OverviewContext = Readonly<{ summary: DefinitionSummary }>;
-
-export type OverviewOf<Parsed> = (parsed: Parsed, name: string, context: OverviewContext) => OverviewParts | ToldParts;
-
 const defaultLongestAnyRunMs = 600_000;
 
 export interface CapabilityDeclaration<Parsed> {
@@ -135,7 +129,6 @@ export interface CapabilityDeclaration<Parsed> {
     saved: SavedDefinitions,
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
-  readonly overview?: OverviewOf<NoInfer<Parsed>>;
   readonly run: (
     parsed: NoInfer<Parsed>,
     input: Schema.Json,
@@ -162,7 +155,6 @@ export interface CapabilityDeclaration<Parsed> {
 
 export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
-  readonly overview: (name: string) => ReturnType<typeof composedOverview>;
   readonly check: (saved: SavedDefinitions) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
@@ -263,7 +255,7 @@ function declaredRuns<Parsed>(definition: CapabilityDeclaration<Parsed>, longest
 }
 
 export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parsed>): Capability {
-  const { type, title, guide, noun, describeOutput, mediaType, parse, summarize, overview, run } = definition;
+  const { type, title, guide, noun, describeOutput, mediaType, parse, summarize, run } = definition;
   const bounds = declaredBounds(definition);
   const { check, whenCancelled, callsTools, answersItsShapeFor, finishesLaterFor, longestRunOf, longestRunFor } =
     declaredRuns(definition, bounds.longestAnyRunMs);
@@ -280,21 +272,17 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
     ...bounds,
     prepare: (source, stripped = noStrippedForms) =>
       parse(source).pipe(
-        Effect.map((parsed) => {
-          const summary = summarize(parsed);
-          return {
-            summary,
-            overview: (name) => composedOverview({ name, noun, summary, parts: overview?.(parsed, name, { summary }) }),
-            check: (saved) => Effect.suspend(() => check(parsed, source, saved)),
-            run: (input, context) => run(parsed, input, context, stripped),
-            whenCancelled,
-            callsTools: callsTools(parsed),
-            finishesLaterFor: (input) => finishesLaterFor(parsed, input),
-            answersItsShapeFor: (input) => answersItsShapeFor(parsed, input),
-            longestRunMs: longestRunOf(parsed),
-            longestRunMsFor: (input) => longestRunFor(parsed, input),
-          };
-        }),
+        Effect.map((parsed) => ({
+          summary: summarize(parsed),
+          check: (saved) => Effect.suspend(() => check(parsed, source, saved)),
+          run: (input, context) => run(parsed, input, context, stripped),
+          whenCancelled,
+          callsTools: callsTools(parsed),
+          finishesLaterFor: (input) => finishesLaterFor(parsed, input),
+          answersItsShapeFor: (input) => answersItsShapeFor(parsed, input),
+          longestRunMs: longestRunOf(parsed),
+          longestRunMsFor: (input) => longestRunFor(parsed, input),
+        })),
       ),
   };
 }

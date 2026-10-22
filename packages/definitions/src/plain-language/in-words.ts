@@ -1,4 +1,4 @@
-import { asSentence, capitalized, listed, quoted } from '@on.auto/operations';
+import { asSentence, listed, quoted } from '@on.auto/operations';
 import { Predicate, type Schema } from 'effect';
 
 import { charactersIn } from './characters.ts';
@@ -11,10 +11,6 @@ const separators = /[_-]+/gu;
 
 export function nameInWords(name: string): string {
   return name.replaceAll(wordBoundary, '$<lower> $<upper>').replaceAll(separators, ' ').trim().toLowerCase();
-}
-
-export function readableName(name: string): string {
-  return capitalized(nameInWords(name));
 }
 
 function renderedArray(items: readonly Schema.Json[]): string {

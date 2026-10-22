@@ -2,7 +2,7 @@ import type { Schema } from 'effect';
 
 export const grains = ['day', 'week', 'month', 'quarter', 'year'] as const;
 
-export type SeriesGrain = (typeof grains)[number];
+type SeriesGrain = (typeof grains)[number];
 
 export interface Timeline {
   readonly words: string;

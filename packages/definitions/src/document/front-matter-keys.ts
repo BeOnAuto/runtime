@@ -3,7 +3,6 @@ import { Predicate, Result, SchemaIssue, type Schema, type StandardSchema } from
 
 import { issueAt, type DocumentIssue, type SourceLines } from './document-issue.ts';
 import { readFrontMatter } from './front-matter-reading.ts';
-import { describingPointers, frontMatterTextIssues } from './written-texts.ts';
 
 export interface FrontMatterSection {
   readonly name: string | undefined;
@@ -75,16 +74,9 @@ export function frontMatterIn(
   firstLine: number,
   shape: FrontMatterShape,
 ): Result.Result<ReadFrontMatter, readonly DocumentIssue[]> {
-  return Result.map(
-    readFrontMatter(text, firstLine, shape.required, new Set(describingPointers)),
-    ({ value, lines, positions }) => ({
-      root: value,
-      lines,
-      issues: [
-        ...unknownKeyIssues(value, lines, shape.sections),
-        ...typeIssues(value, lines, shape),
-        ...frontMatterTextIssues({ root: value, positions }, { lines: text.split('\n'), firstLine }),
-      ],
-    }),
-  );
+  return Result.map(readFrontMatter(text, firstLine, shape.required), ({ value, lines }) => ({
+    root: value,
+    lines,
+    issues: [...unknownKeyIssues(value, lines, shape.sections), ...typeIssues(value, lines, shape)],
+  }));
 }

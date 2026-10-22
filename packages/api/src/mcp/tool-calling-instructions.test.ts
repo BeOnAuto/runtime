@@ -12,10 +12,10 @@ import {
 import { instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,993 characters on /mcp, 1,912 on the org endpoint and 1,618 on the playbook endpoint', () => {
+  it('take 1,996 characters on /mcp, 1,912 on the org endpoint and 1,621 on the playbook endpoint', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1912, 1618, 1993]);
+    ).toEqual([1912, 1621, 1996]);
   });
 });
 

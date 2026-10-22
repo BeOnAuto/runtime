@@ -56,7 +56,6 @@ function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () =
     (section) => outputContractOf(section, lines),
   );
   const description = checkedSection(() => decodeSection.description(root['description']), Result.succeed);
-  const about = checkedSection(() => decodeSection.about(root['about']), Result.succeed);
   const providerOptions = checkedSection(
     () => decodeSection.provider_options(root['provider_options']),
     (options) => providerOptionsOf(options, lines),
@@ -80,7 +79,7 @@ function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () =
   ];
   return found.length > 0
     ? Result.fail(found)
-    : Result.all({ model, settings, input, output, template: template(), description, about, providerOptions, tools });
+    : Result.all({ model, settings, input, output, template: template(), description, providerOptions, tools });
 }
 
 function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinitionDocument> {
@@ -93,7 +92,6 @@ function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinition
     definitionFrom(reading.success, () => template),
     (definition) => ({
       ...(definition.description === undefined ? {} : { description: definition.description }),
-      ...(definition.about === undefined ? {} : { about: definition.about }),
       model: definition.model,
       settings: definition.settings,
       input: definition.input,

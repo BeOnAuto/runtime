@@ -1,7 +1,6 @@
 import type {
   RenderClock,
   RenderFailure as EngineRenderFailure,
-  TemplateText,
   VariableReference,
 } from '@on.auto/definitions/template';
 import type { Result, Schema } from 'effect';
@@ -25,7 +24,7 @@ export type RenderFailure =
   | EngineRenderFailure
   | { readonly reason: 'too_long'; readonly part: PromptPart; readonly line: number };
 
-export interface CompiledTemplate extends TemplateText {
+export interface CompiledTemplate {
   readonly hasInstructions: boolean;
   readonly hasMessage: boolean;
   readonly variables: readonly VariableReference[];

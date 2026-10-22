@@ -11,7 +11,6 @@ import {
   type RunEvent,
 } from '../index.ts';
 import { runStreamNameOf } from '../runs/run-decider.ts';
-import { overviewTitled } from '../testing/overview-sections.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 
 const recordId = '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3';
@@ -127,7 +126,6 @@ describe('the records of a run that are no facts', () => {
 
 const content = {
   source: '---\nmodel: anthropic/claude-sonnet-4-5\n---\nSummarize.',
-  overview: overviewTitled('summary'),
 };
 
 describe('the facts of a definition as events', () => {

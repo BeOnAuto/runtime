@@ -63,7 +63,7 @@ describe('the words of the rule a value broke', () => {
 });
 
 describe('the words of a value of another kind', () => {
-  it('says what a field of another kind takes, as the overview words the field', () => {
+  it('says what a field of another kind takes, in the words of its schema', () => {
     expect([
       fieldWords({ type: 'integer', minimum: 1, maximum: 100 }, 2.5),
       fieldWords({ type: 'number' }, 'many'),

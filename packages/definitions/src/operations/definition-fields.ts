@@ -6,8 +6,13 @@ import { jsonBytesOf, mostInputBytes, mostInputDepth, nestsWithin } from '../run
 
 const mostSourceBytes = 65_536;
 
-function fitsInSourceLimit(source: string): boolean {
-  return Buffer.byteLength(source, 'utf8') <= mostSourceBytes;
+const mostOverviewBytes = 16_384;
+
+function atMostBytes(most: number, written: string) {
+  return Schema.makeFilter((text: string) => Buffer.byteLength(text, 'utf8') <= most, {
+    expected: `${written} of at most ${most} bytes in UTF-8`,
+    toJsonSchema: () => [{ maxLength: most }, true],
+  });
 }
 
 export const definitionNamePattern = /^[a-z][a-z0-9-]{2,47}$/u;
@@ -24,12 +29,12 @@ export const RunsOfNameField = definitionNameFieldOf('Only the runs of the defin
 
 export const SourceField = Schema.String.annotate({
   description: `The definition document in its type's format, at most ${mostSourceBytes} bytes in UTF-8`,
-}).check(
-  Schema.makeFilter(fitsInSourceLimit, {
-    expected: `a document of at most ${mostSourceBytes} bytes in UTF-8`,
-    toJsonSchema: () => [{ maxLength: mostSourceBytes }, true],
-  }),
-);
+}).check(atMostBytes(mostSourceBytes, 'a document'));
+
+export const OverviewField = Schema.String.annotate({
+  description:
+    'Markdown for the person who runs the business, written from everything you know of them and of the playbook: why this exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value.',
+}).check(Schema.isMinLength(1), atMostBytes(mostOverviewBytes, 'an overview'));
 
 export const RunIdInputField = Schema.String.annotate({
   description: "The run's id, a UUID in any case, kept in lowercase",

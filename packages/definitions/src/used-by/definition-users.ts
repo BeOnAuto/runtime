@@ -12,9 +12,8 @@ import {
   type CallingStep,
   type CallRole,
   type NamedDefinition,
-  type UserRelation,
 } from './called-definitions.ts';
-import type { DefinitionCalled, DefinitionUser } from './user-relations.ts';
+import type { DefinitionUser, NamingRelation } from './user-relations.ts';
 
 export type PlaybookRegistries = ReadonlyMap<string, DefinitionRegistry>;
 
@@ -34,10 +33,6 @@ const NamingDetailsSchema = Schema.Struct({
 type NamingDetails = typeof NamingDetailsSchema.Type;
 
 const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
-
-const decodeTitle = Schema.decodeUnknownOption(Schema.Struct({ title: Schema.String }));
-
-type NamingRelation = Exclude<UserRelation, 'calls'>;
 
 type Use =
   | { readonly relation: 'calls'; readonly steps: readonly CallingStep[] }
@@ -93,55 +88,18 @@ function usesOf({ calls = [], filters = [] }: NamingDetails, used: NamedDefiniti
   return uses.filter((use, index) => uses.findIndex((other) => other.relation === use.relation) === index);
 }
 
-type Phrased = Pick<DefinitionUser, 'type' | 'name' | 'title'>;
-
-function phrasedOf(type: string, name: string, details: StoredDefinition['details']): Phrased {
-  return Option.match(decodeTitle(details), {
-    onNone: () => ({ type, name }),
-    onSome: ({ title }) => ({ type, name, title }),
-  });
-}
-
-function userOf(phrased: Phrased, use: Use): DefinitionUser {
-  return { ...phrased, ...use };
+function userOf(user: NamedDefinition, use: Use): DefinitionUser {
+  return { ...user, ...use };
 }
 
 function usersIn(type: string, registry: DefinitionRegistry, used: NamedDefinition): readonly DefinitionUser[] {
   return [...registry.values()]
     .filter(({ name, status }) => status === 'active' && !isNamed({ type, name }, used))
-    .flatMap(({ name, details }) => {
-      const uses = usesOf(namingDetailsOf(details), used);
-      if (uses.length === 0) {
-        return [];
-      }
-      const phrased = phrasedOf(type, name, details);
-      return uses.map((use) => userOf(phrased, use));
-    });
+    .flatMap(({ name, details }) => usesOf(namingDetailsOf(details), used).map((use) => userOf({ type, name }, use)));
 }
 
 export function usersOf(registries: PlaybookRegistries, used: NamedDefinition): readonly DefinitionUser[] {
   return [...registries]
     .flatMap(([type, registry]: readonly [string, DefinitionRegistry]) => usersIn(type, registry, used))
     .toSorted(byTypeThenName);
-}
-
-function calledAsHeld(registries: PlaybookRegistries, { type, name }: CalledDefinition): DefinitionCalled {
-  const held = registries.get(type)?.get(name);
-  if (held === undefined) {
-    return { type, name, standing: 'missing' };
-  }
-  const { description } = held;
-  return {
-    ...phrasedOf(type, name, held.details),
-    standing: held.status,
-    ...(description === undefined ? {} : { description }),
-  };
-}
-
-export function definitionsCalled(
-  registries: PlaybookRegistries,
-  details?: StoredDefinition['details'],
-): readonly DefinitionCalled[] {
-  const { calls = [] } = namingDetailsOf(details);
-  return calls.filter((call) => 'steps' in call).map((call) => calledAsHeld(registries, call));
 }

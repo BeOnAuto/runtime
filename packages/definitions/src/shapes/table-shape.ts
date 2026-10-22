@@ -4,7 +4,7 @@ import type { Schema } from 'effect';
 import { closedRecord, label, shapeOf, type OutputShape } from './output-shape.ts';
 import { issueAt, isList, itemsOf, recordOf, repeatedNameIssues } from './shape-values.ts';
 
-export const tableBounds = { mostColumns: 50, mostRows: 500 } as const;
+const tableBounds = { mostColumns: 50, mostRows: 500 } as const;
 
 const column = closedRecord({ name: label, unit: label }, ['name']);
 

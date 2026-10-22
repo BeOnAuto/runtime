@@ -116,14 +116,13 @@ function filterExpressionsOf(filters: readonly ViewFilter[], lines: SourceLines)
 }
 
 function assembled(
-  { description, about }: Pick<RecallFrontMatter, 'description' | 'about'>,
+  { description }: Pick<RecallFrontMatter, 'description'>,
   parts: Parts,
   lines: SourceLines,
 ): RecallFunctionDefinitionDocument {
   const { input, output, view, filters, fold } = parts;
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     language,
     input,
     output,

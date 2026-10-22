@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { overviewTitled } from '@on.auto/definitions/testing';
 import type { AppendSignal, EncodedEvent, EventStore } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
 import type { Schema } from 'effect';
@@ -71,7 +70,6 @@ function savedBy(append: Append, definitions: Map<string, number>): PlaybookAppe
     const type = version === 1 ? 'definition_created' : 'definition_updated';
     const content = {
       source: `the ${name} document, version ${version}`,
-      overview: overviewTitled(name),
       ...(details === undefined ? {} : { details }),
     };
     await append(`${streamPrefixOfPlaybook(playbook)}definitions/recall`, [{ type, data: { content } }], {

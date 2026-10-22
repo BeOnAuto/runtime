@@ -9,7 +9,6 @@ export interface FilterExpression {
 
 export interface RecallFunctionDefinitionDocument {
   readonly description?: string;
-  readonly about?: string;
   readonly language: 'typescript';
   readonly input: ValueContract;
   readonly output: ValueContract;

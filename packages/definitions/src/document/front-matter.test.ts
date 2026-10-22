@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { issueText, reportedIssues } from './document-issue.ts';
 import { splitDocument } from './document-split.ts';
 import { frontMatterIn, type FrontMatterShape, type ReadFrontMatter } from './front-matter-keys.ts';
-import { AboutSchema, DescriptionSchema } from './function-fields.ts';
 
 const NoteSchema = Schema.Struct({
   title: Schema.String,
@@ -27,35 +26,20 @@ const note: FrontMatterShape = {
   required: 'the title',
 };
 
-const DescribedSchema = Schema.Struct({
-  description: Schema.optionalKey(DescriptionSchema),
-  about: Schema.optionalKey(AboutSchema),
-});
-
-const described: FrontMatterShape = {
-  sections: [{ name: undefined, keys: Object.keys(DescribedSchema.fields) }],
-  decode: Schema.decodeUnknownResult(DescribedSchema, { errors: 'all' }),
-  required: 'what it is for',
-};
-
-function read(source: string, shape = note): Result.Result<ReadFrontMatter, readonly string[]> {
+function read(source: string): Result.Result<ReadFrontMatter, readonly string[]> {
   return Result.mapError(
     Result.flatMap(splitDocument(source, 'A note'), ({ frontMatter, frontMatterLine }) =>
-      frontMatterIn(frontMatter, frontMatterLine, shape),
+      frontMatterIn(frontMatter, frontMatterLine, note),
     ),
     (issues) => reportedIssues(issues).map((issue) => issueText(issue)),
   );
 }
 
-function issuesIn(source: string, shape = note): readonly string[] {
-  return Result.match(read(source, shape), {
+function issuesIn(source: string): readonly string[] {
+  return Result.match(read(source), {
     onSuccess: ({ issues }) => reportedIssues(issues).map((issue) => issueText(issue)),
     onFailure: (issues) => issues,
   });
-}
-
-function headingRefusalAt(line: number, key: string, where = 'this line'): string {
-  return `Line ${line}, /${key}: ${key} takes no heading, since an overview writes its own: ${where} makes one, with # before its words or as a line of = or - under the words above it`;
 }
 
 function rootOf(source: string): Schema.JsonObject {
@@ -167,45 +151,5 @@ describe('the keys of the front matter', () => {
 
     expect(issuesIn(documentOf(`title: A\n${many}`))).toHaveLength(21);
     expect(issuesIn(documentOf(`title: A\n${many}`)).at(-1)).toBe('Line 23: 3 more issues are not shown');
-  });
-});
-
-describe('the description and the about of the front matter', () => {
-  it('take no heading, each refused at its own line in a literal block', () => {
-    const source = documentOf(
-      ['description: |', '  Reviews a brief.', '  ## When', 'about: |-', '', '  Who it serves', '  ---'].join('\n'),
-    );
-
-    expect(issuesIn(source, described)).toEqual([headingRefusalAt(4, 'description'), headingRefusalAt(8, 'about')]);
-  });
-
-  it('take no heading in any other style, refused at the line their value opens, naming the line by its first words', () => {
-    expect(
-      issuesIn(documentOf("description: '# Reviews a brief'\nabout: >\n  Who it serves.\n\n  # When"), described),
-    ).toEqual([
-      headingRefusalAt(2, 'description', 'the line that begins “# Reviews a brief”'),
-      headingRefusalAt(3, 'about', 'the line that begins “# When”'),
-    ]);
-    expect(issuesIn(documentOf('title: "# A note"\nextra:\n  anything: "# kept"'))).toEqual([]);
-  });
-
-  it('leave no block open, and hold no line ## Details, each refused at its line', () => {
-    const fence = '`'.repeat(3);
-
-    expect(
-      issuesIn(documentOf(['about: |', '  Who it serves.', `  ${fence}`, '  ## Details'].join('\n')), described),
-    ).toEqual([
-      'Line 4, /about: about leaves open the fence that this line opens, so the rest of the overview would be read inside it: close it',
-      "Line 5, /about: about may not hold the line ## Details, which is the overview's own, since the page that shows an overview splits it at that text: this line is one",
-    ]);
-  });
-
-  it('take Markdown with paragraphs, lists and emphasis', () => {
-    const about = ['about: |', '  It is for the *team*.', '', '  - Who it serves', '  - When it runs'].join('\n');
-
-    expect(Result.getOrThrow(read(documentOf(about), described))).toMatchObject({
-      root: { about: 'It is for the *team*.\n\n- Who it serves\n- When it runs\n' },
-      issues: [],
-    });
   });
 });

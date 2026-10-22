@@ -18,14 +18,12 @@ export function parse(source: string): Effect.Effect<RecallFunctionDefinitionDoc
 
 export function summarize({
   description,
-  about,
   input,
   output,
   details,
 }: RecallFunctionDefinitionDocument): DefinitionSummary {
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     ...(input.schema === undefined ? {} : { inputSchema: input.schema.document }),
     ...(output.schema === undefined ? {} : { outputSchema: output.schema.document }),
     details: encodeDetails(details),

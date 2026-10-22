@@ -9,7 +9,7 @@ import type {
   DefinitionRetirement,
   DefinitionUpdate,
 } from './definition-commands.ts';
-import type { DefinitionEvent } from './definition-events.ts';
+import type { DefinitionContent, DefinitionEvent } from './definition-events.ts';
 import type { DefinitionRegistry } from './definition-registry.ts';
 import { hasTriggers } from './definition-triggers.ts';
 import type { StoredDefinition } from './definition.ts';
@@ -86,9 +86,17 @@ function decideCreation(
   return beyond === undefined ? recording({ type: 'definition_created', data: { content } }) : Result.fail(beyond);
 }
 
+function withTheSavedOverview(content: DefinitionContent, { overview }: StoredDefinition): DefinitionContent {
+  return content.overview === undefined && overview !== undefined ? { ...content, overview } : content;
+}
+
+function isAsSaved({ source, overview }: DefinitionContent, saved: StoredDefinition): boolean {
+  return source === saved.source && overview === saved.overview;
+}
+
 function decideUpdate(
   rules: RegistryRules,
-  { name, content }: DefinitionUpdate & CommandMetadata,
+  { name, content: given }: DefinitionUpdate & CommandMetadata,
   registry: DefinitionRegistry,
 ): Decision {
   const { type } = rules;
@@ -104,7 +112,8 @@ function decideUpdate(
       }),
     );
   }
-  if (existing.source === content.source) {
+  const content = withTheSavedOverview(given, existing);
+  if (isAsSaved(content, existing)) {
     return nothingToRecord;
   }
   const active = activeIn(registry);

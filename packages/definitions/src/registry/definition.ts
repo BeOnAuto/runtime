@@ -2,6 +2,7 @@ import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { StrippedForms } from '../capability/stripped-forms.ts';
+import { DefinitionUserSchema } from '../used-by/user-relations.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
 const listedDefinitionFields = {
@@ -12,7 +13,8 @@ const listedDefinitionFields = {
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',
   }),
   version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
-    description: 'The definition version: 1 when created, and one more for every update that changes its document',
+    description:
+      'The definition version: 1 when created, and one more for every update that changes its document or its overview',
   }),
   status: Schema.Literals(['active', 'retired']).annotate({ description: 'active, or retired for good' }),
   media_type: Schema.String.annotate({
@@ -68,10 +70,12 @@ export const ListedDefinitionSchema = Schema.Struct(listedDefinitionFields).anno
 export const DefinitionSchema = Schema.Struct({
   ...listedDefinitionFields,
   source: Schema.String.annotate({ description: 'The definition document' }),
-  overview: Schema.String.annotate({
-    description:
-      'The definition in plain words for a person who does not read its document: Markdown with headings, lists, tables of its fields and, where one helps, a diagram, saying, after its description and its about, as their author wrote them, what it needs and produces and what it does, as its type has it, composed by the runtime from the document when this version was saved and written each time it is read, with, after what the document says, the definitions a workflow calls, each with its description, and the active definitions of the playbook that use this one, a workflow with the steps that call it, and their exact names under Details at the end',
-  }),
+  overview: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The overview its author wrote: Markdown for the person who runs the business, kept as written with this version',
+    }),
+  ),
   triggers_since: Schema.optionalKey(
     Schema.String.annotate({
       description:
@@ -79,6 +83,12 @@ export const DefinitionSchema = Schema.Struct({
     }),
   ),
   standing: Schema.optionalKey(StandingField),
+  used_by: Schema.optionalKey(
+    Schema.Array(DefinitionUserSchema).annotate({
+      description:
+        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes',
+    }),
+  ),
 }).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });
 
 export type Definition = typeof DefinitionSchema.Type;
@@ -120,9 +130,8 @@ export type ListedDefinition = typeof ListedDefinitionSchema.Type;
 
 export type StoredDefinition = Omit<
   Definition,
-  'type' | 'media_type' | 'triggers_since' | 'standing' | 'details' | 'overview'
+  'type' | 'media_type' | 'triggers_since' | 'standing' | 'used_by' | 'details'
 > & {
-  readonly overview: unknown;
   readonly details?: Schema.JsonObject;
   readonly stripped?: StrippedForms;
 };

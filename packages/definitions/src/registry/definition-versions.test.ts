@@ -3,7 +3,6 @@ import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { overviewTitled } from '../testing/overview-sections.ts';
 import type { RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionVersionFold, definitionVersionIn } from './definition-versions.ts';
 import { definitionsDecider } from './definitions-decider.ts';
@@ -21,17 +20,17 @@ function about(name: string, version: number): DefinitionContext {
 const history: readonly RecordedDefinitionEvent[] = [
   {
     type: 'definition_created',
-    data: { content: { source: 'one', overview: overviewTitled('greet') } },
+    data: { content: { source: 'one' } },
     context: about('greet', 1),
   },
   {
     type: 'definition_created',
-    data: { content: { source: 'else', overview: overviewTitled('other') } },
+    data: { content: { source: 'else' } },
     context: about('other', 1),
   },
   {
     type: 'definition_updated',
-    data: { content: { source: 'two', overview: overviewTitled('greet'), stripped: { module: 'TWO' } } },
+    data: { content: { source: 'two', stripped: { module: 'TWO' } } },
     context: about('greet', 2),
   },
   { type: 'definition_retired', data: {}, context: about('greet', 2) },
@@ -64,7 +63,7 @@ describe('a read of one version of a definition of a playbook', () => {
       ledger.execute(stream, decider, {
         type: 'create',
         name: 'greet',
-        content: { source: 'one', overview: overviewTitled('greet') },
+        content: { source: 'one' },
         ...at,
       }),
     );
@@ -72,7 +71,7 @@ describe('a read of one version of a definition of a playbook', () => {
       ledger.execute(stream, decider, {
         type: 'update',
         name: 'greet',
-        content: { source: 'two', overview: overviewTitled('greet') },
+        content: { source: 'two' },
         ...at,
       }),
     );

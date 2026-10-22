@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { overviewOfAProbe, probe } from '../testing/capabilities/probe.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { asQueryString, firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
@@ -12,9 +12,14 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 const later = '2026-10-02T14:15:00.000Z';
 
+const plainOverview = 'Keeps the text the team pastes in, as they wrote it.';
+
 async function withActiveAndRetiredDefinitions() {
   const definitions = harness();
-  await definitions.call(createDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'plain', source: 'text' }));
+  await definitions.call(
+    createDefinition,
+    toAlpha(acmeAdmin, { type: 'probe', name: 'plain', source: 'text', overview: plainOverview }),
+  );
   await definitions.call(createDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'stale', source: 'old' }));
   await definitions.call(retireDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'stale' }), later);
   return definitions;
@@ -33,7 +38,7 @@ describe('get_definition', () => {
     });
   });
 
-  it('reads a definition with its document, active or retired, from JSON and from a query string', async () => {
+  it('reads a definition with its document and the overview its author wrote, active or retired, from JSON and from a query string', async () => {
     const { call } = await withActiveAndRetiredDefinitions();
 
     expect(await call(getDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'plain' }))).toStrictEqual({
@@ -48,7 +53,7 @@ describe('get_definition', () => {
         created_by: 'acme-admin',
         updated_at: firstMoment,
         source: 'text',
-        overview: overviewOfAProbe('plain'),
+        overview: plainOverview,
       },
     });
     expect(

@@ -49,15 +49,7 @@ export { forbidden, rejection, type Rejection } from './dsl/policy-checks.ts';
 export { runtimeNames } from './dsl/task-policy.ts';
 export { holdsAnExpression, workflowExpressionsOf, type PlacedExpression } from './dsl/workflow-expressions.ts';
 export { describeError, type ErrorKind } from './dsl/raised-error.ts';
-export {
-  allTaskEntries,
-  kindOf,
-  pointerTo,
-  taskEntries,
-  taskKinds,
-  type TaskEntry,
-  type TaskKind,
-} from './dsl/tasks.ts';
+export { allTaskEntries, pointerTo, taskKinds, type TaskEntry } from './dsl/tasks.ts';
 export { runCacheBounds, runCacheOf, type RunCache, type RunCacheBounds } from './cache/run-cache.ts';
 export { workflowEngineOf } from './engine/engine.ts';
 export { SplitDecision, runLoopOf, type RunDecision } from './engine/run-loop.ts';
