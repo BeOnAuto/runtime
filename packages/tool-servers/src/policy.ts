@@ -3,11 +3,9 @@ export { conversationCallIdKey, deliveryIdKey, runIdKey } from './calls/call-met
 export {
   isServerName,
   isToolName,
-  namesEveryTool,
   serverNameShape,
   toolNameShape,
   toolReferenceOf,
   toolReferenceShape,
-  writtenOf,
   type ToolReference,
 } from './names/tool-reference.ts';

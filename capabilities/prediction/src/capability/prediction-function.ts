@@ -7,7 +7,6 @@ import {
 
 import { predictionCheck } from '../checks/prediction-check.ts';
 import { predictionFacts } from '../facts/prediction-facts.ts';
-import { predictionOverview } from '../overview/prediction-overview.ts';
 import { predictionRunsOn } from '../run/prediction-runs.ts';
 import { predictionStanding } from '../standing/prediction-standing.ts';
 import { predictionBounds, predictionDefinitionType } from './prediction-bounds.ts';
@@ -31,7 +30,6 @@ export function makePredictionFunctionAdapter({
     parse,
     check: predictionCheck(pool),
     summarize,
-    overview: predictionOverview,
     ...predictionRunsOn(ports),
     facts: predictionFacts,
     mostActive: mostFunctions,

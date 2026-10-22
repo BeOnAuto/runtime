@@ -17,6 +17,8 @@ const samples = Number(process.env['DEFINITIONS_MEASURE_SAMPLES'] ?? 15);
 
 const mostSourceBytes = 65_536;
 
+const mostOverviewBytes = 16_384;
+
 const utf8 = new TextEncoder();
 
 const decodeFields = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Record(Schema.String, Schema.String)));
@@ -62,6 +64,13 @@ function documentOf(version: number): string {
     entries.push(fieldOf(entries.length - 1));
   }
   return `{${entries.join(',')}}`;
+}
+
+function overviewOf(version: number): string {
+  return `Version ${version} of the overview. `.padEnd(
+    mostOverviewBytes,
+    'What the person who runs the business reads. ',
+  );
 }
 
 function median(values: readonly number[]): number {
@@ -138,10 +147,21 @@ const runtime = ManagedRuntime.make(
 try {
   const { load, read } = await runtime.runPromise(
     Effect.gen(function* () {
-      yield* dispatched(createDefinition, { type: 'widest', name: 'widest', source: documentOf(1) });
+      yield* dispatched(createDefinition, {
+        type: 'widest',
+        name: 'widest',
+        source: documentOf(1),
+        overview: overviewOf(1),
+      });
       yield* Effect.forEach(
         Array.from({ length: versions - 1 }, (_, index) => index + 2),
-        (version) => dispatched(updateDefinition, { type: 'widest', name: 'widest', source: documentOf(version) }),
+        (version) =>
+          dispatched(updateDefinition, {
+            type: 'widest',
+            name: 'widest',
+            source: documentOf(version),
+            overview: overviewOf(version),
+          }),
       );
       return {
         load: yield* sampled(dispatched(listDefinitions, { type: 'widest' })),

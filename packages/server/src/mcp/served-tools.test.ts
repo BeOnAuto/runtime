@@ -105,14 +105,16 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition with the kind it is in create_definition, at 708 characters in five sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('name each type of definition with the kind it is in create_definition, at 791 characters in five sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
       'reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow.',
     );
-    expect(description).toContain("`source` is the whole document in that type's format, which get_guide gives.");
-    expect([description.length, sentencesOf(description)]).toEqual([708, 5]);
+    expect(description).toContain(
+      "`source` is the whole document in that type's format, which get_guide gives, and `overview` the Markdown written after it for the person who runs the business.",
+    );
+    expect([description.length, sentencesOf(description)]).toEqual([791, 5]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
@@ -169,14 +171,14 @@ function everyArgument(): readonly Argument[] {
 }
 
 describe('the arguments of the tools of /mcp', () => {
-  it('each have a description under 300 characters', () => {
+  it('each have a description under 300 characters, the longest the overview of a definition at 291', () => {
     expect(everyArgument().length).toBeGreaterThan(60);
     expect(
       everyArgument()
         .filter((argument) => isUndescribedOrLong(argument))
         .map(({ where }) => where),
     ).toEqual([]);
-    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBeLessThan(200);
+    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(291);
   });
 
   it('each give their constraints as keywords, but an argument that takes any JSON value', () => {

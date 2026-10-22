@@ -1,15 +1,10 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { plainTextOf, schemaBlocks, type Phrases } from '../index.ts';
-
-function plain(phrases: Phrases): string {
-  return phrases.map((phrase) => (typeof phrase === 'string' ? phrase : `**${plainTextOf([phrase])}**`)).join('');
-}
+import { expectedWordsOf } from './schema-words.ts';
 
 function wordsOf(field: Schema.JsonObject): string {
-  const [block] = schemaBlocks({ type: 'object', properties: { field } }, '');
-  return block?.kind === 'fields' ? plain(block.rows[0]?.words ?? []) : '';
+  return expectedWordsOf(field, field);
 }
 
 function listOf(items: Schema.JsonObject): string {
@@ -31,17 +26,17 @@ describe('the bounds of a schema in words', () => {
       wordsOf({ enum: ['draft', 'sent'], default: 'draft' }),
       wordsOf({ type: 'string', default: 'x'.repeat(400) }),
     ]).toEqual([
-      'A whole number, from 1 to 50, 5 when left out.',
-      'A whole number, at least 1,000.',
-      'A number, at most 0.5.',
-      'A number, more than 0, less than 100.',
-      'Text, at most 200 characters.',
-      'Text, at least 1 character.',
-      'Text, 2 to 3 characters, “abc” when left out.',
-      'A list of at least 1 whole number.',
-      'A list of at most 1 item.',
-      'One of: draft, sent; “draft” when left out.',
-      'Text, a default when left out.',
+      'a whole number, from 1 to 50, 5 when left out',
+      'a whole number, at least 1,000',
+      'a number, at most 0.5',
+      'a number, more than 0, less than 100',
+      'text, at most 200 characters',
+      'text, at least 1 character',
+      'text, 2 to 3 characters, “abc” when left out',
+      'a list of at least 1 whole number',
+      'a list of at most 1 item',
+      'one of: draft, sent; “draft” when left out',
+      'text, a default when left out',
     ]);
   });
 });
@@ -60,16 +55,16 @@ describe('the bounds of a container in words', () => {
       wordsOf({ type: 'array', minItems: 2, items: { type: 'array', maxItems: 3, items: { type: 'number' } } }),
       wordsOf({ type: 'array', minItems: 1, items: { type: 'array' } }),
     ]).toEqual([
-      'A list of text.',
-      'A list of 1 to 10 text values, each at most 200 characters.',
-      'A list of at most 3 whole numbers, each from 1 to 50.',
-      'A list of at least 1 date and time.',
-      'A list of at most 2 yes-or-no values.',
-      'A list of at most 1 empty value.',
-      'A list of at most 5 values.',
-      'A list of at least 1 record.',
-      'A list of at least 2 lists of at most 3 numbers.',
-      'A list of at least 1 list.',
+      'a list of text',
+      'a list of 1 to 10 text values, each at most 200 characters',
+      'a list of at most 3 whole numbers, each from 1 to 50',
+      'a list of at least 1 date and time',
+      'a list of at most 2 yes-or-no values',
+      'a list of at most 1 empty value',
+      'a list of at most 5 values',
+      'a list of at least 1 record',
+      'a list of at least 2 lists of at most 3 numbers',
+      'a list of at least 1 list',
     ]);
   });
 });
@@ -84,12 +79,12 @@ describe('equal bounds in words', () => {
       wordsOf({ type: 'string', minLength: 5, maxLength: 5 }),
       wordsOf({ type: 'integer', minimum: 5, maximum: 5 }),
     ]).toEqual([
-      'A list of exactly 1 record.',
-      'A list of exactly 3 whole numbers.',
-      'A list of exactly 2 items.',
-      'A record of exactly 1 entry, each text.',
-      'Text, exactly 5 characters.',
-      'A whole number, exactly 5.',
+      'a list of exactly 1 record',
+      'a list of exactly 3 whole numbers',
+      'a list of exactly 2 items',
+      'a record of exactly 1 entry, each text',
+      'text, exactly 5 characters',
+      'a whole number, exactly 5',
     ]);
   });
 });
@@ -110,14 +105,14 @@ describe('the bounds of a list of choices, alternatives or records in words', ()
         items: { type: 'object', required: ['at'], properties: { at: { type: 'string' } } },
       }),
     ]).toEqual([
-      'A list of at most 3 values, each one of: a, b.',
-      'A list of at least 1 value, one of: a, b.',
-      'A list of at most 3 values, each exactly a.',
-      'A list of at least 1 value, exactly a.',
-      'A list of at most 3 whole numbers or text values.',
-      'A list of at least 1 whole number or text value.',
-      'A list of at most 3 values of 5 kinds.',
-      'A list of at most 20 records with: **at** (text).',
+      'a list of at most 3 values, each one of: a, b',
+      'a list of at least 1 value, one of: a, b',
+      'a list of at most 3 values, each exactly a',
+      'a list of at least 1 value, exactly a',
+      'a list of at most 3 whole numbers or text values',
+      'a list of at least 1 whole number or text value',
+      'a list of at most 3 values of 5 kinds',
+      'a list of at most 20 records with: at (text)',
     ]);
   });
 });
@@ -130,10 +125,10 @@ describe('the bounds of a record in words', () => {
       listOf({ type: 'object', maxProperties: 2, additionalProperties: { type: 'string' } }),
       listOf({ type: 'object', minProperties: 1, properties: { a: { type: 'string' } } }),
     ]).toEqual([
-      'A record of at most 3 entries with: **a** (text, optional).',
-      'A record with: **inner** (a record of 1 to 9 entries, optional).',
-      'A list of records of at most 2 entries, each text.',
-      'A list of records of at least 1 entry with: **a** (text, optional).',
+      'a record of at most 3 entries with: a (text, optional)',
+      'a record with: inner (a record of 1 to 9 entries, optional)',
+      'a list of records of at most 2 entries, each text',
+      'a list of records of at least 1 entry with: a (text, optional)',
     ]);
   });
 });
@@ -147,11 +142,11 @@ describe('the bounds of a list or a record that its words do not hold', () => {
       wordsOf({ type: 'array', enum: [['a'], ['b']], maxItems: 1 }),
       wordsOf({ anyOf: [{ type: 'array' }, { type: 'null' }], maxItems: 4 }),
     ]).toEqual([
-      'A list of at most 2 whole numbers or nothing.',
-      'Text, at most 2 items, at most 3 entries.',
-      'Any value, at most 2 items.',
-      'One of: ["a"], ["b"]; at most 1 item.',
-      'A list or nothing, at most 4 items.',
+      'a list of at most 2 whole numbers or nothing',
+      'text, at most 2 items, at most 3 entries',
+      'any value, at most 2 items',
+      'one of: ["a"], ["b"]; at most 1 item',
+      'a list or nothing, at most 4 items',
     ]);
   });
 });
@@ -168,12 +163,12 @@ describe('a record of entries in words', () => {
       wordsOf({ type: 'object', properties: { a: { type: 'object', additionalProperties: { type: 'string' } } } }),
       wordsOf({ type: 'object', minProperties: 2, maxProperties: 4 }),
     ]).toEqual([
-      'A record of at most 50 entries, each a list of at most 20 records with: **at** (text, optional).',
-      'A record of at least 1 entry, each a whole number.',
-      'A list of records whose every entry is text.',
-      'A record.',
-      'A record with: **a** (a record, optional).',
-      'A record of 2 to 4 entries.',
+      'a record of at most 50 entries, each a list of at most 20 records with: at (text, optional)',
+      'a record of at least 1 entry, each a whole number',
+      'a list of records whose every entry is text',
+      'a record',
+      'a record with: a (a record, optional)',
+      'a record of 2 to 4 entries',
     ]);
   });
 });

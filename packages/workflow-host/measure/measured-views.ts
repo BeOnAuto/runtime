@@ -1,4 +1,3 @@
-import { overviewTitled } from '@on.auto/definitions/testing';
 import { unitMemoryBytes, workerStackBytes, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Schema } from 'effect';
 
@@ -10,7 +9,7 @@ import { viewsFolder } from '../src/views/views-folder.ts';
 import { viewsPortOn } from '../src/views/views-port.ts';
 
 export function recallContentOf(name: string, details: Schema.JsonObject): Schema.JsonObject {
-  return { source: name, overview: overviewTitled(name), details };
+  return { source: name, details };
 }
 
 export function measuredViewOf(database: HostDatabase, name: string): Promise<KeptView | undefined> {

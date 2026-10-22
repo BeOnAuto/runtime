@@ -11,8 +11,6 @@ export {
   defineCapability,
   type AnswerIssues,
   type AnsweringRun,
-  type OverviewContext,
-  type OverviewOf,
   defaultRunWords,
   type CancelDecision,
   type CancelledRun,
@@ -176,7 +174,6 @@ export {
 } from './registry/definition-triggers.ts';
 export { runStartedOf } from './runs/run-starts.ts';
 export { inWords, nameInWords, outputInWords } from './plain-language/in-words.ts';
-export { charactersIn } from './plain-language/characters.ts';
 export { triggerNamed } from './plain-language/event-words.ts';
 export { mostInputBytes, mostInputDepth, mostResultBytes } from './runs/recorded-size.ts';
 export {
@@ -207,86 +204,11 @@ export {
 } from './capability/function-terminology.ts';
 export { checkedInput, refusedByTheInputSchema, refusedInput, wordedIssuesOf } from './checking/schema-refusals.ts';
 export { checkedWorker } from './checking/worker-url.ts';
-export {
-  bulletList,
-  definitionPhrase,
-  listedPhrases,
-  mostTableRows,
-  named,
-  numberedList,
-  paragraph,
-  sectionOf,
-  type BulletList,
-  type Diagram,
-  type DiagramEdge,
-  type DiagramGroup,
-  type DiagramNode,
-  type FieldRow,
-  type FieldTable,
-  type NodeShape,
-  type NumberedList,
-  type Overview,
-  type OverviewBlock,
-  type OverviewSection,
-  type Paragraph,
-  type Phrase,
-  type PhrasedDefinition,
-  type Phrases,
-  type Quote,
-} from './overview/overview.ts';
-export { durationInWords } from './overview/duration-words.ts';
-export { eventFilterPhrases, type EventFilter } from './overview/event-filter-words.ts';
-export { markdownOf, mostOverviewBytes } from './overview/markdown-writer.ts';
-export { describedSchemaBlocks, mostFieldDescriptionCharacters, schemaBlocks } from './overview/schema-words.ts';
-export { plainTextOf } from './overview/markdown-text.ts';
-export { isJsonSchema } from './overview/schema-reading.ts';
-export { callSection, callSentence } from './overview-words/call-words.ts';
-export { computedSentence, programSection } from './overview-words/computation-words.ts';
-export { valueMeaning } from './overview-words/field-meanings.ts';
-export {
-  answerSection,
-  answerSentence,
-  answerWaitSentence,
-  inboxSentence,
-  messageLead,
-  notTakenSentence,
-  notificationSentence,
-  partyNamedUnderDetails,
-  replyRuleSentence,
-  replyWaitSentence,
-  unansweredSentence,
-  whereSection,
-  type ReplyParts,
-} from './overview-words/request-words.ts';
-export { replyDiagram } from './overview-words/reply-diagram-words.ts';
-export { shownUnderSource } from './overview-words/source-words.ts';
-export { templateLead } from './overview-words/template-words.ts';
-export { theToolOf } from './overview-words/tool-words.ts';
-export { undescribedSentence } from './overview-words/value-words.ts';
 export type { OutputShape } from './shapes/output-shape.ts';
 export { OutputShapeNameSchema, type OutputShapeName } from './shapes/shape-names.ts';
 export { outputShapeNamed, outputShapeNames, shapeMismatchOf } from './shapes/output-shapes.ts';
 export { declaredShape, type ShapeRefusal } from './shapes/shape-declarations.ts';
 export { publishedOutputOf } from './shapes/published-output.ts';
-export { seriesBounds, seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
-export { periodNouns, seriesPathBlocks } from './shapes/shape-words.ts';
+export { seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
-export {
-  composedOverview,
-  inputDetails,
-  inputSection,
-  outputDetails,
-  outputSection,
-  type OverviewParts,
-  type ToldParts,
-} from './overview/definition-overview.ts';
-export { overviewAtRead, type ReadKnowledge } from './used-by/overview-at-read.ts';
-export type { DefinitionCalled, DefinitionUser } from './used-by/user-relations.ts';
-export {
-  CalledDefinitionSchema,
-  type CalledDefinition,
-  type CallingStep,
-  type CallRole,
-  type NamedDefinition,
-  type UserRelation,
-} from './used-by/called-definitions.ts';
+export type { CalledDefinition, CallingStep, CallRole } from './used-by/called-definitions.ts';

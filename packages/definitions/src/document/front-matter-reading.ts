@@ -13,12 +13,10 @@ import {
 } from 'yaml';
 
 import type { DocumentIssue, SourceLines } from './document-issue.ts';
-import type { TextPosition } from './written-texts.ts';
 
 export interface FrontMatterReading {
   readonly value: Schema.JsonObject;
   readonly lines: SourceLines;
-  readonly positions: ReadonlyMap<string, TextPosition>;
 }
 
 const frontMatterNesting = 72;
@@ -36,7 +34,6 @@ interface Place {
 interface Reading {
   readonly report: (line: number, pointer: string, detail: string) => void;
   readonly locate: (pointer: string, line: number) => void;
-  readonly position: (pointer: string, node: unknown) => void;
   readonly lineOf: (node: unknown, fallback: number) => number;
 }
 
@@ -97,9 +94,6 @@ function valueOf(node: unknown, place: Place, reading: Reading): Schema.Json {
     reading.report(line, place.pointer, 'Expected text, a finite number, true, false or null');
     return null;
   }
-  if (typeof value === 'string') {
-    reading.position(place.pointer, node);
-  }
   return value;
 }
 
@@ -146,7 +140,6 @@ export function readFrontMatter(
   text: string,
   firstLine: number,
   required: string,
-  positioned: ReadonlySet<string>,
 ): Result.Result<FrontMatterReading, readonly DocumentIssue[]> {
   const lineCounter = new LineCounter();
   const document = parseDocument(text, { ...parseOptions, lineCounter });
@@ -167,7 +160,6 @@ export function readFrontMatter(
   }
   const issues: DocumentIssue[] = [];
   const lines = new Map<string, number>([['', firstLine]]);
-  const positions = new Map<string, TextPosition>();
   const value = objectOf(
     () => contents,
     { pointer: '', depth: 0, line: firstLine },
@@ -178,17 +170,11 @@ export function readFrontMatter(
       locate: (pointer, line) => {
         lines.set(pointer, line);
       },
-      position: (pointer, node) => {
-        const offset = offsetOf(node);
-        if (offset !== undefined && positioned.has(pointer)) {
-          positions.set(pointer, { line: lineAt(offset), column: lineCounter.linePos(offset).col });
-        }
-      },
       lineOf: (node, fallback) => {
         const offset = offsetOf(node);
         return offset === undefined ? fallback : lineAt(offset);
       },
     },
   );
-  return issues.length > 0 ? Result.fail(issues) : Result.succeed({ value, lines, positions });
+  return issues.length > 0 ? Result.fail(issues) : Result.succeed({ value, lines });
 }

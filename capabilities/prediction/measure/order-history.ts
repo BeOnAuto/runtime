@@ -1,4 +1,3 @@
-import { overviewTitled } from '@on.auto/definitions/testing';
 import type { ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Result } from 'effect';
 
@@ -94,7 +93,7 @@ export function savedIn(folders: ProjectedFolders, { name, source, document }: M
     [
       {
         type: 'definition_created',
-        data: { content: { source, overview: overviewTitled(name), details: datasetDetailsOf(document) } },
+        data: { content: { source, details: datasetDetailsOf(document) } },
       },
     ],
     {

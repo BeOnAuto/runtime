@@ -13,7 +13,6 @@ import { Effect, type Schema } from 'effect';
 import { checkedExpressions, type ExpressionCheck } from '../document/expression-check.ts';
 import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../document/workflow-document.ts';
 import { summaryOf } from '../document/workflow-summary.ts';
-import { workflowOverview } from '../overview/workflow-overview.ts';
 import { runPresenter } from '../presenting/run-presenter.ts';
 import { started, type WorkflowStarts } from '../runs/run-start.ts';
 
@@ -47,7 +46,6 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
       readWorkflowDocument(source, dependencies.mostDurationMs),
     check: checkedExpressions(dependencies.check),
     summarize: ({ document }) => summaryOf(document),
-    overview: workflowOverview,
     run: (read, input, run, stripped) =>
       Effect.flatMap(admittedInput(read, input, run), (admitted) =>
         started(dependencies, runnableDocument(read.document, stripped), admitted, run),

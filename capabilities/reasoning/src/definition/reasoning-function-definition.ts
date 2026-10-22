@@ -12,7 +12,6 @@ export interface InputContract {
 
 export interface ReasoningFunctionDefinitionDocument {
   readonly description?: string;
-  readonly about?: string;
   readonly model: string;
   readonly settings: GenerationSettings;
   readonly input: InputContract;

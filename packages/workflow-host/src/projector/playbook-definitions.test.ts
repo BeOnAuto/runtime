@@ -1,4 +1,3 @@
-import { overviewTitled } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
 import { detailsOf } from '../views-testing/view-documents.ts';
@@ -26,7 +25,7 @@ describe('the recall functions a playbook keeps', () => {
     const definitions = definitionsAfter(
       noDefinitions,
       [
-        savedAs('runs', { source: 'the runs document', overview: overviewTitled('runs'), details: { fold } }),
+        savedAs('runs', { source: 'the runs document', details: { fold } }),
         { type: 'definition_renamed', data: {}, context: { by: 'acme-admin', at: 'now', definitionName: 'runs' } },
       ],
       runnableDetailsOf,
@@ -40,7 +39,7 @@ describe('the recall functions a playbook keeps', () => {
     const definitions = definitionsAfter(
       noDefinitions,
       [
-        savedAs('runs', { source: 'the runs document', overview: overviewTitled('runs'), details: { fold } }),
+        savedAs('runs', { source: 'the runs document', details: { fold } }),
         {
           type: 'definition_retired',
           data: {},
@@ -70,10 +69,7 @@ describe('the fold a playbook keeps for a recall function', () => {
 
     const kept = definitionsAfter(
       noDefinitions,
-      [
-        savedAs('runs', { source: 'a', overview: overviewTitled('runs'), details: typed, stripped }),
-        savedAs('plain', { source: 'b', overview: overviewTitled('plain'), details: typed }),
-      ],
+      [savedAs('runs', { source: 'a', details: typed, stripped }), savedAs('plain', { source: 'b', details: typed })],
       runnableDetailsOf,
     );
 

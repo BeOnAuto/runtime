@@ -3,7 +3,7 @@ import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { approvalDocument, callDocument, notificationDocument } from '../testing/index.ts';
+import { approvalDocument, notificationDocument } from '../testing/index.ts';
 import { requestDocumentOf } from '../testing/route-documents.ts';
 import { parseInteractionDocument } from './document-parsing.ts';
 
@@ -18,7 +18,7 @@ function documentWith(frontMatter: readonly string[], body = 'Approve {{ input.c
 
 const essentials = ["to: '{{ input.owner }}'", 'expires: P2D'];
 
-const keys = 'description, about, call, to, from, expires, deliver, replies, input, output, reply';
+const keys = 'description, call, to, from, expires, deliver, replies, input, output, reply';
 
 describe('an interaction function definition', () => {
   it('reads its party, expiry, schemas and message, and waits in the inbox without deliver', () => {
@@ -151,29 +151,6 @@ describe('the refusals of the form of a definition', () => {
     ]).toEqual([
       [expect.stringContaining('A template may use at most 1000 names')],
       [expect.stringMatching(/^Line 5, \/input\/schema/u)],
-    ]);
-  });
-});
-
-describe('the about of an interaction function definition', () => {
-  const about = ['about: |', '  The campaign owner approves each brief before it goes to a client.'];
-
-  it('is kept as its author wrote it, for a function that asks a person and for one that asks a system', () => {
-    expect([
-      requestDocumentOf(documentWith([...essentials, ...about])).about,
-      Result.getOrThrow(parseInteractionDocument(callDocument({ front: about }), standingRenderClock)).about,
-    ]).toEqual([
-      'The campaign owner approves each brief before it goes to a client.\n',
-      'The campaign owner approves each brief before it goes to a client.\n',
-    ]);
-  });
-
-  it('takes no heading, nor does the description, each refused at its line', () => {
-    const frontMatter = ["description: '# Approve a brief'", ...essentials, ...about, '  ## When it runs'];
-
-    expect(problemsOf(documentWith(frontMatter))).toEqual([
-      'Line 2, /description: description takes no heading, since an overview writes its own: the line that begins “# Approve a brief” makes one, with # before its words or as a line of = or - under the words above it',
-      'Line 7, /about: about takes no heading, since an overview writes its own: this line makes one, with # before its words or as a line of = or - under the words above it',
     ]);
   });
 });

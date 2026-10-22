@@ -21,14 +21,12 @@ export function parse(source: string): Effect.Effect<ReasoningFunctionDefinition
 
 export function summarize({
   description,
-  about,
   input,
   output,
   warnings,
 }: ReasoningFunctionDefinitionDocument): DefinitionSummary {
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     ...(input.schema === undefined ? {} : { inputSchema: input.schema.document }),
     ...(output.type === 'json' ? publishedOutputOf({ schema: output.schema.document, shape: output.shape }) : {}),
     warnings,

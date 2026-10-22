@@ -186,29 +186,8 @@ describe('a text that is not a prediction function document', () => {
       'Line 3: The definition has no brief: write it after the front matter',
     ]);
     expect(problemsOf(weeklyOrdersWith(['source:', 'input:\n  schema: {}\nsource:']))).toEqual([
-      'Line 24, /input: input is not a key of the front matter; it takes description, about, predicts, data, evaluation, source, rules',
+      'Line 24, /input: input is not a key of the front matter; it takes description, predicts, data, evaluation, source, rules',
     ]);
     expect(problemsOf(weeklyOrdersWith(['  period: week', '  period: fortnight']))).toEqual([periodRefused]);
-  });
-});
-
-const descriptionLine = 'description: Predicts the orders of each region one and four weeks ahead';
-
-describe('the about of a prediction function document', () => {
-  it('is kept as its author wrote it', () => {
-    const about = `${descriptionLine}\nabout: |\n  The sales team plans the stock of each region with it.`;
-
-    expect(documentOf(weeklyOrdersWith([descriptionLine, about])).about).toBe(
-      'The sales team plans the stock of each region with it.\n',
-    );
-  });
-
-  it('takes no heading, nor does the description, each refused at its line', () => {
-    const written = "description: '# Predicts the orders'\nabout: |\n  The sales team plans with it.\n  ===";
-
-    expect(problemsOf(weeklyOrdersWith([descriptionLine, written]))).toEqual([
-      'Line 2, /description: description takes no heading, since an overview writes its own: the line that begins “# Predicts the orders” makes one, with # before its words or as a line of = or - under the words above it',
-      'Line 5, /about: about takes no heading, since an overview writes its own: this line makes one, with # before its words or as a line of = or - under the words above it',
-    ]);
   });
 });

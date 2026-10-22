@@ -14,7 +14,7 @@ import {
   type Path,
 } from './shape-values.ts';
 
-export const seriesBounds = { mostLines: 20, mostPoints: 2_000, mostMarks: 8 } as const;
+const seriesBounds = { mostLines: 20, mostPoints: 2_000, mostMarks: 8 } as const;
 
 const point = closedRecord(
   {

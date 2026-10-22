@@ -1,4 +1,4 @@
-import type { DefinitionSummary, ToldParts } from '@on.auto/definitions';
+import type { DefinitionSummary } from '@on.auto/definitions';
 import { issueText } from '@on.auto/definitions/document';
 import { renderClock } from '@on.auto/definitions/template';
 import { InvalidInput } from '@on.auto/operations';
@@ -6,8 +6,6 @@ import { Effect, Result, type Schema } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
-import { callOverview } from '../overview/call-overview.ts';
-import { requestOverview } from '../overview/request-overview.ts';
 
 export function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
@@ -35,16 +33,11 @@ function detailsOf(document: InteractionFunctionDefinitionDocument): Schema.Json
 }
 
 export function summarize(document: InteractionFunctionDefinitionDocument): DefinitionSummary {
-  const { description, about, input, output } = document;
+  const { description, input, output } = document;
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     ...(input.schema === undefined ? {} : { inputSchema: input.schema.document }),
     ...(output.schema === undefined ? {} : { outputSchema: output.schema.document }),
     details: detailsOf(document),
   };
-}
-
-export function overview(document: InteractionFunctionDefinitionDocument): ToldParts {
-  return document.shape === 'call' ? callOverview(document) : requestOverview(document);
 }

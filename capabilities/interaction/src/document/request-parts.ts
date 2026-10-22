@@ -64,7 +64,6 @@ function documentOfParts(written: InteractionFrontMatter, expires: string, done:
   return {
     shape: 'request',
     ...(written.description === undefined ? {} : { description: written.description }),
-    ...(written.about === undefined ? {} : { about: written.about }),
     ...(route === null ? {} : { route }),
     to,
     ...(from === null ? {} : { from }),

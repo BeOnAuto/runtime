@@ -2,7 +2,6 @@ import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { inWords, nameInWords, outputInWords } from '../index.ts';
-import { readableName } from './in-words.ts';
 
 const renderings: ReadonlyArray<readonly [Schema.Json, string]> = [
   ['Profits rose.', '“Profits rose.”'],
@@ -65,15 +64,5 @@ describe('nameInWords', () => {
     ['text', 'text'],
   ])('turns %s into %s', (name, words) => {
     expect(nameInWords(name)).toBe(words);
-  });
-});
-
-describe('readableName', () => {
-  it('is the name in words with its first letter raised', () => {
-    expect([readableName('month-window'), readableName('weekly_review'), readableName('x')]).toEqual([
-      'Month window',
-      'Weekly review',
-      'X',
-    ]);
   });
 });

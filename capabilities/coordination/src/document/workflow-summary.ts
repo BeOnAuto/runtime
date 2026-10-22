@@ -4,14 +4,19 @@ import {
   type CallingStep,
   type DefinitionSummary,
 } from '@on.auto/definitions';
-import { field, type JsonObject, textField } from '@on.auto/workflow-engine';
+import {
+  allTaskEntries,
+  field,
+  objectField,
+  textField,
+  type JsonObject,
+  type TaskEntry,
+} from '@on.auto/workflow-engine';
 
-import { numberedTasksOf, type NumberedTask } from '../steps/placed-tasks.ts';
 import { inlineSchemaOf } from './workflow-document.ts';
 import { definitionCallOf, namesItsDefinition } from './workflow-functions.ts';
 import { outputShapeOf } from './workflow-output.ts';
 import { triggersOfDocument } from './workflow-schedule.ts';
-import { aboutOf, descriptionOf, headerOf } from './workflow-texts.ts';
 
 interface CallingTask {
   readonly type: string;
@@ -19,13 +24,9 @@ interface CallingTask {
   readonly step: CallingStep;
 }
 
-function everyTaskOf(tasks: readonly NumberedTask[]): readonly NumberedTask[] {
-  return tasks.flatMap((task) => [task, ...everyTaskOf(task.body), ...everyTaskOf(task.recovery)]);
-}
-
-function callingTaskOf({ name, task, step }: NumberedTask): readonly CallingTask[] {
+function callingTaskOf({ name, task }: TaskEntry, number: number): readonly CallingTask[] {
   const call = definitionCallOf(task);
-  return namesItsDefinition(call) ? [{ type: call.type, name: call.name, step: { number: step, name } }] : [];
+  return namesItsDefinition(call) ? [{ type: call.type, name: call.name, step: { number, name } }] : [];
 }
 
 function isSameDefinition(one: CallingTask, other: CallingTask): boolean {
@@ -33,7 +34,9 @@ function isSameDefinition(one: CallingTask, other: CallingTask): boolean {
 }
 
 function callsOf(document: JsonObject): readonly CalledDefinition[] {
-  const calling = everyTaskOf(numberedTasksOf(field(document, 'do'))).flatMap((task) => callingTaskOf(task));
+  const calling = allTaskEntries(field(document, 'do'), '/do').flatMap((entry, index) =>
+    callingTaskOf(entry, index + 1),
+  );
   return calling
     .filter((call, index) => calling.findIndex((other) => isSameDefinition(other, call)) === index)
     .map((call) => ({
@@ -43,26 +46,27 @@ function callsOf(document: JsonObject): readonly CalledDefinition[] {
     }));
 }
 
-function detailsOf(document: JsonObject, title: string | undefined): JsonObject {
+function detailsOf(document: JsonObject): JsonObject {
   const calls = callsOf(document);
-  return { ...(calls.length === 0 ? {} : { calls }), ...(title === undefined ? {} : { title }) };
+  return calls.length === 0 ? {} : { calls };
+}
+
+function descriptionOf(document: JsonObject): string | undefined {
+  const header = objectField(document, 'document') ?? {};
+  return textField(header, 'summary') ?? textField(header, 'title');
 }
 
 export function summaryOf(document: JsonObject): DefinitionSummary {
-  const header = headerOf(document);
-  const title = textField(header, 'title');
-  const description = descriptionOf(header)?.text;
-  const about = aboutOf(header)?.text;
+  const description = descriptionOf(document);
   const inputSchema = inlineSchemaOf(document, 'input');
   const triggers = triggersOfDocument(document);
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     ...(inputSchema === undefined ? {} : { inputSchema }),
     ...publishedOutputOf({
       schema: inlineSchemaOf(document, 'output'),
       shape: outputShapeOf(document),
-      details: detailsOf(document, title),
+      details: detailsOf(document),
     }),
     ...(triggers.length === 0 ? {} : { triggers }),
   };

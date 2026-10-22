@@ -4,7 +4,7 @@ import type { Schema } from 'effect';
 import { shapeOf, type OutputShape } from './output-shape.ts';
 import { counted, issueAt, recordOf, textValue } from './shape-values.ts';
 
-export const textBounds = { mostBytes: 65_536 } as const;
+const textBounds = { mostBytes: 65_536 } as const;
 
 function textIssues(value: Schema.Json): readonly SchemaIssue[] {
   const text = textValue(recordOf(value)['text']);

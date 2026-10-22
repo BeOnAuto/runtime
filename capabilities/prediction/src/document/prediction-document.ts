@@ -84,7 +84,6 @@ export interface DerivedSchemas {
 
 export interface PredictionFunctionDefinitionDocument {
   readonly description?: string;
-  readonly about?: string;
   readonly predicts: Predicts;
   readonly data: DataPart;
   readonly dataSha256: string;

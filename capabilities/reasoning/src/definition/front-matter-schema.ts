@@ -1,5 +1,4 @@
 import {
-  AboutSchema,
   DescriptionSchema,
   frontMatterIn as sharedFrontMatterIn,
   type DocumentIssue,
@@ -43,7 +42,6 @@ const ProviderOptionsSchema = Schema.Record(Schema.String, Schema.JsonObject);
 
 const FrontMatterSchema = Schema.Struct({
   description: Schema.optionalKey(DescriptionSchema),
-  about: Schema.optionalKey(AboutSchema),
   model: Schema.String,
   config: Schema.optionalKey(ConfigSchema),
   input: Schema.optionalKey(InputSectionSchema),
@@ -60,7 +58,6 @@ export type OutputSection = typeof OutputSectionSchema.Type | undefined;
 
 export const decodeSection = {
   description: Schema.decodeUnknownOption(Schema.UndefinedOr(DescriptionSchema)),
-  about: Schema.decodeUnknownOption(Schema.UndefinedOr(AboutSchema)),
   model: Schema.decodeUnknownOption(Schema.String),
   config: Schema.decodeUnknownOption(Schema.UndefinedOr(ConfigSchema)),
   input: Schema.decodeUnknownOption(Schema.UndefinedOr(InputSectionSchema)),

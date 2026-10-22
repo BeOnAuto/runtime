@@ -41,7 +41,7 @@ export interface NamedRunDefinitionCall extends RunDefinitionCall {
   readonly name: string;
 }
 
-export function literalText(value: Json | undefined): string | undefined {
+function literalText(value: Json | undefined): string | undefined {
   return typeof value === 'string' && enclosedBody(value) === undefined ? value : undefined;
 }
 

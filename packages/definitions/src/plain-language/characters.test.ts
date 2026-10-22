@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { charactersIn } from '../index.ts';
-import { firstCharacters } from './characters.ts';
+import { charactersIn, firstCharacters } from './characters.ts';
 
 describe('the characters of a text', () => {
   it('are its code points, a character outside the Basic Multilingual Plane counted once', () => {

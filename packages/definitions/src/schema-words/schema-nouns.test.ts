@@ -1,12 +1,10 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { plainTextOf, schemaBlocks } from '../index.ts';
+import { expectedWordsOf } from './schema-words.ts';
 
 function wordsOf(field: Schema.JsonObject): string {
-  const [block] = schemaBlocks({ type: 'object', properties: { field } }, '');
-  const words = block?.kind === 'fields' ? (block.rows[0]?.words ?? []) : [];
-  return plainTextOf(words);
+  return expectedWordsOf(field, field);
 }
 
 function listOf(items: Schema.JsonObject): string {
@@ -22,16 +20,16 @@ describe('the form of a string in words', () => {
       wordsOf({ type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', format: 'uuid' } }),
       wordsOf({ type: 'array', maxItems: 1, items: { type: 'string', format: 'email' } }),
     ]).toEqual([
-      'A date.',
-      'A date and time.',
-      'A time.',
-      'An email address.',
-      'A URI.',
-      'A UUID.',
-      'A list of dates.',
-      'A list of URIs.',
-      'A list of 1 to 3 UUIDs.',
-      'A list of at most 1 email address.',
+      'a date',
+      'a date and time',
+      'a time',
+      'an email address',
+      'a URI',
+      'a UUID',
+      'a list of dates',
+      'a list of URIs',
+      'a list of 1 to 3 UUIDs',
+      'a list of at most 1 email address',
     ]);
   });
 });

@@ -9,7 +9,6 @@ import { handCallPresenter } from '@on.auto/tool-servers';
 
 import { parse, summarize } from '../definition/definition-reading.ts';
 import type { OfferedModels } from '../model/offered-models.ts';
-import { reasoningOverview } from '../overview/reasoning-overview.ts';
 import { longestRequestMs, longestRunMsOf } from './definition-request.ts';
 import { definitionRun, type RunServices } from './definition-run.ts';
 import { onThisServer } from './on-this-server.ts';
@@ -33,7 +32,6 @@ export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOp
     mediaType: 'text/markdown',
     parse,
     summarize,
-    overview: reasoningOverview,
     run: (definition, input, context) => run(definition, input, context),
     longestAnyRunMs: longestRequestMs,
     longestRunOf: longestRunMsOf,

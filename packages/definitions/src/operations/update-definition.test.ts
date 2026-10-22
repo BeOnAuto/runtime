@@ -18,23 +18,24 @@ const later = '2026-10-02T14:15:00.000Z';
 
 const hello = '{"greeting": "Hello", "description": "Greets the caller"}';
 
+const greetOverview = 'Greets each guest who arrives at the front desk.';
+
 async function withGreet() {
   const definitions = harness();
-  await definitions.call(createDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: hello }));
+  await definitions.call(
+    createDefinition,
+    toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: hello, overview: greetOverview }),
+  );
   return definitions;
 }
 
-const howdyOverview = [
-  '# greet',
-  'This greeting has no description yet.',
-  '## What it needs',
-  'A record.',
-  '## What it produces',
-  '| Field | Required | What it is |\n| --- | --- | --- |\n| **greeting** | yes | Exactly Howdy. |\n| **input** | yes | A record. |\n',
-].join('\n\n');
-
-function updatingGreet(source: string) {
-  return toAlpha(acmeAlphaKeeper, { type: 'echo', name: 'greet', source });
+function updatingGreet(source: string, overview?: string) {
+  return toAlpha(acmeAlphaKeeper, {
+    type: 'echo',
+    name: 'greet',
+    source,
+    ...(overview === undefined ? {} : { overview }),
+  });
 }
 
 describe('update_definition', () => {
@@ -50,7 +51,7 @@ describe('update_definition', () => {
     });
   });
 
-  it('replaces the document and what the capability says about it, at a new version', async () => {
+  it('replaces the document and what the capability says about it, at a new version that keeps the saved overview when the update leaves it out', async () => {
     const { call } = await withGreet();
 
     expect(await call(updateDefinition, updatingGreet('{"greeting": "Howdy"}'), later)).toStrictEqual({
@@ -71,22 +72,34 @@ describe('update_definition', () => {
         created_by: 'acme-admin',
         updated_at: later,
         source: '{"greeting": "Howdy"}',
-        overview: howdyOverview,
+        overview: greetOverview,
       },
     });
-    expect(await call(updateDefinition, updatingGreet(hello), later)).toMatchObject({
-      output: { version: 3, description: 'Greets the caller' },
+    expect(await call(updateDefinition, updatingGreet(hello, 'Greets each guest by name.'), later)).toMatchObject({
+      output: { version: 3, description: 'Greets the caller', overview: 'Greets each guest by name.' },
     });
   });
 });
 
 describe('update_definition of the same document', () => {
-  it('succeeds and records nothing', async () => {
+  it('succeeds and records nothing when the overview is the same or left out', async () => {
     const { call } = await withGreet();
 
-    expect(await call(updateDefinition, updatingGreet(hello), later)).toMatchObject({
+    expect([
+      await call(updateDefinition, updatingGreet(hello), later),
+      await call(updateDefinition, updatingGreet(hello, greetOverview), later),
+    ]).toMatchObject([
+      { status: 'succeeded', output: { version: 1, updated_at: firstMoment, overview: greetOverview } },
+      { status: 'succeeded', output: { version: 1, updated_at: firstMoment, overview: greetOverview } },
+    ]);
+  });
+
+  it('records a new version when the overview alone changes', async () => {
+    const { call } = await withGreet();
+
+    expect(await call(updateDefinition, updatingGreet(hello, 'Greets each guest by name.'), later)).toMatchObject({
       status: 'succeeded',
-      output: { version: 1, updated_at: firstMoment },
+      output: { version: 2, updated_at: later, source: hello, overview: 'Greets each guest by name.' },
     });
   });
 });

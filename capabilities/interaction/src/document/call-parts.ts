@@ -66,7 +66,6 @@ export function callFrom(
     : Result.map(Result.all({ input, output: answered }), (contracts: Pick<CallDocument, 'input' | 'output'>) => ({
         shape: 'call',
         ...(written.description === undefined ? {} : { description: written.description }),
-        ...(written.about === undefined ? {} : { about: written.about }),
         call,
         ...contracts,
       }));

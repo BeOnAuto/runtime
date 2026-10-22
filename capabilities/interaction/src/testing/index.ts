@@ -14,7 +14,6 @@ export {
   notificationDocument,
   replyRuleLines,
   threadDocument,
-  threadReplies,
   type ThreadOptions,
 } from './documents.ts';
 export { callDocument, repliesOutput, type CallOptions } from './call-documents.ts';

@@ -15,16 +15,16 @@ const wholeNumbers: Noun = {
   countedOther: 'whole numbers',
 };
 
-export const numbers: Noun = { one: 'a number', other: 'numbers', countedOne: 'number', countedOther: 'numbers' };
+const numbers: Noun = { one: 'a number', other: 'numbers', countedOne: 'number', countedOther: 'numbers' };
 
-export const yesOrNo: Noun = {
+const yesOrNo: Noun = {
   one: 'yes or no',
   other: 'yes-or-no values',
   countedOne: 'yes-or-no value',
   countedOther: 'yes-or-no values',
 };
 
-export const nothing: Noun = {
+const nothing: Noun = {
   one: 'nothing',
   other: 'empty values',
   countedOne: 'empty value',

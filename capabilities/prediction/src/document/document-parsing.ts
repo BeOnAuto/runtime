@@ -23,7 +23,6 @@ function assembled(
   const { predicts, data, evaluation, source, rules, brief } = done;
   return {
     ...(front.description === undefined ? {} : { description: front.description }),
-    ...(front.about === undefined ? {} : { about: front.about }),
     predicts,
     data: data.data,
     dataSha256: dataDigestOf(data.data, predicts.period),

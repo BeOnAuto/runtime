@@ -143,7 +143,7 @@ describe('the definitions a workflow calls', () => {
 });
 
 describe('the details of the summary of a workflow', () => {
-  it('keep the calls, and a workflow that calls none and has no title keeps no details', () => {
+  it('keep the calls, and a workflow that calls none keeps no details', () => {
     const calling = workflow(
       'do:\n  - pace: { call: run_definition, with: { type: computation, name: campaign-pace } }',
     );

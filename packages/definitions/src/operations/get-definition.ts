@@ -29,7 +29,7 @@ export function defineGetDefinition(capabilities: readonly Capability[]) {
       reasons: ['not_found'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
-        const { stored, definition: read } = yield* readDefinition(capability, known.types, name);
+        const { stored, definition: read } = yield* readDefinition(capability, name);
         const definition =
           (stored.triggers ?? []).length > 0 && stored.status === 'active'
             ? { ...read, triggers_since: yield* triggersSince(capability.type, stored) }

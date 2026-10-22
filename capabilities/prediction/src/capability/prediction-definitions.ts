@@ -53,11 +53,10 @@ function callsOf({ source, evaluation: { activate } }: PredictionFunctionDefinit
 }
 
 export function summarize(document: PredictionFunctionDefinitionDocument): DefinitionSummary {
-  const { description, about, schemas } = document;
+  const { description, schemas } = document;
   const calls = callsOf(document);
   return {
     ...(description === undefined ? {} : { description }),
-    ...(about === undefined ? {} : { about }),
     inputSchema: schemas.input,
     ...publishedOutputOf({
       shape: seriesShape,

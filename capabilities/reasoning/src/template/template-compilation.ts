@@ -22,8 +22,6 @@ export function compileTemplate(
   }
   const hasInstructions = outline.top.length > 0;
   return Result.succeed({
-    text: body,
-    firstLine,
     hasInstructions,
     hasMessage: outline.hasMessage,
     variables: parsed.variables,

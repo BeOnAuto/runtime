@@ -9,7 +9,6 @@ import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import type { ViewsPort } from '@on.auto/workflow-host';
 
 import { documentCheck } from '../document/document-check.ts';
-import { recallOverview } from '../overview/recall-overview.ts';
 import { recallBounds, recallDefinitionType } from '../run/recall-bounds.ts';
 import { recallRun } from '../run/recall-run.ts';
 import { parse, summarize } from './recall-definitions.ts';
@@ -43,7 +42,6 @@ export function makeRecallFunctionAdapter({
     parse,
     check: documentCheck(pool),
     summarize,
-    overview: recallOverview,
     run: (document, input, context, stripped) => run({ document, program: stripped.module }, input, context),
     longestAnyRunMs: deadlineMs,
     mostActive: mostFunctions,
