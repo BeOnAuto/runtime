@@ -1,11 +1,13 @@
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { defaultTiming } from '../bounds/call-bounds.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
 import {
   consentClientWith,
   fetchWithDeletion,
+  manualTimer,
   recordingTimer,
   serveFakeMcp,
   testClientInfo,
@@ -17,7 +19,7 @@ import type { CallSettled, ServerClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
 import { serverLink } from './server-links.ts';
 
-const timing = { callMs: 5000, openMs: 5000, longestRetryWaitMs: 1000 };
+const timing = { ...defaultTiming, longestRetryWaitMs: 1000 };
 
 const clientSecret = 'graph-client-secret-81c2';
 
@@ -209,12 +211,13 @@ describe('the headers and the end of a session', () => {
 const endings: readonly ('release' | 'stop')[] = ['release', 'stop'];
 
 describe('an http server that does not end its session', () => {
-  it.each(endings)('bounds %s and aborts a session deletion that never answers', async (ending) => {
+  it.each(endings)('bounds %s at its deadline and aborts a session deletion that never answers', async (ending) => {
     const fake = await fakeServer();
     const deleting = Promise.withResolvers<unknown>();
     const unanswered = Promise.withResolvers<Response>();
+    const deadline = manualTimer();
     const { link } = linked(httpSettings(fake.url), {
-      timing: { ...timing, openMs: 1000 },
+      timer: deadline.timer,
       fetch: fetchWithDeletion(fetch, (request) => {
         deleting.resolve(request);
         return unanswered.promise;
@@ -223,6 +226,7 @@ describe('an http server that does not end its session', () => {
     const client = await link.take();
     const finished = link[ending]().then(() => true);
     const request = await deleting.promise;
+    deadline.fire();
 
     expect(await finished).toBe(true);
     expect(request).toHaveProperty('signal.aborted', true);

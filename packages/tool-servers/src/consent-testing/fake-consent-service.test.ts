@@ -4,7 +4,7 @@ import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
-import { consentServiceOf, type ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
+import type { ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import {
   postedToTheService,
@@ -15,6 +15,7 @@ import {
   type ThroughAuto,
 } from './auto-consents.ts';
 import { studioBase } from './consent-fakes.ts';
+import { cuttingTimeouts } from './gated-requests.ts';
 import { consentedAt } from './given-consents.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -196,18 +197,17 @@ describe('a call the fake consent service does not know', () => {
 });
 
 describe('the calls the fake consent service heard', () => {
-  it('are recorded with what each sent, and stalled once it is told to stall', async () => {
+  it('are recorded with what each sent, and stalled once it is told to stall, until the bound of the stalled call ends', async () => {
     const { fake: vendor, service } = await serving();
-    const calls = consentServiceOf({
-      fetch: globalThis.fetch,
-      url: service.url,
-      requestMs: 50,
-      requestTimeout: (ms) => AbortSignal.timeout(ms),
-    });
+    const { requestTimeout, cutWhen } = cuttingTimeouts();
+    const calls = serviceCallsAt(service, requestTimeout);
     await Effect.runPromise(calls.clients);
     service.stall();
 
-    expect(await run(calls.start(startOf(vendor)))).toMatchObject({ failure: { refused: 'unanswered' } });
+    const starting = run(calls.start(startOf(vendor)));
+    await cutWhen(() => service.calls().length === 2);
+
+    expect(await starting).toMatchObject({ failure: { refused: 'unanswered' } });
     expect(service.calls()).toMatchObject([
       { method: 'GET', path: '/clients', body: '', authorization: null },
       { method: 'POST', path: '/consents', body: { issuer: vendor.origin, challenge_method: 'S256' } },

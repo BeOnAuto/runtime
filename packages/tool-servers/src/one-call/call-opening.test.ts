@@ -32,10 +32,9 @@ const hanging: ServerLink = {
   stop: () => Promise.resolve(),
 };
 
-const listing = {
-  secrets: secretsOf([Redacted.make('notes-key')]),
-  timing: { ...defaultTiming, openMs: 10 },
-};
+const listing = { secrets: secretsOf([Redacted.make('notes-key')]), timing: defaultTiming };
+
+const listingWithin10Ms = { ...listing, timing: { ...defaultTiming, openMs: 10 } };
 
 const exited: ServerClient = {
   call: () => Promise.reject(new Error('No call is made')),
@@ -63,7 +62,7 @@ describe('the opening of one call to a process that exited', () => {
 
 describe('the opening of one call', () => {
   it('gives up on a client that does not open within the open bound, as a server that could not be reached', async () => {
-    expect(await openedFor({ server: 'notes', tool: 'search' }, hanging, listing)).toEqual({
+    expect(await openedFor({ server: 'notes', tool: 'search' }, hanging, listingWithin10Ms)).toEqual({
       kind: 'unopened',
       refused: 'tool_server_failed',
       because: 'unreachable',

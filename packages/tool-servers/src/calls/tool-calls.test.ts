@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { shownWithin, type Timing } from '../bounds/call-bounds.ts';
+import { defaultTiming, shownWithin, type Timing } from '../bounds/call-bounds.ts';
 import { answerOf, resultText } from '../bounds/tool-results.ts';
 import {
   brokenPromise,
@@ -13,8 +13,6 @@ import {
   openFakeToolRun,
   toolRunId,
 } from '../testing/index.ts';
-
-const quick: Timing = { callMs: 2000, openMs: 2000, longestRetryWaitMs: 1000 };
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -68,7 +66,7 @@ describe('the result of a call', () => {
   });
 
   it('gives the model what a tool answered against its own output schema, and never says the arguments were refused', async () => {
-    const run = await openFakeToolRun(['promised'], quick, { data: true });
+    const run = await openFakeToolRun(['promised'], defaultTiming, { data: true });
     closing.push(run.close);
 
     expect(await run.call('promised', {})).toMatchObject({
@@ -231,7 +229,7 @@ describe('a server that fails a call', () => {
   });
 
   it('fails a call that takes longer than a call may', async () => {
-    const { call, journal } = await runWith(['sleep'], { ...quick, callMs: 200 });
+    const { call, journal } = await runWith(['sleep'], { ...defaultTiming, callMs: 200 });
 
     expect(await call('sleep', { ms: 5000 })).toMatchObject({
       text: 'The tool server graph failed: The tool server did not answer within 200 ms',
@@ -243,7 +241,7 @@ describe('a server that fails a call', () => {
 
 describe('a server that asks to slow down or forgets a session', () => {
   it('waits out a 429 within the longest wait, and fails one asking longer, ending the calls as rate limited after five', async () => {
-    const { call, fake, tools } = await runWith(['search'], quick);
+    const { call, fake, tools } = await runWith(['search'], { ...defaultTiming, longestRetryWaitMs: 1000 });
 
     fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '0' });
     const waited = await call('search', { query: 'waited' });

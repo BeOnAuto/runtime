@@ -12,6 +12,7 @@ import {
   connectedThroughAuto,
   consentClientThrough,
   consentClientWith,
+  cuttingTimeouts,
   memoryTokens,
   rowOf,
   servedOf,
@@ -174,14 +175,17 @@ describe('a renewal through Auto’s consent service that cannot ask it', () => 
     expect(heardAt(connected, '/tokens/refresh')).toEqual([]);
   });
 
-  it('fails the call within the bound of its request where the service stalls, in its own words, and breaks nothing', async () => {
+  it('fails the call once the bound of its request ends where the service stalls, in its own words, and breaks nothing', async () => {
     const connected = await connectedAt();
+    const { requestTimeout, cutWhen } = cuttingTimeouts();
     connected.service.stall();
 
-    const failed = await renewed(connected, sourceOf(connected, consentClientThrough(connected, { requestMs: 50 })));
+    const renewing = renewed(connected, sourceOf(connected, consentClientThrough(connected, { requestTimeout })));
+    await cutWhen(() => heardAt(connected, '/tokens/refresh').length === 1);
+    const failed = await renewing;
 
     expect(failed).toEqual(new Error(renewalWords.serviceUnanswered('files')));
-    expect([connected.row.ends(), connected.row.version(), connected.row.claims()]).toEqual([[], 1, [15_050]]);
+    expect([connected.row.ends(), connected.row.version(), connected.row.claims()]).toEqual([[], 1, [45_000]]);
   });
 
   it('fails the call and breaks nothing where something answers 403 without a refusal of the service', async () => {

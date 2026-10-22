@@ -5,6 +5,7 @@ import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
   connectedByConsent,
   consentClientAt,
+  cuttingTimeouts,
   gatedRequests,
   goneWords,
   rowOf,
@@ -36,21 +37,6 @@ async function twoProcessesOverOneRow() {
 
 function heardAt(fake: FakeMcpServer, path: string): number {
   return fake.heard().filter((heard) => heard.path === path).length;
-}
-
-function cuttingTimeouts() {
-  const cuts: number[] = [];
-  const cutting = new AbortController();
-  return {
-    requestTimeout: (ms: number) => {
-      cuts.push(ms);
-      return cutting.signal;
-    },
-    cut: () => {
-      cutting.abort();
-    },
-    cuts: () => [...cuts],
-  };
 }
 
 async function cutOffAt(requestMs: number) {
