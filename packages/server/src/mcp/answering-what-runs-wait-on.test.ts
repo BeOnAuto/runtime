@@ -147,17 +147,21 @@ async function approvedThenNextMonth(session: McpSession) {
 }
 
 describe('episode 7: the person approves, in the chat, a draft a workflow sent through a tool', () => {
-  it('finds in the instructions, answer_interaction and the guide that the answer goes to the waiting request, and nothing that says to wait in a loop', async () => {
+  it('finds in the instructions, answer_interaction and the guide that the answer goes to the waiting request, and nowhere that it waits in a loop', async () => {
     const { instructions } = meetings.surfaces;
     const guide = await meetings.onMcp((session) => session.callTool('get_guide', { guide: 'interaction-function' }));
 
     expect(sentenceNaming(instructions, 'answer_interaction')).toBe(
       'When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run.',
     );
-    expect(sentenceNaming(instructions, 'get_run')).toBe(
-      'A run of a workflow answers started; get_run shows whether it ended or still waits.',
+    expect(descriptionIn(meetings.surfaces, 'run_definition')).toContain(
+      'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
     );
-    expect(instructions).not.toMatch(/\bpoll|\buntil (?:it ends|its status changes)/iu);
+    expect(
+      [instructions, descriptionIn(meetings.surfaces, 'run_definition')].filter((words) =>
+        /\bpoll|\buntil (?:it ends|its status changes)/iu.test(words),
+      ),
+    ).toEqual([]);
     expect(descriptionIn(meetings.surfaces, 'answer_interaction')).toContain(
       'Use it when the person approves, rejects, revises or otherwise answers a request list_interactions shows, wherever it reached them; a new run asks again and answers nothing,',
     );

@@ -1,5 +1,3 @@
-import { articled } from '@on.auto/operations';
-
 export type McpEndpoint = 'org' | 'playbook' | 'own org';
 
 export interface DefinitionType {
@@ -37,14 +35,13 @@ const purposesByType: Readonly<Record<string, readonly string[]>> = {
     'Recall retrieves run results, definitions and events, never run inputs or tool calls.',
     'What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes.',
   ],
-  prediction: [
-    "A prediction function answers from a model trained on the playbook's history; a build, input { build: {} }, answers started.",
-  ],
+  prediction: ["A prediction function answers from a model trained on the playbook's history."],
   workflow: ['A workflow runs functions in steps, waits for input and can start on a schedule or an event.'],
 };
 
-export const whatAPlaybookIs = [
-  'Auto Runtime executes playbooks; Studio manages them; your agent is a separate client.',
+export const whatThisServerIsFor = [
+  'Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer.',
+  'Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client.',
   'A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook.',
 ];
 
@@ -90,35 +87,12 @@ const guides: Sentences = ({ listed }) => [
     : 'get_guide holds what these words mean and how each kind of definition is written.',
 ];
 
-const modelsAndTools: Sentences = ({ reasoning, listed }) => {
-  if (reasoning === undefined || !listed('search')) {
-    return [];
-  }
-  const tools = 'may name tools that search finds';
-  return [
-    listed('list_models')
-      ? `A reasoning function names a model that list_models lists and ${tools}.`
-      : `A reasoning function names a model this server can call, as the ${reasoning.guide} guide says, and ${tools}.`,
-  ];
-};
-
 const connectingAService = [
   "Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links.",
   'Say a service cannot be connected only when no provider or server matches.',
 ];
 
 const connections: Sentences = ({ listed }) => (listed('search') && listed('add_connection') ? connectingAService : []);
-
-const typesThatFinishLater: ReadonlySet<string> = new Set(['workflow']);
-
-const runsThatFinishLater: Sentences = ({ listed, definitionTypes }) => {
-  const finishingLater = definitionTypes
-    .filter(({ type }) => typesThatFinishLater.has(type))
-    .map(({ noun }) => articled(noun));
-  return listed('get_run') && finishingLater.length > 0
-    ? [`A run of ${finishingLater.join(' or ')} answers started; get_run shows whether it ended or still waits.`]
-    : [];
-};
 
 const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
   listed('answer_interaction')
@@ -134,9 +108,7 @@ const orientation: readonly Sentences[] = [
   connection,
   modelsBeforeWriting,
   guides,
-  modelsAndTools,
   connections,
-  runsThatFinishLater,
   answeringWhatRunsWaitOn,
   closing,
 ];
@@ -165,5 +137,5 @@ export function instructionsFor(
     definitionTypes,
     reasoning: definitionTypes.find(({ type }) => type === reasoningFunctionType),
   };
-  return [...whatAPlaybookIs, ...orientation.flatMap((sentences) => sentences(serving))].join(' ');
+  return [...whatThisServerIsFor, ...orientation.flatMap((sentences) => sentences(serving))].join(' ');
 }

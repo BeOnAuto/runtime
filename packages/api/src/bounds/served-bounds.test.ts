@@ -2,11 +2,12 @@ import { defineQuery, makeCatalog, makeDispatcher, type Registration } from '@on
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { guideShelfOf, instructionsFor, mcpRoutes, type DefinitionType, type Guide, type Recipe } from '../index.ts';
+import { guideShelfOf, mcpRoutes, type DefinitionType, type Guide, type Recipe } from '../index.ts';
 import { createTestHandler } from '../testing/api-calls.ts';
 import { asking, sentencesOf } from '../testing/asking-operation.ts';
 import { notebookGuide, noteRecipe, wordsGuide } from '../testing/guides.ts';
 import { testRetryStateKeys, testServerInfo } from '../testing/operation-server.ts';
+import { mostInstructionCharacters, requireTextWithin } from './served-bounds.ts';
 
 const reportedErrors: string[] = [];
 
@@ -130,29 +131,16 @@ describe('the tools on a connection', () => {
   });
 });
 
-function workflowCalled(noun: string): DefinitionType {
-  return { type: 'workflow', noun, guide: 'asking' };
-}
-
-function instructionLengthWith(noun: string): number {
-  return instructionsFor('own org', { orgTools: [], playbookTools: ['get_run'] }, [workflowCalled(noun)]).length;
-}
-
-function servingTypeOf(noun: string): Serving {
-  return {
-    operations: [asking({ name: 'get_run' })],
-    guides: [guideOf('asking')],
-    definitionTypes: [workflowCalled(noun)],
+function holdingInstructionsOf(length: number): () => void {
+  return () => {
+    requireTextWithin('The instructions of the own org endpoint', 'x'.repeat(length), mostInstructionCharacters);
   };
 }
 
 describe('the instructions of a connection', () => {
-  it('start the server at 2,000 characters, and refuse to start it at 2,001', () => {
-    const atTheBound = `b${'x'.repeat(2000 - instructionLengthWith('b'))}`;
-
-    expect(instructionLengthWith(atTheBound)).toBe(2000);
-    expect(starting(servingTypeOf(atTheBound))).not.toThrow();
-    expect(starting(servingTypeOf(`${atTheBound}x`))).toThrow(
+  it('are held to 2,000 characters, and refused at 2,001', () => {
+    expect(holdingInstructionsOf(2000)).not.toThrow();
+    expect(holdingInstructionsOf(2001)).toThrow(
       'The instructions of the own org endpoint: 2001 characters, more than the 2000 allowed',
     );
   });

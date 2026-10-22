@@ -87,8 +87,8 @@ interface Endpoint {
 }
 
 const endpoints: readonly Endpoint[] = [
-  { path: '/mcp', tools: 28, bytes: 44_771, mostBytes: mostListingBytes['own org'] },
-  { path: '/orgs/local/mcp', tools: 10, bytes: 13_019, mostBytes: mostListingBytes.org },
+  { path: '/mcp', tools: 28, bytes: 44_907, mostBytes: mostListingBytes['own org'] },
+  { path: '/orgs/local/mcp', tools: 10, bytes: 13_155, mostBytes: mostListingBytes.org },
   { path: '/orgs/local/playbooks/alpha/mcp', tools: 20, bytes: 31_925, mostBytes: mostListingBytes.playbook },
 ];
 

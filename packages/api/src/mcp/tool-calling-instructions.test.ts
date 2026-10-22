@@ -12,10 +12,10 @@ import {
 import { instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,996 characters on /mcp, 1,912 on the org endpoint and 1,621 on the playbook endpoint', () => {
+  it('take 1,987 characters on /mcp, 1,987 on the org endpoint and 1,575 on the playbook endpoint', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1912, 1621, 1996]);
+    ).toEqual([1987, 1575, 1987]);
   });
 });
 
@@ -25,12 +25,12 @@ describe('what the instructions say of calling a tool', () => {
     playbookTools: queriesInsideAPlaybook,
   };
 
-  it('end the sentence on tools at what search finds, leaving execute and dry_run to their own descriptions, and keep the closing sentence', () => {
+  it('leave the model and tools of a reasoning function, a run that finishes later, execute and dry_run to their tools and guides, and keep the closing sentence', () => {
     expect(instructionsFor('own org', ownOrg, definitionTypes)).toContain(
-      'A reasoning function names a model that list_models lists and may name tools that search finds. A run of a workflow',
+      "Read a definition's format with get_guide; give it an overview. When the person approves",
     );
     expect(instructionsFor('playbook', playbookEndpoint, definitionTypes)).toContain(
-      'A reasoning function names a model this server can call, as the reasoning-function guide says, and may name tools that search finds. A run of a workflow',
+      "Read a definition's format with get_guide; give it an overview. When the person approves",
     );
     expect(
       everyEndpoint.filter(([endpoint, served]) =>
@@ -55,7 +55,7 @@ describe('what the instructions say of calling a tool', () => {
       instructionsFor('playbook', { orgTools: [], playbookTools: queriesInsideAPlaybook }, definitionTypes),
     ];
 
-    expect(lengths.map(({ length }) => length)).toEqual([1507, 1544, 1540, 1504]);
+    expect(lengths.map(({ length }) => length)).toEqual([1498, 1498, 1615, 1458]);
   });
 });
 
@@ -65,12 +65,12 @@ describe('the instructions of an endpoint that lists search and add_connection',
     'Say a service cannot be connected only when no provider or server matches.',
   ].join(' ');
 
-  it('say after the sentence on tools that a service is connected through search and add_connection, on /mcp and the org endpoint', () => {
+  it('say after the sentence on the guides that a service is connected through search and add_connection, on /mcp and the org endpoint', () => {
     expect(instructionsFor('own org', withConnections(ownOrg), definitionTypes)).toContain(
-      `may name tools that search finds. ${connecting} A run of a workflow`,
+      `give it an overview. ${connecting} When the person approves`,
     );
     expect(instructionsFor('org', withConnections(orgEndpoint), definitionTypes)).toContain(
-      `may name tools that search finds. ${connecting} Say what was done`,
+      `how each kind of definition is written. ${connecting} Say what was done`,
     );
   });
 

@@ -55,7 +55,7 @@ describe('episode 1: asked "what is a playbook?"', () => {
     const answer = sentencesOf(surfaces.instructions).slice(0, 3).join(' ');
 
     expect(answer).toBe(
-      'Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle.',
+      'Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows.',
     );
     expect(internalTermsIn(answer)).toEqual([]);
     expect(answer).not.toMatch(/[a-z]+_[a-z_]+|\bid\b/u);
@@ -67,7 +67,7 @@ describe('episode 2: asked to create a playbook for meetings', () => {
     const created = await onMcp((session) => session.callTool('create_playbook', meetingsPlaybook));
 
     expect(sentencesOf(descriptionOf('create_playbook')).filter((sentence) => /\bid\b/u.test(sentence))).toEqual([
-      'Use it when the person wants a new playbook; list_playbooks shows the playbooks that exist, and an id that is taken or retired is refused.',
+      'list_playbooks shows the playbooks that exist, and an id that is taken or retired is refused.',
       "`playbook` is the id every tool inside the playbook takes, `name` is what people call it, and `description` says what the playbook is for, in the person's words.",
     ]);
     expect(descriptionOf('create_playbook')).not.toMatch(/lowercase|never changes|immutable|reused/u);
@@ -78,11 +78,11 @@ describe('episode 2: asked to create a playbook for meetings', () => {
 });
 
 describe('episode 3: asked to use Slack', () => {
-  it('finds search in the instructions, and its answer names each tool server', async () => {
+  it('finds in the description of search the tools of the tool servers, and its answer names each tool server', async () => {
     const listed = await onMcp((session) => session.callTool('search', { playbook: 'meetings' }));
 
-    expect(sentenceNaming(surfaces.instructions, 'search finds')).toBe(
-      'A reasoning function names a model that list_models lists and may name tools that search finds.',
+    expect(descriptionOf('search')).toContain(
+      "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute.",
     );
     expect(plainTextIn(listed)).toMatch(/^This playbook's functions may use 2 tool servers\. /u);
     expect(plainTextIn(listed)).toContain('“slack” offers');
@@ -244,12 +244,10 @@ async function lookedAtOverMcp(session: McpSession) {
 }
 
 describe('episode 8: asked what a gateway-style tool server offers, and then to post to #random', () => {
-  it('finds search in the instructions and what execute answers in its description, finds the search tool by its words, calls it, and makes no function to look', async () => {
+  it('finds what search and execute do in their descriptions, finds the search tool by its words, calls it, and makes no function to look', async () => {
     const seen = await onMcp(lookedAtOverMcp);
 
-    expect(sentenceNaming(surfaces.instructions, 'search finds')).toBe(
-      'A reasoning function names a model that list_models lists and may name tools that search finds.',
-    );
+    expect(descriptionOf('search')).toContain('Searches the tools of the tool servers');
     expect(descriptionOf('execute')).toContain(
       "as a run of a reasoning function would call it, and answers what that run's model would see.",
     );
