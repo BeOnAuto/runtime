@@ -139,7 +139,6 @@ An approval, or any other question for a person or a system, is an interaction f
 | `document.namespace`, `document.name`       | Required names of the document                                                  |
 | `document.version`                          | Required semantic version of the document, such as `1.0.0`                      |
 | `document.title`, `document.summary`        | Optional; the summary, or else the title, is the definition's `description`     |
-| `document.metadata.about`                   | Optional Markdown of 1 to 4,000 characters, without headings, for the overview  |
 | `input.schema.document`                     | Optional inline JSON Schema, published as the definition's `input_schema`       |
 | `input.from`                                | Optional expression or template shaping the run's input before the first task   |
 | `evaluate.language`, `evaluate.mode`        | Optional; only `typescript` and `strict` ([Expressions](#expressions))          |
@@ -591,33 +590,9 @@ These are refused when a document is saved, each for the reason given:
 
 ## The overview
 
-`get_definition` returns a saved workflow with its `overview`: the workflow in plain words, for a person who does not read YAML. Auto Studio shows it before the document. The overview says, in order:
+`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value. Write it after the document, and write it again with every update.
 
-1. The `summary`, or else the `title`, or that the workflow has no description yet, then `document.metadata.about` as it is written.
-2. What starts it: each trigger of its `schedule` in words, and a call of `run_definition`, which can always start it. A `cron` reads as a time in UTC and its days where it reads plainly, and as written otherwise.
-3. What it needs and produces: each field of `input.schema.document` and `output.schema.document`, with its type and its `examples` unless its `description` gives one, or the shape `output.shape` names, in a sentence.
-4. What it does: a flowchart of its tasks, with the same steps beneath it as a numbered list in words.
-5. What it calls: each definition a `call: run_definition` names, with its type and its description, read each time it is returned, and left out when the workflow names no definition.
-6. **Used by**: the active definitions of the playbook that use this workflow, read each time it is returned, and left out when there are none.
-
-In the flowchart:
-
-- Each trigger is an entry node. Each task is a step, numbered in document order as in the list.
-- A `call` is a node named for the definition it runs, such as `Run review-campaign-brief`. A `switch` is a decision with an edge for each case, and a `raise` an end node. A `set`, `listen`, `wait`, `emit` or `run` is a node in words.
-- A `for`, `do`, `fork` or `try` is a group around its tasks. A `for` draws an edge back for the next item. A `fork` starts each branch at once, and its group says when the first to finish wins. A `try` draws its `catch` as a dashed edge from each of its steps to the steps of `catch.do`, or to the step after it when `catch.do` names none.
-- Edges follow document order and each `then`, and pass around a task whose `if` may not hold.
-
-The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions the workflow calls and those that use it. Write the `summary` in one or two sentences, and each schema field's `description` to begin with an article where the field names a thing. Write `document.metadata.about` for a business reader: what the workflow is for, who it serves, when it runs and what happens. Neither it nor the `summary` takes a heading, nor the `title` where it stands in for the summary, which a save refuses at its line. Write it as a literal block scalar, `about: |`, so that a `#` in it is text:
-
-```yaml
-document:
-  metadata:
-    about: |
-      The campaign team uses it to have each brief reviewed and approved.
-      It runs when a brief is submitted, and ends with the owner's decision.
-```
-
-Name each task for what it does, since the steps carry those names.
+An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.
 
 ## How a run ends
 

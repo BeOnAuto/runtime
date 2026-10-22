@@ -201,7 +201,6 @@ export function fold(view: View, event: Event): View {
 | Field           | Purpose                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
 | `description`   | Optional; 1 to 1,000 characters                                                                          |
-| `about`         | Optional; Markdown of 1 to 4,000 characters, without headings; see [The overview](#the-overview)         |
 | `language`      | Required; `typescript`, the playbook's one language                                                      |
 | `source.events` | Required; 1 to 8 filters, each naming events the fold takes; see [The events](#the-events)               |
 | `view.initial`  | Optional; the view before any event, any JSON value within the bound on a view; `null` when left out     |
@@ -549,16 +548,9 @@ do:
 
 ## The overview
 
-`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read TypeScript or YAML. Auto Studio shows it before the document. The overview says, in order:
+`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value. Write it after the document, and write it again with every update.
 
-1. The `description`, or that the function has none yet, then the `about` as it is written.
-2. What the function remembers: each filter as a sentence, such as "each time a run of the reasoning function **review-brief** succeeds" for the example at the top of this page. A filter without a `subject` names every run, and one for a definition's event without a `source` names every definition. Each other attribute and the `data` a filter names are said with it, an expression as it is written.
-3. What it keeps: the view's schema in words, with its bounds, such as `maxProperties` and `maxItems`, and `view.initial` unless it is empty.
-4. What it answers: each field of `input.schema` and `output.schema`, or the view itself for a module without `answer`.
-5. How the view is kept: a diagram from each filter to the view and from the view to the answer, with one line that the program is TypeScript and is shown under Source. The module itself is not described.
-6. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
-
-The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences, and give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The campaign to look up`, so the overview can say it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line. A function without them still has an overview, with the types alone.
+An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Availability
 

@@ -115,7 +115,6 @@ the run succeeds with this output, and its record shows that it spent 0 checkpoi
 | Field           | Required | Value                                                                                                                                                             |
 | --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `description`   | No       | Text of 1 to 1,000 characters                                                                                                                                     |
-| `about`         | No       | Markdown of 1 to 4,000 characters, without headings, for a business reader; see [The overview](#the-overview)                                                     |
 | `language`      | Yes      | `typescript`, the playbook's one language                                                                                                                         |
 | `input.schema`  | No       | A JSON Schema of the input. The input may be any JSON value it allows                                                                                             |
 | `output.schema` | No       | A JSON Schema of the output. An output that does not match it ends the run as a conflict                                                                          |
@@ -397,29 +396,9 @@ When the computation function's run is `unavailable`, the `compute` task retries
 
 ## The overview
 
-`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read TypeScript. Auto Studio shows it before the document. It tells what happens, and holds the technical facts after it, under **Details**. For the example above, it opens:
+`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value. Write it after the document, and write it again with every update.
 
-> Spend, pace and projection per campaign, in cents, for a reporting period.
->
-> It is given the rows and the period, and a program works out the answer, the same every time for the same input: the campaigns and the total spend cents.
-
-It says:
-
-1. The `description`, as a sentence, or that the function has none yet, then the `about` as it is written.
-2. What the function is given and what it answers with, each field by its meaning: the first clause of the field's `description`, such as "the month" for `The month, such as April 2026`, where that clause begins with an article or a question word and is short, or else the field's name in words, such as "the total spend cents". An output that declares a shape is named by it, such as "a series over time".
-3. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
-4. Under **Details**: each field of `input.schema` and `output.schema` with its name, its description, its type, bounds and default, or the shape `output.shape` names, and that the program is TypeScript, in the definition's document. The program itself is not described.
-
-The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function, so the rest says only what the document says. Write the `description` in one or two sentences, and give each field of the schemas a `description` that begins with an article where the field names a thing, such as `The reporting period`, so the overview can name the field by it. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own, and a save refuses one at its line. Write it as a literal block scalar, `about: |` with its lines indented under it, so that a `#` in it is text and each of its lines stays a line:
-
-```yaml
-about: |
-  The finance team reads it to see whether each campaign spends to plan.
-  A workflow runs it at the end of each reporting period, and gets back
-  the spend, the pace and the projection of every campaign.
-```
-
-The program may give a field a value of its own where the input leaves it out. Write that value as the field's `default` in `input.schema`, so the overview can say it. A function without them still has an overview, with the names of its fields alone.
+An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Availability
 

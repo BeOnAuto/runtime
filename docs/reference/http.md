@@ -119,10 +119,10 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
 | Operation           | Method and route                            | Permission       | Input                                    |
 | ------------------- | ------------------------------------------- | ---------------- | ---------------------------------------- |
-| `create_definition` | `POST /definitions/reasoning`               | `playbook:write` | `name`, `source`                         |
+| `create_definition` | `POST /definitions/reasoning`               | `playbook:write` | `name`, `source`, optional `overview`    |
 | `list_definitions`  | `GET /definitions/reasoning`                | `playbook:read`  | Optional `include_retired`               |
 | `get_definition`    | `GET /definitions/reasoning/{name}`         | `playbook:read`  | Name in path                             |
-| `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`                                 |
+| `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, optional `overview`            |
 | `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                             |
 | `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id` |
 | `get_run`           | `GET /runs/{run_id}`                        | `playbook:read`  | Run id in path                           |
@@ -132,18 +132,36 @@ The `source` is a [reasoning function document](reasoning-format.md). These rule
 - A name follows the playbook id rule: 3 to 48 lowercase letters, digits and hyphens, beginning with a letter.
 - A name is unique within its type and playbook, and cannot be reused after retirement.
 - A source document may be at most 65,536 UTF-8 bytes.
-- Changing a document creates a version. Updating it with identical source records no change.
+- Changing a document or its overview creates a version. Updating it with identical source, and the same overview or none, records no change.
 - A run uses the latest active version.
 - A retired definition can be read, but cannot be edited or run.
 - A definition carries its `input_schema` and `output_schema` where its document declares them. A reasoning function, a computation function or a workflow whose `output.shape` names an [output shape](output-shapes.md) has the shape's schema as its `output_schema`, and the shape's name as `details.shape`, such as `"details": { "shape": "series" }`; `details` is left out otherwise. A prediction function has the `series` shape so, since its questions answer a series. `list_definitions` shows both too.
 
-`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`; `list_definitions` leaves it out. The overview describes the definition in plain words, for a person who does not read its document:
+`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview` and its `used_by`; `list_definitions` leaves both out.
 
-- It is Markdown with headings, lists, tables of its fields and, where one helps, a diagram. It says what the definition needs, what it produces and what it does, as its type has it. For a reasoning function, it also gives the model, the tools and what the model is told.
-- The runtime composes it from the document when it saves the version, and writes it each time the definition is returned.
-- A workflow's overview then says **What it calls**: each definition its `run_definition` steps name, with the first paragraph of its description, or that it is retired or not in the playbook yet.
-- **Used by** follows, a line for each active definition of the playbook that uses this one: a workflow whose `run_definition` calls it, with the number and the name of each step that does, a prediction function that sends it builds to train or asks it to approve a version, or a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`).
-- Both are read each time the definition is returned, so they are as current as the playbook, and each is left out when it has nothing to say. Their exact names, each with its type, close the overview under **Details**.
+- `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
+- `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`; `sends-builds` or `asks-approval` for a prediction function that sends it builds to train or asks it to approve a version; `remembers-runs` or `remembers-changes` for a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`). A definition that uses this one in two ways is listed for each.
+
+The interaction function `send-build` that a prediction function trains through, that a workflow calls in two steps and that two recall functions follow is returned with this `used_by`, shown here without its other fields:
+
+```json
+{
+  "used_by": [
+    { "type": "prediction", "name": "weekly-orders", "relation": "sends-builds" },
+    { "type": "recall", "name": "build-answers", "relation": "remembers-runs" },
+    { "type": "recall", "name": "build-changes", "relation": "remembers-changes" },
+    {
+      "type": "workflow",
+      "name": "weekly-build",
+      "relation": "calls",
+      "steps": [
+        { "number": 1, "name": "send" },
+        { "number": 3, "name": "again" }
+      ]
+    }
+  ]
+}
+```
 
 ## Interaction functions
 

@@ -83,7 +83,6 @@ Before you write one, settle these with the person:
 | Field                       | Meaning                                                                                                                                    |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `description`               | Optional; what the function predicts, 1 to 1,000 characters                                                                                |
-| `about`                     | Optional; Markdown of 1 to 4,000 characters, without headings, for a business reader; see [The overview](#the-overview)                    |
 | `predicts.target`           | Required; the name of the quantity, which names its column in the dataset                                                                  |
 | `predicts.period`           | Required; `day`, `week`, `month`, `quarter` or `year`                                                                                      |
 | `predicts.season`           | Optional; the length of a season in periods, 2 to 366, such as 52 for weeks over a year                                                    |
@@ -691,17 +690,9 @@ A workflow on a [schedule](workflow-format.md#triggers) can ask for a build on t
 
 ## The overview
 
-`get_definition` returns a saved function with its `overview`: the function in plain words, for a person who does not read its document. Auto Studio shows it before the document. The overview says, in order:
+`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value. Write it after the document, and write it again with every update.
 
-1. The `description`, or that the function has none yet, then the `about` as it is written.
-2. What the function predicts: the target, its unit, its period and its horizons, or the period it sums to with `accumulates`. Then its season, what a question names, with the given features among it, and its answer in the words of the series shape, such as "It answers the last 8 observed weeks and 1 and 4 weeks ahead, each with a likely value, a low and a high."
-3. What it learns from. For a projected dataset: each filter with the attributes and the `data` test it names, where the time and the series are read, and each column of a row with how it is aggregated. For an uploaded dataset: its digest and its columns. For either: the window a build reads.
-4. Who trains it: the party of `source.to` in the inbox, or the interaction function of `source.through`, in bold. Then how long a build waits for its candidates, how long each is scored, and the brief as a person reads it, read as [the overview of a reasoning function](reasoning-format.md#the-overview) reads its message.
-5. How a version goes live: the holdout, the metric, the coverage floor, the baselines and the confidence a candidate must pass. Then the shadow a later version runs over a projected dataset, and whether a version activates on its own or once it is approved through the interaction function that `evaluation.activate.approved` names.
-6. The rules, when there are any.
-7. **Used by**: the active definitions of the playbook that use this function, read each time it is returned, and left out when there are none.
-
-The runtime composes the overview from the document when it is saved, and writes it at each read with the definitions that use the function. Write the `description` in one or two sentences. Write the `about` for a business reader: what the function is for, who it serves, when it runs and what happens. Neither it nor the `description` takes a heading, since the overview writes its own. Write it as a literal block scalar, `about: |`, so that a `#` in it is text.
+An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Availability
 
