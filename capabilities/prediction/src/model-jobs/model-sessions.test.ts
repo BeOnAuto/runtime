@@ -1,8 +1,12 @@
+import { once } from 'node:events';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { candidateUrl, type CandidateName } from '../build-testing/due-driving.ts';
+import { scratchDirectory } from '../testing/scratch.ts';
 import {
   AnsweredBadly,
   firstLineOf,
@@ -17,6 +21,25 @@ function loaded(name: CandidateName) {
 }
 
 const twoDays: ModelFeeds = { y: { data: Float32Array.of(10, 12), dims: [1, 2] } };
+
+interface LoadedInAProcess {
+  readonly exited: readonly unknown[];
+  readonly leftInItsTemporaryFolder: readonly string[];
+}
+
+async function loadedInAProcessOfItsOwn(name: CandidateName): Promise<LoadedInAProcess> {
+  const temporaryFolder = scratchDirectory();
+  const loading = [
+    `import { loadWithOnnxRuntime } from ${JSON.stringify(new URL('./model-sessions.ts', import.meta.url).href)};`,
+    `await loadWithOnnxRuntime(${JSON.stringify(fileURLToPath(candidateUrl(name)))}, 1);`,
+  ].join('\n');
+  const child = spawnForTheTest(process.execPath, ['--input-type=module', '--eval', loading], {
+    env: { TMPDIR: temporaryFolder },
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  const exited: readonly unknown[] = await once(child, 'exit');
+  return { exited, leftInItsTemporaryFolder: readdirSync(temporaryFolder) };
+}
 
 describe('a model loaded in onnxruntime', () => {
   it('names its inputs and outputs with their types and axes, and the periods of y when its signature fixes them', async () => {
@@ -33,6 +56,10 @@ describe('a model loaded in onnxruntime', () => {
       7,
     ]);
     expect(sequence.outputs).toEqual([{ name: 'q', type: 'non-tensor', shape: [] }]);
+  });
+
+  it('turns the telemetry of onnxruntime off first, so the process it is loaded in leaves nothing in its temporary folder', async () => {
+    expect(await loadedInAProcessOfItsOwn('visits-mean')).toEqual({ exited: [0, null], leftInItsTemporaryFolder: [] });
   });
 
   it('answers q as float32 with its dimensions', async () => {
