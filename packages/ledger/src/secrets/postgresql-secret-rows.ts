@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import { executorOn } from '../content/postgresql-content.ts';
 import { lostConnectionsLoggedWith } from '../postgresql/lost-connections.ts';
-import type { PoolBounds } from '../postgresql/postgresql-event-store.ts';
+import type { PoolBounds } from '../postgresql/postgresql-options.ts';
 import { secretRowsOn } from './secret-rows.ts';
 
 export interface SecretConnections {

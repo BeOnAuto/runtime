@@ -2,10 +2,8 @@ import { SQL } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';
-import { inTurn } from '../projections/inline-projection.ts';
 import { createMissingIndexes, type PlaybookIndex } from '../recorded/missing-indexes.ts';
 import type { ContentDialect } from './content-dialects.ts';
-import { ledgerShapeRefused } from './ledger-shape-refused.ts';
 
 export interface Shelf {
   readonly chunks: string;
@@ -31,9 +29,8 @@ export const stagingShelf: Shelf = {
 
 export const unstagedRuns = 'unstaged_runs';
 
-export interface ContentTable {
+interface ContentTable {
   readonly name: string;
-  readonly columns: readonly string[];
   readonly create: (dialect: ContentDialect) => SQL;
 }
 
@@ -55,7 +52,6 @@ function chunkTableOf({ chunks, placeColumns }: Shelf): ContentTable {
   const key = [...placeColumns, 'upload_id', 'chunk'];
   return {
     name: chunks,
-    columns: [...key, 'data'],
     create: ({ bytesType }) => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(chunks)} (
       ${textColumns([...placeColumns, 'upload_id'])},
       chunk INTEGER NOT NULL,
@@ -69,7 +65,6 @@ function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
   const key = [...placeColumns, 'sha256'];
   return {
     name: heads,
-    columns: [...key, 'upload_id', 'bytes', 'chunks', 'media_type'],
     create: () => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(heads)} (
       ${textColumns([...key, 'upload_id'])},
       bytes BIGINT NOT NULL,
@@ -82,7 +77,6 @@ function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
 
 const unstagedRunsTable: ContentTable = {
   name: unstagedRuns,
-  columns: stagingShelf.placeColumns,
   create: () => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(unstagedRuns)} (
     ${textColumns(stagingShelf.placeColumns)},
     PRIMARY KEY (${namesOf(stagingShelf.placeColumns)})
@@ -91,7 +85,7 @@ const unstagedRunsTable: ContentTable = {
 
 export const shelves: readonly Shelf[] = [keptShelf, stagingShelf];
 
-export const contentTables: readonly ContentTable[] = [
+const contentTables: readonly ContentTable[] = [
   ...shelves.flatMap((shelf) => [chunkTableOf(shelf), headTableOf(shelf)]),
   unstagedRunsTable,
 ];
@@ -116,30 +110,8 @@ export async function namesFound(execute: StatementExecutor, sql: SQL): Promise<
   return Schema.decodeUnknownSync(NameRows)(rows).map(({ name }) => name);
 }
 
-export interface KeptTable {
-  readonly name: string;
-  readonly columns: readonly string[];
-  readonly holds: string;
-}
-
-export async function requireTheShapeKept(
-  execute: StatementExecutor,
-  dialect: ContentDialect,
-  { name, columns, holds }: KeptTable,
-): Promise<void> {
-  const found = (await namesFound(execute, dialect.columnsOf(name))).toSorted();
-  const kept = columns.toSorted();
-  if (found.join() !== kept.join()) {
-    throw ledgerShapeRefused({ table: name, holds, found, kept });
-  }
-}
-
 export async function createdContentTables(execute: StatementExecutor, dialect: ContentDialect): Promise<void> {
   const existing = new Set(await namesFound(execute, dialect.relationsAmong('table', contentTableNames)));
-  await inTurn(
-    contentTables.filter(({ name }) => existing.has(name)),
-    (table) => requireTheShapeKept(execute, dialect, { ...table, holds: 'recorded content' }),
-  );
   await createMissingIndexes(
     execute,
     contentTables.map((table) => ({ name: table.name, create: () => table.create(dialect) })),

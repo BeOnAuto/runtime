@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url';
 
-import { unreachableDatabase } from '@on.auto/ledger/testing';
+import { ledgerLayout, unreachableDatabase } from '@on.auto/ledger/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
-import { aLedgerOfAnotherVersionAt } from '../testing/records/a-ledger-of-another-version.ts';
+import { aLedgerOfAnotherVersionAt, anotherLayout } from '../testing/records/a-ledger-of-another-version.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { startServer } from './lifecycle.ts';
 
@@ -65,7 +65,7 @@ describe('a server given both DATABASE_URL and LEDGER_FILE', () => {
 });
 
 function refusedFor(file: string): string {
-  return `Auto Runtime could not start: The ledger is kept in the file ${file}, and was made by another version of Auto Runtime. This version keeps secrets in a different shape and cannot read the secrets this ledger holds. kept_secrets has the columns held, id, kept_at, kept_by, version, where this version keeps claimed_until, ends_with, held, id, kept_at, kept_by, kid, version, wrapped_key.`;
+  return `Auto Runtime could not start: The ledger is kept in the file ${file}, and was made by another version of Auto Runtime. This version keeps the ledger in layout ${ledgerLayout} and cannot read a ledger in layout ${anotherLayout}.`;
 }
 
 const goesWithIt = 'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';

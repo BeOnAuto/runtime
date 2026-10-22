@@ -198,12 +198,7 @@ describe('a server that cannot start', () => {
 
 describe('a server that cannot start on a ledger of another version', () => {
   const refused = ledgerOfAnotherVersion(
-    {
-      table: 'kept_secrets',
-      holds: 'secrets',
-      found: ['held', 'id', 'kept_at', 'kept_by', 'version'],
-      kept: ['claimed_until', 'ends_with', 'held', 'id', 'kept_at', 'kept_by', 'kid', 'version', 'wrapped_key'],
-    },
+    { found: 2, kept: 1 },
     { ledger: { store: 'sqlite', file: '/data/ledger.db' }, distribution: 'source' },
   );
 

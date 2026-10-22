@@ -1,9 +1,8 @@
-import { randomUUID } from 'node:crypto';
-
 import { Client } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
-import type { RecordedStore } from '../event-store.ts';
+import { executorOn } from '../content/postgresql-content.ts';
+import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
 import { keptSecretsBehaviour } from '../secrets/kept-secrets-behaviour.ts';
@@ -17,6 +16,16 @@ import {
 } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
+
+const executedOn: LedgerEntry['executedOn'] = async (database, work) => {
+  const client = new Client({ connectionString: database });
+  await client.connect();
+  try {
+    return await work(executorOn(client));
+  } finally {
+    await client.end();
+  }
+};
 
 async function queried(database: string, statement: string): Promise<readonly unknown[]> {
   const client = new Client({ connectionString: database });
@@ -42,7 +51,7 @@ async function definitionStreamsIndexed(database: string): Promise<boolean> {
   }
 }
 
-async function planOf(database: string, read: (store: RecordedStore) => Promise<unknown>): Promise<string> {
+const planOf: LedgerEntry['planOf'] = async (database, read) => {
   const asked: { readonly text: string; readonly values: readonly unknown[] }[] = [];
   await read(
     postgresqlRecordedStore((text, values) => {
@@ -65,10 +74,10 @@ async function planOf(database: string, read: (store: RecordedStore) => Promise<
   } finally {
     await client.end();
   }
-}
+};
 
 async function aDatabase(): Promise<string> {
-  const name = `ledger_${randomUUID().replaceAll('-', '')}`;
+  const name = `ledger_${crypto.randomUUID().replaceAll('-', '')}`;
   await queried(server, `CREATE DATABASE ${name}`);
   onTestFinished(async () => {
     await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
@@ -99,6 +108,8 @@ const onPostgreSQL: LedgerEntry = {
       },
     }),
   queried,
+  executedOn,
+  layout: postgresqlLayout,
   definitionStreamsIndexed,
   planOf,
   throughTheKindIndex: `Index Cond: (("substring"(stream_id, '^(?:[^/]*/){4}'::text) = ANY`,

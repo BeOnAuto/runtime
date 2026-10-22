@@ -1,11 +1,11 @@
-import { LedgerShapeRefused } from '@on.auto/ledger';
+import { LedgerLayoutRefused } from '@on.auto/ledger';
 import { Ledger } from '@on.auto/operations';
 import { Cause, Effect, Exit, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { readSettings } from '../settings/settings.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
-import { ledgerDatabaseOf, withARefusedShapeExplained } from './ledger-database.ts';
+import { ledgerDatabaseOf, withARefusedLayoutExplained } from './ledger-database.ts';
 import { LedgerOfAnotherVersion } from './ledger-of-another-version.ts';
 
 const somePools: unknown = expect.any(Function);
@@ -30,12 +30,10 @@ describe('the database of the ledger and the workflow host', () => {
   });
 });
 
-const refusedShape = new LedgerShapeRefused({
-  table: 'kept_secrets',
-  holds: 'secrets',
-  found: ['held', 'id', 'kept_at', 'kept_by', 'version'],
-  kept: ['claimed_until', 'ends_with', 'held', 'id', 'kept_at', 'kept_by', 'kid', 'version', 'wrapped_key'],
-  message: "The ledger's database keeps secrets in a shape this server no longer reads",
+const refusedLayout = new LedgerLayoutRefused({
+  found: 2,
+  kept: 1,
+  message: "The ledger's database is in layout 2 of the ledger, where this server keeps layout 1",
 });
 
 async function builtFrom(ledgerLayer: Layer.Layer<Ledger>): Promise<unknown> {
@@ -43,28 +41,27 @@ async function builtFrom(ledgerLayer: Layer.Layer<Ledger>): Promise<unknown> {
   return Exit.isFailure(exit) ? Cause.squash(exit.cause) : 'built';
 }
 
-describe('a ledger that refuses the shape of its database as it opens', () => {
+describe('a ledger that refuses the layout of its database as it opens', () => {
   it('stops the start with words that say where the ledger is kept, from the settings', async () => {
     const refused = await builtFrom(
-      withARefusedShapeExplained(
-        Layer.effect(Ledger, Effect.die(refusedShape)),
+      withARefusedLayoutExplained(
+        Layer.effect(Ledger, Effect.die(refusedLayout)),
         readSettings({ LEDGER_FILE: '/data/ledger.db' }),
       ),
     );
 
     expect(refused).toBeInstanceOf(LedgerOfAnotherVersion);
     expect(refused).toMatchObject({
-      table: 'kept_secrets',
-      found: refusedShape.found,
-      kept: refusedShape.kept,
+      found: 2,
+      kept: 1,
       remedy: { command: 'rm -f /data/ledger.db /data/ledger.db-wal /data/ledger.db-shm' },
     });
   });
 
   it('says in the image which files to delete from the volume, from the distribution the settings name', async () => {
     const refused = await builtFrom(
-      withARefusedShapeExplained(
-        Layer.effect(Ledger, Effect.die(refusedShape)),
+      withARefusedLayoutExplained(
+        Layer.effect(Ledger, Effect.die(refusedLayout)),
         readSettings({ LEDGER_FILE: '/app/data/ledger.db', RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' }),
       ),
     );
@@ -82,7 +79,7 @@ describe('a ledger that refuses the shape of its database as it opens', () => {
 
     expect(
       await builtFrom(
-        withARefusedShapeExplained(
+        withARefusedLayoutExplained(
           Layer.effect(Ledger, Effect.die(unreachable)),
           readSettings({ LEDGER_FILE: '/data/ledger.db' }),
         ),

@@ -1,9 +1,6 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
-import { sqliteContent } from '../content/content-dialects.ts';
-import { createdContentTables } from '../content/content-tables.ts';
-import { createdSecretTable } from '../secrets/kept-secrets.ts';
 import { createMissingIndexes, type PlaybookIndex, type IndexExecutor } from './missing-indexes.ts';
 
 function prefixThroughSlashes(count: number): string {
@@ -74,10 +71,4 @@ export async function createSQLitePlaybookIndexes(execute: IndexExecutor): Promi
   );
   const existing = new Set(Schema.decodeUnknownSync(NameRows)(rows).map(({ name }) => name));
   await createMissingIndexes(execute, playbookIndexes, existing);
-}
-
-export async function sqliteSchemaCreated(execute: IndexExecutor): Promise<void> {
-  await createSQLitePlaybookIndexes(execute);
-  await createdContentTables(execute, sqliteContent);
-  await createdSecretTable(execute, sqliteContent);
 }

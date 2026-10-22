@@ -2,7 +2,7 @@
 
 Auto Runtime is in early development and is not ready for production use; see [Availability](../concepts/functions.md#availability). Your team can still run it today, and you can rely on these behaviors:
 
-- Auto keeps every playbook, definition, run and its history in its ledger, with the workflows that wait on timers and events. On a durable volume or database, all of it survives a restart, and a new version migrates it when it starts.
+- Auto keeps every playbook, definition, run and its history in its ledger, with the workflows that wait on timers and events. On a durable volume or database, all of it survives a restart. A release that keeps the ledger's layout opens it as it is; before launch, one that changes the layout refuses the older ledger at start and says what to delete ([Upgrades](#upgrades)).
 - Backups are yours to run: copy the volume, or rely on your database's own backups.
 - One server runs the workflows at a time. If it stops or dies, a standby that shares its database takes them over within about three seconds.
 
@@ -182,7 +182,7 @@ Pin a full version, such as `docker.on.auto/onauto/runtime:0.9.1`, and upgrade o
 
 1. Read the [release notes](https://github.com/BeOnAuto/runtime/releases).
 2. Pull the new tag. With the files from [Run with Docker](docker.md#upgrade), change the `IMAGE` line of `.env`.
-3. Replace the container. The new server migrates the ledger at start.
+3. Replace the container. A new server that keeps the ledger's layout opens the ledger as it is. Before launch nothing is carried over: a server that changes the layout refuses the ledger at start, names the layout it found and the one it keeps, and says to delete the files or to point `DATABASE_URL` at an empty database.
 
 Servers of different versions never share a database at the same time. With several servers, follow [Upgrade several servers](workflows.md#upgrade-several-servers): stop every old server before you start a new one.
 

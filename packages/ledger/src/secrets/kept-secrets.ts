@@ -1,20 +1,14 @@
 import { SQL } from '@event-driven-io/dumbo';
 
 import type { ContentDialect } from '../content/content-dialects.ts';
-import { namesFound, requireTheShapeKept, type KeptTable } from '../content/content-tables.ts';
+import { namesFound } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { createMissingIndexes, type PlaybookIndex } from '../recorded/missing-indexes.ts';
 
 export const keptSecrets = SQL.identifier('kept_secrets');
 
-export const keptSecretsShape: KeptTable = {
-  name: 'kept_secrets',
-  columns: ['id', 'version', 'kept_at', 'claimed_until', 'ends_with', 'kept_by', 'held', 'wrapped_key', 'kid'],
-  holds: 'secrets',
-};
-
 const keptSecretsTable: PlaybookIndex = {
-  name: keptSecretsShape.name,
+  name: 'kept_secrets',
   create: () => SQL`CREATE TABLE IF NOT EXISTS ${keptSecrets} (
     id TEXT PRIMARY KEY,
     version INTEGER NOT NULL,
@@ -29,9 +23,6 @@ const keptSecretsTable: PlaybookIndex = {
 };
 
 export async function createdSecretTable(execute: StatementExecutor, dialect: ContentDialect): Promise<void> {
-  const existing = new Set(await namesFound(execute, dialect.relationsAmong('table', [keptSecretsShape.name])));
-  if (existing.has(keptSecretsShape.name)) {
-    await requireTheShapeKept(execute, dialect, keptSecretsShape);
-  }
+  const existing = new Set(await namesFound(execute, dialect.relationsAmong('table', [keptSecretsTable.name])));
   await createMissingIndexes(execute, [keptSecretsTable], existing);
 }

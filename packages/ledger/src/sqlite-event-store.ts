@@ -3,11 +3,11 @@ import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
 import type { AppendObserver, LedgerStore } from './event-store.ts';
+import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
 import { ledgerLayerOver, type StoreLayerOptions } from './ledger-layer.ts';
 import { sqliteRunOutcomesOf } from './outcomes/sqlite-run-outcomes.ts';
 import type { KeptTables } from './projections/projection-parts.ts';
 import { preparedOn, sqliteProjectionsOf } from './projections/sqlite-projections.ts';
-import { sqliteSchemaCreated } from './recorded/sqlite-indexes.ts';
 import { sqliteRecordedStoreOn } from './recorded/sqlite-recorded.ts';
 
 export type AnyDriver = Parameters<typeof getSQLiteEventStore>[0]['driver'];
@@ -45,6 +45,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     }),
     readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
     migrate: async () => {
+      await sqliteLayoutKept(pool.execute);
       await streams.migrate();
       await sqliteSchemaCreated(pool.execute);
       await preparedOn(projections.prepare, pool);

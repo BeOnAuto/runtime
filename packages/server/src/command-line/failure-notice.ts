@@ -1,5 +1,4 @@
 import {
-  columnsCompared,
   helpOfferedAt,
   ledgerOfAnotherVersionIn,
   type LedgerOfAnotherVersion,
@@ -25,7 +24,7 @@ function wrapped(text: string, indent: string): readonly string[] {
   return lines.map((line) => `${indent}${line}`);
 }
 
-type Refusal = Pick<LedgerOfAnotherVersion, 'happened' | 'remedy' | 'table' | 'holds' | 'found' | 'kept'>;
+type Refusal = Pick<LedgerOfAnotherVersion, 'happened' | 'remedy'>;
 
 function ledgerNotice(refusal: Refusal, depth: ColorDepth): string {
   const paint = painterFor(depth);
@@ -42,8 +41,6 @@ function ledgerNotice(refusal: Refusal, depth: ColorDepth): string {
     ...shown,
     '',
     `  ${helpOfferedAt(paint('cyan', link(discordInvite, discordInvite)))}`,
-    '',
-    ...wrapped(columnsCompared(refusal), '  ').map((line) => paint('dim', line)),
   ].join('\n');
 }
 

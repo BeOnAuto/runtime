@@ -16,7 +16,6 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
-import { contentOfAnOlderShape } from './older-content-shapes-behaviour.ts';
 import { unnamedChunksSwept } from './unnamed-chunks-behaviour.ts';
 
 const ChunkRows = Schema.Array(Schema.Struct({ chunk: Schema.Number, bytes: Schema.Number }));
@@ -183,5 +182,4 @@ export function contentBehaviour(entry: LedgerEntry): void {
     readWhileUnstaged(entry);
   });
   unnamedChunksSwept(entry);
-  contentOfAnOlderShape(entry);
 }

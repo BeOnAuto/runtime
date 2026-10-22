@@ -2,7 +2,8 @@ import type { Ledger, RunOutcomeMapping, KeyedProjection } from '@on.auto/operat
 import type { Layer } from 'effect';
 import { onTestFinished } from 'vitest';
 
-import type { LedgerStore, RecordedStore } from '../event-store.ts';
+import type { LedgerStore, RecordedStore, StatementExecutor } from '../event-store.ts';
+import type { LayoutDialect } from '../layout/layout-dialects.ts';
 import { openLedgerWith } from './open-ledger.ts';
 
 export interface LedgerEntry {
@@ -17,6 +18,8 @@ export interface LedgerEntry {
   ) => Layer.Layer<Ledger>;
   readonly storeOn: (database: string) => LedgerStore;
   readonly queried: (database: string, statement: string) => Promise<readonly unknown[]>;
+  readonly executedOn: <A>(database: string, work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
+  readonly layout: LayoutDialect;
   readonly definitionStreamsIndexed: (database: string) => Promise<boolean>;
   readonly planOf: (database: string, read: (store: RecordedStore) => Promise<unknown>) => Promise<string>;
   readonly throughTheKindIndex: string;
