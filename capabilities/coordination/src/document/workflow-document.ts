@@ -19,7 +19,8 @@ import {
 } from '@on.auto/workflow-engine';
 import { Effect, Result } from 'effect';
 
-import { dslProblems, type Problem } from './dsl-validation.ts';
+import { dslProblems } from '../dsl/dsl-validation.ts';
+import type { Problem } from '../dsl/schema-problems.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from './workflow-functions.ts';
 import { outputShapeRejections } from './workflow-output.ts';
 
@@ -91,23 +92,28 @@ function readWorkflowDocument(
     const rejections = policy(value);
     const unreadable =
       nestingRejections(value).length > 0 || rejections.some(({ pointer }) => pointer === '/document/dsl');
-    const found: readonly Problem[] = [
-      ...(unreadable
-        ? []
-        : dslProblems(value, { connecting: rejections.length === 0 }).filter(
-            (problem) => !isShadowed(problem, rejections),
-          )),
-      ...rejections,
-      ...(unreadable ? [] : durationLimitRejections(value, mostDuration)),
-      ...outputShapeRejections(value),
-    ];
-    const refused = refusedIn(locate);
-    return Result.match(compiledInputOf(value, rejections), {
-      onFailure: (issues) => refused([...found, ...issues]),
-      onSuccess: (input) =>
-        found.length === 0 ? Effect.succeed({ document: value, ...input, locate }) : refused(found),
+    return Effect.flatMap(unreadable ? Effect.succeed([]) : dslProblemsBeside(value, rejections), (dsl) => {
+      const found: readonly Problem[] = [
+        ...dsl,
+        ...rejections,
+        ...(unreadable ? [] : durationLimitRejections(value, mostDuration)),
+        ...outputShapeRejections(value),
+      ];
+      const refused = refusedIn(locate);
+      return Result.match(compiledInputOf(value, rejections), {
+        onFailure: (issues) => refused([...found, ...issues]),
+        onSuccess: (input) =>
+          found.length === 0 ? Effect.succeed({ document: value, ...input, locate }) : refused(found),
+      });
     });
   });
+}
+
+function dslProblemsBeside(document: JsonObject, rejections: readonly Rejection[]): Effect.Effect<readonly Problem[]> {
+  return Effect.map(
+    Effect.promise(() => dslProblems(document, { connecting: rejections.length === 0 })),
+    (problems) => problems.filter((problem) => !isShadowed(problem, rejections)),
+  );
 }
 
 export function workflowReaderOf(
