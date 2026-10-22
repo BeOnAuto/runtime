@@ -694,7 +694,7 @@ jobs:
           grep --quiet '"isError":true' introspected.txt
           grep --quiet 'tool_server_not_configured' introspected.txt
           call_mcp /mcp '{"jsonrpc":"2.0","id":8,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' initialized.txt
-          grep --quiet 'Before writing a definition, read its format with get_guide' initialized.txt
+          grep --quiet 'Studio manages them; your agent is a separate client' initialized.txt
           call_mcp /mcp '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"get_guide","arguments":{"guide":"reasoning-function"}}}' guide.txt
           grep --quiet '# Reasoning function format' guide.txt
           grep --quiet 'On this server, ' guide.txt
