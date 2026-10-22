@@ -18,8 +18,10 @@ export function studioBaseFor({ studio, runtime }: ConnectPages): string {
 export function connectPageOf({ studio, runtime }: ConnectPages, { org, connection, token }: PageOfALink): string {
   const server = runtime();
   const page = new URL('connect', studioBaseOf(studio, server));
-  page.searchParams.set('server', server);
-  page.searchParams.set('org', org);
+  if (!studio.served) {
+    page.searchParams.set('server', server);
+    page.searchParams.set('org', org);
+  }
   page.searchParams.set('connection', connection);
   page.searchParams.set('token', token);
   return page.href;

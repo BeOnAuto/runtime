@@ -28,9 +28,17 @@ async function linkOf(h: Harness): Promise<LinkToOpen | undefined> {
 }
 
 describe('the words of adding a connection', () => {
-  it('say what was added and where the person approves it, leaving the link to the details beside them', async () => {
+  it('say what was added, where the person approves it, and that the link is shown to them by a name, never as its address', async () => {
     expect(await outcomeWords(harness(), 'add_connection', notes)).toBe(
-      'Added the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes.',
+      'Added the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+    );
+  });
+
+  it("name the link for the provider's title where the connection was added from a provider", async () => {
+    expect(
+      await outcomeWords(harness(), 'add_connection', { provider: 'tracker', placeholders: { site: 'acme' } }),
+    ).toBe(
+      'Added the connection “tracker”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the Tracker connection”, never as its address.',
     );
   });
 

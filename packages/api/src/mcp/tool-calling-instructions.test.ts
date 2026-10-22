@@ -12,10 +12,10 @@ import {
 import { instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,987 characters on /mcp, 1,987 on the org endpoint and 1,575 on the playbook endpoint', () => {
+  it('take 1,993 characters on /mcp, 1,993 on the org endpoint and 1,575 on the playbook endpoint', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1987, 1575, 1987]);
+    ).toEqual([1993, 1575, 1993]);
   });
 });
 
@@ -61,7 +61,7 @@ describe('what the instructions say of calling a tool', () => {
 
 describe('the instructions of an endpoint that lists search and add_connection', () => {
   const connecting = [
-    "Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links.",
+    "A service a playbook will use is connected on this server, whatever connector the agent has of its own: asked to connect, link, sign in to or use one, call search with its words, then add_connection with the provider's name, which the person approves on the page it links.",
     'Say a service cannot be connected only when no provider or server matches.',
   ].join(' ');
 

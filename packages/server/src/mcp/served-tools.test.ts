@@ -139,13 +139,16 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toHaveLength(798);
   });
 
-  it("open add_connection with a person's account at a service that search lists, at 357 characters", () => {
+  it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, and end it with what the call does not grant, at 637 characters", () => {
     const adding = descriptionOf('add_connection');
 
     expect(adding).toMatch(
-      /^Starts connecting a person's account at a service, named by a provider that search lists, /u,
+      /^Starts connecting a person's account at a service, named by a provider that search lists, .*\. A service a playbook will use is connected here, whatever connector the agent has of its own for it\. /u,
     );
-    expect(adding).toHaveLength(357);
+    expect(adding).toMatch(
+      / Nothing is granted by this call and no credential passes through it: the person allows it at the service, or gives its credential, on the page the link opens, or nothing happens\.$/u,
+    );
+    expect(adding).toHaveLength(637);
   });
 });
 

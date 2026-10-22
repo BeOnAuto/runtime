@@ -48,17 +48,13 @@ async function added(served: ReasoningServer, body: unknown = crm) {
 }
 
 describe('adding a connection over HTTP in local mode', () => {
-  it("answers 201 with the record and a link to the page of the Studio the server serves, under the server's own address", async () => {
+  it("answers 201 with the record and a link to the page of the Studio the server serves, under the server's own address, naming the connection and its token alone", async () => {
     const served = await serving();
 
-    const { answer, id, page } = await added(served);
+    const { answer, id, page, token } = await added(served);
 
     expect(answer).toMatchObject({ status: 201, body: { id, name: 'crm', status: 'pending', added_by: 'local' } });
-    expect(Object.fromEntries(page.searchParams)).toMatchObject({
-      server: served.origin,
-      org: 'local',
-      connection: id,
-    });
+    expect(Object.fromEntries(page.searchParams)).toEqual({ connection: id, token });
     expect(`${page.origin}${page.pathname}`).toBe(`${served.origin}/studio/connect`);
   });
 
