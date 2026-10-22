@@ -1,9 +1,9 @@
 import { listedTools, plainTextIn, problemIn, textOf, withMcpSession, type McpSession } from '@on.auto/api/testing';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import { internalTermsIn } from '@on.auto/operations/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { servingReasoning } from '../testing/servers/reasoning-server.ts';
 
 const dated = [
   '---',
@@ -23,14 +23,9 @@ const total = [
   '}',
 ].join('\n');
 
-let server: ReasoningServer;
-
-afterEach(async () => {
-  await server.stop();
-});
-
 async function onAlpha<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
-  server = await servingReasoning([]);
+  const server = await servingReasoning([]);
+  onTestFinished(server.stop);
   await withMcpSession('current revision', { url: `${server.origin}/orgs/acme/mcp`, headers: {} }, (session) =>
     session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }),
   );

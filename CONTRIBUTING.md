@@ -43,6 +43,7 @@ The preview opens under `/docs/`. Read [Documentation contributions](docs/contri
 - **TypeScript must be erasable**, because Node strips the types at runtime. That means no `enum`, `namespace`, parameter properties or decorators. Relative imports include the `.ts` extension.
 - **Tests sit next to the code** as `*.test.ts` and test behaviour through the public interface, with injected fakes rather than mocks.
 - **A test waits for the event that shows the state it needs, never for the clock,** and the one-minute ceiling in `vitest.shared.ts` only guards against a hang.
+- **A test removes what it makes.** Each run of a package's tests works in a temporary folder of its own, which `tmpdir()` answers in every worker, and its teardown fails the run, naming what a test left there, before it removes the folder.
 
 ## Commits and pull requests
 

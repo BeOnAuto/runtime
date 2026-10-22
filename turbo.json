@@ -8,6 +8,8 @@
     "tsconfig.base.json",
     ".oxlintrc.json",
     "vitest.shared.ts",
+    "packages/operations/src/process-testing/test-run-folder.ts",
+    "packages/operations/src/process-testing/process-endings.ts",
     ".nvmrc",
     "pnpm-lock.yaml"
   ],

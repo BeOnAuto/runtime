@@ -3,6 +3,8 @@ import { setTimeout } from 'node:timers/promises';
 
 import { onTestFinished } from 'vitest';
 
+import { endedWithin, lookEveryMs, signalled, stoppedWithinMs, type Ending } from './process-endings.ts';
+
 export interface TestProcessOptions {
   readonly cwd?: string;
   readonly env?: Readonly<Record<string, string | undefined>>;
@@ -23,49 +25,12 @@ export interface PidReader {
   readonly readWithinMs: number;
 }
 
-interface Ending {
-  readonly isGone: () => boolean;
-  readonly signal: (name: NodeJS.Signals) => unknown;
-}
-
-export const stoppedWithinMs = 10_000;
-
-const lookEveryMs = 50;
-
 const theTestsFinish: TestFinish = {
   registered: (end) => {
     onTestFinished(end);
   },
   stoppedWithinMs,
 };
-
-function signalled(pid: number, signal: NodeJS.Signals | 0): boolean {
-  try {
-    process.kill(pid, signal);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function goneBy(ending: Ending, deadline: number): Promise<boolean> {
-  if (ending.isGone() || performance.now() >= deadline) {
-    return ending.isGone();
-  }
-  await setTimeout(lookEveryMs);
-  return goneBy(ending, deadline);
-}
-
-async function ended(ending: Ending, withinMs: number): Promise<void> {
-  if (ending.isGone()) {
-    return;
-  }
-  ending.signal('SIGTERM');
-  if (!(await goneBy(ending, performance.now() + withinMs))) {
-    ending.signal('SIGKILL');
-    await goneBy(ending, Number.POSITIVE_INFINITY);
-  }
-}
 
 function endingOfPid(pid: number): Ending {
   return { isGone: () => !signalled(pid, 0), signal: (name) => signalled(pid, name) };
@@ -90,7 +55,7 @@ export function endWithTheTest(pidOrReader: number | PidReader, finish: TestFini
   finish.registered(async () => {
     const pid = await pidOf(pidOrReader);
     if (pid !== undefined) {
-      await ended(endingOfPid(pid), finish.stoppedWithinMs);
+      await endedWithin(endingOfPid(pid), finish.stoppedWithinMs);
     }
   });
 }
@@ -114,6 +79,6 @@ export function spawnForTheTest(
     isGone: () => child.pid === undefined || child.exitCode !== null || child.signalCode !== null,
     signal: (name) => child.kill(name),
   };
-  finish.registered(() => ended(ending, finish.stoppedWithinMs));
+  finish.registered(() => endedWithin(ending, finish.stoppedWithinMs));
   return child;
 }

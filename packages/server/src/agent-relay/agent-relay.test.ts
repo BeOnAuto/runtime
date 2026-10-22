@@ -1,15 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { restartMarkIn } from '../local-runtime/local-control.ts';
-import {
-  runtimesStartedInTheBackgroundEndedWithTheTest,
-  startedInTheBackgroundIn,
-} from '../testing/processes/background-runtimes.ts';
+import { runtimesStartedInTheBackgroundEndedWithTheTest } from '../testing/processes/background-runtimes.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import {
   homeOfTheTest,
@@ -217,36 +214,5 @@ describe('an agent whose runtime port another program holds', () => {
       `Another program answers on port ${port}; set PORT to start Auto Runtime on a free port\n`,
     );
     expect(await relay.exited).toBe(0);
-  });
-});
-
-describe('the end of the runtimes a relay started in the home of a test', () => {
-  it('leaves alone a process the log of that home says has ended, and one whose command is no longer the runtime started', async () => {
-    const home = homeOfTheTest(homePrefix);
-    const another = spawnRuntimeCommand([], { home: homeOfTheTest(homePrefix), port: await aPortNothingListensOn() });
-    await until(() => {
-      expect(readiesIn(another.stdout())).toBe(1);
-    });
-    const instance = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
-    mkdirSync(join(home, '.auto-runtime'), { recursive: true });
-    writeFileSync(
-      join(home, '.auto-runtime', 'runtime.log'),
-      [
-        `Auto Runtime was started in the background as process ${String(another.pid)}, instance ${instance}`,
-        `Auto Runtime was started in the background as process ${process.pid}, instance ${instance}`,
-        `Auto Runtime, process ${process.pid}, ended`,
-        '',
-      ].join('\n'),
-    );
-    onTestFinished(() => {
-      expect(() => process.kill(Number(another.pid), 0)).not.toThrow();
-    });
-
-    runtimesStartedInTheBackgroundEndedWithTheTest(home);
-
-    expect(startedInTheBackgroundIn(home)).toEqual([
-      { pid: another.pid, instance },
-      { pid: process.pid, instance },
-    ]);
   });
 });

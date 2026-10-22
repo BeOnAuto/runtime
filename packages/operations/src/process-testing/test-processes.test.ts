@@ -5,7 +5,8 @@ import { setTimeout } from 'node:timers/promises';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { endWithTheTest, spawnForTheTest, stoppedWithinMs, type PidReader, type TestFinish } from './test-processes.ts';
+import { stoppedWithinMs } from './process-endings.ts';
+import { endWithTheTest, spawnForTheTest, type PidReader, type TestFinish } from './test-processes.ts';
 
 const stopsWhenTold = [
   "process.on('SIGTERM', () => { process.stdout.write('stopped'); process.exit(0); });",

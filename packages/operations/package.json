@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./test-run-folder": "./src/process-testing/test-run-folder.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
