@@ -6,7 +6,6 @@ import {
   type JsonObject,
   type MatchedFilter,
 } from '@on.auto/workflow-engine';
-import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { Array, Effect } from 'effect';
 
 export const stopsInARowBeforeTheVersion = 3;
@@ -130,7 +129,7 @@ export function filterStops(): FilterStops {
   };
 }
 
-export function filterMatchingOf(sandbox: FilterSandbox = filterSandboxOf()): MatchFilters {
+export function filterMatchingOf(sandbox: FilterSandbox): MatchFilters {
   return (filters, event, now) => Effect.promise(() => filterVerdictsOf(filters, event, sandbox, now));
 }
 

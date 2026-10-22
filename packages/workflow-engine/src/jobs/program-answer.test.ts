@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { freshInstance } from '../instances/fresh-instances.ts';
@@ -8,7 +9,7 @@ import type { ProgramJob } from './program-messages.ts';
 async function hostOf(more: Partial<ProgramHost> = {}): Promise<ProgramHost> {
   return {
     now: () => 0,
-    instance: await freshInstance(unitMemoryBytes),
+    instance: await freshInstance(shippedFilesOnDisk, unitMemoryBytes),
     check: unchecked,
     ...more,
   };

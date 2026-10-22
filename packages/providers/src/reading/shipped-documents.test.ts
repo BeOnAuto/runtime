@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -32,7 +32,7 @@ type Held = ReturnType<typeof heldBy>;
 
 function heldBy(name: string) {
   const { security, paths, components } = decodeOperations(
-    readFileSync(join(documentsBesideTheEntries, `${name}.openapi.json`), 'utf8'),
+    readFileSync(new URL(`${name}.openapi.json`, documentsBesideTheEntries), 'utf8'),
   );
   const operations = Object.values(paths).flatMap((methods) => Object.values(methods));
   const requirements = [...security, ...operations.flatMap((operation) => operation.security ?? [])];
@@ -63,8 +63,20 @@ function namesOf(manifest: DocumentManifest): Named {
   };
 }
 
-function namedBy(name: string): Held {
-  const { kept, scheme } = namesOf(manifestIn(documentsBesideTheEntries, name));
+interface Kept {
+  readonly name: string;
+  readonly manifest: DocumentManifest;
+}
+
+const manifests: readonly Kept[] = await Promise.all(
+  (await manifestNamesIn(shippedFilesOnDisk, documentsBesideTheEntries)).map(async (name) => ({
+    name,
+    manifest: await manifestIn(shippedFilesOnDisk, documentsBesideTheEntries, name),
+  })),
+);
+
+function namedBy(manifest: DocumentManifest): Held {
+  const { kept, scheme } = namesOf(manifest);
   return { operations: kept.toSorted(), schemes: [scheme], required: [scheme] };
 }
 
@@ -72,20 +84,16 @@ function addressesOf(manifest: DocumentManifest): readonly string[] {
   return [...namesOf(manifest).sources, manifest.authorization_server];
 }
 
-const names = manifestNamesIn(documentsBesideTheEntries);
-
 describe('the manifests beside the entries', () => {
   it('are each one the command reads, of one of its kinds, keeping each operation once, at https addresses', () => {
-    const kept: readonly (readonly string[])[] = names.map((name) => namedBy(name).operations);
+    const kept: readonly (readonly string[])[] = manifests.map(({ manifest }) => namedBy(manifest).operations);
 
     expect(kept.map(({ length }) => length)).toEqual(kept.map((operations) => new Set(operations).size));
     expect(
-      names
-        .flatMap((name) => addressesOf(manifestIn(documentsBesideTheEntries, name)))
-        .filter((address) => !address.startsWith('https://')),
+      manifests.flatMap(({ manifest }) => addressesOf(manifest)).filter((address) => !address.startsWith('https://')),
     ).toEqual([]);
-    expect(names.map((name) => manifestIn(documentsBesideTheEntries, name).type).toSorted()).toEqual([
-      ...Array.from({ length: names.length - 3 }, () => 'discovery'),
+    expect(manifests.map(({ manifest }) => manifest.type).toSorted()).toEqual([
+      ...Array.from({ length: manifests.length - 3 }, () => 'discovery'),
       'openapi',
       'openapi',
       'swagger',
@@ -93,6 +101,6 @@ describe('the manifests beside the entries', () => {
   });
 
   it('each have their document beside them, whose operations are those they keep, all requiring the one scheme they name', () => {
-    expect(names.map((name) => heldBy(name))).toEqual(names.map((name) => namedBy(name)));
+    expect(manifests.map(({ name }) => heldBy(name))).toEqual(manifests.map(({ manifest }) => namedBy(manifest)));
   });
 });

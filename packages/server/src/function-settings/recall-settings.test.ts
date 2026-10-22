@@ -1,11 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -14,12 +14,16 @@ function errorFrom(environment: Environment): unknown {
 
 describe('the recall function settings', () => {
   it('keep at most 32 recall functions a playbook, build 4 views of a playbook at once and follow 4 playbooks at once when nothing is set', () => {
-    expect(readSettings({}).recall).toEqual({ mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 });
+    expect(readSettingsOf({}).recall).toEqual({
+      mostFunctions: 32,
+      rebuildsAtOnce: 4,
+      playbooksAtOnce: 4,
+    });
   });
 
   it('read each of the three', () => {
     expect(
-      readSettings({
+      readSettingsOf({
         RECALL_MAX_FUNCTIONS: ' 100 ',
         RECALL_MAX_REBUILDS: '2',
         RECALL_PLAYBOOKS_AT_ONCE: '8',

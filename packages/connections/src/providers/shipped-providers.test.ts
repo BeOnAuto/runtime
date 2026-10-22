@@ -1,6 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import {
   additionOfProvider,
   holdsAClientId,
@@ -22,7 +20,11 @@ import { describe, expect, it } from 'vitest';
 import { additionIssuesOf, readAddition, type AdditionInput } from '../entries/entry-checks.ts';
 import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
 
-const shipped = Result.getOrThrow(readProviders());
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
+
+const filesBesideTheEntries = await shippedFilesOnDisk.list(
+  new URL('entries/documents/', import.meta.resolve('@on.auto/providers')),
+);
 
 const checking = {
   org: 'acme',
@@ -92,13 +94,13 @@ function settingsOf(addition: ProviderAddition): ServerSettings {
 
 function operationsIn(document = ''): number {
   const { paths } = Schema.decodeUnknownSync(Schema.fromJsonString(DocumentSchema))(
-    readFileSync(join(shipped.documents, document), 'utf8'),
+    shipped.documents.get(document)?.text ?? '',
   );
   return Object.values(paths).flatMap((operations) => Object.keys(operations)).length;
 }
 
 function documentsBesideTheEntries(): readonly string[] {
-  return readdirSync(join(shipped.documents, 'documents'))
+  return filesBesideTheEntries
     .filter((file) => file.endsWith('.openapi.json'))
     .map((file) => `documents/${file}`)
     .toSorted();

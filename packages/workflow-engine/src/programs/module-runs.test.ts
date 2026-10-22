@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { freshInstance } from '../instances/fresh-instances.ts';
@@ -19,7 +20,7 @@ function requestOf(source: string, more: Partial<ModuleRequest> = {}): ModuleReq
 }
 
 async function ran(source: string, more: Partial<ModuleRequest> = {}): Promise<unknown> {
-  return moduleRun(await freshInstance(unitMemoryBytes), settings, requestOf(source, more));
+  return moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, requestOf(source, more));
 }
 
 describe('a run of a module', () => {

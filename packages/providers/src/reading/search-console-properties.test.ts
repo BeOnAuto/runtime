@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describedAccess, patientTiming, serveFakeApi } from '@on.auto/tool-servers/testing';
 import { Effect, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -17,7 +19,9 @@ const [, domainProperty = '', urlPrefixProperty = '', sentPath = ''] = [...sente
   ([, quoted = '']: readonly string[]) => quoted,
 );
 
-const shipped = Result.getOrThrow(readProviders());
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
+
+const entriesFolder = new URL('../entries/', import.meta.url);
 
 const { entry } = Result.getOrThrow(providerNamed(shipped, 'google-search-console'));
 
@@ -36,7 +40,7 @@ async function pathSentFor(siteUrl: string): Promise<string | undefined> {
     {
       'search-console': {
         org: 'acme',
-        document: relative(process.cwd(), join(shipped.documents, entry.document ?? '')),
+        document: relative(process.cwd(), fileURLToPath(new URL(entry.document ?? '', entriesFolder))),
         base_url: fake.baseUrl,
         auth: { issuer: String(fake.issuing?.issuer), client_id: 'playbook', client_secret: '${CLIENT_SECRET}' },
       },

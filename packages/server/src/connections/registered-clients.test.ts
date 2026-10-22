@@ -5,8 +5,8 @@ import { serveFakeMcp } from '@on.auto/tool-servers/testing';
 import { Redacted, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -50,14 +50,14 @@ afterEach(async () => {
 
 describe('the registered clients of a server', () => {
   it('are among its settings, each secret redacted', () => {
-    const { registeredClients } = readSettings({ CONNECTIONS: connections, EXAMPLE_CLIENT_SECRET: clientSecret });
+    const { registeredClients } = readSettingsOf({ CONNECTIONS: connections, EXAMPLE_CLIENT_SECRET: clientSecret });
 
     expect(registeredClients).toMatchObject([
       { clientId: '1234.apps.example.com', credential: { kind: 'client_secret' } },
     ]);
     expect(JSON.stringify(registeredClients)).not.toContain(clientSecret);
     expect(registeredClientSecrets(registeredClients).map((secret) => Redacted.value(secret))).toEqual([clientSecret]);
-    expect(readSettings({}).registeredClients).toEqual([]);
+    expect(readSettingsOf({}).registeredClients).toEqual([]);
   });
 
   it('have their secrets scrubbed from what a call answers and from what it records, as the secrets of its tool servers are', async () => {

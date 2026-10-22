@@ -1,7 +1,8 @@
 import { Schema } from 'effect';
 
 import { compositionRoot } from '../src/composition/composition-root.ts';
-import { startServer, type RunningServer } from '../src/lifecycle/lifecycle.ts';
+import { startServer } from '../src/lifecycle/lifecycle.ts';
+import type { RunningServer } from '../src/server-options/server-options.ts';
 
 export const playbook = '/v1/orgs/local/playbooks/measure';
 

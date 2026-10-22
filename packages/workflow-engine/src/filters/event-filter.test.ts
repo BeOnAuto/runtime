@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
@@ -16,7 +17,7 @@ const at = '/schedule/on/one';
 
 const now = Date.parse('2026-10-01T09:00:00.000Z');
 
-const sandbox: FilterSandbox = filterSandboxOf(() => 0);
+const sandbox: FilterSandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
 
 const monthClosed: JsonObject = {
   specversion: '1.0',
@@ -147,7 +148,7 @@ describe('matching an event whose data expression fails', () => {
 
   it('answers an error for a filter whose context did not freeze in time', async () => {
     const ticking = { at: 0 };
-    const late = filterSandboxOf(() => {
+    const late = filterSandboxOf(shippedFilesOnDisk, () => {
       ticking.at += 5000;
       return ticking.at;
     });

@@ -1,6 +1,10 @@
+import { handedWorkersWithChecks } from '@on.auto/definitions/check';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { programPool, type Json, type ProgramPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
 
 import { computationBounds } from '../src/run/run-bounds.ts';
+
+export const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
 
 export function millisecondsOf(work: () => void): number {
   const started = performance.now();
@@ -46,5 +50,5 @@ export function request(
 }
 
 export function poolOfOne(): ProgramPool {
-  return programPool({ workers: 1, heapMegabytes: computationBounds.heapMegabytes });
+  return programPool({ handed, workers: 1, heapMegabytes: computationBounds.heapMegabytes });
 }

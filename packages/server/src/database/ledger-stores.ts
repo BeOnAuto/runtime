@@ -2,12 +2,12 @@ import type { SecretStore } from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, type Context } from 'effect';
 
-import type { Served } from '../lifecycle/lifecycle.ts';
 import { logContentStore, logLedger } from '../logging/logging.ts';
 import { loadAwsAdapters, type AwsAdaptersLoader } from '../secrets/aws-adapters.ts';
 import { keepersOf } from '../secrets/secret-keepers.ts';
 import { secretStoreStarted } from '../secrets/secret-store-start.ts';
 import { custodiansOf } from '../secrets/secret-store.ts';
+import type { Served } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
 
 export interface LedgerStores {

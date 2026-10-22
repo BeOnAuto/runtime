@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { modulesReachedFrom } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { freezingPreludeSource, preludeSource } from '../programs/sandbox-prelude.ts';
@@ -19,7 +20,7 @@ const importedInAFolder: ReadonlyMap<string, readonly string[]> = new Map([
   ['programs/', ['quickjs-emscripten-core']],
   ['program-pool/', ['node:worker_threads']],
   ['process-pool/', ['node:buffer', 'node:child_process', 'node:fs', 'node:path', 'node:url']],
-  ['instances/', ['node:fs/promises', 'quickjs-emscripten-core', '@jitl/quickjs-wasmfile-release-sync']],
+  ['instances/', ['quickjs-emscripten-core', '@jitl/quickjs-wasmfile-release-sync']],
 ]);
 
 const quickJs = 'quickjs-emscripten-core';
@@ -132,26 +133,8 @@ const machineAndRunLog = ['machine', 'runner', 'tasks', 'decider', 'run-log', 'd
   sourcesUnder(folder),
 );
 
-const relativeImport = /from '(\.{1,2}\/[^']+)'/gu;
-
-function importedBy(file: string): readonly string[] {
-  const text = readFileSync(join(source, file), 'utf8');
-  return [...text.matchAll(relativeImport)].map(([, path = '']: readonly string[]) =>
-    normalize(join(dirname(file), path)),
-  );
-}
-
 function reachableFrom(entry: string): readonly string[] {
-  const reached = new Set([entry]);
-  const pending = [entry];
-  for (let file = pending.pop(); file !== undefined; file = pending.pop()) {
-    const unseen = importedBy(file).filter((imported) => !reached.has(imported));
-    for (const imported of unseen) {
-      reached.add(imported);
-      pending.push(imported);
-    }
-  }
-  return [...reached].toSorted();
+  return modulesReachedFrom(source, entry).files;
 }
 
 const nodeOrYaml: readonly Forbidden[] = [

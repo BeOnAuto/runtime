@@ -6,7 +6,7 @@ import type { Environment } from '@on.auto/config';
 import type { AccessMode } from '@on.auto/identity';
 import { Option, Schema } from 'effect';
 
-import type { LocalServing } from '../lifecycle/lifecycle.ts';
+import type { LocalServing } from '../server-options/server-options.ts';
 import type { RunsInFlight } from './runs-in-flight.ts';
 import { restartWaitMs } from './runtime-probe.ts';
 

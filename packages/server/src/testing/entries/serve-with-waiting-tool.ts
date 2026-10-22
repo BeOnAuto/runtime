@@ -3,10 +3,10 @@ import { playbookOperations } from '@on.auto/playbooks';
 
 import { compositionRoot } from '../../composition/composition-root.ts';
 import { routesServing } from '../../composition/served-routes.ts';
-import { servedBy } from '../../lifecycle/lifecycle.ts';
 import { exitOnStartupFailure, runServer } from '../../lifecycle/run-server.ts';
 import { stopInsistedBy, stopRequestedBy } from '../../lifecycle/stop-request.ts';
 import { keyInHandOf } from '../../secrets/secrets-keys.ts';
+import { servedBy } from '../../server-options/server-options.ts';
 import { shortShutdownTimeoutMs } from '../processes/shutdown-timeouts.ts';
 import { waitForeverAnnouncedIn } from './calls-in-flight.ts';
 
@@ -14,13 +14,14 @@ await runServer<DispatcherServices>(
   process,
   {
     ...compositionRoot,
-    composed: (settings, telemetry) => ({
-      ...compositionRoot.composed(settings, telemetry),
-      serve: (runtime) =>
+    composed: (settings, telemetry, shippedFiles) => ({
+      ...compositionRoot.composed(settings, telemetry, shippedFiles),
+      serve: async (runtime) =>
         servedBy(
-          routesServing([...playbookOperations, waitForeverAnnouncedIn(process.env)], {
+          await routesServing([...playbookOperations, waitForeverAnnouncedIn(process.env)], {
             identityIssuer: settings.identityIssuer,
             retryStateKeys: { current: keyInHandOf({ from: 'start' }) },
+            shippedFiles,
           })(runtime),
         ),
     }),

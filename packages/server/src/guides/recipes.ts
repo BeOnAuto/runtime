@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-
 import type { Guide, Recipe } from '@on.auto/api';
+import type { ShippedFiles } from '@on.auto/operations';
 
 type RecipeOutline = Omit<Recipe, 'text'>;
 
@@ -85,15 +84,21 @@ const whereInteractionIsServed: Readonly<Record<string, Insertion>> = {
   },
 };
 
-function textOf({ name }: RecipeOutline, carried: ReadonlySet<string>): string {
-  const text = readFileSync(new URL(`recipes/${name}.md`, import.meta.url), 'utf8');
+async function textOf(
+  shippedFiles: ShippedFiles,
+  { name }: RecipeOutline,
+  carried: ReadonlySet<string>,
+): Promise<string> {
+  const text = await shippedFiles.text(new URL(`recipes/${name}.md`, import.meta.url));
   const insertion = carried.has(interactionGuide) ? whereInteractionIsServed[name] : undefined;
   return insertion === undefined ? text : text.replace(insertion.after, `${insertion.after}${insertion.words}`);
 }
 
-export function recipesFor(guides: readonly Guide[]): readonly Recipe[] {
+export function recipesFor(shippedFiles: ShippedFiles, guides: readonly Guide[]): Promise<readonly Recipe[]> {
   const carried = new Set(guides.map(({ name }) => name));
-  return outlines
-    .filter(({ formatGuide }) => carried.has(formatGuide))
-    .map((outline) => Object.assign({ text: textOf(outline, carried) }, outline));
+  return Promise.all(
+    outlines
+      .filter(({ formatGuide }) => carried.has(formatGuide))
+      .map(async (outline) => Object.assign({ text: await textOf(shippedFiles, outline, carried) }, outline)),
+  );
 }

@@ -1,9 +1,9 @@
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { machineSandboxOf } from '../instances/host-sandboxes.ts';
 import { decidedOnce } from '../pool-testing/decided-once.ts';
 import { churn, evaluatedAt } from '../pool-testing/evaluation-workers.ts';
+import { machineOnTheThread, testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadsAlive } from '../pool-testing/threads-alive.ts';
 import { longerThanTheTestMs } from '../pool-testing/waiting.ts';
 import type { Evaluation, ProgramRun } from '../programs/program-run.ts';
@@ -20,10 +20,6 @@ const severalTimesSlowerMs = 3000;
 
 const pools: ProgramPool[] = [];
 
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
-
 const filling = '(() => { const kept = []; for (;;) { kept.push("x".repeat(1048576) + kept.length); } })()';
 
 const caughtStackBomb =
@@ -36,7 +32,7 @@ afterEach(async () => {
 });
 
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 1, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(1), ...settings });
   pools.push(pool);
   return pool;
 }
@@ -64,6 +60,14 @@ async function timed<Answer>(work: () => Answer | Promise<Answer>): Promise<{ an
   return { answer, ms: performance.now() - started };
 }
 
+describe('the evaluation worker of a pool asked before any reserve', () => {
+  it('starts with the module of the sandbox the settings of the pool hand it, and answers once it is ready', () => {
+    const { machine } = poolOf().evaluations;
+
+    expect(evaluatedIn(machine, '1 + 1', longerThanTheTestMs)).toMatchObject({ ran: 'answered', text: '2' });
+  });
+});
+
 describe('the evaluation worker of a pool, given native work that no checkpoint interrupts', () => {
   it('ends the expression of a decision at the input deadline, within about 2.1 s, and decides the next input on a fresh worker', async () => {
     const { machine } = poolOf().evaluations;
@@ -87,7 +91,7 @@ describe('the evaluation worker of a pool, given native work that no checkpoint 
 describe('the evaluation worker of a pool, given a stack or a memory to exhaust', () => {
   it("gives a caught stack bomb one answer, from the shallow stack of the host, from 5,000 frames deep and on a host's own thread", async () => {
     const { machine } = poolOf().evaluations;
-    const here = machineSandboxOf();
+    const here = machineOnTheThread();
     await Promise.all([Effect.runPromise(machine.reserve), Effect.runPromise(here.reserve)]);
 
     const shallow = evaluatedIn(machine, caughtStackBomb);

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const mebibyte = 1_048_576;
 
@@ -45,7 +45,7 @@ function proofIn(file: string): Proof {
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -54,7 +54,7 @@ function errorFrom(environment: Environment): unknown {
 
 describe('the prediction function settings', () => {
   it('keep 4 model processes of 1,280 MiB each, 2 of them for the builds being scored, 4 builds a function a day, 32 active functions a playbook, and the files of the models under /var/tmp/auto-runtime, when nothing is set', () => {
-    expect(readSettings({}).prediction).toEqual({
+    expect(readSettingsOf({}).prediction).toEqual({
       processes: 4,
       processMemoryMebibytes: 1280,
       buildsAtOnce: 2,
@@ -66,8 +66,8 @@ describe('the prediction function settings', () => {
 
   it('keep the files of the models in the absolute folder PREDICTION_CACHE_DIR names, and refuse a relative one', () => {
     expect([
-      readSettings({ PREDICTION_CACHE_DIR: ' /srv/models ' }).prediction.cacheDirectory,
-      readSettings({ PREDICTION_CACHE_DIR: '' }).prediction.cacheDirectory,
+      readSettingsOf({ PREDICTION_CACHE_DIR: ' /srv/models ' }).prediction.cacheDirectory,
+      readSettingsOf({ PREDICTION_CACHE_DIR: '' }).prediction.cacheDirectory,
       String(errorFrom({ PREDICTION_CACHE_DIR: 'models' })),
     ]).toEqual([
       '/srv/models',
@@ -78,8 +78,8 @@ describe('the prediction function settings', () => {
 
   it('look for prlimit in the PATH the server was started with, and nowhere without one', () => {
     expect([
-      readSettings({ PATH: '/usr/local/bin:/usr/bin' }).prediction.path,
-      readSettings({}).prediction.path,
+      readSettingsOf({ PATH: '/usr/local/bin:/usr/bin' }).prediction.path,
+      readSettingsOf({}).prediction.path,
     ]).toEqual(['/usr/local/bin:/usr/bin', undefined]);
   });
 });
@@ -87,7 +87,7 @@ describe('the prediction function settings', () => {
 describe('the prediction function settings given values', () => {
   it('read each of the five', () => {
     expect(
-      readSettings({
+      readSettingsOf({
         PREDICTION_PROCESSES: ' 8 ',
         PREDICTION_PROCESS_MEMORY: '1024',
         PREDICTION_BUILDS_AT_ONCE: '3',
@@ -144,7 +144,7 @@ describe('the least memory of a model process', () => {
       true,
       true,
     ]);
-    expect(readSettings({ PREDICTION_PROCESS_MEMORY: String(floor) }).prediction.processMemoryMebibytes).toBe(floor);
+    expect(readSettingsOf({ PREDICTION_PROCESS_MEMORY: String(floor) }).prediction.processMemoryMebibytes).toBe(floor);
     expect(String(errorFrom({ PREDICTION_PROCESS_MEMORY: String(floor - 1) }))).toBe(
       `InvalidSettingsError: The prediction function settings are invalid. PREDICTION_PROCESS_MEMORY: Expected a whole number from ${floor} to 16384, such as 1280`,
     );

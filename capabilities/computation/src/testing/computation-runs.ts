@@ -1,5 +1,11 @@
 import type { CapabilityAnswer, PreparedDefinition, Capability, RunContext } from '@on.auto/definitions';
-import { checkingWithin, noLongestRuns, nothingSaved, recordingJournal } from '@on.auto/definitions/testing';
+import {
+  checkingWithin,
+  measuredPoolSettings,
+  noLongestRuns,
+  nothingSaved,
+  recordingJournal,
+} from '@on.auto/definitions/testing';
 import { allPermissions, type Conflict, type InvalidInput, type Unavailable } from '@on.auto/operations';
 import { programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Exit, type Schema } from 'effect';
@@ -41,17 +47,11 @@ afterEach(async () => {
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
-const measured: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(process.env).flatMap(([key, value]: readonly [string, string | undefined]) =>
-    key === 'NODE_V8_COVERAGE' && value !== undefined ? [[key, value]] : [],
-  ),
-);
-
 export function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
   const pool = programPool({
     workers: computationBounds.workers,
     heapMegabytes: computationBounds.heapMegabytes,
-    environment: measured,
+    ...measuredPoolSettings,
     ...settings,
   });
   pools.push(pool);

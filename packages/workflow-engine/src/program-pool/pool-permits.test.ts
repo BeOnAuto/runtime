@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
 import { begun, counting, countingElsewhere } from '../pool-testing/counting-workers.ts';
+import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadsAlive } from '../pool-testing/threads-alive.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import { programPool } from './program-pool.ts';
@@ -16,10 +17,6 @@ interface Ran {
 }
 
 const pools: ProgramPool[] = [];
-
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
 
 const decodeRan = Schema.decodeUnknownSync(Schema.Struct({ jobs: Schema.Number, thread: Schema.Number }));
 
@@ -42,7 +39,7 @@ afterEach(async () => {
 });
 
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 4, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(4), ...settings });
   pools.push(pool);
   return pool;
 }
@@ -183,7 +180,9 @@ describe('a pool that closes', () => {
   ])('holds no process open %s', async (_when, closing) => {
     const script = [
       `const { programPool } = await import('${new URL('program-pool.ts', import.meta.url).href}');`,
-      'const pool = programPool({ workers: 2, heapMegabytes: 64 });',
+      `const { handedWorkersOf } = await import('${new URL('handed-files.ts', import.meta.url).href}');`,
+      `const { shippedFilesOnDisk } = await import('${import.meta.resolve('@on.auto/operations/shipped-files-on-disk')}');`,
+      'const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 2, heapMegabytes: 64 });',
       "const source = 'export default function (input) { return input + 1; }';",
       "const outcome = await pool.run({ source, arguments: [1], entry: 'default', moment: 0, budget: 500, memoryBytes: 67108864, stackBytes: 1048576, deadlineMs: 10000, mostOutputBytes: 100 });",
       closing,

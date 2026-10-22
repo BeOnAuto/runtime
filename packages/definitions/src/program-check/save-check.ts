@@ -1,9 +1,13 @@
-import { InvalidInput, Unavailable } from '@on.auto/operations';
+import { InvalidInput, Unavailable, type ShippedFiles } from '@on.auto/operations';
 import {
+  handedFilesOf,
+  handedWorkersOf,
   pooledJob,
   type CheckIssue,
   type CheckJob,
   type CheckOutcome,
+  type HandedFiles,
+  type HandedWorkers,
   type ProgramPool,
   type Stopped,
   type StrippedSources,
@@ -11,8 +15,17 @@ import {
 import { Effect } from 'effect';
 
 import { changedExpressions, type StrippedForms } from '../capability/stripped-forms.ts';
+import { keptLibFiles } from './kept-lib.ts';
 
 export const checkWorker = new URL('./check-worker.ts', import.meta.url);
+
+export function keptLibOf(shippedFiles: ShippedFiles): Promise<HandedFiles> {
+  return handedFilesOf(shippedFiles, Object.values(keptLibFiles));
+}
+
+export async function handedWorkersWithChecks(shippedFiles: ShippedFiles): Promise<HandedWorkers> {
+  return handedWorkersOf(shippedFiles, { [checkWorker.href]: await keptLibOf(shippedFiles) });
+}
 
 export const checkDeadlineMs = 2000;
 

@@ -1,8 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { listed } from '@on.auto/operations';
+import { listed, type ShippedFiles } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { CutSchema } from './discovery-cuts.ts';
@@ -11,7 +9,7 @@ import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversi
 import { translatedDiscoveryOf } from './translate-discovery.ts';
 import { curatedOpenApiOf } from './translate-openapi.ts';
 
-export const documentsBesideTheEntries = join(import.meta.dirname, '../entries/documents/');
+export const documentsBesideTheEntries = new URL('../entries/documents/', import.meta.url);
 
 const AuthorizationServerAddressSchema = Schema.String.annotate({
   description: 'The address of the metadata of the authorization server whose endpoints the oauth2 scheme names',
@@ -68,8 +66,10 @@ const documentSuffix = '.openapi.json';
 export type Fetching = (address: string) => Promise<Response>;
 
 export interface Translating {
-  readonly folder: string;
+  readonly folder: Readonly<URL>;
+  readonly shippedFiles: ShippedFiles;
   readonly fetching: Fetching;
+  readonly readGiven: (path: string) => Promise<string>;
 }
 
 export interface Written {
@@ -85,15 +85,19 @@ interface Asked {
 const usage =
   'Usage: pnpm --filter @on.auto/providers documents:translate [<name>[=<Discovery document>]]..., each name a manifest beside the documents, every manifest when none is named';
 
-export function manifestNamesIn(folder: string): readonly string[] {
-  return readdirSync(folder)
+export async function manifestNamesIn(shippedFiles: ShippedFiles, folder: Readonly<URL>): Promise<readonly string[]> {
+  return (await shippedFiles.list(folder))
     .filter((file) => file.endsWith(manifestSuffix))
     .map((file) => file.slice(0, -manifestSuffix.length))
     .toSorted();
 }
 
-export function manifestIn(folder: string, name: string): DocumentManifest {
-  return decodeManifest(readFileSync(join(folder, `${name}${manifestSuffix}`), 'utf8'));
+export async function manifestIn(
+  shippedFiles: ShippedFiles,
+  folder: Readonly<URL>,
+  name: string,
+): Promise<DocumentManifest> {
+  return decodeManifest(await shippedFiles.text(new URL(`${name}${manifestSuffix}`, folder)));
 }
 
 function askedOf(commandArgument: string, names: readonly string[]): Asked {
@@ -115,8 +119,8 @@ async function fetchedJson(address: string, fetching: Fetching): Promise<unknown
   return read;
 }
 
-async function givenJson(path: string): Promise<unknown> {
-  const read: unknown = JSON.parse(await readFile(path, 'utf8'));
+async function givenJson(path: string, { readGiven }: Translating): Promise<unknown> {
+  const read: unknown = JSON.parse(await readGiven(path));
   return read;
 }
 
@@ -124,24 +128,25 @@ function jsonText(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function documentPathOf(folder: string, name: string): string {
-  return join(folder, `${name}${documentSuffix}`);
+function pathIn(folder: Readonly<URL>, file: string): string {
+  return fileURLToPath(new URL(file, folder));
 }
 
 async function discoveryTranslated(
   { name, given }: Asked,
   manifest: DiscoveryManifest,
-  { folder, fetching }: Translating,
+  translating: Translating,
 ): Promise<readonly Written[]> {
-  const read = await (given === undefined ? fetchedJson(manifest.discovery, fetching) : givenJson(given));
+  const { folder, fetching } = translating;
+  const read = await (given === undefined ? fetchedJson(manifest.discovery, fetching) : givenJson(given, translating));
   const metadata = await fetchedJson(manifest.authorization_server, fetching);
   const { document, revision } = translatedDiscoveryOf(read, metadata, manifest);
   const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
   const remade = { type, discovery: address, revision, authorization_server: authorizationServer, methods };
   return [
-    { path: documentPathOf(folder, name), text: jsonText(document) },
+    { path: pathIn(folder, `${name}${documentSuffix}`), text: jsonText(document) },
     {
-      path: join(folder, `${name}${manifestSuffix}`),
+      path: pathIn(folder, `${name}${manifestSuffix}`),
       text: jsonText(cuts === undefined ? remade : { ...remade, cuts }),
     },
   ];
@@ -168,7 +173,7 @@ async function openApiTranslated(
   const documents = await fetchedAt(asked, manifest.sources, translating);
   const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
   const document = curatedOpenApiOf(documents, manifest, metadata);
-  return [{ path: documentPathOf(translating.folder, asked.name), text: jsonText(document) }];
+  return [{ path: pathIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
 }
 
 async function swaggerConverted(
@@ -183,11 +188,11 @@ async function swaggerConverted(
   );
   const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
   const document = convertedDocumentOf(documents, manifest, metadata);
-  return [{ path: documentPathOf(translating.folder, asked.name), text: jsonText(document) }];
+  return [{ path: pathIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
 }
 
-function translatedOne(asked: Asked, translating: Translating): Promise<readonly Written[]> {
-  const manifest = manifestIn(translating.folder, asked.name);
+async function translatedOne(asked: Asked, translating: Translating): Promise<readonly Written[]> {
+  const manifest = await manifestIn(translating.shippedFiles, translating.folder, asked.name);
   if (manifest.type === 'discovery') {
     return discoveryTranslated(asked, manifest, translating);
   }
@@ -200,7 +205,7 @@ export async function translatedDocuments(
   commandArguments: readonly string[],
   translating: Translating,
 ): Promise<readonly Written[]> {
-  const names = manifestNamesIn(translating.folder);
+  const names = await manifestNamesIn(translating.shippedFiles, translating.folder);
   const asked =
     commandArguments.length === 0
       ? names.map((name): Asked => ({ name, given: undefined }))

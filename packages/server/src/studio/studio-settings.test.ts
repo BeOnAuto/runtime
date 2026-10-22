@@ -7,7 +7,7 @@ import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { besideTheLedgerFile, readLedgerSettings } from '../settings/ledger-settings.ts';
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { studioFolderName } from './served-studio.ts';
 
 const { entry } = createApiKey({ id: 'ci-1', org: 'acme', permissions: ['org:read'], playbooks: '*' });
@@ -16,7 +16,7 @@ const loopback = { HOST: '127.0.0.1' };
 
 function errorFrom(environment: Readonly<Record<string, string>>): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }
@@ -25,15 +25,15 @@ function errorFrom(environment: Readonly<Record<string, string>>): string {
 
 describe('the Studio settings of a runtime in local mode', () => {
   it('serve Studio, fetched from the Studio host of Auto, by default', () => {
-    expect(readSettings(loopback).studio).toEqual({ origin: 'https://studio.on.auto', served: true });
+    expect(readSettingsOf(loopback).studio).toEqual({ origin: 'https://studio.on.auto', served: true });
   });
 
   it('serve none on an address beyond the loopback with neither PUBLIC_URL nor API_KEYS, which is no local mode', () => {
-    expect(readSettings({ HOST: '0.0.0.0' }).studio.served).toBe(false);
+    expect(readSettingsOf({ HOST: '0.0.0.0' }).studio.served).toBe(false);
   });
 
   it('serve none where SERVE_STUDIO is false', () => {
-    expect(readSettings({ ...loopback, SERVE_STUDIO: 'false' }).studio.served).toBe(false);
+    expect(readSettingsOf({ ...loopback, SERVE_STUDIO: 'false' }).studio.served).toBe(false);
   });
 });
 
@@ -44,11 +44,16 @@ const withCredentials: ReadonlyArray<readonly [string, Readonly<Record<string, s
 
 describe('the Studio settings of a runtime with a public address or keys', () => {
   it.each(withCredentials)('serve no Studio by default where %s is set', (_case, environment) => {
-    expect(readSettings(environment).studio).toEqual({ origin: 'https://studio.on.auto', served: false });
+    expect(readSettingsOf(environment).studio).toEqual({
+      origin: 'https://studio.on.auto',
+      served: false,
+    });
   });
 
   it('serve Studio where the operator sets SERVE_STUDIO to true', () => {
-    expect(readSettings({ PUBLIC_URL: 'https://runtime.example.com', SERVE_STUDIO: 'true' }).studio.served).toBe(true);
+    expect(readSettingsOf({ PUBLIC_URL: 'https://runtime.example.com', SERVE_STUDIO: 'true' }).studio.served).toBe(
+      true,
+    );
   });
 });
 
@@ -60,7 +65,7 @@ describe('the Studio host a runtime names', () => {
     'http://127.0.0.1:3200',
     'http://[::1]:3200',
   ])('is taken from STUDIO_ORIGIN=%s', (origin) => {
-    expect(readSettings({ STUDIO_ORIGIN: origin }).studio.origin).toBe(origin);
+    expect(readSettingsOf({ STUDIO_ORIGIN: origin }).studio.origin).toBe(origin);
   });
 
   it.each([
@@ -90,7 +95,7 @@ describe('the Studio settings in the configuration file', () => {
     const configFile = join(folder, 'auto-runtime.yaml');
     writeFileSync(configFile, 'studio_origin: http://127.0.0.1:3200\nserve_studio: false\n');
 
-    expect(readSettings({ ...loopback, CONFIG_FILE: configFile }).studio).toEqual({
+    expect(readSettingsOf({ ...loopback, CONFIG_FILE: configFile }).studio).toEqual({
       origin: 'http://127.0.0.1:3200',
       served: false,
     });

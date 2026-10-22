@@ -3,11 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { stoppedWithinMs } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
+import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { untilRefusingConnections } from '../testing/processes/accepting-connections.ts';
 import { shortShutdownTimeoutMs, shutdownTimeoutVariable } from '../testing/processes/shutdown-timeouts.ts';
 import { serverHoldingARequest, spawnServer } from '../testing/processes/spawned-server.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
-import { defaultServerOptions } from './lifecycle.ts';
 import { longestStopMs } from './shutdown.ts';
 
 const serveWithTestRoutes = fileURLToPath(new URL('../testing/entries/serve-with-test-routes.ts', import.meta.url));

@@ -8,7 +8,7 @@ import { Data, Result } from 'effect';
 
 import { at } from '../settings/checked.ts';
 import { toolServersSetting } from '../settings/server-entries.ts';
-import type { ApiDocumentSource } from '../settings/server-settings.ts';
+import type { ApiDocumentSource, ShippedDocument } from '../settings/server-settings.ts';
 import { DocumentRefused } from './described-api.ts';
 
 export const documentBounds = { bytes: 4_194_304, operations: 500, readMs: 10_000, nesting: 128 } as const;
@@ -124,7 +124,20 @@ async function textIn(path: string, entry: string): Promise<Text> {
   }
 }
 
+function shippedText({ text, bytes }: ShippedDocument, entry: string): Text {
+  return bytes > documentBounds.bytes ? Result.fail(refused(entry, tooLarge)) : Result.succeed(text);
+}
+
+function textOf(source: ApiDocumentSource, reading: DocumentReading): Promise<Text> {
+  if (source.kind === 'url') {
+    return textAt(source.url, reading);
+  }
+  return source.kind === 'file'
+    ? textIn(source.path, reading.entry)
+    : Promise.resolve(shippedText(source.document, reading.entry));
+}
+
 export async function documentOf(source: ApiDocumentSource, reading: DocumentReading): Promise<Read> {
-  const text = source.kind === 'url' ? await textAt(source.url, reading) : await textIn(source.path, reading.entry);
+  const text = await textOf(source, reading);
   return Result.flatMap(text, (read) => boundedParse(read, reading.entry));
 }

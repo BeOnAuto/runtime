@@ -2,7 +2,9 @@ import { createApiKey } from '@on.auto/identity';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { release } from '../composition/release.ts';
-import { defaultServerOptions, startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { type RunningServer } from '../server-options/server-options.ts';
+import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import {
   fakeStudioHost,

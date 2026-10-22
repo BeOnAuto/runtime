@@ -1,7 +1,7 @@
 import { Function } from 'effect';
 
 import { release } from '../composition/release.ts';
-import type { Install, StartPing, UsagePing } from '../lifecycle/lifecycle.ts';
+import type { Install, StartPing, UsagePing } from '../server-options/server-options.ts';
 import type { LedgerSettings } from '../settings/ledger-settings.ts';
 import { installIdFileOf, installIn } from './install-id.ts';
 import type { UsagePingSettings } from './usage-ping-settings.ts';

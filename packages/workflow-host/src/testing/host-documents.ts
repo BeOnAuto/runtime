@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import type { MachineOptions } from '@on.auto/workflow-engine';
 import { machineSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { defaultLimits, defaultSeed, testMachineOf } from '@on.auto/workflow-engine/testing';
@@ -13,7 +14,7 @@ const decodeObject = Schema.decodeUnknownSync(Schema.JsonObject);
 
 const header = { dsl: '1.0.3', namespace: 'acme', name: 'test', version: '1.0.0' };
 
-export const testMachine: MachineOptions = testMachineOf(machineSandboxOf());
+export const testMachine: MachineOptions = testMachineOf(machineSandboxOf(shippedFilesOnDisk));
 
 export function workflow(source: string): JsonObject {
   return { document: header, ...decodeObject(parse(source)) };

@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -8,7 +9,9 @@ import type { FoldHost } from './fold-page.ts';
 import { foldProgress, progressOf } from './fold-progress.ts';
 
 async function hostOf(views: number, more: Partial<FoldHost> = {}): Promise<FoldHost> {
-  const instances = await Promise.all(Array.from({ length: views }, () => freshInstance(unitMemoryBytes)));
+  const instances = await Promise.all(
+    Array.from({ length: views }, () => freshInstance(shippedFilesOnDisk, unitMemoryBytes)),
+  );
   return {
     now: () => 0,
     folding: Function.constVoid,

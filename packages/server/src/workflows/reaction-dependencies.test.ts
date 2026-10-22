@@ -1,13 +1,11 @@
-import { makeAppRuntime } from '@on.auto/api';
 import { playbookOwnNamesOf, defineStartVersion } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import type { PlaybookRequest, Dispatcher, Outcome } from '@on.auto/operations';
 import { StartRefused, StartRejected } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { applicationLayer } from '../composition/application-layer.ts';
+import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { reactionsOf } from './reaction-dependencies.ts';
 
 const start = {
@@ -23,7 +21,7 @@ const start = {
 } as const;
 
 async function reactingWith(answers: readonly Outcome[]) {
-  const runtime = await makeAppRuntime(applicationLayer(ledgerLayer({ fileName: ':memory:' })));
+  const runtime = await memoryRuntime();
   onTestFinished(() => runtime.dispose());
   const requests: PlaybookRequest[] = [];
   const dispatcher: Dispatcher = {

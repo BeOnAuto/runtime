@@ -57,8 +57,8 @@ function recordingModules(pool: ProgramPool, modules: Set<string | undefined>): 
 describe('values their schemas refuse, through the one checked worker, over HTTP', () => {
   it('refuse a computation output and a recall answer, and stall a view, in the one wording of the issues', async () => {
     const modules = new Set<string | undefined>();
-    const server = await servingRecall(verdicts({ campaign: 'spring', verdict: 'approve' }), {}, (settings) =>
-      recordingModules(patientWorkerPool(settings), modules),
+    const server = await servingRecall(verdicts({ campaign: 'spring', verdict: 'approve' }), {}, (settings, handed) =>
+      recordingModules(patientWorkerPool(settings, handed), modules),
     );
     closing.push(server.stop);
     await playbookWithReviews(server, 1);

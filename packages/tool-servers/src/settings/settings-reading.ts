@@ -15,13 +15,13 @@ import { checkedEntry } from './entry-checks.ts';
 import { misplacedReferencesOfEntry, secretsOfEntry, unreferencedSecurity } from './entry-references.ts';
 import { entryToRead, type EntryToRead, type ProviderResolver } from './provider-entries.ts';
 import { ServerEntrySchema, ToolServersSchema, toolServersSetting, type ServerEntryFields } from './server-entries.ts';
-import type { ServerSettings, ToolServerSettings } from './server-settings.ts';
+import type { DocumentsPlace, ServerSettings, ToolServerSettings } from './server-settings.ts';
 
 export type Environment = Readonly<Record<string, string | undefined>>;
 
 export interface ToolServerSettingsContext {
   readonly modelProviders: readonly string[];
-  readonly documentsDirectory?: string;
+  readonly documents?: DocumentsPlace;
   readonly placedValues?: ReadonlyMap<string, string>;
   readonly providers?: ProviderResolver;
 }
@@ -58,7 +58,7 @@ function withValuesPlaced(fields: ServerEntryFields, placed: PlacedValues): Serv
 
 function readWritten(
   name: string,
-  { written, placedValues, documentsDirectory, provider }: EntryToRead,
+  { written, placedValues, documents, provider }: EntryToRead,
   environment: Environment,
   { modelProviders }: ToolServerSettingsContext,
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
@@ -77,7 +77,7 @@ function readWritten(
   const fields = withValuesPlaced(decodeEntry(resolved.value), placedValues);
   return checkedEntry(name, fields, {
     modelProviders,
-    directory: documentsDirectory,
+    documents,
     secrets: secretsOfEntry(name, fields, resolved.references),
     provider,
   });
@@ -91,7 +91,7 @@ export function readEntry(
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
   const reading = {
     placedValues: context.placedValues,
-    documentsDirectory: context.documentsDirectory,
+    documents: context.documents,
     providers: context.providers,
   };
   return Result.flatMap(entryToRead(name, written, reading), (entry) =>

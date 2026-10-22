@@ -3,6 +3,7 @@ import { Result } from 'effect';
 
 import type { ProviderNamed, ProviderResolver } from '../settings/provider-entries.ts';
 import type { ServerEntryFields } from '../settings/server-entries.ts';
+import type { DocumentsPlace } from '../settings/server-settings.ts';
 
 export type FakeProvider = (named: ProviderNamed) => ServerEntryFields | { readonly refused: readonly Issue[] };
 
@@ -17,9 +18,11 @@ function placedValuesOf({ credential }: ProviderNamed): ReadonlyMap<string, stri
   return new Map(credential.client_id === undefined ? [] : [['client_id', credential.client_id]]);
 }
 
+const inTheWorkingDirectory: DocumentsPlace = { kind: 'directory', path: process.cwd() };
+
 export function fakeProviders(
   providers: ReadonlyMap<string, FakeProvider>,
-  documentsDirectory: string = process.cwd(),
+  documents: DocumentsPlace = inTheWorkingDirectory,
 ): FakeProviders {
   const named: ProviderNamed[] = [];
   return {
@@ -35,7 +38,7 @@ export function fakeProviders(
         : Result.succeed({
             written: resolved,
             placedValues: placedValuesOf(asked),
-            documentsDirectory,
+            documents,
             writtenAt: (pointer) => (pointer === credentialHeader ? '/credential/value' : '/provider'),
           });
     },

@@ -2,9 +2,10 @@ import { createApiKey, signInScopes } from '@on.auto/identity';
 import { Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { defaultServerOptions, startServer, servedBy, type ServerOptions } from '../lifecycle/lifecycle.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { servedBy, type ServerOptions } from '../server-options/server-options.ts';
 import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
-import { optionsServing } from '../testing/entries/serving-options.ts';
+import { optionsServing, defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { localControlOf, type LocalControl } from './local-control.ts';
 import { runsInFlight } from './runs-in-flight.ts';
 

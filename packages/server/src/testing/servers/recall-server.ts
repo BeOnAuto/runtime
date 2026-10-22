@@ -61,7 +61,7 @@ export function foldsHeldUntilOpened(): Gate {
     },
   });
   return {
-    poolOf: (settings) => held(patientWorkerPool(settings)),
+    poolOf: (settings, handed) => held(patientWorkerPool(settings, handed)),
     letThrough: (folds) => {
       allowed.folds += folds;
       released();

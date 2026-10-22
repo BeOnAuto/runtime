@@ -1,13 +1,15 @@
-import { stat } from 'node:fs/promises';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 
 import {
   freshInstance,
+  handedWorkersOf,
   programPool,
   runMemoryBytes,
   threadStackBytes,
   unitMemoryBytes,
   type ProgramRun,
 } from '../src/dsl.ts';
+import { sandboxModuleFile } from '../src/instances/fresh-instances.ts';
 import { expressionUnitOf } from '../src/programs/expression-units.ts';
 import { filterContextOf } from '../src/programs/kept-contexts.ts';
 import { moduleRun } from '../src/programs/module-runs.ts';
@@ -50,7 +52,7 @@ async function ranModule(
   args: readonly string[],
   evaluation: Evaluation = unbounded,
 ): Promise<ProgramRun> {
-  const run = moduleRun(await freshInstance(unitMemoryBytes), settings, {
+  const run = moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, {
     source,
     entry: 'default',
     arguments: args,
@@ -63,23 +65,23 @@ async function ranModule(
 }
 
 async function instanceLines(): Promise<readonly string[]> {
-  const wasm = await stat(new URL(import.meta.resolve('@jitl/quickjs-wasmfile-release-sync/wasm')));
-  await freshInstance(unitMemoryBytes);
+  const wasm = await shippedFilesOnDisk.bytes(sandboxModuleFile);
+  await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
   const fresh = await medianAsync(50, async () => {
     const started = performance.now();
-    await freshInstance(unitMemoryBytes);
+    await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
     return performance.now() - started;
   });
   const withPrelude = await medianAsync(50, async () => {
     const started = performance.now();
-    const runtime = sandboxRuntimeOf(await freshInstance(runMemoryBytes), settings);
+    const runtime = sandboxRuntimeOf(await freshInstance(shippedFilesOnDisk, runMemoryBytes), settings);
     runtime.context().close();
     const milliseconds = performance.now() - started;
     runtime.close();
     return milliseconds;
   });
   return [
-    `the WebAssembly file: ${formatted(wasm.size, 0)} bytes`,
+    `the WebAssembly file: ${formatted(wasm.byteLength, 0)} bytes`,
     `a fresh instance of the compiled module, memory maximum 64 MiB: ${formatted(fresh, 2)} ms at the median of 50; 256 MiB with a runtime, a context and the prelude: ${formatted(withPrelude, 2)} ms`,
   ];
 }
@@ -113,13 +115,13 @@ async function checkpointLines(): Promise<readonly string[]> {
 }
 
 async function expressionLines(): Promise<readonly string[]> {
-  const instance = await freshInstance(unitMemoryBytes);
+  const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
   const unit = expressionUnitOf(() => instance, settings);
   const fresh = medianMillisecondsOf(201, () => {
     unit.evaluate('$context.decision.decision == "approve"', { context: decision }, unbounded);
   });
   unit.close();
-  const filters = filterContextOf(await freshInstance(unitMemoryBytes), settings, unbounded);
+  const filters = filterContextOf(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, unbounded);
   const test = filters.define(' $data.decision.decision == "approve" ');
   const freezing = millisecondsOf(() => {
     filters.freeze();
@@ -167,7 +169,7 @@ async function valueLines(): Promise<readonly string[]> {
 }
 
 async function stackLines(): Promise<readonly string[]> {
-  const pool = programPool({ workers: 1, heapMegabytes: 256 });
+  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
   const deepest =
     'export default function () {\n  let deepest = 0;\n  const down = (depth) => {\n    deepest = depth;\n    return down(depth + 1);\n  };\n  try {\n    down(0);\n  } catch {\n    return deepest;\n  }\n  return -1;\n}';
   const depthAt = async (stackBytes: number): Promise<string> => {

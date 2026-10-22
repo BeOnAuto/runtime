@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { handedSandbox } from '../pool-testing/test-pools.ts';
 import type { Evaluation } from '../programs/program-run.ts';
 import { serveEvaluations } from './evaluation-loop.ts';
 
@@ -24,7 +25,11 @@ afterEach(() => {
 function servedHere(): Served {
   const channel = new MessageChannel();
   channels.push(channel);
-  serveEvaluations({ port: channel.port1, flags: new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT) });
+  serveEvaluations({
+    port: channel.port1,
+    flags: new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT),
+    handed: handedSandbox,
+  });
   return {
     ask: (request) => {
       const { promise, resolve } = Promise.withResolvers<unknown>();

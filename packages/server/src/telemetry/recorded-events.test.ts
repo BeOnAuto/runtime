@@ -2,7 +2,7 @@ import type { Environment } from '@on.auto/config';
 import type { AppendObserver } from '@on.auto/ledger';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { logsIn, metricNamesIn } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp, type OtlpReceiver } from '../testing/telemetry/otlp-receiver.ts';
 import { startTelemetry, type Telemetry } from './start-telemetry.ts';
@@ -30,7 +30,7 @@ async function observed(environment: Environment = {}): Promise<Observed> {
   const receiver = await receivingOtlp();
   onTestFinished(receiver.close);
   const telemetry = startTelemetry(
-    readSettings({
+    readSettingsOf({
       OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
       OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
       ...environment,

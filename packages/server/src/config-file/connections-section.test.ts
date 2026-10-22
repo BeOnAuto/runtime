@@ -6,7 +6,7 @@ import { configurationOf } from '@on.auto/config';
 import { Redacted, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { fileSettings } from './file-settings.ts';
 
 const directories: string[] = [];
@@ -27,7 +27,7 @@ function fileOf(text: string): string {
 
 function refusalOf(path: string, environment: Readonly<Record<string, string>> = {}): string {
   try {
-    readSettings({ CONFIG_FILE: path, ...environment });
+    readSettingsOf({ CONFIG_FILE: path, ...environment });
   } catch (error) {
     return String(error).replaceAll(path, 'auto-runtime.yaml');
   }
@@ -45,7 +45,7 @@ const ownVariable = 'is a variable the runtime reads for itself, which no connec
 
 describe('the connections section of the configuration file', () => {
   it('is read as the policy of what people may add, its kinds of credential not taken for credentials', () => {
-    expect(readSettings({ CONFIG_FILE: fileOf(policy) }).connections).toEqual({
+    expect(readSettingsOf({ CONFIG_FILE: fileOf(policy) }).connections).toEqual({
       peopleMayAdd: true,
       allowedHosts: ['*.example.com', 'crm.example.com'],
       credentialKinds: ['none', 'reference', 'secret', 'client_credentials'],
@@ -56,7 +56,7 @@ describe('the connections section of the configuration file', () => {
 
 describe('the variables of the connections section', () => {
   it('hold the value of each variable it lists that the environment sets, and nothing of one it leaves unset or empty', () => {
-    const settings = readSettings({
+    const settings = readSettingsOf({
       CONFIG_FILE: fileOf(policy.replace('[CRM_API_KEY]', '[CRM_API_KEY, WIKI_TOKEN, NOTES_KEY]')),
       CRM_API_KEY: 'crm-key-0f3c9a71',
       NOTES_KEY: '',

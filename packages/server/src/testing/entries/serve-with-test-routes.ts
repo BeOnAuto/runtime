@@ -2,9 +2,9 @@ import { once } from 'node:events';
 
 import { Schema } from 'effect';
 
-import { servedBy } from '../../lifecycle/lifecycle.ts';
 import { exitOnStartupFailure, runServer } from '../../lifecycle/run-server.ts';
 import { stopInsistedBy, stopRequestedBy } from '../../lifecycle/stop-request.ts';
+import { servedBy } from '../../server-options/server-options.ts';
 import { shortShutdownTimeoutMs, shutdownTimeoutVariable } from '../processes/shutdown-timeouts.ts';
 import { callInFlightAnnouncedIn } from './calls-in-flight.ts';
 import { optionsServing } from './serving-options.ts';

@@ -1,7 +1,9 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Function } from 'effect';
 
 import {
   freshInstance,
+  handedWorkersOf,
   programPool,
   unitMemoryBytes,
   workerStackBytes,
@@ -100,7 +102,7 @@ function inTurn<A, B>(items: readonly A[], step: (item: A) => Promise<B>): Promi
 }
 
 async function onAFreshPool(page: FoldRequest): Promise<number> {
-  const pool = programPool({ workers: 1, heapMegabytes: 256 });
+  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
   const { milliseconds } = await pool.fold(page);
   await pool.close();
   return milliseconds;
@@ -110,7 +112,7 @@ async function foldedOnThisThread(
   page: FoldRequest,
 ): Promise<{ readonly milliseconds: number; readonly views: string }> {
   const folded = { views: '' };
-  const instances = await Promise.all(page.views.map(() => freshInstance(unitMemoryBytes)));
+  const instances = await Promise.all(page.views.map(() => freshInstance(shippedFilesOnDisk, unitMemoryBytes)));
   const host = {
     now: () => performance.now(),
     folding: Function.constVoid,
@@ -153,7 +155,7 @@ function medianOf(all: readonly Turn[], of: (turn: Turn) => number): string {
 export async function pagesMeasured(): Promise<readonly string[]> {
   const page = pageOf(events);
   const start = await inTurn(Array.from({ length: turns }), () => onAFreshPool(pageOf(0)));
-  const pool = programPool({ workers: 1, heapMegabytes: 256 });
+  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
   await pool.fold(page);
   const all = await turnsOf(page, pool);
   await pool.close();

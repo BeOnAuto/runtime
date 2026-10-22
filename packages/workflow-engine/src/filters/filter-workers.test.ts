@@ -12,6 +12,7 @@ import {
   plainFilter,
   replacementOf,
 } from '../pool-testing/evaluation-workers.ts';
+import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadsAlive } from '../pool-testing/threads-alive.ts';
 import { programPool } from '../program-pool/program-pool.ts';
 import { filterVerdictsOf } from './filter-verdicts.ts';
@@ -19,10 +20,6 @@ import { filterVerdictsOf } from './filter-verdicts.ts';
 const timerMs = 20;
 
 const pools: ProgramPool[] = [];
-
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
 
 function european(reference: string): typeof plainFilter {
   return { ...plainFilter, reference };
@@ -33,7 +30,7 @@ afterEach(async () => {
 });
 
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 1, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(1), ...settings });
   pools.push(pool);
   return pool;
 }

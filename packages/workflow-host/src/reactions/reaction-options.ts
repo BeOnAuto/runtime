@@ -29,5 +29,5 @@ export interface ReactionOptions {
   readonly start: StartReaction;
   readonly emit: EmitEvent;
   readonly appended?: StreamSignal;
-  readonly filters?: FilterSandbox;
+  readonly filters: FilterSandbox;
 }

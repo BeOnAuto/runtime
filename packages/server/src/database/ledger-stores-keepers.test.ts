@@ -11,9 +11,9 @@ import { serveFakeParameterStore, type FakeParameterOperation } from '@on.auto/s
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from './ledger-stores.ts';
 
 const account = '111122223333';
@@ -73,7 +73,7 @@ async function openedWith(
   const { context, lines } = await aContextLogging();
   const stores = await ledgerStoresOpenedBy(
     context,
-    readSettings({ LEDGER_FILE: fileName, ...environment }),
+    readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
     () => Promise.resolve(adaptersOn(parameterStoreUrl, waits)),
   );

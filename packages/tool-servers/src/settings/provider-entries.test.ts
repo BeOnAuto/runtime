@@ -55,7 +55,7 @@ function providers() {
       ['ledgers', ledgers],
       ['refusing', refusing],
     ]),
-    documents,
+    { kind: 'directory', path: documents },
   );
 }
 

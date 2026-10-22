@@ -35,7 +35,7 @@ function recordingChecks(): { readonly checked: readonly CheckRequest[]; readonl
       return pool.check(request, signal);
     },
   });
-  return { checked, poolOf: (settings) => recording(patientWorkerPool(settings)) };
+  return { checked, poolOf: (settings, handed) => recording(patientWorkerPool(settings, handed)) };
 }
 
 function saving(name: string, source: string) {

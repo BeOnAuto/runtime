@@ -2,10 +2,10 @@ import { fixtureProviders } from '@on.auto/providers/testing';
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { readConnections, readConnectionSettings } from './connection-settings.ts';
 
-const functions = readSettings({});
+const functions = readSettingsOf({});
 
 describe('the values the operator sets for the providers', () => {
   it('are read from the environment for each variable a provider refers to, and for no other', () => {

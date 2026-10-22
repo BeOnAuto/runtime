@@ -3,8 +3,9 @@ import { setTimeout } from 'node:timers/promises';
 import type { Environment } from '@on.auto/config';
 
 import { ledgerOfAnotherVersionIn } from '../database/ledger-of-another-version.ts';
+import { type RunningServer, type ServerOptions } from '../server-options/server-options.ts';
 import { firstStartNotice } from '../usage-ping/usage-ping.ts';
-import { startServer, type RunningServer, type ServerOptions } from './lifecycle.ts';
+import { startServer } from './lifecycle.ts';
 
 export interface ServerProcess {
   readonly env: Environment;

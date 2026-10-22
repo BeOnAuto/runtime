@@ -204,7 +204,7 @@ export function providerOf(entry: unknown, documentServer?: string): Provider {
 }
 
 export function providerListOf(...providers: readonly Provider[]): ProviderList {
-  return { providers, documents: import.meta.dirname };
+  return { providers, documents: new Map() };
 }
 
 export function providersOf(...entries: readonly unknown[]): ProviderList {

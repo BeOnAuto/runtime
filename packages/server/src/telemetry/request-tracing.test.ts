@@ -2,19 +2,15 @@ import { INVALID_SPAN_CONTEXT, trace } from '@opentelemetry/api';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
-import { defaultServerOptions, startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { metricNamesIn, spansIn } from '../testing/telemetry/otlp-exports.ts';
-import { receivingOtlp, type OtlpReceiver } from '../testing/telemetry/otlp-receiver.ts';
+import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { tracedRequestOf } from './request-tracing.ts';
 
-interface Traced {
-  readonly receiver: OtlpReceiver;
-  readonly server: RunningServer;
-}
-
-async function tracedServer(endpoint = 'OTEL_EXPORTER_OTLP_ENDPOINT', path = ''): Promise<Traced> {
+async function tracedServer(endpoint = 'OTEL_EXPORTER_OTLP_ENDPOINT', path = '') {
   const receiver = await receivingOtlp();
   onTestFinished(receiver.close);
   const server = await startServer(

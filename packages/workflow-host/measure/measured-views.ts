@@ -1,4 +1,11 @@
-import { unitMemoryBytes, workerStackBytes, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import {
+  handedWorkersOf,
+  programPool,
+  unitMemoryBytes,
+  workerStackBytes,
+  type ProgramPool,
+} from '@on.auto/workflow-engine/dsl';
 import { Effect, type Schema } from 'effect';
 
 import type { HostDatabase } from '../src/database/host-database.ts';
@@ -7,6 +14,12 @@ import type { ProjectorSettings } from '../src/projector/projector-settings.ts';
 import type { KeptView } from '../src/views/view-rows.ts';
 import { viewsFolder } from '../src/views/views-folder.ts';
 import { viewsPortOn } from '../src/views/views-port.ts';
+
+const handed = await handedWorkersOf(shippedFilesOnDisk);
+
+export function measuringPool(): ProgramPool {
+  return programPool({ handed, workers: 4, heapMegabytes: 256 });
+}
 
 export function recallContentOf(name: string, details: Schema.JsonObject): Schema.JsonObject {
   return { source: name, details };

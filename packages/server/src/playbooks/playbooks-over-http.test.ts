@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
-import { startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';

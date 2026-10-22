@@ -7,6 +7,7 @@ import { JobAnswerSchema, type JobSchema } from '../jobs/job-envelopes.ts';
 import type { PoolSettings } from '../jobs/pool-contract.ts';
 import type { Job, Running } from '../jobs/pool-job.ts';
 import { ReadySchema } from '../jobs/ready-signal.ts';
+import { handedTo } from './handed-files.ts';
 
 export const workerStackMegabytes = 64;
 
@@ -202,8 +203,12 @@ export function workerOptions(settings: PoolSettings): WorkerOptions {
   };
 }
 
+function workerStarting(module: Readonly<URL>, settings: PoolSettings): Worker {
+  return new Worker(module, { ...workerOptions(settings), workerData: { handed: handedTo(settings.handed, module) } });
+}
+
 function threadOf(start: Job<unknown>, settings: PoolSettings, hooks: ThreadHooks<Envelope>): Thread<Envelope> {
-  const worker = new Worker(start.module, workerOptions(settings));
+  const worker = workerStarting(start.module, settings);
   const state: ThreadState = { jobs: 0, resting: undefined };
   const loading = Promise.withResolvers<boolean>();
   const served = async <Answer>(job: number, work: Job<Answer>, running: Running): Promise<Served<Answer>> => {

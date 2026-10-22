@@ -16,6 +16,7 @@ import {
   type Catalog,
   type Dispatcher,
   type DispatcherServices,
+  type ShippedFiles,
 } from '@on.auto/operations';
 
 import { servedGuidesOf } from '../guides/served-guides.ts';
@@ -30,13 +31,14 @@ export interface ServedCatalog {
   readonly capabilities: readonly Capability[];
   readonly identityIssuer: string;
   readonly retryStateKeys: RetryStateKeys;
+  readonly shippedFiles: ShippedFiles;
 }
 
-export function routesFor(
+export async function routesFor(
   runtime: AppRuntime<DispatcherServices>,
-  { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys }: ServedCatalog,
-): readonly RegisterRoutes[] {
-  const { guides, recipes, definitionTypes } = servedGuidesOf(capabilities);
+  { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, shippedFiles }: ServedCatalog,
+): Promise<readonly RegisterRoutes[]> {
+  const { guides, recipes, definitionTypes } = await servedGuidesOf(shippedFiles, capabilities);
   const shelf = guideShelfOf(guides, recipes, definitionTypes);
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
@@ -59,9 +61,20 @@ export function routesFor(
 
 export function routesServing(
   operations: Operations,
-  { identityIssuer, retryStateKeys }: Pick<ServedCatalog, 'identityIssuer' | 'retryStateKeys'>,
-): (runtime: AppRuntime<DispatcherServices>) => readonly RegisterRoutes[] {
+  {
+    identityIssuer,
+    retryStateKeys,
+    shippedFiles,
+  }: Pick<ServedCatalog, 'identityIssuer' | 'retryStateKeys' | 'shippedFiles'>,
+): (runtime: AppRuntime<DispatcherServices>) => Promise<readonly RegisterRoutes[]> {
   const catalog = makeCatalog(operations);
-  const served = { catalog, dispatcher: makeDispatcher([]), capabilities: [], identityIssuer, retryStateKeys };
+  const served = {
+    catalog,
+    dispatcher: makeDispatcher([]),
+    capabilities: [],
+    identityIssuer,
+    retryStateKeys,
+    shippedFiles,
+  };
   return (runtime) => routesFor(runtime, served);
 }

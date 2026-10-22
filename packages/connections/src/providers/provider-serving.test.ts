@@ -1,6 +1,12 @@
 import type { ProviderList } from '@on.auto/providers';
 import { fixtureProviders, providerListOf, providerOf, providersOf } from '@on.auto/providers/testing';
-import type { ConnectionServerSettings, ConnectionUnready, OrgConnection } from '@on.auto/tool-servers';
+import {
+  shippedDocumentOf,
+  type ConnectionServerSettings,
+  type ConnectionUnready,
+  type OrgConnection,
+} from '@on.auto/tool-servers';
+import { fakeApiDocument } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -205,7 +211,16 @@ const { base_url: _baseUrl, ...unbasedNotes } = {
 
 describe('a provider whose document beside the entries names its server', () => {
   it('has the host of that server judged where it gives no base_url, at add and at use', async () => {
-    const providers = providerListOf(providerOf(unbasedNotes, 'https://api.notes.example.com/v1'));
+    const server = 'https://api.notes.example.com/v1';
+    const providers = {
+      ...providerListOf(providerOf(unbasedNotes, server)),
+      documents: new Map([
+        [
+          unbasedNotes.document,
+          shippedDocumentOf(new TextEncoder().encode(JSON.stringify(fakeApiDocument('3.1', server)))),
+        ],
+      ]),
+    };
     const h = harness({ providers });
     const { id, token } = await added(h, { provider: 'notes-api' });
     await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });

@@ -1,4 +1,5 @@
-import { programPool } from '@on.auto/workflow-engine/dsl';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { handedWorkersOf, programPool } from '@on.auto/workflow-engine/dsl';
 
 import { rebuiltOn, type Folding, type History } from './measure/dataset-rebuild.ts';
 import { dailyOrders, seriesMeasured, testedDailyOrders } from './measure/order-history.ts';
@@ -69,7 +70,7 @@ async function testedOn({ store, aDatabase }: MeasuredStore, history: History): 
 }
 
 async function measuredOn(measured: MeasuredStore): Promise<void> {
-  const pool = programPool({ workers: 1, heapMegabytes: 256 });
+  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
   const history = { days, liveDays, filters: pool.evaluations.filters };
   try {
     await untestedOn(measured, history);

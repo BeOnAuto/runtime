@@ -20,6 +20,8 @@ export type {
   CheckRequest,
   FoldOutcome,
   FoldRequest,
+  HandedFiles,
+  HandedWorkers,
   PoolOutcome,
   PoolSettings,
   ProgramPool,
@@ -27,6 +29,7 @@ export type {
 } from './jobs/pool-contract.ts';
 export type { CheckAnswer, CheckIssue, CheckJob, StrippedSources } from './jobs/check-messages.ts';
 export { checkPermits, programPool } from './program-pool/program-pool.ts';
+export { handedFilesOf, handedWorkersOf } from './program-pool/handed-files.ts';
 export { pooledJob } from './jobs/pooled-jobs.ts';
 export { idleWorkerMs, jobsBeforeRecycling } from './program-pool/pool-workers.ts';
 export { workerStackMegabytes } from './program-pool/pool-threads.ts';

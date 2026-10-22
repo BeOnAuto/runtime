@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import type { Install } from '../lifecycle/lifecycle.ts';
+import type { Install } from '../server-options/server-options.ts';
 import { besideTheLedgerFile, type LedgerSettings } from '../settings/ledger-settings.ts';
 
 const installIdFile = 'install-id';

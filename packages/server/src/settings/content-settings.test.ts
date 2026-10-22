@@ -1,11 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from './settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -13,16 +13,18 @@ function errorFrom(environment: Environment): unknown {
 }
 
 function contentOf(environment: Environment) {
-  return readSettings({ CONTENT_STORE_URL: 's3://playbook-content/a/b', ...environment }).content;
+  return readSettingsOf({ CONTENT_STORE_URL: 's3://playbook-content/a/b', ...environment }).content;
 }
 
 describe('the content store settings', () => {
   it('keep content in the ledger when CONTENT_STORE_URL is not set, whatever the endpoint', () => {
-    expect(readSettings({ AWS_ENDPOINT_URL: 'http://127.0.0.1:9000' }).content).toEqual({ store: 'ledger' });
+    expect(readSettingsOf({ AWS_ENDPOINT_URL: 'http://127.0.0.1:9000' }).content).toEqual({
+      store: 'ledger',
+    });
   });
 
   it('keep content on object storage in the bucket and under the prefix of CONTENT_STORE_URL', () => {
-    expect(readSettings({ CONTENT_STORE_URL: 's3://playbook-content', AWS_REGION: 'eu-west-1' }).content).toEqual({
+    expect(readSettingsOf({ CONTENT_STORE_URL: 's3://playbook-content', AWS_REGION: 'eu-west-1' }).content).toEqual({
       store: 'object-storage',
       location: { bucket: 'playbook-content', prefix: '' },
       endpoint: undefined,

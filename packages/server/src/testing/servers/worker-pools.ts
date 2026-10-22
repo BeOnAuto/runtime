@@ -11,8 +11,9 @@ function decidingPatiently(pool: ProgramPool): ProgramPool {
   return { ...pool, evaluations: { ...pool.evaluations, machine: decidingWithin(machine, inputsAwaitedAtMostMs) } };
 }
 
-export const patientWorkerPool: ProgramPoolOf = (settings) => decidingPatiently(checkingWithin(workerPool(settings)));
+export const patientWorkerPool: ProgramPoolOf = (settings, handed) =>
+  decidingPatiently(checkingWithin(workerPool(settings, handed)));
 
 export function scriptedWorkerPool(...outcomes: readonly PoolOutcome[]): ProgramPoolOf {
-  return (settings) => scriptedPool(outcomes, patientWorkerPool(settings));
+  return (settings, handed) => scriptedPool(outcomes, patientWorkerPool(settings, handed));
 }

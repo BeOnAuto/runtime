@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { freshInstance } from '../instances/fresh-instances.ts';
@@ -12,7 +13,7 @@ const now = Date.parse('2026-10-01T09:00:00.000Z');
 const budget = { now, mostWork: 250, deadlineAt: Number.POSITIVE_INFINITY };
 
 async function unitOf(clock: () => number = () => 0): Promise<ExpressionUnit> {
-  const instance = await freshInstance(unitMemoryBytes);
+  const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
   return expressionUnitOf(() => instance, { stackBytes: threadStackBytes, mostAnswerBytes: mostEventBytes, clock });
 }
 

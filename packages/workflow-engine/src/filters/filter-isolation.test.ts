@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import type { JsonObject } from '../dsl/json.ts';
@@ -22,7 +23,7 @@ function filterAt(reference: string, data = writingTheIteratorPrototype) {
 describe('the filters of a sandbox that breaks', () => {
   it('pass on a failure that is not a raise of the filter, unchanged', async () => {
     const failure = new TypeError('the sandbox broke');
-    const sandbox = filterSandboxOf(() => 0);
+    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
     const breaking: FilterSandbox = {
       ...sandbox,
       session: async (opening) => ({
@@ -40,7 +41,7 @@ describe('the filters of a sandbox that breaks', () => {
 describe('the filters of one batch', () => {
   it('share no state through an intrinsic no global names, so each answers as it would alone', async () => {
     const [first, second] = [filterAt('/first'), filterAt('/second')];
-    const sandbox = filterSandboxOf(() => 0);
+    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
 
     const together = await filterVerdictsOf([first, second], closed, sandbox, now);
     const alone = [
@@ -53,7 +54,7 @@ describe('the filters of one batch', () => {
   });
 
   it('take a fresh context after one its sandbox refused, so one filter that fills its memory fails no other', async () => {
-    const sandbox = filterSandboxOf(() => 0);
+    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
 
     const verdicts = await filterVerdictsOf(
       [
@@ -71,7 +72,7 @@ describe('the filters of one batch', () => {
   });
 
   it('say a filter was stopped when its memory or its deadline ended it, which no event causes, and not when its work did', async () => {
-    const sandbox = filterSandboxOf(() => 0);
+    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
 
     const verdicts = await filterVerdictsOf(
       [filterAt('/working', working), filterAt('/filling', filling), filterAt('/eu', '${ $data.region == "eu" }')],

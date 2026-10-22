@@ -1,10 +1,11 @@
 import { Effect, Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { optionsComposing } from '../testing/entries/serving-options.ts';
+import { servedBy } from '../server-options/server-options.ts';
+import { optionsComposing, defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { logsIn, spansIn } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp, type OtlpReceiver } from '../testing/telemetry/otlp-receiver.ts';
-import { defaultServerOptions, servedBy, startServer } from './lifecycle.ts';
+import { startServer } from './lifecycle.ts';
 
 async function collector(): Promise<OtlpReceiver> {
   const receiver = await receivingOtlp();

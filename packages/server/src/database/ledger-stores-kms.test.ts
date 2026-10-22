@@ -5,9 +5,9 @@ import { serveFakeKms, type FakeKeyState } from '@on.auto/secrets/testing';
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
 
 const account = '111122223333';
@@ -66,7 +66,7 @@ async function openedWith(fileName: string, environment: Readonly<Record<string,
   const { context, lines } = await aContextLogging();
   const stores = await ledgerStoresOpenedBy(
     context,
-    readSettings({ LEDGER_FILE: fileName, ...environment }),
+    readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
     () => Promise.resolve(adaptersWithin(waits)),
   );
@@ -78,7 +78,7 @@ async function storesOf(fileName: string, environment: Readonly<Record<string, s
   const { context } = await aContextLogging();
   return ledgerStoresOpenedBy(
     context,
-    readSettings({ LEDGER_FILE: fileName, ...environment }),
+    readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
     () => Promise.resolve(onTheFake),
   );

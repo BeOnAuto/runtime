@@ -1,6 +1,5 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { programPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, Function } from 'effect';
 
 import type { DatabaseSettings } from '../src/database/host-databases.ts';
@@ -8,7 +7,7 @@ import { statement } from '../src/database/statement.ts';
 import { openWorkflowStore, type WorkflowStore } from '../src/host/workflow-store.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
-import { measuredViewOf, measuredViews, recallContentOf } from './measured-views.ts';
+import { measuredViewOf, measuredViews, measuringPool, recallContentOf } from './measured-views.ts';
 
 export interface IdleViews {
   readonly views: number;
@@ -62,7 +61,7 @@ async function allLive(store: WorkflowStore, views: number): Promise<void> {
 }
 
 export async function idleViewsOn(settings: DatabaseSettings, views: number, seconds: number): Promise<IdleViews> {
-  const pool = programPool({ workers: 4, heapMegabytes: 256 });
+  const pool = measuringPool();
   const measured = measuredViews(pool);
   const store = await openWorkflowStore(settings, Function.constVoid, measured.folders);
   await savedInTurn(store, views);

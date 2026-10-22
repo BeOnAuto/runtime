@@ -1,8 +1,8 @@
 import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
 
 import { release } from '../composition/release.ts';
-import type { Install } from '../lifecycle/lifecycle.ts';
 import type { ColorDepth } from '../logging/terminal.ts';
+import type { Install } from '../server-options/server-options.ts';
 import { clearedLine, headerOf, readyNoticeOf, startingLine, stoppedNotice, stoppingNotice } from './local-banner.ts';
 
 interface LocalServer {

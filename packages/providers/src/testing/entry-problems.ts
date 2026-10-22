@@ -1,10 +1,7 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { shippedFilesInMemory } from '@on.auto/operations/testing';
 import { Result, Schema, SchemaIssue } from 'effect';
-import { onTestFinished } from 'vitest';
 
 import { ProviderEntrySchema } from '../entry/provider-entry.ts';
 import { readProviders } from '../reading/shipped-providers.ts';
@@ -26,23 +23,22 @@ export function decodedEntry(entry: unknown) {
 }
 
 export interface EntryFolder {
-  readonly folder: string;
-  readonly read: () => string;
+  readonly read: () => Promise<string>;
 }
 
+const folder = '/shipped/entries';
+
+const entries = pathToFileURL(`${folder}/`);
+
 export function entryFolderWith(files: Readonly<Record<string, string>>): EntryFolder {
-  const folder = mkdtempSync(join(tmpdir(), 'auto-runtime-providers-'));
-  onTestFinished(() => {
-    rmSync(folder, { recursive: true, force: true });
-  });
-  mkdirSync(join(folder, 'documents'));
-  for (const [name, text] of Object.entries(files)) {
-    writeFileSync(join(folder, name), text);
-  }
+  const shipped = shippedFilesInMemory(
+    Object.fromEntries(
+      Object.entries(files).map(([name, text]: readonly [string, string]) => [new URL(name, entries).href, text]),
+    ),
+  );
   return {
-    folder,
-    read: () =>
-      Result.match(readProviders(pathToFileURL(`${folder}/`)), {
+    read: async () =>
+      Result.match(await readProviders(shipped, entries), {
         onSuccess: ({ providers }) => providers.map(({ entry, address }) => `${entry.name} ${address}`).join('; '),
         onFailure: ({ message }: { readonly message: string }) => message.replaceAll(folder, '<entries>'),
       }),

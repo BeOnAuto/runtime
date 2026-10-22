@@ -1,11 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from './settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -14,7 +14,7 @@ function errorFrom(environment: Environment): unknown {
 
 describe('the workflow settings', () => {
   it('let a run last 30 days, run 32 calls at once, keep 1000 calls open under a run and sweep every second when nothing is set', () => {
-    expect(readSettings({}).workflows).toEqual({
+    expect(readSettingsOf({}).workflows).toEqual({
       mostDurationMs: 2_592_000_000,
       mostCallsAtOnce: 32,
       mostOpenCalls: 1000,
@@ -23,7 +23,7 @@ describe('the workflow settings', () => {
   });
 
   it('read how long a run may last, how many calls run at once, how many stay open and how often the runs are swept', () => {
-    const workflows = readSettings({
+    const workflows = readSettingsOf({
       WORKFLOW_MAX_DURATION: 'P7D',
       WORKFLOW_NESTED_RUNS: '8',
       WORKFLOW_MAX_OPEN_CALLS: '50',
@@ -55,8 +55,8 @@ describe('the workflow settings', () => {
 describe('the most calls open under one run', () => {
   it('take from 1 to 9999, and refuse 10000', () => {
     expect([
-      readSettings({ WORKFLOW_MAX_OPEN_CALLS: '1' }).workflows.mostOpenCalls,
-      readSettings({ WORKFLOW_MAX_OPEN_CALLS: '9999' }).workflows.mostOpenCalls,
+      readSettingsOf({ WORKFLOW_MAX_OPEN_CALLS: '1' }).workflows.mostOpenCalls,
+      readSettingsOf({ WORKFLOW_MAX_OPEN_CALLS: '9999' }).workflows.mostOpenCalls,
     ]).toEqual([1, 9999]);
     expect(String(errorFrom({ WORKFLOW_MAX_OPEN_CALLS: '10000' }))).toContain(
       'WORKFLOW_MAX_OPEN_CALLS: Expected a whole number from 1 to 9999',

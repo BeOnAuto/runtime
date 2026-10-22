@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { freshInstance } from '../instances/fresh-instances.ts';
@@ -14,7 +15,7 @@ const evaluation: Evaluation = { budget: 500, deadlineAt: Number.POSITIVE_INFINI
 
 const settings = { stackBytes: threadStackBytes, mostAnswerBytes: 1_048_576, clock: () => 0 };
 
-const instance = await freshInstance(unitMemoryBytes);
+const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
 
 const unit = expressionUnitOf(() => instance, settings);
 
@@ -45,7 +46,7 @@ function foldOf(folding: FoldingUnit): FilterContext & { readonly fold: Fold } {
 }
 
 async function returned(body: string): Promise<ModuleRun> {
-  return moduleRun(await freshInstance(unitMemoryBytes), settings, {
+  return moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, {
     source: `export default function () {\n  ${body}\n}`,
     entry: 'default',
     arguments: [],
@@ -253,7 +254,7 @@ describe('a context the sandbox freezes', () => {
   it('lets an Error of a program name itself and a value take a key its prototype has', async () => {
     const folding = foldOf(
       foldingUnitOf(
-        await freshInstance(unitMemoryBytes),
+        await freshInstance(shippedFilesOnDisk, unitMemoryBytes),
         settings,
         {
           fold: [

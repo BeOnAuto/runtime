@@ -31,7 +31,7 @@ function decidingPastTheDeadline(pool: ProgramPool): ProgramPool {
   return { ...pool, evaluations: { ...pool.evaluations, machine: { ...machine, unit: unitPastItsDeadline } } };
 }
 
-const poolOf: ProgramPoolOf = (settings) => decidingPastTheDeadline(patientWorkerPool(settings));
+const poolOf: ProgramPoolOf = (settings, handed) => decidingPastTheDeadline(patientWorkerPool(settings, handed));
 
 describe('the start of a workflow whose expressions run past the deadline of an input, over HTTP', () => {
   it('is unavailable, naming the expression, the deadline of an input and the step', async () => {

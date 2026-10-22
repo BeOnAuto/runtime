@@ -6,9 +6,9 @@ import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing'
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { offeredByTheServer, shippedProviders } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const workspace = 'notes-workspace-6b2e0d';
 
@@ -169,7 +169,7 @@ describe('a provider the settings file adds, whose choices set a host named for 
 
 function refusalOf(environment: Readonly<Record<string, string>>): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error).replaceAll(environment['CONFIG_FILE'] ?? 'no file', 'auto-runtime.yaml');
   }

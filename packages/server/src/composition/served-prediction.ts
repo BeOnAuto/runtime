@@ -4,8 +4,8 @@ import type { DispatcherServices } from '@on.auto/operations';
 import type { PredictionPorts } from '@on.auto/prediction';
 import type { WorkflowStore } from '@on.auto/workflow-host';
 
-import type { ServedClosing } from '../lifecycle/lifecycle.ts';
 import { logPredictionFunctions } from '../logging/prediction-logging.ts';
+import type { ServedClosing } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
 import { servedModels } from './served-models.ts';

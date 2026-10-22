@@ -1,4 +1,5 @@
-import { mostValueDepth } from '@on.auto/workflow-engine/dsl';
+import { measuredPoolSettings } from '@on.auto/definitions/testing';
+import { mostValueDepth, programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 
 export const breaksTheWorker = 'breaks the worker';
 
@@ -53,3 +54,7 @@ export const breakingFoldWorker = foldingWorker({
   whenFolding: `if (events[event]?.data?.output === '${breaksTheWorker}') throw new Error('broken on purpose');`,
   serving: 'serveJobs({ fold });',
 });
+
+export function testFoldPoolOf(settings: Partial<PoolSettings>): ProgramPool {
+  return programPool({ workers: 4, heapMegabytes: 64, ...measuredPoolSettings, ...settings });
+}

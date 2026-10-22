@@ -1,8 +1,8 @@
 import { studioBaseOf, studioLinkOf, type AccessMode, type StudioSettings } from '@on.auto/identity';
 
-import type { Install } from '../lifecycle/lifecycle.ts';
 import { defaultRuntimePort } from '../local-runtime/local-control.ts';
 import { linkerFor, painterFor, type ColorDepth } from '../logging/terminal.ts';
+import type { Install } from '../server-options/server-options.ts';
 import { firstStartNotice } from '../usage-ping/usage-ping.ts';
 import { logoHeight, logoLines, type PaintingDepth } from './logo.ts';
 

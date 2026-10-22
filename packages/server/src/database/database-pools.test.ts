@@ -4,10 +4,10 @@ import type { DatabaseTokenRequest } from '@on.auto/outbound/aws';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
-import { readSettings } from '../settings/settings.ts';
 import { aFakePostgreSQL } from '../testing/databases/fake-postgresql.ts';
 import { aCertificateOfTheLoopback, trustedForTheTest } from '../testing/databases/loopback-certificate.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { databasePoolsOf, type DatabaseTokenSignerOf } from './database-pools.ts';
 
 interface Asked {
@@ -40,7 +40,7 @@ function aRecordingSigner(): RecordingSigner {
 const proxied = { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://proxy.internal:3128' };
 
 function postgresqlLedgerOf(environment: Environment): PostgreSQLLedgerSettings {
-  const { ledger } = readSettings({ SECRETS_KEY: secretsKey, ...environment });
+  const { ledger } = readSettingsOf({ SECRETS_KEY: secretsKey, ...environment });
   if (ledger.store === 'sqlite') {
     throw new Error('Expected a ledger in PostgreSQL');
   }
@@ -62,7 +62,7 @@ describe('the pools of a ledger whose password is in DATABASE_URL', () => {
 
     const pool = databasePoolsOf(
       postgresqlLedgerOf({ DATABASE_URL: url }),
-      readSettings({}).proxy,
+      readSettingsOf({}).proxy,
       signer.signerOf,
     )({
       max: 4,
@@ -80,7 +80,7 @@ describe('the pools of a ledger that signs a token for each connection', () => {
     trustedForTheTest(certificate);
     const database = await aFakePostgreSQL(certificate);
     const signer = aRecordingSigner();
-    const { proxy } = readSettings(proxied);
+    const { proxy } = readSettingsOf(proxied);
 
     const pool = databasePoolsOf(signingLedgerOn(database.port), proxy, signer.signerOf)({ max: 2 });
     onTestFinished(() => pool.end());
@@ -99,7 +99,7 @@ describe('the pools of a ledger that signs a token for each connection', () => {
   it('reach only a database whose certificate they verify, and ask no token of one they cannot', async () => {
     const database = await aFakePostgreSQL(aCertificateOfTheLoopback());
     const signer = aRecordingSigner();
-    const pool = databasePoolsOf(signingLedgerOn(database.port), readSettings({}).proxy, signer.signerOf)({ max: 1 });
+    const pool = databasePoolsOf(signingLedgerOn(database.port), readSettingsOf({}).proxy, signer.signerOf)({ max: 1 });
     onTestFinished(() => pool.end());
 
     await expect(pool.connect()).rejects.toMatchObject({ code: 'DEPTH_ZERO_SELF_SIGNED_CERT' });
@@ -110,7 +110,7 @@ describe('the pools of a ledger that signs a token for each connection', () => {
   it('refuse a database that offers no TLS, before any token is asked for', async () => {
     const database = await aFakePostgreSQL();
     const signer = aRecordingSigner();
-    const pool = databasePoolsOf(signingLedgerOn(database.port), readSettings({}).proxy, signer.signerOf)({ max: 1 });
+    const pool = databasePoolsOf(signingLedgerOn(database.port), readSettingsOf({}).proxy, signer.signerOf)({ max: 1 });
     onTestFinished(() => pool.end());
 
     await expect(pool.connect()).rejects.toThrow('The server does not support SSL connections');
@@ -125,7 +125,7 @@ describe('the host name of a database that signs in with tokens', () => {
     trustedForTheTest(certificate);
     const database = await aFakePostgreSQL(certificate);
     const signer = aRecordingSigner();
-    const pool = databasePoolsOf(signingLedgerOn(database.port), readSettings({}).proxy, signer.signerOf)({ max: 1 });
+    const pool = databasePoolsOf(signingLedgerOn(database.port), readSettingsOf({}).proxy, signer.signerOf)({ max: 1 });
     onTestFinished(() => pool.end());
 
     await expect(pool.connect()).rejects.toMatchObject({ code: 'ERR_TLS_CERT_ALTNAME_INVALID' });
@@ -142,7 +142,7 @@ describe('a token the pools of a ledger cannot sign', () => {
     const unsigned = new Error('Could not load credentials from any providers');
     const pool = databasePoolsOf(
       signingLedgerOn(database.port),
-      readSettings({}).proxy,
+      readSettingsOf({}).proxy,
       () => () => Promise.reject(unsigned),
     )({ max: 1 });
     onTestFinished(() => pool.end());

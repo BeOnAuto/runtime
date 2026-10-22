@@ -86,7 +86,7 @@ export function readReasoningSettings(
     readToolServerSettings(environment, {
       modelProviders,
       providers,
-      ...(file === undefined ? {} : { documentsDirectory: dirname(file.path) }),
+      ...(file === undefined ? {} : { documents: { kind: 'directory', path: dirname(file.path) } }),
     }).pipe(Effect.mapError((invalid: Problems) => serversPlaced(invalid, file))),
   );
   const reasoning = Effect.runSync(countsIn(environment, { settings: 'reasoning function settings', bounds }));

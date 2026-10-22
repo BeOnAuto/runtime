@@ -36,8 +36,8 @@ function stallingChecks(): {
     stall: (because) => {
       state.because = because;
     },
-    poolOf: (settings) => {
-      const pool = patientWorkerPool(settings);
+    poolOf: (settings, handed) => {
+      const pool = patientWorkerPool(settings, handed);
       return {
         ...pool,
         check: (request, signal) =>

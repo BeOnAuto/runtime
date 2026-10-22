@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { release } from '../composition/release.ts';
-import type { StartPing } from '../lifecycle/lifecycle.ts';
+import type { StartPing } from '../server-options/server-options.ts';
 import type { LedgerSettings } from '../settings/ledger-settings.ts';
 import type { UsagePingSettings } from './usage-ping-settings.ts';
 import { firstStartNotice, usagePingOf, type PingFetch, type UsagePingHost } from './usage-ping.ts';

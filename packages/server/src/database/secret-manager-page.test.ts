@@ -6,8 +6,8 @@ import { Effect, Logger, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { AwsAdapters } from '../secrets/aws-adapters.ts';
-import { readSettings } from '../settings/settings.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
 
 const page = readFileSync(new URL('../../../../docs/self-host/secret-manager.md', import.meta.url), 'utf8');
@@ -68,7 +68,7 @@ describe('the page that keeps secrets in a secret manager', () => {
   it('names the manager alone, then the move from the ledger and back, as the settings read them', () => {
     expect(
       environments.map((environment) => {
-        const { keepers, secrets } = readSettings(environment);
+        const { keepers, secrets } = readSettingsOf(environment);
         return { keepers, custodian: secrets?.current.from };
       }),
     ).toEqual([
@@ -127,7 +127,7 @@ async function startedUnder(environment: Readonly<Record<string, string>>) {
   const context = await Effect.runPromise(Effect.context().pipe(Effect.provide(Logger.layer([capture]))));
   const started = await ledgerStoresOpenedBy(
     context,
-    readSettings({ LEDGER_FILE: fileName, ...environment }),
+    readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
     () => Promise.resolve(onTheFake),
   ).then(

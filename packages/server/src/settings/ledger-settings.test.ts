@@ -5,11 +5,12 @@ import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { secretsKey } from '../testing/databases/secrets-key.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import type { LedgerSettings } from './ledger-settings.ts';
-import { readSettings, type Settings } from './settings.ts';
+import { type Settings } from './settings.ts';
 
 function settingsOf(environment: Environment): Settings {
-  return readSettings({ SECRETS_KEY: secretsKey, ...environment });
+  return readSettingsOf({ SECRETS_KEY: secretsKey, ...environment });
 }
 
 function errorFrom(environment: Environment): unknown {

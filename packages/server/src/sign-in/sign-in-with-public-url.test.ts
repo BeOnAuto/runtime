@@ -6,7 +6,8 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
 import { tcpPort } from '../lifecycle/http-server.ts';
-import { startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { accessTokenOf, issuerOverHttps } from './issuer-over-https.ts';
 

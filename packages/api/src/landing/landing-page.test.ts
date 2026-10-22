@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
 
+import type { ShippedFiles } from '@on.auto/operations';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesInMemory } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import type { ApiHandler } from '../index.ts';
+import { readPageStyle, type ApiHandler } from '../index.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
 import { operationServer } from '../testing/operation-server.ts';
 import { servedStudio } from '../testing/studios.ts';
@@ -154,6 +157,29 @@ describe('what the page at the root of the server loads', () => {
     expect(fontsOf(page)).toEqual(['wOF2', 'wOF2']);
     expect(page).toContain("font-family: 'DM Mono';");
     expect(page).toContain("font-family: 'DM Sans';");
+  });
+
+  it('has its typefaces read through the files the server ships once, before the server answers, and none read again for a page', async () => {
+    const read: string[] = [];
+    const shippedFiles: ShippedFiles = {
+      ...shippedFilesOnDisk,
+      bytes: (file) => {
+        read.push(file.pathname.slice(file.pathname.lastIndexOf('/') + 1));
+        return shippedFilesOnDisk.bytes(file);
+      },
+    };
+    const { handler } = createTestHandler({ pageStyle: await readPageStyle(shippedFiles) });
+    const before = [...read];
+
+    await open(handler);
+    await open(handler);
+
+    expect(before).toEqual(['dm-mono-latin-500.woff2', 'dm-sans-latin-variable.woff2']);
+    expect(read).toEqual(before);
+  });
+
+  it('cannot be styled when a typeface is not shipped, so the read refuses, naming the file', async () => {
+    await expect(readPageStyle(shippedFilesInMemory({}))).rejects.toThrow(/No file is shipped at .*\.woff2$/u);
   });
 
   it('names no other server than the studio it opens', async () => {

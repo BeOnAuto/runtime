@@ -6,7 +6,7 @@ import { createApiKey } from '@on.auto/identity';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { variablesTheRuntimeReads } from '../connections/variables-the-runtime-reads.ts';
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { autoClientsOf, returnKindOf } from './consent-settings.ts';
 
 const { entry } = createApiKey({ id: 'ci-1', org: 'acme', permissions: ['org:read'], playbooks: '*' });
@@ -17,7 +17,7 @@ const signingIn = { PUBLIC_URL: 'https://runtime.example.com' };
 
 function errorFrom(environment: Readonly<Record<string, string>>): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }
@@ -25,7 +25,7 @@ function errorFrom(environment: Readonly<Record<string, string>>): string {
 }
 
 function switchOf(environment: Readonly<Record<string, string>>): boolean {
-  return readSettings(environment).autoClients.enabled;
+  return readSettingsOf(environment).autoClients.enabled;
 }
 
 function connectionsOf(setting: Readonly<Record<string, unknown>>): string {
@@ -75,9 +75,9 @@ describe('the switch of Auto’s clients', () => {
 describe('the address of Auto’s consent service', () => {
   it('is https://consent.on.auto by default, and any https origin, or an http one on the loopback for a test', () => {
     expect([
-      readSettings(loopback).autoClients.serviceUrl,
-      readSettings({ ...loopback, CONSENT_SERVICE_URL: 'https://consent.example.com' }).autoClients.serviceUrl,
-      readSettings({ ...loopback, CONSENT_SERVICE_URL: 'http://127.0.0.1:19650' }).autoClients.serviceUrl,
+      readSettingsOf(loopback).autoClients.serviceUrl,
+      readSettingsOf({ ...loopback, CONSENT_SERVICE_URL: 'https://consent.example.com' }).autoClients.serviceUrl,
+      readSettingsOf({ ...loopback, CONSENT_SERVICE_URL: 'http://127.0.0.1:19650' }).autoClients.serviceUrl,
     ]).toEqual(['https://consent.on.auto', 'https://consent.example.com', 'http://127.0.0.1:19650']);
   });
 

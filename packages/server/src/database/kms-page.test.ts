@@ -5,8 +5,8 @@ import { serveFakeKms } from '@on.auto/secrets/testing';
 import { Effect, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
 
 const page = readFileSync(new URL('../../../../docs/self-host/production.md', import.meta.url), 'utf8');
@@ -57,7 +57,7 @@ const quotedRefusal = String(/`(The secrets settings are invalid\. SECRETS_KEY_K
 
 describe('the page that holds the secrets key in a KMS', () => {
   it('sets SECRETS_KEY_KMS to the ARN of a key and of an alias, and rotates from a key in a file in one restart, as the settings read them', () => {
-    expect(shellBlocks.map((environment) => readSettings(environment).secrets)).toEqual([
+    expect(shellBlocks.map((environment) => readSettingsOf(environment).secrets)).toEqual([
       { current: { from: 'kms', setting: 'SECRETS_KEY_KMS', arn: keyArn, region: 'eu-west-1' }, previous: undefined },
       {
         current: {
@@ -110,7 +110,7 @@ async function startRefusedFor(environment: Readonly<Record<string, string>>): P
   const context = await Effect.runPromise(Effect.context());
   return ledgerStoresOpenedBy(
     context,
-    readSettings({ LEDGER_FILE: fileName, ...environment }),
+    readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
     { store: 'sqlite', file: fileName },
     () => Promise.resolve(onTheFake),
   ).then(() => 'started', String);

@@ -59,7 +59,7 @@ export function reactionsOf(
   runtime: AppRuntime<DispatcherServices>,
   dispatcher: Dispatcher,
   { startVersion, names }: Reacting,
-): ReactionOptions {
+): Omit<ReactionOptions, 'filters'> {
   return {
     definitionType: workflows,
     start: (start) =>

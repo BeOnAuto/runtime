@@ -6,7 +6,7 @@ import { Effect, ManagedRuntime } from 'effect';
 
 import { ledgerLayerFor } from '../composition/ledger-store.ts';
 import { ledgerDatabaseOf } from '../database/ledger-database.ts';
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const datasets = '/v1/orgs/acme/playbooks/alpha/datasets';
 
@@ -49,7 +49,7 @@ export async function keptText(
   environment: Readonly<Record<string, string>>,
   sha256: string,
 ): Promise<string | undefined> {
-  const settings = readSettings(environment);
+  const settings = readSettingsOf(environment);
   const runtime = ManagedRuntime.make(ledgerLayerFor(settings, ledgerDatabaseOf(settings)));
   try {
     const kept = await runtime.runPromise(

@@ -50,9 +50,19 @@ export interface StdioServerSettings extends ServedBy {
   readonly env: ReadonlyMap<string, Redacted.Redacted>;
 }
 
+export interface ShippedDocument {
+  readonly text: string;
+  readonly bytes: number;
+}
+
 export type ApiDocumentSource =
   | { readonly kind: 'url'; readonly url: string }
-  | { readonly kind: 'file'; readonly path: string };
+  | { readonly kind: 'file'; readonly path: string }
+  | { readonly kind: 'shipped'; readonly document: ShippedDocument };
+
+export type DocumentsPlace =
+  | { readonly kind: 'directory'; readonly path: string }
+  | { readonly kind: 'shipped'; readonly byName: ReadonlyMap<string, ShippedDocument> };
 
 export interface OpenApiServerSettings extends ServedBy {
   readonly type: 'openapi';
@@ -88,6 +98,10 @@ function servesScope(server: Scoped, { org, playbook }: ServersScope): boolean {
 
 export function isListedFor(server: Scoped, scope: ServersScope, named: string | undefined): boolean {
   return servesScope(server, scope) && (named === undefined || server.name === named);
+}
+
+export function shippedDocumentOf(bytes: Readonly<Uint8Array>): ShippedDocument {
+  return { text: new TextDecoder().decode(bytes), bytes: bytes.byteLength };
 }
 
 export function authOf(server: ServerSettings): AuthSettings | null {

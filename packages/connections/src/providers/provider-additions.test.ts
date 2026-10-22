@@ -1,4 +1,6 @@
 import { providersOf, regions, tracker } from '@on.auto/providers/testing';
+import { shippedDocumentOf } from '@on.auto/tool-servers';
+import { fakeApiDocument } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -28,6 +30,10 @@ const notesApi = {
   base_url: 'https://api.notes.example.org/v1',
   credentials: [{ kind: 'none' }],
 };
+
+const notesDocument = new TextEncoder().encode(JSON.stringify(fakeApiDocument('3.1', notesApi.base_url)));
+
+const notesShipped = new Map([[notesApi.document, shippedDocumentOf(notesDocument)]]);
 
 const openai = { ...tracker, name: 'openai', url: 'https://openai-tools.example.com/mcp', placeholders: {} };
 
@@ -221,7 +227,7 @@ describe('the rules a connection added by a provider passes', () => {
   it('take the document beside the entries of a provider, which is no host, and judge the host its calls go to', async () => {
     const h = harness({
       policy: connectionPolicyOf({ allowed_hosts: ['*.example.org'] }),
-      providers: providersOf(notesApi),
+      providers: { ...providersOf(notesApi), documents: notesShipped },
     });
 
     expect(await adding(h, { provider: 'notes-api' })).toMatchObject({

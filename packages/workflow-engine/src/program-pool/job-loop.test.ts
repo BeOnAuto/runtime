@@ -5,10 +5,12 @@ import { foldAnswerOf, foldPageData } from '../folds/fold-answer.ts';
 import type { FoldPage } from '../folds/fold-page.ts';
 import { foldProgress, type FoldProgress } from '../folds/fold-progress.ts';
 import type { CheckJob } from '../jobs/check-messages.ts';
-import type { JobHandlers } from '../jobs/job-kit.ts';
 import { answerOf, type OutputCheck } from '../jobs/program-answer.ts';
+import { handedSandbox } from '../pool-testing/test-pools.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
-import { serveJobs } from './job-loop.ts';
+import { serveJobs, serveJobsWith } from './job-loop.ts';
+
+type HandlersOf = Parameters<typeof serveJobsWith>[0];
 
 type Ask = (message: unknown) => Promise<unknown>;
 
@@ -29,12 +31,12 @@ afterEach(() => {
   }
 });
 
-function served(handlers: JobHandlers): Ask {
+function servedWith(handlersOf: HandlersOf, handed: Readonly<Record<string, Readonly<Uint8Array>>> = {}): Ask {
   const { port1, port2 } = new MessageChannel();
   channels.push({ port1, port2 });
   const ready = Promise.withResolvers<unknown>();
   port2.once('message', ready.resolve);
-  serveJobs(handlers, port1);
+  serveJobsWith(handlersOf, port1, { handed: { ...handedSandbox, ...handed } });
   return async (message) => {
     await ready.promise;
     const { promise, resolve } = Promise.withResolvers<unknown>();
@@ -44,6 +46,10 @@ function served(handlers: JobHandlers): Ask {
     port2.postMessage(message, []);
     return promise;
   };
+}
+
+function served(handlers: ReturnType<HandlersOf>): Ask {
+  return servedWith(() => handlers);
 }
 
 function inTurn(ask: Ask, messages: readonly unknown[]): Promise<readonly unknown[]> {
@@ -121,6 +127,21 @@ describe('a loop that starts serving jobs', () => {
     serveJobs({}, port1);
 
     expect(await first.promise).toEqual({ ready: true });
+  });
+
+  it('makes its handlers of the files the pool handed its worker', async () => {
+    const note = new URL('file:///shipped/note.txt');
+    const ask = servedWith(
+      (handed) => ({
+        check: () => ({ ran: 'checked', issues: [{ at: 0, line: 1, detail: new TextDecoder().decode(handed(note)) }] }),
+      }),
+      { [note.href]: new TextEncoder().encode('Handed at start') },
+    );
+
+    expect(await ask({ job: 1, kind: 'check', request: checkRequest })).toMatchObject({
+      job: 1,
+      answer: { ran: 'checked', issues: [{ detail: 'Handed at start' }] },
+    });
   });
 });
 

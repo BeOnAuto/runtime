@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
+import type { CheckHandler, HandedFile } from '@on.auto/workflow-engine/job-loop';
 
+import { checkerOf } from './checking.ts';
 import type { SandboxLib } from './sandbox-lib.ts';
 
 export const keptLibFiles: Readonly<Record<keyof SandboxLib, URL>> = {
@@ -7,9 +8,14 @@ export const keptLibFiles: Readonly<Record<keyof SandboxLib, URL>> = {
   iterator: new URL('../../lib/sandbox-iterator.d.ts.txt', import.meta.url),
 };
 
-export function keptSandboxLib(): SandboxLib {
+export function sandboxLibFrom(handed: HandedFile): SandboxLib {
+  const decoder = new TextDecoder();
   return {
-    script: readFileSync(keptLibFiles.script, 'utf8'),
-    iterator: readFileSync(keptLibFiles.iterator, 'utf8'),
+    script: decoder.decode(handed(keptLibFiles.script)),
+    iterator: decoder.decode(handed(keptLibFiles.iterator)),
   };
+}
+
+export function handedChecks(handed: HandedFile): { readonly check: CheckHandler } {
+  return { check: checkerOf(sandboxLibFrom(handed)) };
 }
