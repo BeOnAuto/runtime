@@ -4,7 +4,7 @@
   "info": {
     "title": "Auto Runtime",
     "version": "0.16.0",
-    "description": "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
+    "description": "Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
     {
@@ -66,7 +66,7 @@
       "post": {
         "operationId": "create_playbook",
         "summary": "Create playbook",
-        "description": "Creates a playbook in the org for one business responsibility, such as reviewing campaign briefs or keeping a team's meeting notes, and returns it, active and empty: its functions and workflows come next. Use it when the person wants a new playbook; list_playbooks shows the playbooks that exist, and an id that is taken or retired is refused. `playbook` is the id every tool inside the playbook takes, `name` is what people call it, and `description` says what the playbook is for, in the person's words.",
+        "description": "Start here when the person wants something done in their business that should keep working after this conversation, however they put it, and none of their playbooks covers it. Creates a playbook in the org for one business responsibility, such as reviewing campaign briefs or keeping a team's meeting notes, and returns it, active and empty: its functions and workflows come next. list_playbooks shows the playbooks that exist, and an id that is taken or retired is refused. `playbook` is the id every tool inside the playbook takes, `name` is what people call it, and `description` says what the playbook is for, in the person's words.",
         "tags": [
           "playbooks"
         ],
@@ -221,7 +221,7 @@
       "get": {
         "operationId": "list_playbooks",
         "summary": "List playbooks",
-        "description": "Lists the playbooks of the org that the caller may access, sorted by id, each with its name, what it is for and whether it is active. Use it to find a playbook the person names, or to see whether one exists before another is made; each playbook it lists holds every field of the playbook. `include_retired` adds the retired playbooks, which are left out otherwise.",
+        "description": "Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id, each with its name, what it is for and whether it is active. Each playbook it lists holds every field of the playbook. `include_retired` adds the retired playbooks, which are left out otherwise.",
         "tags": [
           "playbooks"
         ],

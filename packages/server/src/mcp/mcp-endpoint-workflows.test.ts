@@ -1,4 +1,4 @@
-import { toolNamesIn, withMcpSession, type McpSession, type ToolResult } from '@on.auto/api/testing';
+import { listedTools, toolNamesIn, withMcpSession, type McpSession, type ToolResult } from '@on.auto/api/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -73,18 +73,16 @@ async function welcomedAfterReply(session: McpSession): Promise<ToolResult> {
 }
 
 describe('/mcp with workflows', () => {
-  it('lists twenty-eight tools, and its instructions say how to see whether a workflow run ended or still waits', async () => {
+  it('lists twenty-eight tools, and the description of run_definition says how to see whether a workflow run ended', async () => {
     server = await servingWorkflows([]);
 
-    const served = await onMcp(async (session) => ({
-      tools: toolNamesIn(await session.listTools()),
-      instructions: session.instructions,
-    }));
+    const listing = await onMcp((session) => session.listTools());
+    const tools = toolNamesIn(listing);
 
-    expect(served.tools).toHaveLength(28);
-    expect(served.tools.slice(-2)).toEqual(['send_run_event', 'get_guide']);
-    expect(served.instructions).toContain(
-      'A run of a workflow answers started; get_run shows whether it ended or still waits.',
+    expect(tools).toHaveLength(28);
+    expect(tools.slice(-2)).toEqual(['send_run_event', 'get_guide']);
+    expect(listedTools(listing).find(({ name }) => name === 'run_definition')?.description).toContain(
+      'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
     );
   });
 

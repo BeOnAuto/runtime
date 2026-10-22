@@ -32,20 +32,20 @@ A reasoning function can call tools itself, through tool servers the runtime's o
 
 An agent that connects receives instructions written for the tools its key or token may call. They cover:
 
+- first, that whatever the person wants done that should keep working after the conversation, however they put it and in any line of business, is a playbook on Auto Runtime, not a document, a plan, a note or a one-off answer;
 - what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and one for workflows;
 - that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
 - that `get_guide` returns the format of each definition, and that each definition is given an overview;
-- how a reasoning function names its model and its tools;
+- where `list_models` is listed and `search` is not, that `list_models` lists the models a reasoning function can name;
 - where `search` and `add_connection` are both listed, that a person's accounts at services are connected through Auto Runtime: asked to connect, link, sign in to or use a service, the agent calls `search` with the service's words, which lists the providers that match, then `add_connection` with a provider's name, which the person approves on the page it links. The agent says that a service cannot be connected only when no provider or server matches;
-- that `get_run` shows whether a run that finishes later has ended or is still waiting;
 - that when the person answers what a run waits on, such as an approval, the agent answers the request with `answer_interaction` and starts no new run for it. The tool's description gives the shape of the answer;
 - how to reply to the person: what was done and what they can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules. An id or a status appears only where the person needs it to act;
 - that a tool that cannot do what was asked says why and what to change.
 
-What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs.
+What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. That of `run_definition` says that a run that finishes later returns `started` and that `get_run` shows how it ended. Those of `list_models` and `search` say how a reasoning function names its model and its tools, as the reasoning function's guide does. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs.
 
-The recall sentence says that a recall function reads run results, definitions and events from the playbook's history, never a run's input or its tool calls. The prediction sentence says that a prediction function predicts from a model a trainer built on the playbook's history. It also says that a build (the input `{ build: {} }`) returns `started`.
+The recall sentence says that a recall function reads run results, definitions and events from the playbook's history, never a run's input or its tool calls. The prediction sentence says that a prediction function predicts from a model a trainer built on the playbook's history. The [prediction format](prediction-format.md) says that a build (the input `{ build: {} }`) returns `started`.
 
 ## Authentication
 

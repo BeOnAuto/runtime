@@ -15,13 +15,13 @@ import {
 import { instructionsFor, type ServedTools } from './instructions.ts';
 
 const servedOnMcp =
-  "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. A reasoning function has a prompt and calls a language model. An interaction function asks a system and answers at once, or a person and answers started. A computation function runs a program whose output is the same for the same input. Recall retrieves run results, definitions and events, never run inputs or tool calls. What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes. A prediction function answers from a model trained on the playbook's history; a build, input { build: {} }, answers started. A workflow runs functions in steps, waits for input and can start on a schedule or an event. This connection acts in the caller's own org: list_playbooks shows its playbooks and create_playbook makes one. Read a definition's format with get_guide; give it an overview. A reasoning function names a model that list_models lists and may name tools that search finds. Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links. Say a service cannot be connected only when no provider or server matches. A run of a workflow answers started; get_run shows whether it ended or still waits. When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run. Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act. A tool that cannot do what was asked says why and what to change.";
+  "Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. A reasoning function has a prompt and calls a language model. An interaction function asks a system and answers at once, or a person and answers started. A computation function runs a program whose output is the same for the same input. Recall retrieves run results, definitions and events, never run inputs or tool calls. What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes. A prediction function answers from a model trained on the playbook's history. A workflow runs functions in steps, waits for input and can start on a schedule or an event. This connection acts in the caller's own org: list_playbooks shows its playbooks and create_playbook makes one. Read a definition's format with get_guide; give it an overview. Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links. Say a service cannot be connected only when no provider or server matches. When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run. Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act. A tool that cannot do what was asked says why and what to change.";
 
 const servedOnAnOrg =
-  "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. A reasoning function has a prompt and calls a language model. An interaction function asks a system and answers at once, or a person and answers started. A computation function runs a program whose output is the same for the same input. Recall retrieves run results, definitions and events, never run inputs or tool calls. What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes. A prediction function answers from a model trained on the playbook's history; a build, input { build: {} }, answers started. A workflow runs functions in steps, waits for input and can start on a schedule or an event. This connection manages the playbooks of one org: list_playbooks shows them and create_playbook makes one, and a playbook's functions and workflows are made on the playbook's own connection, /orgs/{org}/playbooks/{playbook}/mcp. get_guide holds what these words mean and how each kind of definition is written. A reasoning function names a model that list_models lists and may name tools that search finds. Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links. Say a service cannot be connected only when no provider or server matches. Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act. A tool that cannot do what was asked says why and what to change.";
+  "Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. A reasoning function has a prompt and calls a language model. An interaction function asks a system and answers at once, or a person and answers started. A computation function runs a program whose output is the same for the same input. Recall retrieves run results, definitions and events, never run inputs or tool calls. What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes. A prediction function answers from a model trained on the playbook's history. A workflow runs functions in steps, waits for input and can start on a schedule or an event. This connection manages the playbooks of one org: list_playbooks shows them and create_playbook makes one, and a playbook's functions and workflows are made on the playbook's own connection, /orgs/{org}/playbooks/{playbook}/mcp. get_guide holds what these words mean and how each kind of definition is written. Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links. Say a service cannot be connected only when no provider or server matches. Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act. A tool that cannot do what was asked says why and what to change.";
 
 const servedOnAPlaybook =
-  "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. A reasoning function has a prompt and calls a language model. An interaction function asks a system and answers at once, or a person and answers started. A computation function runs a program whose output is the same for the same input. Recall retrieves run results, definitions and events, never run inputs or tool calls. What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes. A prediction function answers from a model trained on the playbook's history; a build, input { build: {} }, answers started. A workflow runs functions in steps, waits for input and can start on a schedule or an event. This connection acts inside one playbook. Read a definition's format with get_guide; give it an overview. A reasoning function names a model this server can call, as the reasoning-function guide says, and may name tools that search finds. A run of a workflow answers started; get_run shows whether it ended or still waits. When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run. Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act. A tool that cannot do what was asked says why and what to change.";
+  "Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. A reasoning function has a prompt and calls a language model. An interaction function asks a system and answers at once, or a person and answers started. A computation function runs a program whose output is the same for the same input. Recall retrieves run results, definitions and events, never run inputs or tool calls. What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes. A prediction function answers from a model trained on the playbook's history. A workflow runs functions in steps, waits for input and can start on a schedule or an event. This connection acts inside one playbook. Read a definition's format with get_guide; give it an overview. When the person approves, rejects or otherwise answers what a run waits on, answer its request with answer_interaction, not a new run. Say what was done and what the person can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules; an id or status only where needed to act. A tool that cannot do what was asked says why and what to change.";
 
 const interactionSentence =
   'An interaction function asks a system and answers at once, or a person and answers started.';
@@ -34,8 +34,10 @@ const recallSentence = 'Recall retrieves run results, definitions and events, ne
 const whatThePersonWantsKept =
   'What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes.';
 
-const predictionSentence =
-  "A prediction function answers from a model trained on the playbook's history; a build, input { build: {} }, answers started.";
+const predictionSentence = "A prediction function answers from a model trained on the playbook's history.";
+
+const claim =
+  'Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer.';
 
 function asServedWithFourTypes(servedText: string): string {
   return [interactionSentence, predictionSentence, answeringSentence].reduce(
@@ -139,7 +141,7 @@ describe('the instructions of a key that may only read', () => {
 });
 
 describe('instructions scoped to a playbook endpoint', () => {
-  it('on a playbook endpoint, say how a reasoning function names its tools without naming the models it cannot list', () => {
+  it('on a playbook endpoint, leave the model and the tools of a reasoning function to the guide of its format', () => {
     const reading = instructionsFor(
       'playbook',
       { orgTools: [], playbookTools: queriesInsideAPlaybook },
@@ -147,7 +149,7 @@ describe('instructions scoped to a playbook endpoint', () => {
     );
 
     expect(reading).toContain(
-      'get_guide holds what these words mean and how each kind of definition is written. A reasoning function names a model this server can call, as the reasoning-function guide says,',
+      'get_guide holds what these words mean and how each kind of definition is written. Say what was done',
     );
   });
 
@@ -167,7 +169,7 @@ describe('instructions scoped to a playbook endpoint', () => {
 });
 
 describe('what the instructions say of a prediction function', () => {
-  it('say, where the server runs one, that it answers a question and that its build answers started', () => {
+  it("say, where the server runs one, that it answers from a model trained on the playbook's history", () => {
     const predicting = definitionTypes.filter(({ type }) => type === 'prediction');
 
     expect(instructionsFor('playbook', playbookEndpoint, predicting)).toContain(
@@ -195,20 +197,19 @@ describe('what the instructions say of the definition types', () => {
     const drafting = [{ type: 'drafting', noun: 'draft', guide: 'drafting' }];
 
     expect(instructionsFor('playbook', playbookEndpoint, drafting)).toContain(
-      "Auto Runtime executes playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. This connection acts inside one playbook. Read a definition's format",
+      `${claim} Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. This connection acts inside one playbook. Read a definition's format`,
     );
   });
 
-  it('say nothing of models and tools where the server runs no reasoning function', () => {
+  it('say nothing of the models where the server runs no reasoning function', () => {
     const withoutReasoning = definitionTypes.slice(1);
+    const listingTheModels = { orgTools: ['list_playbooks', 'list_models', 'get_guide'], playbookTools: [] };
 
     expect(
-      ['list_models', 'search'].filter((name) =>
-        [
-          instructionsFor('own org', ownOrg, withoutReasoning),
-          instructionsFor('org', orgEndpoint, withoutReasoning),
-        ].some((instructions) => instructions.includes(name)),
-      ),
+      [
+        instructionsFor('own org', listingTheModels, withoutReasoning),
+        instructionsFor('org', listingTheModels, withoutReasoning),
+      ].filter((instructions) => instructions.includes('list_models')),
     ).toEqual([]);
   });
 });
@@ -221,7 +222,7 @@ describe('what the instructions say of the guides', () => {
       writing.filter(
         ([endpoint, served]) =>
           !instructionsFor(endpoint, served, definitionTypes).includes(
-            "Read a definition's format with get_guide; give it an overview. A reasoning function",
+            "Read a definition's format with get_guide; give it an overview.",
           ),
       ),
     ).toEqual([]);
@@ -262,12 +263,22 @@ describe('the instructions of every endpoint', () => {
     expect(definitionTypes.filter(({ noun }) => !resourcesOnTheTerminologyPage.has(noun))).toEqual([]);
   });
 
-  it('use no term of the internal vocabulary once the address of a playbook is taken out, and identifies the runtime', () => {
+  it('open with the claim that whatever the person wants kept working is a playbook here, and then name the runtime', () => {
+    expect(
+      everyEndpoint.filter(
+        ([endpoint, served]) =>
+          !instructionsFor(endpoint, served, definitionTypes).startsWith(
+            `${claim} Auto Runtime makes and runs playbooks;`,
+          ),
+      ),
+    ).toEqual([]);
+  });
+
+  it('use no term of the internal vocabulary once the address of a playbook is taken out', () => {
     const instructions = everyEndpoint.map(([endpoint, served]) =>
       instructionsFor(endpoint, served, definitionTypes).replace(', /orgs/{org}/playbooks/{playbook}/mcp.', '.'),
     );
 
     expect(instructions.flatMap((text) => internalTermsIn(text))).toEqual([]);
-    expect(instructions.every((text) => text.startsWith('Auto Runtime executes playbooks;'))).toBe(true);
   });
 });

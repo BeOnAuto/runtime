@@ -16,7 +16,7 @@ export const mostToolsOnAConnection = 32;
 
 export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
   'own org': 48_000,
-  org: 13_100,
+  org: 13_200,
   playbook: 40_000,
 };
 
