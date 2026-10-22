@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   consentClientWith,
   memoryRegistrations,
+  registeredAt,
   servedForConsent,
   startAskedAt,
   type ClientRegistration,
@@ -220,5 +221,31 @@ describe('a start at a server that takes no client the runtime has', () => {
       await refused(consentClientWith({ publicUrl }), startAskedAt(fake, { clients: ['metadata_document'] })),
       await refused(consentClientWith(), startAskedAt(fake)),
     ]).toEqual([{ refused: 'no_client' }, { refused: 'no_client' }, { refused: 'no_client' }]);
+  });
+});
+
+describe('the registered client a start takes at an issuer two clients serve', () => {
+  it('is the one whose scopes cover the scope of the way, the first where both do, and none where neither does', async () => {
+    const fake = await served();
+    const client = consentClientWith({
+      registeredClients: [
+        registeredAt(fake.origin, { clientId: 'reading', scopes: ['files.read'] }),
+        registeredAt(fake.origin, { clientId: 'writing', scopes: ['files.read', 'files.write'] }),
+      ],
+    });
+
+    const covered = await started(client, startAskedAt(fake, { scope: 'files.write files.read' }));
+
+    expect([
+      covered.client,
+      new URL(covered.url).searchParams.get('client_id'),
+      (await started(client, startAskedAt(fake, { scope: 'files.read' }))).client,
+      await refused(client, startAskedAt(fake, { scope: 'mail.send' })),
+    ]).toEqual([
+      { client_id: 'writing', client_source: 'registered' },
+      'writing',
+      { client_id: 'reading', client_source: 'registered' },
+      { refused: 'no_client' },
+    ]);
   });
 });

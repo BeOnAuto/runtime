@@ -184,8 +184,9 @@ function redeemed(asked: Asked, store: Store): Promise<Response> | Response {
   return person === undefined ? signInFirst() : redeemedWith(asked, store, person);
 }
 
-function listed(_asked: Asked, store: Store): Response {
-  return answer({ clients: [{ issuer: store.options.vendor.origin, client_id: client.clientId }] });
+function listed(_asked: Asked, { options: { vendor, scopes } }: Store): Response {
+  const named = scopes === undefined ? {} : { scopes };
+  return answer({ clients: [{ issuer: vendor.origin, client_id: client.clientId, ...named }] });
 }
 
 const routes: ReadonlyMap<string, Route> = new Map<string, Route>([

@@ -8,6 +8,7 @@ import {
   consentClientAt,
   everyHost,
   hostRefusedAt,
+  registeredAfterAnother,
   registeredAt,
   returnAddress,
   servedForConsent,
@@ -61,6 +62,16 @@ describe('the revocation a removal asks for', () => {
     const answered = await revoked(consentClientAt(connected.fake), connected);
 
     expect(answered).toMatchObject({ _tag: 'Success' });
+    expect(await admitted(connected.fake, connected.kept.access_token)).toBe(false);
+  });
+
+  it('revokes with the client of the connection where another registered client stands first at the issuer', async () => {
+    const connected = await connectedAt();
+    const consent = consentClientAt(connected.fake, {
+      registeredClients: registeredAfterAnother(connected.fake.origin),
+    });
+
+    expect(await revoked(consent, connected)).toMatchObject({ _tag: 'Success' });
     expect(await admitted(connected.fake, connected.kept.access_token)).toBe(false);
   });
 

@@ -9,7 +9,8 @@ import { Effect, Option, Redacted } from 'effect';
 
 import {
   clientMetadataDocumentOf,
-  registeredClientAt,
+  registeredClientFor,
+  registeredClientNamed,
   type ClientMetadataDocument,
   type ClientSource,
   type ClientsHad,
@@ -143,7 +144,7 @@ function takenFrom(
   const { asked, server } = taking;
   if (source === 'registered') {
     return Effect.succeed(
-      registeredActing(required(registeredClientAt(choosing.registeredClients, asked.way.issuer)), asked.returnAddress),
+      registeredActing(required(registeredClientFor(choosing.registeredClients, asked.way)), asked.returnAddress),
     );
   }
   if (source === 'metadata_document') {
@@ -170,8 +171,8 @@ function chosenAt(taking: Taking, choosing: Choosing): Effect.Effect<ActingClien
 
 function recordedOf({ way, client, returnAddress }: RecordedClient, choosing: Choosing): ActingClient | undefined {
   if (client.client_source === 'registered') {
-    const registered = registeredClientAt(choosing.registeredClients, way.issuer);
-    return registered?.clientId === client.client_id ? registeredActing(registered, returnAddress) : undefined;
+    const registered = registeredClientNamed(choosing.registeredClients, way.issuer, client.client_id);
+    return registered === undefined ? undefined : registeredActing(registered, returnAddress);
   }
   const documented = clientMetadataDocumentOf(choosing.publicUrl, returnAddress);
   return documented?.address === client.client_id ? documentedActing(documented) : undefined;

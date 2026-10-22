@@ -51,6 +51,18 @@ const RegisteredClientFieldsSchema = Schema.Struct({
         'How the client authenticates at the token endpoint where the metadata of the authorization server leaves the choice; chosen from the client and the metadata when left out',
     }),
   ),
+  scopes: Schema.optionalKey(
+    Schema.Array(NamedSchema)
+      .check(
+        Schema.isMinLength(1, {
+          message: 'Expected at least one scope the client may ask; leave scopes out for a client that may ask any',
+        }),
+      )
+      .annotate({
+        description:
+          "The scopes the client may ask at its issuers, each as a provider's way writes it: a way takes the first client at its issuer that names every scope the way asks. Named for each client where several clients serve one issuer, and left out for a client that may ask any",
+      }),
+  ),
 });
 
 type RegisteredClientFields = typeof RegisteredClientFieldsSchema.Type;
@@ -150,16 +162,18 @@ function writtenClientIssuesOf(client: RegisteredClientFields): readonly ClientI
     : [...issuerIssuesOf(client), ...credentialIssuesOf(client), ...methodIssuesOf(client)];
 }
 
-const sharedIssuer =
-  'Names an issuer an earlier registered client names too, a trailing slash aside; register each issuer under one client';
+const scopesUnnamed =
+  'Expected scopes, the scopes the client may ask, since another registered client names one of its issuers too, a trailing slash aside: a client that names none would serve every way there that no client before it covers, and a client after it never';
 
-function sharedIssuerIssuesOf(clients: readonly RegisteredClientFields[]): readonly ClientIssue[] {
+function sharesAnIssuer(client: RegisteredClientFields, other: RegisteredClientFields): boolean {
+  return client.issuers.some((issuer) => other.issuers.some((named) => isSameIssuer(named, issuer)));
+}
+
+function unnamedScopeIssuesOf(clients: readonly RegisteredClientFields[]): readonly ClientIssue[] {
   return clients.flatMap((client, position) =>
-    client.issuers.flatMap((issuer, index) =>
-      clients.slice(0, position).some(({ issuers }) => issuers.some((named) => isSameIssuer(named, issuer)))
-        ? [{ path: [position, 'issuers', index], issue: sharedIssuer }]
-        : [],
-    ),
+    client.scopes === undefined && clients.some((other, index) => index !== position && sharesAnIssuer(client, other))
+      ? [{ path: [position, 'scopes'], issue: scopesUnnamed }]
+      : [],
   );
 }
 
@@ -168,9 +182,9 @@ export const RegisteredClientsSchema = Schema.Array(
 )
   .annotate({
     description:
-      'The clients whoever runs the runtime registered at authorization servers, each with the issuers it is registered at, its client_id, and its client_secret, or its private_key with its algorithm, as a reference, or neither for a public client',
+      'The clients whoever runs the runtime registered at authorization servers, each with the issuers it is registered at, its client_id, and its client_secret, or its private_key with its algorithm, as a reference, or neither for a public client, and the scopes it may ask, which each client names where several serve one issuer',
   })
-  .check(Schema.makeFilter((clients: readonly RegisteredClientFields[]) => sharedIssuerIssuesOf(clients)));
+  .check(Schema.makeFilter((clients: readonly RegisteredClientFields[]) => unnamedScopeIssuesOf(clients)));
 
 function credentialOf({
   client_secret: clientSecret,
@@ -195,6 +209,7 @@ export function registeredClientsOf(clients: readonly RegisteredClientFields[]):
     clientId: client.client_id,
     credential: credentialOf(client),
     tokenEndpointAuthMethod: client.token_endpoint_auth_method ?? null,
+    ...(client.scopes === undefined ? {} : { scopes: client.scopes }),
   }));
 }
 

@@ -25,7 +25,6 @@ import {
 } from './client-sources.ts';
 
 export interface ConsentWay extends WayOfClients {
-  readonly scope?: string | undefined;
   readonly parameters?: Readonly<Record<string, string>> | undefined;
   readonly authorization_endpoint?: string | undefined;
   readonly token_endpoint?: string | undefined;

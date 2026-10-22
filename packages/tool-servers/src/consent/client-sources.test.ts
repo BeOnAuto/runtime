@@ -5,8 +5,9 @@ import {
   clientMetadataDocumentOf,
   isSameIssuer,
   metadataDocumentOf,
-  registeredClientAt,
-  serviceClientAt,
+  registeredClientFor,
+  registeredClientNamed,
+  serviceClientFor,
   sourcesHad,
   sourceTakenOf,
   type RegisteredClient,
@@ -40,12 +41,55 @@ describe('the issuers of the clients whoever runs the runtime registered', () =>
     const clients = [accounts, tenants];
 
     expect([
-      registeredClientAt(clients, 'https://accounts.example.com')?.clientId,
-      registeredClientAt(clients, 'https://login.example.net/acme.example.org/v2.0/')?.clientId,
-      registeredClientAt(clients, 'https://login.example.net/{tenant}/v2.0')?.clientId,
-      registeredClientAt(clients, 'https://login.example.net/a/b/v2.0'),
-      registeredClientAt(clients, 'https://elsewhere.example.com'),
+      registeredClientFor(clients, { issuer: 'https://accounts.example.com' })?.clientId,
+      registeredClientFor(clients, { issuer: 'https://login.example.net/acme.example.org/v2.0/' })?.clientId,
+      registeredClientFor(clients, { issuer: 'https://login.example.net/{tenant}/v2.0' })?.clientId,
+      registeredClientFor(clients, { issuer: 'https://login.example.net/a/b/v2.0' }),
+      registeredClientFor(clients, { issuer: 'https://elsewhere.example.com' }),
     ]).toEqual(['1234.apps.example.com', '9f1c0d2e-example', '9f1c0d2e-example', undefined, undefined]);
+  });
+});
+
+describe('the registered client a way takes at an issuer two clients serve', () => {
+  const issuer = 'https://accounts.example.com';
+  const reading: RegisteredClient = { ...accounts, clientId: 'reading', scopes: ['files.read', 'files.list'] };
+  const sending: RegisteredClient = { ...accounts, clientId: 'sending', scopes: ['files.read', 'mail.send'] };
+  const clients = [reading, sending];
+
+  it('is the first whose scopes hold every scope the way asks, each compared as written', () => {
+    expect([
+      registeredClientFor(clients, { issuer, scope: 'mail.send files.read' })?.clientId,
+      registeredClientFor(clients, { issuer, scope: 'files.read' })?.clientId,
+      registeredClientFor(clients, { issuer })?.clientId,
+      registeredClientFor(clients, { issuer, scope: 'files.list mail.send' }),
+      registeredClientFor(clients, { issuer, scope: 'Files.Read' }),
+    ]).toEqual(['sending', 'reading', 'reading', undefined, undefined]);
+  });
+
+  it('is none for a way neither covers, which is set up first', () => {
+    const had = { registeredClients: clients, publicUrl: undefined, serviceClients: [] };
+
+    expect([
+      sourcesHad({ issuer, scope: 'files.list mail.send' }, had),
+      sourceTakenOf({ issuer, scope: 'files.list mail.send' }, had),
+      sourcesHad({ issuer, scope: 'mail.send' }, had),
+    ]).toEqual([[], undefined, ['registered']]);
+  });
+
+  it('is the one client at the issuer that names no scopes, whatever scope the way asks', () => {
+    expect([
+      registeredClientFor([accounts], { issuer, scope: 'files.list mail.send' })?.clientId,
+      registeredClientFor([accounts], { issuer })?.clientId,
+    ]).toEqual(['1234.apps.example.com', '1234.apps.example.com']);
+  });
+
+  it('that a connection was made with is found by its client id at the issuer, whichever stands first', () => {
+    expect([
+      registeredClientNamed(clients, issuer, 'sending')?.clientId,
+      registeredClientNamed(clients, `${issuer}/`, 'reading')?.clientId,
+      registeredClientNamed(clients, issuer, 'renamed'),
+      registeredClientNamed(clients, 'https://elsewhere.example.com', 'sending'),
+    ]).toEqual(['sending', 'reading', undefined, undefined]);
   });
 });
 
@@ -112,9 +156,41 @@ describe('the client of Auto’s consent service among the sources a runtime has
     const listed = [{ issuer: 'https://login.example.net/{tenant}/v2.0', client_id: 'auto-tenants' }];
 
     expect([
-      serviceClientAt(listed, 'https://login.example.net/acme.example.org/v2.0')?.client_id,
-      serviceClientAt(listed, 'https://login.example.net/a/b/v2.0'),
+      serviceClientFor(listed, { issuer: 'https://login.example.net/acme.example.org/v2.0' })?.client_id,
+      serviceClientFor(listed, { issuer: 'https://login.example.net/a/b/v2.0' }),
     ]).toEqual(['auto-tenants', undefined]);
+  });
+});
+
+describe('the client of Auto’s consent service a way takes by its scope', () => {
+  const issuer = 'https://accounts.example.com';
+
+  it('is the first the service lists at the issuer whose scopes cover the way, or one it lists without scopes', () => {
+    const listed = [
+      { issuer, client_id: 'auto-reading', scopes: ['files.read'] },
+      { issuer, client_id: 'auto-sending', scopes: ['files.read', 'mail.send'] },
+    ];
+
+    expect([
+      serviceClientFor(listed, { issuer, scope: 'files.read' })?.client_id,
+      serviceClientFor(listed, { issuer, scope: 'mail.send files.read' })?.client_id,
+      serviceClientFor(listed, { issuer, scope: 'files.write' }),
+      serviceClientFor([{ issuer, client_id: 'auto' }], { issuer, scope: 'files.write' })?.client_id,
+    ]).toEqual(['auto-reading', 'auto-sending', undefined, 'auto']);
+  });
+
+  it('is taken where the registered client at the issuer does not cover the way and the service’s client does', () => {
+    const had = {
+      registeredClients: [{ ...accounts, scopes: ['mail.send'] }],
+      publicUrl: undefined,
+      serviceClients: [{ issuer, client_id: 'auto', scopes: ['files.read'] }],
+    };
+
+    expect([
+      sourceTakenOf({ issuer, scope: 'files.read' }, had),
+      sourceTakenOf({ issuer, scope: 'mail.send' }, had),
+      sourcesHad({ issuer, scope: 'files.read mail.send' }, had),
+    ]).toEqual(['auto', 'registered', []]);
   });
 });
 

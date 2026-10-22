@@ -44,6 +44,13 @@ export function registeredAt(issuer: string, changes: Partial<RegisteredClient> 
   };
 }
 
+export function registeredAfterAnother(issuer: string): readonly RegisteredClient[] {
+  return [
+    registeredAt(issuer, { clientId: 'standing-first', scopes: ['files.read'] }),
+    registeredAt(issuer, { scopes: ['files.read'] }),
+  ];
+}
+
 export function consentClientWith(options: Partial<ConsentClientOptions> = {}): ConsentClient {
   return makeConsentClient({
     fetch: globalThis.fetch,

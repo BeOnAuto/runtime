@@ -11,6 +11,7 @@ export type RefusedCall = 'start' | 'redeem' | 'refresh' | 'revoke';
 export interface FakeConsentServiceOptions {
   readonly vendor: Pick<FakeMcpServer, 'origin'>;
   readonly now: () => number;
+  readonly scopes?: readonly string[];
 }
 
 export const GivenSchema = Schema.String.check(Schema.isMinLength(1));

@@ -226,12 +226,14 @@ describe('the secrets of the registered clients of the connections section', () 
 });
 
 describe('the issuers and the references of the registered clients of the connections section', () => {
-  it('stop the start at two clients of one issuer, and at variables naming a variable they refer to, at their lines', () => {
+  it('stop the start at clients of one issuer that name no scopes, and at variables naming a variable they refer to, at their lines', () => {
     const sharing = registeredClients.replace('http://127.0.0.1:8443', 'https://accounts.example.com/');
     const naming = `${registeredClients}  variables: [EXAMPLE_CLIENT_SECRET]\n`;
+    const scopesUnnamed =
+      'Expected scopes, the scopes the client may ask, since another registered client names one of its issuers too, a trailing slash aside: a client that names none would serve every way there that no client before it covers, and a client after it never';
 
     expect(refusalOf(fileOf(sharing), clientSecrets)).toBe(
-      `${fileInvalid} auto-runtime.yaml:11:17 connections.registered_clients[2].issuers[0]: Names an issuer an earlier registered client names too, a trailing slash aside; register each issuer under one client`,
+      `${fileInvalid} auto-runtime.yaml:3:7 connections.registered_clients[0].scopes: ${scopesUnnamed}; auto-runtime.yaml:11:7 connections.registered_clients[2].scopes: ${scopesUnnamed}`,
     );
     expect(refusalOf(fileOf(naming), clientSecrets)).toBe(
       `connections_setting_invalid: The connection settings are invalid. auto-runtime.yaml:13:15 connections.variables[0]: EXAMPLE_CLIENT_SECRET ${ownVariable}`,
