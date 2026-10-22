@@ -3,9 +3,8 @@ import { fileURLToPath } from 'node:url';
 import type { Environment } from '@on.auto/config';
 
 import { release } from '../composition/release.ts';
-import { logFileIn } from '../local-runtime/local-control.ts';
-import type { Waiting } from '../local-runtime/runtime-probe.ts';
-import { restartMarkIn } from '../local-runtime/runtime-restarts.ts';
+import { logFileIn, restartMarkIn } from '../local-runtime/local-control.ts';
+import type { RuntimeFetch } from '../local-runtime/runtime-probe.ts';
 import { loggedTo, noticesFor, startInBackgroundOf, startingLockIn } from './background-process.ts';
 import type { BackgroundStarting } from './background-start.ts';
 import { Sighting } from './sighting.ts';
@@ -14,7 +13,7 @@ import { StartedRuntimes } from './started-runtimes.ts';
 export interface AgentRelaying {
   readonly home: string;
   readonly environment: Environment;
-  readonly waiting: Waiting;
+  readonly fetch: RuntimeFetch;
 }
 
 export interface AgentStarting {
@@ -28,12 +27,12 @@ export function reportedOnStderr(line: string): void {
   process.stderr.write(`${line}\n`);
 }
 
-export function startingFor({ home, environment, waiting }: AgentRelaying): AgentStarting {
+export function startingFor({ home, environment, fetch }: AgentRelaying): AgentStarting {
   const started = new StartedRuntimes();
   const sighting = new Sighting((instance) => started.ended(instance));
   const log = loggedTo(home, reportedOnStderr);
   const starting: BackgroundStarting = {
-    ...waiting,
+    fetch,
     version: release.version,
     logFile: logFileIn(home),
     startingLock: startingLockIn(home),

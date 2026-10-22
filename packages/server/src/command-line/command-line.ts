@@ -1,21 +1,19 @@
 import { randomUUID } from 'node:crypto';
 
 import type { Environment } from '@on.auto/config';
-import { runKeyCommand, type KeyCommandConsole } from '@on.auto/identity';
+import { runKeyCommand } from '@on.auto/identity';
+import { Effect } from 'effect';
 
 import { instanceStartedInBackground } from '../background-start/background-process.ts';
 import { release } from '../composition/release.ts';
 import type { LocalStarting } from '../local-runtime/local-control.ts';
-import { isRuntimeCommand, runRuntimeCommand } from '../local-runtime/runtime-commands.ts';
+import { isRuntimeCommand, runRuntimeCommand, type RuntimeAsking } from '../local-runtime/runtime-commands.ts';
 import { runtimePortOf } from '../local-runtime/runtime-port.ts';
-import type { Waiting } from '../local-runtime/runtime-probe.ts';
 import { localSettings, type LocalPlace } from './local-settings.ts';
 
-export interface CommandLineHost {
+export interface CommandLineHost extends RuntimeAsking {
   readonly environment: Environment;
   readonly place: LocalPlace;
-  readonly console: KeyCommandConsole;
-  readonly waiting: Waiting;
   readonly startServer: (settings: Readonly<Record<string, string>>, starting: LocalStarting) => Promise<unknown>;
   readonly relay: (port: number) => Promise<unknown>;
 }
@@ -94,10 +92,7 @@ export function runCommandLine(args: readonly string[], host: CommandLineHost): 
     return relayed(host);
   }
   if (args.length === 1 && isRuntimeCommand(name)) {
-    return runRuntimeCommand(name, runtimePortOf(host.environment, host.place.home), {
-      ...host.waiting,
-      console: host.console,
-    });
+    return Effect.runPromise(runRuntimeCommand(name, runtimePortOf(host.environment, host.place.home), host));
   }
   return Promise.resolve(answered(args, host));
 }

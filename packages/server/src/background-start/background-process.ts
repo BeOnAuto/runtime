@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { Environment } from '@on.auto/config';
 
 import { logFileIn, runtimeHomeIn } from '../local-runtime/local-control.ts';
-import { startWaitMs } from '../local-runtime/runtime-restarts.ts';
+import { startWaitMs } from '../local-runtime/runtime-probe.ts';
 import type { StartingLock } from './background-start.ts';
 import type { StartedRuntime } from './started-runtimes.ts';
 

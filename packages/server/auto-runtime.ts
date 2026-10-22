@@ -1,5 +1,4 @@
 import { homedir } from 'node:os';
-import { setTimeout } from 'node:timers/promises';
 
 import { relayedAgent } from './src/agent-relay/agent-relay.ts';
 import { runCommandLine } from './src/command-line/command-line.ts';
@@ -10,8 +9,6 @@ import { colorDepthOf } from './src/logging/terminal.ts';
 const environmentAtStart = { ...process.env };
 
 const home = homedir();
-
-const waiting = { fetch: overTheNetwork, sleep: (milliseconds: number) => setTimeout(milliseconds) };
 
 const terminal = {
   depth: colorDepthOf(process.stdout),
@@ -39,12 +36,12 @@ process.exitCode =
         process.stderr.write(`${line}\n`);
       },
     },
-    waiting,
+    fetch: overTheNetwork,
     startServer: async (settings, starting) => {
       const { startedLocally } = await import('./src/local-runtime/local-start.ts');
       if ((await startedLocally(settings, starting, { home, terminal })) === 'restart') {
         restartIn(process, environmentAtStart);
       }
     },
-    relay: (port) => relayedAgent(port, { home, environment: environmentAtStart, waiting }),
+    relay: (port) => relayedAgent(port, { home, environment: environmentAtStart, fetch: overTheNetwork }),
   })) ?? process.exitCode;

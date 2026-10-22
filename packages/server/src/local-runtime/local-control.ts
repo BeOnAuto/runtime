@@ -1,12 +1,14 @@
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { RuntimeAction, RuntimeStatus, StartedBy } from '@on.auto/api';
 import type { Environment } from '@on.auto/config';
 import type { AccessMode } from '@on.auto/identity';
+import { Option, Schema } from 'effect';
 
 import type { LocalServing } from '../lifecycle/lifecycle.ts';
 import type { RunsInFlight } from './runs-in-flight.ts';
-import type { RestartMark } from './runtime-restarts.ts';
+import { restartWaitMs } from './runtime-probe.ts';
 
 export const defaultRuntimePort = 5555;
 
@@ -31,6 +33,12 @@ export interface LocalControl {
   readonly asked: Promise<RuntimeAction>;
 }
 
+export interface RestartMark {
+  readonly leave: (pid: number, port: number) => boolean;
+  readonly clear: (pid: number) => void;
+  readonly isUnderWay: (port: number) => boolean;
+}
+
 export function runtimeHomeIn(home: string): string {
   return join(home, '.auto-runtime');
 }
@@ -39,9 +47,63 @@ export function logFileIn(home: string): string {
   return join(runtimeHomeIn(home), 'runtime.log');
 }
 
-export function restartWordsFor({ port, version }: Pick<LocalRun, 'port' | 'version'>): string {
-  const command = `${port === undefined ? '' : `PORT=${port} `}npx -y @on.auto/runtime@${version} restart`;
-  return `restart Auto Runtime with ${command} or at http://localhost:${port ?? defaultRuntimePort}`;
+const restartMarkOf = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ pid: Schema.Number, at: Schema.Number, port: Schema.Number })),
+);
+
+function textIn(file: string): string | undefined {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch {
+    return undefined;
+  }
+}
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function leftIn(file: string, text: string): boolean {
+  try {
+    writeFileSync(file, text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function restartMarkIn(home: string, now: () => number = Date.now): RestartMark {
+  const file = join(runtimeHomeIn(home), 'restart-mark.json');
+  const markLeft = () => Option.getOrUndefined(restartMarkOf(textIn(file)));
+  return {
+    leave: (pid, port) => {
+      mkdirSync(runtimeHomeIn(home), { recursive: true });
+      return leftIn(file, JSON.stringify({ pid, at: now(), port }));
+    },
+    clear: (pid) => {
+      if (markLeft()?.pid === pid) {
+        rmSync(file, { force: true });
+      }
+    },
+    isUnderWay: (port) => {
+      const mark = markLeft();
+      return mark?.port === port && isRunning(mark.pid) && now() - mark.at <= restartWaitMs;
+    },
+  };
+}
+
+function portServedBy({ port }: Pick<LocalRun, 'port'>): number {
+  return port === undefined ? defaultRuntimePort : Number(port);
+}
+
+export function restartWordsFor(run: Pick<LocalRun, 'port' | 'version'>): string {
+  const command = `${run.port === undefined ? '' : `PORT=${run.port} `}npx -y @on.auto/runtime@${run.version} restart`;
+  return `restart Auto Runtime with ${command} or at http://localhost:${portServedBy(run)}`;
 }
 
 export function providerSetupFor(directory: string, restart = 'restart Auto Runtime'): string {
@@ -77,7 +139,7 @@ export function localControlOf(
       resolve('stop');
     },
     restart: () => {
-      restartMark.leave(run.pid);
+      restartMark.leave(run.pid, portServedBy(run));
       resolve('restart');
     },
   };

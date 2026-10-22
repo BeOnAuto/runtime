@@ -1,17 +1,24 @@
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import type { RuntimeControl } from '@on.auto/api';
 import { describe, expect, it } from 'vitest';
 
+import { homeOfTheTest } from '../testing/processes/runtime-command.ts';
 import {
   localControlOf,
   logFileIn,
   providerSetupFor,
   restartIn,
+  restartMarkIn,
   restartWordsFor,
   runtimeStatusOf,
   type LocalRun,
   type RestartingProcess,
 } from './local-control.ts';
 import { runsInFlight } from './runs-in-flight.ts';
+import { restartWaitMs } from './runtime-probe.ts';
 
 const inATerminal: LocalRun = {
   version: '0.9.1',
@@ -28,7 +35,7 @@ const noMark = { leave: () => true };
 
 function controlOf(
   run: LocalRun = inATerminal,
-  restartMark: { readonly leave: (pid: number) => boolean } = noMark,
+  restartMark: { readonly leave: (pid: number, port: number) => boolean } = noMark,
 ): { readonly control: RuntimeControl; readonly asked: Promise<unknown> } {
   const local = localControlOf(run, runsInFlight(), restartMark);
   const { runtimeControl } = local.servingIn('local');
@@ -70,22 +77,31 @@ describe('asking a runtime to stop or restart', () => {
     await expect(asked).resolves.toBe('restart');
   });
 
-  it('leaves the mark of its process before it restarts, and none when it stops', async () => {
-    const left: number[] = [];
+  it('leaves the mark of its process and of the port it serves before it restarts, and none when it stops', async () => {
+    const left: { readonly pid: number; readonly port: number }[] = [];
     const recording = {
-      leave: (pid: number) => {
-        left.push(pid);
+      leave: (pid: number, port: number) => {
+        left.push({ pid, port });
         return true;
       },
     };
-    const toRestart = controlOf(inATerminal, recording);
+    const onTheDefaultPort = controlOf(inATerminal, recording);
+    const onAnotherPort = controlOf({ ...inATerminal, port: '6060' }, recording);
     const toStop = controlOf(inATerminal, { leave: () => false });
 
-    toRestart.control.restart();
+    onTheDefaultPort.control.restart();
+    onAnotherPort.control.restart();
     toStop.control.stop();
 
-    await expect(Promise.all([toRestart.asked, toStop.asked])).resolves.toEqual(['restart', 'stop']);
-    expect(left).toEqual([4242]);
+    await expect(Promise.all([onTheDefaultPort.asked, onAnotherPort.asked, toStop.asked])).resolves.toEqual([
+      'restart',
+      'restart',
+      'stop',
+    ]);
+    expect(left).toEqual([
+      { pid: 4242, port: 5555 },
+      { pid: 4242, port: 6060 },
+    ]);
   });
 
   it('says it was asked to stop', async () => {
@@ -198,5 +214,85 @@ describe('what a runtime on this computer tells an agent about adding a model pr
     expect(providerSetupFor('/Users/ada/playbooks')).toContain(
       'in /Users/ada/playbooks/.env, never in this chat, then restart Auto Runtime. Then offer a first function',
     );
+  });
+});
+
+const homePrefix = 'auto-runtime-mark-';
+
+const port = 5555;
+
+const anotherPort = 19_700;
+
+function markFileIn(home: string): string {
+  return join(home, '.auto-runtime', 'restart-mark.json');
+}
+
+function goneProcess(): number {
+  return spawnSync(process.execPath, ['-e', '']).pid;
+}
+
+describe('the mark a runtime leaves while it restarts', () => {
+  it('says a restart is under way on its port while the process that left it runs, within the restart wait', () => {
+    const home = homeOfTheTest(homePrefix);
+    const at = Date.now();
+    const mark = restartMarkIn(home, () => at);
+
+    expect(mark.leave(process.pid, port)).toBe(true);
+    const left: unknown = JSON.parse(readFileSync(markFileIn(home), 'utf8'));
+    expect(left).toEqual({ pid: process.pid, at, port });
+    expect(mark.isUnderWay(port)).toBe(true);
+  });
+
+  it('says no restart is under way on another port, whose relay has no restart to wait through', () => {
+    const mark = restartMarkIn(homeOfTheTest(homePrefix));
+
+    mark.leave(process.pid, anotherPort);
+
+    expect([mark.isUnderWay(port), mark.isUnderWay(anotherPort)]).toEqual([false, true]);
+  });
+
+  it('is stale once its process is gone, or once it is older than the restart wait', () => {
+    const home = homeOfTheTest(homePrefix);
+    restartMarkIn(home).leave(goneProcess(), port);
+    const gone = restartMarkIn(home).isUnderWay(port);
+    restartMarkIn(home, () => Date.now() - restartWaitMs - 1).leave(process.pid, port);
+
+    expect([gone, restartMarkIn(home).isUnderWay(port)]).toEqual([false, false]);
+  });
+});
+
+describe('what is no mark of a restart', () => {
+  it('is no file, a file that is not a mark, or a mark that names no port', () => {
+    const home = homeOfTheTest(homePrefix);
+    const mark = restartMarkIn(home);
+    const without = mark.isUnderWay(port);
+    mkdirSync(join(home, '.auto-runtime'));
+    writeFileSync(markFileIn(home), 'restarting');
+    const notAMark = mark.isUnderWay(port);
+    writeFileSync(markFileIn(home), JSON.stringify({ pid: process.pid, at: Date.now() }));
+
+    expect([without, notAMark, mark.isUnderWay(port)]).toEqual([false, false, false]);
+  });
+});
+
+describe('the end of the mark a runtime leaves while it restarts', () => {
+  it('is cleared by the process that left it, once it answers again, and by no other', () => {
+    const home = homeOfTheTest(homePrefix);
+    const mark = restartMarkIn(home);
+    mark.leave(process.pid, port);
+
+    mark.clear(process.pid + 1);
+    const keptForAnother = existsSync(markFileIn(home));
+    mark.clear(process.pid);
+
+    expect([keptForAnother, existsSync(markFileIn(home))]).toEqual([true, false]);
+  });
+
+  it('is not left where it cannot be written', () => {
+    const home = homeOfTheTest(homePrefix);
+    mkdirSync(join(home, '.auto-runtime'));
+    chmodSync(join(home, '.auto-runtime'), 0o500);
+
+    expect(restartMarkIn(home).leave(process.pid, port)).toBe(false);
   });
 });

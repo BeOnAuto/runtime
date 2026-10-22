@@ -1,5 +1,4 @@
 import { homedir } from 'node:os';
-import { setTimeout } from 'node:timers/promises';
 
 import { relayedAgent } from '../../agent-relay/agent-relay.ts';
 import { relayBounds } from '../../agent-relay/relay-bounds.ts';
@@ -12,10 +11,6 @@ const shortBounds = { ...relayBounds, silenceMs: 1000, stopWithinMs: 500 };
 
 await relayedAgent(
   runtimePortOf(process.env, home),
-  {
-    home,
-    environment: { ...process.env },
-    waiting: { fetch: overTheNetwork, sleep: (milliseconds: number) => setTimeout(milliseconds) },
-  },
+  { home, environment: { ...process.env }, fetch: overTheNetwork },
   shortBounds,
 );

@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 
 import { startChild, type RunningChild, type StartChild } from '../../development/children.ts';
 import { runDevelopment } from '../../development/development.ts';
-import { restartMarkIn } from '../../local-runtime/runtime-restarts.ts';
+import { restartMarkIn } from '../../local-runtime/local-control.ts';
 
 const TestSetupSchema = Schema.Struct({
   envFiles: Schema.Array(Schema.String),

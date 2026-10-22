@@ -1,11 +1,10 @@
 import type { StartedBy } from '@on.auto/api';
 import { Effect, Option, Schedule } from 'effect';
 
-import { anotherProgramOn, impatient, type NotRunning } from '../background-start/background-start.ts';
+import { anotherProgramOn, type NotRunning } from '../background-start/background-start.ts';
 import type { Sighted } from '../background-start/sighting.ts';
 import type { StartedRuntime } from '../background-start/started-runtimes.ts';
-import { probeEveryMs } from '../local-runtime/runtime-probe.ts';
-import type { Patience } from '../local-runtime/runtime-restarts.ts';
+import { impatient, probeEveryMs, type Patience } from '../local-runtime/runtime-probe.ts';
 import type { PingOutcome } from './runtime-ping.ts';
 
 export type Recovery = { readonly runs: true } | ({ readonly runs: false } & NotRunning);

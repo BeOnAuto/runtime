@@ -60,12 +60,9 @@ function recordedHost(): Recorded {
           errors.push(line);
         },
       },
-      waiting: {
-        fetch: (address) => {
-          asked.push(address);
-          return Promise.resolve(Response.json(runningStatus));
-        },
-        sleep: () => Promise.resolve(),
+      fetch: (address) => {
+        asked.push(address);
+        return Promise.resolve(Response.json(runningStatus));
       },
       startServer: (settings, starting) => {
         started.push(settings);

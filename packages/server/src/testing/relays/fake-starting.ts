@@ -1,8 +1,9 @@
-import { Function } from 'effect';
+import { Effect, Function } from 'effect';
 
 import type { BackgroundStarting } from '../../background-start/background-start.ts';
 import type { StartedRuntime } from '../../background-start/started-runtimes.ts';
-import type { RuntimeFetch } from '../../local-runtime/runtime-probe.ts';
+import { probeEveryMs, type RuntimeFetch } from '../../local-runtime/runtime-probe.ts';
+import { after } from './relayed-agent.ts';
 
 export const startedForAnAgent = {
   version: '0.9.1',
@@ -21,10 +22,19 @@ export interface Computer {
   readonly events: () => readonly string[];
   readonly sight: (state: string) => void;
   readonly sightings: () => readonly string[];
+  readonly probed: () => void;
+  readonly probes: () => number;
+  readonly freeze: () => void;
+  readonly frozen: () => boolean;
+  readonly aborted: () => void;
+  readonly aborts: () => number;
 }
 
 export function computerWith(first?: object): Computer {
   let answering = first;
+  let probes = 0;
+  let frozen = false;
+  let aborts = 0;
   const events: string[] = [];
   const sightings: string[] = [];
   return {
@@ -40,30 +50,71 @@ export function computerWith(first?: object): Computer {
       sightings.push(state);
     },
     sightings: () => [...sightings],
+    probed: () => {
+      probes += 1;
+    },
+    probes: () => probes,
+    freeze: () => {
+      frozen = true;
+    },
+    frozen: () => frozen,
+    aborted: () => {
+      aborts += 1;
+    },
+    aborts: () => aborts,
   };
 }
 
-function fetchOn(computer: Computer): RuntimeFetch {
-  return (address, { method }) => {
-    const answering = computer.answering();
-    if (answering === undefined) {
-      return Promise.reject(new TypeError('fetch failed'));
+function unansweredUntilAborted(computer: Computer, signal: Readonly<AbortSignal>): Promise<Response> {
+  return new Promise((_resolve, reject) => {
+    signal.addEventListener(
+      'abort',
+      () => {
+        computer.aborted();
+        reject(new DOMException('This operation was aborted', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
+}
+
+function answerOf(computer: Computer, address: string, method: 'GET' | 'POST'): Promise<Response> {
+  const answering = computer.answering();
+  if (answering === undefined) {
+    return Promise.reject(new TypeError('fetch failed'));
+  }
+  if (method === 'POST') {
+    computer.record(`asked ${address.slice(address.lastIndexOf('/') + 1)}`);
+    computer.answerWith();
+    return Promise.resolve(Response.json({ status: 'stopping' }, { status: 202 }));
+  }
+  return Promise.resolve(Response.json(answering));
+}
+
+function isAProbe(address: string, method: 'GET' | 'POST'): boolean {
+  return method === 'GET' && address.endsWith('/runtime');
+}
+
+function fetchOn(computer: Computer, comesBackAfter: number | undefined): RuntimeFetch {
+  return (address, { method, signal }) => {
+    const answer = computer.frozen() ? unansweredUntilAborted(computer, signal) : answerOf(computer, address, method);
+    if (isAProbe(address, method)) {
+      computer.probed();
+      if (computer.probes() === comesBackAfter) {
+        computer.answerWith(startedForAnAgent);
+      }
     }
-    if (method === 'POST') {
-      computer.record(`asked ${address.slice(address.lastIndexOf('/') + 1)}`);
-      computer.answerWith();
-      return Promise.resolve(Response.json({ status: 'stopping' }, { status: 202 }));
-    }
-    return Promise.resolve(Response.json(answering));
+    return answer;
   };
 }
 
 export interface Options {
   readonly version?: string;
   readonly startsAs?: object | undefined;
+  readonly startsFrozen?: boolean;
   readonly comesBackAfter?: number;
   readonly lockTaken?: boolean;
-  readonly restarting?: boolean;
+  readonly restartingOn?: number;
   readonly endsAtItsStart?: boolean;
   readonly pausing?: boolean;
 }
@@ -80,21 +131,16 @@ function startedRuntime(endsAtItsStart: boolean): StartedRuntime {
 }
 
 export function startingOn(computer: Computer, options: Options = {}): BackgroundStarting {
-  let sleeps = 0;
   return {
     version: options.version ?? '0.9.1',
     logFile: '/Users/ada/.auto-runtime/runtime.log',
-    fetch: fetchOn(computer),
-    sleep: () => {
-      sleeps += 1;
-      if (options.comesBackAfter === sleeps) {
-        computer.answerWith(startedForAnAgent);
-      }
-      return Promise.resolve();
-    },
+    fetch: fetchOn(computer, options.comesBackAfter),
     startInBackground: () => {
       computer.record('started');
       computer.answerWith('startsAs' in options ? options.startsAs : startedForAnAgent);
+      if (options.startsFrozen === true) {
+        computer.freeze();
+      }
       return startedRuntime(options.endsAtItsStart === true);
     },
     startingLock: {
@@ -109,7 +155,7 @@ export function startingOn(computer: Computer, options: Options = {}): Backgroun
     notice: (line) => {
       computer.record(`noticed ${line}`);
     },
-    restartUnderWay: () => options.restarting === true,
+    restartUnderWay: (port) => port === options.restartingOn,
     saw: (probe) => {
       computer.sight(probe.state);
     },
@@ -118,4 +164,8 @@ export function startingOn(computer: Computer, options: Options = {}): Backgroun
     },
     pausing: () => options.pausing === true,
   };
+}
+
+export function ranProbeByProbe<A>(program: Effect.Effect<A>): Effect.Effect<A> {
+  return Effect.race(program, Effect.forever(after(probeEveryMs)));
 }
