@@ -6,6 +6,7 @@ import { sdkStreamMixin } from '@smithy/core/serde';
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { storageWaits } from '../client/storage-client.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
 import { fakeBucket } from '../testing/fake-bucket.ts';
 import { objectContentOn } from './object-content.ts';
@@ -16,7 +17,7 @@ describe('a read on object storage whose store stops sending', () => {
   it('fails once the store has sent no piece for the wait of a request, and lets go of the body', async () => {
     const bucket = fakeBucket();
     const client = bucket.client();
-    const store = objectContentOn(() => client, location, { connectionMs: 100, requestMs: 100 });
+    const store = objectContentOn(() => client, location, { ...storageWaits, requestMs: 100 });
     const kept = await resultOf(store.content.put(alpha, textToKeep('stalled', octets)));
     const silent = new Readable({ read: Function.constVoid });
     bucket.intercepting('GetObjectCommand', async (asked) => ({ ...(await asked()), Body: sdkStreamMixin(silent) }));
