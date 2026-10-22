@@ -7,6 +7,7 @@ import type { ConsentClient, StartAsked } from '../consent/consent-client.ts';
 import {
   autoClientsOf,
   consentClientWith,
+  cuttingTimeouts,
   returnAddress,
   servedThroughAuto,
   startAskedAt,
@@ -151,19 +152,31 @@ describe('a start for a Studio neither hosted nor on this computer', () => {
 });
 
 describe('a start the consent service refuses or does not answer', () => {
-  it('is refused as a start the service will not make where it refuses it, and unanswered where it is gone or stalls', async () => {
-    const [refusing, gone, stalling] = await Promise.all([throughAuto(), throughAuto(), throughAuto()]);
-    const asking = [refusing, gone, stalling].map((serving): Asking => ({
+  it('is refused as a start the service will not make where it refuses it, and unanswered where it is gone', async () => {
+    const [refusing, gone] = await Promise.all([throughAuto(), throughAuto()]);
+    const asking = [refusing, gone].map((serving): Asking => ({
       asked: startAskedAt(serving.fake),
-      client: consentClientWith({ autoClients: autoClientsOf(serving.service), requestMs: 200 }),
+      client: consentClientWith({ autoClients: autoClientsOf(serving.service) }),
     }));
     await Effect.runPromise(Effect.all(asking.map(({ client }) => client.hadSources(studioBase))));
     refusing.service.refuseNext('start');
     await gone.service.close();
-    stalling.service.stall();
 
     const answers = await Promise.all(asking.map(({ client, asked }) => refused(client, asked)));
 
-    expect(answers).toEqual([{ refused: 'start_refused' }, { refused: 'unanswered' }, { refused: 'unanswered' }]);
+    expect(answers).toEqual([{ refused: 'start_refused' }, { refused: 'unanswered' }]);
+  });
+
+  it('is unanswered where the service stalls, once the bound of its request ends', async () => {
+    const stalling = await throughAuto();
+    const { requestTimeout, cutWhen } = cuttingTimeouts();
+    const client = consentClientWith({ autoClients: autoClientsOf(stalling.service), requestTimeout });
+    await Effect.runPromise(client.hadSources(studioBase));
+    stalling.service.stall();
+
+    const starting = refused(client, startAskedAt(stalling.fake));
+    await cutWhen(() => pathsHeardBy(stalling.service).includes('/consents'));
+
+    expect(await starting).toEqual({ refused: 'unanswered' });
   });
 });

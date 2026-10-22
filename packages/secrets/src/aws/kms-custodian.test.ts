@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { once } from 'node:events';
-import { createServer } from 'node:http';
 
-import { Effect, Redacted, Schema } from 'effect';
-import { afterAll, describe, expect, it } from 'vitest';
+import { Effect, Redacted } from 'effect';
+import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { Custodian } from '../custodians/custodian.ts';
+import { aClosedPort } from '../fakes/closed-port.ts';
 import { serveFakeKms, type FakeKeyState } from '../fakes/fake-kms.ts';
 import type { KeepingFailure } from '../keepers/keeper.ts';
 import type { AwsWaits } from './aws-requests.ts';
@@ -54,17 +53,6 @@ function aDataKey(): Redacted.Redacted<Uint8Array> {
 
 function failureOf<A, E>(effect: Effect.Effect<A, E>): Promise<E> {
   return Effect.runPromise(Effect.flip(effect));
-}
-
-const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
-
-async function aClosedPort(): Promise<string> {
-  const server = createServer().listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  const { port } = decodeAddress(server.address());
-  server.close();
-  await once(server, 'close');
-  return `http://127.0.0.1:${String(port)}`;
 }
 
 function idOf(arn: string): string {
@@ -252,27 +240,32 @@ describe('the custodian of a key in a KMS that throttles it', () => {
 });
 
 describe('the custodian of a key in a KMS that does not answer', () => {
-  it('gives up within the waits of its client, where KMS stalls and where it cannot be reached, as a keeper that does not answer, naming its kid', async () => {
+  it('gives up within the waits of 100 ms its client is given, the bound this test is about, where KMS stalls, as a keeper that does not answer, naming its kid', async () => {
     const stalling = await custodianOf(key, fake.url, waitsOf100Ms);
-    const unreachable = await custodianOf(key, await aClosedPort(), waitsOf100Ms);
     fake.tell(key, 'stalling');
+    onTestFinished(() => {
+      fake.tell(key, 'enabled');
+    });
     const started = performance.now();
 
     const stalled = await failureOf(stalling.wrap(aDataKey()));
-    const unreached = await failureOf(unreachable.unwrap('d3JhcHBlZA=='));
-    fake.tell(key, 'enabled');
 
-    expect([stalled, unreached]).toMatchObject([
-      { _tag: 'keeper_unavailable', kid: idOf(key) },
-      { _tag: 'keeper_unavailable', kid: idOf(key) },
-    ]);
+    expect(stalled).toMatchObject({ _tag: 'keeper_unavailable', kid: idOf(key) });
     expect(stalled.detail).toMatch(
       new RegExp(
         `^The custodian of the key ${idOf(key)} did not answer a request to wrap a data key: TimeoutError`,
         'u',
       ),
     );
-    expect(unreached.detail).toMatch(/did not answer a request to unwrap a data key: .*ECONNREFUSED/u);
     expect(performance.now() - started).toBeLessThan(20_000);
+  });
+
+  it('does not answer where KMS cannot be reached, in the words of the refused connection, naming its kid', async () => {
+    const unreachable = await custodianOf(key, await aClosedPort());
+
+    const unreached = await failureOf(unreachable.unwrap('d3JhcHBlZA=='));
+
+    expect(unreached).toMatchObject({ _tag: 'keeper_unavailable', kid: idOf(key) });
+    expect(unreached.detail).toMatch(/did not answer a request to unwrap a data key: .*ECONNREFUSED/u);
   });
 });

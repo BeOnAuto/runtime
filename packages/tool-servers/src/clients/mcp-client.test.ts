@@ -1,5 +1,6 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { defaultTiming } from '../bounds/call-bounds.ts';
 import type { McpServerSettings } from '../settings/server-settings.ts';
 import { serveFakeMcp, testClientInfo } from '../testing/index.ts';
 import { openHttp, systemTimer, type HttpOpening } from './http-client.ts';
@@ -27,8 +28,8 @@ function opening(reportError: (message: string) => void): HttpOpening {
     clientInfo: testClientInfo,
     fetch: globalThis.fetch,
     authProvider: undefined,
-    timeoutMs: 5000,
-    longestRetryWaitMs: 1000,
+    timeoutMs: defaultTiming.openMs,
+    longestRetryWaitMs: defaultTiming.longestRetryWaitMs,
     reportError,
     timer: systemTimer,
   };

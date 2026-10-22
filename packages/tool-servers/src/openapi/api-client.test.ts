@@ -2,6 +2,7 @@ import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { documentOf, toolsOf } from '../api-testing/derived-documents.ts';
+import { defaultTiming } from '../bounds/call-bounds.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { failureOf } from '../clients/server-failures.ts';
 import { serveFakeApi, type FakeApiServer } from '../testing/index.ts';
@@ -41,7 +42,7 @@ function calledAt(baseUrl: string, path: string): Promise<CallSettled> {
     input: {},
     meta: {},
     signal: new AbortController().signal,
-    timeoutMs: 1000,
+    timeoutMs: defaultTiming.callMs,
   });
 }
 
@@ -91,7 +92,7 @@ describe('the client of an HTTP API', () => {
       input: {},
       meta: {},
       signal: new AbortController().signal,
-      timeoutMs: 1000,
+      timeoutMs: defaultTiming.callMs,
     });
 
     expect(failureOfSettled(settled)).toEqual({
@@ -107,7 +108,7 @@ describe('the client of an HTTP API', () => {
     await client.end();
 
     await expect(client.closed).resolves.toBeUndefined();
-    expect(await client.listTools(1000)).toEqual([]);
+    expect(await client.listTools(defaultTiming.openMs)).toEqual([]);
   });
 });
 
@@ -146,7 +147,7 @@ function calledThrough(
     },
     { fetch: globalThis.fetch, tokens: undefined, now: Date.now },
   );
-  return client.call({ tool, input, meta: {}, signal: new AbortController().signal, timeoutMs: 1000 });
+  return client.call({ tool, input, meta: {}, signal: new AbortController().signal, timeoutMs: defaultTiming.callMs });
 }
 
 const unexploded = documentOf({

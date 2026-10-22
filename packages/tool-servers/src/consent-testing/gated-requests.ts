@@ -2,6 +2,8 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { HostRefused } from '@on.auto/outbound';
 import { Option, Schema } from 'effect';
 
+import { until } from '../testing/until.ts';
+
 export interface GatedRequests {
   readonly fetch: FetchLike;
   readonly release: () => void;
@@ -32,6 +34,33 @@ export function gatedRequests(path = '/token'): GatedRequests {
     release: opened.resolve,
     holding: () => held.requests,
     answered: () => [...answered],
+  };
+}
+
+export interface CuttingTimeouts {
+  readonly requestTimeout: (ms: number) => AbortSignal;
+  readonly cut: () => void;
+  readonly cutWhen: (holds: () => boolean) => Promise<void>;
+  readonly cuts: () => readonly number[];
+}
+
+export function cuttingTimeouts(): CuttingTimeouts {
+  const cuts: number[] = [];
+  const cutting = new AbortController();
+  const cut = () => {
+    cutting.abort();
+  };
+  return {
+    requestTimeout: (ms) => {
+      cuts.push(ms);
+      return cutting.signal;
+    },
+    cut,
+    cutWhen: async (holds) => {
+      await until(holds);
+      cut();
+    },
+    cuts: () => [...cuts],
   };
 }
 

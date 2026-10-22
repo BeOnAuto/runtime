@@ -29,13 +29,11 @@ export function autoClientsOf(service: Pick<FakeConsentService, 'url'>, kind: Re
   return { enabled: true, service: { url: service.url }, returnKindOf: Function.constant(kind) };
 }
 
-export function serviceCallsAt({ url }: Pick<FakeConsentService, 'url'>) {
-  return consentServiceOf({
-    fetch: globalThis.fetch,
-    url,
-    requestMs: 5000,
-    requestTimeout: (ms) => AbortSignal.timeout(ms),
-  });
+export function serviceCallsAt(
+  { url }: Pick<FakeConsentService, 'url'>,
+  requestTimeout = (ms: number) => AbortSignal.timeout(ms),
+) {
+  return consentServiceOf({ fetch: globalThis.fetch, url, requestMs: 5000, requestTimeout });
 }
 
 export async function handleOf(service: Pick<FakeConsentService, 'url'>, authorizationUrl: string): Promise<string> {

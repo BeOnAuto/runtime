@@ -20,8 +20,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function runWith(tools: readonly string[], longestRetryWaitMs = 1000) {
-  const run = await openFakeToolRun(tools, { callMs: 2000, openMs: 2000, longestRetryWaitMs });
+async function runWith(tools: readonly string[]) {
+  const run = await openFakeToolRun(tools);
   closing.push(run.close);
   return run;
 }
@@ -88,7 +88,7 @@ describe('a run that ends while it calls', () => {
   });
 
   it('stops waiting out a 429 when the run ends', async () => {
-    const { call, fake, journal } = await runWith(['search'], 10_000);
+    const { call, fake, journal } = await runWith(['search']);
     const signals = controlledSignals();
 
     fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '5' });

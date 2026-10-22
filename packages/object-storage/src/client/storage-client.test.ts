@@ -7,7 +7,7 @@ import { Effect, Function, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { objectContentOn, objectStoreReached } from '../content/object-content.ts';
-import { storageClientOf } from './storage-client.ts';
+import { storageClientOf, storageWaits } from './storage-client.ts';
 
 const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
@@ -66,10 +66,10 @@ describe('the client of an object store', () => {
 });
 
 describe('the client of an object store that stops answering', () => {
-  it('gives up on each request after its wait, so no check, read or put of a stalled store waits for ever', async () => {
+  it('gives up on each request after its wait of 100 ms, so no check, read or put of a stalled store waits for ever', async () => {
     const endpoint = await aStoreThatNeverAnswers();
     const client = storageClientOf({ endpoint, region: 'us-east-1', proxy: noProxy }, credentials, {
-      connectionMs: 100,
+      ...storageWaits,
       requestMs: 100,
     });
     const location = { bucket: 'content', prefix: '' };
