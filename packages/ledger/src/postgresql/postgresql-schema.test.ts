@@ -70,15 +70,15 @@ describe("the ledger's own schema on PostgreSQL", () => {
 });
 
 interface Held {
-  readonly tables: number;
+  readonly tables: readonly string[];
   readonly layout?: number;
 }
 
-function answerTo(statement: string, { tables, layout }: Held): unknown {
+function rowsAnswering(statement: string, { tables, layout }: Held): readonly unknown[] {
   if (statement.includes('pg_try_advisory_xact_lock')) {
-    return { locked: true };
+    return [{ locked: true }];
   }
-  return statement.includes('pg_tables') ? { tables, numbered: layout !== undefined } : { layout };
+  return statement.includes('pg_tables') ? tables.map((name) => ({ name })) : [{ layout }];
 }
 
 function aDatabaseHolding(held: Held): { readonly execute: StatementExecutor; readonly asked: string[] } {
@@ -89,7 +89,7 @@ function aDatabaseHolding(held: Held): { readonly execute: StatementExecutor; re
       query: (sql) => {
         const statement = described(sql);
         asked.push(statement);
-        return Promise.resolve({ rows: [answerTo(statement, held)] });
+        return Promise.resolve({ rows: rowsAnswering(statement, held) });
       },
       command: (sql) => {
         asked.push(described(sql));
@@ -101,28 +101,27 @@ function aDatabaseHolding(held: Held): { readonly execute: StatementExecutor; re
 
 const lockTaken = `SELECT pg_try_advisory_xact_lock(${emmettsMigrationLock}) AS locked`;
 
-const tablesCounted =
-  'SELECT count(*)::int AS tables, count(*) FILTER (WHERE tablename = "ledger_layout") > 0 AS numbered FROM pg_tables WHERE schemaname = current_schema()';
+const tablesListed = 'SELECT tablename AS name FROM pg_tables WHERE schemaname = current_schema()';
 
 describe('the layout of the ledger on PostgreSQL, as the migration begins', () => {
-  it('takes the migration lock, then counts the tables of the schema, and writes the layout into a table of one row before any other table of a database that holds none', async () => {
-    const { execute, asked } = aDatabaseHolding({ tables: 0 });
+  it('takes the migration lock, then lists the tables of the schema, and writes the layout into a table of one row before any other table of a database that holds none', async () => {
+    const { execute, asked } = aDatabaseHolding({ tables: [] });
 
     await beforeTheSchema({ execute });
 
     expect(asked).toEqual([
       lockTaken,
-      tablesCounted,
-      'CREATE TABLE ledger_layout ( one_row BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL )',
+      tablesListed,
+      'CREATE TABLE ledger_layout ( one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL )',
       `INSERT INTO ledger_layout (layout) VALUES (${ledgerLayout})`,
     ]);
   });
 
   it('reads the layout of a database that holds its table, and writes nothing when it is the layout kept', async () => {
-    const { execute, asked } = aDatabaseHolding({ tables: 12, layout: ledgerLayout });
+    const { execute, asked } = aDatabaseHolding({ tables: ['emt_messages', 'ledger_layout'], layout: ledgerLayout });
 
     await beforeTheSchema({ execute });
 
-    expect(asked).toEqual([lockTaken, tablesCounted, 'SELECT layout FROM ledger_layout']);
+    expect(asked).toEqual([lockTaken, tablesListed, 'SELECT layout FROM ledger_layout']);
   });
 });
