@@ -89,6 +89,10 @@
           {
             "text": "Connect Zoom",
             "link": "/integrations/zoom"
+          },
+          {
+            "text": "Connect Slack",
+            "link": "/integrations/slack"
           }
         ]
       }
