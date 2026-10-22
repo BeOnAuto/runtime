@@ -6,7 +6,7 @@ import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { DefinitionSchema } from '../registry/definition.ts';
 import { DefinitionNameField } from './definition-fields.ts';
-import { definitionOf } from './definition-views.ts';
+import { answeredDefinition } from './definition-reading.ts';
 import { recordInRegistry } from './registry-access.ts';
 
 export function defineRetireDefinition(capabilities: readonly Capability[]) {
@@ -29,7 +29,11 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
       reasons: ['not_found', 'conflict'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
-        return definitionOf(capability, yield* recordInRegistry(capability, { type: 'retire', name }));
+        return yield* answeredDefinition(
+          capability,
+          known.types,
+          yield* recordInRegistry(capability, { type: 'retire', name }),
+        );
       }),
       plainLanguage: {
         task: `retire a ${words.kinds}`,

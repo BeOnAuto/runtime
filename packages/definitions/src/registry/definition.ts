@@ -2,6 +2,7 @@ import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { StrippedForms } from '../capability/stripped-forms.ts';
+import { DefinitionUserSchema } from '../used-by/user-relations.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
 const listedDefinitionFields = {
@@ -82,6 +83,12 @@ export const DefinitionSchema = Schema.Struct({
     }),
   ),
   standing: Schema.optionalKey(StandingField),
+  used_by: Schema.optionalKey(
+    Schema.Array(DefinitionUserSchema).annotate({
+      description:
+        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes',
+    }),
+  ),
 }).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });
 
 export type Definition = typeof DefinitionSchema.Type;
@@ -121,7 +128,10 @@ export function isWorkflowDefinition(definition: Definition): definition is Work
 
 export type ListedDefinition = typeof ListedDefinitionSchema.Type;
 
-export type StoredDefinition = Omit<Definition, 'type' | 'media_type' | 'triggers_since' | 'standing' | 'details'> & {
+export type StoredDefinition = Omit<
+  Definition,
+  'type' | 'media_type' | 'triggers_since' | 'standing' | 'used_by' | 'details'
+> & {
   readonly details?: Schema.JsonObject;
   readonly stripped?: StrippedForms;
 };

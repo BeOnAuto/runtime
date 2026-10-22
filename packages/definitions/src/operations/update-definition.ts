@@ -6,7 +6,8 @@ import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor, whatItDoes } from '../plain-language/definition-words.ts';
 import { DefinitionSchema } from '../registry/definition.ts';
 import { DefinitionNameField, OverviewField, SourceField } from './definition-fields.ts';
-import { contentOf, definitionOf } from './definition-views.ts';
+import { answeredDefinition } from './definition-reading.ts';
+import { contentOf } from './definition-views.ts';
 import { recordInRegistry } from './registry-access.ts';
 
 export function defineUpdateDefinition(capabilities: readonly Capability[]) {
@@ -36,7 +37,11 @@ export function defineUpdateDefinition(capabilities: readonly Capability[]) {
       handle: Effect.fnUntraced(function* ({ type, name, ...written }) {
         const capability = yield* known.capabilityOfType(type);
         const content = yield* contentOf(capability, written);
-        return definitionOf(capability, yield* recordInRegistry(capability, { type: 'update', name, content }));
+        return yield* answeredDefinition(
+          capability,
+          known.types,
+          yield* recordInRegistry(capability, { type: 'update', name, content }),
+        );
       }),
       plainLanguage: {
         task: `update a ${words.kinds}`,

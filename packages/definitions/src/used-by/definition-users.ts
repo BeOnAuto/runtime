@@ -12,9 +12,8 @@ import {
   type CallingStep,
   type CallRole,
   type NamedDefinition,
-  type UserRelation,
 } from './called-definitions.ts';
-import type { DefinitionUser } from './user-relations.ts';
+import type { DefinitionUser, NamingRelation } from './user-relations.ts';
 
 export type PlaybookRegistries = ReadonlyMap<string, DefinitionRegistry>;
 
@@ -34,8 +33,6 @@ const NamingDetailsSchema = Schema.Struct({
 type NamingDetails = typeof NamingDetailsSchema.Type;
 
 const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
-
-type NamingRelation = Exclude<UserRelation, 'calls'>;
 
 type Use =
   | { readonly relation: 'calls'; readonly steps: readonly CallingStep[] }

@@ -17,6 +17,11 @@ import { definitionsDecider, definitionTypeStreamOf } from '../registry/definiti
 import { findDefinition } from '../registry/registry-lookup.ts';
 import { commandMetadata } from './command-metadata.ts';
 
+export interface DefinitionInRegistry {
+  readonly registry: DefinitionRegistry;
+  readonly stored: StoredDefinition;
+}
+
 export function loadRegistry(type: string): Effect.Effect<DefinitionRegistry, never, PlaybookReader> {
   return PlaybookReader.use((reader) => reader.load(definitionTypeStreamOf(type), definitionsDecider(type))).pipe(
     Effect.map(({ state }) => state),
@@ -70,5 +75,6 @@ export const recordInRegistry = Effect.fnUntraced(function* (
       ...metadata,
     },
   );
-  return yield* Effect.orDie(findDefinition(state, type, data.name));
+  const stored = yield* Effect.orDie(findDefinition(state, type, data.name));
+  return { registry: state, stored };
 });
