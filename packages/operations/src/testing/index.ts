@@ -1,6 +1,7 @@
 export { memoryPlaybookRegistry } from './memory-playbook-registry.ts';
 export { memoryLedger, type MemoryLedger } from './memory-ledger.ts';
 export { memoryRecordedContent } from '../content/memory-content.ts';
+export { shippedFilesInMemory } from '../shipped-files/shipped-files-in-memory.ts';
 export { keptTextOf } from './kept-text.ts';
 export { nothingKept } from '../reading/kept-content.ts';
 export { recordingReporter, type RecordingReporter, type ReportedIncident } from './recording-reporter.ts';
@@ -35,3 +36,5 @@ export {
 export { internalTerms, internalTermsIn } from '../plain-language/internal-terms.ts';
 export { endedWhileItRuns, stoppedWithinMs, type RunningProcess } from '../process-testing/process-endings.ts';
 export { endWithTheTest, spawnForTheTest, type PidReader } from '../process-testing/test-processes.ts';
+export { measuredEnvironment } from '../process-testing/measured-environment.ts';
+export { modulesReachedFrom, type ModulesReached } from '../module-testing/modules-reached.ts';
