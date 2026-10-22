@@ -91,7 +91,7 @@ describe('the Studio a runtime serves, at /studio/ and under it', () => {
     const { handler } = createTestHandler({ studio });
 
     const root = await opened(handler, '/studio/');
-    const route = await opened(handler, '/studio/connect?server=http%3A%2F%2F127.0.0.1%3A5555&token=a-token');
+    const route = await opened(handler, '/studio/connect?connection=a-connection&token=a-token');
 
     expect([root, route]).toEqual([
       { status: 200, type: 'text/html', caching: 'no-cache', text: page },

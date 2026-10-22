@@ -73,11 +73,7 @@ describe('the Studio a runtime in local mode serves', () => {
     const fromABrowser = { cookie: 'session=a-cookie', authorization: 'Bearer a-token' };
 
     const root = await opened(server, '/studio/', fromABrowser);
-    const route = await opened(
-      server,
-      '/studio/connect?server=http%3A%2F%2F127.0.0.1&token=a-link-token',
-      fromABrowser,
-    );
+    const route = await opened(server, '/studio/connect?connection=a-connection&token=a-link-token', fromABrowser);
     const again = await opened(server, '/studio/', fromABrowser);
 
     expect([root, route, again].map(({ status, type, text }) => [status, type, text])).toEqual([

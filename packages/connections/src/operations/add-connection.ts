@@ -7,13 +7,15 @@ import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { checkedAdditionOf, refusalOfTheAddition } from '../providers/provider-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
-import { connectionNamed, linkWords } from './connection-words.ts';
+import { connectionNamed, linkWordsOf } from './connection-words.ts';
 import { additionOf, recordInRegistry } from './registry-access.ts';
 
 const description = [
   "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page.",
+  'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
   'A server given by hand takes name, type, entry and credential instead, none holding a secret.',
   'The person approves it, and gives its credential, on the page the link opens within ten minutes.',
+  'Nothing is granted by this call and no credential passes through it: the person allows it at the service, or gives its credential, on the page the link opens, or nothing happens.',
 ].join(' ');
 
 export function defineAddConnection({
@@ -57,7 +59,7 @@ export function defineAddConnection({
       task: 'add a connection',
       attempt: ({ name, provider }) =>
         name === undefined ? `connect the provider ${quoted(String(provider))}` : `add the connection ${quoted(name)}`,
-      outcome: (added) => `Added ${connectionNamed(added)}. ${linkWords}`,
+      outcome: (added) => `Added ${connectionNamed(added)}. ${linkWordsOf(added, serving.providers)}`,
     },
     linkToOpen: (added) => ({
       message: `Open this page to approve ${connectionNamed(added)}, and give its credential where it takes one, within ten minutes.`,

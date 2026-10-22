@@ -1,5 +1,6 @@
 import {
   calledOpeningLinks,
+  plainTextIn,
   retriedWith,
   stateAskedBy,
   toolNamesIn,
@@ -70,12 +71,10 @@ describe('add_connection over MCP', () => {
         url,
       },
     ]);
-    expect(url).toMatch(
-      /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?server=http%3A%2F%2F127\.0\.0\.1%3A\d+&org=local&/u,
-    );
+    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=[\da-f-]{36}&token=[\w-]{43}$/u);
   });
 
-  it('asks nothing of a client that does not declare it opens links, or speaks 2025-11-25, and answers the link', async () => {
+  it('asks nothing of a client that does not declare it opens links, or speaks 2025-11-25, and answers the link, with words that say to show it by a name', async () => {
     const formsAlone = await adding('notes-forms', { opens: 'forms alone' });
     const legacy = await adding('notes-legacy', { revision: 'previous revision' });
 
@@ -83,7 +82,10 @@ describe('add_connection over MCP', () => {
       ({ answer }) => Schema.decodeUnknownSync(AddedSchema)(answer.structuredContent).connect.url,
     );
     expect([formsAlone.elicited, legacy.elicited]).toEqual([[], []]);
-    expect(urls.filter((url) => /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?server=/u.test(url))).toHaveLength(2);
+    expect(urls.filter((url) => /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=/u.test(url))).toHaveLength(2);
+    expect(plainTextIn(legacy.answer)).toBe(
+      'Added the connection “notes-legacy”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+    );
   });
 });
 

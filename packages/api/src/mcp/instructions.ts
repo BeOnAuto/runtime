@@ -88,7 +88,7 @@ const guides: Sentences = ({ listed }) => [
 ];
 
 const connectingAService = [
-  "Accounts at services are connected through this server: asked to connect, link, sign in to or use a service, call search with its words, which lists the providers that match, then add_connection with a provider's name, which the person approves on the page it links.",
+  "A service a playbook will use is connected on this server, whatever connector the agent has of its own: asked to connect, link, sign in to or use one, call search with its words, then add_connection with the provider's name, which the person approves on the page it links.",
   'Say a service cannot be connected only when no provider or server matches.',
 ];
 
