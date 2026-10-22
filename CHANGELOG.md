@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.17.0](https://github.com/BeOnAuto/runtime/compare/v0.16.0...v0.17.0) (2026-10-22)
+
+
+### Features
+
+* **api:** the instructions and the playbook tools claim a request for a playbook ([#288](https://github.com/BeOnAuto/runtime/issues/288)) ([e4e6f86](https://github.com/BeOnAuto/runtime/commit/e4e6f86d27691cd88893e56a9de0043170cd80eb))
+* **connections:** a client names the scopes it may ask, and a way takes the one covering its scope ([#289](https://github.com/BeOnAuto/runtime/issues/289)) ([e05a127](https://github.com/BeOnAuto/runtime/commit/e05a127194f981a0c7d05eec2b9ad0182fcef82a))
+* **connections:** a connect link names what its page cannot know, and the agent shows it as a link ([#290](https://github.com/BeOnAuto/runtime/issues/290)) ([8d1de91](https://github.com/BeOnAuto/runtime/commit/8d1de91c44c8a33f6d71d0334f0f02b75660f950))
+* **definitions:** the overview is its author's markdown, and a read names what uses a definition ([#287](https://github.com/BeOnAuto/runtime/issues/287)) ([7c1c637](https://github.com/BeOnAuto/runtime/commit/7c1c637edd3bb2ebe9220fb277103682c22ef98e))
+* **ledger:** a layout number, written at creation and checked at open, replaces the shape checks ([#281](https://github.com/BeOnAuto/runtime/issues/281)) ([a48be0e](https://github.com/BeOnAuto/runtime/commit/a48be0e5008511648588533140e86fa2bc556549))
+
+
+### Bug Fixes
+
+* **operations:** a version 7 uuid made in the same millisecond as the last sorts after it ([#285](https://github.com/BeOnAuto/runtime/issues/285)) ([846a36d](https://github.com/BeOnAuto/runtime/commit/846a36da15008cb9a2e33e77bd2337ac10e026ed))
+* **prediction:** a model loads with the telemetry of onnxruntime off, so its process leaves nothing ([#283](https://github.com/BeOnAuto/runtime/issues/283)) ([ea1a6d8](https://github.com/BeOnAuto/runtime/commit/ea1a6d8b375f75173bed17015b7db4ca86943dfc))
+* **server:** the start's waits run on Effect's clock and the restart mark names its port ([#282](https://github.com/BeOnAuto/runtime/issues/282)) ([db6c858](https://github.com/BeOnAuto/runtime/commit/db6c858f21d24f1b2b1d6f4faae17f3a6a6f62d7))
+
 ## [0.16.0](https://github.com/BeOnAuto/runtime/compare/v0.15.0...v0.16.0) (2026-10-21)
 
 
