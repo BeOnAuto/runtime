@@ -1,4 +1,4 @@
-import { awsCredentialChain } from '@on.auto/outbound/aws';
+import { awsCredentialChainOf } from '@on.auto/outbound';
 import type { Custodian } from '@on.auto/secrets';
 import { Effect } from 'effect';
 
@@ -16,13 +16,8 @@ function unresolved({ setting, arn }: KeyInKms, detail: string): InvalidSettings
 }
 
 export async function kmsCustodianOf(source: KeyInKms, { proxy, loadAws }: AwsMaking): Promise<Custodian> {
-  const { kmsCustodian } = await loadAws();
-  const made = kmsCustodian({
-    keyId: source.arn,
-    region: source.region,
-    proxy,
-    credentials: awsCredentialChain(proxy),
-  });
+  const [{ kmsCustodian }, credentials] = await Promise.all([loadAws(), awsCredentialChainOf(proxy)]);
+  const made = kmsCustodian({ keyId: source.arn, region: source.region, proxy, credentials });
   return Effect.runPromise(
     Effect.mapError(made, ({ detail }: { readonly detail: string }) => unresolved(source, detail)),
   );

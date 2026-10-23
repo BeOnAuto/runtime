@@ -1,3 +1,4 @@
+export { awsCredentialChainOf, awsCredentialVariables } from './aws/aws-credentials.ts';
 export { causesOf, codesOf } from './causes/error-causes.ts';
 export { isUntrustedCertificate } from './certificates/untrusted-certificates.ts';
 export { proxySettingsOf, proxySettingsVariables, type ProxySettings } from './proxy/proxy-settings.ts';

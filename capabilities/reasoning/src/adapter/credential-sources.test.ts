@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { googleAccessTokens, googleCredentialChain, guarded } from './credential-sources.ts';
+import { googleAccessTokens, guarded } from './credential-sources.ts';
 import { OutboundFailure } from './outbound-failure.ts';
 
 describe('guarded', () => {
@@ -26,11 +26,5 @@ describe('googleAccessTokens', () => {
     await expect(googleAccessTokens({ getAccessToken: () => Promise.resolve(token) })()).rejects.toBeInstanceOf(
       OutboundFailure,
     );
-  });
-});
-
-describe('the default credential chains', () => {
-  it('are built without looking anything up', () => {
-    expect(typeof googleCredentialChain('acme-ai')).toBe('function');
   });
 });

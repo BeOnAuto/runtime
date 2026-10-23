@@ -1,5 +1,3 @@
-import { GoogleAuth, OAuth2Client } from 'google-auth-library';
-
 import { OutboundFailure } from './outbound-failure.ts';
 
 export const googleCredentialVariables: readonly string[] = ['GOOGLE_APPLICATION_CREDENTIALS'];
@@ -24,8 +22,6 @@ export interface CredentialSources {
   readonly azure?: AccessTokenSource;
 }
 
-const googleCloudScope = 'https://www.googleapis.com/auth/cloud-platform';
-
 export function guarded<Credential>(source: () => Promise<Credential>): () => Promise<Credential> {
   return async () => {
     try {
@@ -44,14 +40,4 @@ export function googleAccessTokens(client: GoogleTokenClient): AccessTokenSource
     }
     return token;
   };
-}
-
-export function googleCredentialChain(project: string): AccessTokenSource {
-  return googleAccessTokens(new GoogleAuth({ scopes: [googleCloudScope], projectId: project }));
-}
-
-export function refreshingGoogleClient(tokens: AccessTokenSource): OAuth2Client {
-  const client = new OAuth2Client();
-  client.refreshHandler = async () => ({ access_token: await tokens(), expiry_date: Date.now() });
-  return client;
 }

@@ -1,5 +1,5 @@
 import type { ContentStore } from '@on.auto/operations';
-import { awsCredentialChain } from '@on.auto/outbound/aws';
+import { awsCredentialChainOf } from '@on.auto/outbound';
 import { Effect } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';
@@ -29,10 +29,10 @@ export function contentStoreOf({
       `CONTENT_STORE_URL names the bucket ${location.bucket} on ${hostOf(endpoint)}, which could not be reached: ${answer}`,
     );
   return Effect.gen(function* () {
-    const { objectContentOn, objectStoreReached, storageClientOf } = yield* Effect.promise(
-      () => import('@on.auto/object-storage'),
+    const [{ objectContentOn, objectStoreReached, storageClientOf }, credentials] = yield* Effect.promise(() =>
+      Promise.all([import('@on.auto/object-storage'), awsCredentialChainOf(proxy)]),
     );
-    const client = storageClientOf({ endpoint, region, proxy }, awsCredentialChain(proxy));
+    const client = storageClientOf({ endpoint, region, proxy }, credentials);
     client.middlewareStack.add(commandSpansIn(location.bucket), commandSpanStep);
     const composed: ComposedContentStore = {
       store: objectContentOn(() => client, location),
