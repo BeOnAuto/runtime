@@ -31,6 +31,7 @@ export {
   type StreamLoad,
 } from './ledger-service.ts';
 export { sqliteEventStore, sqliteLedgerLayer, type SQLiteStoreOptions } from './sqlite-event-store.ts';
+export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';
 export { recordedReaderOf } from './recorded/recorded-reader.ts';
 export { retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
 export { streamAppends, streamSignalOf, type StreamAppended, type StreamSignal } from './signal/append-signal.ts';

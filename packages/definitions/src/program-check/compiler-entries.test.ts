@@ -19,10 +19,15 @@ function compilersReachedFrom(entry: string): readonly string[] {
   return modulesReachedFrom(sources, entry).packages.filter((name) => compilers.has(name));
 }
 
+const checkHandler = 'program-check/handed-checks.ts';
+
 describe('the compiler', () => {
-  it('is reached by no entry of the package, the check entry among them, and by the check worker, which the pool starts with the first check', () => {
-    expect(entries).toEqual(['index.ts', 'check.ts', 'document.ts', 'template.ts', 'testing/index.ts']);
-    expect(entries.flatMap((entry) => compilersReachedFrom(entry))).toEqual([]);
+  it('is reached by the check worker, which the pool starts with the first check, and by the entry of the handler it serves, and by no other entry of the package, the check entry among them', () => {
+    expect(entries).toEqual(['index.ts', 'check.ts', checkHandler, 'document.ts', 'template.ts', 'testing/index.ts']);
+    expect(entries.filter((entry) => entry !== checkHandler).flatMap((entry) => compilersReachedFrom(entry))).toEqual(
+      [],
+    );
+    expect(compilersReachedFrom(checkHandler)).toEqual(['ts-blank-space', 'typescript6']);
     expect(compilersReachedFrom('program-check/check-worker.ts')).toEqual(['ts-blank-space', 'typescript6']);
   });
 });
