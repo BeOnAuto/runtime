@@ -29,7 +29,13 @@ const HeadRows = Schema.Array(
   Schema.Struct({ upload_id: Schema.String, bytes: Schema.Number, chunks: Schema.Number, media_type: Schema.String }),
 );
 
-const ChunkRows = Schema.Array(Schema.Struct({ data: Schema.Uint8Array }));
+const StoredBytes = Schema.Union([Schema.Uint8Array, Schema.instanceOf(ArrayBuffer)]);
+
+const ChunkRows = Schema.Array(Schema.Struct({ data: StoredBytes }));
+
+function viewOf(stored: Readonly<Uint8Array> | Readonly<ArrayBuffer>): Uint8Array {
+  return stored instanceof Uint8Array ? stored : new Uint8Array(stored);
+}
 
 export function matching(key: Key): SQL {
   return SQL.merge(
@@ -84,7 +90,8 @@ async function chunkOf({ execute, shelf }: Shelved, upload: Key, index: number):
   const { rows } = await execute.query(
     SQL`SELECT data FROM ${SQL.identifier(shelf.chunks)} WHERE ${matching(upload)} AND chunk = ${index}`,
   );
-  return Schema.decodeUnknownSync(ChunkRows)(rows).at(0)?.data;
+  const chunk = Schema.decodeUnknownSync(ChunkRows)(rows).at(0);
+  return chunk === undefined ? undefined : viewOf(chunk.data);
 }
 
 export function uploadOf(place: Key, uploadId: string): Key {

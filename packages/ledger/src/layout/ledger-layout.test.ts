@@ -9,7 +9,7 @@ import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { ledgerLayout } from './ledger-layout.ts';
 
 const pinned = {
-  layout: 1,
+  layout: 2,
   catalog: [
     {
       name: 'kept_secrets',
@@ -22,6 +22,10 @@ const pinned = {
     {
       name: 'ledger_first_messages_by_kind',
       sql: "CREATE INDEX ledger_first_messages_by_kind ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/') + 1), '/')), global_position) WHERE stream_position = 1",
+    },
+    {
+      name: 'ledger_layout',
+      sql: 'CREATE TABLE ledger_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)',
     },
     { name: 'ledger_messages_by_id', sql: 'CREATE INDEX ledger_messages_by_id ON emt_messages (message_id)' },
     {

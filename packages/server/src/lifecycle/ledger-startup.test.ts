@@ -76,7 +76,7 @@ describe('a ledger file made by another version of Auto Runtime', () => {
   it('stops the process with one line of stderr, its words alone, that says where the ledger is, what to do and where to ask, ending with the command that deletes it', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
-    aLedgerOfAnotherVersionAt(ledger.fileName);
+    await aLedgerOfAnotherVersionAt(ledger.fileName);
     const file = ledger.fileName;
 
     const child = spawnServer(mainModule, { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: file });
@@ -91,7 +91,7 @@ describe('a ledger file made by another version of Auto Runtime', () => {
   it('says in the image which files to delete from the volume, with no command', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
-    aLedgerOfAnotherVersionAt(ledger.fileName);
+    await aLedgerOfAnotherVersionAt(ledger.fileName);
 
     const child = spawnServer(mainModule, {
       HOST: '127.0.0.1',

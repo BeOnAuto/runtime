@@ -92,17 +92,17 @@ describe('a runtime started in a terminal on a taken port', () => {
   });
 });
 
-function aHomeWithALedgerOfAnotherVersion(): { readonly home: string; readonly ledger: string } {
+async function aHomeWithALedgerOfAnotherVersion(): Promise<{ readonly home: string; readonly ledger: string }> {
   const home = homeOfTheTest(homePrefix);
   const ledger = join(home, '.auto-runtime', 'ledger.db');
   mkdirSync(join(home, '.auto-runtime'));
-  aLedgerOfAnotherVersionAt(ledger);
+  await aLedgerOfAnotherVersionAt(ledger);
   return { home, ledger };
 }
 
 describe('a runtime started in a terminal on a ledger made by another version', () => {
   it('says on stderr, in a notice of its own, where the ledger is, what to do and where to ask, and exits', async () => {
-    const { home, ledger } = aHomeWithALedgerOfAnotherVersion();
+    const { home, ledger } = await aHomeWithALedgerOfAnotherVersion();
 
     const runtime = spawnRuntimeCommand([], { home, port: await aPortNothingListensOn() });
 
@@ -113,7 +113,7 @@ describe('a runtime started in a terminal on a ledger made by another version', 
   });
 
   it('writes the notice into a file that stderr is sent to with no color or link code', async () => {
-    const { home, ledger } = aHomeWithALedgerOfAnotherVersion();
+    const { home, ledger } = await aHomeWithALedgerOfAnotherVersion();
     const written = join(home, 'stderr.txt');
 
     const runtime = spawnRuntimeCommand([], { home, port: await aPortNothingListensOn(), stderrInto: written });

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { inTurn } from '../projections/inline-projection.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
-import type { FoundLayout } from './layout-dialects.ts';
+import { layoutFound, layoutWritten, type FoundLayout } from './layout-kept.ts';
 import { LedgerLayoutRefused } from './ledger-layout-refused.ts';
 import { ledgerLayout } from './ledger-layout.ts';
 
@@ -12,13 +11,11 @@ const whatToDo =
   'Nothing stored before launch is carried over, so delete the local database and start the server again';
 
 export function layoutIn(entry: LedgerEntry, database: string): Promise<FoundLayout> {
-  return entry.executedOn(database, (execute) => entry.layout.found(execute));
+  return entry.executedOn(database, (execute) => layoutFound(execute, entry.layout));
 }
 
 function stampedWith(entry: LedgerEntry, database: string, layout: number): Promise<void> {
-  return entry.executedOn(database, (execute) =>
-    inTurn(entry.layout.written(layout), (statement) => execute.command(statement)),
-  );
+  return entry.executedOn(database, (execute) => layoutWritten(execute, layout));
 }
 
 function refusalOf(entry: LedgerEntry, database: string): Promise<unknown> {

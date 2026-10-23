@@ -1,6 +1,6 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { sqliteFormatter } from '@event-driven-io/dumbo/sqlite';
-import { mostContentChunkBytes, sha256Of, textToKeep } from '@on.auto/operations';
+import { mostContentChunkBytes, sha256Of, textOfContent, textToKeep } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -23,12 +23,13 @@ interface Recording {
   readonly statements: readonly string[];
 }
 
-function recordingFinding(heads: readonly unknown[]): Recording {
+function recordingAnswering(rowsOf: (statement: string) => readonly unknown[]): Recording {
   const statements: string[] = [];
   const execute: StatementExecutor = {
     query: (sql) => {
-      statements.push(described(sql));
-      return Promise.resolve({ rows: heads });
+      const statement = described(sql);
+      statements.push(statement);
+      return Promise.resolve({ rows: rowsOf(statement) });
     },
     command: (sql) => {
       statements.push(described(sql));
@@ -48,11 +49,26 @@ function recordingFinding(heads: readonly unknown[]): Recording {
   };
 }
 
+function recordingFinding(heads: readonly unknown[]): Recording {
+  return recordingAnswering(() => heads);
+}
+
+function recordingHoldingOneChunk(data: unknown): Recording {
+  return recordingAnswering((statement) => (statement.startsWith('SELECT data') ? [{ data }] : [headOf('upload')]));
+}
+
 function kindsOf({ statements }: Recording): readonly string[] {
   return statements.map((statement) => statement.split(' ').slice(0, 3).join(' '));
 }
 
 const largerThanTwoChunks = 'x'.repeat(2 * mostContentChunkBytes + 1);
+
+const keptBytes = new TextEncoder().encode('kept');
+
+const chunkShapes: ReadonlyArray<readonly [string, unknown]> = [
+  ['a Uint8Array', keptBytes],
+  ['an ArrayBuffer', keptBytes.slice().buffer],
+];
 
 function headOf(uploadId: string) {
   return { upload_id: uploadId, bytes: 4, chunks: 1, media_type: 'text/plain' };
@@ -129,6 +145,19 @@ describe('the reads and the removals of a recorded content', () => {
     const read = await Effect.runPromise(sqliteContentOn(recording.pool).content.get(alpha, 'digest'));
 
     expect([read, kindsOf(recording)]).toEqual([undefined, ['SELECT upload_id, CAST(bytes']]);
+  });
+
+  it.each(chunkShapes)('read a content back from a chunk its store answers as %s', async (_shape, chunk) => {
+    const recording = recordingHoldingOneChunk(chunk);
+
+    const read = await Effect.runPromise(
+      Effect.flatMap(
+        Effect.flatMap(sqliteContentOn(recording.pool).content.get(alpha, sha256Of('kept')), Effect.fromNullishOr),
+        textOfContent,
+      ),
+    );
+
+    expect(read).toBe('kept');
   });
 
   it('mark a run unstaged, then remove the heads and the chunks it staged in one transaction, the heads first', async () => {
