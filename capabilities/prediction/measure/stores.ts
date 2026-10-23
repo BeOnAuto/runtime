@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import type { Ledger } from '@on.auto/operations';
-import type { DatabaseSettings } from '@on.auto/workflow-host';
+import type { DatabaseSettings } from '@on.auto/workflow-host/testing';
 import type { Layer } from 'effect';
 import { Client } from 'pg';
 

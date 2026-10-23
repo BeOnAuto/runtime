@@ -1,5 +1,5 @@
 import { callKeyText, type RunInput } from '@on.auto/workflow-engine';
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
@@ -55,7 +55,6 @@ function decliningEveryOffer(database: HostDatabase): Declining {
       reports: {
         unsettled: () => Effect.void,
         trouble: () => Effect.void,
-        lostConnection: Function.constVoid,
         note: (note) =>
           Effect.sync(() => {
             notes.push(note);

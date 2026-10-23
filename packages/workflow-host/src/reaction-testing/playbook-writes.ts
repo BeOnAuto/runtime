@@ -1,5 +1,5 @@
 import type { Trigger } from '@on.auto/definitions';
-import { eventAppenderOf, type EventStore } from '@on.auto/ledger';
+import { eventAppenderOf, type LedgerStreams } from '@on.auto/ledger';
 import { ContextSchema, messageIdOf, noLineage, type Context, type Decided, type Lineage } from '@on.auto/operations';
 import { playbooksStreamOfOrg } from '@on.auto/playbooks';
 import type { Json } from '@on.auto/workflow-engine';
@@ -33,14 +33,14 @@ export interface Written {
   readonly lineage: Lineage;
 }
 
-export async function recordedWith(store: EventStore, stream: string, record: AnyRecord, written: Written) {
+export async function recordedWith(store: LedgerStreams, stream: string, record: AnyRecord, written: Written) {
   const { version } = await store.read(stream);
   await Effect.runPromise(
     eventAppenderOf(store, AnyRecordSchema)(stream, [record], { expectedVersion: version, ...written }),
   );
 }
 
-export function recorded(store: EventStore, stream: string, record: AnyRecord, context: Context = byAdmin) {
+export function recorded(store: LedgerStreams, stream: string, record: AnyRecord, context: Context = byAdmin) {
   return recordedWith(store, stream, record, { context, lineage: noLineage });
 }
 
@@ -48,7 +48,12 @@ export function emittedContext(runId: string, workflow: string, depth: number): 
   return { ...byAdmin, runId, definitionType: 'workflow', definitionName: workflow, definitionVersion: 1, depth };
 }
 
-export function published(store: EventStore, event: PublishedEvent, context: Context = byAdmin, playbookKey = alpha) {
+export function published(
+  store: LedgerStreams,
+  event: PublishedEvent,
+  context: Context = byAdmin,
+  playbookKey = alpha,
+) {
   return recorded(
     store,
     `${playbookKey}events/${event.id}`,
@@ -60,7 +65,7 @@ export function published(store: EventStore, event: PublishedEvent, context: Con
   );
 }
 
-export function publishedInTurn(store: EventStore, events: readonly PublishedEvent[]): Promise<void> {
+export function publishedInTurn(store: LedgerStreams, events: readonly PublishedEvent[]): Promise<void> {
   return events.reduce<Promise<void>>((before, event) => before.then(() => published(store, event)), Promise.resolve());
 }
 
@@ -87,7 +92,7 @@ export function everyTrigger(milliseconds: number): Trigger {
 }
 
 export function definitionRecorded(
-  store: EventStore,
+  store: LedgerStreams,
   { name, version, triggers, when = at }: DefinitionVersion,
   playbookKey = alpha,
 ) {
@@ -108,7 +113,7 @@ export function eventRecordOf(id: string, playbookKey = alpha): string {
   return messageIdOf(`${playbookKey}events/${id}`, 1);
 }
 
-export function definitionRetired(store: EventStore, name: string, version: number) {
+export function definitionRetired(store: LedgerStreams, name: string, version: number) {
   return recorded(
     store,
     `${alpha}definitions/workflow`,
@@ -117,14 +122,14 @@ export function definitionRetired(store: EventStore, name: string, version: numb
   );
 }
 
-export function playbookCreated(store: EventStore, playbook: string) {
+export function playbookCreated(store: LedgerStreams, playbook: string) {
   return recorded(store, playbooksStreamOfOrg('acme'), {
     type: 'playbook_created',
     data: { playbook, name: playbook, description: '' },
   });
 }
 
-export function playbookRenamed(store: EventStore, playbook: string) {
+export function playbookRenamed(store: LedgerStreams, playbook: string) {
   return recorded(store, playbooksStreamOfOrg('acme'), {
     type: 'playbook_updated',
     data: { playbook, name: 'Renamed' },
@@ -139,7 +144,7 @@ export interface RunOf {
   readonly correlation?: string;
 }
 
-export async function runRecorded(store: EventStore, run: RunOf, ending?: 'run_succeeded') {
+export async function runRecorded(store: LedgerStreams, run: RunOf, ending?: 'run_succeeded') {
   const { runId, type, name, depth, correlation = runId } = run;
   const stream = `${alpha}runs/${runId}`;
   const context: Context = {

@@ -1,7 +1,7 @@
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { oneRowOf, rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import type { HostClock } from '../loop/host-clock.ts';
 
 const sweepsBeforeALeaseLapses = 3;

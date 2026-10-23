@@ -1,8 +1,8 @@
 import { ScheduleTriggerSchema, type ScheduleTrigger } from '@on.auto/definitions';
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 export interface Schedule {
   readonly playbookKey: string;

@@ -1,7 +1,7 @@
+import { type Statement, statement } from '@on.auto/ledger';
 import { Effect, Option, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement, type Statement } from '../database/statement.ts';
 import { comparePoints, isAfter, pointIn, pointText, type Point } from '../pages/history-points.ts';
 import type { PageEvent, ReadPage } from '../pages/page-events.ts';
 import type { FoldedChanges, Folder, Reconciled, Reconciling, RowPhase, Writing } from '../projector/folder.ts';

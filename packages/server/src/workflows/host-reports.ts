@@ -3,7 +3,7 @@ import type { DispatcherServices } from '@on.auto/operations';
 import type { HostReports } from '@on.auto/workflow-host';
 
 import { logHostNote } from '../logging/host-notes.ts';
-import { logLostWorkflowConnection, logUnsettled, logWorkflowTrouble } from '../logging/logging.ts';
+import { logUnsettled, logWorkflowTrouble } from '../logging/logging.ts';
 import { inRuntime } from './in-runtime.ts';
 
 const unsettledBecause = {
@@ -16,9 +16,6 @@ export function hostReports(runtime: AppRuntime<DispatcherServices>): HostReport
     unsettled: ({ org, playbook, runId, receipt }) =>
       inRuntime(runtime, logUnsettled({ org, playbook, runId, reason: unsettledBecause[receipt] })),
     trouble: (what, cause) => inRuntime(runtime, logWorkflowTrouble(what, cause)),
-    lostConnection: (error) => {
-      void runtime.run(logLostWorkflowConnection(error));
-    },
     note: (note) => inRuntime(runtime, logHostNote(note)),
   };
 }

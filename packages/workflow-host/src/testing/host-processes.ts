@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { expect } from 'vitest';
 
-import type { DatabaseSettings } from '../database/host-databases.ts';
+import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { onPostgreSQLAt } from './host-files.ts';
 
 const hostProcess = fileURLToPath(new URL('../../host-process.ts', import.meta.url));

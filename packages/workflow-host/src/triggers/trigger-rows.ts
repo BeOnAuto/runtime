@@ -1,8 +1,8 @@
 import { EventTriggerSchema, TriggerSchema, type Trigger, type TriggerFilter } from '@on.auto/definitions';
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { nextAfter } from '../schedules/schedule-times.ts';
 import { triggerChangesOf, type TriggerChange } from './trigger-changes.ts';
 

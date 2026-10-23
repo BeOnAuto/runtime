@@ -4,6 +4,7 @@ import { onTestFinished } from 'vitest';
 
 import type { LedgerStore, RecordedStore, StatementExecutor } from '../event-store.ts';
 import type { LayoutDialect } from '../layout/layout-dialects.ts';
+import type { OpenedLedger } from '../ledger-layer.ts';
 import { openLedgerWith } from './open-ledger.ts';
 
 export interface LedgerEntry {
@@ -17,6 +18,7 @@ export interface LedgerEntry {
     projections?: readonly KeyedProjection[],
   ) => Layer.Layer<Ledger>;
   readonly storeOn: (database: string) => LedgerStore;
+  readonly openedOn: (database: string) => OpenedLedger;
   readonly queried: (database: string, statement: string) => Promise<readonly unknown[]>;
   readonly executedOn: <A>(database: string, work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
   readonly layout: LayoutDialect;

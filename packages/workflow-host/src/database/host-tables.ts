@@ -1,17 +1,18 @@
-import { statement, type Statement } from './statement.ts';
+import { statement, type ConnectionPorts, type Dialect, type Statement } from '@on.auto/ledger';
+import { Schema } from 'effect';
 
-export interface AddedColumn {
+interface AddedColumn {
   readonly table: string;
   readonly column: string;
   readonly added: Statement;
   readonly addedWhenMissing: Statement;
 }
 
-export function columnsOnSQLite(table: string): Statement {
+function columnsOnSQLite(table: string): Statement {
   return statement`SELECT name FROM pragma_table_info(${table})`;
 }
 
-export const addedColumns: readonly AddedColumn[] = [
+const addedColumns: readonly AddedColumn[] = [
   {
     table: 'workflow_timers',
     column: 'armed_by',
@@ -32,7 +33,7 @@ export const addedColumns: readonly AddedColumn[] = [
   },
 ];
 
-export const indexesOfAddedColumns: readonly Statement[] = [
+const indexesOfAddedColumns: readonly Statement[] = [
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_open_by_root ON workflow_calls (root_id)
     WHERE state IN ('running', 'waiting')`,
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_waiting_by_run ON workflow_calls (run_key) WHERE state = 'waiting'`,
@@ -130,7 +131,7 @@ const followerTables: readonly Statement[] = [
   )`,
 ];
 
-export const hostTables: readonly Statement[] = [
+const hostTables: readonly Statement[] = [
   statement`CREATE TABLE IF NOT EXISTS workflow_runs (
     run_key TEXT NOT NULL PRIMARY KEY,
     stream_id TEXT NOT NULL,
@@ -199,3 +200,36 @@ export const hostTables: readonly Statement[] = [
   )`,
   ...followerTables,
 ];
+
+const ColumnRows = Schema.Array(Schema.Struct({ name: Schema.String }));
+
+async function columnAddedOn(connection: ConnectionPorts, { table, column, added }: AddedColumn): Promise<void> {
+  const columns = Schema.decodeUnknownSync(ColumnRows)(await connection.read(columnsOnSQLite(table)));
+  if (!columns.some(({ name }) => name === column)) {
+    await connection.write(added);
+  }
+}
+
+type TablesMade = (connection: ConnectionPorts, tables: readonly Statement[]) => Promise<void>;
+
+const tablesMadeIn: Readonly<Record<Dialect, TablesMade>> = {
+  sqlite: async (connection, tables) => {
+    await connection.migrated([...hostTables, ...tables]);
+    await addedColumns.reduce<Promise<void>>(
+      (before, column) => before.then(() => columnAddedOn(connection, column)),
+      Promise.resolve(),
+    );
+    await connection.migrated(indexesOfAddedColumns);
+  },
+  postgresql: (connection, tables) =>
+    connection.migrated([
+      ...hostTables,
+      ...tables,
+      ...addedColumns.map(({ addedWhenMissing }) => addedWhenMissing),
+      ...indexesOfAddedColumns,
+    ]),
+};
+
+export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {
+  return tablesMadeIn[connection.dialect](connection, tables);
+}

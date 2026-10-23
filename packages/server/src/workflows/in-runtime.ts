@@ -1,10 +1,9 @@
 import type { AppRuntime } from '@on.auto/api';
-import type { DispatcherServices } from '@on.auto/operations';
 import { Effect, Exit, Option } from 'effect';
 
-export function inRuntime<A, E>(
-  runtime: AppRuntime<DispatcherServices>,
-  work: Effect.Effect<A, E, DispatcherServices>,
+export function inRuntime<A, E, Services>(
+  runtime: AppRuntime<Services>,
+  work: Effect.Effect<A, E, Services>,
 ): Effect.Effect<A, E> {
   return Effect.gen(function* () {
     const parent = yield* Effect.option(Effect.currentParentSpan);

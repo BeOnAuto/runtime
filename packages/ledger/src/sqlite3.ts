@@ -2,13 +2,14 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
-import type { ContentStore, Ledger, RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
+import type { ContentStore, RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
 import type { Layer } from 'effect';
 
 import type { AppendSignal } from './appends/append-signal.ts';
+import { sqliteLedgerLayer } from './connection/sqlite-opening.ts';
 import type { AppendObserver } from './event-store.ts';
+import type { LedgerServices } from './ledger-layer.ts';
 import { sqliteSecretRowsOn, type SecretRowsOptions } from './secrets/sqlite-secret-rows.ts';
-import { sqliteLedgerLayer } from './sqlite-event-store.ts';
 
 export interface LedgerOptions {
   readonly fileName: string;
@@ -47,8 +48,11 @@ export function ledgerLayer({
   appends,
   content,
   observer,
-}: LedgerOptions): Layer.Layer<Ledger> {
-  return sqliteLedgerLayer(() => sqlite3OptionsOf(fileName), { runOutcomes, projections, appends, content, observer });
+}: LedgerOptions): Layer.Layer<LedgerServices> {
+  return sqliteLedgerLayer(
+    { optionsOf: () => sqlite3OptionsOf(fileName), inMemory: fileName === privateMemory },
+    { runOutcomes, projections, appends, content, observer },
+  );
 }
 
 export function sqliteSecretRows({ fileName }: SecretRowsOptions) {

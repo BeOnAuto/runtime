@@ -1,6 +1,6 @@
 import { defaultLimits } from '@on.auto/workflow-engine/testing';
 import { Effect, Function } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   closeHostParts,
@@ -14,7 +14,7 @@ import {
 } from '../index.ts';
 import { runKeyOf } from '../runs/run-address.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, leaseHoldersOn } from '../testing/host-files.ts';
+import { aSQLiteFile, connectedOn, leaseHoldersOn } from '../testing/host-files.ts';
 import { recordedOptionsOf } from '../testing/host-runs.ts';
 import { watchedClock } from '../testing/watched-clock.ts';
 import { steppedClock } from '../views-testing/stepped-sweeps.ts';
@@ -34,8 +34,7 @@ interface OwnClocked {
 }
 
 async function ownClocked(clock: HostClock): Promise<OwnClocked> {
-  const store = await openWorkflowStore({ store: 'sqlite', file: aSQLiteFile() }, Function.constVoid, []);
-  onTestFinished(() => store.database.close());
+  const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
   const recorded = recordedOptionsOf({ sweepEveryMs: 1000 });
   const armed: number[] = [];
   const parts = openHostParts(store, { ...recorded.options, clock }, (dueAt) => {

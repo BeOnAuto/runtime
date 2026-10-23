@@ -4,8 +4,8 @@ import { Effect, Layer, Logger } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { sqliteLedgerOpened } from '../connection/sqlite-opening.ts';
 import { ledgerLayerOver } from '../ledger-layer.ts';
-import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
 import { until } from '../testing/until.ts';
 import { sweptHourly, unnamedChunksLastMs, type ContentSweeping } from './content-sweep.ts';
@@ -62,11 +62,14 @@ describe('the sweep of the chunks no head names', () => {
   it('never holds the ledger back from opening, though its first sweep fails', async () => {
     const sweeps = sweepsFailingAt(1);
     const { logged, layer } = capturing();
-    const store = () => ({
-      ...sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName: ':memory:' })),
-      sweepContent: sweeps.sweepContent,
-    });
-    const { ledger, dispose } = await openLedgerWith(ledgerLayerOver(store).pipe(Layer.provide(layer)));
+    const opened = () => {
+      const { store, connection } = sqliteLedgerOpened({
+        optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName: ':memory:' }),
+        inMemory: true,
+      });
+      return { store: { ...store, sweepContent: sweeps.sweepContent }, connection };
+    };
+    const { ledger, dispose } = await openLedgerWith(ledgerLayerOver(opened).pipe(Layer.provide(layer)));
     onTestFinished(dispose);
 
     const kept = await Effect.runPromise(

@@ -5,9 +5,6 @@ import type { LedgerDatabase } from './ledger-database.ts';
 
 export function sqliteLedgerDatabase(file: string, observer?: AppendObserver): LedgerDatabase {
   return {
-    store: 'sqlite',
-    file,
-    observer,
     ledgerLayer: (kept) => ledgerLayer({ ...kept, fileName: file, observer }),
     secretRows: sqliteSecretRows({ fileName: file }),
   };

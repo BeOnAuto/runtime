@@ -1,9 +1,9 @@
 import { triggerNamed } from '@on.auto/definitions';
+import { statement } from '@on.auto/ledger';
 import { StartingTriggerSchema } from '@on.auto/operations';
 import { Effect, Schema, type Tracer } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { DeliveryFailed, deliverySweeps } from '../follower/consumers.ts';
 import { linksTo } from '../runs/run-spans.ts';
 import type { ReactionStart, StartReaction } from './reaction-options.ts';

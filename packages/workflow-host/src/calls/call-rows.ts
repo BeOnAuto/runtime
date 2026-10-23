@@ -1,9 +1,9 @@
+import { statement } from '@on.auto/ledger';
 import { CallResultSchema, type CallResult } from '@on.auto/operations';
 import { CallKeySchema, type OutputOrigin, type RunContext, type StartCall } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { oneRowOf, rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 const StartCallSchema = Schema.Struct({
   kind: Schema.Literal('start_call'),

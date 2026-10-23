@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import { CancelOrderSchema, type CancelOrder } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 export interface PendingCancelRow {
   readonly runKey: string;

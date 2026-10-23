@@ -1,10 +1,9 @@
-import { recordedCursorOf, type RecordedPoint } from '@on.auto/ledger';
+import { recordedCursorOf, type RecordedPoint, statement } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { playbookCreatedOf, playbooksStreamOfOrg } from '@on.auto/playbooks';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import {
   definitionRecordsIn,
   type ApplyDefinitionRecord,

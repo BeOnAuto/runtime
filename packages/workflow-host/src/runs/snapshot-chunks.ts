@@ -1,3 +1,4 @@
+import { statement } from '@on.auto/ledger';
 import {
   UnreadableRun,
   snapshotChunks,
@@ -8,7 +9,6 @@ import {
 import { Effect, Result, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 const ChunkRow = Schema.Struct({ version: WholeNumber, chunks: WholeNumber, bytes: WholeNumber, text: Schema.String });
 

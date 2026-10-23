@@ -84,10 +84,13 @@ export interface StoredPage {
   readonly lastExamined?: StoredPlace;
 }
 
-export interface StreamStore {
+export interface Streams {
   readonly mostEventsInOneAppend: number;
   readonly read: (stream: string, after?: number) => Promise<RecordedStream>;
   readonly append: (stream: string, events: readonly EncodedEvent[], place: AppendPlace) => Promise<void>;
+}
+
+export interface StreamStore extends Streams {
   readonly migrate: () => Promise<void>;
   readonly close: () => Promise<void>;
 }
@@ -118,7 +121,9 @@ export interface DefinitionStreamsStore {
   readonly definitionStreams: (definitionType: string) => Promise<readonly DefinitionStream[]>;
 }
 
-export interface EventStore extends StreamStore, RecordedStore, DefinitionStreamsStore {}
+export interface LedgerStreams extends Streams, RecordedStore, DefinitionStreamsStore {}
+
+export interface EventStore extends StreamStore, LedgerStreams {}
 
 export interface RunOutcomesStore {
   readonly readRunOutcomes: (

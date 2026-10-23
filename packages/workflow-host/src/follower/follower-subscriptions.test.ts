@@ -1,9 +1,9 @@
+import { statement } from '@on.auto/ledger';
 import { messageIdOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import {
   alpha,
   at,

@@ -2,9 +2,9 @@ import { appendSignal, type EncodedEvent } from '@on.auto/ledger';
 import type { Context } from '@on.auto/operations';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import type { DatabaseSettings } from '../database/host-databases.ts';
 import type { HostNote, HostReports } from '../host/host-reports.ts';
 import { openWorkflowStore } from '../host/workflow-store.ts';
+import { ledgerConnectedOn, type DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { systemClock } from '../loop/host-clock.ts';
 import type { SomeFolder } from '../projector/folder.ts';
 import { startProjector, type Projector } from '../projector/projector.ts';
@@ -38,7 +38,8 @@ export async function projectedFolders(
 ): Promise<ProjectedFolders> {
   const reports = recordingReports();
   const appends = appendSignal();
-  const { database } = await openWorkflowStore(settings, reports.reports.lostConnection, folders);
+  const ledger = await ledgerConnectedOn(settings);
+  const { database } = await openWorkflowStore(ledger.connection, folders);
   const versions = new Map<string, number>();
   const running: Projector[] = [];
   const stop = async (): Promise<void> => {
@@ -69,7 +70,7 @@ export async function projectedFolders(
     stop,
     close: async () => {
       await stop();
-      await database.close();
+      await ledger.close();
     },
   };
 }

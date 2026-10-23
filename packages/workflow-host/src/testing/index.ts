@@ -6,3 +6,4 @@ export {
   type ProjectedFolders,
   type ProjectingOptions,
 } from '../folder-testing/projected-folders.ts';
+export { workflowHostOnALedger, type DatabaseSettings } from '../ledger-testing/ledger-connections.ts';

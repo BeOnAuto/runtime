@@ -1,9 +1,9 @@
 import { Effect, Function } from 'effect';
 
-import { openHostDatabase, type DatabaseSettings } from '../src/database/host-databases.ts';
 import { followedPlaybooksOn } from '../src/follower/followed-playbooks.ts';
 import { passOf } from '../src/follower/playbook-pass.ts';
 import { playbookRecordsOf } from '../src/follower/playbook-records.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { definitionRecordsKeepingTheirOwnStops } from '../src/reaction-testing/own-stops.ts';
 import { byAdmin, definitionRecorded, eventTrigger, published } from '../src/reaction-testing/playbook-writes.ts';
 import { playbookSweepsOn, type PlaybookSweeps } from '../src/sweeps/playbook-sweeps.ts';
@@ -58,7 +58,7 @@ function medianOf(times: readonly number[]): number {
 }
 
 export async function sweepCostOn(database: DatabaseSettings, playbooks: number, reacting: number): Promise<SweepCost> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   const followed = followedPlaybooksOn(opened);
   await inTurn(playbooks, async (index) => {
     await published(opened.store, { id: `e${index}`, type: 'com.measure.other' }, byAdmin, playbookKeyOf(index));

@@ -3,9 +3,8 @@ import { setTimeout } from 'node:timers/promises';
 import { streamSignalOf } from '@on.auto/ledger';
 import { Effect, Function } from 'effect';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
-import { openHostDatabase } from '../src/database/host-databases.ts';
 import { openWorkflowHost } from '../src/host/workflow-host.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import {
   playbookCreated,
   eventRecordOf,
@@ -35,7 +34,6 @@ export interface LatencyCase {
 const quiet = {
   unsettled: () => Effect.void,
   trouble: Effect.logWarning,
-  lostConnection: Function.constVoid,
   note: () => Effect.void,
 };
 
@@ -91,10 +89,10 @@ export async function reactionLatencyOn(database: DatabaseSettings, measured: La
   const startedAt = new Map<string, number>();
   const publishedAt = new Map<string, number>();
   const reactions = recordedReactions();
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   await playbookCreated(opened.store, 'alpha');
   const host = await openWorkflowHost({
-    database,
+    database: { database: opened },
     machine: testMachine,
     perform: () => Effect.succeed({ status: 'succeeded', output: null }),
     settle: () => Effect.die(new Error('The measured runs settle nothing')),

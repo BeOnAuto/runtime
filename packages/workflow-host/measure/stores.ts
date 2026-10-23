@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { plainPoolsOn } from '@on.auto/ledger/postgresql';
 import { Client } from 'pg';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
+import type { DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 
 export interface MeasuredStore {
   readonly store: string;

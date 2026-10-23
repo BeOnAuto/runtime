@@ -1,10 +1,16 @@
-import type { ContentStore, Ledger } from '@on.auto/operations';
+import type { ContentStore } from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
 import type { AppendSignal } from '../appends/append-signal.ts';
-import { ledgerLayerOver } from '../ledger-layer.ts';
+import { ledgerLayerOver, type LedgerServices, type OpenedLedger } from '../ledger-layer.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
-import { postgresqlEventStore } from './postgresql-event-store.ts';
+import { postgresqlConnectionOn } from './postgresql-connection.ts';
+import {
+  connectionsOfOneLedger,
+  poolOf,
+  postgresqlStoreOn,
+  type PostgreSQLStoreOptions,
+} from './postgresql-event-store.ts';
 import type { PostgreSQLOptions } from './postgresql-options.ts';
 
 export { postgresqlEventStore, type PostgreSQLStoreOptions } from './postgresql-event-store.ts';
@@ -20,11 +26,37 @@ export interface PostgreSQLLedgerOptions extends PostgreSQLOptions {
   readonly content?: ContentStore;
 }
 
-export function postgresqlLedgerLayer({ appends, content, ...options }: PostgreSQLLedgerOptions): Layer.Layer<Ledger> {
+const connectionsForTheStatementsBeside = 4;
+
+export function postgresqlLedgerOpened(options: PostgreSQLStoreOptions): OpenedLedger {
+  const { observer } = options;
+  const pool = poolOf(options, connectionsOfOneLedger);
+  const besides = poolOf(options, connectionsForTheStatementsBeside);
+  const store = postgresqlStoreOn(() => pool, options, observer);
+  return {
+    store: {
+      ...store,
+      close: async () => {
+        await store.close();
+        await besides.end();
+      },
+    },
+    connection: postgresqlConnectionOn(
+      besides,
+      postgresqlStoreOn(() => pool, {}, observer),
+    ),
+  };
+}
+
+export function postgresqlLedgerLayer({
+  appends,
+  content,
+  ...options
+}: PostgreSQLLedgerOptions): Layer.Layer<LedgerServices> {
   return Layer.unwrap(
     Effect.map(Effect.context(), (context) =>
       ledgerLayerOver(
-        () => postgresqlEventStore({ ...options, reportLostConnection: lostConnectionsLoggedWith(context) }),
+        () => postgresqlLedgerOpened({ ...options, reportLostConnection: lostConnectionsLoggedWith(context) }),
         { appends, content },
       ),
     ),

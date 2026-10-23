@@ -1,6 +1,6 @@
+import { type Statement, statement } from '@on.auto/ledger';
 import type { Schema } from 'effect';
 
-import { statement, type Statement } from '../database/statement.ts';
 import { pointText } from '../pages/history-points.ts';
 import type { RowPhase } from '../projector/folder.ts';
 import type { FoldedEvent, ViewRow, ViewStall } from './view-rows.ts';

@@ -18,9 +18,11 @@ function driversReachedFrom(module: string): readonly string[] {
 }
 
 describe('the module of the database of each store', () => {
-  it('is reached from neither entry of the host, and loads when the host first opens a database on its store', () => {
-    expect([...driversReachedFrom('index.ts'), ...driversReachedFrom('testing/index.ts')]).toEqual([]);
-    expect(driversReachedFrom('database/sqlite-database.ts')).toEqual(['@event-driven-io/emmett-sqlite/sqlite3']);
-    expect(driversReachedFrom('database/postgresql-database.ts')).toEqual(['@on.auto/ledger/postgresql']);
+  it('is reached from neither entry of the host, nor from the opening of a ledger for the tests, which loads it when it opens one', () => {
+    expect([
+      ...driversReachedFrom('index.ts'),
+      ...driversReachedFrom('testing/index.ts'),
+      ...driversReachedFrom('ledger-testing/ledger-connections.ts'),
+    ]).toEqual([]);
   });
 });

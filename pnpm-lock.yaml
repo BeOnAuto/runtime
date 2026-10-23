@@ -1078,12 +1078,6 @@ importers:
 
   packages/workflow-host:
     dependencies:
-      '@event-driven-io/dumbo':
-        specifier: 0.13.0-beta.56
-        version: 0.13.0-beta.56(@types/pg@8.23.1)(pg@8.23.1)(sqlite3@6.0.1)
-      '@event-driven-io/emmett-sqlite':
-        specifier: 0.43.0-beta.50
-        version: 0.43.0-beta.50(@aws-sdk/credential-providers@3.1149.0)(@types/pg@8.23.1)(commander@14.0.3)(pg@8.23.1)(sqlite3@6.0.1)(supports-color@8.1.1)(uuid@14.0.2)
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../definitions
@@ -1108,12 +1102,6 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0
-      pg:
-        specifier: 8.23.1
-        version: 8.23.1
-      sqlite3:
-        specifier: 6.0.1
-        version: 6.0.1
     devDependencies:
       '@types/pg':
         specifier: 8.23.1
@@ -1121,6 +1109,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.3(vitest@5.0.3)
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
       vitest:
         specifier: 'catalog:'
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))

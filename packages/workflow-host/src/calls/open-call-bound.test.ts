@@ -1,10 +1,10 @@
+import { type Statement, statement } from '@on.auto/ledger';
 import type { CallResult } from '@on.auto/operations';
 import type { StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Exit, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { statement, type Statement } from '../database/statement.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
 import { hostExecutor } from './host-executor.ts';

@@ -14,7 +14,7 @@ import {
 } from './served-prediction-functions.ts';
 import { toolUsersServedBy, type ToolUsersWiring } from './served-tools.ts';
 
-type ProjectedDatabase = Parameters<FunctionWiring['projections']['served']>[1]['database'];
+type ProjectedDatabase = Parameters<FunctionWiring['projections']['served']>[0]['database'];
 
 export interface ServedFunctions {
   readonly parts: Omit<WorkflowParts, 'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'shippedFiles'>;
@@ -34,7 +34,7 @@ export async function functionsServedBy(
 ): Promise<ServedFunctions> {
   const { reasoning, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
   const computation = await computationServedBy(settings.computation, programPoolOf, shippedFiles);
-  const projections = await wiring.served(runtime, { recall: settings.recall, database }, computation.pool, [
+  const projections = await wiring.served({ recall: settings.recall, database }, computation.pool, [
     datasetsFolderOf(computation.pool),
   ]);
   const prediction = await predictionFunctionsServedBy(runtime, settings, computation.pool, projections.store);

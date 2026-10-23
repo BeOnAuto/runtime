@@ -37,7 +37,6 @@ export function recordingReports(): RecordingReports {
         Effect.sync(() => {
           noted(what);
         }),
-      lostConnection: noted,
       note: (note) =>
         Effect.sync(() => {
           notes.push(note);

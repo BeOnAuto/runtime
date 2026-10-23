@@ -2,10 +2,10 @@ import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import type { DatabaseSettings } from '../database/host-databases.ts';
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
+import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { testMachine } from '../testing/host-documents.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aSQLiteFile, connectedOn, openedOn } from '../testing/host-files.ts';
 import { recordingReports, recordingSettlements, type RecordingReports } from '../testing/recording-reports.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { recordedReactions, type FailingStart, type RecordedReactions } from './recorded-reactions.ts';
@@ -35,7 +35,7 @@ export async function reactingHost(options: ReactingOptions = {}): Promise<React
   const reports = recordingReports();
   const reactions = recordedReactions({ failure: options.failure ?? startsEveryTime });
   const host = await openWorkflowHost({
-    database: settings,
+    database: await connectedOn(settings),
     machine: testMachine,
     perform: () => Effect.succeed({ status: 'succeeded', output: null }),
     settle: recordingSettlements(() => false).settle,

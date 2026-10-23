@@ -1,9 +1,9 @@
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { tallyFolderOf } from '../folder-testing/tally-folder.ts';
 import { someFolder } from '../projector/folder.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { connectedOn, onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { watchedSystemClock } from '../testing/watched-clock.ts';
 import { counting } from '../views-testing/view-documents.ts';
@@ -17,7 +17,7 @@ describe('a host given a store and the settings of its projector', () => {
     await views.saved('runs', counting);
     await views.ran('reasoning/runs', 1);
     const projector = views.settingsOf();
-    const store = await openWorkflowStore(settings, Function.constVoid, projector.folders);
+    const store = await openWorkflowStore(await connectedOn(settings), projector.folders);
 
     const clock = watchedSystemClock();
     const hosted = await hostedOn(store, { projector, clock });

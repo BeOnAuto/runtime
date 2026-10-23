@@ -1,7 +1,6 @@
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
-import { openHostDatabase } from '../src/database/host-databases.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { playbookCreated, definitionRecorded } from '../src/reaction-testing/playbook-writes.ts';
 import { ledgerRunLogStore } from '../src/runs/ledger-run-store.ts';
 import { runKeyOf } from '../src/runs/run-address.ts';
@@ -22,7 +21,7 @@ function percentile(sorted: readonly number[], fraction: number): number {
 }
 
 async function latenessOf(database: DatabaseSettings, runs: number): Promise<readonly number[]> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   const runStore = ledgerRunLogStore(opened);
   const late = await Effect.runPromise(
     Effect.forEach(
@@ -42,7 +41,7 @@ async function latenessOf(database: DatabaseSettings, runs: number): Promise<rea
 }
 
 async function reactingWorkflows(database: DatabaseSettings, count: number, triggersOf: TriggersOf): Promise<void> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   await playbookCreated(opened.store, 'alpha');
   await Array.from({ length: count }, (_, index) => index).reduce<Promise<void>>(
     (before, index) =>

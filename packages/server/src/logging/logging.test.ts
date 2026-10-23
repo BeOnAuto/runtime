@@ -9,7 +9,6 @@ import { linesLoggedBy } from '../testing/records/logged-lines.ts';
 import {
   logAccessMode,
   logIncident,
-  logLostWorkflowConnection,
   logMcpError,
   logReasoning,
   logUnsettled,
@@ -151,15 +150,6 @@ describe('the workflow warnings', () => {
     expect(line).toContain('"message":"A sweep of the runs failed; the next sweep tries again","level":"WARN"');
     expect(line).toContain('"error":"Error: the database is gone xxx');
     expect(line).not.toContain('x'.repeat(2000));
-  });
-
-  it('warn that a connection of the workflows to PostgreSQL was lost, with the message of its error', async () => {
-    const [line] = await linesLoggedBy(logLostWorkflowConnection(new Error('Connection terminated unexpectedly')));
-
-    expect(line).toContain(
-      '"message":"A connection of the workflows to their PostgreSQL database was lost; they open another when they need one","level":"WARN"',
-    );
-    expect(line).toContain('"annotations":{"error":"Connection terminated unexpectedly"}');
   });
 });
 

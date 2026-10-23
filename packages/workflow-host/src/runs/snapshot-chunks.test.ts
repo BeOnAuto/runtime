@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import { snapshotOf } from '@on.auto/workflow-engine';
 import { Cause, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { statement } from '../database/statement.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';

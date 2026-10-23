@@ -7,7 +7,7 @@ import { openLedgerWith } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';
 import { until } from '../testing/until.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
-import { plainPoolsOn, postgresqlEventStore, postgresqlLedgerLayer } from './postgresql-ledger.ts';
+import { plainPoolsOn, postgresqlLedgerLayer, postgresqlLedgerOpened } from './postgresql-ledger.ts';
 import { emmettsMigrationLock } from './postgresql-run-outcomes.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -87,7 +87,7 @@ async function untilNoneOpen(database: string): Promise<void> {
 
 function sweptOn(database: string, held?: Promise<void>) {
   return sweepsWatched(
-    () => postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection: Function.constVoid }),
+    () => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection: Function.constVoid }),
     held,
   );
 }
@@ -175,7 +175,7 @@ async function aLedgerLogging(database: string) {
   ]);
   const context = await Effect.runPromise(Effect.context().pipe(Effect.provide(logging)));
   const watched = sweepsWatched(() =>
-    postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection: lostConnectionsLoggedWith(context) }),
+    postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection: lostConnectionsLoggedWith(context) }),
   );
   const { ledger, dispose } = await openLedgerWith(watched.layer.pipe(Layer.provide(logging)));
   onTestFinished(dispose);

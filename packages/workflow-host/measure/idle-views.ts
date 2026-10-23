@@ -1,10 +1,10 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { Effect, Function } from 'effect';
+import { statement } from '@on.auto/ledger';
+import { Effect } from 'effect';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
-import { statement } from '../src/database/statement.ts';
 import { openWorkflowStore, type WorkflowStore } from '../src/host/workflow-store.ts';
+import { ledgerConnectedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
 import { measuredViewOf, measuredViews, measuringPool, recallContentOf } from './measured-views.ts';
@@ -63,7 +63,8 @@ async function allLive(store: WorkflowStore, views: number): Promise<void> {
 export async function idleViewsOn(settings: DatabaseSettings, views: number, seconds: number): Promise<IdleViews> {
   const pool = measuringPool();
   const measured = measuredViews(pool);
-  const store = await openWorkflowStore(settings, Function.constVoid, measured.folders);
+  const ledger = await ledgerConnectedOn(settings);
+  const store = await openWorkflowStore(ledger.connection, measured.folders);
   await savedInTurn(store, views);
   const projector = startProjector({
     database: store.database,
@@ -71,7 +72,6 @@ export async function idleViewsOn(settings: DatabaseSettings, views: number, sec
     reports: {
       unsettled: () => Effect.void,
       trouble: () => Effect.void,
-      lostConnection: Function.constVoid,
       note: () => Effect.void,
     },
     clock: systemClock,
@@ -85,6 +85,6 @@ export async function idleViewsOn(settings: DatabaseSettings, views: number, sec
   const busy = performance.eventLoopUtilization(before);
   await projector.stop();
   await pool.close();
-  await store.database.close();
+  await ledger.close();
   return { views, viewBytes: view.length, seconds, busyMsASecond: busy.utilization * 1000 };
 }

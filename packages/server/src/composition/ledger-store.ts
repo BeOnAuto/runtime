@@ -1,7 +1,7 @@
 import { runOutcomeMapping } from '@on.auto/definitions';
 import { conversations, openRequests } from '@on.auto/interaction';
-import type { AppendSignal } from '@on.auto/ledger';
-import type { ContentStore, Ledger } from '@on.auto/operations';
+import type { AppendSignal, LedgerServices } from '@on.auto/ledger';
+import type { ContentStore } from '@on.auto/operations';
 import { predictionBuilds, predictionModels } from '@on.auto/prediction';
 import { Effect, Layer } from 'effect';
 
@@ -14,7 +14,7 @@ export function ledgerLayerOf(
   database: LedgerDatabase,
   appends?: AppendSignal,
   content?: ContentStore,
-): Layer.Layer<Ledger> {
+): Layer.Layer<LedgerServices> {
   return database.ledgerLayer({
     runOutcomes: runOutcomeMapping,
     projections,
@@ -27,7 +27,7 @@ export function ledgerLayerFor(
   settings: ContentStoreSettings,
   database: LedgerDatabase,
   appends?: AppendSignal,
-): Layer.Layer<Ledger> {
+): Layer.Layer<LedgerServices> {
   const composing = contentStoreOf(settings);
   return composing === undefined
     ? ledgerLayerOf(database, appends)

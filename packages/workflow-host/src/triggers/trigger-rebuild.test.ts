@@ -1,4 +1,4 @@
-import type { EventStore } from '@on.auto/ledger';
+import type { LedgerStreams } from '@on.auto/ledger';
 import { describe, expect, it } from 'vitest';
 
 import { triggerRowsOf, untilTriggersAt } from '../reaction-testing/kept-triggers.ts';
@@ -26,7 +26,7 @@ function isoAt(minutes: number): string {
   return new Date(activatedAt + minutes * aMinute).toISOString();
 }
 
-async function definitionsOfThePlaybook(store: EventStore): Promise<void> {
+async function definitionsOfThePlaybook(store: LedgerStreams): Promise<void> {
   const closed = eventTrigger({ type: 'com.acme.closed' });
   await playbookCreated(store, 'alpha');
   await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed, everyTrigger(15 * aMinute)] });

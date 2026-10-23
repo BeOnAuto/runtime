@@ -41,7 +41,7 @@ async function orphanedLike(entry: LedgerEntry, database: string, named: Named, 
 }
 
 async function keptAndOrphaned(entry: LedgerEntry, database: string): Promise<Orphans> {
-  const watched = sweepsWatched(() => entry.storeOn(database));
+  const watched = sweepsWatched(() => entry.openedOn(database));
   const { ledger, dispose } = await openLedgerWith(watched.layer);
   onTestFinished(dispose);
   await watched.finished;
@@ -68,7 +68,7 @@ function sweptOnItsSchedule(entry: LedgerEntry): void {
   it('sweeps the chunks no head names on its schedule from the open, once their upload is an hour old, and keeps every chunk a head names', async () => {
     const database = await entry.aDatabase();
     const { fresh, named } = await keptAndOrphaned(entry, database);
-    const watched = sweepsWatched(() => entry.storeOn(database));
+    const watched = sweepsWatched(() => entry.openedOn(database));
 
     const { dispose } = await openLedgerWith(watched.layer);
     onTestFinished(dispose);
@@ -83,7 +83,7 @@ function sweepFinishedBeforeClosing(entry: LedgerEntry): void {
     const database = await entry.aDatabase();
     const { fresh, named } = await keptAndOrphaned(entry, database);
     const held = Promise.withResolvers<void>();
-    const watched = sweepsWatched(() => entry.storeOn(database), held.promise);
+    const watched = sweepsWatched(() => entry.openedOn(database), held.promise);
     const { dispose } = await openLedgerWith(watched.layer);
     await watched.started;
 

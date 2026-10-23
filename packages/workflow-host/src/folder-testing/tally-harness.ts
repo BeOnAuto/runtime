@@ -1,6 +1,6 @@
 import { Effect, type Schema } from 'effect';
 
-import type { DatabaseSettings } from '../database/host-databases.ts';
+import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { someFolder } from '../projector/folder.ts';
 import { definitionStreamOf } from '../projector/playbook-definitions.ts';
 import type { Projector } from '../projector/projector.ts';

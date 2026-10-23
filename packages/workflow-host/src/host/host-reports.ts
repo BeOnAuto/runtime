@@ -53,6 +53,5 @@ export interface UnsettledRun extends RunAddress {
 export interface HostReports {
   readonly unsettled: (run: UnsettledRun) => Effect.Effect<void>;
   readonly trouble: Trouble;
-  readonly lostConnection: (error: Readonly<Error>) => void;
   readonly note: (note: HostNote) => Effect.Effect<void>;
 }

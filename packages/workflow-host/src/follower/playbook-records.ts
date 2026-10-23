@@ -1,4 +1,4 @@
-import { recordedReaderOf, type EventStore } from '@on.auto/ledger';
+import { recordedReaderOf, type LedgerStreams } from '@on.auto/ledger';
 import type { PlaybookAddress, RecordedEvent, RecordedPage } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -33,7 +33,7 @@ export function relativeRecord(playbookKey: string, record: RecordedEvent): Reco
   return { ...record, stream: record.stream.slice(playbookKey.length) };
 }
 
-export function playbookRecordsOf(store: EventStore): PlaybookRecords {
+export function playbookRecordsOf(store: LedgerStreams): PlaybookRecords {
   const read = recordedReaderOf(store);
   return {
     after: (playbook, cursor, delivers) =>

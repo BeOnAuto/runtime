@@ -1,4 +1,4 @@
-import { eventAppenderOf, eventCodecOf } from '@on.auto/ledger';
+import { eventAppenderOf, eventCodecOf, statement } from '@on.auto/ledger';
 import {
   RunLogRecordSchema,
   runLogRecordOf,
@@ -10,7 +10,6 @@ import {
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { runForgotten } from '../listeners/listener-rows.ts';
 import { runLogStreamOf } from './run-address.ts';
 import { lineageOfRecord } from './run-lineage.ts';

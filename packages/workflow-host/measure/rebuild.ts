@@ -1,10 +1,10 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 
 import type { HostDatabase } from '../src/database/host-database.ts';
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
 import { openWorkflowStore } from '../src/host/workflow-store.ts';
+import { ledgerConnectedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
 import { reviewsFold } from '../src/views-testing/campaign-reviews.ts';
@@ -108,7 +108,8 @@ function counted(database: HostDatabase): Counted {
 export async function rebuildOn(settings: DatabaseSettings, events: number): Promise<Rebuild> {
   const pool = measuringPool();
   const measured = measuredViews(pool);
-  const store = await openWorkflowStore(settings, Function.constVoid, measured.folders);
+  const ledger = await ledgerConnectedOn(settings);
+  const store = await openWorkflowStore(ledger.connection, measured.folders);
   await recorded(store.database, events);
   const counting = counted(store.database);
   const started = performance.now();
@@ -118,7 +119,6 @@ export async function rebuildOn(settings: DatabaseSettings, events: number): Pro
     reports: {
       unsettled: () => Effect.void,
       trouble: () => Effect.void,
-      lostConnection: Function.constVoid,
       note: () => Effect.void,
     },
     clock: systemClock,
@@ -128,7 +128,7 @@ export async function rebuildOn(settings: DatabaseSettings, events: number): Pro
   const milliseconds = performance.now() - started;
   await projector.stop();
   await pool.close();
-  await store.database.close();
+  await ledger.close();
   return {
     events,
     pages: counting.pages(),

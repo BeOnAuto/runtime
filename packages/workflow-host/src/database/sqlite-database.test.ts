@@ -1,11 +1,10 @@
 import { mkdirSync } from 'node:fs';
 
+import { statement } from '@on.auto/ledger';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { openSQLiteDatabase } from './sqlite-database.ts';
-import { statement } from './statement.ts';
 
 const tablesOfTheHost = statement`SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'workflow_%' ORDER BY name`;
 
@@ -110,6 +109,6 @@ describe('the host database on SQLite, in memory or refusing', () => {
     const file = aSQLiteFile();
     mkdirSync(file);
 
-    await expect(openSQLiteDatabase(file, [])).rejects.toThrow('SQLITE_CANTOPEN');
+    await expect(openedOn({ store: 'sqlite', file })).rejects.toThrow('SQLITE_CANTOPEN');
   });
 });

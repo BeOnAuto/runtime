@@ -1,7 +1,7 @@
+import type { Statement } from '@on.auto/ledger';
 import type { Effect } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
-import type { Statement } from '../database/statement.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import type { Point } from '../pages/history-points.ts';
 import type { ReadPage } from '../pages/page-events.ts';
