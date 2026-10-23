@@ -145,7 +145,7 @@ async function providerOf(entry: ProviderEntry, file: string, entries: Entries):
 
 async function readProvider(entries: Entries, file: string): Promise<Result.Result<ProviderRead, readonly Located[]>> {
   const at = new URL(file, entries.folder);
-  const path = fileURLToPath(at);
+  const path = fileURLToPath(at.href);
   const reading = readYaml(await entries.shippedFiles.text(at), entryYaml);
   if ('problems' in reading) {
     return Result.fail(

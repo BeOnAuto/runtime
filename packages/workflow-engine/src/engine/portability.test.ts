@@ -18,7 +18,7 @@ const importedEverywhere: ReadonlySet<string> = new Set(['effect', '@on.auto/ope
 
 const importedInAFolder: ReadonlyMap<string, readonly string[]> = new Map([
   ['programs/', ['quickjs-emscripten-core']],
-  ['program-pool/', ['node:worker_threads']],
+  ['program-pool/', ['node:url', 'node:worker_threads']],
   ['process-pool/', ['node:buffer', 'node:child_process', 'node:fs', 'node:path', 'node:url']],
   ['instances/', ['quickjs-emscripten-core', '@jitl/quickjs-wasmfile-release-sync']],
 ]);

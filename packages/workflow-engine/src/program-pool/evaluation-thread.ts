@@ -13,7 +13,7 @@ import {
 } from '../jobs/remote-evaluations.ts';
 import { exhaustedBy, type ProgramRun } from '../programs/program-run.ts';
 import { handedData } from './handed-files.ts';
-import { workerOptions } from './pool-threads.ts';
+import { workerModuleOf, workerOptions } from './pool-threads.ts';
 
 export const answerGraceMs = 50;
 
@@ -55,7 +55,7 @@ function absoluteNow(): number {
 function started(module: Readonly<URL>, settings: PoolSettings): Live {
   const { port1, port2 } = new MessageChannel();
   const flags = new Int32Array(new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT));
-  const worker = new Worker(module, {
+  const worker = new Worker(workerModuleOf(module), {
     ...workerOptions(settings),
     workerData: { port: port2, flags: flags.buffer, ...handedData(settings, module) },
     transferList: [port2],

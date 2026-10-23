@@ -14,7 +14,7 @@ export const issuerAnswerMs = 10_000;
 
 export class UnreadAnswer extends Data.TaggedError('UnreadAnswer')<{ readonly message: string }> {}
 
-const utf8 = new TextDecoder('utf-8', { fatal: true });
+const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
 
 async function bytesUpTo(body: ReadableStream<Uint8Array> | null, mostBytes: number): Promise<Buffer | undefined> {
   if (body === null) {

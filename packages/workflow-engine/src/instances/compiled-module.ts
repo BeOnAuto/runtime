@@ -9,7 +9,10 @@ import type { SandboxModule } from './instance-source.ts';
 export type Instantiated = Omit<SandboxInstance, 'release'>;
 
 interface GrowingMemory {
-  readonly grow: (pages: number) => number;
+  readonly buffer: ArrayBuffer;
+  grow(pages: number): number;
+  toFixedLengthBuffer(): ArrayBuffer;
+  toResizableBuffer(): ArrayBuffer;
 }
 
 interface MemoryLimits {

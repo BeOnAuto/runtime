@@ -1,5 +1,4 @@
-import { createReadStream } from 'node:fs';
-import { Readable } from 'node:stream';
+import { open, type FileHandle } from 'node:fs/promises';
 
 import type { Conflict } from '@on.auto/operations';
 import { Effect } from 'effect';
@@ -8,6 +7,31 @@ import type { BuildState } from '../builds/build-state.ts';
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import { buildEnded } from './waiting-builds.ts';
 
+const chunkBytes = 1_048_576;
+
+function chunksOf(path: string): ReadableStream<Uint8Array> {
+  const reading: { file?: Promise<FileHandle> } = {};
+  return new ReadableStream<Uint8Array>(
+    {
+      pull: async (controller) => {
+        reading.file ??= open(path);
+        const file = await reading.file;
+        const { bytesRead, buffer } = await file.read({ buffer: new Uint8Array(chunkBytes) });
+        if (bytesRead > 0) {
+          controller.enqueue(buffer.subarray(0, bytesRead));
+          return;
+        }
+        await file.close();
+        controller.close();
+      },
+      cancel: async () => {
+        await (await reading.file)?.close();
+      },
+    },
+    { highWaterMark: 0 },
+  );
+}
+
 export function staged(
   ports: Pick<PredictionPorts, 'ledger'>,
   { address }: Pick<BuildState, 'address'>,
@@ -15,7 +39,7 @@ export function staged(
   sha256: string,
 ): Effect.Effect<void, Conflict> {
   const { org, playbook, id } = address;
-  const stream = Readable.toWeb(createReadStream(path));
+  const stream = chunksOf(path);
   return ports.ledger.content
     .stage({ org, playbook }, id, { stream, mediaType: 'application/octet-stream', expected: { sha256 } })
     .pipe(
