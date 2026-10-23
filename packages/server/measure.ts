@@ -4,6 +4,7 @@ import { conversationsOn } from './measure/conversations.ts';
 import { expiriesOn } from './measure/expiries.ts';
 import { hangingOn } from './measure/hanging.ts';
 import { measuredLedgers, type MeasuredLedger } from './measure/measured-ledgers.ts';
+import { reasoningStepsOn } from './measure/reasoning-steps.ts';
 
 const postgresqlServer = process.env['LEDGER_MEASURE_POSTGRESQL_URL'] ?? '';
 
@@ -26,6 +27,9 @@ async function measuredOn(ledger: MeasuredLedger): Promise<void> {
   }
   if (only === '' || only === 'conversations') {
     await conversationsOn(ledger, 1000, write);
+  }
+  if (only === '' || only === 'reasoning') {
+    await reasoningStepsOn(ledger, write);
   }
 }
 
