@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.18.0](https://github.com/BeOnAuto/runtime/compare/v0.17.0...v0.18.0) (2026-10-23)
+
+
+### Features
+
+* **identity:** keys from a key source, a person without an org acts in their own, a key set given ([#301](https://github.com/BeOnAuto/runtime/issues/301)) ([ca6f754](https://github.com/BeOnAuto/runtime/commit/ca6f7540dbe08884deb21df67ff2e2267c3664a6))
+* **server:** the npm package carries every package as a subpath, with its testing entry ([#304](https://github.com/BeOnAuto/runtime/issues/304)) ([caf2e36](https://github.com/BeOnAuto/runtime/commit/caf2e36f01b8aaaee6d57b0af3fff66439ff3fc1))
+
+
+### Bug Fixes
+
+* **coordination:** the workflow spec SDK compiles a validator on first use, not when imported ([#308](https://github.com/BeOnAuto/runtime/issues/308)) ([0dcd0df](https://github.com/BeOnAuto/runtime/commit/0dcd0df6a1b9de73f089f74c8d076fd70848f5f1))
+* **workflow-host:** the follower notes each unreadable record, and a first follow misses nothing ([#302](https://github.com/BeOnAuto/runtime/issues/302)) ([7c5588c](https://github.com/BeOnAuto/runtime/commit/7c5588c02fcd9fb118ca1b62e5be4348181630f4))
+* **workflow-host:** the waiting measurement names the run of each record it writes ([#299](https://github.com/BeOnAuto/runtime/issues/299)) ([69ad59f](https://github.com/BeOnAuto/runtime/commit/69ad59f0be1fd05abc0e96a86ebad52ccf2b04d4))
+
 ## [0.17.0](https://github.com/BeOnAuto/runtime/compare/v0.16.0...v0.17.0) (2026-10-22)
 
 
