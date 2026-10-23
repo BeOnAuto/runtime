@@ -126,11 +126,17 @@ const noStartPing: StartPing = {
   stop: Function.constVoid,
 };
 
+function composedFor<R>(
+  { settings, telemetry, options }: Starting<R>,
+  local: LocalServing | undefined,
+): Composed<R> | Promise<Composed<R>> {
+  return options.composed(settingsServing(settings, local), telemetryServing(telemetry, local), options.shippedFiles);
+}
+
 export async function started<R>(starting: Starting<R>): Promise<RunningServer> {
   const { settings, authenticator, telemetry, options, pageStyle } = starting;
   const local = options.localServingIn?.(authenticator.mode);
-  const { shippedFiles } = options;
-  const composed = options.composed(settingsServing(settings, local), telemetryServing(telemetry, local), shippedFiles);
+  const composed = await composedFor(starting, local);
   const runtime = await startRuntime(composed.services, settings, telemetry.layer);
   await runtime.run(logAccessMode({ ...settings, mode: authenticator.mode }));
   await runtime.run(logServedStudio({ ...settings, mode: authenticator.mode }));

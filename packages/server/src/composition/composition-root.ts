@@ -15,8 +15,8 @@ export function compositionRootWith(
   toolTiming?: FunctionWiring['toolTiming'],
 ): ComposedServerOptions {
   const wiring = functionWiringOf(modelAccessOf, programPoolOf, toolTiming);
-  return serverOptionsComposing((settings, telemetry, shippedFiles) => {
-    const database = ledgerDatabaseOf(settings, telemetry.appended);
+  return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
+    const database = await ledgerDatabaseOf(settings, telemetry.appended);
     return {
       services: applicationLayer(
         withARefusedLayoutExplained(ledgerLayerFor(settings, database, wiring.projections.appends), settings),

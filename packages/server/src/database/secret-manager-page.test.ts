@@ -9,6 +9,7 @@ import type { AwsAdapters } from '../secrets/aws-adapters.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
+import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const page = readFileSync(new URL('../../../../docs/self-host/secret-manager.md', import.meta.url), 'utf8');
 
@@ -128,7 +129,7 @@ async function startedUnder(environment: Readonly<Record<string, string>>) {
   const started = await ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    { store: 'sqlite', file: fileName },
+    sqliteLedgerDatabase(fileName),
     () => Promise.resolve(onTheFake),
   ).then(
     async (stores) => {

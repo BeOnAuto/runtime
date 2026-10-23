@@ -14,7 +14,7 @@ import {
 } from './served-prediction-functions.ts';
 import { toolUsersServedBy, type ToolUsersWiring } from './served-tools.ts';
 
-type LedgerDatabase = Parameters<FunctionWiring['projections']['served']>[1]['database'];
+type ProjectedDatabase = Parameters<FunctionWiring['projections']['served']>[1]['database'];
 
 export interface ServedFunctions {
   readonly parts: Omit<WorkflowParts, 'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'shippedFiles'>;
@@ -24,7 +24,7 @@ export interface ServedFunctions {
 export async function functionsServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  database: LedgerDatabase,
+  database: ProjectedDatabase,
   {
     programPoolOf,
     projections: wiring,

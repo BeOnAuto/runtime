@@ -1,5 +1,4 @@
 import type { SecretStore } from '@on.auto/secrets';
-import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, type Context } from 'effect';
 
 import { logContentStore, logLedger } from '../logging/logging.ts';
@@ -9,6 +8,7 @@ import { secretStoreStarted } from '../secrets/secret-store-start.ts';
 import { custodiansOf } from '../secrets/secret-store.ts';
 import type { Served } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
+import type { LedgerDatabase } from './ledger-database.ts';
 
 export interface LedgerStores {
   readonly secrets: SecretStore;
@@ -20,7 +20,7 @@ type StoresSettings = Pick<Settings, 'ledger' | 'content' | 'secrets' | 'keepers
 export async function ledgerStoresOpenedBy(
   context: Context.Context<never>,
   { ledger, content, secrets, keepers, proxy }: StoresSettings,
-  database: DatabaseSettings,
+  database: LedgerDatabase,
   loadAws: AwsAdaptersLoader = loadAwsAdapters,
 ): Promise<LedgerStores> {
   const run = Effect.runPromiseWith(context);

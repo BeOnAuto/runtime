@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
+import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const page = readFileSync(new URL('../../../../docs/self-host/production.md', import.meta.url), 'utf8');
 
@@ -111,7 +112,7 @@ async function startRefusedFor(environment: Readonly<Record<string, string>>): P
   return ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    { store: 'sqlite', file: fileName },
+    sqliteLedgerDatabase(fileName),
     () => Promise.resolve(onTheFake),
   ).then(() => 'started', String);
 }

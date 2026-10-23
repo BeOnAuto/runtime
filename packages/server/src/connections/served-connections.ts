@@ -9,10 +9,10 @@ import {
 } from '@on.auto/connections';
 import { accessModeOf } from '@on.auto/identity';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { DatabaseSettings } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/served-consent.ts';
+import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
 import { retryStateKeysOf, secretsKeptBy } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -90,7 +90,7 @@ function sourceServedBy(
 export async function storesAndConnectionsOf(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  database: DatabaseSettings,
+  database: LedgerDatabase,
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);

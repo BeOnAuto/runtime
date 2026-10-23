@@ -14,8 +14,8 @@ await runServer<DispatcherServices>(
   process,
   {
     ...compositionRoot,
-    composed: (settings, telemetry, shippedFiles) => ({
-      ...compositionRoot.composed(settings, telemetry, shippedFiles),
+    composed: async (settings, telemetry, shippedFiles) => ({
+      ...(await compositionRoot.composed(settings, telemetry, shippedFiles)),
       serve: async (runtime) =>
         servedBy(
           await routesServing([...playbookOperations, waitForeverAnnouncedIn(process.env)], {

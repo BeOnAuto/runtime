@@ -23,8 +23,8 @@ export async function servingAToolThatWaits(): Promise<WaitingServer> {
   const calling = Promise.withResolvers<void>();
   const server = await startServer<DispatcherServices>(loopbackSettingsOver(ledger), {
     ...compositionRoot,
-    composed: (settings, telemetry, shippedFiles) => ({
-      ...compositionRoot.composed(settings, telemetry, shippedFiles),
+    composed: async (settings, telemetry, shippedFiles) => ({
+      ...(await compositionRoot.composed(settings, telemetry, shippedFiles)),
       serve: async (runtime) =>
         servedBy(
           await routesServing([...playbookOperations, waitForeverAnnouncing(calling.resolve)], {
