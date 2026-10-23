@@ -76,7 +76,7 @@ export function childEndingLatencyOn(database: DatabaseSettings, measured: Waiti
       store,
       `${alpha}runs/${childOf(runId)}`,
       { type: 'run_succeeded', data: { output: 'done', record: {} } },
-      { ...ofTheRun, by: 'playbook:alpha', calledBy: { runId, reference: '/do/0/ask', run: 1 } },
+      { ...ofTheRun, runId: childOf(runId), by: 'playbook:alpha', calledBy: { runId, reference: '/do/0/ask', run: 1 } },
     ),
   );
 }
@@ -87,7 +87,7 @@ export function cancelLatencyOn(database: DatabaseSettings, measured: WaitingCas
       store,
       `${alpha}runs/${runId}`,
       { type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Measured' } },
-      { ...ofTheRun, by: 'acme-admin' },
+      { ...ofTheRun, runId, by: 'acme-admin' },
     ),
   );
 }

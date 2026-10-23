@@ -55,7 +55,8 @@ async function untilAt(opened: Opened, cursor: string | null): Promise<void> {
 
 async function finishedInTurn(opened: Opened, count: number, index = 0): Promise<void> {
   if (index < count) {
-    await recorded(opened.store, `${alpha}runs/${runAt(index).runId}`, finishOf(index), ofTheRun);
+    const { runId } = runAt(index);
+    await recorded(opened.store, `${alpha}runs/${runId}`, finishOf(index), { ...ofTheRun, runId });
     await finishedInTurn(opened, count, index + 1);
   }
 }
