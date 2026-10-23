@@ -11,9 +11,10 @@ import {
 } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { copiedFirst, heldAt } from '../content/bucket-requests.ts';
-import { objectContentOn, objectStoreReached, ObjectStoreUnreachable } from '../content/object-content.ts';
+import { objectContentOn } from '../content/object-content.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
+import { objectStoreReached, ObjectStoreUnreachable } from '../s3/object-store-reached.ts';
+import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import type { ObjectStoreEntry, ObjectStoreUnderTest } from './object-store-entry.ts';
 import { keysIn, openUploadsIn } from './test-object-store.ts';
 
@@ -22,14 +23,15 @@ const longAgo = '00000000-0000-7000-8000-000000000001';
 function keptOnObjects(entry: ObjectStoreEntry): void {
   it('keeps a content as one object under its playbook and digest, with its media type and size, and stages it under its run until the run is unstaged', async () => {
     const store = await entry.aStore();
-    const { content } = objectContentOn(store.bucket.client, store.location);
+    const bucket = bucketOnS3(store.bucket);
+    const { content } = objectContentOn(bucket, store.location);
     const keys = objectKeysOf(store.location);
     const { sha256, content: generatedContent } = await generated(2_500_000);
 
     await resultOf(content.put(alpha, { ...generatedContent(), mediaType: json }));
     await resultOf(content.stage(alpha, 'run/1', generatedContent()));
     const kept = await keysIn(store.bucket, store.location.prefix);
-    const held = await heldAt(store.bucket, keys.kept(alpha, sha256));
+    const held = await bucket.head(keys.kept(alpha, sha256));
     await resultOf(content.unstage(alpha, 'run/1'));
 
     expect(kept).toEqual(
@@ -46,11 +48,12 @@ function keptOnObjects(entry: ObjectStoreEntry): void {
 function misfiledRead(entry: ObjectStoreEntry): void {
   it('fails a read of an object whose bytes are not those its digest names, before it hands over the last of them', async () => {
     const store = await entry.aStore();
-    const { content } = objectContentOn(store.bucket.client, store.location);
+    const bucket = bucketOnS3(store.bucket);
+    const { content } = objectContentOn(bucket, store.location);
     const keys = objectKeysOf(store.location);
     const { sha256 } = await resultOf(content.put(alpha, (await generated(2_500_000)).content()));
     const misfiled = sha256Of('another content');
-    await copiedFirst(store.bucket, keys.kept(alpha, sha256), keys.kept(alpha, misfiled));
+    await bucket.put(keys.kept(alpha, misfiled), { copyOf: keys.kept(alpha, sha256) });
 
     const delivered = await deliveredBeforeFailing((await present(content.get(alpha, misfiled))).stream);
 
@@ -75,7 +78,7 @@ async function uploadsBegun(store: ObjectStoreUnderTest, fresh: string): Promise
 function uploadsSwept(entry: ObjectStoreEntry): void {
   it('sweeps the uploads and the open multipart uploads begun before the time it is given, and keeps those begun after it', async () => {
     const store = await entry.aStore();
-    const { sweepContent } = objectContentOn(store.bucket.client, store.location);
+    const { sweepContent } = objectContentOn(bucketOnS3(store.bucket), store.location);
     const keys = objectKeysOf(store.location);
     const fresh = randomUUIDv7();
     await uploadsBegun(store, fresh);

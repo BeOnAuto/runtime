@@ -4,8 +4,8 @@ import { alpha, generated, generatedStream, octets, refusalOf } from '@on.auto/o
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore } from '../testing/fake-bucket.ts';
-import { uploadPartBytes } from './upload-writing.ts';
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 

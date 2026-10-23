@@ -10,8 +10,8 @@ import {
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import type { Bucket, ObjectHead } from '../bucket/bucket.ts';
 import type { ObjectKeys } from '../location/object-keys.ts';
-import { copiedFirst, heldAt, removed, writtenFirst, type Bucket, type Held } from './bucket-requests.ts';
 import { uploadWritingOf, type UploadWriting } from './upload-writing.ts';
 
 export interface Placing {
@@ -28,8 +28,8 @@ interface Written {
   readonly upload: string;
 }
 
-function heldOf(bucket: Bucket, key: string): Effect.Effect<Held | undefined> {
-  return Effect.promise(() => heldAt(bucket, key));
+function heldOf(bucket: Bucket, key: string): Effect.Effect<ObjectHead | undefined> {
+  return Effect.promise(() => bucket.head(key));
 }
 
 function keptAt(bucket: Bucket, key: string, sha256: string): Effect.Effect<ContentKept> {
@@ -47,11 +47,11 @@ function readAlone(): Effect.Effect<void> {
 function placedFirst(bucket: Bucket, key: string, { mediaType, writing, upload }: Written): Effect.Effect<boolean> {
   return writing.uploading()
     ? Effect.promise(async () => {
-        const first = await copiedFirst(bucket, upload, key);
-        await removed(bucket, [upload]);
+        const first = await bucket.put(key, { copyOf: upload, ifAbsent: true });
+        await bucket.delete([upload]);
         return first;
       })
-    : Effect.promise(() => writtenFirst(bucket, key, { body: writing.inHand(), mediaType }));
+    : Effect.promise(() => bucket.put(key, { data: writing.inHand(), mediaType, ifAbsent: true }));
 }
 
 function keptAfter(bucket: Bucket, keyOf: KeyOf, written: Written): Effect.Effect<ContentKept> {
@@ -60,7 +60,7 @@ function keptAfter(bucket: Bucket, keyOf: KeyOf, written: Written): Effect.Effec
   return Effect.gen(function* () {
     const held = yield* heldOf(bucket, key);
     if (held !== undefined) {
-      yield* Effect.promise(() => removed(bucket, written.writing.uploading() ? [written.upload] : []));
+      yield* Effect.promise(() => bucket.delete(written.writing.uploading() ? [written.upload] : []));
       return { sha256, ...held };
     }
     const first = yield* placedFirst(bucket, key, written);
@@ -68,7 +68,10 @@ function keptAfter(bucket: Bucket, keyOf: KeyOf, written: Written): Effect.Effec
   });
 }
 
-function heldDigestRead({ stream, expected }: ContentToKeep, held: Held): Effect.Effect<ContentKept, ContentRefused> {
+function heldDigestRead(
+  { stream, expected }: ContentToKeep,
+  held: ObjectHead,
+): Effect.Effect<ContentKept, ContentRefused> {
   return Effect.gen(function* () {
     const taken = yield* takenInChunks(stream, mostContentChunkBytes, readAlone);
     yield* requireExpected(expected, taken);

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fakeBucket } from '../testing/fake-bucket.ts';
 import { bucketReady, testObjectStoreOf } from '../testing/test-object-store.ts';
-import { objectStoreReached, ObjectStoreUnreachable } from './object-content.ts';
+import { objectStoreReached, ObjectStoreUnreachable } from './object-store-reached.ts';
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 

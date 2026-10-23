@@ -2,10 +2,11 @@ import type { S3Client } from '@aws-sdk/client-s3';
 import type { ContentEntry } from '@on.auto/operations/testing';
 import { onTestFinished } from 'vitest';
 
-import type { Bucket } from '../content/bucket-requests.ts';
 import { objectContentOn } from '../content/object-content.ts';
 import type { ContentLocation } from '../location/content-location.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
+import type { S3Bucket } from '../s3/bucket-requests.ts';
+import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import { emptied, keysIn, openUploadsIn } from './test-object-store.ts';
 
 export interface StoreClients {
@@ -15,7 +16,7 @@ export interface StoreClients {
 }
 
 export interface ObjectStoreUnderTest {
-  readonly bucket: Bucket;
+  readonly bucket: S3Bucket;
   readonly location: ContentLocation;
   readonly reading: () => S3Client;
 }
@@ -47,8 +48,9 @@ export function contentEntryOf(entry: ObjectStoreEntry): ContentEntry {
       const unnamed = async () =>
         (await keysIn(store.bucket, uploads)).length + (await openUploadsIn(store.bucket, uploads)).length;
       return {
-        content: objectContentOn(store.bucket.client, store.location).content,
-        elsewhere: objectContentOn(store.reading, store.location).content,
+        content: objectContentOn(bucketOnS3(store.bucket), store.location).content,
+        elsewhere: objectContentOn(bucketOnS3({ client: store.reading, name: store.bucket.name }), store.location)
+          .content,
         unnamedLeft: unnamed,
       };
     },

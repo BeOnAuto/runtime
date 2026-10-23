@@ -1,6 +1,6 @@
 import { uuidV7Before } from '@on.auto/operations';
 
-import { keysUnder, removed, uploadAbandoned, uploadsUnder, type Bucket } from './bucket-requests.ts';
+import type { Bucket } from '../bucket/bucket.ts';
 
 function startedBefore(key: string, before: number): boolean {
   return uuidV7Before(key.slice(key.lastIndexOf('/') + 1), before);
@@ -8,7 +8,7 @@ function startedBefore(key: string, before: number): boolean {
 
 async function staleObjectsUnder(bucket: Bucket, uploads: string, before: number): Promise<readonly string[]> {
   const stale: string[] = [];
-  for await (const key of keysUnder(bucket, uploads)) {
+  for await (const key of bucket.list(uploads)) {
     if (!startedBefore(key, before)) {
       break;
     }
@@ -18,10 +18,10 @@ async function staleObjectsUnder(bucket: Bucket, uploads: string, before: number
 }
 
 export async function sweptUploads(bucket: Bucket, uploads: string, before: number): Promise<void> {
-  await removed(bucket, await staleObjectsUnder(bucket, uploads, before));
-  for await (const open of uploadsUnder(bucket, uploads)) {
-    if (startedBefore(open.key, before)) {
-      await uploadAbandoned(bucket, open);
+  await bucket.delete(await staleObjectsUnder(bucket, uploads, before));
+  for await (const unfinished of bucket.unfinished(uploads)) {
+    if (startedBefore(unfinished.key, before)) {
+      await unfinished.abandon();
     }
   }
 }

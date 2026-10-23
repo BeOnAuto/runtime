@@ -1,12 +1,7 @@
-import { Upload } from '@aws-sdk/lib-storage';
 import type { TakeChunk } from '@on.auto/operations';
 import { Effect, Function } from 'effect';
 
-import { removed, type Bucket } from './bucket-requests.ts';
-
-export const uploadPartBytes = 5 * 1_048_576;
-
-const uploadPartsAtOnce = 2;
+import type { Bucket } from '../bucket/bucket.ts';
 
 export interface UploadWriting {
   readonly take: TakeChunk;
@@ -46,13 +41,7 @@ function whileSending<A>({ settled }: Sending, work: Promise<A>): Promise<A> {
 
 function sendingTo({ bucket, key, mediaType }: UploadTarget): Sending {
   const body = new TransformStream<Uint8Array, Uint8Array>();
-  const upload = new Upload({
-    client: bucket.client(),
-    params: { Bucket: bucket.name, Key: key, Body: body.readable, ContentType: mediaType },
-    partSize: uploadPartBytes,
-    queueSize: uploadPartsAtOnce,
-  });
-  const settled = upload.done().then(
+  const settled = bucket.put(key, { stream: body.readable, mediaType }).then(
     (): Settled => ({ sent: true }),
     (failure: unknown): Settled => ({ sent: false, failure }),
   );
@@ -92,7 +81,7 @@ export function uploadWritingOf(target: UploadTarget): UploadWriting {
         if (sending !== undefined) {
           void sending.body.abort(new Error('The content was not kept')).catch(Function.constVoid);
           await sending.settled;
-          await removed(target.bucket, [target.key]);
+          await target.bucket.delete([target.key]);
         }
       }),
   };

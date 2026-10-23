@@ -5,8 +5,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { objectKeysOf } from '../location/object-keys.ts';
+import { uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore, type FakeContentStore } from '../testing/fake-bucket.ts';
-import { uploadPartBytes } from './upload-writing.ts';
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 
