@@ -1,6 +1,6 @@
 import { readPageStyle } from '@on.auto/api';
 import type { Environment } from '@on.auto/config';
-import { authenticatorFor, identityServiceOf } from '@on.auto/identity';
+import { authenticatorFor, configuredApiKeys, identityServiceOf } from '@on.auto/identity';
 
 import type { RunningServer, ServerOptions } from '../server-options/server-options.ts';
 import { readShippedSettings } from '../settings/served-settings.ts';
@@ -22,7 +22,11 @@ export async function startServer<R>(environment: Environment, options: ServerOp
           studio: settings.studio,
           allowedOrigins: settings.allowedOrigins,
         });
-  const authenticator = authenticatorFor({ ...settings, identityService });
+  const authenticator = authenticatorFor({
+    ...settings,
+    apiKeySource: configuredApiKeys(settings.apiKeys),
+    identityService,
+  });
   const telemetry = startTelemetry(settings.telemetry);
   try {
     return await started({ settings, authenticator, telemetry, options, pageStyle });
