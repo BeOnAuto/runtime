@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { until } from '../testing/until.ts';
 import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
-import { dueAwaitedMs, dueInOneTick, duePerformedAtOnce } from './due-work.ts';
+import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork } from './fake-due-work.ts';
 
 describe('a due row that calls out nowhere, behind more deliveries than one read of them takes', () => {
   it('is performed, read apart from the deliveries due before it, and not at the next sweep', async () => {
     const now = Date.now();
     const rows = fakeDueWork();
-    for (const key of keysOf(2 * dueInOneTick + 300, 'delivery')) {
+    for (const key of keysOf(2 * dueInOneWakeUp + 300, 'delivery')) {
       rows.add(key, now - 2000);
       rows.hanging(key);
     }
@@ -45,8 +45,8 @@ describe('a delivery that waits for a place while deliveries hang', () => {
   });
 });
 
-describe('a due row whose ending falls due while a tick waits for the rows it handed out', () => {
-  it('is performed by the next tick, not at the next sweep', async () => {
+describe('a due row whose ending falls due while a wake-up waits for the rows it handed out', () => {
+  it('is performed by the next wake-up, not at the next sweep', async () => {
     const now = Date.now();
     const rows = fakeDueWork();
     for (const key of keysOf(duePerformedAtOnce + 4, 'delivery')) {
@@ -98,7 +98,7 @@ describe('a host that stops while due rows are in flight', () => {
 });
 
 describe('a delivery handed out while workflow timers fall due', () => {
-  it('holds none of them, as the tick waits for the rows that call out nowhere alone', async () => {
+  it('holds none of them, as the wake-up waits for the rows that call out nowhere alone', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
     const rows = fakeDueWork();

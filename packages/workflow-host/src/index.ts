@@ -1,6 +1,6 @@
 export type { CallAnswer, Perform, Trouble } from './calls/host-executor.ts';
 export type { DatabaseSettings } from './database/host-databases.ts';
-export { dueInOneTick, duePerformedAtOnce, type DueItem, type DueWork } from './due-work/due-work.ts';
+export { dueInOneWakeUp, duePerformedAtOnce, type DueItem, type DueWork } from './due-work/due-work.ts';
 export { rowWaitBounds } from './due-work/row-waits.ts';
 export { DeliveryFailed, type Consumer, type Delivery, type FollowedRecord } from './follower/consumers.ts';
 export type { FollowedEvent } from './follower/followed-events.ts';

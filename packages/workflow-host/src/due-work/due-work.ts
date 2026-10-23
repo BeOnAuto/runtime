@@ -31,7 +31,7 @@ export interface DueParts {
   readonly context?: HostContext;
 }
 
-export const dueInOneTick = 256;
+export const dueInOneWakeUp = 256;
 
 export const duePerformedAtOnce = 16;
 
@@ -131,7 +131,7 @@ function workPerformer(work: DueWork, parts: DueParts): DuePerformer {
     mostInFlight: duePerformedAtOnce,
     context: parts.context,
   });
-  const local = laneOf({ performed: performedItem, finished, mostInFlight: dueInOneTick, context: parts.context });
+  const local = laneOf({ performed: performedItem, finished, mostInFlight: dueInOneWakeUp, context: parts.context });
   const lanes = [outbound, local];
   const handedOut = (items: readonly DueItem[], now: number): readonly string[] => {
     const ready = [...new Map(items.map((item) => [item.key, item])).values()].filter(
