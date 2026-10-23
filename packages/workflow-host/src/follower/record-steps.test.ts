@@ -3,7 +3,7 @@ import { recordingTracer } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { deliverySweeps, type CallConsumer } from './consumers.ts';
+import { callConsumerOf, deliverySweeps } from './consumers.ts';
 import { playbookOfKey, stepOf, type StepParts } from './record-steps.ts';
 import type { GateVerdict } from './run-gate.ts';
 
@@ -58,17 +58,18 @@ describe('the step over the record of a run that passed listeners', () => {
   });
 });
 
-const answering: CallConsumer = {
+const answering = callConsumerOf({
   name: 'call_answers',
   types: ['call_answered'],
   skippedAfterSweeps: deliverySweeps,
+  readOf: (call) => call,
   batchOf: () =>
     Effect.succeed({
       deliveries: [{ key: 'notify', workflow: 'close', deliver: Effect.void, skipped: () => Effect.void }],
       through: undefined,
       more: false,
     }),
-};
+});
 
 const answered: RecordedEvent = {
   ...record,

@@ -61,6 +61,44 @@ describe('a record of a playbook the follower cannot read', () => {
   });
 });
 
+describe('a record the consumers of waiting calls cannot read', () => {
+  it('is said once and passed over, a cancel request whose context names no run as an ending whose context names none', async () => {
+    const reacting = await reactingHost();
+    const { store } = reacting.database;
+    await definitionRecorded(store, {
+      name: 'watch',
+      version: 1,
+      triggers: [eventTrigger({ type: 'com.acme.sentinel' })],
+    });
+    const stream = `${alpha}runs/r-bad`;
+    await recorded(store, stream, { type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Gone' } });
+    await recorded(store, stream, { type: 'run_succeeded', data: { output: null, record: {} } });
+
+    await published(store, { id: 's1', type: 'com.acme.sentinel' });
+    await until(
+      () => Promise.resolve(reacting.reactions.starts()),
+      (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
+    );
+
+    expect(reacting.notes()).toEqual([
+      {
+        kind: 'record_unreadable',
+        org: 'acme',
+        playbook: 'alpha',
+        recordId: messageIdOf(stream, 1),
+        type: 'run_cancel_requested',
+      },
+      {
+        kind: 'record_unreadable',
+        org: 'acme',
+        playbook: 'alpha',
+        recordId: messageIdOf(stream, 2),
+        type: 'run_succeeded',
+      },
+    ]);
+  });
+});
+
 describe('a consumer the host is given', () => {
   it('is offered the events of the types it names, though nothing in the playbook reacts, and one naming none is offered nothing', async () => {
     const received: string[] = [];

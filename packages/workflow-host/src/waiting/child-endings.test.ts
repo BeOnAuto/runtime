@@ -2,6 +2,7 @@ import { Conflict } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { BoundConsumer, CallConsumer } from '../follower/consumers.ts';
 import { alpha, at, recorded } from '../reaction-testing/playbook-writes.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
 import { until } from '../testing/until.ts';
@@ -78,20 +79,30 @@ describe('the ending of a run that answers a call', () => {
   });
 });
 
+function endingReadBy(consumer: CallConsumer): BoundConsumer {
+  const reading = consumer.read(endingRecord);
+  if (reading === 'unreadable') {
+    throw new Error('The consumer of child endings could not read the ending');
+  }
+  return reading;
+}
+
 describe('a delivery of an ending that the run cannot take now', () => {
   it('fails, to be made again, by a consumer that never skips a delivery', async () => {
     const { database } = await waitingParent(child);
-    const consumer = childEndings({
-      database,
-      submitted: () => Effect.fail(new Conflict({ detail: 'The log of the run kept changing' })),
-      resultOf: resultOfEnding,
-      now: () => 1,
-    });
+    const consumer = endingReadBy(
+      childEndings({
+        database,
+        submitted: () => Effect.fail(new Conflict({ detail: 'The log of the run kept changing' })),
+        resultOf: resultOfEnding,
+        now: () => 1,
+      }),
+    );
 
-    const { deliveries } = await Effect.runPromise(consumer.batchOf(endingRecord, undefined, 100));
+    const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
     const failure = await Effect.runPromise(Effect.flip(Effect.forEach(deliveries, ({ deliver }) => deliver)));
     const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(''));
-    const resumed = await Effect.runPromise(consumer.batchOf(endingRecord, 'call', 100));
+    const resumed = await Effect.runPromise(consumer.batchOf('call', 100));
 
     expect([failure.detail, consumer.skippedAfterSweeps]).toEqual(['The log of the run kept changing', Infinity]);
     expect(resumed.deliveries).toEqual([]);

@@ -8,7 +8,7 @@ import {
   deliverySweeps,
   type CallConsumer,
   type Consumer,
-  type FollowedRecord,
+  type Reading,
   type RecordConsumer,
 } from './consumers.ts';
 import { deliveredAll, type Mode } from './delivery-loop.ts';
@@ -54,18 +54,8 @@ function passedOver(record: RecordedEvent): Progress {
   return { cursor: record.cursor, delivered: null, attempts: 0, waiting: false };
 }
 
-function followedOf(
-  parts: StepParts,
-  playbookKey: string,
-  relative: RecordedEvent,
-): Effect.Effect<FollowedRecord | null> {
-  const event = followedEventOf(relative, parts.definitionType);
-  if (event === 'unreadable') {
-    return Effect.as(parts.unreadable(playbookKey, relative), null);
-  }
-  return Effect.succeed(
-    event === 'none' ? null : { playbook: playbookOfKey(playbookKey), playbookKey, record: relative, event },
-  );
+function unreadableStep(parts: StepParts, playbookKey: string, record: RecordedEvent): Effect.Effect<Step> {
+  return Effect.as(parts.unreadable(playbookKey, record), { progress: passedOver(record) });
 }
 
 function runRecordStep(parts: StepParts, stepping: Stepping, progress: Progress, record: RecordedEvent) {
@@ -85,31 +75,49 @@ function runRecordStep(parts: StepParts, stepping: Stepping, progress: Progress,
   });
 }
 
-function boundOf(parts: StepParts, followed: FollowedRecord | null) {
-  if (followed === null) {
+function followedReadingsOf(parts: StepParts, playbookKey: string, relative: RecordedEvent): readonly Reading[] {
+  const event = followedEventOf(relative, parts.definitionType);
+  if (event === 'none') {
     return [];
   }
-  const wanting = parts.registered.filter(({ types }) => types.includes(followed.event.event.type));
+  if (event === 'unreadable') {
+    return ['unreadable'];
+  }
+  const followed = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative, event };
+  const wanting = parts.registered.filter(({ types }) => types.includes(event.event.type));
   return [...parts.consumers, ...wanting].map((consumer) => boundTo(consumer, followed));
 }
 
-function deliveredStep(parts: StepParts, stepping: Stepping, progress: Progress, record: RecordedEvent) {
-  return Effect.gen(function* () {
-    const { playbookKey } = stepping;
-    const relative = relativeRecord(playbookKey, record);
-    const calls = parts.calls
-      .filter(({ types }) => types.includes(record.type))
-      .map((consumer) => boundTo(consumer, { playbook: playbookOfKey(playbookKey), playbookKey, record: relative }));
-    const consumers = [...calls, ...boundOf(parts, yield* followedOf(parts, playbookKey, relative))];
-    if (consumers.length === 0) {
-      return { progress: passedOver(record) };
+function readingsOf(parts: StepParts, playbookKey: string, record: RecordedEvent): readonly Reading[] {
+  const relative = relativeRecord(playbookKey, record);
+  const call = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative };
+  const calls = parts.calls.filter(({ types }) => types.includes(record.type)).map((consumer) => consumer.read(call));
+  return [...calls, ...followedReadingsOf(parts, playbookKey, relative)];
+}
+
+function deliveredStep(
+  parts: StepParts,
+  stepping: Stepping,
+  progress: Progress,
+  record: RecordedEvent,
+): Effect.Effect<Step> {
+  return Effect.suspend(() => {
+    const readings = readingsOf(parts, stepping.playbookKey, record);
+    const consumers = readings.filter((reading) => reading !== 'unreadable');
+    if (consumers.length < readings.length) {
+      return unreadableStep(parts, stepping.playbookKey, record);
     }
-    const { made, ...delivered } = yield* deliveredAll(consumers, progress, stepping.mode).pipe(
+    if (consumers.length === 0) {
+      return Effect.succeed({ progress: passedOver(record) });
+    }
+    return deliveredAll(consumers, progress, stepping.mode).pipe(
       Effect.withSpan(`follow ${record.type}`, followSpanOf(record)),
+      Effect.map(({ made, ...delivered }) =>
+        delivered.end === undefined
+          ? { progress: passedOver(record), delivered: made }
+          : { ...delivered, delivered: made },
+      ),
     );
-    return delivered.end === undefined
-      ? { progress: passedOver(record), delivered: made }
-      : { ...delivered, delivered: made };
   });
 }
 
@@ -130,7 +138,7 @@ export function stepOf(
     const readAgain: Effect.Effect<Step> = Effect.succeed({ progress, end: 'more' });
     return Effect.flatMap(parts.applyDefinitionRecord(playbookKey, record), (applied) =>
       applied === 'unreadable'
-        ? Effect.as(parts.unreadable(playbookKey, record), { progress: passedOver(record) })
+        ? unreadableStep(parts, playbookKey, record)
         : Effect.flatMap(stepping.wantsMore(), (more) => (more ? readAgain : step)),
     );
   }

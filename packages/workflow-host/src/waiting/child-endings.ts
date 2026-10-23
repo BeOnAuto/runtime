@@ -11,7 +11,7 @@ import { Effect } from 'effect';
 
 import { answeredRow, callRowOf, deliveredRow, waitingCallsOf } from '../calls/call-rows.ts';
 import type { HostDatabase } from '../database/host-database.ts';
-import { DeliveryFailed, type CallConsumer } from '../follower/consumers.ts';
+import { callConsumerOf, DeliveryFailed, type CallConsumer, type CallRecord } from '../follower/consumers.ts';
 import { addressOfRun, runKeyOf } from '../runs/run-address.ts';
 import type { WaitingOptions } from './waiting-options.ts';
 
@@ -25,6 +25,11 @@ export interface EndingParts {
 interface CalledEnding {
   readonly ending: RunEnding;
   readonly calledBy: CalledBy;
+}
+
+interface Ended {
+  readonly playbook: PlaybookAddress;
+  readonly ending: RunEnding;
 }
 
 function calledEndingOf(ending: RunEnding | undefined): CalledEnding | undefined {
@@ -72,14 +77,20 @@ export function childAnswersOn(
   };
 }
 
+function endedOf({ playbook, record }: CallRecord): Ended | undefined {
+  const ending = runEndingOf(record);
+  return ending === undefined ? undefined : { playbook, ending };
+}
+
 export function childEndings(parts: EndingParts): CallConsumer {
-  return {
+  return callConsumerOf({
     name: 'child_endings',
     types: ['run_succeeded', 'run_rejected', 'run_failed'],
     skippedAfterSweeps: Number.POSITIVE_INFINITY,
-    batchOf: ({ playbook, record }, after) =>
+    readOf: endedOf,
+    batchOf: ({ playbook, ending }, after) =>
       Effect.sync(() => {
-        const called = after === undefined ? calledEndingOf(runEndingOf(record)) : undefined;
+        const called = after === undefined ? calledEndingOf(ending) : undefined;
         return {
           deliveries:
             called === undefined
@@ -96,7 +107,7 @@ export function childEndings(parts: EndingParts): CallConsumer {
           more: false,
         };
       }),
-  };
+  });
 }
 
 export function endedChildrenOn(parts: EndingParts): (runKey: string) => Effect.Effect<void, DeliveryFailed> {

@@ -137,10 +137,18 @@ async function failingConsumer() {
 
 const endingOfAnotherCapability = { type: 'run_succeeded', data: { output: null, record: {} } };
 
+function readBy(consumer: ReturnType<typeof cancelRequests>, fact: Fact, context?: Context) {
+  const reading = consumer.read(asked(fact, context));
+  if (reading === 'unreadable') {
+    throw new Error(`The consumer of cancel requests could not read ${fact.type}`);
+  }
+  return reading;
+}
+
 describe('the consumer of cancel requests', () => {
   it('never skips a request, and fails a delivery the run cannot take now, to be made again', async () => {
-    const consumer = await failingConsumer();
-    const { deliveries } = await Effect.runPromise(consumer.batchOf(asked(askedToCancel), undefined, 100));
+    const consumer = readBy(await failingConsumer(), askedToCancel);
+    const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
     const failure = await Effect.runPromise(Effect.flip(Effect.forEach(deliveries, ({ deliver }) => deliver)));
     const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(''));
 
@@ -148,23 +156,24 @@ describe('the consumer of cancel requests', () => {
     expect(await Effect.runPromise(Effect.as(skipped, 'nothing skipped'))).toBe('nothing skipped');
   });
 
-  it('makes no delivery of a cancel before a start, nor of a record that is no request or ends another capability’s run', async () => {
+  it('makes no delivery of a cancel its caller recorded before the run’s start, nor again of one it made', async () => {
     const consumer = await failingConsumer();
-    const beforeTheStart = asked(
-      { type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Gone' } },
-      { by: 'playbook:alpha', at },
-    );
+    const beforeTheStart = readBy(consumer, askedToCancel, { by: 'playbook:alpha', at, runId });
+    const made = readBy(consumer, askedToCancel);
     const batches = await Effect.runPromise(
-      Effect.all([
-        consumer.batchOf(beforeTheStart, undefined, 100),
-        consumer.batchOf(asked({ type: 'event_published', data: {} }), undefined, 100),
-      ]),
+      Effect.all([beforeTheStart.batchOf(undefined, 100), made.batchOf('cancel', 100)]),
     );
-    const ending = await Effect.runPromise(
-      consumer.batchOf(asked(endingOfAnotherCapability, runOf('interaction', 'playbook:alpha')), undefined, 100),
-    );
-    const resumed = await Effect.runPromise(consumer.batchOf(asked(askedToCancel), 'cancel', 100));
 
-    expect([...batches, ending, resumed].map(({ deliveries }) => deliveries)).toEqual([[], [], [], []]);
+    expect(batches.map(({ deliveries }) => deliveries)).toEqual([[], []]);
+  });
+
+  it('cannot read a request whose context names no run, nor a record that is no request', async () => {
+    const consumer = await failingConsumer();
+
+    expect([
+      consumer.read(asked(askedToCancel, { by: 'playbook:alpha', at })),
+      consumer.read(asked({ type: 'event_published', data: {} })),
+      consumer.read(asked(endingOfAnotherCapability, runOf('interaction', 'playbook:alpha'))),
+    ]).toEqual(['unreadable', 'unreadable', 'unreadable']);
   });
 });
