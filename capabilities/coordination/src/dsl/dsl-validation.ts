@@ -14,16 +14,16 @@ import {
   type JsonObject,
   type TaskList,
 } from '@on.auto/workflow-engine';
-import { buildGraph, Classes } from '@openworkflowspec/sdk';
 import specificationPackage from '@openworkflowspec/sdk/package.json' with { type: 'json' };
 import { Predicate, Schema } from 'effect';
 import satisfies from 'semver/functions/satisfies.js';
 
 import { withoutOutputShape } from '../document/workflow-output.ts';
+import { specificationSdk, type SpecificationSdk } from './dsl-libraries.ts';
 import { problemsOf, type Problem } from './schema-problems.ts';
 import { schemaChecksOf } from './specification-schema.ts';
 
-type Workflow = ReturnType<typeof Classes.Workflow.deserialize>;
+type Workflow = ReturnType<SpecificationSdk['Classes']['Workflow']['deserialize']>;
 
 type Reading = { readonly text: string; readonly document: JsonObject } | { readonly problems: readonly Problem[] };
 
@@ -44,9 +44,11 @@ export async function dslProblems(
     return unread;
   }
   const refused = (await schemaChecksOf(reading.document)).flatMap((check) => problemsOf(check));
-  return refused.length > 0
-    ? refused
-    : firstFound([() => duplicatedNames(reading.document), () => (connecting ? connectionProblems(reading.text) : [])]);
+  if (refused.length > 0) {
+    return refused;
+  }
+  const duplicated = duplicatedNames(reading.document);
+  return duplicated.length > 0 || !connecting ? duplicated : connectionProblems(reading.text);
 }
 
 function firstFound(checks: readonly (() => readonly Problem[])[]): readonly Problem[] {
@@ -130,8 +132,9 @@ function duplicatedNames(document: JsonObject): readonly Problem[] {
   );
 }
 
-function connectionProblems(text: string): readonly Problem[] {
-  const hydration = hydrated(text);
+async function connectionProblems(text: string): Promise<readonly Problem[]> {
+  const { buildGraph, Classes } = await specificationSdk();
+  const hydration = hydrated(() => Classes.Workflow.deserialize(text, { validate: false }));
   if ('problems' in hydration) {
     return hydration.problems;
   }
@@ -143,9 +146,11 @@ function connectionProblems(text: string): readonly Problem[] {
   }
 }
 
-function hydrated(text: string): { readonly workflow: Workflow } | { readonly problems: readonly Problem[] } {
+function hydrated(
+  deserialized: () => Workflow,
+): { readonly workflow: Workflow } | { readonly problems: readonly Problem[] } {
   try {
-    return { workflow: Classes.Workflow.deserialize(text, { validate: false }) };
+    return { workflow: deserialized() };
   } catch (error) {
     return { problems: [{ pointer: '', detail: messageOf(error) }] };
   }
