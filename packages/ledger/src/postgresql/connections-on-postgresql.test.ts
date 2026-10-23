@@ -2,8 +2,8 @@ import { Effect, Function, Layer, Logger, Schema } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { sweepsWatched } from '../content/watched-sweeps.ts';
-import { openLedgerWith } from '../testing/open-ledger.ts';
+import { endingOf, sweepsWatched } from '../content/watched-sweeps.ts';
+import { openChoresWith, openLedgerWith } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';
 import { until } from '../testing/until.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
@@ -107,10 +107,11 @@ describe.skipIf(skipped)(`A ledger on a PostgreSQL database of its own${notice}`
     expect(loaded).toEqual({ state: 1, version: 1 });
   });
 
-  it('holds one connection once its first sweep is done, and closes every connection when the runtime is disposed', async () => {
+  it('holds one connection once its chore has swept, and closes every connection when the runtime is disposed', async () => {
     const database = await aDatabase();
     const watched = sweptOn(database);
-    const { ledger, dispose } = await openLedgerWith(watched.layer);
+    const { ledger, sweptAt, dispose } = await openChoresWith(watched.layer);
+    await sweptAt(Date.now());
     await watched.finished;
     await Effect.runPromise(ledger.load('org/acme/tallies', tally));
     const whileOpen = await queried(database, connectionsTo(database));
@@ -127,14 +128,15 @@ describe.skipIf(skipped)(`A ledger on PostgreSQL whose runtime is disposed while
     const database = await aDatabase();
     const held = Promise.withResolvers<void>();
     const watched = sweptOn(database, held.promise);
-    const { dispose } = await openLedgerWith(watched.layer);
+    const { sweptAt, dispose } = await openChoresWith(watched.layer);
+    const sweeping = endingOf(sweptAt(Date.now()));
     await watched.started;
 
     const disposing = dispose();
     held.resolve();
     await disposing;
 
-    expect(await watched.finished).toBe('swept');
+    expect(await Promise.all([watched.finished, sweeping])).toEqual(['swept', 'ended']);
     await untilNoneOpen(database);
   });
 });
@@ -177,8 +179,9 @@ async function aLedgerLogging(database: string) {
   const watched = sweepsWatched(() =>
     postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection: lostConnectionsLoggedWith(context) }),
   );
-  const { ledger, dispose } = await openLedgerWith(watched.layer.pipe(Layer.provide(logging)));
+  const { ledger, sweptAt, dispose } = await openChoresWith(watched.layer.pipe(Layer.provide(logging)));
   onTestFinished(dispose);
+  await sweptAt(Date.now());
   return { ledger, logged, firstSweep: watched.finished };
 }
 

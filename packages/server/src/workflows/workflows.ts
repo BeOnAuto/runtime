@@ -1,20 +1,13 @@
-import type { AppRuntime } from '@on.auto/api';
 import { callMarginMs, defineSendRunEvent, makeWorkflowAdapter, type ExpressionCheck } from '@on.auto/coordination';
 import { defineStartVersion, type PlaybookOwnNames, type Capability, type CapabilityFacts } from '@on.auto/definitions';
-import {
-  makeCatalog,
-  makeDispatcher,
-  type DispatcherServices,
-  type RouteRegistration,
-  type ShippedFiles,
-} from '@on.auto/operations';
+import { makeCatalog, makeDispatcher, type RouteRegistration, type ShippedFiles } from '@on.auto/operations';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { playbookOperationsServing } from '../composition/playbook-operations.ts';
 import { routesFor, type ServedCatalog } from '../composition/served-routes.ts';
 import type { Served } from '../server-options/server-options.ts';
-import { openedHost, type HostParts } from './host-dependencies.ts';
+import { openedHost, type HostParts, type HostRuntime } from './host-dependencies.ts';
 
 interface OrgOperation {
   readonly registration: RouteRegistration<'org'>;
@@ -49,7 +42,7 @@ function onceOpened(opening: Promise<WorkflowHost>): Pick<WorkflowHost, 'start'>
   };
 }
 
-export async function serveWorkflows(runtime: AppRuntime<DispatcherServices>, parts: WorkflowParts): Promise<Served> {
+export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts): Promise<Served> {
   const dispatcher = makeDispatcher([]);
   const opening = Promise.withResolvers<WorkflowHost>();
   const { names } = parts;

@@ -1,6 +1,6 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { uuidV7TimeOf } from '@on.auto/operations';
-import { Clock, Effect, type Scope } from 'effect';
+import { Context, Effect } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
@@ -11,6 +11,12 @@ export const unnamedChunksLastMs = 3_600_000;
 export interface ContentSweeping {
   readonly sweepContent: (before: number) => Promise<void>;
 }
+
+export interface ChorePorts {
+  readonly sweepOrphans: (now: number) => Effect.Effect<number>;
+}
+
+export class LedgerChores extends Context.Service<LedgerChores, ChorePorts>()('@on.auto/ledger/LedgerChores') {}
 
 function sweptShelf(
   execute: StatementExecutor,
@@ -34,18 +40,17 @@ export function contentSweepOn(execute: StatementExecutor): ContentSweeping['swe
   return (before) => inTurn(shelves, (shelf) => sweptShelf(execute, shelf, uuidV7TimeOf(before)));
 }
 
-function sweptNow({ sweepContent }: ContentSweeping): Effect.Effect<void> {
-  return Effect.uninterruptible(
-    Effect.flatMap(Clock.currentTimeMillis, (now) => Effect.promise(() => sweepContent(now - unnamedChunksLastMs))),
-  );
-}
-
-export function sweptHourly(store: ContentSweeping): Effect.Effect<void, never, Scope.Scope> {
-  const sweep = Effect.catchCause(sweptNow(store), (cause) =>
-    Effect.logError(
-      'The ledger could not sweep what puts that never finished left of their content; it sweeps again in an hour',
-      cause,
-    ),
-  );
-  return Effect.asVoid(Effect.forkScoped(Effect.forever(Effect.andThen(sweep, Effect.sleep('1 hour')))));
+export function orphansSweptOf({ sweepContent }: ContentSweeping): ChorePorts['sweepOrphans'] {
+  return (now) =>
+    Effect.uninterruptible(
+      Effect.promise(() => sweepContent(now - unnamedChunksLastMs)).pipe(
+        Effect.catchCause((cause) =>
+          Effect.logError(
+            'The ledger could not sweep what puts that never finished left of their content; it sweeps again in an hour',
+            cause,
+          ),
+        ),
+        Effect.as(now + unnamedChunksLastMs),
+      ),
+    );
 }

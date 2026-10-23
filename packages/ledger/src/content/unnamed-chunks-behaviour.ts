@@ -4,9 +4,9 @@ import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { LedgerEntry } from '../testing/ledger-entry.ts';
-import { openLedgerWith } from '../testing/open-ledger.ts';
+import { openChoresWith, openLedgerWith } from '../testing/open-ledger.ts';
 import { unnamedChunksLastMs } from './content-sweep.ts';
-import { sweepsWatched } from './watched-sweeps.ts';
+import { endingOf, sweepsWatched } from './watched-sweeps.ts';
 
 const UploadRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
 
@@ -41,10 +41,8 @@ async function orphanedLike(entry: LedgerEntry, database: string, named: Named, 
 }
 
 async function keptAndOrphaned(entry: LedgerEntry, database: string): Promise<Orphans> {
-  const watched = sweepsWatched(() => entry.openedOn(database));
-  const { ledger, dispose } = await openLedgerWith(watched.layer);
+  const { ledger, dispose } = await openLedgerWith(entry.ledgerOn(database));
   onTestFinished(dispose);
-  await watched.finished;
   await resultOf(ledger.content.put(alpha, textToKeep('{"kept":true}', 'application/json')));
   await resultOf(ledger.content.stage(alpha, 'run-1', (await generated(1000)).content()));
   const named = {
@@ -64,16 +62,18 @@ async function uploadsLeft(entry: LedgerEntry, database: string): Promise<readon
   ].toSorted();
 }
 
-function sweptOnItsSchedule(entry: LedgerEntry): void {
-  it('sweeps the chunks no head names on its schedule from the open, once their upload is an hour old, and keeps every chunk a head names', async () => {
+function sweptByItsChore(entry: LedgerEntry): void {
+  it('sweeps the chunks no head names when its chore is called, once their upload is an hour old, keeps every chunk a head names, and answers that it is due again an hour on', async () => {
     const database = await entry.aDatabase();
     const { fresh, named } = await keptAndOrphaned(entry, database);
     const watched = sweepsWatched(() => entry.openedOn(database));
-
-    const { dispose } = await openLedgerWith(watched.layer);
+    const { sweptAt, dispose } = await openChoresWith(watched.layer);
     onTestFinished(dispose);
+    const now = Date.now();
 
-    expect(await watched.finished).toBe('swept');
+    const dueAgainAt = await sweptAt(now);
+
+    expect([await watched.finished, dueAgainAt]).toEqual(['swept', now + unnamedChunksLastMs]);
     expect(await uploadsLeft(entry, database)).toEqual([...named, fresh, fresh].toSorted());
   });
 }
@@ -84,14 +84,15 @@ function sweepFinishedBeforeClosing(entry: LedgerEntry): void {
     const { fresh, named } = await keptAndOrphaned(entry, database);
     const held = Promise.withResolvers<void>();
     const watched = sweepsWatched(() => entry.openedOn(database), held.promise);
-    const { dispose } = await openLedgerWith(watched.layer);
+    const { sweptAt, dispose } = await openChoresWith(watched.layer);
+    const sweeping = endingOf(sweptAt(Date.now()));
     await watched.started;
 
     const disposing = dispose();
     held.resolve();
     await disposing;
 
-    expect(await watched.finished).toBe('swept');
+    expect(await Promise.all([watched.finished, sweeping])).toEqual(['swept', 'ended']);
     expect(await uploadsLeft(entry, database)).toEqual([...named, fresh, fresh].toSorted());
   });
 }
@@ -111,7 +112,7 @@ function sweptBefore(entry: LedgerEntry): void {
 
 export function unnamedChunksSwept(entry: LedgerEntry): void {
   describe('the chunks no head names', () => {
-    sweptOnItsSchedule(entry);
+    sweptByItsChore(entry);
     sweepFinishedBeforeClosing(entry);
     sweptBefore(entry);
   });

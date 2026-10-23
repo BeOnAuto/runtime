@@ -1,10 +1,9 @@
-import type { Ledger } from '@on.auto/operations';
 import type { Layer } from 'effect';
 
-import { ledgerLayerOver, type OpenedLedger } from '../ledger-layer.ts';
+import { ledgerLayerOver, type LedgerServices, type OpenedLedger } from '../ledger-layer.ts';
 
 export interface WatchedSweeps {
-  readonly layer: Layer.Layer<Ledger>;
+  readonly layer: Layer.Layer<LedgerServices>;
   readonly started: Promise<void>;
   readonly finished: Promise<string>;
 }
@@ -27,4 +26,12 @@ export function sweepsWatched(openedOf: () => OpenedLedger, held: Promise<void> 
     };
   };
   return { layer: ledgerLayerOver(open), started: started.promise, finished: finished.promise };
+}
+
+function ended(): 'ended' {
+  return 'ended';
+}
+
+export function endingOf(chore: Promise<unknown>): Promise<'ended'> {
+  return chore.then(ended, ended);
 }

@@ -1,5 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import {
+  LedgerChores,
   LedgerConnection,
   LedgerLayoutRefused,
   type AppendObserver,
@@ -9,6 +10,7 @@ import {
 } from '@on.auto/ledger';
 import type { ContentStore, KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
 import type { SecretRows } from '@on.auto/secrets';
+import { choreWork, type DueWork } from '@on.auto/workflow-host';
 import { Cause, Effect, Layer, type Context } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';
@@ -55,4 +57,9 @@ export function withARefusedLayoutExplained<Services>(
 
 export function ledgerConnectionIn(runtime: AppRuntime<LedgerConnection>): Promise<ConnectionPorts> {
   return Effect.runPromise(inRuntime(runtime, Effect.service(LedgerConnection)));
+}
+
+export async function orphansSweptIn(runtime: AppRuntime<LedgerChores>): Promise<DueWork> {
+  const { sweepOrphans } = await Effect.runPromise(inRuntime(runtime, Effect.service(LedgerChores)));
+  return choreWork({ name: 'orphaned content', perform: sweepOrphans });
 }

@@ -1,4 +1,5 @@
 export type { CallAnswer, Perform, Trouble } from './calls/host-executor.ts';
+export { choreWork, type Chore } from './due-work/due-chores.ts';
 export { dueInOneWakeUp, duePerformedAtOnce, type DueItem, type DueWork } from './due-work/due-work.ts';
 export { rowWaitBounds } from './due-work/row-waits.ts';
 export { DeliveryFailed, type Consumer, type Delivery, type FollowedRecord } from './follower/consumers.ts';
