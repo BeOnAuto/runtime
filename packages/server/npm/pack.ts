@@ -7,13 +7,21 @@ import { fileURLToPath } from 'node:url';
 import { Schema } from 'effect';
 
 import { bareSpecifiersIn } from './imported-packages.ts';
+import { aliasedNamesOf, readmeWithAlias, subpathsOf, type PackedPackage } from './package-subpaths.ts';
+import { importedSubpaths } from './subpath-check.ts';
 
 const repository = fileURLToPath(new URL('../../../', import.meta.url));
 const distribution = join(repository, 'dist');
 const output = join(distribution, 'npm');
 const workspaceGroups: readonly string[] = ['packages', 'capabilities'];
 const developmentSources = join(repository, 'packages', 'server', 'src', 'development');
-const testHelperImports: readonly string[] = ['vitest'];
+const testHelperImports: readonly string[] = [
+  '@modelcontextprotocol/sdk',
+  'ajv',
+  'ajv-formats',
+  'typescript',
+  'vitest',
+];
 
 const Names = Schema.Record(Schema.String, Schema.String);
 
@@ -89,24 +97,40 @@ function closureOf(names: readonly string[], reached: ReadonlySet<string>): Read
   return closureOf(following, new Set([...reached, ...reachedNow]));
 }
 
-function isShipped(source: string): boolean {
+function isTestingFolder(name: string): boolean {
+  return name === 'testing' || name.endsWith('-testing');
+}
+
+function offersTesting({ manifest }: WorkspacePackage): boolean {
+  return Object.hasOwn(manifest.exports ?? {}, './testing');
+}
+
+function isShipped(shipped: WorkspacePackage, source: string): boolean {
   const name = basename(source);
   return (
-    !name.endsWith('.test.ts') && name !== 'testing' && !name.endsWith('-testing') && source !== developmentSources
+    !name.endsWith('.test.ts') && source !== developmentSources && (offersTesting(shipped) || !isTestingFolder(name))
   );
 }
 
-function shippedExports({ directory, manifest }: WorkspacePackage): Readonly<Record<string, string>> {
-  return Object.fromEntries(
-    Object.entries(manifest.exports ?? {}).filter(([, target]: readonly [string, string]) =>
-      existsSync(join(output, directory, target)),
+function packedOf(shipped: WorkspacePackage): PackedPackage {
+  const { directory, manifest } = shipped;
+  return {
+    name: manifest.name,
+    directory,
+    exports: Object.fromEntries(
+      Object.entries(manifest.exports ?? {}).filter(([, target]: readonly [string, string]) =>
+        existsSync(join(output, directory, target)),
+      ),
     ),
-  );
+  };
+}
+
+function installedIn(directory: string, dependency: string): string {
+  return join(repository, directory, 'node_modules', dependency);
 }
 
 function installedVersion({ directory }: WorkspacePackage, dependency: string): string {
-  return installedOf(readFileSync(join(repository, directory, 'node_modules', dependency, 'package.json'), 'utf8'))
-    .version;
+  return installedOf(readFileSync(join(installedIn(directory, dependency), 'package.json'), 'utf8')).version;
 }
 
 function dependenciesOf(names: readonly string[]): Readonly<Record<string, string>> {
@@ -128,6 +152,29 @@ function dependenciesOf(names: readonly string[]): Readonly<Record<string, strin
     [...chosen].toSorted(([first]: readonly [string, string], [second]: readonly [string, string]) =>
       first.localeCompare(second),
     ),
+  );
+}
+
+function installedDependencies(packages: readonly WorkspacePackage[]): ReadonlyMap<string, string> {
+  return new Map(
+    packages.flatMap((shipped) =>
+      dependencyEntries(shipped)
+        .filter(([, specification]: readonly [string, string]) => !isWorkspace(specification))
+        .map(([dependency]: readonly [string, string]): [string, string] => [
+          dependency,
+          installedIn(shipped.directory, dependency),
+        ]),
+    ),
+  );
+}
+
+function installedTestHelpers(packages: readonly WorkspacePackage[]): ReadonlyMap<string, string> {
+  return new Map(
+    ['.', ...packages.map(({ directory }) => directory)]
+      .flatMap((directory) =>
+        testHelperImports.map((helper): [string, string] => [helper, installedIn(directory, helper)]),
+      )
+      .filter(([, installed]: readonly [string, string]) => existsSync(installed)),
   );
 }
 
@@ -156,7 +203,7 @@ mkdirSync(output, { recursive: true });
 for (const shipped of shippedPackages) {
   cpSync(join(repository, shipped.directory, 'src'), join(output, shipped.directory, 'src'), {
     recursive: true,
-    filter: isShipped,
+    filter: (source) => isShipped(shipped, source),
   });
 }
 
@@ -174,13 +221,20 @@ const extras = [
 for (const extra of extras) {
   cpSync(join(repository, extra), join(output, extra), { recursive: true });
 }
-cpSync(join(repository, 'packages', 'server', 'npm', 'README.md'), join(output, 'README.md'));
+const packed = shippedPackages.map((shipped) => packedOf(shipped));
+const aliasedNames = aliasedNamesOf(packed);
+const subpaths = subpathsOf(packed);
+writeFileSync(
+  join(output, 'README.md'),
+  readmeWithAlias(
+    readFileSync(join(repository, 'packages', 'server', 'npm', 'README.md'), 'utf8'),
+    root.name,
+    aliasedNames,
+  ),
+);
 
-for (const shipped of shippedPackages) {
-  writeFileSync(
-    join(output, shipped.directory, 'package.json'),
-    json({ name: shipped.manifest.name, type: 'module', exports: shippedExports(shipped) }),
-  );
+for (const { name, directory, exports } of packed) {
+  writeFileSync(join(output, directory, 'package.json'), json({ name, type: 'module', exports }));
 }
 
 const dependencies = dependenciesOf(shippedNames);
@@ -205,6 +259,7 @@ writeFileSync(
     repository: { type: 'git', url: 'git+https://github.com/BeOnAuto/runtime.git' },
     license: root.license,
     type: 'module',
+    exports: subpaths,
     bin: { 'auto-runtime': 'bin/auto-runtime.js' },
     engines: root.engines,
     os: ['darwin', 'linux'],
@@ -230,7 +285,15 @@ writeFileSync(
   { mode: 0o755 },
 );
 
+const tarball = join(distribution, `${root.name.slice(1).replace('/', '-')}-${root.version ?? ''}.tgz`);
 execFileSync('npm', ['pack', '--pack-destination', distribution], { cwd: output, stdio: 'inherit' });
+importedSubpaths({
+  packageName: root.name,
+  tarball,
+  modules: new Map([...installedDependencies(shippedPackages), ...installedTestHelpers(shippedPackages)]),
+  aliasedNames,
+  subpaths: Object.keys(subpaths),
+});
 process.stdout.write(
-  `Packed ${shippedNames.length} workspace packages and ${Object.keys(dependencies).length} dependencies into ${join(distribution, `${root.name.slice(1).replace('/', '-')}-${root.version ?? ''}.tgz`)}\n`,
+  `Packed ${shippedNames.length} workspace packages and ${Object.keys(dependencies).length} dependencies into ${tarball}, and imported its ${Object.keys(subpaths).length} subpaths\n`,
 );

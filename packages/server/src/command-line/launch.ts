@@ -91,7 +91,7 @@ function workspacePackages(release: string): ReadonlyMap<string, string> {
   );
 }
 
-function linked(release: string, links: ReadonlyMap<string, string>): void {
+export function linked(release: string, links: ReadonlyMap<string, string>): void {
   for (const [name, target] of links) {
     const link = join(release, 'node_modules', name);
     mkdirSync(dirname(link), { recursive: true });

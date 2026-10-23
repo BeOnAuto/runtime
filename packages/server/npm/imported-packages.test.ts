@@ -38,6 +38,10 @@ describe('the packages a shipped source imports', () => {
       '];',
       "const said = 'import ';",
       "  export const indented = 'from ' + 'nowhere';",
+      'export const worker = workerOf([',
+      "  `import { serveJobs } from '${jobLoop}';`,",
+      "  `import { answerOf } from '${new URL('./answer.ts', import.meta.url).href}';`,",
+      ']);',
     ].join('\n');
 
     expect(bareSpecifiersIn(source)).toEqual([]);
