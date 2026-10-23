@@ -4,6 +4,7 @@ import { onTestFinished } from 'vitest';
 
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { startLoop } from '../loop/host-loop.ts';
+import { hostWakeUp, type WakeUpParts } from '../loop/host-wake-up.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { sqlTimers } from '../timers/sql-timers.ts';
 import type { FakeDueWork } from './fake-due-work.ts';
@@ -41,7 +42,7 @@ export async function dueLooping(
     Effect.sync(() => {
       troubles.push(what);
     });
-  const loop = startLoop({
+  const parts: WakeUpParts = {
     clock,
     timers,
     dueWork: [rows.work('host')],
@@ -54,7 +55,8 @@ export async function dueLooping(
     resume: () => Effect.succeed(0),
     trouble,
     sweepEveryMs,
-  });
+  };
+  const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;
   onTestFinished(() => loop.stop());
   return {

@@ -7,6 +7,7 @@ import { until } from '../testing/until.ts';
 import { watchedSystemClock, type WatchedClock } from '../testing/watched-clock.ts';
 import { sqlTimers, type DueTimer, type TimerTable } from '../timers/sql-timers.ts';
 import { startLoop, type HostLoop } from './host-loop.ts';
+import { hostWakeUp, type WakeUpParts } from './host-wake-up.ts';
 
 const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -68,7 +69,7 @@ async function looping(options: LoopingOptions): Promise<Looping> {
   const timers = sqlTimers(database, (dueAt) => {
     alarm.armed(dueAt);
   });
-  const loop = startLoop({
+  const parts: WakeUpParts = {
     clock,
     dueWork: [],
     timers: failingReadsOf(timers, readsFailing),
@@ -88,7 +89,8 @@ async function looping(options: LoopingOptions): Promise<Looping> {
     resume: () => Effect.succeed(0),
     trouble: (what) => Effect.sync(() => troubles.push(what)),
     sweepEveryMs,
-  });
+  };
+  const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;
   onTestFinished(() => loop.stop());
   return {
