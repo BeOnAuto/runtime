@@ -1,3 +1,4 @@
+import type { RecordedContent } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import type { ServerMessage } from '../access/caller-context.ts';
@@ -18,6 +19,7 @@ export const fakeApiKey = 'graph-api-key-4f1d9a7c2b';
 
 export interface FakeToolRun {
   readonly fake: FakeMcpServer;
+  readonly content: RecordedContent;
   readonly tools: RunTools;
   readonly journal: RecordingCallJournal;
   readonly messages: () => readonly ServerMessage[];
@@ -34,10 +36,11 @@ export async function openFakeToolRun(
   tools: readonly string[],
   timing?: Timing,
   options: FakeMcpOptions = {},
+  entry: Readonly<Record<string, unknown>> = {},
 ): Promise<FakeToolRun> {
   const fake = await serveFakeMcp({ ...options, bearer: fakeApiKey });
-  const { access, messages } = reportingAccess(
-    { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
+  const { access, messages, content } = reportingAccess(
+    { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry } },
     { environment: { GRAPH_API_KEY: fakeApiKey }, ...(timing === undefined ? {} : { timing }) },
   );
   const journal = recordingCallJournal();
@@ -47,6 +50,7 @@ export async function openFakeToolRun(
   let calls = 0;
   return {
     fake,
+    content,
     tools: opened,
     journal,
     messages,

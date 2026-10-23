@@ -29,13 +29,9 @@ export const CallAnsweredSchema = Schema.Struct({
   server_request_id: Schema.optionalKey(Schema.NullOr(Schema.String)),
 });
 
-export const CallFailedBecauseSchema = Schema.Literals([
-  'arguments_refused',
-  'server_failure',
-  'timed_out',
-  'cancelled',
-  'too_large',
-]);
+const sentCallFailures = ['arguments_refused', 'server_failure', 'timed_out', 'cancelled', 'too_large'] as const;
+
+export const CallFailedBecauseSchema = Schema.Literals([...sentCallFailures, 'interrupted']);
 
 export const CallFailedSchema = Schema.Struct({
   because: CallFailedBecauseSchema,
@@ -43,6 +39,11 @@ export const CallFailedSchema = Schema.Struct({
   duration_ms: Schema.Int,
   jsonrpc_id: JsonRpcIdSchema,
   server_request_id: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  rate_limited: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description: 'The server asked the run to slow down for longer than a call waits',
+    }),
+  ),
 });
 
 export type CallSent = typeof CallSentSchema.Type;
@@ -54,6 +55,8 @@ export type CallAnswered = typeof CallAnsweredSchema.Type;
 export type CallFailed = typeof CallFailedSchema.Type;
 
 export type CallFailedBecause = typeof CallFailedBecauseSchema.Type;
+
+export type SentCallFailedBecause = (typeof sentCallFailures)[number];
 
 export type CallEnded =
   | { readonly type: 'tool_call_answered'; readonly data: CallAnswered }

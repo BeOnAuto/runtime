@@ -2,6 +2,7 @@ import type { AppRuntime } from '@on.auto/api';
 import { registeredClientSecrets } from '@on.auto/connections';
 import type { DispatcherServices } from '@on.auto/operations';
 import {
+  defaultTiming,
   describedToolServers,
   makeToolAccess,
   type ConnectionSource,
@@ -73,11 +74,13 @@ export function toolAccessOf(
   composed: Effect.Effect<ToolAccess, ToolServerDocumentRefused>,
   { toolServers }: Pick<Settings, 'toolServers'>,
   { takesConnections }: Pick<ConnectionSource, 'takesConnections'>,
+  { callMs }: Timing = defaultTiming,
 ): ToolAccess {
   const tools = Effect.orDie(composed);
   return {
     configured: toolServers.servers.length > 0 || takesConnections,
     takesConnections,
+    callMs,
     callOnce: (call, runCall) => Effect.flatMap(tools, (access) => access.callOnce(call, runCall)),
     preparedCall: (call) => Effect.flatMap(tools, (access) => access.preparedCall(call)),
     open: (context, references) => Effect.flatMap(tools, (access) => access.open(context, references)),

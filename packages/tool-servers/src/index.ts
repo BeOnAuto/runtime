@@ -13,13 +13,16 @@ export {
   type CallEnded,
   type CallFailed,
   type CallFailedBecause,
+  type SentCallFailedBecause,
   type CallSent,
   type CallStarted,
 } from './calls/call-facts.ts';
 export type { CallJournal, KeepContent } from './calls/recorded-calls.ts';
 export { callFieldsShown, keptAnswerOf, keptArgumentsOf } from './calls/shown-calls.ts';
 export type { CallSignals, ToolCallRequest } from './calls/run-parts.ts';
-export type { OfferedTool, RunTools, ToolsEnding } from './calls/run-tools.ts';
+export type { RunTools, ToolsEnding } from './calls/run-tools.ts';
+export type { OfferedTool } from './calls/offered-tools.ts';
+export type { SentReply, ToolSending } from './calls/tool-caller.ts';
 export type { AnsweredFields, StartedFields } from './calls/recorded-calls.ts';
 export type { AnsweredOnce, CallAnswer, CalledOnce, UnopenedOnce } from './one-call/called-once.ts';
 export type { OneCall, RunCall } from './one-call/one-call.ts';

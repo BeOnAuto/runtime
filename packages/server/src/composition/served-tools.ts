@@ -1,6 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { ConnectionSource } from '@on.auto/tool-servers';
+import type { ConnectionSource, Timing } from '@on.auto/tool-servers';
 
 import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -12,6 +12,7 @@ import { toolOperationsOf, type ProvidersOffered, type ServedToolOperations } fr
 export interface ToolUsersWiring extends ProvidersOffered {
   readonly registry: CapabilityRegistry;
   readonly connections: Pick<ConnectionSource, 'takesConnections'>;
+  readonly toolTiming?: Timing;
 }
 
 export interface ServedToolUsers {
@@ -23,9 +24,9 @@ export interface ServedToolUsers {
 export async function toolUsersServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  { registry, connections, offering }: ToolUsersWiring,
+  { registry, connections, offering, toolTiming }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
-  const tools = toolAccessOf(registry.tools, settings, connections);
+  const tools = toolAccessOf(registry.tools, settings, connections, toolTiming);
   return {
     reasoning: await reasoningServedBy(runtime, settings, registry.models, tools),
     interaction: interactionServedBy(runtime, settings, tools),

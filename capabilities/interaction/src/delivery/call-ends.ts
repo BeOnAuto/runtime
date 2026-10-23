@@ -1,4 +1,4 @@
-import type { AnsweredOnce, CallAnswer, CallAnswered, CallFailed, CallFailedBecause } from '@on.auto/tool-servers';
+import type { AnsweredOnce, CallAnswer, CallAnswered, CallFailed, SentCallFailedBecause } from '@on.auto/tool-servers';
 
 import type { DeliveryFailedBecause } from '../facts/run-facts.ts';
 
@@ -8,10 +8,10 @@ const becauseOf = {
   timed_out: 'timed_out',
   too_large: 'too_large',
   cancelled: 'lost',
-} as const satisfies Readonly<Record<CallFailedBecause, DeliveryFailedBecause>>;
+} as const satisfies Readonly<Record<SentCallFailedBecause, DeliveryFailedBecause>>;
 
 interface CallFailure {
-  readonly because: 'tool_error' | (typeof becauseOf)[CallFailedBecause];
+  readonly because: 'tool_error' | (typeof becauseOf)[SentCallFailedBecause];
   readonly retryAfterMs: number | null;
   readonly detail: string;
   readonly fields: CallAnswered | CallFailed;

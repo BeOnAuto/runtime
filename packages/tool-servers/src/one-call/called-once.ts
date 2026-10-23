@@ -4,7 +4,7 @@ import type { NotOfferedBecause, ToolNotOffered } from '../access/tool-not-offer
 import type { ToolServerFailed, ServerFailedBecause } from '../access/tool-server-failed.ts';
 import { cutToFailureBound } from '../bounds/call-bounds.ts';
 import { resultText, type AnswerBlock, type ToolAnnotations } from '../bounds/tool-results.ts';
-import type { CallAnswered, CallFailed, CallFailedBecause } from '../calls/call-facts.ts';
+import type { CallAnswered, CallFailed, SentCallFailedBecause } from '../calls/call-facts.ts';
 import type { SentCall } from '../calls/tool-caller.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import { refusalOf, type Unusable } from '../org-servers/server-refusals.ts';
@@ -29,7 +29,7 @@ export type AnsweredOnce =
       readonly answered: CallAnswered;
     })
   | (AnsweredCall & { readonly outcome: 'tool_error'; readonly answered: CallAnswered })
-  | (AnsweredCall & { readonly outcome: CallFailedBecause; readonly failed: CallFailed });
+  | (AnsweredCall & { readonly outcome: SentCallFailedBecause; readonly failed: CallFailed });
 
 interface Unopened<Refused extends string, Because extends string> {
   readonly kind: 'unopened';

@@ -1,7 +1,16 @@
 import { admission } from '../bounds/call-bounds.ts';
 import { answerOf, isReadOnly } from '../bounds/tool-results.ts';
 import type { CallAnswered, CallEnded, CallFailed, CallStarted } from './call-facts.ts';
-import { callReplyOf, failureCounted, replyOf, unsentReply, type CallReply, type Replying } from './call-replies.ts';
+import {
+  callReplyOf,
+  failureCounted,
+  replyOf,
+  reportedFailure,
+  unsentReply,
+  type CallReply,
+  type Replying,
+  type ToolReply,
+} from './call-replies.ts';
 import {
   answeredFields,
   failedData,
@@ -60,12 +69,13 @@ async function forwardedOnce(forwarding: Forwarding, recording: Recording): Prom
   return { done: scrubbedOf(done, recording), durationMs: Math.round(performance.now() - began) };
 }
 
+type StartingCall = Pick<Forwarding, 'slot' | 'tool' | 'input'>;
+
 async function startOf(
-  forwarding: Forwarding,
+  { slot, tool, input }: StartingCall,
   recording: Recording,
-  { callId, readOnly }: CallJournalling,
+  { callId, readOnly }: Pick<CallJournalling, 'callId' | 'readOnly'>,
 ): Promise<CallStarted> {
-  const { slot, tool, input } = forwarding;
   const fields = await startedFields({ server: slot.settings.name, tool, input }, recording);
   return { call_id: callId, ...fields, ...(readOnly ? { read_only: true } : {}) };
 }
@@ -126,6 +136,39 @@ function replied(state: RunState, sent: SentCall, replying: Replying, room: numb
   return { ...reply, scrubbedResult: sent.done.scrubbed };
 }
 
+export interface SentReply {
+  readonly ended: CallEnded;
+  readonly reply: ToolReply;
+}
+
+export interface ToolSending {
+  readonly start: (request: ToolCallRequest) => Promise<CallStarted>;
+  readonly send: (request: ToolCallRequest, signal: Readonly<AbortSignal>) => Promise<SentReply>;
+}
+
+function replyingOf({ context, secrets, report }: RunToolsParts, { reference }: NamedOffer): Replying {
+  return { server: reference.server, meta: context.meta, scrub: secrets.scrub, report };
+}
+
+export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending {
+  const { slot } = offered;
+  const tool = offered.tool.name;
+  const recording = recordingOf(slot.settings, parts.secrets, parts.keep);
+  const replying = replyingOf(parts, offered);
+  const readOnly = isReadOnly(offered.tool.annotations);
+  return {
+    start: ({ callId, input }) => startOf({ slot, tool, input }, recording, { callId, readOnly }),
+    send: async ({ input, room }, signal) => {
+      const forwarding = { slot, tool, input, meta: parts.context.meta, signal, ...parts.timing };
+      const once = await forwardedOnce(forwarding, recording);
+      const { text, isError, shownBytes } = replyOf(once.done, replying, room);
+      const settled = await settledOf(once, recording, shownBytes);
+      reportedFailure(once.done, replying);
+      return { ended: endedOf(settled), reply: { text, isError } };
+    },
+  };
+}
+
 export function caller(
   parts: RunToolsParts,
   state: RunState,
@@ -134,12 +177,7 @@ export function caller(
   const { slot } = offered;
   const { context, timing } = parts;
   const recording = recordingOf(slot.settings, parts.secrets, parts.keep);
-  const replying = {
-    server: offered.reference.server,
-    meta: context.meta,
-    scrub: parts.secrets.scrub,
-    report: parts.report,
-  };
+  const replying = replyingOf(parts, offered);
   return async ({ callId, input, room }, signals) => {
     if (signals.signal.aborted) {
       return notSent;

@@ -1,11 +1,12 @@
-import type { PlaybookAddress } from '@on.auto/operations';
+import { sha256Of, type PlaybookAddress } from '@on.auto/operations';
 import type { Effect } from 'effect';
 
 import { cutToFailureBound } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { bytesOf } from '../bounds/text-bytes.ts';
+import type { FailureKind } from '../clients/server-failures.ts';
 import type { ServerSettings } from '../settings/server-settings.ts';
-import type { CallAnswered, CallEnded, CallFailed, CallFailedBecause, CallStarted } from './call-facts.ts';
+import type { CallAnswered, CallEnded, CallFailed, CallStarted, SentCallFailedBecause } from './call-facts.ts';
 
 export type StartedFields = Omit<CallStarted, 'call_id' | 'read_only'>;
 
@@ -59,6 +60,10 @@ export function scrubbedJsonOf(json: string, { secrets }: Pick<Recording, 'secre
   return JSON.stringify(secrets.scrubValue(parsed));
 }
 
+export function argumentsDigestOf(input: unknown, secrets: Pick<Secrets, 'scrub' | 'scrubValue'>): string {
+  return sha256Of(scrubbedJsonOf(JSON.stringify(input), { secrets }));
+}
+
 async function keptDigestOf(kept: string, recording: Recording): Promise<string | undefined> {
   if (!recording.content) {
     return undefined;
@@ -94,10 +99,11 @@ export async function answeredFields(answer: CallAnswer, recording: Recording): 
 }
 
 export interface CallFailure {
-  readonly because: CallFailedBecause;
+  readonly because: SentCallFailedBecause;
   readonly message: string;
   readonly jsonrpcId: string | number | null;
   readonly serverRequestId: string | null;
+  readonly failure?: FailureKind | null;
 }
 
 export function failedData(failure: CallFailure, durationMs: number, recording: Recording): CallFailed {
@@ -108,5 +114,6 @@ export function failedData(failure: CallFailure, durationMs: number, recording: 
     duration_ms: durationMs,
     jsonrpc_id: failure.jsonrpcId,
     ...requestIdOf(failure, recording),
+    ...(failure.failure === 'rate_limited' ? { rate_limited: true } : {}),
   };
 }

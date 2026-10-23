@@ -1,3 +1,4 @@
+import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
 import { cutWhereValid } from './structural-cut.ts';
 import { bytesOf, canonicalJson, cutAtCodePoint } from './text-bytes.ts';
 
@@ -113,6 +114,20 @@ export function shownResult(text: string, room?: number): ShownResult {
 
 export function shownWithin(text: string, shownBytes: number): string {
   return cutWhereValid(text, shownBytes);
+}
+
+export function shownAgain(text: string, shownBytes: number): string {
+  return `${shownWithin(text, shownBytes)}${cutNote(shownBytes, bytesOf(text))}`;
+}
+
+const failuresOfTheRun: ReadonlySet<string> = new Set(['server_failure', 'timed_out']);
+
+export function countsAgainstTheRun(because: string): boolean {
+  return failuresOfTheRun.has(because);
+}
+
+export function failingBecause(rateLimited: boolean): CallsEndedBecause {
+  return rateLimited ? 'rate_limited' : 'failing';
 }
 
 export function failedOnce(tally: CallTally): CallTally {

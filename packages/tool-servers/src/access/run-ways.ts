@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 
+import { defaultTiming, type Timing } from '../bounds/call-bounds.ts';
 import type { RunTools } from '../calls/run-tools.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { OrgAccess } from '../org-servers/org-access.ts';
@@ -15,11 +16,13 @@ export interface RunWays extends CallWays {
     references: readonly ToolReference[],
   ) => Effect.Effect<RunTools, ToolsNotOpened>;
   readonly named: NamingCheck;
+  readonly callMs: number;
 }
 
-export function runWaysOf(access: OrgAccess, recording: RecordingParts): RunWays {
+export function runWaysOf(access: OrgAccess, recording: RecordingParts, timing: Timing = defaultTiming): RunWays {
   return {
     ...callWaysOf(access, recording),
+    callMs: timing.callMs,
     open: (context, references) =>
       Effect.gen(function* () {
         const servers = yield* access.serversOf(context.org);
