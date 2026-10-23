@@ -66,6 +66,14 @@ npx @on.auto/runtime --help
 
 The same release is the image `docker.on.auto/onauto/runtime`, from Docker Hub. See [Run with Docker](https://on.auto/docs/self-host/docker).
 
+## Compose it in your own program
+
+The package carries each of the runtime's packages as a subpath, so a program can compose the core itself rather than run the server. `@on.auto/runtime/ledger` is the ledger, `@on.auto/runtime/ledger/sqlite3` one of the subpaths the ledger names, and `@on.auto/runtime/ledger/testing` its testing entry. A testing entry is for your tests as it is for the runtime's: `recordedContentBehaviour` of `@on.auto/runtime/operations/testing`, the behaviour suite of the content port, runs against a store of your own. The test tools a testing entry imports are your tests' to provide.
+
+The subpaths are the `.ts` sources the server runs, and they import one another by the packages' own names, such as `@on.auto/operations`. Where your bundler must resolve those names, alias each of them, with its subpaths, to the same subpath of `@on.auto/runtime`:
+
+<!-- npm/pack.ts writes the alias here -->
+
 ## License
 
 Auto Runtime is source-available under the [Elastic License 2.0](https://github.com/BeOnAuto/runtime/blob/main/LICENSE). [LICENSING.md](https://github.com/BeOnAuto/runtime/blob/main/LICENSING.md) explains the terms.

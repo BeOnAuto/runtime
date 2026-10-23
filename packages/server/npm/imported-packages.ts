@@ -1,5 +1,5 @@
 const statements: readonly RegExp[] = [
-  /^(?:import|export)\b[^;'"]*?\bfrom\s*'([^']*)'/gmu,
+  /^(?:import|export)\b[^;'"`]*?\bfrom\s*'([^']*)'/gmu,
   /^import\s*'([^']*)'/gmu,
   /\bimport\(\s*'([^']*)'/gu,
   /\bimport\.meta\.resolve\(\s*'([^']*)'/gu,
