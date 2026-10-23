@@ -10,10 +10,12 @@ export interface FunctionWiring extends ToolAccessWiring {
 export function functionWiringOf(
   programPoolOf: ProgramPoolOf = workerPool,
   toolTiming?: FunctionWiring['toolTiming'],
+  now?: FunctionWiring['now'],
 ): FunctionWiring {
   return {
     programPoolOf,
     projections: projectionWiring(),
     ...(toolTiming === undefined ? {} : { toolTiming }),
+    ...(now === undefined ? {} : { now }),
   };
 }

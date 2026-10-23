@@ -1,7 +1,9 @@
+import { makeAppRuntime } from '@on.auto/api';
+import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { Context, Effect, Exit, Layer, Scope } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { composedOnFirstUse } from './first-use.ts';
+import { composedOnFirstUse, scopeOfTheRuntime } from './first-use.ts';
 
 interface Composition {
   readonly number: number;
@@ -108,5 +110,31 @@ describe('a composition on first use that fails or ends', () => {
     await close();
 
     expect([before, counts.ended()]).toEqual([0, 1]);
+  });
+});
+
+describe('the scope of the runtime that holds the compositions', () => {
+  it('closes what it holds when the runtime is disposed, before the services the runtime built first', async () => {
+    const ended: string[] = [];
+    const endingAs = (name: string) =>
+      Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          ended.push(name);
+        }),
+      );
+    const services = Layer.mergeAll(
+      memoryLedger().layer,
+      memoryPlaybookRegistry([]),
+      recordingReporter().layer,
+      Layer.effectDiscard(endingAs('services')),
+    );
+    const { closedFirstOf, openedIn } = scopeOfTheRuntime();
+    const runtime = await makeAppRuntime(closedFirstOf(services));
+    await openedIn(runtime, endingAs('compositions'));
+
+    const beforeDisposal = [...ended];
+    await runtime.dispose();
+
+    expect({ beforeDisposal, ended }).toEqual({ beforeDisposal: [], ended: ['compositions', 'services'] });
   });
 });

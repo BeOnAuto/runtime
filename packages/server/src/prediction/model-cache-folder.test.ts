@@ -1,4 +1,5 @@
-import { chmodSync, mkdirSync, statSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -48,5 +49,20 @@ describe('the folder of the model files', () => {
     await child.exited;
 
     expect([made.isDirectory(), made.mode & 0o777]).toEqual([true, 0o700]);
+  });
+
+  it('is left unread at start, so the files in it are checked against their digests when a prediction first needs them', async () => {
+    const ledger = aLedger();
+    const entry = join(ledger.cacheDirectory, 'models', 'a'.repeat(64));
+    mkdirSync(entry, { recursive: true, mode: 0o700 });
+    chmodSync(ledger.cacheDirectory, 0o700);
+    writeFileSync(join(entry, 'model.onnx'), 'not the bytes of its digest');
+
+    const child = serverOn(ledger);
+    await child.port;
+    child.signal('SIGTERM');
+    await child.exited;
+
+    expect(existsSync(join(entry, 'model.onnx'))).toBe(true);
   });
 });

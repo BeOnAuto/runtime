@@ -30,12 +30,9 @@ export async function functionsServedBy(
     projections: wiring,
     shippedFiles,
     ...tools
-  }: FunctionWiring &
-    Pick<ToolUsersWiring, 'registry' | 'consent' | 'connections' | 'offering'> & {
-      readonly shippedFiles: ShippedFiles;
-    },
+  }: FunctionWiring & ToolUsersWiring & { readonly shippedFiles: ShippedFiles },
 ): Promise<ServedFunctions> {
-  const { reasoning, interaction, toolOperations, withToolsClosed } = await toolUsersServedBy(runtime, settings, tools);
+  const { reasoning, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
   const computation = await computationServedBy(settings.computation, programPoolOf, shippedFiles);
   const projections = await wiring.served(runtime, { recall: settings.recall, database }, computation.pool, [
     datasetsFolderOf(computation.pool),
@@ -66,6 +63,6 @@ export async function functionsServedBy(
       evaluations: computation.pool.evaluations,
       check: computation.check,
     },
-    closing: (served) => prediction.withProcessesClosed(computation.withPoolClosed(withToolsClosed(served))),
+    closing: (served) => prediction.withProcessesClosed(computation.withPoolClosed(served)),
   };
 }
