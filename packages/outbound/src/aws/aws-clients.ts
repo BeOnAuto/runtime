@@ -22,14 +22,6 @@ export interface DatabaseTokenRequest {
 
 export type DatabaseTokenSigner = () => Promise<string>;
 
-export const awsCredentialVariables: readonly string[] = [
-  'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY',
-  'AWS_SESSION_TOKEN',
-  'AWS_CONTAINER_AUTHORIZATION_TOKEN',
-  'AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE',
-];
-
 export function awsClientSettingsOf(proxy: ProxySettings): AwsClientSettings {
   if (!proxy.enabled) {
     return {};

@@ -1,12 +1,10 @@
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { createAmazonBedrockAnthropic } from '@ai-sdk/amazon-bedrock/anthropic';
 import { createAzure } from '@ai-sdk/azure';
-import { createGoogleVertex } from '@ai-sdk/google-vertex';
-import { createGoogleVertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
 import { Redacted } from 'effect';
 
-import type { AzureSettings, BedrockSettings, VertexSettings } from '../settings/provider-settings.ts';
-import { refreshingGoogleClient, type AccessTokenSource, type AwsCredentialSource } from './credential-sources.ts';
+import type { AzureSettings, BedrockSettings } from '../settings/provider-settings.ts';
+import type { AccessTokenSource, AwsCredentialSource } from './credential-sources.ts';
 import type { Fetch, ModelFactory } from './sdk-model.ts';
 
 function bedrockOptions(settings: BedrockSettings, credentials: AwsCredentialSource, fetch: Fetch) {
@@ -43,27 +41,6 @@ export function azureModels(settings: AzureSettings, credential: AzureCredential
     ...('api_key' in credential
       ? { apiKey: Redacted.value(credential.api_key) }
       : { tokenProvider: credential.tokens }),
-    fetch,
-  });
-  return (modelId) => provider.languageModel(modelId);
-}
-
-export function vertexModels(settings: VertexSettings, tokens: AccessTokenSource, fetch: Fetch): ModelFactory {
-  const provider = createGoogleVertex({
-    project: settings.project,
-    location: settings.location,
-    apiKey: '',
-    googleAuthOptions: { authClient: refreshingGoogleClient(tokens) },
-    fetch,
-  });
-  return (modelId) => provider.languageModel(modelId);
-}
-
-export function vertexAnthropicModels(settings: VertexSettings, tokens: AccessTokenSource, fetch: Fetch): ModelFactory {
-  const provider = createGoogleVertexAnthropic({
-    project: settings.project,
-    location: settings.location,
-    generateAuthToken: tokens,
     fetch,
   });
   return (modelId) => provider.languageModel(modelId);

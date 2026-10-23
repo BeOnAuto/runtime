@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./location": "./src/location/content-location.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

@@ -5,4 +5,3 @@ export {
   type StorageWaits,
 } from './client/storage-client.ts';
 export { objectContentOn, objectStoreReached, ObjectStoreUnreachable } from './content/object-content.ts';
-export { contentLocationOf, type ContentLocation } from './location/content-location.ts';

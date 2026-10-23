@@ -1,12 +1,4 @@
-import { isDateTime, isJsonPointer, isUri, isUriTemplate } from '@hyperjump/json-schema-formats';
-import {
-  registerSchema,
-  setShouldValidateFormat,
-  validate,
-  type SchemaObject,
-  type Validator,
-} from '@hyperjump/json-schema/draft-2020-12';
-import { addFormat } from '@hyperjump/json-schema/experimental';
+import type { SchemaObject, Validator } from '@hyperjump/json-schema/draft-2020-12';
 import {
   allTaskEntries,
   entriesOf,
@@ -18,8 +10,9 @@ import {
   type JsonEntry,
   type JsonObject,
 } from '@on.auto/workflow-engine';
-import { workflowSchema } from '@openworkflowspec/sdk';
 import { Schema } from 'effect';
+
+import { schemaValidator, specificationSdk, type SchemaValidator } from './dsl-libraries.ts';
 
 export interface SchemaRefusal {
   readonly keyword: string;
@@ -55,14 +48,12 @@ interface Place {
   readonly location: string;
 }
 
-const taskDefinition = '#/$defs/task';
+interface Specification {
+  readonly id: string;
+  readonly schema: JsonObject;
+}
 
-const formatChecks: ReadonlyMap<string, (text: string) => boolean> = new Map([
-  ['date-time', isDateTime],
-  ['json-pointer', isJsonPointer],
-  ['uri', isUri],
-  ['uri-template', isUriTemplate],
-]);
+const taskDefinition = '#/$defs/task';
 
 const schemaKeywords: ReadonlySet<string> = new Set([
   'additionalItems',
@@ -114,11 +105,9 @@ function readMembers(members: JsonObject): JsonObject {
   );
 }
 
-const published = Schema.decodeUnknownSync(
+const publishedOf = Schema.decodeUnknownSync(
   Schema.StructWithRest(Schema.Struct({ $id: Schema.String }), [Schema.Record(Schema.String, Schema.Json)]),
-)(workflowSchema);
-
-const specification = readObject(published);
+);
 
 let compiling: Promise<Checks> | undefined;
 
@@ -136,24 +125,27 @@ export async function schemaChecksOf(document: JsonObject): Promise<readonly Sch
 }
 
 async function compiledChecks(): Promise<Checks> {
-  setShouldValidateFormat(true);
-  for (const [name, isFormat] of formatChecks) {
-    addFormat({
-      id: `https://json-schema.org/format/${name}`,
-      handler: (value: unknown) => typeof value !== 'string' || isFormat(value),
-    });
-  }
-  registerSchema(schemaObjectOf(specification));
-  const [document, task] = await Promise.all([checkAt('#'), checkAt(taskDefinition)]);
+  const [{ workflowSchema }, { registerSchema, validate }] = await Promise.all([specificationSdk(), schemaValidator()]);
+  const published = publishedOf(workflowSchema);
+  const specification: Specification = { id: published.$id, schema: readObject(published) };
+  registerSchema(schemaObjectOf(specification.schema));
+  const [document, task] = await Promise.all([
+    checkAt(validate, specification, '#'),
+    checkAt(validate, specification, taskDefinition),
+  ]);
   return { document, task };
 }
 
-async function checkAt(definition: string): Promise<Check> {
-  const root: Place = { at: '#', location: `${published.$id}${definition}` };
+async function checkAt(
+  validate: SchemaValidator['validate'],
+  specification: Specification,
+  definition: string,
+): Promise<Check> {
+  const root: Place = { at: '#', location: `${specification.id}${definition}` };
   const validator = await validate(root.location);
   return (instance) => {
     const output = validator(instanceOf(instance), 'DETAILED');
-    return output.valid ? [] : refusalsIn(output.errors, root, instance);
+    return output.valid ? [] : refusalsIn(output.errors, root, instance, specification.schema);
   };
 }
 
@@ -161,6 +153,7 @@ function refusalsIn(
   units: readonly RefusedUnit[] | undefined,
   parent: Place,
   instance: Json,
+  schema: JsonObject,
 ): readonly SchemaRefusal[] {
   return (units ?? []).flatMap((unit) => {
     const place = placeOf(unit.absoluteKeywordLocation, parent);
@@ -169,10 +162,10 @@ function refusalsIn(
       keyword: place.at.slice(place.at.lastIndexOf('/') + 1),
       at: place.at,
       pointer,
-      rule: valueAtPointer(specification, decodeURI(fragmentOf(place.location))),
+      rule: valueAtPointer(schema, decodeURI(fragmentOf(place.location))),
       value: valueAtPointer(instance, pointer),
     };
-    return [refusal].concat(refusalsIn(unit.errors, place, instance));
+    return [refusal].concat(refusalsIn(unit.errors, place, instance, schema));
   });
 }
 

@@ -1,4 +1,4 @@
-import { awsCredentialChain } from '@on.auto/outbound/aws';
+import { awsCredentialChainOf } from '@on.auto/outbound';
 import { sealedKeeper, type Custodians, type Keeper, type Keepers } from '@on.auto/secrets';
 import { Option } from 'effect';
 
@@ -9,9 +9,12 @@ async function keeperOf(given: KeeperGiven, custodians: Custodians | undefined, 
   if (given.kind === 'ledger') {
     return sealedKeeper(Option.getOrThrow(Option.fromNullishOr(custodians)));
   }
-  const { parameterStoreKeeper } = await making.loadAws();
+  const [{ parameterStoreKeeper }, credentials] = await Promise.all([
+    making.loadAws(),
+    awsCredentialChainOf(making.proxy),
+  ]);
   const { prefix, region } = given;
-  return parameterStoreKeeper({ prefix, region, proxy: making.proxy, credentials: awsCredentialChain(making.proxy) });
+  return parameterStoreKeeper({ prefix, region, proxy: making.proxy, credentials });
 }
 
 export async function keepersOf(
