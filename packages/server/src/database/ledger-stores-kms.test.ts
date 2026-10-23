@@ -1,4 +1,3 @@
-import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { sha256Of } from '@on.auto/operations';
 import { kmsCustodian, parameterStoreKeeper, type AwsWaits, type KmsCustodianOptions } from '@on.auto/secrets/aws';
 import { serveFakeKms, type FakeKeyState } from '@on.auto/secrets/testing';
@@ -9,6 +8,7 @@ import { secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
+import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const account = '111122223333';
 
@@ -67,7 +67,7 @@ async function openedWith(fileName: string, environment: Readonly<Record<string,
   const stores = await ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    { store: 'sqlite', file: fileName },
+    sqliteLedgerDatabase(fileName),
     () => Promise.resolve(adaptersWithin(waits)),
   );
   await stores.secrets.close();
@@ -79,7 +79,7 @@ async function storesOf(fileName: string, environment: Readonly<Record<string, s
   return ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    { store: 'sqlite', file: fileName },
+    sqliteLedgerDatabase(fileName),
     () => Promise.resolve(onTheFake),
   );
 }
@@ -189,7 +189,7 @@ async function valuesReadUnderTheKeyInHand(fileName: string, ids: readonly strin
 }
 
 async function keptRowsIn(fileName: string) {
-  const rows = await Effect.runPromise(sqliteSecretRows({ fileName }));
+  const rows = await Effect.runPromise(sqliteLedgerDatabase(fileName).secretRows);
   const held = await Effect.runPromise(rows.heldBy({ keptBy: 'ledger' }, 10));
   await rows.close();
   return held;

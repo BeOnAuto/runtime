@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 
-import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import {
   kmsCustodian,
   parameterStoreKeeper,
@@ -15,6 +14,7 @@ import { secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from './ledger-stores.ts';
+import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const account = '111122223333';
 
@@ -74,7 +74,7 @@ async function openedWith(
   const stores = await ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    { store: 'sqlite', file: fileName },
+    sqliteLedgerDatabase(fileName),
     () => Promise.resolve(adaptersOn(parameterStoreUrl, waits)),
   );
   onTestFinished(() => stores.secrets.close());
@@ -90,7 +90,7 @@ function secretsLineOf(lines: readonly string[]): string {
 }
 
 async function heldIn(fileName: string) {
-  const rows = await Effect.runPromise(sqliteSecretRows({ fileName }));
+  const rows = await Effect.runPromise(sqliteLedgerDatabase(fileName).secretRows);
   const held = await Effect.runPromise(
     Effect.all([rows.heldBy({ keptBy: 'aws-parameter-store' }, 10), rows.heldBy({ keptBy: 'ledger' }, 10)]),
   );

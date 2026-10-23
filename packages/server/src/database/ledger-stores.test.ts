@@ -1,14 +1,14 @@
-import { plainPoolsOn, type PoolBounds } from '@on.auto/ledger/postgresql';
+import { plainPoolsOn, type PostgreSQLPools } from '@on.auto/ledger/postgresql';
 import { unreachableDatabase } from '@on.auto/ledger/testing';
 import { sha256Of } from '@on.auto/operations';
 import { Effect, Logger, type Context } from 'effect';
-import type { Pool } from 'pg';
 import { describe, expect, it } from 'vitest';
 
 import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { messagesOf } from '../testing/processes/stderr-lines.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
+import { postgresqlLedgerDatabase } from './postgresql-ledger-database.ts';
 
 async function aContextLogging(): Promise<{ readonly context: Context.Context<never>; readonly lines: string[] }> {
   const lines: string[] = [];
@@ -26,17 +26,18 @@ describe('the stores of a ledger in PostgreSQL, as the server opens them, withou
     const bounds: number[] = [];
     const endedYet: (() => boolean)[] = [];
     const stopped: string[] = [];
-    const recordedPools = ({ max }: PoolBounds): Pool => {
+    const recordedPools: PostgreSQLPools = ({ max }) => {
       const pool = plainPoolsOn(url)({ max });
       bounds.push(max);
       endedYet.push(() => pool.ended);
       return pool;
     };
 
-    const stores = await ledgerStoresOpenedBy(context, readSettingsOf({ DATABASE_URL: url, SECRETS_KEY: secretsKey }), {
-      store: 'postgresql',
-      pools: recordedPools,
-    });
+    const stores = await ledgerStoresOpenedBy(
+      context,
+      readSettingsOf({ DATABASE_URL: url, SECRETS_KEY: secretsKey }),
+      postgresqlLedgerDatabase(recordedPools),
+    );
     const served = stores.withSecretsClosed({
       routes: [],
       stopWork: () => {

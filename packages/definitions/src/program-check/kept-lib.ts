@@ -1,6 +1,5 @@
-import type { CheckHandler, HandedFile } from '@on.auto/workflow-engine/job-loop';
+import type { HandedFile } from '@on.auto/workflow-engine/job-loop';
 
-import { checkerOf } from './checking.ts';
 import type { SandboxLib } from './sandbox-lib.ts';
 
 export const keptLibFiles: Readonly<Record<keyof SandboxLib, URL>> = {
@@ -14,8 +13,4 @@ export function sandboxLibFrom(handed: HandedFile): SandboxLib {
     script: decoder.decode(handed(keptLibFiles.script)),
     iterator: decoder.decode(handed(keptLibFiles.iterator)),
   };
-}
-
-export function handedChecks(handed: HandedFile): { readonly check: CheckHandler } {
-  return { check: checkerOf(sandboxLibFrom(handed)) };
 }

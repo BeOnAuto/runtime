@@ -1,5 +1,5 @@
 import { serveJobsWith } from '@on.auto/workflow-engine/job-loop';
 
-import { handedChecks } from './kept-lib.ts';
+import { handedChecks } from './handed-checks.ts';
 
 serveJobsWith(handedChecks);

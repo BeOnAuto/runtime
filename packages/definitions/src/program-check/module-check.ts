@@ -1,7 +1,7 @@
 import type { CheckIssue, CheckJob } from '@on.auto/workflow-engine/dsl';
 import ts from 'typescript6';
 
-import { assignmentIssues } from './assignment-bound.ts';
+import { assignmentIssues } from './assignment-count.ts';
 import { locatedIn, type Located } from './diagnostics.ts';
 import { contractOf, contractIssues, type Contract } from './entry-contracts.ts';
 import { exportedFunctions, moduleRuleIssues, type Place } from './module-rules.ts';

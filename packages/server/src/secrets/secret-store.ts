@@ -1,8 +1,4 @@
-import { postgresqlSecretRows } from '@on.auto/ledger/postgresql';
-import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
-import { localCustodian, type Custodian, type Custodians, type SecretRows } from '@on.auto/secrets';
-import type { DatabaseSettings } from '@on.auto/workflow-host';
-import type { Effect } from 'effect';
+import { localCustodian, type Custodian, type Custodians } from '@on.auto/secrets';
 
 import type { SecretsKeySource, SecretsSettings } from '../settings/secrets-settings.ts';
 import type { AwsMaking } from './aws-adapters.ts';
@@ -18,10 +14,4 @@ export async function custodiansOf({ current, previous }: SecretsSettings, makin
     current: await custodianOf(current, making),
     previous: previous === undefined ? undefined : await custodianOf(previous, making),
   };
-}
-
-export function secretRowsOn(database: DatabaseSettings): Effect.Effect<SecretRows> {
-  return database.store === 'postgresql'
-    ? postgresqlSecretRows({ pools: database.pools })
-    : sqliteSecretRows({ fileName: database.file });
 }

@@ -5,6 +5,7 @@ import { Effect, Logger } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { ledgerStoresOpenedBy } from '../database/ledger-stores.ts';
+import { sqliteLedgerDatabase } from '../database/sqlite-ledger-database.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
@@ -27,10 +28,11 @@ async function openedAndClosed(environment: Readonly<Record<string, string>>): P
   const { fileName, remove } = temporaryLedger();
   onTestFinished(remove);
   const context = await Effect.runPromise(Effect.context().pipe(Effect.provide(Logger.layer([]))));
-  const stores = await ledgerStoresOpenedBy(context, readSettingsOf({ LEDGER_FILE: fileName, ...environment }), {
-    store: 'sqlite',
-    file: fileName,
-  });
+  const stores = await ledgerStoresOpenedBy(
+    context,
+    readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
+    sqliteLedgerDatabase(fileName),
+  );
   await stores.secrets.close();
 }
 

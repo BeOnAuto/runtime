@@ -1,19 +1,34 @@
-import { LedgerLayoutRefused, type AppendObserver } from '@on.auto/ledger';
-import { Ledger } from '@on.auto/operations';
+import { LedgerLayoutRefused, type AppendObserver, type AppendSignal } from '@on.auto/ledger';
+import { Ledger, type ContentStore, type KeyedProjection, type RunOutcomeMapping } from '@on.auto/operations';
+import type { SecretRows } from '@on.auto/secrets';
 import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Cause, Effect, Layer } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';
-import { databasePoolsOf } from './database-pools.ts';
 import { ledgerOfAnotherVersion } from './ledger-of-another-version.ts';
 
-export function ledgerDatabaseOf(
+interface KeptByTheLedger {
+  readonly runOutcomes?: RunOutcomeMapping;
+  readonly projections?: readonly KeyedProjection[];
+  readonly appends?: AppendSignal;
+  readonly content?: ContentStore;
+}
+
+export type LedgerDatabase = DatabaseSettings & {
+  readonly ledgerLayer: (kept: KeptByTheLedger) => Layer.Layer<Ledger>;
+  readonly secretRows: Effect.Effect<SecretRows>;
+};
+
+export async function ledgerDatabaseOf(
   { ledger, proxy }: Pick<Settings, 'ledger' | 'proxy'>,
   observer?: AppendObserver,
-): DatabaseSettings {
-  return ledger.store === 'sqlite'
-    ? { store: 'sqlite', file: ledger.file, observer }
-    : { store: 'postgresql', pools: databasePoolsOf(ledger, proxy), observer };
+): Promise<LedgerDatabase> {
+  if (ledger.store === 'sqlite') {
+    const { sqliteLedgerDatabase } = await import('./sqlite-ledger-database.ts');
+    return sqliteLedgerDatabase(ledger.file, observer);
+  }
+  const { postgresqlLedgerDatabaseOf } = await import('./postgresql-ledger-database.ts');
+  return postgresqlLedgerDatabaseOf(ledger, proxy, observer);
 }
 
 export function withARefusedLayoutExplained(

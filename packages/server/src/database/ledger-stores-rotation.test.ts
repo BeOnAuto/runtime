@@ -6,6 +6,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
+import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const [previousKey, currentKey] = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
 
@@ -37,10 +38,11 @@ describe('the stores of a ledger whose secrets the previous key cannot unwrap', 
       SECRETS_KEY_PREVIOUS: previousKey.toString('base64'),
     });
 
-    const opened = ledgerStoresOpenedBy(await Effect.runPromise(Effect.context()), settings, {
-      store: 'sqlite',
-      file: fileName,
-    });
+    const opened = ledgerStoresOpenedBy(
+      await Effect.runPromise(Effect.context()),
+      settings,
+      sqliteLedgerDatabase(fileName),
+    );
 
     await expect(opened).rejects.toThrow(
       `The secrets settings are invalid. SECRETS_KEY_PREVIOUS: The secrets its key sealed could not be sealed again under the current key: The custodian of the key ${sha256Of(previousKey).slice(0, 16)} refused to unwrap a data key: its wrapped key does not open under this key`,

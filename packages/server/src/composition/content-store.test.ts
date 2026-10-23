@@ -33,7 +33,7 @@ async function aStoreAnswering(status: number): Promise<string> {
   return `127.0.0.1:${String(decodeAddress(server.address()).port)}`;
 }
 
-function ledgerOn(host: string): Promise<Ledger['Service']> {
+async function ledgerOn(host: string): Promise<Ledger['Service']> {
   vi.stubEnv('AWS_ACCESS_KEY_ID', 'an-access-key');
   vi.stubEnv('AWS_SECRET_ACCESS_KEY', secret);
   onTestFinished(() => {
@@ -45,7 +45,7 @@ function ledgerOn(host: string): Promise<Ledger['Service']> {
     AWS_ENDPOINT_URL: `http://${host}`,
     AWS_REGION: 'us-east-1',
   });
-  const runtime = ManagedRuntime.make(ledgerLayerFor(settings, ledgerDatabaseOf(settings)));
+  const runtime = ManagedRuntime.make(ledgerLayerFor(settings, await ledgerDatabaseOf(settings)));
   onTestFinished(() => runtime.dispose());
   return runtime.runPromise(Ledger);
 }
@@ -86,7 +86,7 @@ describe('the store the content of a playbook is kept in', () => {
   it('keeps what the ledger is given to keep, and reads it back, in the store it is composed with', async () => {
     const content = memoryRecordedContent();
     const runtime = ManagedRuntime.make(
-      ledgerLayerOf({ store: 'sqlite', file: ':memory:' }, undefined, {
+      ledgerLayerOf(await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: ':memory:' })), undefined, {
         content,
         sweepContent: () => Promise.resolve(),
       }),

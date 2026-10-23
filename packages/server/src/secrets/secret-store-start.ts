@@ -7,13 +7,12 @@ import {
   type Keepers,
   type SecretStore,
 } from '@on.auto/secrets';
-import type { DatabaseSettings } from '@on.auto/workflow-host';
 import { Effect, Option } from 'effect';
 
+import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
 import { currentKeeper, type KeeperGiven, type KeeperSettings } from '../settings/keeper-settings.ts';
 import type { SecretsSettings } from '../settings/secrets-settings.ts';
-import { secretRowsOn } from './secret-store.ts';
 import { logSecretsInParameterStore, logSecretStore } from './secrets-logging.ts';
 
 export interface SecretsMade {
@@ -110,14 +109,14 @@ function startLogged(made: SecretsMade, given: SecretsGiven, { moved, resealed }
 }
 
 export function secretStoreStarted(
-  database: DatabaseSettings,
+  database: LedgerDatabase,
   made: SecretsMade,
   given: SecretsGiven,
 ): Effect.Effect<SecretStore, InvalidSettingsError> {
   return Effect.gen(function* () {
     yield* custodianProbedAtStart(made.custodians, given.secrets);
     yield* keeperProbedAtStart(made.keepers.current, given.keepers.current);
-    const store = secretStoreOn(yield* secretRowsOn(database), made.keepers, made.custodians);
+    const store = secretStoreOn(yield* database.secretRows, made.keepers, made.custodians);
     const moved = yield* movedUnder(store, given.keepers);
     const resealed = yield* rotatedUnder(store, given.secrets);
     yield* startLogged(made, given, { moved, resealed });

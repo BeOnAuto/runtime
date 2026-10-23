@@ -50,7 +50,7 @@ export async function keptText(
   sha256: string,
 ): Promise<string | undefined> {
   const settings = readSettingsOf(environment);
-  const runtime = ManagedRuntime.make(ledgerLayerFor(settings, ledgerDatabaseOf(settings)));
+  const runtime = ManagedRuntime.make(ledgerLayerFor(settings, await ledgerDatabaseOf(settings)));
   try {
     const kept = await runtime.runPromise(
       Effect.flatMap(Ledger, ({ content }) => content.get({ org: 'acme', playbook: 'alpha' }, sha256)),

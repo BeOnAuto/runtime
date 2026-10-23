@@ -47,7 +47,11 @@ export interface LocalServing {
 }
 
 export interface ServerOptions<R> {
-  readonly composed: (settings: Settings, telemetry: Telemetry, shippedFiles: ShippedFiles) => Composed<R>;
+  readonly composed: (
+    settings: Settings,
+    telemetry: Telemetry,
+    shippedFiles: ShippedFiles,
+  ) => Composed<R> | Promise<Composed<R>>;
   readonly shutdownTimeoutMs: number;
   readonly exitDeadlineMs: number;
   readonly shippedFiles: ShippedFiles;
