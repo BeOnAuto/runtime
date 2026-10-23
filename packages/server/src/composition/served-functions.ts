@@ -31,7 +31,9 @@ export async function functionsServedBy(
     shippedFiles,
     ...tools
   }: FunctionWiring &
-    Pick<ToolUsersWiring, 'consent' | 'connections' | 'offering'> & { readonly shippedFiles: ShippedFiles },
+    Pick<ToolUsersWiring, 'registry' | 'consent' | 'connections' | 'offering'> & {
+      readonly shippedFiles: ShippedFiles;
+    },
 ): Promise<ServedFunctions> {
   const { reasoning, interaction, toolOperations, withToolsClosed } = await toolUsersServedBy(runtime, settings, tools);
   const computation = await computationServedBy(settings.computation, programPoolOf, shippedFiles);

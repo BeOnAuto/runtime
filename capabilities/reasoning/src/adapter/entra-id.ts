@@ -1,6 +1,7 @@
 import { Effect, Predicate } from 'effect';
 
 import type { AzureSettings } from '../settings/provider-settings.ts';
+import type { OptionalPackages } from '../settings/provider-status.ts';
 import type { Availability } from '../settings/setting-values.ts';
 import type { AccessTokenSource } from './credential-sources.ts';
 
@@ -45,6 +46,24 @@ export async function importUnlessMissing<Module>(load: () => Promise<Module>): 
   } catch (error) {
     if (isMissingModule(error)) {
       return undefined;
+    }
+    throw error;
+  }
+}
+
+export type Resolve = (specifier: string) => string;
+
+function resolvedInPlace(specifier: string): string {
+  return import.meta.resolve(specifier);
+}
+
+export function installedPackages(resolve: Resolve = resolvedInPlace): OptionalPackages {
+  try {
+    resolve('@azure/identity');
+    return { entraId: true };
+  } catch (error) {
+    if (isMissingModule(error)) {
+      return { entraId: false };
     }
     throw error;
   }

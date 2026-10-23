@@ -1,20 +1,17 @@
 import { workerPool, type ProgramPoolOf } from './served-computation.ts';
 import { projectionWiring, type ProjectionWiring } from './served-projections.ts';
-import type { ModelAccessOf } from './served-reasoning.ts';
-import type { ToolWiring } from './served-tools.ts';
+import type { ToolAccessWiring } from './served-tool-access.ts';
 
-export interface FunctionWiring extends ToolWiring {
+export interface FunctionWiring extends ToolAccessWiring {
   readonly programPoolOf: ProgramPoolOf;
   readonly projections: ProjectionWiring;
 }
 
 export function functionWiringOf(
-  modelAccessOf: ModelAccessOf,
   programPoolOf: ProgramPoolOf = workerPool,
   toolTiming?: FunctionWiring['toolTiming'],
 ): FunctionWiring {
   return {
-    modelAccessOf,
     programPoolOf,
     projections: projectionWiring(),
     ...(toolTiming === undefined ? {} : { toolTiming }),

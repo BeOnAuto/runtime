@@ -5,6 +5,7 @@ import {
   entraIdentityLoader,
   entraTokens,
   importUnlessMissing,
+  installedPackages,
   loadEntraIdentity,
   type AccessToken,
 } from './entra-id.ts';
@@ -13,6 +14,10 @@ function missingModule(): Promise<never> {
   return Promise.reject(
     Object.assign(new Error("Cannot find package '@azure/identity'"), { code: 'ERR_MODULE_NOT_FOUND' }),
   );
+}
+
+function unresolved(specifier: string): never {
+  throw Object.assign(new Error(`Cannot find package '${specifier}'`), { code: 'ERR_MODULE_NOT_FOUND' });
 }
 
 function tokenFor(token: string): Promise<AccessToken> {
@@ -69,5 +74,25 @@ describe('entraTokens', () => {
     });
 
     await expect(tokens()).resolves.toBe(`token for ${cognitiveServicesScope}`);
+  });
+});
+
+describe('installedPackages', () => {
+  it('finds the identity library installed where it resolves', () => {
+    expect(installedPackages()).toEqual({ entraId: true });
+  });
+
+  it('finds it missing when the package does not resolve', () => {
+    expect(installedPackages(unresolved)).toEqual({ entraId: false });
+  });
+
+  it('passes any other failure on', () => {
+    const broken = new TypeError('Invalid module specifier');
+
+    expect(() =>
+      installedPackages(() => {
+        throw broken;
+      }),
+    ).toThrow(broken);
   });
 });

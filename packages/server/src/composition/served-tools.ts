@@ -1,23 +1,17 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { ToolAccessOptions } from '@on.auto/tool-servers';
 
+import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Served } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
 import { interactionServedBy, type ServedInteraction } from './served-interaction.ts';
-import { reasoningServedBy, type ModelAccessOf, type ServedReasoning } from './served-reasoning.ts';
+import { reasoningServedBy, type ServedReasoning } from './served-reasoning.ts';
 import { toolAccessOf, type ServedConnections, type ToolAccessWiring } from './served-tool-access.ts';
 import { toolOperationsOf, type ProvidersOffered, type ServedToolOperations } from './served-tool-operations.ts';
 
-export interface ToolWiring extends ToolAccessWiring {
-  readonly modelAccessOf: ModelAccessOf;
-  readonly telemetry?: {
-    readonly models: Parameters<ModelAccessOf>[2];
-    readonly traceMeta: ToolAccessOptions['traceMeta'];
-  };
+export interface ToolUsersWiring extends ToolAccessWiring, ServedConnections, ProvidersOffered {
+  readonly registry: CapabilityRegistry;
 }
-
-export type ToolUsersWiring = ToolWiring & ServedConnections & ProvidersOffered;
 
 export interface ServedToolUsers {
   readonly reasoning: ServedReasoning;
@@ -29,13 +23,11 @@ export interface ServedToolUsers {
 export async function toolUsersServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  { modelAccessOf, ...wiring }: ToolUsersWiring,
+  { registry, ...wiring }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
   const tools = await toolAccessOf(runtime, settings, wiring);
-  const models = wiring.telemetry?.models;
-  const access: ModelAccessOf = (modelSettings, proxy) => modelAccessOf(modelSettings, proxy, models);
   return {
-    reasoning: await reasoningServedBy(runtime, settings, access, tools),
+    reasoning: await reasoningServedBy(runtime, settings, registry.models, tools),
     interaction: interactionServedBy(runtime, settings, tools),
     toolOperations: toolOperationsOf(tools, wiring),
     withToolsClosed: ({ routes, stopWork }) => ({
