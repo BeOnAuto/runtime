@@ -1,7 +1,7 @@
+import { statement } from '@on.auto/ledger';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { statement } from '../database/statement.ts';
 import { startsReaching, untilScheduleRuns } from '../reaction-testing/kept-triggers.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {

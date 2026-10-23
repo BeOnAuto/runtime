@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AppendSignal, EncodedEvent, EventStore } from '@on.auto/ledger';
+import type { AppendSignal, EncodedEvent, LedgerStreams } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
@@ -37,7 +37,7 @@ function ranContext(subject: string, at: string): Context {
   return { by: 'acme-admin', at, definitionType: type, definitionName: name, definitionVersion: 1 };
 }
 
-function appendOn(store: EventStore, appends: AppendSignal): Append {
+function appendOn(store: LedgerStreams, appends: AppendSignal): Append {
   const streams = new Map<string, number>();
   return async (stream, events, context = byAdmin) => {
     const version = streams.get(stream) ?? 0;
@@ -82,7 +82,7 @@ function savedBy(append: Append, definitions: Map<string, number>): PlaybookAppe
   };
 }
 
-export function playbookAppends(store: EventStore, appends: AppendSignal): PlaybookAppends {
+export function playbookAppends(store: LedgerStreams, appends: AppendSignal): PlaybookAppends {
   const append = appendOn(store, appends);
   const ran = ranBy(append);
   const definitions = new Map<string, number>();

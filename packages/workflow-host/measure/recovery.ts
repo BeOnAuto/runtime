@@ -1,8 +1,7 @@
-import { Effect, Function, Schema } from 'effect';
+import { statement } from '@on.auto/ledger';
+import { Effect, Schema } from 'effect';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
-import { openHostDatabase } from '../src/database/host-databases.ts';
-import { statement } from '../src/database/statement.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { header, measuredHost, runAt, startOf } from './measured-host.ts';
 
 export interface Recovery {
@@ -28,7 +27,7 @@ function millisecondsOf<A>(work: () => Promise<A>): Promise<number> {
 }
 
 async function snapshotBytesOf(database: DatabaseSettings): Promise<number> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   const rows = await Effect.runPromise(
     opened.read(statement`SELECT SUM(bytes) AS bytes FROM workflow_snapshot_chunks`),
   );

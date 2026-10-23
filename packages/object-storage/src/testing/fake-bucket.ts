@@ -2,9 +2,10 @@ import type { S3Client, ServiceOutputTypes } from '@aws-sdk/client-s3';
 import type { ContentStore } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { storageClientOf } from '../client/storage-client.ts';
+import { storageClientOf, type StorageWaits } from '../client/storage-client.ts';
 import { objectContentOn } from '../content/object-content.ts';
 import type { ContentLocation } from '../location/content-location.ts';
+import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import { answersOf, found, shelvesOf } from './fake-shelves.ts';
 
 type Interceptor = (asked: () => Promise<ServiceOutputTypes>) => Promise<ServiceOutputTypes>;
@@ -75,8 +76,20 @@ export function fakeBucket({
   };
 }
 
-export function fakeContentStore(location: ContentLocation, options: FakeBucketOptions = {}): FakeContentStore {
+export interface FakeContentOptions extends FakeBucketOptions {
+  readonly waits?: StorageWaits;
+}
+
+export function fakeContentStore(
+  location: ContentLocation,
+  { waits, ...options }: FakeContentOptions = {},
+): FakeContentStore {
   const bucket = fakeBucket({ name: location.bucket, ...options });
   const client = bucket.client();
-  return { bucket, client: () => client, ...objectContentOn(() => client, location) };
+  const answering = () => client;
+  return {
+    bucket,
+    client: answering,
+    ...objectContentOn(bucketOnS3({ client: answering, name: location.bucket }, waits), location),
+  };
 }

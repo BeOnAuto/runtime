@@ -1,10 +1,10 @@
 import type { SettleRun } from '@on.auto/definitions';
+import { statement } from '@on.auto/ledger';
 import { NotFound, SettlementSchema, type Lineage, type Settlement } from '@on.auto/operations';
 import { DispatchFailed, type RecordStore, type SettleReceipt } from '@on.auto/workflow-engine';
 import { Cause, Effect, Equal, Option, Predicate, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { addressOfRun } from '../runs/run-address.ts';
 import { lineageOfSettlement } from '../runs/run-lineage.ts';

@@ -1,7 +1,7 @@
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import type { ReactionStart } from '../reactions/reaction-options.ts';
 import { until } from '../testing/until.ts';
 

@@ -1,6 +1,6 @@
 import { Effect, Function, type Schema } from 'effect';
 
-import { openHostDatabase, type DatabaseSettings } from '../src/database/host-databases.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { alpha, at, playbookCreated, recorded } from '../src/reaction-testing/playbook-writes.ts';
 import { header, runAt, startOf } from './measured-host.ts';
 import { childOf, waitingHost, type WaitingHost } from './waiting-host.ts';
@@ -18,7 +18,7 @@ export interface WaitingCase {
   readonly oneAtATime: boolean;
 }
 
-type Store = Awaited<ReturnType<typeof openHostDatabase>>['store'];
+type Store = Awaited<ReturnType<typeof hostDatabaseOpenedOn>>['store'];
 
 const calling: Schema.JsonObject = { document: header, do: [{ ask: { call: 'notify', with: { to: 'ada' } } }] };
 
@@ -50,7 +50,7 @@ async function measuredOn(
   document: Schema.JsonObject,
   record: (store: Store, runId: string) => Promise<void>,
 ): Promise<WaitingLatency> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   await playbookCreated(opened.store, 'alpha');
   const waiting = await waitingHost(database, opened, signalled);
   await inTurn(runs, (index) => Effect.runPromise(waiting.host.start(runAt(index), startOf(document))));

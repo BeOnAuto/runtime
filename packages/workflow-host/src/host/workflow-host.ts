@@ -33,7 +33,7 @@ export interface WorkflowHost {
 
 export async function openWorkflowHost(options: HostOptions): Promise<WorkflowHost> {
   const clock = options.clock ?? systemClock;
-  const store = await storeOf(options.database, options.reports.lostConnection, options.projector?.folders ?? []);
+  const store = await storeOf(options.database, options.projector?.folders ?? []);
   const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
   const standing = await standingOn(store, { ...options, clock, placeAtOpen }, options.holder);
   const { guarded, closed } = gate();
@@ -42,7 +42,6 @@ export async function openWorkflowHost(options: HostOptions): Promise<WorkflowHo
     await standing.stopReacting();
     await closed();
     await standing.stop();
-    await store.database.close();
   };
   const stopping: { done?: Promise<void> } = {};
   return {

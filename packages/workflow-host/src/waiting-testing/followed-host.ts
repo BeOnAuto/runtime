@@ -1,9 +1,8 @@
-import { recordedReaderOf } from '@on.auto/ledger';
+import { recordedReaderOf, statement } from '@on.auto/ledger';
 import type { Settlement } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { alpha, playbookCreated } from '../reaction-testing/playbook-writes.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn, type HostedOptions, type HostedRuns } from '../testing/host-runs.ts';

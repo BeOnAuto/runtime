@@ -9,7 +9,6 @@ import {
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { heldAt, keysUnder, marked, removed } from './bucket-requests.ts';
 import { placedOn, type Placing } from './object-writes.ts';
 
 interface StagedRun {
@@ -18,7 +17,7 @@ interface StagedRun {
 }
 
 function endedOf({ bucket, keys }: Placing, { playbook, run }: StagedRun): Effect.Effect<boolean> {
-  return Effect.promise(async () => (await heldAt(bucket, keys.ended(playbook, run))) !== undefined);
+  return Effect.promise(async () => (await bucket.head(keys.ended(playbook, run))) !== undefined);
 }
 
 function stagingOpen(placing: Placing, staged: StagedRun): Effect.Effect<void, StagingEnded> {
@@ -38,7 +37,7 @@ export function stagedOn(
     yield* stagingOpen(placing, staged).pipe(Effect.tapError(() => leftUnread(content.stream)));
     const kept = yield* placedOn(placing, (sha256) => keys.staged(playbook, run, sha256), content);
     if (yield* endedOf(placing, staged)) {
-      yield* Effect.promise(() => removed(bucket, [keys.staged(playbook, run, kept.sha256)]));
+      yield* Effect.promise(() => bucket.delete([keys.staged(playbook, run, kept.sha256)]));
       return yield* Effect.fail(stagingEnded(run));
     }
     return kept;
@@ -47,12 +46,12 @@ export function stagedOn(
 
 export async function unstagedOn({ bucket, keys }: Placing, { playbook, run }: StagedRun): Promise<void> {
   const ended = keys.ended(playbook, run);
-  await marked(bucket, ended);
+  await bucket.put(ended, { data: new Uint8Array() });
   const staged: string[] = [];
-  for await (const key of keysUnder(bucket, keys.run(playbook, run))) {
+  for await (const key of bucket.list(keys.run(playbook, run))) {
     if (key !== ended) {
       staged.push(key);
     }
   }
-  await removed(bucket, staged);
+  await bucket.delete(staged);
 }

@@ -3,7 +3,7 @@ import { checkedContext, recordingOf, type Decided, type Recorded } from '@on.au
 import { Effect, type Schema } from 'effect';
 
 import { eventCodecOf } from './event-codec.ts';
-import type { AppendPlace, EncodedEvent, StreamStore } from './event-store.ts';
+import type { AppendPlace, EncodedEvent, Streams } from './event-store.ts';
 import { VersionConflict } from './version-conflict.ts';
 
 export type EventAppender<Event extends Recorded> = (
@@ -13,7 +13,7 @@ export type EventAppender<Event extends Recorded> = (
 ) => Effect.Effect<void, VersionConflict>;
 
 export function eventAppenderOf<Event extends Recorded>(
-  store: StreamStore,
+  store: Streams,
   eventSchema: Schema.ConstraintCodec<Event, unknown>,
 ): EventAppender<Event> {
   const { encode } = eventCodecOf(eventSchema);

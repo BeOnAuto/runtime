@@ -1,9 +1,9 @@
+import { statement } from '@on.auto/ledger';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Ledger } from '@on.auto/operations';
 import { Effect, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { statement } from '../database/statement.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';

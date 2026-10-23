@@ -1,4 +1,4 @@
-import type { AppendedStreams, EventStore } from '@on.auto/ledger';
+import type { AppendedStreams, LedgerStreams } from '@on.auto/ledger';
 import { Effect } from 'effect';
 
 import type { FollowedPlaybook, FollowedPlaybooks } from '../follower/followed-playbooks.ts';
@@ -81,7 +81,7 @@ function pendingPlaybooks() {
   };
 }
 
-type AppendedStore = Pick<EventStore, 'readAppended'>;
+type AppendedStore = Pick<LedgerStreams, 'readAppended'>;
 
 export function playbookSweepsOn(store: AppendedStore, playbooks: FollowedPlaybooks): PlaybookSweeps {
   const state: { through: AppendedStreams['through'] | undefined; round: string | null } = {

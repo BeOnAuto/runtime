@@ -62,11 +62,9 @@ describe('the reports of the workflow host', () => {
     ]);
   });
 
-  it('log trouble, a lost connection and a note of the host as warnings', async () => {
+  it('log trouble and a note of the host as warnings', async () => {
     const lines = await reportedLines(async (reports) => {
       await Effect.runPromise(reports.trouble('A sweep of the runs failed; the next sweep tries again', Cause.empty));
-      reports.lostConnection(new Error('Connection terminated unexpectedly'));
-      await Effect.runPromise(Effect.yieldNow);
       await Effect.runPromise(
         reports.note({
           kind: 'settled_after_back_off',
@@ -78,7 +76,6 @@ describe('the reports of the workflow host', () => {
 
     expect(lines).toEqual([
       expect.stringContaining('"message":"A sweep of the runs failed; the next sweep tries again","level":"WARN"'),
-      expect.stringContaining('"annotations":{"error":"Connection terminated unexpectedly"}'),
       expect.stringContaining('"message":"A run that could not be settled was settled at attempt 21"'),
     ]);
   });

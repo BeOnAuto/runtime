@@ -1,8 +1,8 @@
 import { appendSignal, type AppendSignal } from '@on.auto/ledger';
 import { onTestFinished } from 'vitest';
 
-import type { DatabaseSettings } from '../database/host-databases.ts';
 import { openWorkflowStore, type WorkflowStore } from '../host/workflow-store.ts';
+import { connectedOn, type DatabaseSettings } from '../testing/host-files.ts';
 import { recordingReports, type RecordingReports } from '../testing/recording-reports.ts';
 import { harnessProjectors, type HarnessProjectors } from './harness-projectors.ts';
 import { playbookAppends, type PlaybookAppends } from './playbook-appends.ts';
@@ -27,12 +27,11 @@ export async function viewHarness(
   const pool = testFoldPoolOf(poolSettings);
   const appends = appendSignal();
   const settingsOf = settingsOver(pool, appends);
-  const store = await openWorkflowStore(settings, reports.reports.lostConnection, settingsOf({ besides }).folders);
+  const store = await openWorkflowStore(await connectedOn(settings), settingsOf({ besides }).folders);
   const projectors = harnessProjectors({ database: store.database, reports: reports.reports, settingsOf });
   onTestFinished(async () => {
     await projectors.stopProjectors();
     await pool.close();
-    await store.database.close();
   });
   return {
     ...playbookAppends(store.database.store, appends),

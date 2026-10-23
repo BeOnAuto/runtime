@@ -1,5 +1,7 @@
-import type { HostDatabase } from '../database/host-database.ts';
-import { openHostDatabase, type DatabaseSettings } from '../database/host-databases.ts';
+import type { ConnectionPorts } from '@on.auto/ledger';
+
+import { hostDatabaseOn, type HostDatabase } from '../database/host-database.ts';
+import { hostTablesMadeOn } from '../database/host-tables.ts';
 import { tablesOf, type SomeFolder } from '../projector/folder.ts';
 
 export interface WorkflowStore {
@@ -7,26 +9,19 @@ export interface WorkflowStore {
 }
 
 export async function openWorkflowStore(
-  settings: DatabaseSettings,
-  reportLostConnection: (error: Readonly<Error>) => void,
+  connection: ConnectionPorts,
   folders: readonly SomeFolder[],
 ): Promise<WorkflowStore> {
-  const database = await openHostDatabase(settings, reportLostConnection, tablesOf(folders));
-  return { database };
+  await hostTablesMadeOn(connection, tablesOf(folders));
+  return { database: hostDatabaseOn(connection) };
 }
 
-export type StoreSettings = DatabaseSettings | WorkflowStore;
+export type StoreSettings = ConnectionPorts | WorkflowStore;
 
 function isWorkflowStore(database: StoreSettings): database is WorkflowStore {
   return 'database' in database;
 }
 
-export function storeOf(
-  database: StoreSettings,
-  reportLostConnection: (error: Readonly<Error>) => void,
-  folders: readonly SomeFolder[],
-): Promise<WorkflowStore> {
-  return isWorkflowStore(database)
-    ? Promise.resolve(database)
-    : openWorkflowStore(database, reportLostConnection, folders);
+export function storeOf(database: StoreSettings, folders: readonly SomeFolder[]): Promise<WorkflowStore> {
+  return isWorkflowStore(database) ? Promise.resolve(database) : openWorkflowStore(database, folders);
 }

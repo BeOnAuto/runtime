@@ -1,10 +1,9 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { recordedReaderOf } from '@on.auto/ledger';
-import { Effect, Function, Schema } from 'effect';
+import { recordedReaderOf, statement } from '@on.auto/ledger';
+import { Effect, Schema } from 'effect';
 
-import { openHostDatabase, type DatabaseSettings } from '../src/database/host-databases.ts';
-import { statement } from '../src/database/statement.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { alpha, at, playbookCreated, recorded } from '../src/reaction-testing/playbook-writes.ts';
 import { measuredHost, runAt } from './measured-host.ts';
 
@@ -13,7 +12,7 @@ export interface FinishCatchUp {
   readonly milliseconds: number;
 }
 
-type Opened = Awaited<ReturnType<typeof openHostDatabase>>;
+type Opened = Awaited<ReturnType<typeof hostDatabaseOpenedOn>>;
 
 const Places = Schema.Array(Schema.Struct({ cursor: Schema.NullOr(Schema.String) }));
 
@@ -61,7 +60,7 @@ async function finishedInTurn(opened: Opened, count: number, index = 0): Promise
 }
 
 export async function finishCatchUpOn(database: DatabaseSettings, finishes: number): Promise<FinishCatchUp> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   await playbookCreated(opened.store, 'alpha');
   const following = await measuredHost(database);
   await untilPlaced(opened, (places) => places.length > 0);

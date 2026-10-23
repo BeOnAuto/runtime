@@ -1,46 +1,22 @@
-import { S3ServiceException, type S3Client } from '@aws-sdk/client-s3';
-import type { ContentStore } from '@on.auto/operations';
-import { Data, Effect } from 'effect';
+import { verifiedStream, type ContentStore, type StreamedContent } from '@on.auto/operations';
+import { Effect } from 'effect';
 
-import { storageWaits, type StorageWaits } from '../client/storage-client.ts';
+import type { Bucket } from '../bucket/bucket.ts';
 import type { ContentLocation } from '../location/content-location.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
-import { bucketReached, readAt } from './bucket-requests.ts';
 import { stagedOn, unstagedOn } from './object-staging.ts';
 import { placedOn, type Placing } from './object-writes.ts';
 import { sweptUploads } from './upload-sweep.ts';
 
-export class ObjectStoreUnreachable extends Data.TaggedError('object_store_unreachable')<{
-  readonly bucket: string;
-  readonly answer: string;
-}> {}
-
-function answerOf(failure: unknown): string {
-  if (failure instanceof S3ServiceException) {
-    return `${failure.name} (${String(failure.$metadata.httpStatusCode)})`;
-  }
-  return String(failure);
+async function verifiedAt(bucket: Bucket, key: string, sha256: string): Promise<StreamedContent | undefined> {
+  const read = await bucket.get(key);
+  return read === undefined ? undefined : { ...read, stream: verifiedStream(sha256, read.bytes, read.stream) };
 }
 
-export function objectStoreReached(
-  client: () => S3Client,
-  { bucket }: ContentLocation,
-): Effect.Effect<void, ObjectStoreUnreachable> {
-  return Effect.tryPromise({
-    try: () => bucketReached({ client, name: bucket }),
-    catch: (failure) => new ObjectStoreUnreachable({ bucket, answer: answerOf(failure) }),
-  });
-}
-
-export function objectContentOn(
-  client: () => S3Client,
-  location: ContentLocation,
-  { requestMs }: StorageWaits = storageWaits,
-): ContentStore {
-  const placing: Placing = { bucket: { client, name: location.bucket }, keys: objectKeysOf(location) };
-  const { bucket, keys } = placing;
-  const readOf = (key: string, sha256: string) =>
-    Effect.promise(() => readAt(bucket, key, { sha256, waitMs: requestMs }));
+export function objectContentOn(bucket: Bucket, location: ContentLocation): ContentStore {
+  const placing: Placing = { bucket, keys: objectKeysOf(location) };
+  const { keys } = placing;
+  const readOf = (key: string, sha256: string) => Effect.promise(() => verifiedAt(bucket, key, sha256));
   return {
     content: {
       put: (playbook, content) => placedOn(placing, (sha256) => keys.kept(playbook, sha256), content),

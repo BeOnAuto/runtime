@@ -1,9 +1,9 @@
+import { statement } from '@on.auto/ledger';
 import type { RecordedEvent } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';

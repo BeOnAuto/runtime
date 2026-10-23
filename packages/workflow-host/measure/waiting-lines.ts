@@ -1,6 +1,6 @@
 import { loadavg } from 'node:os';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
+import type { DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { finishCatchUpOn } from './finish-catch-up.ts';
 import { firstResumeOn, type FirstResume } from './first-resume.ts';
 import { openCallsCountOn } from './open-calls.ts';

@@ -1,6 +1,6 @@
-import { Effect, Function, type Schema } from 'effect';
+import { Effect, type Schema } from 'effect';
 
-import { openHostDatabase, type DatabaseSettings } from '../src/database/host-databases.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { bareEngineOn } from '../src/waiting-testing/crashed-host.ts';
 import { passedOverRow, pendingCancelRowsAfter } from '../src/waiting/pending-cancel-rows.ts';
 import { pendingCancelsGivenOnce } from '../src/waiting/pending-cancels.ts';
@@ -39,7 +39,7 @@ export async function firstResumeOn(database: DatabaseSettings, going: number, p
   const started = performance.now();
   await goingRuns(database, going);
   const startedMs = performance.now() - started;
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   await Effect.runPromise(
     Effect.forEach(
       Array.from({ length: pending }, (_, index) => index),

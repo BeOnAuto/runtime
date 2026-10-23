@@ -1,11 +1,11 @@
 import { setTimeout } from 'node:timers/promises';
 
 import type { Run, SettleRun } from '@on.auto/definitions';
-import { Effect, Function, type Schema } from 'effect';
+import { Effect, type Schema } from 'effect';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
 import type { RunStart } from '../src/host/run-requests.ts';
-import { openWorkflowHost, type WorkflowHost } from '../src/host/workflow-host.ts';
+import type { WorkflowHost } from '../src/host/workflow-host.ts';
+import { workflowHostOnALedger, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import type { HostClock } from '../src/loop/host-clock.ts';
 import { recordedReactions } from '../src/reaction-testing/recorded-reactions.ts';
 import { startOf as testStartOf, testMachine } from '../src/testing/host-documents.ts';
@@ -44,15 +44,13 @@ export async function measuredHost(database: DatabaseSettings, clock?: HostClock
       counts.settled += 1;
       return run;
     });
-  const host = await openWorkflowHost({
-    database,
+  const host = await workflowHostOnALedger(database, {
     machine: testMachine,
     perform: () => Effect.succeed({ status: 'succeeded', output: null }),
     settle,
     reports: {
       unsettled: () => Effect.void,
       trouble: Effect.logWarning,
-      lostConnection: Function.constVoid,
       note: () => Effect.void,
     },
     sweepEveryMs: 1000,

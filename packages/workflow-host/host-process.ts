@@ -3,9 +3,9 @@ import { setTimeout } from 'node:timers/promises';
 
 import type { SettleRun } from '@on.auto/definitions';
 import type { CallResult } from '@on.auto/operations';
-import { Effect, Function, Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 
-import { openWorkflowHost, type WorkflowHost } from './src/host/workflow-host.ts';
+import { workflowHostOnALedger } from './src/ledger-testing/ledger-connections.ts';
 import { recordedReactions } from './src/reaction-testing/recorded-reactions.ts';
 import { startOf, testMachine } from './src/testing/host-documents.ts';
 import { databaseSettingsOf, type ProcessDatabase } from './src/testing/host-processes.ts';
@@ -55,24 +55,22 @@ const settle: SettleRun = ({ id }, settlement) =>
         } as const;
       });
 
-async function settledIn(host: WorkflowHost): Promise<void> {
+async function stoppedOnceSettled(stop: () => Promise<void>): Promise<void> {
   if (existsSync(settlementsFile) && readFileSync(settlementsFile, 'utf8') !== '') {
-    await host.stop();
+    await stop();
     return;
   }
   await setTimeout(20);
-  await settledIn(host);
+  await stoppedOnceSettled(stop);
 }
 
-const host = await openWorkflowHost({
-  database: databaseSettingsOf(database),
+const host = await workflowHostOnALedger(databaseSettingsOf(database), {
   machine: testMachine,
   perform: () => (mode === 'hang-on-call' ? Effect.andThen(said('calling'), hangs) : answered),
   settle,
   reports: {
     unsettled: () => Effect.void,
     trouble: () => Effect.void,
-    lostConnection: Function.constVoid,
     note: () => Effect.void,
   },
   sweepEveryMs: Number(sweepEveryMs),
@@ -82,7 +80,7 @@ const host = await openWorkflowHost({
 });
 
 if (mode === 'finish') {
-  await settledIn(host);
+  await stoppedOnceSettled(host.stop);
 } else {
   await Effect.runPromise(host.start(run, { ...startOf(notifying), attributes: {} }));
 }

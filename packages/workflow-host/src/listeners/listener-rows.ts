@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import { CallKeySchema, type CallKey } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 export interface ListenerRow {
   readonly runKey: string;

@@ -1,7 +1,7 @@
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { oneRowOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 export const settleAttemptsBeforeBackingOff = 20;
 

@@ -1,9 +1,9 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 
-import { openHostDatabase, type DatabaseSettings } from '../src/database/host-databases.ts';
 import { openWorkflowHost } from '../src/host/workflow-host.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { playbookCreated, everyTrigger, definitionRecorded } from '../src/reaction-testing/playbook-writes.ts';
 import { recordedReactions } from '../src/reaction-testing/recorded-reactions.ts';
 import { testMachine } from '../src/testing/host-documents.ts';
@@ -22,7 +22,6 @@ const aMinute = 60_000;
 const quiet = {
   unsettled: () => Effect.void,
   trouble: Effect.logWarning,
-  lostConnection: Function.constVoid,
   note: () => Effect.void,
 };
 
@@ -39,10 +38,10 @@ async function untilFired(fired: () => number, most: number): Promise<void> {
 
 export async function everyFiringOn(database: DatabaseSettings, schedules: number): Promise<EveryFiring> {
   const firedAt: number[] = [];
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   await playbookCreated(opened.store, 'alpha');
   const host = await openWorkflowHost({
-    database,
+    database: { database: opened },
     machine: testMachine,
     perform: () => Effect.succeed({ status: 'succeeded', output: null }),
     settle: () => Effect.die(new Error('The measured runs settle nothing')),

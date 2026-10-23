@@ -4,7 +4,6 @@ import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
 import type { AppendObserver, LedgerStore } from './event-store.ts';
 import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
-import { ledgerLayerOver, type StoreLayerOptions } from './ledger-layer.ts';
 import { sqliteRunOutcomesOf } from './outcomes/sqlite-run-outcomes.ts';
 import type { KeptTables } from './projections/projection-parts.ts';
 import { preparedOn, sqliteProjectionsOf } from './projections/sqlite-projections.ts';
@@ -16,18 +15,23 @@ const eventsWithinAHundredParameters = 8;
 
 export type SQLiteStoreOptions<Driver extends AnyDriver> = Parameters<typeof getSQLiteEventStore<Driver>>[0];
 
+export function pooledOptionsOf<Driver extends AnyDriver>(optionsOf: () => SQLiteStoreOptions<Driver>) {
+  const options = optionsOf();
+  const pool =
+    options.pool ?? dumbo({ serialization: options.serialization, ...options.driver.mapToDumboOptions(options) });
+  return { ...options, pool };
+}
+
 export function sqliteEventStore<Driver extends AnyDriver>(
   optionsOf: () => SQLiteStoreOptions<Driver>,
   kept: KeptTables = {},
   observer?: AppendObserver,
 ): LedgerStore {
-  const options = optionsOf();
-  const pool =
-    options.pool ?? dumbo({ serialization: options.serialization, ...options.driver.mapToDumboOptions(options) });
+  const options = pooledOptionsOf(optionsOf);
+  const { pool } = options;
   const projections = sqliteProjectionsOf(kept);
   const store = getSQLiteEventStore({
     ...options,
-    pool,
     schema: { autoMigration: 'None' },
     projections: [...(options.projections ?? []), ...projections.registrations],
   });
@@ -51,14 +55,4 @@ export function sqliteEventStore<Driver extends AnyDriver>(
       await preparedOn(projections.prepare, pool);
     },
   };
-}
-
-export function sqliteLedgerLayer<Driver extends AnyDriver>(
-  optionsOf: () => SQLiteStoreOptions<Driver>,
-  { runOutcomes, projections, appends, content, observer }: StoreLayerOptions = {},
-) {
-  return ledgerLayerOver(() => sqliteEventStore(optionsOf, { runOutcomes, projections }, observer), {
-    appends,
-    content,
-  });
 }

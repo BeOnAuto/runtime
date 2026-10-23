@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
+import { storeSettingsOf, type HostedDatabase } from '../ledger-testing/hosted-databases.ts';
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { testMachine } from './host-documents.ts';
@@ -78,9 +79,9 @@ export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions 
   };
 }
 
-export async function hostedOn(settings: HostOptions['database'], options: HostedOptions = {}): Promise<HostedRuns> {
+export async function hostedOn(database: HostedDatabase, options: HostedOptions = {}): Promise<HostedRuns> {
   const { options: hostOptions, ...records } = recordedOptionsOf(options);
-  const host = await openWorkflowHost({ database: settings, ...hostOptions });
+  const host = await openWorkflowHost({ database: await storeSettingsOf(database), ...hostOptions });
   onTestFinished(() => host.stop());
   return { host, ...records };
 }

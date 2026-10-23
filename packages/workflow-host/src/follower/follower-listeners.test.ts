@@ -1,7 +1,7 @@
+import { statement } from '@on.auto/ledger';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { statement } from '../database/statement.ts';
 import { emittedContext, published, publishedInTurn } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';

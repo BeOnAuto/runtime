@@ -11,21 +11,23 @@ import {
   S3ServiceException,
   type S3Client,
 } from '@aws-sdk/client-s3';
-import { verifiedStream, type StreamedContent } from '@on.auto/operations';
 
-export interface Bucket {
+import type { ObjectHead, ObjectRead } from '../bucket/bucket.ts';
+
+export interface S3Bucket {
   readonly client: () => S3Client;
   readonly name: string;
-}
-
-export interface Held {
-  readonly bytes: number;
-  readonly mediaType: string;
 }
 
 export interface OpenUpload {
   readonly key: string;
   readonly uploadId: string;
+}
+
+export interface WrittenObject {
+  readonly data: Readonly<Uint8Array>;
+  readonly mediaType?: string | undefined;
+  readonly ifAbsent?: boolean | undefined;
 }
 
 interface Listed {
@@ -88,6 +90,15 @@ async function writtenIfFirst(write: () => Promise<unknown>, attempt = 1): Promi
   }
 }
 
+async function writtenAlways(write: () => Promise<unknown>): Promise<boolean> {
+  await write();
+  return true;
+}
+
+function writtenAsAsked(ifAbsent: boolean | undefined, write: () => Promise<unknown>): Promise<boolean> {
+  return ifAbsent === true ? writtenIfFirst(write) : writtenAlways(write);
+}
+
 function answeredWithout(key: string, missing: string): Error {
   return new Error(`The object store answered for ${key} without its ${missing}`);
 }
@@ -134,22 +145,18 @@ function isOpenUpload(upload: ListedUpload): upload is OpenUpload {
   return [upload.key, upload.uploadId].every((part) => part !== undefined);
 }
 
-export async function bucketReached({ client, name }: Bucket): Promise<void> {
+export async function bucketReached({ client, name }: S3Bucket): Promise<void> {
   await client().send(new HeadBucketCommand({ Bucket: name }));
 }
 
-export async function heldAt({ client, name }: Bucket, key: string): Promise<Held | undefined> {
+export async function heldAt({ client, name }: S3Bucket, key: string): Promise<ObjectHead | undefined> {
   const head = await unlessNotFound(client().send(new HeadObjectCommand({ Bucket: name, Key: key })));
   return head === undefined
     ? undefined
     : { bytes: sizeOf(key, head.ContentLength), mediaType: head.ContentType ?? octets };
 }
 
-export async function readAt(
-  { client, name }: Bucket,
-  key: string,
-  { sha256, waitMs }: { readonly sha256: string; readonly waitMs: number },
-): Promise<StreamedContent | undefined> {
+export async function readAt({ client, name }: S3Bucket, key: string, waitMs: number): Promise<ObjectRead | undefined> {
   const object = await unlessNotFound(client().send(new GetObjectCommand({ Bucket: name, Key: key })));
   if (object === undefined) {
     return undefined;
@@ -159,42 +166,43 @@ export async function readAt(
   }
   const bytes = sizeOf(key, object.ContentLength);
   return {
-    stream: verifiedStream(sha256, bytes, piecesWithin(object.Body.transformToWebStream(), waitMs, key)),
+    stream: piecesWithin(object.Body.transformToWebStream(), waitMs, key),
     bytes,
     mediaType: object.ContentType ?? octets,
   };
 }
 
-export async function marked({ client, name }: Bucket, key: string): Promise<void> {
-  await client().send(new PutObjectCommand({ Bucket: name, Key: key, Body: new Uint8Array() }));
-}
-
-export function writtenFirst(
-  { client, name }: Bucket,
+export function written(
+  { client, name }: S3Bucket,
   key: string,
-  { body, mediaType }: { readonly body: Readonly<Uint8Array>; readonly mediaType: string },
+  { data, mediaType, ifAbsent }: WrittenObject,
 ): Promise<boolean> {
   const put = new PutObjectCommand({
     Bucket: name,
     Key: key,
-    Body: body,
-    ContentType: mediaType,
-    IfNoneMatch: ifNoneMatch,
+    Body: data,
+    ...(mediaType === undefined ? {} : { ContentType: mediaType }),
+    ...(ifAbsent === true ? { IfNoneMatch: ifNoneMatch } : {}),
   });
-  return writtenIfFirst(() => client().send(put));
+  return writtenAsAsked(ifAbsent, () => client().send(put));
 }
 
-export function copiedFirst({ client, name }: Bucket, from: string, to: string): Promise<boolean> {
+export function copied(
+  { client, name }: S3Bucket,
+  from: string,
+  to: string,
+  ifAbsent: boolean | undefined,
+): Promise<boolean> {
   const copy = new CopyObjectCommand({
     Bucket: name,
     Key: to,
     CopySource: copySourceOf(name, from),
-    IfNoneMatch: ifNoneMatch,
+    ...(ifAbsent === true ? { IfNoneMatch: ifNoneMatch } : {}),
   });
-  return writtenIfFirst(() => client().send(copy));
+  return writtenAsAsked(ifAbsent, () => client().send(copy));
 }
 
-export async function removed(bucket: Bucket, keys: readonly string[]): Promise<void> {
+export async function removed(bucket: S3Bucket, keys: readonly string[]): Promise<void> {
   if (keys.length === 0) {
     return;
   }
@@ -210,7 +218,7 @@ export async function removed(bucket: Bucket, keys: readonly string[]): Promise<
   await removed(bucket, keys.slice(mostKeysInOneDelete));
 }
 
-export async function* keysUnder(bucket: Bucket, prefix: string, token?: string): AsyncGenerator<string> {
+export async function* keysUnder(bucket: S3Bucket, prefix: string, token?: string): AsyncGenerator<string> {
   const page = await bucket
     .client()
     .send(new ListObjectsV2Command({ Bucket: bucket.name, Prefix: prefix, ContinuationToken: token }));
@@ -221,7 +229,7 @@ export async function* keysUnder(bucket: Bucket, prefix: string, token?: string)
 }
 
 export async function* uploadsUnder(
-  bucket: Bucket,
+  bucket: S3Bucket,
   prefix: string,
   markers?: UploadMarkers,
 ): AsyncGenerator<OpenUpload> {
@@ -235,6 +243,6 @@ export async function* uploadsUnder(
   }
 }
 
-export async function uploadAbandoned({ client, name }: Bucket, { key, uploadId }: OpenUpload): Promise<void> {
+export async function uploadAbandoned({ client, name }: S3Bucket, { key, uploadId }: OpenUpload): Promise<void> {
   await client().send(new AbortMultipartUploadCommand({ Bucket: name, Key: key, UploadId: uploadId }));
 }

@@ -8,9 +8,6 @@ import type { LedgerDatabase } from './ledger-database.ts';
 
 export function postgresqlLedgerDatabase(pools: PostgreSQLPools, observer?: AppendObserver): LedgerDatabase {
   return {
-    store: 'postgresql',
-    pools,
-    observer,
     ledgerLayer: (kept) => postgresqlLedgerLayer({ ...kept, pools, observer }),
     secretRows: postgresqlSecretRows({ pools }),
   };

@@ -1,9 +1,9 @@
 import type { Trigger } from '@on.auto/definitions';
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { definitionRecordsKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts';
 import { cronTrigger, eventTrigger, everyTrigger } from '../reaction-testing/playbook-writes.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';

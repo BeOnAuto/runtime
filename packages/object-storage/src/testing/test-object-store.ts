@@ -7,11 +7,11 @@ import {
   removed,
   uploadAbandoned,
   uploadsUnder,
-  type Bucket,
-} from '../content/bucket-requests.ts';
+  type S3Bucket,
+} from '../s3/bucket-requests.ts';
 
 export interface TestObjectStore {
-  readonly bucket: Bucket;
+  readonly bucket: S3Bucket;
   readonly endpoint: string;
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
@@ -35,20 +35,20 @@ export function testObjectStoreOf(url: string): TestObjectStore {
   return { bucket: { client: () => client, name: pathname.slice(1) }, endpoint: origin, accessKeyId, secretAccessKey };
 }
 
-export async function bucketReady(bucket: Bucket): Promise<void> {
+export async function bucketReady(bucket: S3Bucket): Promise<void> {
   const created = () => bucket.client().send(new CreateBucketCommand({ Bucket: bucket.name }));
   await bucketReached(bucket).catch(() => created().catch(() => bucketReached(bucket)));
 }
 
-export function keysIn(bucket: Bucket, prefix: string): Promise<readonly string[]> {
+export function keysIn(bucket: S3Bucket, prefix: string): Promise<readonly string[]> {
   return listed(keysUnder(bucket, prefix));
 }
 
-export async function openUploadsIn(bucket: Bucket, prefix: string): Promise<readonly string[]> {
+export async function openUploadsIn(bucket: S3Bucket, prefix: string): Promise<readonly string[]> {
   return (await listed(uploadsUnder(bucket, prefix))).map(({ key }) => key);
 }
 
-export async function emptied(bucket: Bucket, prefix: string): Promise<void> {
+export async function emptied(bucket: S3Bucket, prefix: string): Promise<void> {
   const open = await listed(uploadsUnder(bucket, prefix));
   await Promise.all(open.map((upload) => uploadAbandoned(bucket, upload)));
   await removed(bucket, await keysIn(bucket, prefix));

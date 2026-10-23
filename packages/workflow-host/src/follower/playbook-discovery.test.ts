@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import { messageIdOf } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { statement } from '../database/statement.ts';
 import {
   alpha,
   playbookCreated,

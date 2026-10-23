@@ -1,13 +1,16 @@
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { describe, onTestFinished } from 'vitest';
 
-import { sqliteEventStore, sqliteLayout } from './index.ts';
+import { sqliteLayout, sqliteLedgerOpened } from './index.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
 import { keptSecretsBehaviour } from './secrets/kept-secrets-behaviour.ts';
 import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
 import { ledgerBehaviour } from './testing/ledger-behaviour.ts';
 import type { LedgerEntry } from './testing/ledger-entry.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
+
+const openedOn: LedgerEntry['openedOn'] = (fileName) =>
+  sqliteLedgerOpened({ optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName }), inMemory: false });
 
 const onSQLite: LedgerEntry = {
   mostEventsInOneAppend: 8,
@@ -20,7 +23,8 @@ const onSQLite: LedgerEntry = {
   },
   ledgerOn: (fileName, runOutcomes, projections = []) =>
     ledgerLayer({ fileName, projections, ...(runOutcomes === undefined ? {} : { runOutcomes }) }),
-  storeOn: (fileName) => sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName })),
+  storeOn: (fileName) => openedOn(fileName).store,
+  openedOn,
   queried,
   executedOn,
   layout: sqliteLayout,

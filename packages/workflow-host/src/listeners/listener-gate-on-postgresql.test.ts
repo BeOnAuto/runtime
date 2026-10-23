@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
+import { statement, textOnPostgreSQL } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement, textOnPostgreSQL } from '../database/statement.ts';
 import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { runGateOf } from '../follower/run-gate.ts';
 import { onPostgreSQLAt, openedOn } from '../testing/host-files.ts';

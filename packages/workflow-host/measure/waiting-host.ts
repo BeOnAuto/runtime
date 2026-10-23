@@ -2,11 +2,11 @@ import { setTimeout } from 'node:timers/promises';
 
 import type { SettleRun } from '@on.auto/definitions';
 import { streamSignalOf } from '@on.auto/ledger';
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 
 import { waitingCallsOf } from '../src/calls/call-rows.ts';
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
-import { openWorkflowHost, type WorkflowHost } from '../src/host/workflow-host.ts';
+import type { WorkflowHost } from '../src/host/workflow-host.ts';
+import { workflowHostOnALedger, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { recordedReactions } from '../src/reaction-testing/recorded-reactions.ts';
 import { testMachine } from '../src/testing/host-documents.ts';
 import { recordedWaiting } from '../src/waiting-testing/recorded-waiting.ts';
@@ -50,15 +50,13 @@ function settlingAt(settledAt: Map<string, number>): SettleRun {
 export async function waitingHost(settings: DatabaseSettings, reads: Reads, signalled: boolean): Promise<WaitingHost> {
   const settledAt = new Map<string, number>();
   const reactions = recordedReactions().options;
-  const host = await openWorkflowHost({
-    database: settings,
+  const host = await workflowHostOnALedger(settings, {
     machine: testMachine,
     perform: (call) => Effect.succeed({ status: 'waiting', child: childOf(call.key.runId) }),
     settle: settlingAt(settledAt),
     reports: {
       unsettled: () => Effect.void,
       trouble: Effect.logWarning,
-      lostConnection: Function.constVoid,
       note: () => Effect.void,
     },
     sweepEveryMs: 1000,

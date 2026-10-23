@@ -1,7 +1,7 @@
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 
 import { openCallsUnder, startedRow } from '../src/calls/call-rows.ts';
-import { openHostDatabase, type DatabaseSettings } from '../src/database/host-databases.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 
 export interface OpenCallsCount {
   readonly underTheRoot: number;
@@ -34,7 +34,7 @@ function percentile(sorted: readonly number[], fraction: number): number {
 }
 
 export async function openCallsCountOn(database: DatabaseSettings, underTheRoot: number): Promise<OpenCallsCount> {
-  const opened = await openHostDatabase(database, Function.constVoid);
+  const opened = await hostDatabaseOpenedOn(database);
   const roots = ['root-0', 'root-1', 'root-2', 'root-3', 'root-4', 'root-5', 'root-6', 'root-7', 'root-8', 'root-9'];
   await Effect.runPromise(
     Effect.forEach(roots, (root) =>

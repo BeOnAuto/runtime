@@ -1,6 +1,6 @@
 import { loadavg } from 'node:os';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
+import type { DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { timerLatenessOn } from './lateness.ts';
 import { reactionLatencyOn } from './reactions.ts';
 import { everyFiringOn } from './schedule-firing.ts';

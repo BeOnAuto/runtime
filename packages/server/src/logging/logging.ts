@@ -222,12 +222,6 @@ export function logWorkflowTrouble(what: string, cause: Cause.Cause<unknown>): E
   );
 }
 
-export function logLostWorkflowConnection(error: Readonly<Error>): Effect.Effect<void> {
-  return Effect.logWarning(
-    'A connection of the workflows to their PostgreSQL database was lost; they open another when they need one',
-  ).pipe(Effect.annotateLogs({ error: error.message }));
-}
-
 function destinationOf(target: SignalExport | undefined): string {
   return target === undefined ? 'off' : `${new URL(target.url).origin} over ${target.protocol}`;
 }

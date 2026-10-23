@@ -1,7 +1,5 @@
-import type { AppRuntime } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
-import { appendSignal, type AppendSignal } from '@on.auto/ledger';
-import type { DispatcherServices } from '@on.auto/operations';
+import { appendSignal, type AppendSignal, type ConnectionPorts } from '@on.auto/ledger';
 import { makeRecallFunctionAdapter, recallBounds, recallDefinitionType, recallFolding } from '@on.auto/recall';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import {
@@ -9,14 +7,12 @@ import {
   someFolder,
   viewsFolder,
   viewsPortOn,
-  type DatabaseSettings,
   type ProjectorSettings,
   type SomeFolder,
   type WorkflowStore,
 } from '@on.auto/workflow-host';
 
 import type { Settings } from '../settings/settings.ts';
-import { hostReports } from '../workflows/host-reports.ts';
 
 interface ServedProjections {
   readonly recall: Capability;
@@ -25,24 +21,19 @@ interface ServedProjections {
 }
 
 interface ProjectedOn extends Pick<Settings, 'recall'> {
-  readonly database: DatabaseSettings;
+  readonly database: ConnectionPorts;
 }
 
 export interface ProjectionWiring {
   readonly appends: AppendSignal;
-  readonly served: (
-    runtime: AppRuntime<DispatcherServices>,
-    on: ProjectedOn,
-    pool: ProgramPool,
-    besides: readonly SomeFolder[],
-  ) => Promise<ServedProjections>;
+  readonly served: (on: ProjectedOn, pool: ProgramPool, besides: readonly SomeFolder[]) => Promise<ServedProjections>;
 }
 
 export function projectionWiring(): ProjectionWiring {
   const appends = appendSignal();
   return {
     appends,
-    served: async (runtime, { recall, database }, pool, besides) => {
+    served: async ({ recall, database }, pool, besides) => {
       const views = viewsFolder({
         definitionType: recallDefinitionType,
         pool,
@@ -51,7 +42,7 @@ export function projectionWiring(): ProjectionWiring {
         rebuildsAtOnce: recall.rebuildsAtOnce,
       });
       const folders = [someFolder(views), ...besides];
-      const store = await openWorkflowStore(database, hostReports(runtime).lostConnection, folders);
+      const store = await openWorkflowStore(database, folders);
       return {
         recall: makeRecallFunctionAdapter({
           pool,

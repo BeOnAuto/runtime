@@ -2,10 +2,10 @@ import type { StreamReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { eventCodecOf } from './event-codec.ts';
-import type { StreamStore } from './event-store.ts';
+import type { Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 
-export function streamReaderOf(store: StreamStore): StreamReader['load'] {
+export function streamReaderOf(store: Streams): StreamReader['load'] {
   return (stream, fold) =>
     Effect.gen(function* () {
       const recorded = yield* Effect.promise(() => store.read(stream));

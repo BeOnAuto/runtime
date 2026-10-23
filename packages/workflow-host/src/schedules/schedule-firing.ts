@@ -1,8 +1,8 @@
 import { triggerNamed } from '@on.auto/definitions';
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import type { ReactionStart, StartReaction } from '../reactions/reaction-options.ts';
 import type { Refusals } from '../reactions/refusals.ts';

@@ -1,14 +1,12 @@
-import type { EventStore } from '@on.auto/ledger';
+import type { ConnectionPorts, LedgerStreams, ReadRows, Statement } from '@on.auto/ledger';
 import { Data, Effect, Schema } from 'effect';
-
-import type { Statement } from './statement.ts';
 
 export class DatabaseFailed extends Data.TaggedError('database_failed')<{ readonly detail: string }> {}
 
 export type ReadStatement = (statement: Statement) => Effect.Effect<readonly unknown[], DatabaseFailed>;
 
 export interface HostDatabase {
-  readonly store: EventStore;
+  readonly store: LedgerStreams;
   readonly read: ReadStatement;
   readonly write: (statement: Statement) => Effect.Effect<readonly unknown[], DatabaseFailed>;
   readonly transaction: (statements: readonly Statement[]) => Effect.Effect<readonly unknown[], DatabaseFailed>;
@@ -16,34 +14,45 @@ export interface HostDatabase {
     reads: (read: ReadStatement) => Effect.Effect<A, E>,
   ) => Effect.Effect<A, E | DatabaseFailed>;
   readonly sharedClock: Effect.Effect<number, DatabaseFailed> | null;
-  readonly close: () => Promise<void>;
 }
-
-export interface StatementAnswer {
-  readonly rows: readonly unknown[];
-  readonly rowCount: number | null;
-}
-
-const nothingAnswered: StatementAnswer = { rows: [], rowCount: 0 };
 
 export const WholeNumber = Schema.Union([Schema.Finite, Schema.FiniteFromString]);
 
-export function lastAnswerOf(
-  statements: readonly Statement[],
-  answered: (statement: Statement) => Promise<StatementAnswer>,
-): Promise<StatementAnswer> {
-  return statements.reduce(async (before: Promise<StatementAnswer>, next: Statement) => {
-    await before;
-    return answered(next);
-  }, Promise.resolve(nothingAnswered));
-}
-
-export function wroteARow({ rowCount }: StatementAnswer): boolean {
-  return Number(rowCount) > 0;
-}
-
-export function failedWith(error: unknown): DatabaseFailed {
+function failedWith(error: unknown): DatabaseFailed {
   return new DatabaseFailed({ detail: String(error) });
+}
+
+function asked<A>(answered: () => Promise<A>): Effect.Effect<A, DatabaseFailed> {
+  return Effect.tryPromise({ try: answered, catch: failedWith });
+}
+
+function readsOn(read: ReadRows): ReadStatement {
+  return (statement) => asked(() => read(statement));
+}
+
+function consistentReadsOn(connection: ConnectionPorts): HostDatabase['readConsistently'] {
+  return (reads) =>
+    Effect.flatMap(Effect.context(), (context) =>
+      Effect.flatten(
+        Effect.tryPromise({
+          try: (signal) =>
+            connection.readConsistently((read) => Effect.runPromiseExitWith(context)(reads(readsOn(read)), { signal })),
+          catch: failedWith,
+        }),
+      ),
+    );
+}
+
+export function hostDatabaseOn(connection: ConnectionPorts): HostDatabase {
+  const { sharedClock } = connection;
+  return {
+    store: connection.streams,
+    read: readsOn(connection.read),
+    write: readsOn(connection.write),
+    transaction: (statements) => asked(() => connection.transaction(statements)),
+    readConsistently: consistentReadsOn(connection),
+    sharedClock: sharedClock === null ? null : asked(sharedClock),
+  };
 }
 
 export function rowsOf<Row>(

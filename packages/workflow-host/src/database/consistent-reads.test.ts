@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { aSQLiteFile, onPostgreSQLAt, openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { rowsOf, WholeNumber, type HostDatabase, type ReadStatement } from './host-database.ts';
-import { statement } from './statement.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 

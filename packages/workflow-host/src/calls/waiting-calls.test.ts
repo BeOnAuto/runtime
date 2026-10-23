@@ -1,9 +1,9 @@
+import { statement } from '@on.auto/ledger';
 import { messageIdOf, type CallResult } from '@on.auto/operations';
 import type { StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { statement } from '../database/statement.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';

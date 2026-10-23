@@ -6,7 +6,9 @@ import { alpha, generated, refusalOf } from '@on.auto/operations/testing';
 import { Effect, Function, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { objectContentOn, objectStoreReached } from '../content/object-content.ts';
+import { objectContentOn } from '../content/object-content.ts';
+import { objectStoreReached } from '../s3/object-store-reached.ts';
+import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import { storageClientOf, storageWaits } from './storage-client.ts';
 
 const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
@@ -73,7 +75,7 @@ describe('the client of an object store that stops answering', () => {
       requestMs: 100,
     });
     const location = { bucket: 'content', prefix: '' };
-    const { content } = objectContentOn(() => client, location);
+    const { content } = objectContentOn(bucketOnS3({ client: () => client, name: location.bucket }), location);
     const started = performance.now();
 
     const refused = await refusalOf(objectStoreReached(() => client, location));

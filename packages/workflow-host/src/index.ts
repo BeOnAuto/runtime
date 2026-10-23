@@ -1,5 +1,5 @@
 export type { CallAnswer, Perform, Trouble } from './calls/host-executor.ts';
-export type { DatabaseSettings } from './database/host-databases.ts';
+export { choreWork, type Chore } from './due-work/due-chores.ts';
 export { dueInOneWakeUp, duePerformedAtOnce, type DueItem, type DueWork } from './due-work/due-work.ts';
 export { rowWaitBounds } from './due-work/row-waits.ts';
 export { DeliveryFailed, type Consumer, type Delivery, type FollowedRecord } from './follower/consumers.ts';
@@ -17,7 +17,7 @@ export {
   type HostDatabase,
   type ReadStatement,
 } from './database/host-database.ts';
-export { statement, type Statement, type StatementValue } from './database/statement.ts';
+export { statement, type Statement, type StatementValue } from '@on.auto/ledger';
 export type { PageEvent, ReadPage } from './pages/page-events.ts';
 export type { PlaybookDefinitions, KeptFunction, KeptOf } from './projector/playbook-definitions.ts';
 export {

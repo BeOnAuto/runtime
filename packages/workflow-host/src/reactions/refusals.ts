@@ -1,9 +1,8 @@
 import { reactionRefusalDecider, ReactionRefusedSchema, reactionsStreamKind } from '@on.auto/definitions';
-import { decisionLoop, eventAppenderOf } from '@on.auto/ledger';
+import { decisionLoop, eventAppenderOf, statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { playbookOfKey } from '../follower/record-steps.ts';
 
 interface RefusedWorkflow {

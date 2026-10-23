@@ -1,3 +1,4 @@
+import { statement } from '@on.auto/ledger';
 import {
   DispatchFailed,
   type ArmReceipt,
@@ -9,7 +10,6 @@ import {
 import { Effect, Schema } from 'effect';
 
 import { oneRowOf, rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 
 export interface DueTimer {
   readonly runKey: string;

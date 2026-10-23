@@ -1,7 +1,7 @@
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { waitingCallsOf } from '../calls/call-rows.ts';
-import { statement } from '../database/statement.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import type { HostedOptions } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';

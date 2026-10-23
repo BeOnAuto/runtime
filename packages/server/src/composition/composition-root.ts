@@ -1,6 +1,6 @@
 import { capabilityRegistryHeld } from '../capability-registry/capability-registry.ts';
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
-import { ledgerDatabaseOf, withARefusedLayoutExplained } from '../database/ledger-database.ts';
+import { ledgerConnectionIn, ledgerDatabaseOf, withARefusedLayoutExplained } from '../database/ledger-database.ts';
 import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer } from './application-layer.ts';
@@ -36,7 +36,7 @@ export function compositionRootWith(
           consent,
           connections: source,
         });
-        const functions = await functionsServedBy(runtime, settings, database, {
+        const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
           ...wiring,
           registry,
           connections: source,

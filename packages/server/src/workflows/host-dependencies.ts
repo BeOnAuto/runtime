@@ -1,6 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
-import type { Dispatcher, DispatcherServices } from '@on.auto/operations';
+import type { Dispatcher } from '@on.auto/operations';
 import {
   openWorkflowHost,
   type HostClock,
@@ -10,7 +10,9 @@ import {
   type WorkflowStore,
 } from '@on.auto/workflow-host';
 
+import { orphansSweptIn } from '../database/ledger-database.ts';
 import { logWorkflows } from '../logging/logging.ts';
+import type { ServerServices } from '../server-options/composed-options.ts';
 import type { Settings } from '../settings/settings.ts';
 import { hostReports } from './host-reports.ts';
 import { hostWorkOf, type WorkParts } from './host-work.ts';
@@ -26,8 +28,10 @@ export interface HostParts {
   readonly clock?: HostClock;
 }
 
+export type HostRuntime = AppRuntime<ServerServices>;
+
 export async function openedHost(
-  runtime: AppRuntime<DispatcherServices>,
+  runtime: HostRuntime,
   dispatcher: Dispatcher,
   { workflows, capabilities, store, projector, dueWork, evaluations, clock }: HostParts,
   { startVersion, names }: Pick<WorkParts, 'startVersion' | 'names'>,
@@ -35,7 +39,7 @@ export async function openedHost(
   const host = await openWorkflowHost({
     database: store,
     projector,
-    dueWork,
+    dueWork: [...dueWork, await orphansSweptIn(runtime)],
     ...hostWorkOf(runtime, dispatcher, { capabilities, startVersion, evaluations, names }),
     reports: hostReports(runtime),
     context: runtime.context,

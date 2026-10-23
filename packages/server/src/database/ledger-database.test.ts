@@ -1,32 +1,41 @@
-import { LedgerLayoutRefused } from '@on.auto/ledger';
+import { LedgerConnection, LedgerLayoutRefused, statement } from '@on.auto/ledger';
+import { unreachableDatabase } from '@on.auto/ledger/testing';
 import { Ledger } from '@on.auto/operations';
-import { Cause, Effect, Exit, Layer } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { Cause, Effect, Exit, Layer, ManagedRuntime } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { secretsKey } from '../testing/databases/secrets-key.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerDatabaseOf, withARefusedLayoutExplained } from './ledger-database.ts';
 import { LedgerOfAnotherVersion } from './ledger-of-another-version.ts';
 
-const somePools: unknown = expect.any(Function);
+async function builtFrom<Services>(ledgerLayer: Layer.Layer<Services>): Promise<unknown> {
+  const exit = await Effect.runPromiseExit(Effect.scoped(Layer.build(ledgerLayer)));
+  return Exit.isFailure(exit) ? Cause.squash(exit.cause) : 'built';
+}
 
 describe('the database of the ledger and the workflow host', () => {
-  it('is the file of the ledger when the ledger is kept in SQLite', async () => {
-    expect(await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: '/data/ledger.db' }))).toMatchObject({
-      store: 'sqlite',
-      file: '/data/ledger.db',
-    });
+  it('is the file of the ledger when the ledger is kept in SQLite, where its connection runs the statements of the host', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const database = await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: ledger.fileName }));
+    const runtime = ManagedRuntime.make(database.ledgerLayer({}));
+    onTestFinished(() => runtime.dispose());
+
+    const connection = await runtime.runPromise(Effect.service(LedgerConnection));
+    const streams = await connection.read(
+      statement`SELECT COUNT(*) AS kept FROM sqlite_master WHERE name = 'emt_streams'`,
+    );
+
+    expect([connection.dialect, streams]).toEqual(['sqlite', [{ kept: 1 }]]);
   });
 
   it('is reached through the pools the server composes when the ledger is kept in PostgreSQL', async () => {
-    expect(
-      await ledgerDatabaseOf(
-        readSettingsOf({
-          DATABASE_URL: 'postgresql://playbooks:secret@db.example.com/playbooks',
-          SECRETS_KEY: secretsKey,
-        }),
-      ),
-    ).toMatchObject({ store: 'postgresql', pools: somePools });
+    const { url, port } = await unreachableDatabase();
+    const database = await ledgerDatabaseOf(readSettingsOf({ DATABASE_URL: url, SECRETS_KEY: secretsKey }));
+
+    expect(String(await builtFrom(database.ledgerLayer({})))).toContain(`ECONNREFUSED 127.0.0.1:${port}`);
   });
 });
 
@@ -35,11 +44,6 @@ const refusedLayout = new LedgerLayoutRefused({
   kept: 1,
   message: "The ledger's database is in layout 2 of the ledger, where this server keeps layout 1",
 });
-
-async function builtFrom(ledgerLayer: Layer.Layer<Ledger>): Promise<unknown> {
-  const exit = await Effect.runPromiseExit(Effect.scoped(Layer.build(ledgerLayer)));
-  return Exit.isFailure(exit) ? Cause.squash(exit.cause) : 'built';
-}
 
 describe('a ledger that refuses the layout of its database as it opens', () => {
   it('stops the start with words that say where the ledger is kept, from the settings', async () => {

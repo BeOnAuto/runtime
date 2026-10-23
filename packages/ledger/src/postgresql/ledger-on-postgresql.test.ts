@@ -12,6 +12,7 @@ import {
   plainPoolsOn,
   postgresqlEventStore,
   postgresqlLedgerLayer,
+  postgresqlLedgerOpened,
   postgresqlSecretRows,
 } from './postgresql-ledger.ts';
 
@@ -89,6 +90,10 @@ async function aDatabase(): Promise<string> {
 
 const lostConnections: Readonly<Error>[] = [];
 
+function reportLostConnection(error: Readonly<Error>): void {
+  lostConnections.push(error);
+}
+
 const onPostgreSQL: LedgerEntry = {
   mostEventsInOneAppend: 64,
   afterClosing: 'Cannot use a pool after calling end on the pool',
@@ -100,13 +105,8 @@ const onPostgreSQL: LedgerEntry = {
       projections,
       ...(runOutcomes === undefined ? {} : { runOutcomes }),
     }),
-  storeOn: (database) =>
-    postgresqlEventStore({
-      pools: plainPoolsOn(database),
-      reportLostConnection: (error) => {
-        lostConnections.push(error);
-      },
-    }),
+  storeOn: (database) => postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection }),
+  openedOn: (database) => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection }),
   queried,
   executedOn,
   layout: postgresqlLayout,

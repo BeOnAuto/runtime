@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import type { DispatchWatermark } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { runCaughtUp } from '../listeners/listener-rows.ts';
 import { runLogStreamOf } from '../runs/run-address.ts';
 

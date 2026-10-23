@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { movedClock, type MovedClock } from '../reaction-testing/moved-clock.ts';
 import {
   at,

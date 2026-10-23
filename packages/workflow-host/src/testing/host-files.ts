@@ -2,14 +2,20 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { statement, type ConnectionPorts, type Statement } from '@on.auto/ledger';
 import { plainPoolsOn } from '@on.auto/ledger/postgresql';
-import { Effect, Function, Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 import { expect, onTestFinished } from 'vitest';
 
 import { oneRowOf, rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { openHostDatabase, type DatabaseSettings } from '../database/host-databases.ts';
-import { statement, type Statement } from '../database/statement.ts';
+import {
+  hostDatabaseOpenedOn,
+  ledgerConnectedOn,
+  type DatabaseSettings,
+} from '../ledger-testing/ledger-connections.ts';
 import { until } from './until.ts';
+
+export type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 
 export type SettingsOf = () => Promise<DatabaseSettings>;
 
@@ -35,9 +41,15 @@ export function onPostgreSQLAt(url: string): DatabaseSettings {
   return { store: 'postgresql', pools: plainPoolsOn(url) };
 }
 
+export async function connectedOn(settings: DatabaseSettings): Promise<ConnectionPorts> {
+  const { connection, close } = await ledgerConnectedOn(settings);
+  onTestFinished(close);
+  return connection;
+}
+
 export async function openedOn(settings: DatabaseSettings, tables: readonly Statement[] = []): Promise<HostDatabase> {
-  const database = await openHostDatabase(settings, Function.constVoid, tables);
-  onTestFinished(() => database.close());
+  const database = await hostDatabaseOpenedOn(settings, tables);
+  onTestFinished(database.close);
   return database;
 }
 

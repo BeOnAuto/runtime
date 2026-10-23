@@ -1,7 +1,7 @@
 import { Effect, Schema } from 'effect';
 import { parse } from 'yaml';
 
-import type { DatabaseSettings } from '../src/database/host-databases.ts';
+import type { DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { skippingClock } from '../src/loop/host-clock.ts';
 import { header, measuredHost, runAt, startOf } from './measured-host.ts';
 

@@ -1,8 +1,8 @@
+import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { statement } from '../database/statement.ts';
 import { deliverySweeps } from '../follower/consumers.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { StartRefused, type ReactionStart } from './reaction-options.ts';

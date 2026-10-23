@@ -1,5 +1,5 @@
 import { playbookEventOf, definitionTypeStreamOf, type CloudEvent } from '@on.auto/definitions';
-import type { EventStore, StoredPage, StoredPlace } from '@on.auto/ledger';
+import type { LedgerStreams, StoredPage, StoredPlace } from '@on.auto/ledger';
 
 import type { Point } from './history-points.ts';
 
@@ -87,7 +87,7 @@ function isPassedOver(placed: PageEvent | PassedOver): placed is PassedOver {
 }
 
 export async function readPage(
-  store: EventStore,
+  store: LedgerStreams,
   { playbookKey, after, types, definitionTypes }: PageRead,
 ): Promise<ReadPage> {
   const page = await store.readRecorded(
