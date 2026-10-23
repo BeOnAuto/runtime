@@ -7,7 +7,7 @@ import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
-import type { ServedParts } from './served-parts.ts';
+import { composedWithTheLedgerOver, type ServedParts } from './served-parts.ts';
 import { patientWorkerPool } from './worker-pools.ts';
 
 export interface ReasoningServer {
@@ -38,22 +38,23 @@ export async function servingReasoning(
   replies: readonly ScriptedReply[],
   environment: Readonly<Record<string, string>> = {},
   fetch: Fetch = noNetwork,
-  { programPoolOf = patientWorkerPool, clock, toolTiming }: ServedParts = {},
+  { programPoolOf = patientWorkerPool, clock, toolTiming, ledgerOver }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const ledger = temporaryLedger();
   const scripted = scriptedLanguageModel(...replies);
+  const composition = compositionRootWith(
+    (settings) =>
+      Effect.map(makeModelAccess(settings, { fetch }), (access) => ({
+        ...access,
+        languageModel: scripted.languageModel,
+      })),
+    programPoolOf,
+    clock,
+    toolTiming,
+  );
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), ...environment },
-    compositionRootWith(
-      (settings) =>
-        Effect.map(makeModelAccess(settings, { fetch }), (access) => ({
-          ...access,
-          languageModel: scripted.languageModel,
-        })),
-      programPoolOf,
-      clock,
-      toolTiming,
-    ),
+    ledgerOver === undefined ? composition : composedWithTheLedgerOver(composition, ledgerOver),
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,

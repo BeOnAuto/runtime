@@ -1,17 +1,8 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { Ledger } from '@on.auto/operations';
+import { Effect, Schema } from 'effect';
+import { describe, expect, it } from 'vitest';
 
-import { describe, expect, it, onTestFinished } from 'vitest';
-
-import {
-  askingASystem,
-  calling,
-  problemWith,
-  systemRunId,
-  type SystemServer,
-} from '../testing/interaction-servers/system-calls.ts';
+import { askingASystem, calling, problemWith, systemRunId } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { beforeAnything, endedFor, endingOf, problems } from './ending-rows.ts';
 import { afterSending, unreadable } from './sent-ending-rows.ts';
@@ -40,24 +31,26 @@ describe('a run that asks a system and cannot use what the tool answered, over H
   });
 });
 
-async function refusingCallStarts(): Promise<SystemServer> {
-  const directory = mkdtempSync(join(tmpdir(), 'asking-a-system-'));
-  const ledgerFile = join(directory, 'ledger.db');
-  onTestFinished(() => {
-    rmSync(directory, { recursive: true, force: true });
+const isTheStartOfACall = Schema.is(
+  Schema.Struct({
+    type: Schema.Literal('tool_call'),
+    fact: Schema.Struct({ type: Schema.Literal('tool_call_started') }),
+  }),
+);
+
+function refusingCallStarts(ledger: Ledger['Service']): Ledger['Service'] {
+  return Ledger.of({
+    ...ledger,
+    execute: (stream, decider, command, lineage) =>
+      isTheStartOfACall(command)
+        ? Effect.die(new Error('The ledger refused the write'))
+        : ledger.execute(stream, decider, command, lineage),
   });
-  const server = await askingASystem({ environment: { LEDGER_FILE: ledgerFile } });
-  const database = new DatabaseSync(ledgerFile);
-  database.exec(
-    "CREATE TRIGGER refuse_call_starts BEFORE INSERT ON emt_messages WHEN NEW.message_type = 'tool_call_started' BEGIN SELECT RAISE(ABORT, 'refused'); END",
-  );
-  database.close();
-  return server;
 }
 
 describe('a run that asks a system whose start of the call the ledger refuses, over HTTP', () => {
   it('fails with an incident, sends nothing, and is recorded failed', async () => {
-    const server = await refusingCallStarts();
+    const server = await askingASystem({ ledgerOver: refusingCallStarts });
     await server.define('asking');
 
     const ended = await server.runCall('asking');
@@ -70,7 +63,11 @@ describe('a run that asks a system whose start of the call the ledger refuses, o
       retryAfter: null,
     });
     expect(ended.body).toMatchObject({ instance: anIncident });
-    expect([read.body, server.fake.received()]).toEqual([problemWith({ status: 'failed' }), []]);
+    expect([read.body, server.fake.received(), server.modelCalls()]).toEqual([
+      problemWith({ status: 'failed' }),
+      [],
+      0,
+    ]);
   });
 });
 

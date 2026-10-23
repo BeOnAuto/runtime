@@ -6,6 +6,7 @@ import { expect, onTestFinished } from 'vitest';
 
 import type { TestResponse } from '../servers/http-client.ts';
 import { alpha } from '../servers/reasoning-server.ts';
+import type { LedgerOver } from '../servers/served-parts.ts';
 import { chatKey } from './chat-deliveries.ts';
 import { interactionServerOn, type InteractionServer } from './interaction-server.ts';
 
@@ -30,6 +31,7 @@ export interface SystemOptions {
   readonly entry?: Readonly<Record<string, unknown>>;
   readonly servers?: Readonly<Record<string, unknown>>;
   readonly timing?: Timing;
+  readonly ledgerOver?: LedgerOver;
   readonly environment?: Readonly<Record<string, string>>;
 }
 
@@ -60,6 +62,7 @@ export async function askingASystem({
   entry = {},
   servers = {},
   timing,
+  ledgerOver,
   environment = {},
 }: SystemOptions = {}): Promise<SystemServer> {
   const fake = await serveFakeMcp({ bearer: chatKey, data: true, hints });
@@ -67,7 +70,7 @@ export async function askingASystem({
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...entry };
   const server = await interactionServerOn(
     { CHAT_KEY: chatKey, TOOL_SERVERS: JSON.stringify({ chat, ...servers }), ...environment },
-    timing === undefined ? {} : { toolTiming: timing },
+    { ...(timing === undefined ? {} : { toolTiming: timing }), ...(ledgerOver === undefined ? {} : { ledgerOver }) },
   );
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return {
