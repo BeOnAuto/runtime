@@ -1,8 +1,7 @@
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { describe, onTestFinished } from 'vitest';
 
-import { sqliteEventStore } from './index.ts';
-import { sqliteLayout } from './layout/layout-dialects.ts';
+import { sqliteEventStore, sqliteLayout } from './index.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
 import { keptSecretsBehaviour } from './secrets/kept-secrets-behaviour.ts';
 import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
