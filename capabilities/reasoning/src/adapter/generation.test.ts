@@ -2,9 +2,9 @@ import { MockLanguageModelV4 } from 'ai/test';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { generatedText, mockGeneration } from '../provider-testing/mock-models.ts';
 import { compileAnswerSchema } from '../schema/answer-schema.ts';
-import { jsonRequest, textRequest, verdictSchema } from '../testing/adapter-harness.ts';
-import { generatedText, mockGeneration } from '../testing/mock-models.ts';
+import { jsonRequest, promptText, textRequest, verdictSchema } from '../testing/adapter-harness.ts';
 
 function answering(result: () => ReturnType<typeof generatedText>): MockLanguageModelV4 {
   return new MockLanguageModelV4({ doGenerate: () => Promise.resolve(result()) });
@@ -70,6 +70,13 @@ describe('the call a generation makes', () => {
   });
 });
 
+const helloRequestBytes = new TextEncoder().encode(
+  JSON.stringify({
+    instructions: 'Answer briefly',
+    messages: [{ role: 'user', content: [{ type: 'text', text: promptText }] }],
+  }),
+).byteLength;
+
 describe('the result of a generation', () => {
   it('maps the usage, the identity of the answer and its duration', async () => {
     const result = await mockGeneration(() => answering(() => generatedText('Hello'))).succeeded(
@@ -89,6 +96,8 @@ describe('the result of a generation', () => {
       model: { requested: 'mock/model', resolved: 'mock/model', answered: 'mock-model-2026' },
       response_id: 'response-1',
       warnings: [],
+      response: JSON.stringify([{ role: 'assistant', content: [{ type: 'text', text: 'Hello' }] }]),
+      request_bytes: helloRequestBytes,
       duration_ms: 0,
     });
   });

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { anthropicMessage, chatCompletion } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { anthropicMessage, chatCompletion } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 
 const gateway = {
   name: 'internal',

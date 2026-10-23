@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { liteLlmModels, vercelGatewayModels } from '../provider-testing/model-lists.ts';
+import { jsonResponse } from '../provider-testing/recording-fetch.ts';
 import { catalogFor } from '../testing/catalog-harness.ts';
-import { liteLlmModels, vercelGatewayModels } from '../testing/model-lists.ts';
-import { jsonResponse } from '../testing/recording-fetch.ts';
 
 const gateway = {
   name: 'gateway',

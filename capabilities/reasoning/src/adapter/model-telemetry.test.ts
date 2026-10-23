@@ -1,9 +1,9 @@
 import type { Telemetry } from 'ai';
 import { describe, expect, it } from 'vitest';
 
+import { anthropicMessage } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { anthropicMessage } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 
 interface Recorded {
   readonly recordInputs: boolean | undefined;

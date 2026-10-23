@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+  anthropicMessage,
+  converseMessage,
+  converseToolAnswer,
+  geminiContent,
+} from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { anthropicMessage, converseMessage, converseToolAnswer, geminiContent } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 import type { AwsCredentials } from './credential-sources.ts';
 
 const region = { AWS_REGION: 'eu-west-1' };

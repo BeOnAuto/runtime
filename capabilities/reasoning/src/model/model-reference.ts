@@ -21,6 +21,10 @@ export function parseModelReference(reference: string): Option.Option<ModelRefer
   return Option.some({ provider: reference.slice(0, split), model: reference.slice(split + 1) });
 }
 
+export function providerOf(reference: string): string {
+  return Option.match(parseModelReference(reference), { onNone: () => reference, onSome: ({ provider }) => provider });
+}
+
 export function hasOnlyVisibleCharacters(text: string): boolean {
   return visibleCharacters.test(text);
 }

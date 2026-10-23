@@ -367,7 +367,7 @@ get_run: The workflow “review-and-approve” is still running; how it ends can
 list_interactions: Found 1 request waiting on this page.
 answer_interaction: The request is answered: the run that asked it takes the answer within the host's sweep, a second by default, and get_run shows how it ended.
 get_run: The run of the workflow “review-and-approve” finished. Its result: review: “Revise: the audience lacks a job role.” and approval: (verdict: “approve” and note: “Approved for the autumn launch.”)
-list_playbook_events: Found 15 events of the run asked for in this playbook, oldest first, each with its fact and its metadata.
+list_playbook_events: Found 17 events of the run asked for in this playbook, oldest first, each with its fact and its metadata.
 get_run: The run of the interaction function “approve-campaign-brief” finished. Its answer: verdict: “approve” and note: “Approved for the autumn launch.”
 list_interactions: No request is waiting.
 ```

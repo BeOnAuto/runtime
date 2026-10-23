@@ -28,7 +28,10 @@ export async function toolUsersServedBy(
 ): Promise<ServedToolUsers> {
   const tools = toolAccessOf(registry.tools, settings, connections, toolTiming);
   return {
-    reasoning: await reasoningServedBy(runtime, settings, registry.models, tools),
+    reasoning: await reasoningServedBy(runtime, settings, registry.models, {
+      tools,
+      telemetry: registry.modelTelemetry,
+    }),
     interaction: interactionServedBy(runtime, settings, tools),
     toolOperations: toolOperationsOf(tools, { offering }),
   };

@@ -1,5 +1,5 @@
 import { TimedOut } from '@on.auto/reasoning';
-import { callingTools, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { callingTools, type ScriptedReplies, type ScriptedReply } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -53,7 +53,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function serving(...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
+async function serving(...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
   const fake: FakeMcpServer = await serveFakeMcp({ bearer: apiKey });
   closing.push(fake.close);
   const gone = await serveFakeMcp();

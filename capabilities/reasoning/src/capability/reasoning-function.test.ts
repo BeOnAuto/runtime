@@ -1,14 +1,12 @@
 import { InvalidInput } from '@on.auto/operations';
-import { noToolServers } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import { documentOf, reasoningExample } from '../testing/definition-documents.ts';
 import { answers, scriptedLanguageModel, textResult } from '../testing/index.ts';
-import { runContext, reasoningWith } from '../testing/reasoning-runs.ts';
+import { reasoningAdapter, runContext, reasoningWith } from '../testing/reasoning-runs.ts';
 import { onThisServer } from './on-this-server.ts';
-import { makeReasoningFunctionAdapter } from './reasoning-function.ts';
 
 const { capability, prepared } = reasoningWith();
 
@@ -135,16 +133,11 @@ describe('the moment a run renders', () => {
       ),
     );
     const scripted = scriptedLanguageModel(answers(textResult('ok')));
-    const timed = makeReasoningFunctionAdapter({
-      languageModel: scripted.languageModel,
-      clock,
-      offered: { providers: ['anthropic'], aliases: [] },
-      tools: noToolServers,
-    });
+    const timed = reasoningAdapter({ languageModel: scripted.languageModel, clock });
     const definition = Effect.runSync(
       timed.prepare(documentOf('model: openai/gpt-5', 'Today is {{ today }}, now {{ now }}')),
     );
-    await Effect.runPromise(definition.run({}, runContext));
+    await Effect.runPromise(definition.run({}, runContext()));
 
     expect(scripted.requests()[0]?.messages).toEqual([
       { role: 'user', content: [{ type: 'text', text: 'Today is 2030-01-02, now 2030-01-02T03:04:05.000Z' }] },

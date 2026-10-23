@@ -1,5 +1,5 @@
 import { listedTools, withMcpSession, type ListedTool, type McpSession } from '@on.auto/api/testing';
-import type { ScriptedReply } from '@on.auto/reasoning/testing';
+import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
 import { servingReasoning } from '../servers/reasoning-server.ts';
@@ -52,7 +52,7 @@ async function chatServing(options: MeetingsOptions) {
 }
 
 export async function servingMeetings(
-  replies: readonly ScriptedReply[],
+  replies: readonly ScriptedReplies[],
   options: MeetingsOptions = {},
 ): Promise<MeetingsServer> {
   const slack = await serveFakeMcp({ bearer: slackKey });

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { openAiResponse } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, jsonRequest, promptText, succeeded, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
-import { openAiResponse } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 
 const answerText = 'ANSWER-TEXT-8e21';
 

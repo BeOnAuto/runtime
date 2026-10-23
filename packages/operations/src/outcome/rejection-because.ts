@@ -17,6 +17,7 @@ export const RejectionBecauseSchema = Schema.Literals([
   'server_failed',
   'tool_error',
   'model_unavailable',
+  'definition_refused',
   'run_bound',
   'no_answer',
   'restarted_without_content',

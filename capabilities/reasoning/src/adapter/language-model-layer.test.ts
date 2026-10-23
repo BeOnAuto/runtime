@@ -2,10 +2,10 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { LanguageModel } from '../model/language-model.ts';
+import { anthropicMessage } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { readModelSettings } from '../settings/model-settings.ts';
 import { textRequest } from '../testing/adapter-harness.ts';
-import { anthropicMessage } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 import { languageModelLayer } from './language-model-layer.ts';
 import { makeModelAccess } from './model-access.ts';
 

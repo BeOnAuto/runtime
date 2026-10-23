@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { chatCompletion } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, type RecordingFetch, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { chatCompletion } from '../testing/provider-replies.ts';
-import { jsonResponse, type RecordingFetch, recordingFetch } from '../testing/recording-fetch.ts';
 import type { ModelAccess } from './model-access.ts';
 
 const gateway = { name: 'gateway', base_url: 'https://llm.internal.example/v1', api_key_env: 'GATEWAY_KEY' };

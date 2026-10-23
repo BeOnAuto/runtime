@@ -1,6 +1,6 @@
 import { withMcpSession } from '@on.auto/api/testing';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
-import { jsonResult, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { answeringFromTheTools, jsonResult, textResult, type ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -109,16 +109,10 @@ const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
 const rows = campaignRows(100);
 
-function readingRowsThroughTheGraph(): ScriptedReply {
-  return (request) =>
-    Effect.promise(async (signal) => {
-      const echo = request.tools?.offered.find(({ name }) => name === 'graph__echo');
-      const reply = await echo?.call(
-        { callId: 'call-1', input: { rows: rows['rows'] } },
-        { signal, cancelled: signal },
-      );
-      return jsonResult(decodeJson(reply?.text ?? '{}'));
-    });
+function readingRowsThroughTheGraph(): ScriptedReplies {
+  return answeringFromTheTools([['graph__echo', { rows: rows['rows'] ?? [] }]], ([echoed = '{}']) =>
+    jsonResult(decodeJson(echoed)),
+  );
 }
 
 const workflowInput = { campaigns: 'all', period: rows['period'] };
@@ -131,7 +125,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function serving(programPoolOf: ProgramPoolOf, ...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
+async function serving(programPoolOf: ProgramPoolOf, ...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
   const graph = await serveFakeMcp({ bearer: apiKey });
   graphs.splice(0, graphs.length, graph);
   closing.push(graph.close);
@@ -200,7 +194,7 @@ describe('a workflow that reads rows through an MCP server, computes and reasons
       runs: [{ type: 'computation', name: 'pace', status: 'succeeded' }],
     });
     expect(await computedOutput(server)).toMatchObject({ total_spend_cents: 283_150 });
-    expect(server.modelCalls()).toBe(2);
+    expect(server.modelCalls()).toBe(3);
   });
 
   it('retries the computation step after a transient failure, and runs it again', async () => {
@@ -230,7 +224,7 @@ describe('a workflow that reads rows through an MCP server, computes and reasons
     expect(await computationRuns(server)).toMatchObject({
       runs: [{ name: 'raising', status: 'rejected', rejection: { reason: 'conflict', kind: 'unworkable' } }],
     });
-    expect(server.modelCalls()).toBe(1);
+    expect(server.modelCalls()).toBe(2);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { McpSession, ToolResult } from '@on.auto/api/testing';
-import type { ScriptedReply } from '@on.auto/reasoning/testing';
+import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/testing';
 
 import type { ReasoningServer } from './reasoning-server.ts';
@@ -9,7 +9,7 @@ const toolServerKey = 'graph-api-key-4f1d9a7c2b';
 
 type InPlaybook = (input: Readonly<Record<string, unknown>>) => Readonly<Record<string, unknown>>;
 
-export async function servingWithAToolServer(replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
+export async function servingWithAToolServer(replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
   const graph = await serveFakeMcp({ bearer: toolServerKey });
   const server = await servingWorkflows(replies, {
     GRAPH_API_KEY: toolServerKey,

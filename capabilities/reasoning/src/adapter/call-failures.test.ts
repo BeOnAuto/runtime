@@ -1,16 +1,16 @@
-import { Exit } from 'effect';
+import { Effect, Exit, Fiber } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { accessFor, failed, generated, promptText, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { exposedText } from '../testing/exposure.ts';
-import { openAiResponse } from '../testing/provider-replies.ts';
+import { openAiResponse } from '../provider-testing/provider-replies.ts';
 import {
   abortedWith,
   connectionFailure,
   jsonResponse,
   recordingFetch,
   type Responder,
-} from '../testing/recording-fetch.ts';
+} from '../provider-testing/recording-fetch.ts';
+import { accessFor, failed, generated, promptText, succeeded, textRequest } from '../testing/adapter-harness.ts';
+import { exposedText } from '../testing/exposure.ts';
 
 const apiKey = 'sk-openai-SECRET-5d2f';
 
@@ -74,17 +74,28 @@ describe('a call that is stopped', () => {
     expect(failure).toMatchObject({ _tag: 'timed_out', provider: 'openai', timeout_ms: 50 });
   });
 
-  it('fails as cancelled when the caller aborts', async () => {
-    const controller = new AbortController();
-    const recording = recordingFetch(({ signal }) => {
-      controller.abort();
+  it('aborts the request to the provider when the call is interrupted', async () => {
+    const asked = Promise.withResolvers<void>();
+    const recording = recordingFetch(async ({ signal }) => {
+      asked.resolve();
+      await new Promise((aborted) => {
+        signal.addEventListener('abort', aborted);
+      });
       return abortedWith(signal);
     });
     const access = await accessFor({ OPENAI_API_KEY: apiKey }, { fetch: recording.fetch });
 
-    const failure = await failed(access, textRequest('openai/gpt-5', { signal: controller.signal }));
+    const exit = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const calling = yield* Effect.forkChild(access.languageModel.generate(textRequest('openai/gpt-5')));
+        yield* Effect.promise(() => asked.promise);
+        yield* Fiber.interrupt(calling);
+        return yield* Fiber.join(calling);
+      }),
+    );
 
-    expect(failure).toMatchObject({ _tag: 'cancelled', provider: 'openai' });
+    expect(Exit.hasInterrupts(exit)).toBe(true);
+    expect(recording.requests().map(({ signal }) => signal.aborted)).toEqual([true]);
   });
 });
 

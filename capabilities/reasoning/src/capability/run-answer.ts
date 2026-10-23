@@ -1,48 +1,21 @@
-import type { RunContext } from '@on.auto/definitions';
-import type { ToolAccess } from '@on.auto/tool-servers';
-import { Clock, Effect } from 'effect';
+import { Effect } from 'effect';
 
-import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
-import type { LanguageModel } from '../model/language-model.ts';
-import type { ModelResult } from '../model/model-result.ts';
-import type { RenderedPrompt } from '../template/compiled-template.ts';
+import type { StepsAnswer } from '../steps/steps-answer.ts';
 import { withTools } from '../tools/tool-opening.ts';
-import { requestFor, unknownWindows, windowFor, type ModelReading } from './definition-request.ts';
-import { rejections, spendingSince, type DefinitionRejection } from './model-rejection.ts';
+import type { BeforeTheSteps } from './before-the-steps.ts';
+import { requestFor } from './definition-request.ts';
+import { admitted, type DefinitionRejection } from './model-rejection.ts';
+import type { Answering, Stepping } from './run-services.ts';
+import { steppedWith } from './steps-run.ts';
 
-export interface Answering {
-  readonly languageModel: LanguageModel['Service'];
-  readonly access: ToolAccess;
-  readonly reading: ModelReading | undefined;
-  readonly definition: ReasoningFunctionDefinitionDocument;
-  readonly prompt: RenderedPrompt;
-  readonly run: RunContext;
-}
-
-export function answerOf({
-  languageModel,
-  access,
-  reading = unknownWindows,
-  definition,
-  prompt,
-  run,
-}: Answering): Effect.Effect<ModelResult, DefinitionRejection> {
-  const { max_output_tokens: maxOutputTokens } = definition.settings;
-  const admitted = Effect.flatMap(Clock.currentTimeMillis, (started) =>
-    languageModel
-      .admit(requestFor(definition, prompt, run))
-      .pipe(Effect.catchTags(rejections(maxOutputTokens, spendingSince(started)))),
-  );
+export function answerOf(
+  answering: Answering,
+  { definition, prompt, run, before }: Stepping & { readonly before: BeforeTheSteps },
+): Effect.Effect<StepsAnswer, DefinitionRejection> {
+  const admission = admitted(answering.languageModel.admit(requestFor(definition, prompt, run)), before);
+  const opening = { access: answering.access, references: definition.tools, run, before };
   return Effect.andThen(
-    admitted,
-    withTools(access, definition.tools, run, (tools) =>
-      Effect.flatMap(windowFor(reading, definition.model, tools), (contextWindow) =>
-        Effect.flatMap(Clock.currentTimeMillis, (started) =>
-          languageModel
-            .generate(requestFor(definition, prompt, run, { tools, reading: { ...reading, contextWindow } }))
-            .pipe(Effect.catchTags(rejections(maxOutputTokens, spendingSince(started), tools))),
-        ),
-      ),
-    ),
+    admission,
+    withTools(opening, (tools) => steppedWith(answering, { definition, prompt, run }, tools)),
   );
 }

@@ -23,6 +23,11 @@ const unfinishedBecauses = [
   ['server_failed', 'a tool server failed', 'because a tool server failed'],
   ['tool_error', 'a tool answered an error', 'because the tool answered an error, which the details below give'],
   ['model_unavailable', 'the model did not finish', 'because the model stopped answering'],
+  [
+    'definition_refused',
+    'its definition was refused',
+    'because its definition was refused before its model could be called again',
+  ],
   ['run_bound', 'ran out of time', 'because it ran out of time'],
   ['no_answer', 'never came to an answer', 'because the model kept calling tools instead of answering'],
 ] as const;
@@ -104,7 +109,7 @@ describe('explanationOf a run that needs tools', () => {
       ([, rejection]) => explanationOf(rejection).mayHaveChanged === true,
     );
 
-    expect(changing.map(([, rejection]) => rejection.kind)).toEqual(Array.from({ length: 5 }, () => 'effect_unknown'));
+    expect(changing.map(([, rejection]) => rejection.kind)).toEqual(Array.from({ length: 6 }, () => 'effect_unknown'));
   });
 
   it('says why the effect is not known in 105 characters and what to do in 117, and that tools that only read may run again in 171', () => {

@@ -1,10 +1,12 @@
 import { Ledger } from '@on.auto/operations';
+import type { LanguageModel } from '@on.auto/reasoning';
 import type { Timing } from '@on.auto/tool-servers';
 import type { HostClock } from '@on.auto/workflow-host';
 import { Context, Layer } from 'effect';
 
 import type { ProgramPoolOf } from '../../composition/served-computation.ts';
 import type { ComposedServerOptions } from '../../server-options/composed-options.ts';
+import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 
 export type LedgerOver = (ledger: Ledger['Service']) => Ledger['Service'];
 
@@ -13,6 +15,8 @@ export interface ServedParts {
   readonly clock?: HostClock;
   readonly toolTiming?: Timing;
   readonly ledgerOver?: LedgerOver;
+  readonly admit?: LanguageModel['Service']['admit'];
+  readonly ledger?: TemporaryLedger;
 }
 
 export function composedWithTheLedgerOver(

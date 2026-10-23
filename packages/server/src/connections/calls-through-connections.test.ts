@@ -1,4 +1,4 @@
-import { answers, callingTools, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { answers, callingTools, textResult, type ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -38,7 +38,7 @@ function reasoningFunction(tool: string): string {
   return ['---', 'model: anthropic/claude-sonnet-4-5', `tools: [${tool}]`, '---', 'Summarize acme.'].join('\n');
 }
 
-async function serving(...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
+async function serving(...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
   const server = await servingReasoning(replies);
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
@@ -88,8 +88,12 @@ describe('a function that names a connection a person added and gave its credent
     expect(page).toMatchObject({
       events: [
         { type: 'run_started' },
+        { type: 'model_call_started' },
+        { type: 'model_call_answered', data: { tool_calls: [{ server: 'crm', tool: 'echo' }] } },
         { type: 'tool_call_started', data: { server: 'crm', connection_id: id, tool: 'echo' } },
         { type: 'tool_call_answered' },
+        { type: 'model_call_started' },
+        { type: 'model_call_answered' },
         { type: 'run_succeeded' },
       ],
     });

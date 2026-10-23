@@ -3,7 +3,6 @@ import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
-  Cancelled,
   ContentRefused,
   CredentialsRejected,
   ModelNotAllowed,
@@ -27,6 +26,15 @@ function failingWith(failure: () => ModelFailure): Promise<Run> {
   return reasoningWith(() => Effect.fail(failure())).running(jsonDefinition, { text: 'x' });
 }
 
+const unknownTokens = { total: null, uncached: null, cache_read: null, cache_write: null };
+
+const spentOnTheCall = {
+  record: {
+    usage: { input: unknownTokens, output: { total: null, text: null, reasoning: null }, total: null },
+    duration_ms: 0,
+  },
+};
+
 describe('a provider that signals the request of a run without tools too long', () => {
   it('is unworkable, saying the request was too long by its signal, and advising a shorter prompt', async () => {
     const failure = new RequestTooLong({
@@ -44,6 +52,7 @@ describe('a provider that signals the request of a run without tools too long', 
           detail:
             'openai refused the request as longer than the model takes, by the error code context_length_exceeded; shorten the prompt or the input of the reasoning function',
           kind: 'unworkable',
+          ...spentOnTheCall,
         }),
       ),
     );
@@ -66,6 +75,7 @@ describe('a provider that rejects the definition', () => {
           detail:
             'openai answered HTTP 404: the model was not found; update the reasoning function definition. The provider said: The model gpt-6 does not exist',
           kind: 'unworkable',
+          ...spentOnTheCall,
         }),
       ),
     );
@@ -86,6 +96,7 @@ describe('a provider that rejects the definition', () => {
           detail:
             'The request is not valid (/settings/temperature: Expected a finite number); update the reasoning function definition',
           kind: 'unworkable',
+          ...spentOnTheCall,
         }),
       ),
     );
@@ -109,6 +120,7 @@ describe('a JSON answer that is not usable', () => {
           detail:
             'openai stopped the answer at max_output_tokens (200) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition',
           kind: 'unworkable',
+          ...spentOnTheCall,
         }),
       ),
     );
@@ -128,6 +140,7 @@ describe('a JSON answer that is not usable', () => {
       Exit.fail(
         new Unavailable({
           detail: 'The answer of openai does not match the output schema (/summary: Expected string); try again',
+          ...spentOnTheCall,
         }),
       ),
     );
@@ -213,28 +226,7 @@ const cannotServe: readonly (readonly [string, () => ModelFailure, string])[] = 
 
 describe('a provider that cannot serve now', () => {
   it.each(cannotServe)('is unavailable, saying which and when to try again: %s', async (_name, failure, detail) => {
-    expect(await failingWith(failure)).toEqual(Exit.fail(new Unavailable({ detail })));
-  });
-});
-
-describe('a model of a provider the server does not have, while it has others', () => {
-  it('is unavailable of the kind model_not_offered, because its provider is not set up, so that the definition can be switched', async () => {
-    const failure = new ProviderNotConfigured({
-      detail: 'openai is not configured. Configured providers: anthropic, gateway',
-      provider: 'openai',
-      configured: ['anthropic', 'gateway'],
-      missing: ['OPENAI_API_KEY'],
-    });
-
-    expect(await failingWith(() => failure)).toEqual(
-      Exit.fail(
-        new Unavailable({
-          detail: 'openai is not configured. Configured providers: anthropic, gateway',
-          kind: 'model_not_offered',
-          because: 'provider_not_configured',
-        }),
-      ),
-    );
+    expect(await failingWith(failure)).toEqual(Exit.fail(new Unavailable({ detail, ...spentOnTheCall })));
   });
 });
 
@@ -251,6 +243,7 @@ describe('a model outside those its operator allows', () => {
           detail: 'openai/gpt-5 is not one of the models this server offers',
           kind: 'model_not_offered',
           because: 'model_not_allowed',
+          ...spentOnTheCall,
         }),
       ),
     );
@@ -272,18 +265,9 @@ describe('an input the model refuses', () => {
         new InvalidInput({
           detail: 'openai refused the request under its content policy',
           issues: [{ pointer: '', detail: 'The model refused this input under its content policy' }],
+          ...spentOnTheCall,
         }),
       ),
     );
-  });
-});
-
-describe('a cancelled call', () => {
-  it('interrupts the run', async () => {
-    const exit = await failingWith(
-      () => new Cancelled({ detail: 'The call to openai was cancelled', provider: 'openai' }),
-    );
-
-    expect(Exit.hasInterrupts(exit)).toBe(true);
   });
 });

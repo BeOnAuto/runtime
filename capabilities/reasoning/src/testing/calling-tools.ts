@@ -1,29 +1,34 @@
-import { Effect, Option } from 'effect';
+import { Effect, Schema } from 'effect';
 
-import type { ModelRequest, ModelTool, ToolReply } from '../model/model-request.ts';
-import type { ScriptedReply } from './scripted-language-model.ts';
+import type { ModelRequest } from '../model/model-request.ts';
+import type { ModelResult } from '../model/model-result.ts';
+import { toolCallsResult, type ScriptedCall } from './model-results.ts';
+import { answers, type ScriptedReply } from './scripted-language-model.ts';
 
-export type ScriptedCall = readonly [string, Readonly<Record<string, unknown>>];
-
-function toolNamed({ tools }: ModelRequest, name: string): ModelTool {
-  return Option.getOrThrow(Option.fromNullishOr(tools?.offered.find((offered) => offered.name === name)));
-}
-
-function calledInTurn(
-  request: ModelRequest,
+export function callingTools(
   calls: readonly ScriptedCall[],
-  signal: Readonly<AbortSignal>,
-): Promise<readonly ToolReply[]> {
-  return calls.reduce<Promise<readonly ToolReply[]>>(
-    async (done, [name, input], index) => [
-      ...(await done),
-      await toolNamed(request, name).call({ callId: `call-${index + 1}`, input }, { signal, cancelled: signal }),
-    ],
-    Promise.resolve([]),
-  );
+  then: ScriptedReply,
+  asked: Partial<ModelResult> = {},
+): readonly ScriptedReply[] {
+  return [answers(toolCallsResult(calls, asked)), then];
 }
 
-export function callingTools(calls: readonly ScriptedCall[], then: ScriptedReply): ScriptedReply {
-  return (request) =>
-    Effect.promise((interruption) => calledInTurn(request, calls, interruption)).pipe(Effect.andThen(then(request)));
+const ToolAnswers = Schema.Struct({
+  role: Schema.Literal('tool'),
+  content: Schema.Array(Schema.Struct({ output: Schema.Struct({ value: Schema.String }) })),
+});
+
+const isToolAnswers = Schema.is(ToolAnswers);
+
+function answersIn({ conversation = [] }: ModelRequest): readonly string[] {
+  return conversation
+    .filter((message) => isToolAnswers(message))
+    .flatMap(({ content }) => content.map(({ output }) => output.value));
+}
+
+export function answeringFromTheTools(
+  calls: readonly ScriptedCall[],
+  answer: (texts: readonly string[]) => ModelResult,
+): readonly ScriptedReply[] {
+  return callingTools(calls, (request) => Effect.sync(() => answer(answersIn(request))));
 }

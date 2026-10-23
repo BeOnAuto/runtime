@@ -1,5 +1,5 @@
 import { makeModelAccess } from '@on.auto/reasoning';
-import { scriptedLanguageModel, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { scriptedLanguageModel, type ScriptedReplies } from '@on.auto/reasoning/testing';
 import { Effect } from 'effect';
 
 import { compositionRootWith } from '../../composition/composition-root.ts';
@@ -35,18 +35,18 @@ type Fetch = typeof globalThis.fetch;
 export const noNetwork: Fetch = () => Promise.reject(new TypeError('fetch failed: the tests reach no network'));
 
 export async function servingReasoning(
-  replies: readonly ScriptedReply[],
+  replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
   fetch: Fetch = noNetwork,
-  { programPoolOf = patientWorkerPool, clock, toolTiming, ledgerOver }: ServedParts = {},
+  { programPoolOf = patientWorkerPool, clock, toolTiming, ledgerOver, admit, ledger: shared }: ServedParts = {},
 ): Promise<ReasoningServer> {
-  const ledger = temporaryLedger();
+  const ledger = shared ?? temporaryLedger();
   const scripted = scriptedLanguageModel(...replies);
   const composition = compositionRootWith(
     (settings) =>
       Effect.map(makeModelAccess(settings, { fetch }), (access) => ({
         ...access,
-        languageModel: scripted.languageModel,
+        languageModel: { ...scripted.languageModel, ...(admit === undefined ? {} : { admit }) },
       })),
     programPoolOf,
     clock,
@@ -63,7 +63,9 @@ export async function servingReasoning(
     modelRunIds: () => scripted.requests().map(({ run_id: runId }) => runId),
     stop: async () => {
       await server.stop();
-      ledger.remove();
+      if (shared === undefined) {
+        ledger.remove();
+      }
     },
   };
 }

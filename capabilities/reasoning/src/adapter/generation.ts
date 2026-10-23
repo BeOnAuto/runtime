@@ -1,6 +1,6 @@
 import { Clock, Effect, Result } from 'effect';
 
-import type { ModelFailure } from '../failure/model-failure.ts';
+import type { LanguageModel } from '../model/language-model.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelResult } from '../model/model-result.ts';
 import { checkedRequest } from '../model/request-checks.ts';
@@ -26,10 +26,7 @@ function reportsOf(
   );
 }
 
-export interface Generation {
-  readonly admit: (request: ModelRequest) => Effect.Effect<void, ModelFailure>;
-  readonly generate: (request: ModelRequest) => Effect.Effect<ModelResult, ModelFailure>;
-}
+export type Generation = LanguageModel['Service'];
 
 function admission(resolve: ModelResolution, policy: CallPolicy) {
   return Effect.fnUntraced(function* (request: ModelRequest) {

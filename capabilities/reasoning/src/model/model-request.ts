@@ -46,49 +46,22 @@ export interface ProviderOptions {
 
 export type RetryOwner = 'adapter' | 'caller';
 
-export interface ToolReply {
-  readonly text: string;
-  readonly isError: boolean;
-}
-
-export interface ToolCallRequest {
-  readonly callId: string;
-  readonly input: Readonly<Record<string, unknown>>;
-  readonly room?: number;
-}
-
-export interface ToolCallSignals {
-  readonly signal: Readonly<AbortSignal>;
-  readonly cancelled: Readonly<AbortSignal>;
-}
-
-export interface ModelTool {
+export interface ToolDefinition {
   readonly name: string;
   readonly description: string;
   readonly inputSchema: Schema.JsonObject;
-  readonly call: (request: ToolCallRequest, signals: ToolCallSignals) => Promise<ToolReply>;
-}
-
-export interface ModelTools {
-  readonly offered: readonly ModelTool[];
-  readonly callsEnded: () => boolean;
-  readonly calledAny: () => boolean;
-  readonly ended: Readonly<AbortSignal>;
-  readonly runBoundMs: number;
-  readonly mostInputTokens: number;
-  readonly contextWindow?: number;
 }
 
 export interface ModelRequest {
   readonly model: string;
   readonly instructions?: string;
   readonly messages: readonly ModelMessage[];
+  readonly conversation?: readonly Schema.JsonObject[];
+  readonly tools?: readonly ToolDefinition[];
   readonly output: OutputRequest;
   readonly settings: GenerationSettings;
   readonly provider_options?: ProviderOptions;
   readonly timeout_ms?: number;
-  readonly signal?: Readonly<AbortSignal>;
   readonly retries?: RetryOwner;
   readonly run_id?: string;
-  readonly tools?: ModelTools;
 }

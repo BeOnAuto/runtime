@@ -1,12 +1,12 @@
 import type { Schema } from 'effect';
 
-import type { ModelResult, TokenUsage } from '../model/model-result.ts';
+import { unknownUsage, type ModelResult } from '../model/model-result.ts';
 
-export const unknownUsage: TokenUsage = {
-  input: { total: null, uncached: null, cache_read: null, cache_write: null },
-  output: { total: null, text: null, reasoning: null },
-  total: null,
-};
+export type ScriptedCall = readonly [string, unknown];
+
+function responseSaying(text: string): string {
+  return JSON.stringify([{ role: 'assistant', content: [{ type: 'text', text }] }]);
+}
 
 export function textResult(text: string, overrides: Partial<ModelResult> = {}): ModelResult {
   return {
@@ -17,6 +17,8 @@ export function textResult(text: string, overrides: Partial<ModelResult> = {}): 
     model: { requested: 'scripted/model', resolved: 'scripted/model', answered: 'model' },
     response_id: null,
     warnings: [],
+    response: responseSaying(text),
+    request_bytes: 0,
     duration_ms: 0,
     ...overrides,
   };
@@ -24,4 +26,19 @@ export function textResult(text: string, overrides: Partial<ModelResult> = {}): 
 
 export function jsonResult(json: Schema.Json, overrides: Partial<ModelResult> = {}): ModelResult {
   return textResult(JSON.stringify(json), { ...overrides, json });
+}
+
+export function toolCallsResult(calls: readonly ScriptedCall[], overrides: Partial<ModelResult> = {}): ModelResult {
+  const content = calls.map(([tool, input], index) => ({
+    type: 'tool-call',
+    toolCallId: `call-${index + 1}`,
+    toolName: tool,
+    input,
+  }));
+  return textResult('', {
+    finish_reason: 'tool_calls',
+    raw_finish_reason: 'tool_use',
+    response: JSON.stringify([{ role: 'assistant', content }]),
+    ...overrides,
+  });
 }

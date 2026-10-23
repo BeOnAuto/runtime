@@ -207,6 +207,8 @@ describe('the tree of a workflow run, over HTTP', () => {
     expect(tree.filter((event) => isOfRun(event, child)).map(({ type }) => type)).toEqual([
       'step_waiting',
       'run_started',
+      'model_call_started',
+      'model_call_answered',
       'run_succeeded',
     ]);
     expect(ofChild).toEqual([]);

@@ -101,10 +101,10 @@ const allowances: readonly Allowance[] = [
     text: 'toolSpec',
     in: [
       'capabilities/reasoning/src/adapter/cloud-providers.test.ts',
-      'capabilities/reasoning/src/tools/tool-loop.test.ts',
+      'capabilities/reasoning/src/steps/provider-steps.test.ts',
     ],
   },
-  { text: 'code_execution', in: ['capabilities/reasoning/src/testing/model-lists.ts'] },
+  { text: 'code_execution', in: ['capabilities/reasoning/src/provider-testing/model-lists.ts'] },
   {
     text: 'See the Audio Spec for more info: https://advertising.amazon.com/en-us/resources/ad-specs/audio-ads',
     in: [`${providerDocuments}/amazon-ads.openapi.json`],

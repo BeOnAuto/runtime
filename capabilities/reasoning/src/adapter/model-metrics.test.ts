@@ -3,8 +3,8 @@ import { MockLanguageModelV4 } from 'ai/test';
 import { Effect, Metric } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { generatedText, mockGeneration } from '../provider-testing/mock-models.ts';
 import { textRequest } from '../testing/adapter-harness.ts';
-import { generatedText, mockGeneration } from '../testing/mock-models.ts';
 
 interface Measured {
   readonly id: string;

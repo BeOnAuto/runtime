@@ -158,6 +158,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   server_failed: 'because a tool server failed',
   tool_error: 'because the tool answered an error, which the details below give',
   model_unavailable: 'because the model stopped answering',
+  definition_refused: 'because its definition was refused before its model could be called again',
   run_bound: 'because it ran out of time',
   no_answer: 'because the model kept calling tools instead of answering',
   restarted_without_content:

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { accessFor, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
 import {
   anthropicMessage,
   anthropicToolAnswer,
   chatCompletion,
   geminiContent,
   openAiResponse,
-} from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
+} from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
+import { accessFor, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
 
 function replying(body: object) {
   return recordingFetch(() => jsonResponse(body));

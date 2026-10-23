@@ -1,29 +1,9 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { ModelResult } from '../model/model-result.ts';
-import { accessFor, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { anthropicMessage, openAiResponse } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
-import { scriptedTools, searchTool } from '../testing/scripted-tools.ts';
+import { inputSchemaWarnings } from './input-schema-warnings.ts';
 
-interface Provider {
-  readonly model: string;
-  readonly environment: Readonly<Record<string, string>>;
-  readonly answer: object;
-}
-
-const anthropic: Provider = {
-  model: 'anthropic/claude-sonnet-4-5',
-  environment: { ANTHROPIC_API_KEY: 'k' },
-  answer: anthropicMessage('Acme has 2 rows.'),
-};
-
-const openai: Provider = {
-  model: 'openai/gpt-5',
-  environment: { OPENAI_API_KEY: 'k' },
-  answer: openAiResponse('Acme has 2 rows.'),
-};
+const searchTool = 'graph__search';
 
 const boundedQuery: Schema.JsonObject = {
   type: 'object',
@@ -31,20 +11,13 @@ const boundedQuery: Schema.JsonObject = {
   required: ['query'],
 };
 
-async function offeredOnlyTheSearch(provider: Provider, inputSchema: Schema.JsonObject): Promise<ModelResult> {
-  const { tools } = scriptedTools({ inputSchema });
-  const access = await accessFor(provider.environment, {
-    fetch: recordingFetch(() => jsonResponse(provider.answer)).fetch,
-  });
-  return succeeded(access, textRequest(provider.model, { tools }));
+function warningsFor(provider: string, inputSchema: Schema.JsonObject) {
+  return inputSchemaWarnings([{ name: searchTool, description: 'Finds rows.', inputSchema }], provider);
 }
 
 describe('the warnings of a run whose tools have an input schema', () => {
-  it("say where the provider of the run may not hold a tool's arguments to its input schema, and nothing for another provider", async () => {
-    const forAnthropic = await offeredOnlyTheSearch(anthropic, boundedQuery);
-    const forOpenAi = await offeredOnlyTheSearch(openai, boundedQuery);
-
-    expect([forAnthropic.warnings, forOpenAi.warnings]).toEqual([
+  it("say where the provider of the run may not hold a tool's arguments to its input schema, and nothing for another provider", () => {
+    expect([warningsFor('anthropic', boundedQuery), warningsFor('openai', boundedQuery)]).toEqual([
       [
         {
           type: 'compatibility',
@@ -57,10 +30,8 @@ describe('the warnings of a run whose tools have an input schema', () => {
     ]);
   });
 
-  it('say where the provider of the run may refuse the input schema itself', async () => {
-    const forOpenAi = await offeredOnlyTheSearch(openai, { type: 'array', items: { type: 'string' } });
-
-    expect(forOpenAi.warnings).toEqual([
+  it('say where the provider of the run may refuse the input schema itself', () => {
+    expect(warningsFor('openai', { type: 'array', items: { type: 'string' } })).toEqual([
       {
         type: 'compatibility',
         feature: `${searchTool} inputSchema#/type`,
@@ -69,16 +40,13 @@ describe('the warnings of a run whose tools have an input schema', () => {
     ]);
   });
 
-  it('say nothing of an open object with optional properties, since tools are not sent as strict structured outputs', async () => {
+  it('say nothing of an open object with optional properties, since tools are not sent as strict structured outputs', () => {
     const openQuery = { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer' } } };
 
-    const forAnthropic = await offeredOnlyTheSearch(anthropic, openQuery);
-    const forOpenAi = await offeredOnlyTheSearch(openai, openQuery);
-
-    expect([forAnthropic.warnings, forOpenAi.warnings]).toEqual([[], []]);
+    expect([warningsFor('anthropic', openQuery), warningsFor('openai', openQuery)]).toEqual([[], []]);
   });
 
-  it('say nothing of an input schema too large to check', async () => {
+  it('say nothing of an input schema too large to check', () => {
     const tooLarge = {
       type: 'object',
       description: 'x'.repeat(70_000),
@@ -86,6 +54,6 @@ describe('the warnings of a run whose tools have an input schema', () => {
       required: ['query'],
     };
 
-    expect((await offeredOnlyTheSearch(anthropic, tooLarge)).warnings).toEqual([]);
+    expect(warningsFor('anthropic', tooLarge)).toEqual([]);
   });
 });

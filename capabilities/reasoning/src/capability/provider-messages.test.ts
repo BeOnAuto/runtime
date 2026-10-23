@@ -1,13 +1,17 @@
-import { Conflict } from '@on.auto/operations';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import {
+  gatewayError,
+  gatewayErrorText,
+  gatewayInternals,
+  recordingReporter,
+} from '../provider-testing/provider-errors.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor } from '../testing/adapter-harness.ts';
 import { documentOf } from '../testing/definition-documents.ts';
 import { exposedText } from '../testing/exposure.ts';
-import { gatewayError, gatewayErrorText, gatewayInternals, recordingReporter } from '../testing/provider-errors.ts';
-import { adapterWithoutTools, runContext } from '../testing/reasoning-runs.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
+import { reasoningAdapter, runContext } from '../testing/reasoning-runs.ts';
 
 async function executedThroughGateway(gateway: object) {
   const reporter = recordingReporter();
@@ -15,9 +19,9 @@ async function executedThroughGateway(gateway: object) {
     { MODEL_GATEWAYS: JSON.stringify([gateway]) },
     { fetch: recordingFetch(() => jsonResponse(gatewayError, 404)).fetch, reportProviderMessage: reporter.report },
   );
-  const capability = adapterWithoutTools(access);
+  const capability = reasoningAdapter(access);
   const prepared = Effect.runSync(capability.prepare(documentOf('model: gateway/no-such-model-xyz', 'Say hello.')));
-  const exit = await Effect.runPromiseExit(prepared.run({}, runContext));
+  const exit = await Effect.runPromiseExit(prepared.run({}, runContext()));
   return { exit, reports: reporter.reports() };
 }
 
@@ -29,7 +33,8 @@ describe('a run whose gateway rejects the definition', () => {
 
     expect(exit).toEqual(
       Exit.fail(
-        new Conflict({
+        expect.objectContaining({
+          _tag: 'conflict',
           detail:
             'gateway answered HTTP 404: the model was not found, with the error code 404; update the reasoning function definition',
           kind: 'unworkable',
@@ -43,7 +48,7 @@ describe('a run whose gateway rejects the definition', () => {
         model: 'gateway/no-such-model-xyz',
         status: 404,
         message: gatewayErrorText,
-        run_id: runContext.id,
+        run_id: runContext().id,
       },
     ]);
   });
@@ -53,7 +58,8 @@ describe('a run whose gateway rejects the definition', () => {
 
     expect(exit).toEqual(
       Exit.fail(
-        new Conflict({
+        expect.objectContaining({
+          _tag: 'conflict',
           detail: `gateway answered HTTP 404: the model was not found, with the error code 404; update the reasoning function definition. The provider said: ${gatewayErrorText.slice(0, 300)}`,
           kind: 'unworkable',
         }),

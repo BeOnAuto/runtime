@@ -1,7 +1,13 @@
-import type { JSONValue, ModelMessage as SdkMessage } from 'ai';
+import { jsonSchema, modelMessageSchema, tool, type JSONValue, type ModelMessage as SdkMessage, type Tool } from 'ai';
 import type { Schema } from 'effect';
 
-import type { GenerationSettings, ModelMessage, ModelRequest, ProviderOptions } from '../model/model-request.ts';
+import type {
+  GenerationSettings,
+  ModelMessage,
+  ModelRequest,
+  ProviderOptions,
+  ToolDefinition,
+} from '../model/model-request.ts';
 import type { ModelTelemetry } from './model-access-options.ts';
 
 export type CallTelemetry = ModelTelemetry | undefined;
@@ -34,11 +40,36 @@ function sdkMessage(message: ModelMessage): SdkMessage {
   return message.role === 'user' ? { role: 'user', content } : { role: 'assistant', content };
 }
 
+const readMessages = new WeakMap<Schema.JsonObject, SdkMessage>();
+
+function conversationMessage(message: Schema.JsonObject): SdkMessage {
+  const read = readMessages.get(message);
+  if (read !== undefined) {
+    return read;
+  }
+  const parsed = modelMessageSchema.parse(message);
+  readMessages.set(message, parsed);
+  return parsed;
+}
+
 export function promptOf(request: ModelRequest) {
   return {
     ...(request.instructions === undefined ? {} : { instructions: request.instructions }),
-    messages: request.messages.map((message) => sdkMessage(message)),
+    messages: [
+      ...request.messages.map((message) => sdkMessage(message)),
+      ...(request.conversation ?? []).map((message) => conversationMessage(message)),
+    ],
   };
+}
+
+function toolOf({ description, inputSchema }: ToolDefinition): Tool {
+  return tool({ description, inputSchema: jsonSchema(mutableObject(inputSchema)) });
+}
+
+export function toolsOf(tools: readonly ToolDefinition[] | undefined): { readonly tools?: Record<string, Tool> } {
+  return tools === undefined || tools.length === 0
+    ? {}
+    : { tools: Object.fromEntries(tools.map((offered) => [offered.name, toolOf(offered)])) };
 }
 
 export function callSettingsOf(settings: GenerationSettings) {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { geminiModels, geminiModelsAfter } from '../provider-testing/model-lists.ts';
+import { jsonResponse } from '../provider-testing/recording-fetch.ts';
 import { catalogFor } from '../testing/catalog-harness.ts';
-import { geminiModels, geminiModelsAfter } from '../testing/model-lists.ts';
-import { jsonResponse } from '../testing/recording-fetch.ts';
 
 describe('the models of google', () => {
   it('are read page by page with the key in its header, keeping those that generate content', async () => {

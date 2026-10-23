@@ -4,9 +4,9 @@ import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
+import { anthropicModels } from '../provider-testing/model-lists.ts';
+import { jsonResponse, type Responder } from '../provider-testing/recording-fetch.ts';
 import { catalogFor, idsIn, type CatalogHarness } from '../testing/catalog-harness.ts';
-import { anthropicModels } from '../testing/model-lists.ts';
-import { jsonResponse, type Responder } from '../testing/recording-fetch.ts';
 import type { ModelList } from './model-list.ts';
 
 const startedAt = Date.parse('2026-10-01T09:00:00.000Z');

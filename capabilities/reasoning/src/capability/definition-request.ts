@@ -1,11 +1,13 @@
 import type { RunContext } from '@on.auto/definitions';
-import type { RunTools } from '@on.auto/tool-servers';
 import { runBoundMs } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 
 import { mostOutputTokens } from '../definition/definition-settings.ts';
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
-import type { ModelRequest, ModelTools } from '../model/model-request.ts';
+import type { ModelRequest } from '../model/model-request.ts';
+import type { StepBounds } from '../steps/step-decision.ts';
+import type { RequestBase } from '../steps/step-facts.ts';
+import { promptMessages, type Prompt } from '../steps/step-messages.ts';
 import type { RenderedPrompt } from '../template/compiled-template.ts';
 
 const firstAnswerMilliseconds = 60_000;
@@ -23,6 +25,10 @@ export function longestRunMsOf({ settings, tools }: ReasoningFunctionDefinitionD
   return tools.length === 0 ? timeoutMs : runBoundMs(timeoutMs);
 }
 
+export function resumesAfterMsOf({ settings }: ReasoningFunctionDefinitionDocument, callMs: number): number {
+  return timeoutFor(settings.max_output_tokens) + callMs;
+}
+
 export const defaultMostInputTokens = 2_000_000;
 
 export interface ModelReading {
@@ -35,56 +41,51 @@ export const unknownWindows: ModelReading = {
   contextWindowOf: () => Effect.undefined,
 };
 
-export function windowFor(
-  { contextWindowOf }: ModelReading,
-  model: string,
-  tools: RunTools | undefined,
-): Effect.Effect<number | undefined> {
-  return tools === undefined ? Effect.undefined : contextWindowOf(model);
+const unbounded = Number.POSITIVE_INFINITY;
+
+export function boundsFor(
+  { settings, model }: ReasoningFunctionDefinitionDocument,
+  { mostInputTokens, contextWindowOf }: ModelReading,
+  offersTools: boolean,
+): Effect.Effect<StepBounds> {
+  return offersTools
+    ? Effect.map(contextWindowOf(model), (contextWindow) => ({
+        runBoundMs: runBoundMs(timeoutFor(settings.max_output_tokens)),
+        limits: { contextWindow, mostInputTokens },
+      }))
+    : Effect.succeed({ runBoundMs: unbounded, limits: { contextWindow: undefined, mostInputTokens } });
 }
 
-interface ToolReading {
-  readonly mostInputTokens: number;
-  readonly contextWindow: number | undefined;
-}
-
-export interface RequestTools {
-  readonly tools: RunTools | undefined;
-  readonly reading: ToolReading;
-}
-
-function modelToolsOf(
-  { offered, callsEnded, calledAny, ended }: RunTools,
-  { mostInputTokens, contextWindow }: ToolReading,
-  timeoutMs: number,
-): ModelTools {
+export function requestBaseOf(
+  definition: ReasoningFunctionDefinitionDocument,
+  run: RunContext,
+): Omit<RequestBase, 'output'> {
   return {
-    offered,
-    callsEnded,
-    calledAny,
-    ended,
-    runBoundMs: runBoundMs(timeoutMs),
-    mostInputTokens,
-    ...(contextWindow === undefined ? {} : { contextWindow }),
+    model: definition.model,
+    settings: definition.settings,
+    ...(definition.provider_options === undefined ? {} : { provider_options: definition.provider_options }),
+    timeout_ms: timeoutFor(definition.settings.max_output_tokens),
+    run_id: run.id,
   };
+}
+
+export function promptOf({ instructions, message }: RenderedPrompt): Prompt {
+  return { kind: 'prompt', ...(instructions === undefined ? {} : { instructions }), message };
 }
 
 export function requestFor(
   definition: ReasoningFunctionDefinitionDocument,
   { instructions, message }: RenderedPrompt,
   run: RunContext,
-  using?: RequestTools,
 ): ModelRequest {
-  const timeoutMs = timeoutFor(definition.settings.max_output_tokens);
   return {
-    model: definition.model,
-    ...(instructions === undefined ? {} : { instructions }),
-    messages: [{ role: 'user', content: [{ type: 'text', text: message }] }],
+    ...requestBaseOf(definition, run),
     output: definition.output,
-    settings: definition.settings,
-    ...(definition.provider_options === undefined ? {} : { provider_options: definition.provider_options }),
-    timeout_ms: timeoutMs,
-    run_id: run.id,
-    ...(using?.tools === undefined ? {} : { tools: modelToolsOf(using.tools, using.reading, timeoutMs) }),
+    ...(instructions === undefined ? {} : { instructions }),
+    messages: promptMessages({ kind: 'prompt', message }),
   };
+}
+
+export function renderedOf({ instructions, message }: Prompt): RenderedPrompt {
+  return { ...(instructions === undefined ? {} : { instructions }), message };
 }

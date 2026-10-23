@@ -1,3 +1,4 @@
+import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { makeReasoningFunctionAdapter } from '@on.auto/reasoning';
 import { scriptedLanguageModel } from '@on.auto/reasoning/testing';
 import { noToolServers } from '@on.auto/tool-servers/testing';
@@ -11,6 +12,7 @@ describe('the longest a nested run of a workflow may run', () => {
       languageModel: scriptedLanguageModel().languageModel,
       offered: { providers: [], aliases: [] },
       tools: noToolServers,
+      content: memoryRecordedContent(),
     });
 
     expect(longestCallOf([reasoning])).toBe(1_720_000);

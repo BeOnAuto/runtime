@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ModelFailure } from '../failure/model-failure.ts';
+import {
+  gatewayError,
+  gatewayErrorText,
+  gatewayInternals,
+  recordingReporter,
+} from '../provider-testing/provider-errors.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, promptText, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
-import { gatewayError, gatewayErrorText, gatewayInternals, recordingReporter } from '../testing/provider-errors.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 import type { ProviderMessageReport } from './model-access-options.ts';
 
 const apiKey = 'sk-openai-SECRET-5d2f';
