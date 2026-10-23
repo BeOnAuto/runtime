@@ -14,7 +14,7 @@ import {
   type TraceMeta,
 } from './mcp-client.ts';
 import type { ServerClient } from './server-client.ts';
-import { openStdio } from './stdio-client.ts';
+import type { StdioOpening } from './stdio-client.ts';
 import { tokenSource, type ConsentTokenSources, type Discovery, type TokenSource } from './token-source.ts';
 
 export interface LinkOptions {
@@ -59,6 +59,14 @@ function tokensOf({ settings, serverUrl, discovery }: Remote, options: Linking):
       );
 }
 
+async function openedStdio(
+  settings: Extract<LinkedServerSettings, { readonly type: 'stdio' }>,
+  opening: StdioOpening,
+): Promise<ServerClient> {
+  const { openStdio } = await import('./stdio-client.ts');
+  return openStdio(settings, opening);
+}
+
 function tracedOpener(open: () => Promise<ServerClient>, traceMeta?: TraceMeta): () => Promise<ServerClient> {
   return traceMeta === undefined ? open : async () => tracedClient(await open(), traceMeta);
 }
@@ -73,7 +81,7 @@ export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOption
   };
   if (settings.type === 'stdio') {
     return tracedOpener(
-      () => openStdio(settings, { clientInfo: options.clientInfo, timeoutMs: options.timing.openMs, output }),
+      () => openedStdio(settings, { clientInfo: options.clientInfo, timeoutMs: options.timing.openMs, output }),
       options.traceMeta,
     );
   }

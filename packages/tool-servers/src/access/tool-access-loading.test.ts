@@ -1,3 +1,6 @@
+import { join } from 'node:path';
+
+import { modulesReachedFrom } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections } from '../testing/fake-connections.ts';
@@ -29,6 +32,15 @@ describe('an access to tool servers', () => {
 
     expect(access.configured).toBe(true);
     expect(fake.seen()).toEqual([]);
+  });
+});
+
+describe('the modules an access loads when it is first used', () => {
+  it('reach child processes through the transport of a stdio server alone, which the access imports when it first opens one', () => {
+    const source = join(import.meta.dirname, '..');
+
+    expect(modulesReachedFrom(source, 'access/linked-access.ts').packages).not.toContain('node:child_process');
+    expect(modulesReachedFrom(source, 'clients/stdio-client.ts').packages).toContain('node:child_process');
   });
 });
 
