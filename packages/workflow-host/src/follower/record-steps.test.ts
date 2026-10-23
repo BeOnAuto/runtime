@@ -1,6 +1,6 @@
 import type { RecordedEvent } from '@on.auto/operations';
 import { recordingTracer } from '@on.auto/operations/testing';
-import { Effect } from 'effect';
+import { Effect, Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { callConsumerOf, deliverySweeps } from './consumers.ts';
@@ -41,7 +41,11 @@ function steppedPast(verdict: GateVerdict, wantsMore: boolean) {
     playbookKey,
     gate,
     mode: 'signal' as const,
-    delivers: new Set<string>(),
+    delivered: () => new Set<string>(),
+    pageRead: Function.constVoid,
+    readWithData: () => false,
+    delivers: () => Effect.succeed(false),
+    reactsTo: () => Effect.succeed(false),
     wantsMore: () => Effect.succeed(wantsMore),
   };
   return Effect.runPromise(stepOf(parts, stepping, fresh, record));
@@ -86,7 +90,11 @@ function deliveredUnder(followed: RecordedEvent) {
     playbookKey,
     gate: { verdictOn: () => Effect.succeed<GateVerdict>('passed') },
     mode: 'signal' as const,
-    delivers: new Set(['call_answered']),
+    delivered: () => new Set(['call_answered']),
+    pageRead: Function.constVoid,
+    readWithData: (type: string) => type === 'call_answered',
+    delivers: () => Effect.succeed(true),
+    reactsTo: () => Effect.succeed(false),
     wantsMore: () => Effect.succeed(false),
   };
   return Effect.runPromise(

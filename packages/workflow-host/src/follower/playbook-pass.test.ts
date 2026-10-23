@@ -3,32 +3,13 @@ import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { insertedListener } from '../listeners/listener-rows.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { deliveringEach, listenerFor, passingOn, playbookKey, recordAt } from '../reaction-testing/playbook-passes.ts';
 import type { RecordConsumer } from './consumers.ts';
-import { followedPlaybooksOn } from './followed-playbooks.ts';
-import { passOf, type PassParts } from './playbook-pass.ts';
-
-const playbookKey = 'playbook/acme/alpha/';
+import type { PassParts } from './playbook-pass.ts';
 
 interface CountedRecords {
   readonly records: PassParts['records'];
   readonly reads: () => readonly boolean[];
-}
-
-function recordAt(stream: string, position: number): RecordedEvent {
-  return {
-    id: `record-${position}`,
-    cursor: `cursor-${position}`,
-    causationId: null,
-    correlationId: null,
-    stream: `${playbookKey}${stream}`,
-    version: 1,
-    globalPosition: position,
-    type: 'note_written',
-    data: null,
-    context: { at: '2026-10-01T09:00:00.000Z', by: 'acme-admin' },
-    recordedAt: '2026-10-01T09:00:00.000Z',
-  };
 }
 
 function countedRecords(pageAt: (read: number) => Effect.Effect<readonly RecordedEvent[]>): CountedRecords {
@@ -71,45 +52,6 @@ function publishedThenGone(): CountedRecords {
   );
 }
 
-function deliveringEach(delivered: (id: string) => void): RecordConsumer {
-  return {
-    name: 'noting',
-    skippedAfterSweeps: 20,
-    batchOf: (followed, after) =>
-      Effect.succeed({
-        deliveries:
-          after === undefined
-            ? [
-                {
-                  key: followed.record.id,
-                  workflow: 'note',
-                  deliver: Effect.sync(() => {
-                    delivered(followed.record.id);
-                  }),
-                  skipped: () => Effect.void,
-                },
-              ]
-            : [],
-        through: followed.record.id,
-        more: false,
-      }),
-  };
-}
-
-function listenerFor(type: string) {
-  return {
-    runKey: 'acme/alpha/r-1',
-    listener: 'wait',
-    playbookKey,
-    streamId: `${playbookKey}run-logs/r-1`,
-    armedBy: 1,
-    filters: JSON.stringify([{ type }]),
-    workflow: 'wait',
-    version: 1,
-    passed: true,
-  };
-}
-
 function undispatchedRun(): CountedRecords {
   return countedRecords(() => Effect.succeed([recordAt('run-logs/r-1', 1), recordAt('notes/n2', 2)]));
 }
@@ -118,26 +60,12 @@ function endlessNotes(): CountedRecords {
   return countedRecords((read) => Effect.succeed([recordAt(`notes/n${read}`, read)]));
 }
 
-async function passing(
+function passing(
   counted: CountedRecords,
   consumers: readonly RecordConsumer[] = [],
   passedEarly: PassParts['passedEarly'] = () => Effect.void,
 ) {
-  const opened = await openedOn(await onSQLite());
-  const playbooks = followedPlaybooksOn(opened);
-  const pass = passOf({
-    database: opened,
-    records: counted.records,
-    playbooks,
-    consumers,
-    calls: [],
-    definitionType: 'workflow',
-    applyDefinitionRecord: () => Effect.succeed('applied'),
-    unreadable: () => Effect.void,
-    passedEarly,
-    registered: [],
-  });
-  return { database: opened, playbooks, pass };
+  return passingOn(() => ({ records: counted.records, consumers, calls: [], passedEarly }));
 }
 
 describe('a pass over the records of a playbook', () => {
