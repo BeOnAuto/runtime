@@ -2,8 +2,9 @@ import { Conflict } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { modelCallAnswered, modelCallSent, modelCallTimedOut } from '../journal-testing/model-calls.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
-import type { CallStartedFact, RunCommand, ToolCallFact } from './run-commands.ts';
+import type { CallFact, CallStartedFact, ModelCallFact, RunCommand, ToolCallFact } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
 import { lastCallOf, startedRunOf } from './run-state.ts';
@@ -72,8 +73,8 @@ const answered: ToolCallFact = {
   },
 };
 
-function recordingCall(fact: ToolCallFact): RunCommand {
-  return { type: 'tool_call', fact, ...during };
+function recordingCall(fact: CallFact): RunCommand {
+  return { type: 'call', fact, ...during };
 }
 
 function startOfCall(number: number, readOnly = false): RunEvent {
@@ -122,6 +123,7 @@ describe('a tool call of a run', () => {
         new Conflict({
           detail:
             'The run records its calls in order, and call 1 is not its next call, 2; another attempt recorded it first',
+          kind: 'taken',
         }),
       ),
     );
@@ -192,5 +194,54 @@ describe('the calls of a run whose every tool only reads', () => {
   it('are known after a start recorded again, since each start keeps what the calls before it recorded', () => {
     expect(stateAfter(started, readCalled, failed, started)).toMatchObject({ calledOnlyReadOnly: true });
     expect(stateAfter(started, callStarted, failed, started)).toMatchObject({ calledOnlyReadOnly: false });
+  });
+});
+
+const modelCallStarted = (number: number): ModelCallFact => ({
+  type: 'model_call_started',
+  data: { number, ...modelCallSent() },
+});
+
+const modelCallEnded: ModelCallFact = { type: 'model_call_answered', data: { number: 1, ...modelCallAnswered() } };
+
+const modelCallFailed: ModelCallFact = { type: 'model_call_failed', data: { number: 1, ...modelCallTimedOut } };
+
+function notTheNextModelCall(number: number, next: number): Conflict {
+  return new Conflict({
+    detail: `The run records its model calls in order, and model call ${number} is not its next model call, ${next}; another attempt recorded it first`,
+    kind: 'taken',
+  });
+}
+
+describe('a model call of a run', () => {
+  it('is recorded while the run runs under the number it names when that is the next, with its answer or its failure', () => {
+    const callMade = meanwhile(modelCallStarted(1));
+
+    expect(decided(recordingCall(modelCallStarted(1)), started)).toStrictEqual(Result.succeed([modelCallStarted(1)]));
+    expect(decided(recordingCall(modelCallEnded), started, callMade)).toStrictEqual(Result.succeed([modelCallEnded]));
+    expect(decided(recordingCall(modelCallFailed), started, callMade)).toStrictEqual(Result.succeed([modelCallFailed]));
+    expect(decided(recordingCall(modelCallStarted(2)), started, callMade, meanwhile(modelCallEnded))).toStrictEqual(
+      Result.succeed([modelCallStarted(2)]),
+    );
+  });
+
+  it('is refused under a number that is not the next, which another attempt took first, and once the run ended', () => {
+    const callMade = meanwhile(modelCallStarted(1));
+
+    expect(decided(recordingCall(modelCallStarted(1)), started, callMade)).toEqual(
+      Result.fail(notTheNextModelCall(1, 2)),
+    );
+    expect(decided(recordingCall(modelCallStarted(3)), started)).toEqual(Result.fail(notTheNextModelCall(3, 1)));
+    expect(decided(recordingCall(modelCallEnded), started, callMade, failed)).toEqual(Result.fail(noMoreWork));
+  });
+
+  it('is counted apart from the tool calls, across a start recorded again, and changes nothing outside', () => {
+    const running = stateAfter(started, meanwhile(modelCallStarted(1)), callStarted, meanwhile(modelCallStarted(2)));
+
+    expect(running).toMatchObject({ lastModelCall: 2, lastCall: 1 });
+    expect(stateAfter(started, meanwhile(modelCallStarted(1)), failed, started)).toMatchObject({
+      lastModelCall: 1,
+      mayHaveChanged: false,
+    });
   });
 });

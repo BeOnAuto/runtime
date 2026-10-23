@@ -2,7 +2,7 @@ import { Conflict, type Rejection } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import { takesAnAnswer } from '../requests/request-record.ts';
-import type { CapabilityFact, RunAnswer, RunToolCall, RunWork } from '../runs/run-commands.ts';
+import type { CapabilityFact, RunAnswer, RunCall, RunWork } from '../runs/run-commands.ts';
 import type { RunEvent } from '../runs/run-events.ts';
 import {
   awaitsSettlement,
@@ -19,27 +19,37 @@ export type AdmitsFact = (fact: CapabilityFact) => boolean;
 
 export const runEnded = new Conflict({ detail: 'The run has ended, so it records no more of its work' });
 
-function nextCallOf(state: RecordedRunState, number: number | undefined): Result.Result<number, Conflict> {
-  const next = state.lastCall + 1;
+interface Numbering {
+  readonly last: number;
+  readonly noun: string;
+}
+
+function nextCallOf({ last, noun }: Numbering, number: number | undefined): Result.Result<number, Conflict> {
+  const next = last + 1;
   return number === undefined || number === next
     ? Result.succeed(next)
     : Result.fail(
         new Conflict({
-          detail: `The run records its calls in order, and call ${number} is not its next call, ${next}; another attempt recorded it first`,
+          detail: `The run records its ${noun}s in order, and ${noun} ${number} is not its next ${noun}, ${next}; another attempt recorded it first`,
+          kind: 'taken',
         }),
       );
 }
 
-export function decideToolCall({ fact }: RunToolCall, state: RunState): Decision {
-  if (state === undefined || !isRunning(state)) {
-    return Result.fail(runEnded);
+function startedCall({ fact }: RunCall, state: RecordedRunState): Decision {
+  if (fact.type === 'tool_call_started') {
+    return Result.map(nextCallOf({ last: state.lastCall, noun: 'call' }, fact.data.number), (number) => [
+      { type: fact.type, data: { ...fact.data, number } },
+    ]);
   }
-  if (fact.type !== 'tool_call_started') {
-    return Result.succeed([fact]);
+  if (fact.type === 'model_call_started') {
+    return Result.map(nextCallOf({ last: state.lastModelCall, noun: 'model call' }, fact.data.number), () => [fact]);
   }
-  return Result.map(nextCallOf(state, fact.data.number), (number): readonly RunEvent[] => [
-    { type: fact.type, data: { ...fact.data, number } },
-  ]);
+  return Result.succeed([fact]);
+}
+
+export function decideCall(call: RunCall, state: RunState): Decision {
+  return state === undefined || !isRunning(state) ? Result.fail(runEnded) : startedCall(call, state);
 }
 
 function undeclared({ type }: CapabilityFact): Conflict {

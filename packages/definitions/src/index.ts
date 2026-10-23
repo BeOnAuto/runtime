@@ -29,7 +29,8 @@ export {
   type RunWords,
   type Standing,
   type StandingRequest,
-  type ToolCallJournal,
+  type RunJournal,
+  type CallRefused,
 } from './capability/capability.ts';
 export type { SavedDefinition, SavedDefinitions } from './capability/saved-definitions.ts';
 export {
@@ -39,7 +40,26 @@ export {
   runnableExpression,
   type StrippedForms,
 } from './capability/stripped-forms.ts';
-export type { AnswerFact, CapabilityFact, RunOutcome, RunResult } from './runs/run-commands.ts';
+export type { AnswerFact, CallFact, CapabilityFact, RunOutcome, RunResult } from './runs/run-commands.ts';
+export {
+  AskedToolCallSchema,
+  FailureIssueSchema,
+  FinishReasonSchema,
+  ModelCallAnsweredSchema,
+  ModelCallFailedBecauseSchema,
+  ModelCallFailedSchema,
+  ModelCallStartedSchema,
+  ModelUsageSchema,
+  ModelWarningSchema,
+  type AskedToolCall,
+  type ModelCallAnsweredData,
+  type ModelCallEnded,
+  type ModelCallFailedBecause,
+  type ModelCallFailedData,
+  type ModelCallStartedData,
+  type ModelUsage,
+  type ModelWarning,
+} from './run-work/model-call-facts.ts';
 export {
   CancelRequestKindSchema,
   isRunEndingType,

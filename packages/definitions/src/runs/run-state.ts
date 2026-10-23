@@ -32,6 +32,7 @@ export interface RecordedRunState {
   readonly deferred: boolean;
   readonly callsTools: boolean;
   readonly lastCall: number;
+  readonly lastModelCall: number;
   readonly mayHaveChanged: boolean;
   readonly calledOnlyReadOnly: boolean;
   readonly answer: RecordedAnswer | null;
@@ -61,15 +62,16 @@ export function cancelBeforeStartOf(state: RunStreamState): AskedCancel | undefi
   return state !== undefined && 'cancelledBeforeStart' in state ? state.cancelledBeforeStart : undefined;
 }
 
-type CallsBefore = Pick<RecordedRunState, 'lastCall' | 'mayHaveChanged' | 'calledOnlyReadOnly'>;
+type CallsBefore = Pick<RecordedRunState, 'lastCall' | 'lastModelCall' | 'mayHaveChanged' | 'calledOnlyReadOnly'>;
 
-const noCallsBefore: CallsBefore = { lastCall: 0, mayHaveChanged: false, calledOnlyReadOnly: true };
+const noCallsBefore: CallsBefore = { lastCall: 0, lastModelCall: 0, mayHaveChanged: false, calledOnlyReadOnly: true };
 
 function callsBefore(earlier: RunState): CallsBefore {
   return earlier === undefined
     ? noCallsBefore
     : {
         lastCall: earlier.lastCall,
+        lastModelCall: earlier.lastModelCall,
         mayHaveChanged: earlier.mayHaveChanged,
         calledOnlyReadOnly: earlier.calledOnlyReadOnly,
       };
@@ -187,7 +189,7 @@ function evolveWork(state: RecordedRunState, event: RecordedAfterTheStart): Reco
       calledOnlyReadOnly: state.calledOnlyReadOnly && event.data.read_only === true,
     };
   }
-  return state;
+  return event.type === 'model_call_started' ? { ...state, lastModelCall: event.data.number } : state;
 }
 
 function evolveStarted(state: RecordedRunState, event: RecordedAfterTheStart): RecordedRunState {
@@ -237,6 +239,10 @@ export function isRunning({ run }: RecordedRunState): boolean {
 
 export function lastCallOf(state: RunState): number {
   return state?.lastCall ?? 0;
+}
+
+export function lastModelCallOf(state: RunState): number {
+  return state?.lastModelCall ?? 0;
 }
 
 export function mayHaveChangedSomething({ mayHaveChanged }: RecordedRunState): boolean {

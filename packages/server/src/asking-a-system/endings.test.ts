@@ -33,7 +33,7 @@ describe('a run that asks a system and cannot use what the tool answered, over H
 
 const isTheStartOfACall = Schema.is(
   Schema.Struct({
-    type: Schema.Literal('tool_call'),
+    type: Schema.Literal('call'),
     fact: Schema.Struct({ type: Schema.Literal('tool_call_started') }),
   }),
 );

@@ -1,7 +1,7 @@
 import { Conflict, NotFound, RunCancelled, type Rejection } from '@on.auto/operations';
 import { Equal, Result } from 'effect';
 
-import { decideAnswer, decideToolCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
+import { decideAnswer, decideCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
 import type {
   RunCancel,
   RunCommand,
@@ -222,8 +222,8 @@ export function decideOnRun(command: RunCommand, state: RunStreamState, admits: 
     return decideCancel(command, state);
   }
   const run = startedRunOf(state);
-  if (command.type === 'tool_call') {
-    return decideToolCall(command, run);
+  if (command.type === 'call') {
+    return decideCall(command, run);
   }
   if (command.type === 'work') {
     return decideWork(command, run, admits);

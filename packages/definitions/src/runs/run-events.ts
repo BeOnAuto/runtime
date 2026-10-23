@@ -2,6 +2,11 @@ import { ActedOnRunContextSchema, RunContextSchema, factOf, type Decided } from 
 import { CallAnsweredSchema, CallFailedSchema, CallStartedSchema } from '@on.auto/tool-servers';
 import { Schema, SchemaTransformation } from 'effect';
 
+import {
+  ModelCallAnsweredSchema,
+  ModelCallFailedSchema,
+  ModelCallStartedSchema,
+} from '../run-work/model-call-facts.ts';
 import { OutputShapeNameSchema } from '../shapes/shape-names.ts';
 import { RunRejectionSchema } from './run.ts';
 
@@ -44,6 +49,9 @@ const coreFactSchemas = [
   factOf('tool_call_started', Schema.Struct({ ...numbered, ...CallStartedSchema.fields }), RunContextSchema),
   factOf('tool_call_answered', Schema.Struct({ ...numbered, ...CallAnsweredSchema.fields }), RunContextSchema),
   factOf('tool_call_failed', Schema.Struct({ ...numbered, ...CallFailedSchema.fields }), RunContextSchema),
+  factOf('model_call_started', Schema.Struct({ ...numbered, ...ModelCallStartedSchema.fields }), RunContextSchema),
+  factOf('model_call_answered', Schema.Struct({ ...numbered, ...ModelCallAnsweredSchema.fields }), RunContextSchema),
+  factOf('model_call_failed', Schema.Struct({ ...numbered, ...ModelCallFailedSchema.fields }), RunContextSchema),
   factOf('request_answered', RequestAnsweredSchema, RunContextSchema),
 ];
 
@@ -59,6 +67,9 @@ const coreTypes: Readonly<Record<CoreRunFact['type'], true>> = {
   tool_call_started: true,
   tool_call_answered: true,
   tool_call_failed: true,
+  model_call_started: true,
+  model_call_answered: true,
+  model_call_failed: true,
   request_answered: true,
 };
 
@@ -132,6 +143,10 @@ export type CancelRequestKind = FactNamed<'run_cancel_requested'>['data']['kind'
 export type ToolCallStarted = FactNamed<'tool_call_started'>;
 
 export type ToolCallEnded = FactNamed<'tool_call_answered' | 'tool_call_failed'>;
+
+export type ModelCallStarted = FactNamed<'model_call_started'>;
+
+export type ModelCallEndedFact = FactNamed<'model_call_answered' | 'model_call_failed'>;
 
 export type RequestAnswered = FactNamed<'request_answered'>;
 

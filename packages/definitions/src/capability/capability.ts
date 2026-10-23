@@ -5,6 +5,7 @@ import type {
   InvalidInput,
   Issue,
   Noun,
+  Rejection,
   Settlement,
   TriggerLink,
   Unavailable,
@@ -14,6 +15,7 @@ import { Effect, type Schema } from 'effect';
 
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
+import type { CallFact } from '../runs/run-commands.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import type { RecordedAnswer, RecordedWork } from '../runs/run-state.ts';
 import type { SavedDefinitions } from './saved-definitions.ts';
@@ -39,9 +41,13 @@ export interface StandingRequest {
 
 export type Standing = (request: StandingRequest) => Effect.Effect<Schema.JsonObject | undefined>;
 
-export interface ToolCallJournal {
+export type CallRefused = Rejection<'not_found' | 'conflict' | 'cancelled'> | Conflict;
+
+export interface RunJournal {
+  readonly modelCallsBefore: number;
   readonly started: (fact: CallStarted) => Effect.Effect<number | undefined>;
   readonly ended: (number: number, fact: CallEnded) => Effect.Effect<boolean>;
+  readonly record: (fact: CallFact) => Effect.Effect<number, CallRefused>;
 }
 
 export interface RunLineage {
@@ -55,7 +61,7 @@ export interface RunContext {
   readonly playbook: string;
   readonly caller: CallerIdentity;
   readonly definition: { readonly name: string; readonly version: number };
-  readonly journal: ToolCallJournal;
+  readonly journal: RunJournal;
   readonly lineage: RunLineage;
   readonly depth: number;
   readonly callDepth: number;

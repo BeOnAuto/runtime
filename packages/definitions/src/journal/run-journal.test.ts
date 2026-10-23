@@ -156,7 +156,7 @@ describe('a run that called tools', () => {
         calls_tools: true,
         ...at,
       },
-      { type: 'tool_call', fact: { type: 'tool_call_started', data: startOfCall(1) }, ...at },
+      { type: 'call', fact: { type: 'tool_call_started', data: startOfCall(1) }, ...at },
     );
 
     expect(await running({})).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'tools_called' });

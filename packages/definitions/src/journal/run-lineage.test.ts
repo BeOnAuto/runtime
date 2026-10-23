@@ -1,53 +1,15 @@
-import {
-  PlaybookContext,
-  PlaybookWriter,
-  Caller,
-  messageIdOf,
-  type Lineage,
-  type RecordedEvent,
-} from '@on.auto/operations';
-import { Effect } from 'effect';
+import type { Lineage } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { idAt, journalled, linksIn } from '../journal-testing/run-links.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { answerOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
+import { harness, toPlaybook } from '../testing/harness.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
-import { toolCallJournal } from './tool-call-journal.ts';
+import { testRunId as runId } from '../testing/run-facts.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
-
-const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
-
-const stream = `playbook/acme/alpha/${runStreamNameOf(runId)}`;
-
-const idAt = (position: number): string => messageIdOf(stream, position);
-
-interface Linked {
-  readonly type: string;
-  readonly id: string;
-  readonly causationId: string | null;
-  readonly correlationId: string | null;
-}
-
-function linksOf({ type, id, causationId, correlationId }: RecordedEvent): Linked {
-  return { type, id, causationId, correlationId };
-}
-
-async function linksIn({ ledger, run }: Harness): Promise<readonly Linked[]> {
-  const { records } = await run(
-    Effect.orDie(
-      ledger.service.readRecorded(
-        { org: 'acme', playbook: 'alpha' },
-        { kind: 'run', run: runId },
-        { order: 'asc', limit: 100 },
-      ),
-    ),
-  );
-  return records.map((record) => linksOf(record));
-}
 
 async function aToolUser() {
   const user = toolUser();
@@ -118,30 +80,8 @@ describe('the lineage of a run that calls tools', () => {
 describe('the journal of a run, given an answer to a call it has no start of', () => {
   it('links the answer to the answer before it, or to the start of the run', async () => {
     const definitions = harness();
-    const recording = Effect.gen(function* () {
-      yield* definitions.ledger.service.execute(stream, runDecider, {
-        type: 'start',
-        definition_type: 'tool-user',
-        name: 'caller',
-        input: {},
-        definition_version: 1,
-        calls_tools: true,
-        runId,
-        by: 'acme-admin',
-        at: '2026-10-01T09:00:00.000Z',
-      });
-      const journal = yield* toolCallJournal(runId, { startId: idAt(1), correlationId: runId });
-      return yield* journal.ended(9, answerOfCall(9));
-    }).pipe(
-      Effect.provideService(PlaybookWriter, {
-        execute: (relative, decider, command, lineage) =>
-          definitions.ledger.service.execute(`playbook/acme/alpha/${relative}`, decider, command, lineage),
-      }),
-      Effect.provideService(Caller, acmeAdmin),
-      Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
-    );
 
-    expect(await definitions.run(Effect.orDie(recording))).toBe(true);
+    expect(await journalled(definitions, (journal) => journal.ended(9, answerOfCall(9)))).toBe(true);
     expect((await linksIn(definitions)).at(-1)).toEqual({
       type: 'tool_call_answered',
       id: idAt(2),

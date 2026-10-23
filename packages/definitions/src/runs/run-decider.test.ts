@@ -158,6 +158,7 @@ const recordedState = {
   deferred: false,
   callsTools: false,
   lastCall: 0,
+  lastModelCall: 0,
   mayHaveChanged: false,
   calledOnlyReadOnly: true,
   answer: null,

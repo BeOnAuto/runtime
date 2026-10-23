@@ -2,10 +2,10 @@ import { PlaybookContext, PlaybookReader, CallLineage, Caller, Conflict, type Gi
 import { Cause, Effect, Option } from 'effect';
 
 import type { Capability, PreparedDefinition, RunContext, RunLineage } from '../capability/capability.ts';
+import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
 import type { RunOutcome, RunRequest, InterruptedAttempt } from '../runs/run-commands.ts';
 import { claimOf, runTaken } from '../runs/run-decisions.ts';
 import { answerOf } from '../runs/run-lookup.ts';
-import { toolCallJournal, type RunJournal } from '../tool-calls/tool-call-journal.ts';
 import { outputShapeOf, preparedDefinition, preparedVersion, type VersionToRun } from './definition-preparation.ts';
 import { loadRun, loadRunStream, newRunId, recordRun } from './run-access.ts';
 import { attempt, failedAttempt, interruptedAttempt } from './run-attempt.ts';
@@ -13,11 +13,16 @@ import { attempt, failedAttempt, interruptedAttempt } from './run-attempt.ts';
 export const mostCallDepth = 8;
 
 interface JournalledRun extends RunContext {
-  readonly journal: RunJournal;
+  readonly journal: LedgerJournal;
 }
 
 interface Called extends GivenLineage {
   readonly capabilities: readonly Capability[];
+}
+
+interface StartedAttempt {
+  readonly lineage: RunLineage;
+  readonly journal: LedgerJournal;
 }
 
 function finishedBy(id: string, context: JournalledRun, outcome: RunOutcome | InterruptedAttempt) {
@@ -82,8 +87,8 @@ function startOf(request: RunRequest, { definition, prepared, createOnly }: Prep
 const contextOf = Effect.fnUntraced(function* (
   id: string,
   { definition }: Prepared,
-  lineage: RunLineage,
   given: Called,
+  { lineage, journal }: StartedAttempt,
 ) {
   const { org, playbook } = yield* PlaybookContext;
   const longestRun = yield* longestRunsIn(given.capabilities);
@@ -93,7 +98,7 @@ const contextOf = Effect.fnUntraced(function* (
     playbook,
     caller: yield* Caller,
     definition: { name: definition.name, version: definition.version },
-    journal: yield* toolCallJournal(id, lineage),
+    journal,
     lineage,
     depth: given.depth,
     callDepth: given.callDepth,
@@ -118,11 +123,12 @@ const runPrepared = Effect.fnUntraced(function* (
   const correlationId = given.lineage?.correlationId ?? id;
   const recorded = yield* Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
-      const { messageId } = yield* recordRun(id, startOf(request, run, given), {
+      const { messageId, state } = yield* recordRun(id, startOf(request, run, given), {
         causationId: given.lineage?.causationId ?? null,
         correlationId,
       });
-      const context = yield* contextOf(id, run, { startId: messageId, correlationId }, given);
+      const lineage = { startId: messageId, correlationId };
+      const context = yield* contextOf(id, run, given, { lineage, journal: yield* runJournal(id, lineage, state) });
       const running = run.prepared.run(request.input, context);
       const result = yield* attempt(run.prepared.whenCancelled === 'finish' ? running : restore(running)).pipe(
         Effect.onError((cause) =>

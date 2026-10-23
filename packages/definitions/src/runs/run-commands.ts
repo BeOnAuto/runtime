@@ -4,6 +4,8 @@ import type { Schema } from 'effect';
 import type { OutputShapeName } from '../shapes/shape-names.ts';
 import type {
   CancelRequestKind,
+  ModelCallEndedFact,
+  ModelCallStarted,
   RequestAnswered,
   RunDeferred,
   RunFinished,
@@ -40,6 +42,10 @@ export type CallStartedFact = Omit<ToolCallStarted, 'data'> & {
 
 export type ToolCallFact = CallStartedFact | ToolCallEnded;
 
+export type ModelCallFact = ModelCallStarted | ModelCallEndedFact;
+
+export type CallFact = ToolCallFact | ModelCallFact;
+
 export interface CapabilityFact {
   readonly type: string;
   readonly data: Schema.JsonObject;
@@ -56,9 +62,9 @@ export interface RunFinish {
   readonly result: RunOutcome | InterruptedAttempt;
 }
 
-export interface RunToolCall {
-  readonly type: 'tool_call';
-  readonly fact: ToolCallFact;
+export interface RunCall {
+  readonly type: 'call';
+  readonly fact: CallFact;
 }
 
 export interface RunWork {
@@ -90,6 +96,6 @@ export interface RunCancel extends CommandMetadata {
 }
 
 export type RunCommand =
-  | ((RunStart | RunFinish | RunToolCall | RunWork | RunAnswer) & CommandMetadata)
+  | ((RunStart | RunFinish | RunCall | RunWork | RunAnswer) & CommandMetadata)
   | RunSettlement
   | RunCancel;
