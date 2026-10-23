@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { measuredPoolSettings } from '../testing/read-on-disk.ts';
 import { checkingWithin } from '../testing/time/patient-checks.ts';
 import * as checkWorkerModule from './check-worker.ts';
-import { checkDeadlineMs, checkedAtSave, checkWorker, warmedChecks } from './save-check.ts';
+import { checkDeadlineMs, checkedAtSave, checkWorker } from './save-check.ts';
 
 const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
@@ -110,25 +110,5 @@ describe('a check that does not answer', () => {
 
     expect(Exit.hasDies(exit)).toBe(true);
     expect(String(Exit.findDefect(exit))).toContain(defect);
-  });
-});
-
-describe('the check worker a server warms when it starts', () => {
-  it('checks one trivial expression, so the compiler is loaded before the first save', async () => {
-    const asked: unknown[] = [];
-    const recording: ProgramPool = {
-      ...pool,
-      check: (request, signal) => {
-        asked.push(request);
-        return patient.check(request, signal);
-      },
-    };
-
-    const warmed = await warmedChecks(recording);
-
-    expect(warmed).toMatchObject({ ran: 'checked', issues: [] });
-    expect(asked).toEqual([
-      { schemas: {}, expressions: [{ source: 'true', names: [] }], deadlineMs: checkDeadlineMs, worker: checkWorker },
-    ]);
   });
 });

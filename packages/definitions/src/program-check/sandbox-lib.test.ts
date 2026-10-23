@@ -5,7 +5,8 @@ import type { CheckJob } from '@on.auto/workflow-engine/worker';
 import { describe, expect, it } from 'vitest';
 
 import { keptLibOnDisk } from '../testing/read-on-disk.ts';
-import { handedChecks, keptLibFiles, sandboxLibFrom } from './kept-lib.ts';
+import { handedChecks } from './handed-checks.ts';
+import { keptLibFiles, sandboxLibFrom } from './kept-lib.ts';
 import { sandboxLibOf } from './sandbox-lib.ts';
 
 const kept = sandboxLibFrom(keptLibOnDisk);

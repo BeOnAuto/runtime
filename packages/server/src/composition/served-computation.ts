@@ -1,6 +1,6 @@
 import { computationBounds, makeComputationFunctionAdapter } from '@on.auto/computation';
 import type { Capability } from '@on.auto/definitions';
-import { checkedAtSave, handedWorkersWithChecks, warmedChecks } from '@on.auto/definitions/check';
+import { checkedAtSave, handedWorkersWithChecks } from '@on.auto/definitions/check';
 import type { ShippedFiles } from '@on.auto/operations';
 import { programPool, type CheckJob, type HandedWorkers, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 
@@ -25,7 +25,6 @@ export async function computationServedBy(
   shippedFiles: ShippedFiles,
 ): Promise<ServedComputation> {
   const pool = poolOf(settings, await handedWorkersWithChecks(shippedFiles));
-  await warmedChecks(pool);
   return {
     capability: makeComputationFunctionAdapter({ pool }),
     pool,

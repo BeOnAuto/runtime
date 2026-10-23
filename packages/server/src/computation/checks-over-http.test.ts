@@ -117,7 +117,7 @@ describe('a long document checked when it is saved, over HTTP', () => {
 });
 
 describe('the check at save, over HTTP', () => {
-  it('runs once when the server starts, to warm its worker, and then once a save, never when a definition is read or run', async () => {
+  it('runs once a save, and never when the server starts or a definition is read or run', async () => {
     const { checks, poolOf } = countingChecks();
     await serving(poolOf);
     const atStart = checks.count();
@@ -129,7 +129,7 @@ describe('the check at save, over HTTP', () => {
     });
 
     expect(ran).toMatchObject({ status: 200, body: { status: 'succeeded', output: paceOfTwoRows } });
-    expect([atStart, checks.count()]).toEqual([1, 2]);
+    expect([atStart, checks.count()]).toEqual([0, 1]);
   });
 });
 

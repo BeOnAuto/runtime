@@ -1,7 +1,7 @@
 import type { CheckIssue } from '@on.auto/workflow-engine/worker';
 import ts from 'typescript6';
 
-import { assignmentIssues } from './assignment-bound.ts';
+import { assignmentIssues } from './assignment-count.ts';
 import type { Located } from './diagnostics.ts';
 import type { ExpressionsFile, Span } from './expressions-file.ts';
 

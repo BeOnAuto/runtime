@@ -43,7 +43,7 @@ function saving(name: string, source: string) {
 }
 
 describe('the expressions of a workflow, checked when it is saved, over HTTP', () => {
-  it('checks one expression when the server starts, then a hundred as one job, saves the workflow, and runs it', async () => {
+  it('checks nothing when the server starts, then a hundred expressions as one job, saves the workflow, and runs it', async () => {
     const { checked, poolOf } = recordingChecks();
     server = await servingWorkflows([], {}, poolOf);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
@@ -55,7 +55,7 @@ describe('the expressions of a workflow, checked when it is saved, over HTTP', (
       status: 201,
       body: { type: 'workflow', name: 'hundred', version: 1, source: hundred },
     });
-    expect(checked.map(({ expressions }) => expressions.length)).toEqual([1, 100]);
+    expect(checked.map(({ expressions }) => expressions.length)).toEqual([100]);
     expect(await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`)).toMatchObject({
       body: { status: 'succeeded', output: { n: 4950 } },
     });

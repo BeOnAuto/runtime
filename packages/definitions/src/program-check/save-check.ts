@@ -44,8 +44,6 @@ function tooLongToCheck(deadlineMs: number): string {
 
 const notStripped: StrippedSources = { expressions: [] };
 
-const warming: CheckJob = { schemas: {}, expressions: [{ source: 'true', names: [] }] };
-
 function formsOf(job: CheckJob, { module, expressions }: StrippedSources): StrippedForms {
   return {
     ...(module === undefined ? {} : { module }),
@@ -87,8 +85,4 @@ export function checkedAtSave(
   return pooledJob('program', 'check', (signal) =>
     pool.check({ ...job, deadlineMs, worker: checkWorker }, signal),
   ).pipe(Effect.flatMap((outcome) => issuesOf(job, outcome, deadlineMs)));
-}
-
-export function warmedChecks(pool: ProgramPool): Promise<CheckOutcome> {
-  return pool.check({ ...warming, deadlineMs: checkDeadlineMs, worker: checkWorker });
 }
