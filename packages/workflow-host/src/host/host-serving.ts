@@ -1,82 +1,51 @@
-import { Effect, Function } from 'effect';
+import { Function } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { Consumer } from '../follower/consumers.ts';
-import { startLoop, type LoopParts } from '../loop/host-loop.ts';
+import { startLoop } from '../loop/host-loop.ts';
+import { hostWakeUp } from '../loop/host-wake-up.ts';
 import type { ProjectorSettings } from '../projector/projector-settings.ts';
 import { startProjector } from '../projector/projector.ts';
 import { startReacting } from '../reactions/host-reactions.ts';
-import type { WaitingOptions } from '../waiting/waiting-options.ts';
-import { executorWaitingOf, servedWaitingOf, type ServedWaiting } from '../waiting/waiting-parts.ts';
-import { hostEngineOn, type EngineOptions, type HostEngine } from './host-engine.ts';
+import { closeHostParts, openHostParts, type HostParts, type PartsOptions } from './host-parts.ts';
+import type { WorkflowStore } from './workflow-store.ts';
 
-export interface ServingOptions extends EngineOptions {
-  readonly sweepEveryMs: number;
+export interface ServingOptions extends PartsOptions {
   readonly consumers?: readonly Consumer[];
   readonly projector?: ProjectorSettings;
-  readonly waiting: WaitingOptions;
-  readonly mostOpenCalls?: number;
-  readonly dueWork?: LoopParts['dueWork'];
 }
 
 export interface Serving {
-  readonly engine: HostEngine;
+  readonly parts: HostParts;
   readonly stopReacting: () => Promise<void>;
   readonly stop: () => Promise<void>;
 }
 
-function followerOf(database: HostDatabase, options: ServingOptions, engine: HostEngine, { calls }: ServedWaiting) {
+function followerOf(database: HostDatabase, options: ServingOptions, parts: HostParts) {
   return startReacting(
     {
       database,
-      submitted: engine.submitted,
+      submitted: parts.submitted,
       clock: options.clock,
       sweepEveryMs: options.sweepEveryMs,
       reports: options.reports,
       context: options.context,
     },
     options.reactions,
-    engine.reacting,
-    { consumers: options.consumers ?? [], calls },
+    parts.reacting,
+    { consumers: options.consumers ?? [], calls: parts.calls },
   );
 }
 
-function servedOf(database: HostDatabase, options: ServingOptions, engine: HostEngine): ServedWaiting {
-  return servedWaitingOf({
-    database,
-    submitted: engine.submitted,
-    resultOf: options.waiting.resultOf,
-    cancelDeferred: options.waiting.cancelDeferred,
-    workflows: options.reactions.definitionType,
-    now: options.clock.now,
-    trouble: options.reports.trouble,
-  });
-}
-
-export function startServing(database: HostDatabase, options: ServingOptions): Serving {
+export function startServing(store: WorkflowStore, options: ServingOptions): Serving {
+  const { database } = store;
   const alarm: { armed: (dueAt: number) => void } = { armed: Function.constVoid };
-  const waiting = executorWaitingOf(database, options.machine, options.waiting, options.mostOpenCalls);
-  const engine = hostEngineOn(database, options, waiting, (dueAt) => {
+  const parts = openHostParts(store, options, (dueAt) => {
     alarm.armed(dueAt);
   });
-  const served = servedOf(database, options, engine);
-  const loop = startLoop({
-    clock: options.clock,
-    timers: engine.timers,
-    dueWork: options.dueWork ?? [],
-    engine: engine.engine,
-    fire: ({ runKey, timerId }, at) =>
-      Effect.andThen(
-        served.endedChildren(runKey),
-        engine.submitted({ kind: 'timer_fired', runId: runKey, at, timerId }),
-      ),
-    resume: () => Effect.andThen(served.cancelsAsked, engine.executor.resume()),
-    trouble: options.reports.trouble,
-    sweepEveryMs: options.sweepEveryMs,
-    context: options.context,
-  });
+  const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;
-  const follower = followerOf(database, options, engine, served);
+  const follower = followerOf(database, options, parts);
   const projector =
     options.projector === undefined
       ? undefined
@@ -89,13 +58,13 @@ export function startServing(database: HostDatabase, options: ServingOptions): S
           context: options.context,
         });
   return {
-    engine,
+    parts,
     stopReacting: follower.stop,
     stop: async () => {
       await follower.stop();
       await loop.stop();
       await projector?.stop();
-      await Effect.runPromise(engine.executor.stop());
+      await closeHostParts(parts);
     },
   };
 }

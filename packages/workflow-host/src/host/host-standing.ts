@@ -2,26 +2,26 @@ import { randomUUID } from 'node:crypto';
 
 import { Effect } from 'effect';
 
-import type { HostDatabase } from '../database/host-database.ts';
 import { hostLease, leaseMsFor } from '../lease/host-lease.ts';
 import { keptLease } from '../lease/lease-keeper.ts';
-import type { HostEngine } from './host-engine.ts';
+import type { HostParts } from './host-parts.ts';
 import { startServing, type Serving, type ServingOptions } from './host-serving.ts';
+import type { WorkflowStore } from './workflow-store.ts';
 
 export interface Standing {
-  readonly serving: () => HostEngine | undefined;
+  readonly serving: () => HostParts | undefined;
   readonly stopReacting: () => Promise<void>;
   readonly stop: () => Promise<void>;
 }
 
 export async function standingOn(
-  database: HostDatabase,
+  store: WorkflowStore,
   options: ServingOptions,
   holder: string = randomUUID(),
 ): Promise<Standing> {
   const { reports, sweepEveryMs, clock } = options;
   const lastsMs = leaseMsFor(sweepEveryMs);
-  const lease = hostLease(database, holder, lastsMs, clock);
+  const lease = hostLease(store.database, holder, lastsMs, clock);
   const current: { serving: Serving | null } = { serving: null };
   const servedNoMore = Effect.promise(async () => {
     const { serving } = current;
@@ -37,7 +37,7 @@ export async function standingOn(
     held: (before) =>
       Effect.andThen(
         Effect.sync(() => {
-          current.serving = startServing(database, options);
+          current.serving = startServing(store, options);
         }),
         before === 'standing_by' ? reports.note({ kind: 'took_over', holder }) : Effect.void,
       ),
@@ -47,7 +47,7 @@ export async function standingOn(
     context: options.context,
   });
   return {
-    serving: () => current.serving?.engine,
+    serving: () => current.serving?.parts,
     stopReacting: async () => {
       await current.serving?.stopReacting();
     },

@@ -8,7 +8,7 @@ import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import { runKeyOf, type RunAddress } from '../runs/run-address.ts';
 import { backOffLifted } from '../settlement/settle-attempts.ts';
 import { cancelledIfAsked } from '../waiting/pending-cancels.ts';
-import type { HostEngine } from './host-engine.ts';
+import type { HostParts } from './host-parts.ts';
 
 export type RunStart = Omit<Started, 'kind' | 'runId' | 'at'>;
 
@@ -24,10 +24,12 @@ export interface RunRequests {
   readonly stateOf: (runKey: string) => Effect.Effect<RunState>;
 }
 
+type ServingEngine = Pick<HostParts, 'engine' | 'submitted'>;
+
 export interface RequestParts {
   readonly database: HostDatabase;
   readonly clock: { readonly now: () => number };
-  readonly serving: () => HostEngine | undefined;
+  readonly serving: () => ServingEngine | undefined;
 }
 
 const elsewhere = new HostElsewhere({
@@ -46,14 +48,14 @@ function settledOf(database: HostDatabase, runKey: string): Effect.Effect<boolea
   ).pipe(Effect.map((rows) => rows.some(({ settlement }) => settlement !== null)));
 }
 
-function servingIn({ serving }: RequestParts): Effect.Effect<HostEngine, HostElsewhere> {
+function servingIn({ serving }: RequestParts): Effect.Effect<ServingEngine, HostElsewhere> {
   return Effect.suspend(() => {
     const engine = serving();
     return engine === undefined ? Effect.fail(elsewhere) : Effect.succeed(engine);
   });
 }
 
-function settledAgain(parts: RequestParts, engine: HostEngine, runKey: string): Effect.Effect<StartAnswer> {
+function settledAgain(parts: RequestParts, engine: ServingEngine, runKey: string): Effect.Effect<StartAnswer> {
   return Effect.gen(function* () {
     yield* Effect.orDie(backOffLifted(parts.database, runKey));
     yield* engine.engine.wake(runKey);

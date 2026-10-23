@@ -1,16 +1,16 @@
 import { Effect, Fiber } from 'effect';
 
 import { forkedIn } from './forked-fibers.ts';
-import { hostWakeUp, type NextWake, type WakeUpParts } from './host-wake-up.ts';
+import type { HostWakeUp, NextWake, WakeSignal, WakeUpParts } from './host-wake-up.ts';
 
-export type LoopParts = WakeUpParts;
+type LoopParts = Pick<WakeUpParts, 'clock' | 'sweepEveryMs' | 'context'>;
 
 export interface HostLoop {
   readonly armed: (dueAt: number) => void;
   readonly stop: () => Promise<void>;
 }
 
-export function startLoop(parts: LoopParts): HostLoop {
+export function startLoop(parts: LoopParts, wakeUpWith: (signal: WakeSignal) => HostWakeUp): HostLoop {
   const { clock, sweepEveryMs } = parts;
   const plan = {
     wakeAt: Number.NEGATIVE_INFINITY,
@@ -18,7 +18,7 @@ export function startLoop(parts: LoopParts): HostLoop {
     lastSweptAt: Number.NEGATIVE_INFINITY,
     signal: Promise.withResolvers<void>(),
   };
-  const work = hostWakeUp(parts, {
+  const work = wakeUpWith({
     raised: () => {
       plan.signal.resolve();
     },

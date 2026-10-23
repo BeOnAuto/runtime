@@ -5,6 +5,7 @@ export { rowWaitBounds } from './due-work/row-waits.ts';
 export { DeliveryFailed, type Consumer, type Delivery, type FollowedRecord } from './follower/consumers.ts';
 export type { FollowedEvent } from './follower/followed-events.ts';
 export { HostStopped } from './host/host-gate.ts';
+export { closeHostParts, openHostParts, type HostParts, type PartsOptions } from './host/host-parts.ts';
 export type { HostNote, HostReports, UnsettledRun } from './host/host-reports.ts';
 export { HostElsewhere, type DeliveryAnswer, type RunStart, type StartAnswer } from './host/run-requests.ts';
 export { openWorkflowHost, type HostOptions, type WorkflowHost } from './host/workflow-host.ts';
@@ -47,6 +48,14 @@ export { viewsFolder } from './views/views-folder.ts';
 export type { FoldingSettings, ViewsFolding } from './views/views-folding.ts';
 export { viewsPortOn, type ViewsPort } from './views/views-port.ts';
 export type { HostClock } from './loop/host-clock.ts';
+export {
+  hostWakeUp,
+  type HostWakeUp,
+  type NextWake,
+  type WakeSignal,
+  type WakeUpParts,
+  type Woken,
+} from './loop/host-wake-up.ts';
 export type { RunAddress } from './runs/run-address.ts';
 export { runLogContextOf } from './runs/run-log-context.ts';
 export { recordIdOf } from './runs/run-lineage.ts';
