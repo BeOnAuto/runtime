@@ -21,6 +21,14 @@ export const IssuerOrigin = Schema.String.check(
   ),
 );
 
+export const KeySetUrl = Schema.String.check(
+  Schema.makeFilter(
+    (text: string) =>
+      URL.parse(text)?.protocol === 'https:' ||
+      'Expected the https URL of the key set of the identity service, such as https://identity.example.com/.well-known/jwks.json',
+  ),
+);
+
 function aWebOriginSuchAs(example: string) {
   return Schema.makeFilter(
     (text: string) =>

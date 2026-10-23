@@ -21,6 +21,13 @@ With sign-in on, the server reads the identity service before it accepts a reque
 
 Each read waits at most 10 seconds for a response and reads at most 64 KiB. It follows no redirect: an address that responds with one is refused, like an address that does not respond.
 
+The key set may instead be given, for a service that publishes its keys another way, or a server that should read nothing of the service at start:
+
+- With `IDENTITY_JWKS_URL`, the server reads no metadata, and reads the key set at that `https` URL in place of the `jwks_uri`, as step 3 does, with the same bounds.
+- With `IDENTITY_JWKS`, the JSON of the key set itself, which must hold a key, the server reads nothing of the service, at start or later.
+
+Setting both stops the start with an `InvalidSettingsError`. The tokens are checked the same way whichever gives the key set.
+
 A service whose metadata or key set cannot be used stops the start with an `UnusableIdentityServiceError`. The error names the service and each address the server read.
 
 ## The two token forms
@@ -57,10 +64,14 @@ The org comes from the org claim of the token's form: `org_id` for an access tok
 
 ## How the key set is kept
 
+A key set read at start, through the metadata or at `IDENTITY_JWKS_URL`, is kept this way:
+
 - The server reads the key set again for a `kid` it does not hold, once 60 seconds have passed since the last read that succeeded.
 - It reads the set again at the first token after the set is ten minutes old. So a key the service removes is trusted for ten minutes at most.
 - When it cannot read the set again for an unknown `kid`, the keys it held stay in use.
 - When it cannot read the set once ten minutes have passed, every token is refused. An identity service that is unreachable for longer than that keeps sign-ins out until it responds again.
+
+A key set that `IDENTITY_JWKS` gives is read from nowhere: its keys are the ones trusted until the server restarts with others, and a token signed with any other key is refused.
 
 ## When a token is refused
 

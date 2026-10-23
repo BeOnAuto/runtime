@@ -2,7 +2,7 @@ import { once } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createServer } from 'node:https';
 
-import { fakeIssuer, type FakeIssuer } from '@on.auto/identity/testing';
+import { fakeIssuer, type FakeIssuer, type FakeIssuerOptions } from '@on.auto/identity/testing';
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -34,7 +34,7 @@ export function accessTokenOf(issuer: FakeIssuer, audience: string, scope: strin
   });
 }
 
-export async function issuerOverHttps(): Promise<FakeIssuer> {
+export async function issuerOverHttps(options: FakeIssuerOptions = {}): Promise<FakeIssuer> {
   const certificate = aCertificateOfTheLoopback();
   trustedForTheTest(certificate);
   const issuer = Promise.withResolvers<FakeIssuer>();
@@ -47,6 +47,6 @@ export async function issuerOverHttps(): Promise<FakeIssuer> {
     server.close();
     server.closeAllConnections();
   });
-  issuer.resolve(fakeIssuer(`https://127.0.0.1:${portOf(server.address()).port}`));
+  issuer.resolve(fakeIssuer(`https://127.0.0.1:${portOf(server.address()).port}`, options));
   return issuer.promise;
 }

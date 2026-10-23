@@ -26,3 +26,11 @@ export {
   type SignInSettings,
 } from './identity-service/identity-service.ts';
 export type { IssuerFetch, IssuerRequests } from './identity-service/issuer-requests.ts';
+export {
+  discoveredIssuerKeys,
+  issuerKeysAt,
+  issuerKeysGiven,
+  IssuerKeySetSchema,
+  type IssuerKeySet,
+  type IssuerKeySource,
+} from './identity-service/issuer-keys.ts';
