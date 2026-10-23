@@ -7,9 +7,17 @@ import type { Ending, Interrupted } from './job-endings.ts';
 import type { ProgramAnswer } from './program-messages.ts';
 import type { Evaluations } from './remote-evaluations.ts';
 
+export type HandedFiles = Readonly<Record<string, Readonly<Uint8Array>>>;
+
+export interface HandedWorkers {
+  readonly sandbox: HandedFiles;
+  readonly modules?: Readonly<Record<string, HandedFiles>>;
+}
+
 export interface PoolSettings {
   readonly workers: number;
   readonly heapMegabytes: number;
+  readonly handed: HandedWorkers;
   readonly worker?: Readonly<URL>;
   readonly foldWorker?: Readonly<URL>;
   readonly evaluationWorker?: Readonly<URL>;

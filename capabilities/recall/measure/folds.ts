@@ -1,3 +1,5 @@
+import { handedWorkersWithChecks } from '@on.auto/definitions/check';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { programPool, type FoldRequest, type Json, type JsonObject } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result } from 'effect';
 
@@ -5,6 +7,8 @@ import { documentCheck } from '../src/document/document-check.ts';
 import { parseRecallDocument } from '../src/document/document-parsing.ts';
 import { recallBounds, recallFolding } from '../src/run/recall-bounds.ts';
 import { campaignReviews } from '../src/testing/campaign-reviews.ts';
+
+const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
 
 export interface Folded {
   readonly events: number;
@@ -20,7 +24,7 @@ const document = Result.getOrThrow(parseRecallDocument(campaignReviews));
 const { details } = document;
 
 async function strippedFold(): Promise<string> {
-  const pool = programPool({ workers: 1, heapMegabytes: recallBounds.heapMegabytes });
+  const pool = programPool({ handed, workers: 1, heapMegabytes: recallBounds.heapMegabytes });
   const { module = details.fold } = await Effect.runPromise(documentCheck(pool)(document));
   await pool.close();
   return module;
@@ -73,7 +77,7 @@ async function foldedInPages(
   events: number,
   size: number,
 ): Promise<Progress & { readonly pages: number }> {
-  const pool = programPool({ workers: 1, heapMegabytes: recallBounds.heapMegabytes });
+  const pool = programPool({ handed, workers: 1, heapMegabytes: recallBounds.heapMegabytes });
   const starts = Array.from({ length: Math.ceil(events / size) }, (_, index) => index * size);
   const done = await starts.reduce<Promise<Progress>>(
     async (before, start) => {

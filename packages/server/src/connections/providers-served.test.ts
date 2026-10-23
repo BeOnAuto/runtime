@@ -3,9 +3,9 @@ import { hostAlternativesOf, operatorVariablesIn, type Provider } from '@on.auto
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { required, shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';
 
 const names = shippedProviders.map(({ entry }) => entry.name);
@@ -94,7 +94,7 @@ describe('the providers a server lists over HTTP', () => {
   });
 
   it('take no name a built-in model provider has, which every runtime would refuse a connection', () => {
-    const { modelProviders } = readSettings({});
+    const { modelProviders } = readSettingsOf({});
 
     expect(names.filter((name) => modelProviders.includes(name))).toEqual([]);
     expect(modelProviders.length).toBeGreaterThan(5);

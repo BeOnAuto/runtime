@@ -1,12 +1,13 @@
-import { readProviders, type CredentialWay } from '@on.auto/providers';
+import type { CredentialWay } from '@on.auto/providers';
 import type { OfferedProvider } from '@on.auto/tool-servers';
-import { Option, Result, Schema } from 'effect';
+import { Option, Schema } from 'effect';
 
+import { shippedSettings } from '../settings/shipped-settings.ts';
 import type { ReasoningServer } from './reasoning-server.ts';
 
 export const connectionsOfAcme = '/v1/orgs/acme/connections';
 
-export const shippedList = Result.getOrThrow(readProviders());
+export const shippedList = shippedSettings.providers;
 
 export const shippedProviders = shippedList.providers;
 

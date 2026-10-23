@@ -138,8 +138,10 @@ export type {
   ConsentAuth,
   ConsentCredential,
   ServerSettings,
+  ShippedDocument,
   ToolServerSettings,
 } from './settings/server-settings.ts';
+export { shippedDocumentOf } from './settings/server-settings.ts';
 export type { Describing, ToolServers } from './openapi/described-api.ts';
 export type { LeftOutOperation } from './openapi/api-tools.ts';
 export { ToolServerDocumentRefused, describedToolServers } from './openapi/described-servers.ts';

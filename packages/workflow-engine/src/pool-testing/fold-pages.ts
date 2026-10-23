@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Function } from 'effect';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
@@ -98,6 +99,6 @@ export function slowFirstFold(stepMs: number): Timing {
 }
 
 export async function folded(page: FoldPage, timing: Timing = stillTiming()): Promise<FoldedPage> {
-  const instances = await Promise.all(page.views.map(() => freshInstance(page.memoryBytes)));
+  const instances = await Promise.all(page.views.map(() => freshInstance(shippedFilesOnDisk, page.memoryBytes)));
   return foldPage(page, { ...timing, checkOf: entriesAtMost, instances });
 }

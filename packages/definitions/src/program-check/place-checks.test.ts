@@ -2,12 +2,13 @@ import type { CheckJob } from '@on.auto/workflow-engine/worker';
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptLibOnDisk } from '../testing/read-on-disk.ts';
 import { checkerOf } from './checking.ts';
 import { oneExpression } from './expression-issues.ts';
-import { keptSandboxLib } from './kept-lib.ts';
+import { sandboxLibFrom } from './kept-lib.ts';
 import { holdsNothing, readsNothing, signatures } from './module-rules.ts';
 
-const check = checkerOf(keptSandboxLib());
+const check = checkerOf(sandboxLibFrom(keptLibOnDisk));
 
 const view: Schema.JsonObject = {
   type: 'object',

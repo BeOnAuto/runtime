@@ -6,9 +6,10 @@ import { principalIn } from '@on.auto/identity/testing';
 import { Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { defaultServerOptions, startServer, type RunningServer } from '../lifecycle/lifecycle.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { readSettings } from './settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const { entry } = createApiKey({ id: 'ci-1', org: 'acme', permissions: ['org:read'], playbooks: '*' });
 
@@ -33,7 +34,7 @@ function aLedger(): TemporaryLedger {
   return ledger;
 }
 
-function startOf(environment: Readonly<Record<string, string>>): Promise<RunningServer> {
+function startOf(environment: Readonly<Record<string, string>>) {
   const starting = startServer({ PORT: '0', LEDGER_FILE: aLedger().fileName, ...environment }, defaultServerOptions);
   onTestFinished(async () => {
     await (await starting.catch(Function.constUndefined))?.stop();
@@ -43,7 +44,7 @@ function startOf(environment: Readonly<Record<string, string>>): Promise<Running
 
 describe('a runtime whose operator declares local mode with ACCESS_MODE=local', () => {
   it('is in local mode on every address, admitting a request with no credential as the local developer of the org local, with the served Studio on and no one signed in', async () => {
-    const settings = readSettings(inAContainer);
+    const settings = readSettingsOf(inAContainer);
     const authenticator = authenticatorFor({ ...settings, identityService: undefined });
     const developer = principalIn(await authenticator.authenticate(undefined, '/v1/orgs/acme/playbooks'));
 
@@ -53,13 +54,13 @@ describe('a runtime whose operator declares local mode with ACCESS_MODE=local', 
       true,
       undefined,
     ]);
-    expect(() => authenticatorFor({ ...readSettings({ HOST: '0.0.0.0' }), identityService: undefined })).toThrow(
+    expect(() => authenticatorFor({ ...readSettingsOf({ HOST: '0.0.0.0' }), identityService: undefined })).toThrow(
       'A server reachable beyond this computer needs PUBLIC_URL',
     );
   });
 
   it('takes its PUBLIC_URL on the loopback as the address of the runtime, and signs no one in with it', () => {
-    expect(readSettings(inAContainer)).toMatchObject({
+    expect(readSettingsOf(inAContainer)).toMatchObject({
       accessMode: 'local',
       publicUrl: 'http://localhost:5555',
       signIn: undefined,
@@ -67,7 +68,7 @@ describe('a runtime whose operator declares local mode with ACCESS_MODE=local', 
   });
 
   it('needs no PUBLIC_URL on a loopback address, whose links point at that address', () => {
-    expect(readSettings({ HOST: '127.0.0.1', ACCESS_MODE: 'local' })).toMatchObject({
+    expect(readSettingsOf({ HOST: '127.0.0.1', ACCESS_MODE: 'local' })).toMatchObject({
       accessMode: 'local',
       publicUrl: undefined,
       studio: { served: true },
@@ -77,7 +78,7 @@ describe('a runtime whose operator declares local mode with ACCESS_MODE=local', 
   it('is declared in the configuration file as access_mode', () => {
     const file = join(aLedger().directory, 'auto-runtime.yaml');
     writeFileSync(file, 'access_mode: local\n');
-    const settings = readSettings({ HOST: '0.0.0.0', PUBLIC_URL: 'http://localhost:5555', CONFIG_FILE: file });
+    const settings = readSettingsOf({ HOST: '0.0.0.0', PUBLIC_URL: 'http://localhost:5555', CONFIG_FILE: file });
 
     expect([settings.accessMode, authenticatorFor({ ...settings, identityService: undefined }).mode]).toEqual([
       'local',

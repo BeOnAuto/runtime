@@ -28,3 +28,15 @@ export const checkingForever = workerOf([
 ]);
 
 export const brokenAtStart = workerOf(["throw new Error('broken on purpose');"]);
+
+export function checkingWithTheFilesHanded(tag: string): URL {
+  return workerOf([
+    "import { parentPort, workerData } from 'node:worker_threads';",
+    `const tag = ${JSON.stringify(tag)};`,
+    'const issues = Object.keys(workerData.handed).map((detail) => ({ at: 0, line: tag.length, detail }));',
+    "parentPort.on('message', ({ job }) => {",
+    "  parentPort.postMessage({ job, answer: { ran: 'checked', issues }, keep: true });",
+    '});',
+    'parentPort.postMessage({ ready: true });',
+  ]);
+}

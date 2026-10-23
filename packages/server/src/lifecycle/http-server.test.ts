@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { type RunningServer } from '../server-options/server-options.ts';
+import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { ownOriginOf, tcpPort } from './http-server.ts';
-import { startServer, defaultServerOptions, type RunningServer } from './lifecycle.ts';
+import { startServer } from './lifecycle.ts';
 
 describe('HTTP server', () => {
   let server: RunningServer | undefined;

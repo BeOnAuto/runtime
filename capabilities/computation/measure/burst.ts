@@ -2,7 +2,7 @@ import { checkedWorker } from '@on.auto/definitions';
 import { programPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
 
 import { computationBounds } from '../src/run/run-bounds.ts';
-import { formatted, functionOf, inTurn, median, request } from './common.ts';
+import { formatted, functionOf, handed, inTurn, median, request } from './common.ts';
 
 const jobs = 200;
 
@@ -24,7 +24,11 @@ const twoModules: Naming = (index) => (index % 2 === 0 ? {} : withASchema);
 const oneModule: Naming = (index) => (index % 2 === 0 ? { worker: checkedWorker, context: null } : withASchema);
 
 async function burstOf(naming: Naming): Promise<number> {
-  const pool = programPool({ workers: permits, heapMegabytes: computationBounds.heapMegabytes });
+  const pool = programPool({
+    handed,
+    workers: permits,
+    heapMegabytes: computationBounds.heapMegabytes,
+  });
   const started = performance.now();
   await Promise.all(
     Array.from({ length: jobs }, (_, index) =>

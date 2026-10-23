@@ -1,5 +1,11 @@
 import { clientIdPlaceholder } from '@on.auto/providers';
-import { readEntry, type Environment, type ServerEntryFields } from '@on.auto/tool-servers';
+import {
+  readEntry,
+  type Environment,
+  type ServerEntryFields,
+  type ShippedDocument,
+  type ToolServerSettingsContext,
+} from '@on.auto/tool-servers';
 import { JsonPointer, Option, Redacted, Result, Schema } from 'effect';
 
 import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionType } from '../registry/connection-entry.ts';
@@ -176,7 +182,7 @@ interface Named {
 }
 
 export interface Providing {
-  readonly documents: string;
+  readonly documents: ReadonlyMap<string, ShippedDocument>;
   readonly values: ReadonlyMap<string, Redacted.Redacted>;
   readonly documentServer: string | undefined;
 }
@@ -196,6 +202,10 @@ function operatorEnvironmentOf(providing: Providing | undefined): Environment {
   );
 }
 
+function documentsOf(providing: Providing | undefined): NonNullable<ToolServerSettingsContext['documents']> {
+  return providing === undefined ? { kind: 'directory', path: '.' } : { kind: 'shipped', byName: providing.documents };
+}
+
 export function readPlaced(
   { name, type, provider }: Named,
   { written, environment, placedValues }: Placed,
@@ -206,7 +216,7 @@ export function readPlaced(
     name,
     { ...written, type, org },
     { ...operatorEnvironmentOf(providing), ...environment },
-    { modelProviders, documentsDirectory: providing?.documents ?? '.', placedValues },
+    { modelProviders, documents: documentsOf(providing), placedValues },
   );
   return Result.map(read, (settings) => ({ ...settings, provider }));
 }

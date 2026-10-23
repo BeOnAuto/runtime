@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import type { JsonObject } from '../dsl/json.ts';
@@ -50,7 +51,7 @@ const american = filterAt('/us', '${ $data.region == "us" }');
 
 describe('the filters tested over a page of events', () => {
   it('prepare their tests in one session and test every event in it, answering as a group of each event alone does', async () => {
-    const counting = counted(filterSandboxOf(() => 0));
+    const counting = counted(filterSandboxOf(shippedFilesOnDisk, () => 0));
     const testing = filterTestingOf([european, american], counting.sandbox);
 
     const verdicts = [
@@ -68,11 +69,13 @@ describe('the filters tested over a page of events', () => {
       [false, false],
     ]);
     expect([sessionsOfThePage, counting.closed()]).toEqual([1, 1]);
-    expect(verdicts[0]).toEqual(await filterVerdictsOf([european, american], closedIn('eu'), filterSandboxOf(), now));
+    expect(verdicts[0]).toEqual(
+      await filterVerdictsOf([european, american], closedIn('eu'), filterSandboxOf(shippedFilesOnDisk), now),
+    );
   });
 
   it('let a session the sandbox stopped go, finish the event in sessions of its own, and test the next event in a fresh one', async () => {
-    const counting = counted(filterSandboxOf(() => 0));
+    const counting = counted(filterSandboxOf(shippedFilesOnDisk, () => 0));
     const testing = filterTestingOf([filterAt('/filling', filling), european], counting.sandbox);
 
     const stopped = await testing.verdictsOf(closedIn('eu'), now);
@@ -88,7 +91,7 @@ describe('the filters tested over a page of events', () => {
 
 describe('the filters tested over a page of events while a session opens', () => {
   it('close a session still being prepared once it opens, and answer that event and any after the close in sessions of their own', async () => {
-    const counting = counted(filterSandboxOf(() => 0));
+    const counting = counted(filterSandboxOf(shippedFilesOnDisk, () => 0));
     const testing = filterTestingOf([european], counting.sandbox);
 
     const opening = testing.verdictsOf(closedIn('eu'), now);
@@ -100,7 +103,7 @@ describe('the filters tested over a page of events while a session opens', () =>
   });
 
   it('share one session between two events asked about at once, and close it once', async () => {
-    const counting = counted(filterSandboxOf(() => 0));
+    const counting = counted(filterSandboxOf(shippedFilesOnDisk, () => 0));
     const testing = filterTestingOf([european, american], counting.sandbox);
 
     const verdicts = await Promise.all([
@@ -127,7 +130,7 @@ describe('the filters of several types tested over a page of events', () => {
     const refunded = { reference: '/refunded', attributes: { type: 'com.acme.refunded', data: refundTest } };
     const testing = filterTestingOf(
       [placed, refunded],
-      filterSandboxOf(() => 0),
+      filterSandboxOf(shippedFilesOnDisk, () => 0),
     );
 
     const verdicts = await testing.verdictsOf(placedOrder, now);
@@ -140,7 +143,7 @@ describe('the filters of several types tested over a page of events', () => {
     const refunded = { reference: '/refunded', attributes: { data: refundTest, type: 'com.acme.refunded' } };
     const testing = filterTestingOf(
       [refunded],
-      filterSandboxOf(() => 0),
+      filterSandboxOf(shippedFilesOnDisk, () => 0),
     );
 
     const verdicts = await testing.verdictsOf(placedOrder, now);
@@ -153,7 +156,7 @@ describe('the filters of several types tested over a page of events', () => {
 describe('the filters tested over a page of events in a sandbox that breaks', () => {
   it('close a session whose tests could not be prepared, and pass on the failure unchanged', async () => {
     const failure = new TypeError('the sandbox broke');
-    const counting = counted(filterSandboxOf(() => 0));
+    const counting = counted(filterSandboxOf(shippedFilesOnDisk, () => 0));
     const breaking: FilterSandbox = {
       ...counting.sandbox,
       session: async (opening) => ({

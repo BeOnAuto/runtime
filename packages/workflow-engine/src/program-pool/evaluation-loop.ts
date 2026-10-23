@@ -2,7 +2,6 @@ import { MessagePort, workerData } from 'node:worker_threads';
 
 import { Option, Schema } from 'effect';
 
-import { freshInstance } from '../instances/fresh-instances.ts';
 import { instanceStock, type Instances } from '../instances/instance-stock.ts';
 import {
   answeredFlag,
@@ -16,6 +15,7 @@ import { filterContextOf, type FilterContext, type FilterTest } from '../program
 import type { ProgramRun } from '../programs/program-run.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 import type { SandboxSettings } from '../programs/sandbox-session.ts';
+import { handedSandboxOf } from './handed-files.ts';
 
 interface PreparedFilters {
   readonly context: FilterContext;
@@ -111,8 +111,9 @@ export function serveEvaluations(data: unknown = workerData): void {
     Atomics.notify(flags, answeredFlag);
     return run;
   };
-  served(port, answer, { instances: instanceStock(), units: new Map(), filters: new Map() });
-  void freshInstance(unitMemoryBytes).then((instance) => {
+  const sandbox = handedSandboxOf(data);
+  served(port, answer, { instances: instanceStock(sandbox), units: new Map(), filters: new Map() });
+  void sandbox(unitMemoryBytes).then((instance) => {
     Atomics.store(flags, readyFlag, 1);
     Atomics.notify(flags, readyFlag);
     return instance;

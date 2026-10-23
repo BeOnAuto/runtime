@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
 import type { PoolSettings, ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
+import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { nextThreadStarted, threadEnded } from '../pool-testing/threads-alive.ts';
 import { isWatched, longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
 import { runMemoryBytes, unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
@@ -29,12 +30,8 @@ function answeringWith(output: string): URL {
   );
 }
 
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
-
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 4, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(4), ...settings });
   pools.push(pool);
   return pool;
 }

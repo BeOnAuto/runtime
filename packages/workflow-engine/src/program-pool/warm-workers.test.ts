@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { FoldingView } from '../folds/fold-page.ts';
 import type { FoldOutcome, FoldRequest, PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
 import { begun, counting, countingElsewhere, countingOnTheLoop } from '../pool-testing/counting-workers.ts';
+import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadEnded, threadsAlive } from '../pool-testing/threads-alive.ts';
 import { longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
@@ -22,10 +23,6 @@ interface Running {
 
 const pools: ProgramPool[] = [];
 
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
-
 const decodeRan = Schema.decodeUnknownSync(Schema.Struct({ jobs: Schema.Number, thread: Schema.Number }));
 
 const noted = { type: 'noted' };
@@ -39,7 +36,7 @@ afterEach(async () => {
 });
 
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 4, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(4), ...settings });
   pools.push(pool);
   return pool;
 }

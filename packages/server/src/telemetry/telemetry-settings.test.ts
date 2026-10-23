@@ -2,13 +2,13 @@ import type { Environment } from '@on.auto/config';
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import type { NameValues } from './name-value-lists.ts';
 import type { SignalExport } from './telemetry-settings.ts';
 
 function errorFrom(environment: Environment): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }
@@ -16,7 +16,7 @@ function errorFrom(environment: Environment): string {
 }
 
 function telemetryOf(environment: Environment) {
-  return readSettings(environment).telemetry;
+  return readSettingsOf(environment).telemetry;
 }
 
 function headersOf(target: SignalExport | undefined): NameValues {

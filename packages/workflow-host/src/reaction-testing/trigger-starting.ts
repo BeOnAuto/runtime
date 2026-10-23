@@ -1,4 +1,6 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import type { FilterVerdict, MatchedFilter } from '@on.auto/workflow-engine';
+import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { Array, Effect, Function } from 'effect';
 
 import { filterMatchingOf, filterStops, type FilterStops, type MatchFilters } from '../filtering/filter-matching.ts';
@@ -63,7 +65,7 @@ interface CountingMatches {
 
 export function countingMatches(): CountingMatches {
   const evaluated: string[] = [];
-  const matching = filterMatchingOf();
+  const matching = filterMatchingOf(filterSandboxOf(shippedFilesOnDisk));
   return {
     match: (filters, event, now) => {
       evaluated.push(...filters.map(({ reference }) => reference));

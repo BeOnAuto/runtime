@@ -1,11 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -14,7 +14,7 @@ function errorFrom(environment: Environment): unknown {
 
 describe('the reasoning function settings', () => {
   it('let the model calls of a run add up to 2,000,000 input tokens when nothing is set, or the setting is empty', () => {
-    expect([readSettings({}).reasoning, readSettings({ REASONING_MAX_INPUT_TOKENS: '' }).reasoning]).toEqual([
+    expect([readSettingsOf({}).reasoning, readSettingsOf({ REASONING_MAX_INPUT_TOKENS: '' }).reasoning]).toEqual([
       { mostInputTokens: 2_000_000 },
       { mostInputTokens: 2_000_000 },
     ]);
@@ -23,7 +23,7 @@ describe('the reasoning function settings', () => {
   it('read the most input tokens of a run, from the least to the most a whole number of seven digits allows', () => {
     expect(
       ['10000', ' 500000 ', '9999999'].map(
-        (tokens) => readSettings({ REASONING_MAX_INPUT_TOKENS: tokens }).reasoning.mostInputTokens,
+        (tokens) => readSettingsOf({ REASONING_MAX_INPUT_TOKENS: tokens }).reasoning.mostInputTokens,
       ),
     ).toEqual([10_000, 500_000, 9_999_999]);
   });

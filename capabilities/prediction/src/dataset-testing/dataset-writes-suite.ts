@@ -1,14 +1,12 @@
-import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { datasetFolder } from '../dataset/dataset-folder.ts';
 import { datasetsPortOn } from '../dataset/datasets-port.ts';
 import { uploadedWeeklyOrders, weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
 import { isLive, liveFolded } from './dataset-predicates.ts';
 import type { SettingsOf } from './dataset-stores.ts';
 import { north } from './orders.ts';
-import { alphaKey, projectedDatasets } from './projected-datasets.ts';
+import { alphaKey, projectedDatasets, testDatasetFolder } from './projected-datasets.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -25,7 +23,7 @@ function staleWriteTest(settingsOf: SettingsOf): void {
     const row = await datasets.until(dataSha256, liveFolded(1));
     const untouched = await datasets.until(idle.dataSha256, isLive);
     await datasets.stop();
-    const folder = datasetFolder({ filters: filterSandboxOf(), triesBeforeStall: Number.POSITIVE_INFINITY });
+    const folder = testDatasetFolder();
     const unchanged = folder.unchanged(row);
     const stale = {
       row: Object.assign({}, row, { checkpointText: '["0"]' }),

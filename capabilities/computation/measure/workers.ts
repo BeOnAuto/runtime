@@ -1,7 +1,7 @@
 import { programPool, workerStackMegabytes, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 
 import { computationBounds, mebibytes } from '../src/run/run-bounds.ts';
-import { formatted, functionOf, inTurn, poolOfOne, request } from './common.ts';
+import { formatted, functionOf, handed, inTurn, poolOfOne, request } from './common.ts';
 
 const blocking = new URL(`data:text/javascript,${encodeURIComponent('while (true) {}')}`);
 
@@ -24,7 +24,12 @@ const bombs: readonly Bomb[] = [
 ];
 
 async function termination(): Promise<string> {
-  const pool = programPool({ workers: 1, heapMegabytes: computationBounds.heapMegabytes, worker: blocking });
+  const pool = programPool({
+    handed,
+    workers: 1,
+    heapMegabytes: computationBounds.heapMegabytes,
+    worker: blocking,
+  });
   const ended = await pool.run(request(functionOf('return input;'), 1, 500));
   await pool.close();
   return `a worker that never answers, under a deadline of 500 ms: ended ${ended.ran}, after ${formatted(ended.milliseconds, 1)} ms`;

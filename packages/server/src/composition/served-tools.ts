@@ -2,7 +2,7 @@ import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ToolAccessOptions } from '@on.auto/tool-servers';
 
-import type { Served } from '../lifecycle/lifecycle.ts';
+import type { Served } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
 import { interactionServedBy, type ServedInteraction } from './served-interaction.ts';
 import { reasoningServedBy, type ModelAccessOf, type ServedReasoning } from './served-reasoning.ts';

@@ -1,3 +1,4 @@
+import { measuredPoolSettings } from '@on.auto/definitions/testing';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { makePredictionFunctionAdapter } from '@on.auto/prediction';
 import { testPorts, weeklyOrders } from '@on.auto/prediction/testing';
@@ -11,7 +12,7 @@ import { recordingStarts, recordingWorkflows } from '../testing/recording-starts
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-555555555553';
 
-const pool = programPool({ workers: 1, heapMegabytes: 256 });
+const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 afterAll(() => pool.close());
 

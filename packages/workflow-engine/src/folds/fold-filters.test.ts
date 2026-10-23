@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
@@ -12,7 +13,7 @@ const reviewed = { type: 'run_succeeded', subject: 'reasoning/review-brief' };
 const evaluation: Evaluation = { budget: 500, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
 const context = filterContextOf(
-  await freshInstance(unitMemoryBytes),
+  await freshInstance(shippedFilesOnDisk, unitMemoryBytes),
   { stackBytes: threadStackBytes, mostAnswerBytes: 1000, clock: () => 0 },
   evaluation,
 );

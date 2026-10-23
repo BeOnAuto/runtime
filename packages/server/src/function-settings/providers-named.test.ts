@@ -7,8 +7,8 @@ import type { ServerSettings } from '@on.auto/tool-servers';
 import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { required, shippedProviders } from '../testing/servers/connected-servers.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const githubToken = 'github-token-0f3c9a71e2';
 
@@ -83,13 +83,13 @@ function configFile(text: string): string {
 }
 
 function settingsOf(servers: string, environment: Readonly<Record<string, string>> = secrets) {
-  return readSettings({ CONFIG_FILE: configFile(`${providersOfTheFile}${servers}`), ...environment });
+  return readSettingsOf({ CONFIG_FILE: configFile(`${providersOfTheFile}${servers}`), ...environment });
 }
 
 function errorOf(servers: string, environment: Readonly<Record<string, string>> = secrets): string {
   const path = configFile(`${providersOfTheFile}${servers}`);
   try {
-    readSettings({ CONFIG_FILE: path, ...environment });
+    readSettingsOf({ CONFIG_FILE: path, ...environment });
   } catch (error) {
     return String(error).replaceAll(path, 'auto-runtime.yaml');
   }
@@ -198,7 +198,7 @@ tool_servers:
 `;
     const path = configFile(keyed);
 
-    expect(readSettings({ CONFIG_FILE: path }).toolServers.servers).toMatchObject([
+    expect(readSettingsOf({ CONFIG_FILE: path }).toolServers.servers).toMatchObject([
       { name: 'store', url: 'https://acme.keyed.example.com/mcp', provider: 'keyed' },
     ]);
   });

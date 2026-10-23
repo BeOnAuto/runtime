@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { someFolder, type DatabaseSettings } from '@on.auto/workflow-host';
 import { projectedFolders, type ProjectedFolders } from '@on.auto/workflow-host/testing';
@@ -81,11 +82,18 @@ function readingOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'datasets
   };
 }
 
-export async function projectedDatasets(
-  settings: DatabaseSettings,
-  folding: Partial<Omit<DatasetFolding, 'filters'>> = {},
-): Promise<ProjectedDatasets> {
-  const folder = datasetFolder({ filters: filterSandboxOf(), triesBeforeStall: Number.POSITIVE_INFINITY, ...folding });
+type Folding = Partial<Omit<DatasetFolding, 'filters'>>;
+
+export function testDatasetFolder(folding: Folding = {}): ReturnType<typeof datasetFolder> {
+  return datasetFolder({
+    filters: filterSandboxOf(shippedFilesOnDisk),
+    triesBeforeStall: Number.POSITIVE_INFINITY,
+    ...folding,
+  });
+}
+
+export async function projectedDatasets(settings: DatabaseSettings, folding: Folding = {}): Promise<ProjectedDatasets> {
+  const folder = testDatasetFolder(folding);
   const folders = await projectedFolders(settings, [someFolder(folder)]);
   onTestFinished(folders.close);
   return {

@@ -1,5 +1,6 @@
 import { playbookOwnNamesOf, type PlaybookOwnNames } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import {
   reusedSandbox,
   type MachineOptions,
@@ -12,7 +13,10 @@ import { workflowFacts } from '../capability/workflow.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from '../document/workflow-functions.ts';
 import { workflowMachineOptionsOf, workflowMachineSettingsOf } from '../runs/workflow-machine-options.ts';
 
-export const testSandbox: MachineSandbox = reusedSandbox(await freshInstance(unitMemoryBytes), () => 0);
+export const testSandbox: MachineSandbox = reusedSandbox(
+  await freshInstance(shippedFilesOnDisk, unitMemoryBytes),
+  () => 0,
+);
 
 export const testPlaybookNames: PlaybookOwnNames = playbookOwnNamesOf([echo, workflowFacts]);
 

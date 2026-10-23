@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { logTelemetry } from './logging.ts';
 
 describe('logTelemetry', () => {
@@ -10,7 +10,7 @@ describe('logTelemetry', () => {
   });
 
   it('names where each signal goes by its origin alone, and whether content is recorded', async () => {
-    const telemetry = readSettings({
+    const telemetry = readSettingsOf({
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://collector.example.com:4318/v1/traces?token=secret',
       TELEMETRY_CONTENT: 'true',
     }).telemetry;
@@ -34,7 +34,7 @@ describe('logTelemetry', () => {
 
   it('says content is left out unless TELEMETRY_CONTENT asks for it', async () => {
     const [line] = await linesLoggedBy(
-      logTelemetry(readSettings({ OTEL_EXPORTER_OTLP_ENDPOINT: 'http://collector:4318' }).telemetry),
+      logTelemetry(readSettingsOf({ OTEL_EXPORTER_OTLP_ENDPOINT: 'http://collector:4318' }).telemetry),
     );
 
     expect(line).toContain('"content":"left out"');

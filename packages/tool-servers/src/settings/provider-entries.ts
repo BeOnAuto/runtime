@@ -10,6 +10,7 @@ import { Function, Result } from 'effect';
 
 import { at } from './checked.ts';
 import { toolServersSetting, type ServerEntryFields } from './server-entries.ts';
+import type { DocumentsPlace } from './server-settings.ts';
 
 export interface CredentialGiven {
   readonly kind?: string | undefined;
@@ -29,7 +30,7 @@ export interface ProviderNamed {
 export interface ProviderResolved {
   readonly written: ServerEntryFields;
   readonly placedValues: ReadonlyMap<string, string>;
-  readonly documentsDirectory: string;
+  readonly documents: DocumentsPlace;
   readonly writtenAt: (pointer: string) => string;
 }
 
@@ -40,14 +41,14 @@ export const noProviders: ProviderResolver = ({ provider }) =>
 
 export interface EntryReading {
   readonly placedValues: ReadonlyMap<string, string> | undefined;
-  readonly documentsDirectory: string | undefined;
+  readonly documents: DocumentsPlace | undefined;
   readonly providers: ProviderResolver | undefined;
 }
 
 export interface EntryToRead {
   readonly written: ServerEntryFields;
   readonly placedValues: ReadonlyMap<string, string>;
-  readonly documentsDirectory: string;
+  readonly documents: DocumentsPlace;
   readonly provider: string | null;
   readonly placed: (problems: readonly SettingProblem[]) => readonly SettingProblem[];
 }
@@ -185,7 +186,7 @@ function plainEntry(written: ServerEntryFields, reading: EntryReading): EntryToR
   return {
     written,
     placedValues: reading.placedValues ?? new Map(),
-    documentsDirectory: reading.documentsDirectory ?? process.cwd(),
+    documents: reading.documents ?? { kind: 'directory', path: process.cwd() },
     provider: null,
     placed: Function.identity,
   };
@@ -209,7 +210,7 @@ function resolvedEntry(
     onSuccess: (resolved): EntryToRead => ({
       written: { ...resolved.written, ...perConnectionOf(written) },
       placedValues: resolved.placedValues,
-      documentsDirectory: resolved.documentsDirectory,
+      documents: resolved.documents,
       provider,
       placed: placedIn(name, (pointer) => writtenPointer(resolved.writtenAt(pointer))),
     }),

@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,7 +8,7 @@ import { reservedSandbox, reusedSandbox, type MachineSandbox } from './reserved-
 import { unitMemoryBytes } from './sandbox-bounds.ts';
 import type { SandboxInstance } from './sandbox-session.ts';
 
-const instance = await freshInstance(unitMemoryBytes);
+const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
 
 const evaluation: Evaluation = { budget: 250, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 

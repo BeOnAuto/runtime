@@ -1,8 +1,6 @@
-import type { DispatcherServices } from '@on.auto/operations';
-
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
 import { ledgerDatabaseOf, withARefusedLayoutExplained } from '../database/ledger-database.ts';
-import { defaultServerOptions, type ServerOptions } from '../lifecycle/lifecycle.ts';
+import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer } from './application-layer.ts';
 import { functionWiringOf, type FunctionWiring } from './function-wiring.ts';
@@ -15,43 +13,42 @@ export function compositionRootWith(
   programPoolOf?: FunctionWiring['programPoolOf'],
   clock?: WorkflowParts['clock'],
   toolTiming?: FunctionWiring['toolTiming'],
-): ServerOptions<DispatcherServices> {
+): ComposedServerOptions {
   const wiring = functionWiringOf(modelAccessOf, programPoolOf, toolTiming);
-  return {
-    ...defaultServerOptions,
-    composed: (settings, telemetry) => {
-      const database = ledgerDatabaseOf(settings, telemetry.appended);
-      return {
-        services: applicationLayer(
-          withARefusedLayoutExplained(ledgerLayerFor(settings, database, wiring.projections.appends), settings),
-        ),
-        serve: async (runtime, ownOrigin) => {
-          const { ledger, workflows, identityIssuer } = settings;
-          const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata } =
-            await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
-          const functions = await functionsServedBy(runtime, settings, database, {
-            ...wiring,
-            ...(clock === undefined ? {} : { now: clock.now }),
-            telemetry,
-            consent,
-            connections: source,
-            offering,
-          });
-          const parts = {
-            ledger,
-            workflows,
-            identityIssuer,
-            retryStateKeys,
-            ...functions.parts,
-            orgOperations: [...functions.parts.orgOperations, ...connections],
-            ...(clock === undefined ? {} : { clock }),
-          };
-          const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
-          return { ...served, routes: [...served.routes, clientMetadata] };
-        },
-      };
-    },
-  };
+  return serverOptionsComposing((settings, telemetry, shippedFiles) => {
+    const database = ledgerDatabaseOf(settings, telemetry.appended);
+    return {
+      services: applicationLayer(
+        withARefusedLayoutExplained(ledgerLayerFor(settings, database, wiring.projections.appends), settings),
+      ),
+      serve: async (runtime, ownOrigin) => {
+        const { ledger, workflows, identityIssuer } = settings;
+        const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata } =
+          await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
+        const functions = await functionsServedBy(runtime, settings, database, {
+          ...wiring,
+          ...(clock === undefined ? {} : { now: clock.now }),
+          telemetry,
+          consent,
+          connections: source,
+          offering,
+          shippedFiles,
+        });
+        const parts = {
+          ledger,
+          workflows,
+          identityIssuer,
+          retryStateKeys,
+          shippedFiles,
+          ...functions.parts,
+          orgOperations: [...functions.parts.orgOperations, ...connections],
+          ...(clock === undefined ? {} : { clock }),
+        };
+        const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
+        return { ...served, routes: [...served.routes, clientMetadata] };
+      },
+    };
+  });
 }
 
 export const compositionRoot = compositionRootWith(loggedModelAccess);

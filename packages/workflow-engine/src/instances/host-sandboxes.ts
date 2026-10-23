@@ -1,3 +1,5 @@
+import type { ShippedFiles } from '@on.auto/operations';
+
 import type { FilterSandbox } from '../filters/filter-verdicts.ts';
 import { filterContextOf } from '../programs/kept-contexts.ts';
 import { reservedSandbox, type MachineSandbox } from '../programs/reserved-instances.ts';
@@ -9,12 +11,12 @@ export function hostClock(): number {
   return performance.now();
 }
 
-export function machineSandboxOf(clock: () => number = hostClock): MachineSandbox {
-  return reservedSandbox(() => freshInstance(unitMemoryBytes), clock);
+export function machineSandboxOf(shippedFiles: ShippedFiles, clock: () => number = hostClock): MachineSandbox {
+  return reservedSandbox(() => freshInstance(shippedFiles, unitMemoryBytes), clock);
 }
 
-export function filterSandboxOf(clock: () => number = hostClock): FilterSandbox {
-  const instances = instanceStock();
+export function filterSandboxOf(shippedFiles: ShippedFiles, clock: () => number = hostClock): FilterSandbox {
+  const instances = instanceStock((memoryBytes) => freshInstance(shippedFiles, memoryBytes));
   return {
     session: async (opening) => {
       const settings = { stackBytes: threadStackBytes, mostAnswerBytes: unitMemoryBytes, clock };

@@ -6,7 +6,13 @@ import {
   type ProviderEntry,
   type ProviderList,
 } from '@on.auto/providers';
-import type { CredentialGiven, ProviderNamed, ProviderResolved, ProviderResolver } from '@on.auto/tool-servers';
+import type {
+  CredentialGiven,
+  ProviderNamed,
+  ProviderResolved,
+  ProviderResolver,
+  ShippedDocument,
+} from '@on.auto/tool-servers';
 import { Result } from 'effect';
 
 import { credentialIssuesOf } from '../entries/credential-checks.ts';
@@ -87,12 +93,16 @@ function writtenAtOf({ placedAt }: Placing): (pointer: string) => string {
   };
 }
 
-function resolvedOf(addition: ProviderAddition, { credential, reference }: Credentialled, documents: string) {
+function resolvedOf(
+  addition: ProviderAddition,
+  { credential, reference }: Credentialled,
+  documents: ReadonlyMap<string, ShippedDocument>,
+) {
   const placing = placedReference({ provider: addition.provider, entry: addition.entry, credential }, reference);
   const resolved: ProviderResolved = {
     written: { ...placing.written, type: addition.type },
     placedValues: placing.placedValues,
-    documentsDirectory: documents,
+    documents: { kind: 'shipped', byName: documents },
     writtenAt: writtenAtOf(placing),
   };
   return resolved;

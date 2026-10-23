@@ -1,14 +1,21 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { documentServerOf, operatorVariablesOf, readProviders, type Provider } from '../index.ts';
 
-const shipped = Result.getOrThrow(readProviders());
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
 
-const entriesFolder = fileURLToPath(new URL('../entries/', import.meta.url));
+const entriesUrl = new URL('../entries/', import.meta.url);
+
+const entriesFolder = fileURLToPath(entriesUrl);
+
+const documentsBesideTheEntries = shipped.providers
+  .flatMap(({ entry }) => (entry.document === undefined || URL.canParse(entry.document) ? [] : [entry.document]))
+  .toSorted();
 
 function addressesOf({ entry, address }: Provider): readonly string[] {
   return [entry.website, address, ...entry.credentials.flatMap(({ issuer }) => (issuer === undefined ? [] : [issuer]))];
@@ -163,7 +170,19 @@ describe('the servers of the shipped providers', () => {
     expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual(
       shipped.providers.map((provider) => documentServerExpectedOf(provider)),
     );
-    expect(shipped.documents).toBe(entriesFolder);
+  });
+
+  it('hand on the documents beside the entries as the texts they read with the bytes each takes, by the name each entry writes', async () => {
+    const onDisk = await Promise.all(
+      documentsBesideTheEntries.map(async (written) => {
+        const file = new URL(written, entriesUrl);
+        return { text: await shippedFilesOnDisk.text(file), bytes: (await shippedFilesOnDisk.bytes(file)).byteLength };
+      }),
+    );
+
+    expect([...shipped.documents.keys()].toSorted()).toEqual(documentsBesideTheEntries);
+    expect(documentsBesideTheEntries.map((written) => shipped.documents.get(written))).toEqual(onDisk);
+    expect(documentsBesideTheEntries.length).toBeGreaterThan(0);
   });
 });
 

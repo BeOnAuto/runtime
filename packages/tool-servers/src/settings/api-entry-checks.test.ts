@@ -18,10 +18,10 @@ const documentShape = `${pinned}, or a path relative to the directory of the con
 const misplaced =
   'Holds a reference to an environment variable, which only headers, query_params, security, env and auth may hold: an argument shows in the listing of the processes of the machine, and the URL of a server or of a document is no place for a credential';
 
-function read(servers: unknown, documentsDirectory?: string) {
+function read(servers: unknown, path?: string) {
   return readToolServerSettings(
     { TOOL_SERVERS: JSON.stringify(servers), BILLING_API_KEY: apiKey },
-    { modelProviders: [], ...(documentsDirectory === undefined ? {} : { documentsDirectory }) },
+    { modelProviders: [], ...(path === undefined ? {} : { documents: { kind: 'directory', path } }) },
   );
 }
 

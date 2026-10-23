@@ -4,7 +4,7 @@ import { html, raw } from 'hono/html';
 
 import type { ApiEnv } from '../api-env.ts';
 import { brand } from './auto-logo.ts';
-import { controlPageHeaders, headOf, readOnlyPageHeaders } from './page-style.ts';
+import type { PageStyle } from './page-style.ts';
 import {
   act,
   refusalOf,
@@ -21,9 +21,13 @@ const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 
 const statusHeaders = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' };
 
-const head = headOf('');
-
 type Page = ReturnType<typeof html>;
+
+interface Dressing {
+  readonly style: PageStyle;
+  readonly head: string;
+  readonly actionPage: (action: RuntimeAction) => Page;
+}
 
 function factsOf(status: RuntimeStatus): Page {
   const log =
@@ -48,7 +52,7 @@ function factsOf(status: RuntimeStatus): Page {
     </div>`;
 }
 
-function pageOf(studioLink: string, server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
+function pageOf(head: string, studioLink: string, server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
   return html`<!doctype html>
     <html lang="en">
       <head>
@@ -67,35 +71,46 @@ function pageOf(studioLink: string, server: Readonly<URL>, status: RuntimeStatus
     </html>`;
 }
 
-const restartingPage = html`<!doctype html>
-  <html lang="en">
-    <head>
-      ${raw(headOf('<meta http-equiv="refresh" content="4; url=/" />'))}
-    </head>
-    <body>
-      <main>
-        ${raw(brand)}
-        <h1>Auto Runtime is restarting</h1>
-        <p>This page opens again once it is back.</p>
-      </main>
-    </body>
-  </html>`;
+function restartingPageOf(style: PageStyle): Page {
+  return html`<!doctype html>
+    <html lang="en">
+      <head>
+        ${raw(style.head('<meta http-equiv="refresh" content="4; url=/" />'))}
+      </head>
+      <body>
+        <main>
+          ${raw(brand)}
+          <h1>Auto Runtime is restarting</h1>
+          <p>This page opens again once it is back.</p>
+        </main>
+      </body>
+    </html>`;
+}
 
-const stoppedPage = html`<!doctype html>
-  <html lang="en">
-    <head>
-      ${raw(head)}
-    </head>
-    <body>
-      <main>
-        ${raw(brand)}
-        <h1>Auto Runtime has stopped</h1>
-        <p>Your agent starts it again when it next needs it. To start it yourself, run npx @on.auto/runtime.</p>
-      </main>
-    </body>
-  </html>`;
+function stoppedPageOf(head: string): Page {
+  return html`<!doctype html>
+    <html lang="en">
+      <head>
+        ${raw(head)}
+      </head>
+      <body>
+        <main>
+          ${raw(brand)}
+          <h1>Auto Runtime has stopped</h1>
+          <p>Your agent starts it again when it next needs it. To start it yourself, run npx @on.auto/runtime.</p>
+        </main>
+      </body>
+    </html>`;
+}
 
-const actionPages: Readonly<Record<RuntimeAction, Page>> = { stop: stoppedPage, restart: restartingPage };
+function dressingOf(style: PageStyle): Dressing {
+  const head = style.head('');
+  const actionPages: Readonly<Record<RuntimeAction, Page>> = {
+    stop: stoppedPageOf(head),
+    restart: restartingPageOf(style),
+  };
+  return { style, head, actionPage: (action) => actionPages[action] };
+}
 
 const actionStates: Readonly<Record<RuntimeAction, string>> = { stop: 'stopping', restart: 'restarting' };
 
@@ -114,7 +129,7 @@ function guarded(answer: Answer): Answer {
     }) ?? answer(c);
 }
 
-function landingAnswerOf({ control, studio, installId }: Landing): Answer {
+function landingAnswerOf({ control, studio, installId }: Landing, { head, style }: Dressing): Answer {
   return (c) => {
     const server = new URL(c.req.url);
     const studioLink = studioLinkOf(studio, {
@@ -123,27 +138,27 @@ function landingAnswerOf({ control, studio, installId }: Landing): Answer {
       installId: installId?.(),
     });
     return c.html(
-      pageOf(studioLink, server, control?.status()),
+      pageOf(head, studioLink, server, control?.status()),
       200,
-      control === undefined ? readOnlyPageHeaders : controlPageHeaders,
+      control === undefined ? style.readOnlyHeaders : style.controlHeaders,
     );
   };
 }
 
-function actionAnswerOf(control: RuntimeControl, action: RuntimeAction): Answer {
+function actionAnswerOf(control: RuntimeControl, action: RuntimeAction, { actionPage, style }: Dressing): Answer {
   return guarded((c) => {
     act(control, action);
     return asksForAPage(c)
-      ? c.html(actionPages[action], 200, readOnlyPageHeaders)
+      ? c.html(actionPage(action), 200, style.readOnlyHeaders)
       : c.json({ status: actionStates[action] }, 202, statusHeaders);
   });
 }
 
-function controlAnswersOf(control: RuntimeControl): ReadonlyMap<string, Answer> {
+function controlAnswersOf(control: RuntimeControl, dressing: Dressing): ReadonlyMap<string, Answer> {
   return new Map([
     [`GET ${runtimePath}`, guarded((c) => c.json(statusDocumentOf(control.status()), 200, statusHeaders))],
-    [`POST ${runtimeActionPaths.stop}`, actionAnswerOf(control, 'stop')],
-    [`POST ${runtimeActionPaths.restart}`, actionAnswerOf(control, 'restart')],
+    [`POST ${runtimeActionPaths.stop}`, actionAnswerOf(control, 'stop', dressing)],
+    [`POST ${runtimeActionPaths.restart}`, actionAnswerOf(control, 'restart', dressing)],
   ]);
 }
 
@@ -151,19 +166,23 @@ interface Landing {
   readonly control: RuntimeControl | undefined;
   readonly studio: StudioSettings;
   readonly installId: (() => string | undefined) | undefined;
+  readonly style: PageStyle;
 }
 
-function answerFor(c: Context<ApiEnv>, landing: Landing, controls: ReadonlyMap<string, Answer>): Answer | undefined {
+function answerFor(c: Context<ApiEnv>, page: Answer, controls: ReadonlyMap<string, Answer>): Answer | undefined {
   if (c.req.method === 'GET' && c.req.path === '/' && asksForAPage(c)) {
-    return landingAnswerOf(landing);
+    return page;
   }
   return controls.get(`${c.req.method} ${c.req.path}`);
 }
 
 export function landingPageFor(landing: Landing): MiddlewareHandler<ApiEnv> {
-  const controls = landing.control === undefined ? new Map<string, Answer>() : controlAnswersOf(landing.control);
+  const dressing = dressingOf(landing.style);
+  const page = landingAnswerOf(landing, dressing);
+  const controls =
+    landing.control === undefined ? new Map<string, Answer>() : controlAnswersOf(landing.control, dressing);
   return (c, next) => {
-    const answer = answerFor(c, landing, controls);
+    const answer = answerFor(c, page, controls);
     return answer === undefined ? next() : Promise.resolve(answer(c));
   };
 }

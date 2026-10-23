@@ -1,6 +1,5 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { programPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, Function } from 'effect';
 
 import type { HostDatabase } from '../src/database/host-database.ts';
@@ -9,7 +8,7 @@ import { openWorkflowStore } from '../src/host/workflow-store.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
 import { reviewsFold } from '../src/views-testing/campaign-reviews.ts';
-import { measuredViewOf, measuredViews, recallContentOf } from './measured-views.ts';
+import { measuredViewOf, measuredViews, measuringPool, recallContentOf } from './measured-views.ts';
 
 export interface Rebuild {
   readonly events: number;
@@ -107,7 +106,7 @@ function counted(database: HostDatabase): Counted {
 }
 
 export async function rebuildOn(settings: DatabaseSettings, events: number): Promise<Rebuild> {
-  const pool = programPool({ workers: 4, heapMegabytes: 256 });
+  const pool = measuringPool();
   const measured = measuredViews(pool);
   const store = await openWorkflowStore(settings, Function.constVoid, measured.folders);
   await recorded(store.database, events);

@@ -1,13 +1,19 @@
 import type { AppRuntime } from '@on.auto/api';
 import { callMarginMs, defineSendRunEvent, makeWorkflowAdapter, type ExpressionCheck } from '@on.auto/coordination';
 import { defineStartVersion, type PlaybookOwnNames, type Capability, type CapabilityFacts } from '@on.auto/definitions';
-import { makeCatalog, makeDispatcher, type DispatcherServices, type RouteRegistration } from '@on.auto/operations';
+import {
+  makeCatalog,
+  makeDispatcher,
+  type DispatcherServices,
+  type RouteRegistration,
+  type ShippedFiles,
+} from '@on.auto/operations';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { playbookOperationsServing } from '../composition/playbook-operations.ts';
 import { routesFor, type ServedCatalog } from '../composition/served-routes.ts';
-import type { Served } from '../lifecycle/lifecycle.ts';
+import type { Served } from '../server-options/server-options.ts';
 import { openedHost, type HostParts } from './host-dependencies.ts';
 
 interface OrgOperation {
@@ -26,6 +32,7 @@ export interface WorkflowParts extends HostParts {
   readonly names: PlaybookOwnNames;
   readonly identityIssuer: string;
   readonly retryStateKeys: ServedCatalog['retryStateKeys'];
+  readonly shippedFiles: ShippedFiles;
 }
 
 export function longestCallOf(capabilities: readonly Pick<Capability, 'longestAnyRunMs'>[]): number {
@@ -67,7 +74,7 @@ export async function serveWorkflows(runtime: AppRuntime<DispatcherServices>, pa
     ...parts.playbookOperations,
     defineSendRunEvent(host, names),
   ]);
-  const { identityIssuer, retryStateKeys } = parts;
-  const served = { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys };
-  return { routes: routesFor(runtime, served), stopWork: host.stop };
+  const { identityIssuer, retryStateKeys, shippedFiles } = parts;
+  const served = { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, shippedFiles };
+  return { routes: await routesFor(runtime, served), stopWork: host.stop };
 }

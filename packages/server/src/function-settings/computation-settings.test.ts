@@ -1,11 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -14,11 +14,11 @@ function errorFrom(environment: Environment): unknown {
 
 describe('the computation settings', () => {
   it('run four computation functions at once when nothing is set', () => {
-    expect(readSettings({}).computation).toEqual({ workers: 4 });
+    expect(readSettingsOf({}).computation).toEqual({ workers: 4 });
   });
 
   it('read how many computation functions run at once', () => {
-    expect(readSettings({ COMPUTATION_WORKERS: ' 12 ' }).computation).toEqual({ workers: 12 });
+    expect(readSettingsOf({ COMPUTATION_WORKERS: ' 12 ' }).computation).toEqual({ workers: 12 });
   });
 
   it.each(['0', '65', 'many', '1.5'])(

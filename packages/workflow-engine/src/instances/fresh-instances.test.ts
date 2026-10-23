@@ -1,4 +1,5 @@
 import * as releaseSync from '@jitl/quickjs-wasmfile-release-sync';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Schema } from 'effect';
 import { newQuickJSWASMModuleFromVariant, newVariant, type QuickJSSyncVariant } from 'quickjs-emscripten-core';
 import { describe, expect, it } from 'vitest';
@@ -11,7 +12,7 @@ import { instanceStock } from './instance-stock.ts';
 const evaluation = { budget: 1_000_000, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
 function allocated(memoryBytes: number, megabytes: number): Promise<unknown> {
-  return freshInstance(memoryBytes).then((instance) => {
+  return freshInstance(shippedFilesOnDisk, memoryBytes).then((instance) => {
     const unit = expressionUnitOf(() => instance, {
       stackBytes: threadStackBytes,
       mostAnswerBytes: 1024,
@@ -78,7 +79,10 @@ describe('a fresh instance', () => {
   });
 
   it('shares nothing with another instance made from the same compiled module', async () => {
-    const [first, second] = await Promise.all([freshInstance(pageBytes * 512), freshInstance(pageBytes * 512)]);
+    const [first, second] = await Promise.all([
+      freshInstance(shippedFilesOnDisk, pageBytes * 512),
+      freshInstance(shippedFilesOnDisk, pageBytes * 512),
+    ]);
 
     expect(first.module).not.toBe(second.module);
     expect([first.memoryBytes, second.memoryBytes]).toEqual([pageBytes * 512, pageBytes * 512]);
@@ -87,7 +91,7 @@ describe('a fresh instance', () => {
 
 describe('a stock of instances', () => {
   it('hands out a fresh instance of the memory asked for every time, preparing the next while the last is in use', async () => {
-    const instances = instanceStock();
+    const instances = instanceStock((memoryBytes) => freshInstance(shippedFilesOnDisk, memoryBytes));
 
     const [first, second, other] = [
       await instances(pageBytes * 512),

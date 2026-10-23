@@ -2,11 +2,11 @@ import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
 import { variablesTheRuntimeReads } from '../connections/variables-the-runtime-reads.ts';
-import { readSettings } from './settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }
@@ -14,7 +14,7 @@ function errorFrom(environment: Environment): string {
 }
 
 function keepingOf(environment: Environment) {
-  const { keepers, secrets } = readSettings(environment);
+  const { keepers, secrets } = readSettingsOf(environment);
   return { keepers, custodian: secrets?.current.from };
 }
 
@@ -117,7 +117,7 @@ describe('the keepers of the secrets settings at their bounds', () => {
     const prefix = '/level'.repeat(14);
 
     expect(
-      readSettings({ SECRETS_KEEPER: `aws-parameter-store:${prefix}`, AWS_REGION: 'eu-west-1' }).keepers.current,
+      readSettingsOf({ SECRETS_KEEPER: `aws-parameter-store:${prefix}`, AWS_REGION: 'eu-west-1' }).keepers.current,
     ).toEqual({
       kind: 'aws-parameter-store',
       setting: 'SECRETS_KEEPER',

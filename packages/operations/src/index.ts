@@ -284,3 +284,4 @@ export { uuidV5 } from './uuid/uuid-v5.ts';
 export { randomUUIDv7, uuidV7Before, uuidV7TimeOf } from './uuid/uuid-v7.ts';
 export { loopbackNames, namesTheLoopback } from './addresses/loopback-names.ts';
 export { cacheFolderMode, cacheFolderProblem } from './folders/cache-folder.ts';
+export type { ShippedFiles } from './shipped-files/shipped-files.ts';

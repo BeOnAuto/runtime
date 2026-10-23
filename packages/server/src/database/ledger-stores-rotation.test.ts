@@ -3,8 +3,8 @@ import { randomUUIDv7, sha256Of } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
 
 const [previousKey, currentKey] = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
@@ -31,7 +31,7 @@ describe('the stores of a ledger whose secrets the previous key cannot unwrap', 
   it('stop the start, naming the setting of the previous key before the words of its custodian', async () => {
     const fileName = aLedgerFile();
     await keptUnderThePreviousKey(fileName);
-    const settings = readSettings({
+    const settings = readSettingsOf({
       LEDGER_FILE: fileName,
       SECRETS_KEY: currentKey.toString('base64'),
       SECRETS_KEY_PREVIOUS: previousKey.toString('base64'),

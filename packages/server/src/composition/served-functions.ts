@@ -1,5 +1,5 @@
 import type { AppRuntime } from '@on.auto/api';
-import type { DispatcherServices } from '@on.auto/operations';
+import type { DispatcherServices, ShippedFiles } from '@on.auto/operations';
 import { playbookOperations } from '@on.auto/playbooks';
 
 import type { Settings } from '../settings/settings.ts';
@@ -17,7 +17,7 @@ import { toolUsersServedBy, type ToolUsersWiring } from './served-tools.ts';
 type LedgerDatabase = Parameters<FunctionWiring['projections']['served']>[1]['database'];
 
 export interface ServedFunctions {
-  readonly parts: Omit<WorkflowParts, 'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys'>;
+  readonly parts: Omit<WorkflowParts, 'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'shippedFiles'>;
   readonly closing: ServedPredictionFunctions['withProcessesClosed'];
 }
 
@@ -28,11 +28,13 @@ export async function functionsServedBy(
   {
     programPoolOf,
     projections: wiring,
+    shippedFiles,
     ...tools
-  }: FunctionWiring & Pick<ToolUsersWiring, 'consent' | 'connections' | 'offering'>,
+  }: FunctionWiring &
+    Pick<ToolUsersWiring, 'consent' | 'connections' | 'offering'> & { readonly shippedFiles: ShippedFiles },
 ): Promise<ServedFunctions> {
   const { reasoning, interaction, toolOperations, withToolsClosed } = await toolUsersServedBy(runtime, settings, tools);
-  const computation = await computationServedBy(settings.computation, programPoolOf);
+  const computation = await computationServedBy(settings.computation, programPoolOf, shippedFiles);
   const projections = await wiring.served(runtime, { recall: settings.recall, database }, computation.pool, [
     datasetsFolderOf(computation.pool),
   ]);

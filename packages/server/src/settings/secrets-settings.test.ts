@@ -2,12 +2,12 @@ import type { Environment } from '@on.auto/config';
 import { Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { secretsVariables, type SecretsKeySource } from './secrets-settings.ts';
-import { readSettings } from './settings.ts';
 
 function errorFrom(environment: Environment): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }
@@ -19,7 +19,7 @@ function revealed(source: SecretsKeySource | undefined): unknown {
 }
 
 function custodiansIn(environment: Environment) {
-  return Option.getOrThrow(Option.fromNullishOr(readSettings(environment).secrets));
+  return Option.getOrThrow(Option.fromNullishOr(readSettingsOf(environment).secrets));
 }
 
 function secretsOf(environment: Environment) {

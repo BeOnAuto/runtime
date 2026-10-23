@@ -7,7 +7,7 @@ import { Effect, ManagedRuntime, Schema } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { ledgerDatabaseOf } from '../database/ledger-database.ts';
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { contentStoreOf } from './content-store.ts';
 import { ledgerLayerFor, ledgerLayerOf } from './ledger-store.ts';
 
@@ -39,7 +39,7 @@ function ledgerOn(host: string): Promise<Ledger['Service']> {
   onTestFinished(() => {
     vi.unstubAllEnvs();
   });
-  const settings = readSettings({
+  const settings = readSettingsOf({
     LEDGER_FILE: ':memory:',
     CONTENT_STORE_URL: 's3://playbook-content/production',
     AWS_ENDPOINT_URL: `http://${host}`,
@@ -52,7 +52,7 @@ function ledgerOn(host: string): Promise<Ledger['Service']> {
 
 describe('the store the content of a playbook is kept in', () => {
   it("is the ledger's own when no object store is set", () => {
-    expect(contentStoreOf(readSettings({}))).toBeUndefined();
+    expect(contentStoreOf(readSettingsOf({}))).toBeUndefined();
   });
 
   it('is an object store when CONTENT_STORE_URL is set, whose bucket is checked before the ledger opens', async () => {

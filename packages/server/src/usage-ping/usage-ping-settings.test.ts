@@ -5,15 +5,15 @@ import { join } from 'node:path';
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function usagePingIn(environment: Environment): unknown {
-  return readSettings(environment).usagePing;
+  return readSettingsOf(environment).usagePing;
 }
 
 function errorFrom(environment: Environment): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }

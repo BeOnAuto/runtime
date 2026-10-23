@@ -1,11 +1,14 @@
 import { Layer } from 'effect';
 
-import { defaultServerOptions, type Composed, type ServerOptions } from '../../lifecycle/lifecycle.ts';
+import { serverOptionsComposing } from '../../server-options/composed-options.ts';
+import { servedBy, type Composed, type ServerOptions } from '../../server-options/server-options.ts';
 
 export function optionsComposing(services: Layer.Layer<never>, serve: Composed<never>['serve']): ServerOptions<never> {
-  return { ...defaultServerOptions, composed: () => ({ services, serve }) };
+  return serverOptionsComposing(() => ({ services, serve }));
 }
 
 export function optionsServing(serve: Composed<never>['serve']): ServerOptions<never> {
   return optionsComposing(Layer.empty, serve);
 }
+
+export const defaultServerOptions: ServerOptions<never> = optionsServing(() => servedBy([]));

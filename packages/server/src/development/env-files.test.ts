@@ -6,7 +6,6 @@ import { parseEnv } from 'node:util';
 import { providerStatus } from '@on.auto/reasoning';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { stoppedWith } from '../testing/processes/development-endings.ts';
 import {
   developmentFiles,
@@ -16,6 +15,7 @@ import {
   untilWritten,
   type DevelopmentOptions,
 } from '../testing/processes/development-process.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const example = new URL('../../../../.env.example', import.meta.url);
 
@@ -66,7 +66,7 @@ describe('local Studio under pnpm dev', () => {
 
 describe('the settings files pnpm dev reads', () => {
   it('run the server in local mode with dev.env alone, on a loopback address with neither PUBLIC_URL nor API_KEYS', () => {
-    expect(readSettings(parseEnv(readFileSync(devEnv, 'utf8')))).toMatchObject({
+    expect(readSettingsOf(parseEnv(readFileSync(devEnv, 'utf8')))).toMatchObject({
       host: '127.0.0.1',
       apiKeys: undefined,
       signIn: undefined,
@@ -84,7 +84,7 @@ describe('the settings files pnpm dev reads', () => {
   it('documents the model settings in .env.example and auto-runtime.example.yaml in a form that reads as written', () => {
     const environment = parseEnv(uncommented(readFileSync(example, 'utf8')));
 
-    const { models, allowedOrigins, configFile } = readSettings({ ...environment, CONFIG_FILE: exampleConfigFile });
+    const { models, allowedOrigins, configFile } = readSettingsOf({ ...environment, CONFIG_FILE: exampleConfigFile });
 
     expect(providerStatus(models, { entraId: false }).configured).toEqual(['anthropic', 'openai', 'google', 'gateway']);
     expect(Object.fromEntries(models.aliases)).toEqual({ 'anthropic/*': 'gateway/anthropic/*' });
@@ -95,7 +95,7 @@ describe('the settings files pnpm dev reads', () => {
   it('documents the ledger in PostgreSQL in .env.example in a form that reads as written over dev.env', () => {
     const environment = parseEnv(uncommented(readFileSync(example, 'utf8')));
 
-    const { ledger } = readSettings({ LEDGER_FILE: '.data/ledger.db', ...environment });
+    const { ledger } = readSettingsOf({ LEDGER_FILE: '.data/ledger.db', ...environment });
 
     expect(ledger).toMatchObject({ store: 'postgresql', host: '127.0.0.1:5432', database: 'postgres' });
   });

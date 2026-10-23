@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { JsonObject } from '../dsl/json.ts';
 import type { FoldRequest, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
+import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { longerThanTheTestMs } from '../pool-testing/waiting.ts';
 import { programPool } from '../program-pool/program-pool.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
@@ -42,12 +43,8 @@ const foldingAtOnce = workerOf(
   'import { parentPort } from "node:worker_threads"; parentPort.on("message", ({ job }) => { parentPort.postMessage({ job, answer: { ran: "folded", early: false, views: [{ view: "3", folded: 2, lastFolded: 1, through: 1, work: 0 }] }, keep: true }); });',
 );
 
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
-
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 4, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(4), ...settings });
   pools.push(pool);
   return pool;
 }

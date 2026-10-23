@@ -1,4 +1,4 @@
-import { parentPort, type MessagePort } from 'node:worker_threads';
+import { parentPort, workerData, type MessagePort } from 'node:worker_threads';
 
 import { Option, Schema } from 'effect';
 
@@ -9,6 +9,7 @@ import { JobSchema, type JobAnswer, type JobEnvelope } from '../jobs/job-envelop
 import { keptFor, type JobHandlers, type Kept } from '../jobs/job-kit.ts';
 import type { ProgramAnswerData } from '../jobs/program-answer.ts';
 import { readySignal } from '../jobs/ready-signal.ts';
+import { handedFile, handedSandboxOf, type HandedFile } from './handed-files.ts';
 
 type ProgramEnvelope = Extract<JobEnvelope, { readonly kind: 'program' }>;
 
@@ -95,11 +96,20 @@ function answerTo(message: unknown, serving: Serving): Promise<JobAnswer> {
   return value.kind === 'fold' ? foldAnswer(value, serving) : Promise.resolve(checkAnswer(value, serving));
 }
 
-export function serveJobs(handlers: JobHandlers, port: MessagePort | null = parentPort): void {
+export function serveJobsWith(
+  handlersOf: (handed: HandedFile) => JobHandlers,
+  port: MessagePort | null = parentPort,
+  data: unknown = workerData,
+): void {
   if (port === null) {
     return;
   }
-  const serving: Serving = { handlers, kept: keptFor(handlers.checks), instances: instanceStock() };
+  const handlers = handlersOf((file) => handedFile(file, data));
+  const serving: Serving = {
+    handlers,
+    kept: keptFor(handlers.checks),
+    instances: instanceStock(handedSandboxOf(data)),
+  };
   port.on('message', (message: unknown) => {
     void answerTo(message, serving).then((answer) => {
       port.postMessage(answer, []);
@@ -107,4 +117,12 @@ export function serveJobs(handlers: JobHandlers, port: MessagePort | null = pare
     });
   });
   port.postMessage(readySignal, []);
+}
+
+export function serveJobs(
+  handlers: JobHandlers,
+  port: MessagePort | null = parentPort,
+  data: unknown = workerData,
+): void {
+  serveJobsWith(() => handlers, port, data);
 }

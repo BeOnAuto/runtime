@@ -1,9 +1,17 @@
 import { createHash } from 'node:crypto';
 
-import { iconOnDark, iconOnLight } from './auto-logo.ts';
-import { fontFaces } from './fonts.ts';
+import type { ShippedFiles } from '@on.auto/operations';
 
-const styles = `${fontFaces}
+import { iconOnDark, iconOnLight } from './auto-logo.ts';
+import { fontFacesOf } from './fonts.ts';
+
+export interface PageStyle {
+  readonly head: (extra: string) => string;
+  readonly readOnlyHeaders: Readonly<Record<string, string>>;
+  readonly controlHeaders: Readonly<Record<string, string>>;
+}
+
+const pageStyles = `
 :root {
   color-scheme: light dark;
   --paper: #ffffff;
@@ -137,7 +145,11 @@ p {
 .controls button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 `;
 
-function policyOf(formAction: string): string {
+function stylesOf(fontFaces: string): string {
+  return `${fontFaces}${pageStyles}`;
+}
+
+function policyOf(styles: string, formAction: string): string {
   return [
     "default-src 'none'",
     `style-src 'sha256-${createHash('sha256').update(styles).digest('base64')}'`,
@@ -149,28 +161,34 @@ function policyOf(formAction: string): string {
   ].join('; ');
 }
 
-function pageHeadersOf(formAction: string, referrerPolicy: string): Readonly<Record<string, string>> {
+function pageHeadersOf(styles: string, formAction: string, referrerPolicy: string): Readonly<Record<string, string>> {
   return {
     'cache-control': 'no-store',
-    'content-security-policy': policyOf(formAction),
+    'content-security-policy': policyOf(styles, formAction),
     'referrer-policy': referrerPolicy,
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
   };
 }
 
-export const readOnlyPageHeaders = pageHeadersOf("'none'", 'no-referrer');
+function pageStyleOf(fontFaces: string): PageStyle {
+  const styles = stylesOf(fontFaces);
+  return {
+    head: (extra) =>
+      [
+        '<meta charset="utf-8" />',
+        '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+        extra,
+        '<title>Auto Runtime</title>',
+        `<link rel="icon" href="${iconOnLight}" media="(prefers-color-scheme: light)" />`,
+        `<link rel="icon" href="${iconOnDark}" media="(prefers-color-scheme: dark)" />`,
+        `<style>${styles}</style>`,
+      ].join(''),
+    readOnlyHeaders: pageHeadersOf(styles, "'none'", 'no-referrer'),
+    controlHeaders: pageHeadersOf(styles, "'self'", 'same-origin'),
+  };
+}
 
-export const controlPageHeaders = pageHeadersOf("'self'", 'same-origin');
-
-export function headOf(extra: string): string {
-  return [
-    '<meta charset="utf-8" />',
-    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
-    extra,
-    '<title>Auto Runtime</title>',
-    `<link rel="icon" href="${iconOnLight}" media="(prefers-color-scheme: light)" />`,
-    `<link rel="icon" href="${iconOnDark}" media="(prefers-color-scheme: dark)" />`,
-    `<style>${styles}</style>`,
-  ].join('');
+export async function readPageStyle(shippedFiles: ShippedFiles): Promise<PageStyle> {
+  return pageStyleOf(await fontFacesOf(shippedFiles));
 }

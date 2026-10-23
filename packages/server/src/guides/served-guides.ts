@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
-
 import type { DefinitionType, Guide, Recipe } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
-import { capitalized } from '@on.auto/operations';
+import { capitalized, type ShippedFiles } from '@on.auto/operations';
 
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
@@ -23,13 +21,16 @@ function pageOfGuide(guide: string): string {
   return `reference/${guide.replace(/-function$/u, '')}-format.md`;
 }
 
-function pageText(page: string): string {
-  return readFileSync(new URL(page, documentation), 'utf8');
+function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
+  return shippedFiles.text(new URL(page, documentation));
 }
 
-function typeGuideOf({ noun, guide }: Pick<Capability, 'noun' | 'guide'>): Guide {
+async function typeGuideOf(
+  shippedFiles: ShippedFiles,
+  { noun, guide }: Pick<Capability, 'noun' | 'guide'>,
+): Promise<Guide> {
   const page = pageOfGuide(guide.name);
-  const text = withLinksResolved(withoutSiteMarkup(pageText(page)), page);
+  const text = withLinksResolved(withoutSiteMarkup(await pageText(shippedFiles, page)), page);
   return {
     name: guide.name,
     title: `${capitalized(noun.one)} format`,
@@ -38,7 +39,10 @@ function typeGuideOf({ noun, guide }: Pick<Capability, 'noun' | 'guide'>): Guide
   };
 }
 
-export function servedGuidesOf(capabilities: readonly Capability[]): ServedGuides {
+export async function servedGuidesOf(
+  shippedFiles: ShippedFiles,
+  capabilities: readonly Capability[],
+): Promise<ServedGuides> {
   const definitionTypes: readonly DefinitionType[] = capabilities.map(({ type, noun, guide }) => ({
     type,
     noun: noun.one,
@@ -46,10 +50,10 @@ export function servedGuidesOf(capabilities: readonly Capability[]): ServedGuide
   }));
   const guides = [
     terminologyGuideOf(
-      pageText(terminologyPage),
+      await pageText(shippedFiles, terminologyPage),
       definitionTypes.map(({ noun }) => noun),
     ),
-    ...capabilities.map(({ noun, guide }) => typeGuideOf({ noun, guide })),
+    ...(await Promise.all(capabilities.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
   ];
-  return { definitionTypes, guides, recipes: recipesFor(guides) };
+  return { definitionTypes, guides, recipes: await recipesFor(shippedFiles, guides) };
 }

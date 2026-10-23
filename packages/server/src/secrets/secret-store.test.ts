@@ -3,7 +3,8 @@ import type { Keeper } from '@on.auto/secrets';
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings, type Settings } from '../settings/settings.ts';
+import { type Settings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { loadAwsAdapters, type AwsAdapters } from './aws-adapters.ts';
 import { keepersOf } from './secret-keepers.ts';
 import { custodiansOf } from './secret-store.ts';
@@ -60,13 +61,13 @@ function custodiansFor(settings: Pick<Settings, 'secrets' | 'proxy'>, loadAws: (
 describe('the custodians of the secrets settings', () => {
   it('are custodians of keys in hand, and load nothing of AWS, where no setting names a key in KMS', async () => {
     const loader = recordingLoader();
-    const settings = readSettings({
+    const settings = readSettingsOf({
       SECRETS_KEY: current.toString('base64'),
       SECRETS_KEY_PREVIOUS: previous.toString('base64'),
     });
 
     const custodians = await custodiansFor(settings, loader.loadAws);
-    const alone = await custodiansFor(readSettings({ LEDGER_FILE: ':memory:' }), loader.loadAws);
+    const alone = await custodiansFor(readSettingsOf({ LEDGER_FILE: ':memory:' }), loader.loadAws);
 
     expect([custodians.current.kid, custodians.previous?.kid, alone.previous]).toEqual([
       kidOf(current),
@@ -81,12 +82,12 @@ describe('the custodians of the secrets settings', () => {
 describe('the custodians of the secrets settings that name a key in KMS', () => {
   it('load the custodian of KMS where a setting names a key there, for the key the ARN names in its region, with the default credential chain and the proxy settings', async () => {
     const loader = recordingLoader();
-    const inKms = readSettings({
+    const inKms = readSettingsOf({
       SECRETS_KEY_KMS: keyArn,
       SECRETS_KEY_PREVIOUS: previous.toString('base64'),
       NODE_USE_ENV_PROXY: '1',
     });
-    const outOfKms = readSettings({ SECRETS_KEY: current.toString('base64'), SECRETS_KEY_KMS_PREVIOUS: keyArn });
+    const outOfKms = readSettingsOf({ SECRETS_KEY: current.toString('base64'), SECRETS_KEY_KMS_PREVIOUS: keyArn });
 
     const intoKms = await custodiansFor(inKms, loader.loadAws);
     const back = await custodiansFor(outOfKms, loader.loadAws);
@@ -124,7 +125,7 @@ describe('the custodians of the secrets settings that name a key in KMS', () => 
 describe('the keepers of the secrets settings', () => {
   it('are the keeper that seals into the ledger under the custodians, and load nothing of AWS, where no setting names a secret manager', async () => {
     const loader = recordingLoader();
-    const settings = readSettings({ SECRETS_KEY: current.toString('base64') });
+    const settings = readSettingsOf({ SECRETS_KEY: current.toString('base64') });
     const custodians = await custodiansFor(settings, loader.loadAws);
 
     const keepers = await keepersOf(settings.keepers, custodians, { proxy: settings.proxy, loadAws: loader.loadAws });
@@ -136,11 +137,11 @@ describe('the keepers of the secrets settings', () => {
   it('load the keeper of Parameter Store where a setting names it, current or previous, for its prefix in the region of the settings, with the default credential chain and the proxy settings', async () => {
     const loader = recordingLoader();
     const making = { loadAws: loader.loadAws };
-    const alone = readSettings({
+    const alone = readSettingsOf({
       SECRETS_KEEPER: 'aws-parameter-store:/auto-runtime/secrets',
       AWS_REGION: 'eu-west-1',
     });
-    const back = readSettings({
+    const back = readSettingsOf({
       SECRETS_KEEPER: 'ledger',
       SECRETS_KEEPER_PREVIOUS: 'aws-parameter-store:/auto-runtime/secrets',
       SECRETS_KEY: current.toString('base64'),

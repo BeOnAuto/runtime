@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const example = readFileSync(new URL('../../../../auto-runtime.example.yaml', import.meta.url), 'utf8');
 
@@ -37,7 +37,7 @@ describe('the tool servers and the connections auto-runtime.example.yaml shows',
   it('read as written, an entry that names a provider the connections add among them', () => {
     const path = configFile(`${settingAsWritten('tool_servers')}\n${settingAsWritten('connections')}\n`);
 
-    const { toolServers, providers } = readSettings({ CONFIG_FILE: path, ...references });
+    const { toolServers, providers } = readSettingsOf({ CONFIG_FILE: path, ...references });
 
     expect(toolServers.servers.map(({ name, provider }) => [name, provider])).toEqual([
       ['graph', null],

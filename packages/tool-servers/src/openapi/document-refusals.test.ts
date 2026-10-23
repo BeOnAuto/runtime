@@ -9,9 +9,11 @@ import {
   directoryWith,
   documentProblem,
   documentWithServer,
+  documentsIn,
   refusalOf,
   servedDocumentAt,
 } from '../api-testing/described-documents.ts';
+import { shippedDocumentOf } from '../settings/server-settings.ts';
 import { fakeApiDocument, serveFakeApi } from '../testing/index.ts';
 
 const brokenFetch: typeof globalThis.fetch = () =>
@@ -26,7 +28,7 @@ const brokenFetch: typeof globalThis.fetch = () =>
   );
 
 function refusedIn(directory: string) {
-  return (document: string) => refusalOf({ graph: { document, org: 'acme' } }, { directory });
+  return (document: string) => refusalOf({ graph: { document, org: 'acme' } }, documentsIn(directory));
 }
 
 describe('a document refused at start because its URL', () => {
@@ -72,16 +74,20 @@ describe('a document refused at start because its URL', () => {
 });
 
 describe('a document refused at start because of its bytes', () => {
-  it('when it takes more than 4 MiB at its URL or in its file', async () => {
+  it('when it takes more than 4 MiB at its URL, in its file or in the bytes the providers measured as they read it', async () => {
     const large = 'x'.repeat(4_194_305);
     const served = await servedDocumentAt(() => Promise.resolve(new Response(large)));
     const directory = directoryWith({ 'graph.json': large });
+    const byName = new Map([['graph.json', shippedDocumentOf(new TextEncoder().encode('é'.repeat(2_097_153)))]]);
     const tooLarge = documentProblem(
       'The document takes more than the 4194304 bytes a document of a tool server may take',
     );
 
     expect(await refusalOf({ graph: { document: served, org: 'acme' } })).toBe(tooLarge);
     expect(await refusedIn(directory)('graph.json')).toBe(tooLarge);
+    expect(
+      await refusalOf({ graph: { document: 'graph.json', org: 'acme' } }, { documents: { kind: 'shipped', byName } }),
+    ).toBe(tooLarge);
   });
 
   it('when its file does not exist or cannot be read', async () => {
@@ -156,7 +162,7 @@ describe('a document refused at start because a schema refers outside it', () =>
       Object.fromEntries(elsewhere.map((address, index) => [`graph-${index}.json`, referringTo(address)])),
     );
     const refused = (document: string) =>
-      refusalOf({ graph: { document, org: 'acme' } }, { directory, fetch: counted.fetch });
+      refusalOf({ graph: { document, org: 'acme' } }, { ...documentsIn(directory), fetch: counted.fetch });
 
     expect(await Promise.all(elsewhere.map((_, index) => refused(`graph-${index}.json`)))).toEqual(
       elsewhere.map(() =>
@@ -182,7 +188,7 @@ describe('a document refused at start because a path would take its calls elsewh
 
     const refusal = await refusalOf(
       { graph: { document: 'graph.json', base_url: `http://127.0.0.1:${port.slice(0, -1)}`, org: 'acme' } },
-      { directory },
+      documentsIn(directory),
     );
 
     expect(refusal).toContain(

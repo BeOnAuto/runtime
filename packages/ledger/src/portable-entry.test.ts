@@ -1,39 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-
+import { modulesReachedFrom } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-const runtimeImport = /^\s*(?:import|export)\s+(?!type\b)[^'"]*?\bfrom\s+'([^']+)'/gmu;
-
-function importsOf(file: string): readonly string[] {
-  const specifiers: string[] = [];
-  for (const match of readFileSync(file, 'utf8').matchAll(runtimeImport)) {
-    specifiers.push(String(match[1]));
-  }
-  return specifiers;
-}
-
-function packagesReachableFrom(entry: string): ReadonlySet<string> {
-  const visited = new Set<string>();
-  const packages = new Set<string>();
-  const pending = [join(import.meta.dirname, entry)];
-  while (pending.length > 0) {
-    const file = String(pending.pop());
-    const specifiers = visited.has(file) ? [] : importsOf(file);
-    visited.add(file);
-    pending.push(
-      ...specifiers.filter((specifier) => specifier.startsWith('.')).map((relative) => join(dirname(file), relative)),
-    );
-    for (const name of specifiers.filter((specifier) => !specifier.startsWith('.'))) {
-      packages.add(name);
-    }
-  }
-  return packages;
+function packagesReachableFrom(entry: string): readonly string[] {
+  return modulesReachedFrom(import.meta.dirname, entry).packages;
 }
 
 describe('the ledger entry points', () => {
   it('keep the drivers out of the main entry', () => {
-    const packages = [...packagesReachableFrom('index.ts')];
+    const packages = packagesReachableFrom('index.ts');
 
     expect(packages.filter((name) => name.includes('sqlite3'))).toEqual([]);
     expect(packages).not.toContain('pg');
@@ -42,7 +16,7 @@ describe('the ledger entry points', () => {
   });
 
   it('keep the PostgreSQL event store and its driver behind the postgresql entry', () => {
-    const packages = [...packagesReachableFrom('postgresql/postgresql-ledger.ts')];
+    const packages = packagesReachableFrom('postgresql/postgresql-ledger.ts');
 
     expect(packages).toContain('@event-driven-io/emmett-postgresql');
     expect(packages).toContain('@event-driven-io/emmett-postgresql/pg');

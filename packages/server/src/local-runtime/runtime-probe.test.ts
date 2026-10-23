@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { defaultServerOptions } from '../lifecycle/lifecycle.ts';
 import { longestStopMs } from '../lifecycle/shutdown.ts';
+import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { restartWaitMs, startWaitMs, throughARestart } from './runtime-probe.ts';
 
 describe('the patience of an agent for a runtime that restarts', () => {

@@ -45,9 +45,14 @@ async function ranOn(rows: number) {
 describe('a run of a computation function that does not end by itself, over HTTP', () => {
   it('is unavailable once its warm worker is terminated at the deadline, while another worker answers and the server answers other requests', async () => {
     server = await servingReasoning([], {}, undefined, {
-      programPoolOf: ({ workers }) =>
+      programPoolOf: ({ workers }, handed) =>
         checkingWithin(
-          programPool({ workers, heapMegabytes: computationBounds.heapMegabytes, worker: blockingOnTwoRows }),
+          programPool({
+            workers,
+            heapMegabytes: computationBounds.heapMegabytes,
+            worker: blockingOnTwoRows,
+            handed,
+          }),
         ),
     });
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });

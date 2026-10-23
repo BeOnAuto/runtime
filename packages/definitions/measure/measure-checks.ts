@@ -1,11 +1,13 @@
 import { cpus } from 'node:os';
 
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { programPool, sandboxAnswers, type CheckJob } from '@on.auto/workflow-engine/dsl';
 
 import { checkerOf } from '../src/program-check/checking.ts';
-import { keptSandboxLib } from '../src/program-check/kept-lib.ts';
+import { sandboxLibFrom } from '../src/program-check/kept-lib.ts';
 import { sandboxLibOf } from '../src/program-check/sandbox-lib.ts';
-import { checkWorker } from '../src/program-check/save-check.ts';
+import { checkWorker, handedWorkersWithChecks } from '../src/program-check/save-check.ts';
+import { keptLibOnDisk } from '../src/testing/read-on-disk.ts';
 
 const schemas = {
   input: {
@@ -110,13 +112,13 @@ const [cpu] = cpus();
 write(`Node ${process.version} on ${cpu?.model ?? 'an unknown processor'}, ${cpus().length} cores`);
 
 const generating = performance.now();
-const generated = await sandboxLibOf(sandboxAnswers);
+const generated = await sandboxLibOf(shippedFilesOnDisk, (probed) => sandboxAnswers(shippedFilesOnDisk, probed));
 write(
   `the lib generated in ${(performance.now() - generating).toFixed(0)} ms: ${generated.script.length} and ${generated.iterator.length} characters`,
 );
 
 const making = performance.now();
-const check = checkerOf(keptSandboxLib());
+const check = checkerOf(sandboxLibFrom(keptLibOnDisk));
 write(`the checker made from the kept lib in ${(performance.now() - making).toFixed(1)} ms`);
 write(`the example, its first check in the thread: ${timed(() => check(computation(pace))).toFixed(1)} ms`);
 
@@ -138,9 +140,11 @@ for (const [name, job] of cases) {
   );
 }
 
-const pool = programPool({ workers: 1, heapMegabytes: 256 });
-const cold = await pool.check({ ...computation(pace), deadlineMs: 60_000, worker: checkWorker });
-const warm = await pool.check({ ...computation(pace), deadlineMs: 60_000, worker: checkWorker });
+const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
+const pool = programPool({ workers: 1, heapMegabytes: 256, handed });
+const checkedBy = { worker: checkWorker };
+const cold = await pool.check({ ...computation(pace), deadlineMs: 60_000, ...checkedBy });
+const warm = await pool.check({ ...computation(pace), deadlineMs: 60_000, ...checkedBy });
 write(
   `the example in the pool's check worker: ${cold.milliseconds.toFixed(1)} ms the first, the worker's start included, then ${warm.milliseconds.toFixed(1)} ms`,
 );

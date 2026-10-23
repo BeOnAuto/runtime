@@ -14,7 +14,7 @@ import {
 } from './checked.ts';
 import { checkedAuth, checkedHeaders } from './remote-checks.ts';
 import type { ServerEntryFields } from './server-entries.ts';
-import type { ApiDocumentSource, OpenApiServerSettings } from './server-settings.ts';
+import type { ApiDocumentSource, DocumentsPlace, OpenApiServerSettings, ShippedDocument } from './server-settings.ts';
 
 export type ApiTransport = Pick<
   OpenApiServerSettings,
@@ -28,15 +28,32 @@ function isWithin(path: string): boolean {
   return !isAbsolute(path) && normal !== '..' && !normal.startsWith(`..${sep}`);
 }
 
-function checkedDocument(name: string, document: string, directory: string): Checked<ApiDocumentSource> {
+function fileDocument(name: string, document: string, directory: string): Checked<ApiDocumentSource> {
+  return isWithin(document) && document.trim() !== ''
+    ? accepted({ kind: 'file', path: resolve(directory, document) })
+    : refused(name, ['document'], documentShape);
+}
+
+function shippedDocument(
+  name: string,
+  document: string,
+  byName: ReadonlyMap<string, ShippedDocument>,
+): Checked<ApiDocumentSource> {
+  const shipped = byName.get(document);
+  return shipped === undefined
+    ? refused(name, ['document'], `${pinnedUrlShape}, or a document the providers ship`)
+    : accepted({ kind: 'shipped', document: shipped });
+}
+
+function checkedDocument(name: string, document: string, documents: DocumentsPlace): Checked<ApiDocumentSource> {
   if (URL.canParse(document)) {
     return isPinnableUrl(document)
       ? accepted({ kind: 'url', url: document })
       : refused(name, ['document'], documentShape);
   }
-  return isWithin(document) && document.trim() !== ''
-    ? accepted({ kind: 'file', path: resolve(directory, document) })
-    : refused(name, ['document'], documentShape);
+  return documents.kind === 'shipped'
+    ? shippedDocument(name, document, documents.byName)
+    : fileDocument(name, document, documents.path);
 }
 
 function checkedBaseUrl(name: string, baseUrl: string | undefined): Checked<string | null> {
@@ -83,9 +100,9 @@ export function apiTransport(
   name: string,
   fields: ServerEntryFields,
   document: string,
-  directory: string,
+  documents: DocumentsPlace,
 ): Checked<ApiTransport> {
-  const source = checkedDocument(name, document, directory);
+  const source = checkedDocument(name, document, documents);
   const baseUrl = checkedBaseUrl(name, fields.base_url);
   const headers = checkedHeaders(name, fields.headers ?? {}, 'openapi');
   const query = checkedQuery(name, fields.query_params ?? {});

@@ -2,6 +2,7 @@ import type { CapabilityAnswer, PreparedDefinition, Capability, RunContext } fro
 import {
   checkingWithin,
   checksAwaitedAtMostMs,
+  measuredPoolSettings,
   noLongestRuns,
   nothingSaved,
   recordingJournal,
@@ -44,17 +45,11 @@ afterEach(async () => {
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
-const measured: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(process.env).flatMap(([key, value]: readonly [string, string | undefined]) =>
-    key === 'NODE_V8_COVERAGE' && value !== undefined ? [[key, value]] : [],
-  ),
-);
-
 export function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
   const pool = programPool({
     workers: 2,
     heapMegabytes: recallBounds.heapMegabytes,
-    environment: measured,
+    ...measuredPoolSettings,
     ...settings,
   });
   pools.push(pool);

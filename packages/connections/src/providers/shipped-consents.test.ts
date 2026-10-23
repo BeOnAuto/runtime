@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { readProviders, type Placeholder, type ProviderEntry } from '@on.auto/providers';
 import { Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -5,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { vendorsOfTheShippedWays, type VendorOfTheWay } from '../testing/shipped-vendors.ts';
 import { consentedAtTheVendor, harnessAtTheVendor, servedAsTheVendor } from '../testing/vendor-fakes.ts';
 
-const shipped = Result.getOrThrow(readProviders());
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
 
 const closing: (() => Promise<void>)[] = [];
 

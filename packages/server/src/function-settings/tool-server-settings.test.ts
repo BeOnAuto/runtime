@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -17,7 +17,7 @@ const graph = {
 
 function errorFrom(environment: Readonly<Record<string, string>>): string {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return String(error);
   }
@@ -34,7 +34,7 @@ function configFile(text: string): string {
   return path;
 }
 
-function authorizationOf(settings: ReturnType<typeof readSettings>): string | undefined {
+function authorizationOf(settings: ReturnType<typeof readSettingsOf>): string | undefined {
   const [server] = settings.toolServers.servers;
   const header = server?.type === 'mcp' ? server.headers.get('Authorization') : undefined;
   return header === undefined ? undefined : Redacted.value(header);
@@ -42,7 +42,7 @@ function authorizationOf(settings: ReturnType<typeof readSettings>): string | un
 
 describe('the tool servers of the server', () => {
   it('reads the servers, each with the tools it allows, from the environment', () => {
-    const settings = readSettings({
+    const settings = readSettingsOf({
       TOOL_SERVERS: JSON.stringify({ graph: { ...graph, allowed: ['search', 'execute'] } }),
       GRAPH_API_KEY: apiKey,
     });
@@ -59,7 +59,7 @@ describe('the tool servers of the server', () => {
       'tool_servers:\n  graph:\n    url: https://graph.example.com/mcp\n    org: acme\n    headers:\n      Authorization: Bearer ${GRAPH_API_KEY}\n',
     );
 
-    expect(authorizationOf(readSettings({ CONFIG_FILE: path, GRAPH_API_KEY: apiKey }))).toBe(`Bearer ${apiKey}`);
+    expect(authorizationOf(readSettingsOf({ CONFIG_FILE: path, GRAPH_API_KEY: apiKey }))).toBe(`Bearer ${apiKey}`);
   });
 });
 
@@ -109,7 +109,10 @@ describe('the tools of a tool server in the configuration file', () => {
     );
 
     expect(
-      readSettings({ CONFIG_FILE: path }).toolServers.servers.map(({ name, allowed }) => ({ name, allowed })),
+      readSettingsOf({ CONFIG_FILE: path }).toolServers.servers.map(({ name, allowed }) => ({
+        name,
+        allowed,
+      })),
     ).toEqual([
       { name: 'graph', allowed: ['search', 'execute'] },
       { name: 'notes', allowed: null },
@@ -143,7 +146,7 @@ describe('the document of an openapi server named by a path in the configuration
   it('is read from the directory of the configuration file', () => {
     const path = configFile('tool_servers:\n  billing:\n    document: apis/billing.json\n    org: acme\n');
 
-    expect(readSettings({ CONFIG_FILE: path }).toolServers.servers).toMatchObject([
+    expect(readSettingsOf({ CONFIG_FILE: path }).toolServers.servers).toMatchObject([
       { name: 'billing', type: 'openapi', document: { kind: 'file', path: join(dirname(path), 'apis/billing.json') } },
     ]);
   });

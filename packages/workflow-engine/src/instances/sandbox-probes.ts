@@ -1,11 +1,16 @@
+import type { ShippedFiles } from '@on.auto/operations';
+
 import { expressionUnitOf } from '../programs/expression-units.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 import { freshInstance } from './fresh-instances.ts';
 
 const probing = { budget: Number.POSITIVE_INFINITY, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
-export async function sandboxAnswers(expressions: readonly string[]): Promise<readonly string[]> {
-  const instance = await freshInstance(unitMemoryBytes);
+export async function sandboxAnswers(
+  shippedFiles: ShippedFiles,
+  expressions: readonly string[],
+): Promise<readonly string[]> {
+  const instance = await freshInstance(shippedFiles, unitMemoryBytes);
   const unit = expressionUnitOf(() => instance, {
     stackBytes: threadStackBytes,
     mostAnswerBytes: unitMemoryBytes,

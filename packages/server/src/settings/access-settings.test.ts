@@ -1,11 +1,11 @@
 import type { Environment } from '@on.auto/config';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from './settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -18,14 +18,14 @@ const httpOffLoopback =
 describe('readSettings signing persons in', () => {
   it('signs persons in through the Auto identity service once PUBLIC_URL is set, and on every interface through no one without it', () => {
     expect([
-      readSettings({ PUBLIC_URL: 'https://runtime.example.com' }).signIn,
-      readSettings({ IDENTITY_ISSUER: 'https://identity.example' }).signIn,
+      readSettingsOf({ PUBLIC_URL: 'https://runtime.example.com' }).signIn,
+      readSettingsOf({ IDENTITY_ISSUER: 'https://identity.example' }).signIn,
     ]).toEqual([{ issuer: 'https://clerk.on.auto', publicUrl: 'https://runtime.example.com' }, undefined]);
   });
 
   it('signs persons in through the identity service IDENTITY_ISSUER names, such as a development instance', () => {
     expect(
-      readSettings({ IDENTITY_ISSUER: 'https://identity.example', PUBLIC_URL: 'https://runtime.example.com' }).signIn,
+      readSettingsOf({ IDENTITY_ISSUER: 'https://identity.example', PUBLIC_URL: 'https://runtime.example.com' }).signIn,
     ).toEqual({ issuer: 'https://identity.example', publicUrl: 'https://runtime.example.com' });
   });
 
@@ -35,7 +35,7 @@ describe('readSettings signing persons in', () => {
     ['127.0.0.1', 'http://[::1]:5555'],
     ['0.0.0.0', 'http://localhost:5555'],
   ])('takes on HOST=%s the http PUBLIC_URL=%s, whose host is a loopback name', (host, publicUrl) => {
-    expect(readSettings({ HOST: host, PUBLIC_URL: publicUrl }).signIn).toEqual({
+    expect(readSettingsOf({ HOST: host, PUBLIC_URL: publicUrl }).signIn).toEqual({
       issuer: 'https://clerk.on.auto',
       publicUrl,
     });
@@ -59,11 +59,11 @@ describe('readSettings without PUBLIC_URL', () => {
     [{ HOST: '0.0.0.0' }],
     [{ HOST: '127.0.0.1', IDENTITY_ISSUER: 'https://identity.example' }],
   ] as const)('signs no one in with %j, since PUBLIC_URL has no default', (server) => {
-    expect(readSettings(server).signIn).toBeUndefined();
+    expect(readSettingsOf(server).signIn).toBeUndefined();
   });
 
   it('signs persons in at PUBLIC_URL on a loopback address when PUBLIC_URL is set', () => {
-    expect(readSettings({ HOST: '127.0.0.1', PUBLIC_URL: 'https://runtime.example.com' }).signIn).toEqual({
+    expect(readSettingsOf({ HOST: '127.0.0.1', PUBLIC_URL: 'https://runtime.example.com' }).signIn).toEqual({
       issuer: 'https://clerk.on.auto',
       publicUrl: 'https://runtime.example.com',
     });

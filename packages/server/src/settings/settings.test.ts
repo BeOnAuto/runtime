@@ -3,11 +3,11 @@ import { createApiKey } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
 import { shippedList } from '../testing/servers/connected-servers.ts';
-import { readSettings } from './settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 function errorFrom(environment: Environment): unknown {
   try {
-    readSettings(environment);
+    readSettingsOf(environment);
   } catch (error) {
     return error;
   }
@@ -42,7 +42,7 @@ const modelProvidersByDefault = [
 
 describe('readSettings', () => {
   it('listens on every interface at port 5555, allows no origin, has no API keys and keeps the ledger in data/ by default', () => {
-    const { models, toolServers, interaction, ...server } = readSettings({});
+    const { models, toolServers, interaction, ...server } = readSettingsOf({});
 
     expect(models.openai).toEqual({ configured: false, missing: ['OPENAI_API_KEY'] });
     expect(toolServers).toEqual({ servers: [], referencedVariables: [] });
@@ -160,7 +160,7 @@ const everySettingRead = {
 
 describe('readSettings given the distribution', () => {
   it('reads where the runtime came from even when the usage ping is turned off', () => {
-    expect(readSettings({ RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' })).toMatchObject({
+    expect(readSettingsOf({ RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' })).toMatchObject({
       usagePing: undefined,
       distribution: 'docker',
     });
@@ -169,7 +169,7 @@ describe('readSettings given the distribution', () => {
 
 describe('readSettings given every setting', () => {
   it('reads every setting from the environment it is given', () => {
-    const { models, toolServers, interaction, studio, accessMode, publicUrl, ...server } = readSettings(everySetting);
+    const { models, toolServers, interaction, studio, accessMode, publicUrl, ...server } = readSettingsOf(everySetting);
 
     expect([interaction, studio.served, accessMode]).toEqual([{ mostOpenRequests: 250 }, false, undefined]);
     expect([models.openai.configured, publicUrl]).toEqual([true, 'https://runtime.example.com']);
@@ -181,7 +181,7 @@ describe('readSettings given every setting', () => {
 describe('readSettings with empty values', () => {
   it('treats empty variables as not set', () => {
     expect(
-      readSettings({
+      readSettingsOf({
         ALLOWED_ORIGINS: '',
         API_KEYS: '',
         LEDGER_FILE: '',
@@ -207,7 +207,7 @@ describe('readSettings with empty values', () => {
   });
 
   it.each([' ', '\t', '  \n  '])('treats API_KEYS=%j, only whitespace, as no API keys', (keys) => {
-    expect(readSettings({ API_KEYS: keys })).toMatchObject({ apiKeys: undefined });
+    expect(readSettingsOf({ API_KEYS: keys })).toMatchObject({ apiKeys: undefined });
   });
 });
 

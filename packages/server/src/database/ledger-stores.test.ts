@@ -5,9 +5,9 @@ import { Effect, Logger, type Context } from 'effect';
 import type { Pool } from 'pg';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { messagesOf } from '../testing/processes/stderr-lines.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
 
 async function aContextLogging(): Promise<{ readonly context: Context.Context<never>; readonly lines: string[] }> {
@@ -33,7 +33,7 @@ describe('the stores of a ledger in PostgreSQL, as the server opens them, withou
       return pool;
     };
 
-    const stores = await ledgerStoresOpenedBy(context, readSettings({ DATABASE_URL: url, SECRETS_KEY: secretsKey }), {
+    const stores = await ledgerStoresOpenedBy(context, readSettingsOf({ DATABASE_URL: url, SECRETS_KEY: secretsKey }), {
       store: 'postgresql',
       pools: recordedPools,
     });

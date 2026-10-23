@@ -1,6 +1,7 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
+import { type RunningServer } from '../server-options/server-options.ts';
 import { isAcceptingConnections } from '../testing/processes/accepting-connections.ts';
 import {
   gatewayThatHangsFirst,
@@ -12,7 +13,7 @@ import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
-import { startServer, type RunningServer } from './lifecycle.ts';
+import { startServer } from './lifecycle.ts';
 
 const greeting = workflowSource('greeting', "do:\n  - greet: { set: { greeting: '${ `Hello, ${$data.name}` }' } }\n");
 

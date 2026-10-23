@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs';
 
 import { mostGuideBytes, mostRecipeBytes } from '@on.auto/api';
 import { defineCapability, type Capability, type CapabilityGuide } from '@on.auto/definitions';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { withLinksResolved } from './page-links.ts';
-import { servedGuidesOf } from './served-guides.ts';
+import { servedGuidesOf, type ServedGuides } from './served-guides.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
 
 function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capability {
@@ -40,8 +41,14 @@ const everyType = [reasoning, computation, recall, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
-function recipeTextsOf(capabilities: readonly Capability[]): Readonly<Record<string, string>> {
-  return Object.fromEntries(servedGuidesOf(capabilities).recipes.map(({ name, text }) => [name, text]));
+const served = await servedGuidesOf(shippedFilesOnDisk, everyType);
+
+const servedWithInteraction = await servedGuidesOf(shippedFilesOnDisk, [...everyType, interaction]);
+
+const servedForReasoningAndWorkflows = await servedGuidesOf(shippedFilesOnDisk, [reasoning, workflow]);
+
+function recipeTextsOf({ recipes }: ServedGuides): Readonly<Record<string, string>> {
+  return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
 }
 
 function bytesOf(texts: Readonly<Record<string, string>>, ...names: readonly string[]): readonly number[] {
@@ -68,7 +75,7 @@ const pages: Readonly<Record<string, string>> = {
 };
 
 describe('the guides of a server that runs every type of definition', () => {
-  const { definitionTypes, guides, recipes } = servedGuidesOf(everyType);
+  const { definitionTypes, guides, recipes } = served;
 
   it('are the terminology, a guide per type and the four recipes, ten in all', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
@@ -106,7 +113,7 @@ describe('the guides of a server that runs every type of definition', () => {
 });
 
 describe('the titles and links of the guides of a server that runs every type of definition', () => {
-  const { guides } = servedGuidesOf(everyType);
+  const { guides } = served;
 
   it('title each type guide as its page is titled', () => {
     expect(guides.slice(1).map(({ title }) => title)).toEqual([
@@ -125,7 +132,7 @@ describe('the titles and links of the guides of a server that runs every type of
 
 describe('the text of the guides of a server', () => {
   it('holds none of the markup the documentation site needs', () => {
-    const { guides } = servedGuidesOf(everyType);
+    const { guides } = served;
 
     expect(
       guides.filter(({ text }) => /^<div v-pre>|^<\/div>$|^<!-- prettier-ignore -->$/mu.test(outsideCode(text))),
@@ -134,10 +141,10 @@ describe('the text of the guides of a server', () => {
 });
 
 describe('the size and the words of the guides of a server', () => {
-  const { guides, recipes } = servedGuidesOf(everyType);
+  const { guides, recipes } = served;
 
   it('stay under 64 KiB each, the guide of interaction functions among them, and each recipe under 4 KiB', () => {
-    const everyGuide = servedGuidesOf([...everyType, interaction]).guides;
+    const everyGuide = servedWithInteraction.guides;
 
     expect(everyGuide.map(({ name }) => name)).toContain('interaction-function');
     expect(everyGuide.filter(({ text }) => Buffer.byteLength(text, 'utf8') > mostGuideBytes)).toEqual([]);
@@ -157,16 +164,19 @@ describe('the size and the words of the guides of a server', () => {
 
 describe('the recipes of a server', () => {
   it('leave out a recipe whose format guide the server does not carry', () => {
-    expect(servedGuidesOf([reasoning, workflow]).recipes.map(({ name }) => name)).toEqual([
+    expect(servedForReasoningAndWorkflows.recipes.map(({ name }) => name)).toEqual([
       'first-playbook',
       'give-tools',
       'schedule',
     ]);
-    expect(servedGuidesOf([]).recipes).toEqual([]);
+  });
+
+  it('are none for a server that runs no type of definition', async () => {
+    expect((await servedGuidesOf(shippedFilesOnDisk, [])).recipes).toEqual([]);
   });
 
   it('ask the person in their own words, filled into what the prompt asks for', () => {
-    const asked = Object.fromEntries(servedGuidesOf(everyType).recipes.map(({ name, request }) => [name, request]));
+    const asked = Object.fromEntries(served.recipes.map(({ name, request }) => [name, request]));
 
     expect([
       asked['first-playbook']?.({}),
@@ -186,7 +196,7 @@ describe('the recipes of a server', () => {
 
 describe('the recipes that give a playbook tools', () => {
   it('call a tool to learn what it answers, and never make a function to look, within the bound of a recipe', () => {
-    const texts = Object.fromEntries(servedGuidesOf(everyType).recipes.map(({ name, text }) => [name, text]));
+    const texts = recipeTextsOf(served);
 
     expect(String(texts['give-tools'])).toContain(
       "4. To learn what a tool answers, call it with execute, with the arguments its input_schema takes, and read its `text`: that is what the function's model will see. Never make a function to look. A tool whose `read_only` is false may change something, so call it only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
@@ -206,7 +216,7 @@ describe('the recipes that give a playbook tools', () => {
 
 describe('the recipes of a server that serves interaction functions', () => {
   it('send a message a person answers to an interaction function, words a server without them does not serve', () => {
-    const texts = recipeTextsOf([...everyType, interaction]);
+    const texts = recipeTextsOf(servedWithInteraction);
 
     expect(texts['give-tools']).toContain(
       '5. Ask the person what the function should do with the tools, and which of them it needs. When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave. When the playbook should send a person a message through a tool and take their answer, write an interaction function instead: the interaction-function guide says how it names the tool it sends through and the tool it reads replies with, each called the same way.\n',
@@ -216,7 +226,7 @@ describe('the recipes of a server that serves interaction functions', () => {
     );
     expect([
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
-      bytesOf(recipeTextsOf(everyType), 'first-playbook', 'remember', 'give-tools', 'schedule'),
+      bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
       [1988, 2327, 3277, 1294],
       [1898, 2327, 2716, 1294],
@@ -224,7 +234,7 @@ describe('the recipes of a server that serves interaction functions', () => {
   });
 
   it('name the same tools as on a server without them', () => {
-    const { recipes } = servedGuidesOf([...everyType, interaction]);
+    const { recipes } = servedWithInteraction;
 
     expect(recipes.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
       recipes.map(({ name, calls }) => [name, calls.toSorted()]),
@@ -246,7 +256,7 @@ function toolsNamedIn(text: string): readonly string[] {
 
 describe('the tools a recipe calls', () => {
   it('are every tool its steps name, but the guide tool, listed on every connection, list_models and add_connection, called only where they are listed, and the fields of a tool they name', () => {
-    const { recipes } = servedGuidesOf(everyType);
+    const { recipes } = served;
 
     expect(recipes.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
       recipes.map(({ name, calls }) => [name, calls.toSorted()]),
@@ -260,7 +270,7 @@ describe('the tools a recipe calls', () => {
 
 describe('the terminology guide of a server', () => {
   it('names only the types of definition the server runs', () => {
-    const [terminology] = servedGuidesOf([reasoning, workflow]).guides;
+    const [terminology] = servedForReasoningAndWorkflows.guides;
 
     expect(terminology?.text).toContain('- Reasoning: Reasoning function.');
     expect(terminology?.text).toContain('- Coordination: Workflow.');
@@ -273,9 +283,9 @@ describe('the terminology guide of a server', () => {
 });
 
 describe('a server without the page of a type it runs', () => {
-  it('fails to start', () => {
-    expect(() => servedGuidesOf([capabilityOf('drafting', 'draft', { name: 'drafting-function' })])).toThrow(
-      /no such file or directory.*drafting-format\.md/u,
-    );
+  it('fails to start', async () => {
+    await expect(
+      servedGuidesOf(shippedFilesOnDisk, [capabilityOf('drafting', 'draft', { name: 'drafting-function' })]),
+    ).rejects.toThrow(/no such file or directory.*drafting-format\.md/u);
   });
 });

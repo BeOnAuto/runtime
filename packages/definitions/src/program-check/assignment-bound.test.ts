@@ -2,11 +2,12 @@ import type { CheckJob } from '@on.auto/workflow-engine/worker';
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptLibOnDisk } from '../testing/read-on-disk.ts';
 import { fewerAssignments, mostAssignmentsInAFunction } from './assignment-bound.ts';
 import { checkerOf } from './checking.ts';
-import { keptSandboxLib } from './kept-lib.ts';
+import { sandboxLibFrom } from './kept-lib.ts';
 
-const check = checkerOf(keptSandboxLib());
+const check = checkerOf(sandboxLibFrom(keptLibOnDisk));
 
 const output: Schema.JsonObject = {
   type: 'object',

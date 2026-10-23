@@ -6,7 +6,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { contentStoreOf, type ComposedContentStore } from '../composition/content-store.ts';
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { spansIn, type ExportedSpan } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { startTelemetry } from './start-telemetry.ts';
@@ -45,7 +45,7 @@ function composedOn(environment: Readonly<Record<string, string>>): ComposedCont
   onTestFinished(() => {
     vi.unstubAllEnvs();
   });
-  const composed = contentStoreOf(readSettings(environment));
+  const composed = contentStoreOf(readSettingsOf(environment));
   if (composed === undefined) {
     throw new TypeError('CONTENT_STORE_URL is set, so the content is kept in an object store');
   }
@@ -62,7 +62,7 @@ async function spansOfAReadOfNothing(): Promise<readonly ExportedSpan[]> {
     OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
     OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
   };
-  const telemetry = startTelemetry(readSettings(environment).telemetry);
+  const telemetry = startTelemetry(readSettingsOf(environment).telemetry);
   const { reached, store } = composedOn(environment);
   await Effect.runPromise(reached);
   await Effect.runPromise(store.content.get(alpha, sha256Of('{"kept":false}')));

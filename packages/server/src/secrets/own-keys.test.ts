@@ -1,5 +1,3 @@
-import { makeAppRuntime } from '@on.auto/api';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Conflict, type StreamReader, type StreamWriter } from '@on.auto/operations';
 import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
 import { sealedSecretStoreOn, secretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
@@ -14,7 +12,7 @@ import {
 import { DateTime, Effect, Redacted, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { applicationLayer } from '../composition/application-layer.ts';
+import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import {
   ownKeysDecider,
   ownKeysStream,
@@ -253,7 +251,7 @@ describe('a start under a secret manager that cannot have the key that signs the
 });
 
 async function aRuntime() {
-  const runtime = await makeAppRuntime(applicationLayer(ledgerLayer({ fileName: ':memory:' })));
+  const runtime = await memoryRuntime();
   onTestFinished(() => runtime.dispose());
   return runtime;
 }

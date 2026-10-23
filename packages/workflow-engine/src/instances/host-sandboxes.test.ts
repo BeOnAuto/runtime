@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -12,8 +13,8 @@ const overflows = '"x".repeat(96 * 1024 * 1024).length';
 
 describe('the sandboxes of a host', () => {
   it('reserves an instance of 64 MiB for each input of a workflow, read against the clock of the host by default', async () => {
-    const sandbox = machineSandboxOf();
-    const counted = machineSandboxOf(() => 12);
+    const sandbox = machineSandboxOf(shippedFilesOnDisk);
+    const counted = machineSandboxOf(shippedFilesOnDisk, () => 12);
 
     await Effect.runPromise(sandbox.reserve);
     const unit = sandbox.unit();
@@ -30,7 +31,7 @@ describe('the sandboxes of a host', () => {
   });
 
   it('opens a context on an instance of 64 MiB for each group of filters, read against the clock of the host by default', async () => {
-    const sandbox = filterSandboxOf();
+    const sandbox = filterSandboxOf(shippedFilesOnDisk);
 
     const session = await sandbox.session(() => evaluation);
     const [fitting, overflowing] = [session.define(fits), session.define(overflows)];

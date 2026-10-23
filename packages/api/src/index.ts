@@ -1,6 +1,7 @@
 export { createApiHandler } from './api-handler.ts';
 export type { ApiHandler } from './api-handler.ts';
 export type { ApiOptions } from './api-options.ts';
+export { readPageStyle, type PageStyle } from './landing/page-style.ts';
 export type { ApiStudio, HostedStudio, ServedStudio, StudioAnswer, StudioHost } from './studio/served-studio.ts';
 export {
   runtimeActionPaths,

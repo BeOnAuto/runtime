@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { freshInstance } from '../instances/fresh-instances.ts';
@@ -15,7 +16,7 @@ async function ran(
   more: Partial<Evaluation> = {},
   runSettings: SandboxSettings = settings,
 ): Promise<ProgramRun> {
-  const run = moduleRun(await freshInstance(unitMemoryBytes), runSettings, {
+  const run = moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), runSettings, {
     source: `export default function (input) {\n  ${body}\n}`,
     entry: 'default',
     arguments: ['null'],
@@ -123,7 +124,7 @@ describe('the stack of a program', () => {
   });
 
   it('ends a program whose bound is deeper than the stack of the thread it runs on, which then answers no more', async () => {
-    const instance = await freshInstance(unitMemoryBytes);
+    const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
     const runtime = sandboxRuntimeOf(instance, { ...settings, stackBytes: workerStackBytes });
     const context = runtime.context();
     const fn = keptOf(
@@ -177,7 +178,7 @@ describe('what a program throws', () => {
 
 describe('a context of the sandbox', () => {
   it('calls a function over the values it parsed, and lets go of what it is told to forget', async () => {
-    const instance = await freshInstance(unitMemoryBytes);
+    const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
     const runtime = sandboxRuntimeOf(instance, settings);
     const context = runtime.context();
     const fn = keptOf(context.expression('((value) => (\n[value]\n))', evaluation));
@@ -196,7 +197,7 @@ describe('a context of the sandbox', () => {
   });
 
   it('answers no function for an export that is not one, and raises text that is not JSON as an argument', async () => {
-    const runtime = sandboxRuntimeOf(await freshInstance(unitMemoryBytes), settings);
+    const runtime = sandboxRuntimeOf(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings);
     const context = runtime.context();
     const fn = keptOf(context.expression('((value) => (\n[value]\n))', evaluation));
     const unreadable = {
@@ -215,7 +216,7 @@ describe('a context of the sandbox', () => {
 
 describe('a context whose instance breaks', () => {
   it('answers the failure of a program that breaks the instance it runs on, rather than throwing', async () => {
-    const instance = await freshInstance(16_777_216);
+    const instance = await freshInstance(shippedFilesOnDisk, 16_777_216);
     const runtime = sandboxRuntimeOf(instance, settings);
     const context = runtime.context();
 
@@ -230,7 +231,7 @@ describe('a context whose instance breaks', () => {
   });
 
   it('throws what breaks it for another reason, as a defect of the host', async () => {
-    const instance = await freshInstance(unitMemoryBytes);
+    const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
     const runtime = sandboxRuntimeOf(instance, settings);
     const context = runtime.context();
     context.close();

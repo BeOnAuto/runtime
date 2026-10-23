@@ -2,8 +2,15 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { CheckOutcome, CheckRequest, PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
-import { brokenAtStart, checking, checkingForever, checkingReadyAfter } from '../pool-testing/checking-workers.ts';
+import {
+  brokenAtStart,
+  checking,
+  checkingForever,
+  checkingReadyAfter,
+  checkingWithTheFilesHanded,
+} from '../pool-testing/checking-workers.ts';
 import { counting } from '../pool-testing/counting-workers.ts';
+import { handedSandbox, handedWorkers, testPoolSettings } from '../pool-testing/test-pools.ts';
 import { nextThreadStarted, threadEnded } from '../pool-testing/threads-alive.ts';
 import { isWatched, longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
@@ -13,10 +20,6 @@ const slowStartMs = 2000;
 
 const pools: ProgramPool[] = [];
 
-const coverage = process.env['NODE_V8_COVERAGE'];
-
-const measured = coverage === undefined ? {} : { NODE_V8_COVERAGE: coverage };
-
 const decodeRan = Schema.decodeUnknownSync(Schema.Struct({ thread: Schema.Number }));
 
 afterEach(async () => {
@@ -24,7 +27,7 @@ afterEach(async () => {
 });
 
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({ workers: 4, heapMegabytes: 64, environment: measured, ...settings });
+  const pool = programPool({ ...testPoolSettings(4), ...settings });
   pools.push(pool);
   return pool;
 }
@@ -37,6 +40,10 @@ function checkOf(more: Partial<CheckRequest> = {}): CheckRequest {
     worker: checking,
     ...more,
   };
+}
+
+function detailsOf(outcome: CheckOutcome): readonly string[] {
+  return outcome.ran === 'checked' ? outcome.issues.map(({ detail }) => detail) : [];
 }
 
 function threadOf(outcome: CheckOutcome): number | undefined {
@@ -98,6 +105,21 @@ describe('the permit of the checks of a pool', () => {
     await pool.close();
 
     expect(await pool.check(checkOf())).toMatchObject({ ran: 'stopped', because: 'closing' });
+  });
+});
+
+describe('the files the worker of a check starts with', () => {
+  it('are those the settings of the pool hand its module, and no other, while a module they name nothing for starts with the module of the sandbox', async () => {
+    const lib = new URL('file:///shipped/lib.txt');
+    const named = checkingWithTheFilesHanded('named');
+    const other = checkingWithTheFilesHanded('other');
+    const pool = poolOf({ handed: { ...handedWorkers, modules: { [named.href]: { [lib.href]: Uint8Array.of(1) } } } });
+
+    const ofTheNamed = await pool.check(checkOf({ worker: named }));
+    const ofTheOther = await pool.check(checkOf({ worker: other }));
+
+    expect(detailsOf(ofTheNamed)).toEqual([lib.href]);
+    expect(detailsOf(ofTheOther)).toEqual(Object.keys(handedSandbox));
   });
 });
 

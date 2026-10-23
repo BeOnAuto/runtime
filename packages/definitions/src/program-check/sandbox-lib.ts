@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-
+import type { ShippedFiles } from '@on.auto/operations';
 import { sandboxRemovals } from '@on.auto/workflow-engine/worker';
 import ts from 'typescript6';
 
@@ -48,26 +47,29 @@ const libReferences = /^\/\/\/ <reference lib="[^"]+" \/>\n/gmu;
 
 const iteratorLib = 'lib.es2025.iterator.d.ts';
 
-function libSource(name: string): ts.SourceFile {
+async function libSource(shippedFiles: ShippedFiles, name: string): Promise<ts.SourceFile> {
   const fileName = `lib.${name}.d.ts`;
-  return ts.createSourceFile(
-    fileName,
-    readFileSync(new URL(fileName, libFolder), 'utf8'),
-    ts.ScriptTarget.ES2025,
-    true,
-  );
+  const text = await shippedFiles.text(new URL(fileName, libFolder));
+  return ts.createSourceFile(fileName, text, ts.ScriptTarget.ES2025, true);
 }
 
-function libsFrom(name: string, seen: Set<string>): readonly ts.SourceFile[] {
+async function libsFrom(
+  shippedFiles: ShippedFiles,
+  name: string,
+  seen: Set<string>,
+): Promise<readonly ts.SourceFile[]> {
   if (seen.has(name) || skipped.test(name)) {
     return [];
   }
   seen.add(name);
-  const source = libSource(name);
-  const referenced: ts.SourceFile[] = [];
-  for (const { fileName } of source.libReferenceDirectives) {
-    referenced.push(...libsFrom(fileName, seen));
-  }
+  const source = await libSource(shippedFiles, name);
+  const referenced = await source.libReferenceDirectives.reduce<Promise<readonly ts.SourceFile[]>>(
+    async (before, { fileName }: Readonly<ts.FileReference>) => [
+      ...(await before),
+      ...(await libsFrom(shippedFiles, fileName, seen)),
+    ],
+    Promise.resolve([]),
+  );
   return [...referenced, source];
 }
 
@@ -218,8 +220,8 @@ function libFilesOf(sources: () => readonly ts.SourceFile[]): readonly LibFile[]
   return files;
 }
 
-export async function sandboxLibOf(probe: Probe): Promise<SandboxLib> {
-  const sources = libsFrom('es2025', new Set());
+export async function sandboxLibOf(shippedFiles: ShippedFiles, probe: Probe): Promise<SandboxLib> {
+  const sources = await libsFrom(shippedFiles, 'es2025', new Set());
   const files = libFilesOf(() => sources);
   const answers = await probe(files.flatMap(({ candidates }) => candidates.probed.map(({ expression }) => expression)));
   let answered = 0;

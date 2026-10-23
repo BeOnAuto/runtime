@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
 import type { PageEvent } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
@@ -36,7 +37,7 @@ describe('the matching of a dataset whose filters name their data before their t
   it('tests an event against the data tests of the filters of its own type alone, matching each type first', async () => {
     const matching = datasetMatchingOf(
       dataNamedFirst,
-      filterSandboxOf(() => 0),
+      filterSandboxOf(shippedFilesOnDisk, () => 0),
     );
 
     const match = await Effect.runPromise(matching.matchOf(placed));

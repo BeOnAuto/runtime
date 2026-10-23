@@ -43,7 +43,7 @@ function countingChecks(): { readonly checks: Checks; readonly poolOf: ProgramPo
         stalled = { ran: 'stopped', because, milliseconds: 2000 };
       },
     },
-    poolOf: (settings) => checking(patientWorkerPool(settings)),
+    poolOf: (settings, handed) => checking(patientWorkerPool(settings, handed)),
   };
 }
 

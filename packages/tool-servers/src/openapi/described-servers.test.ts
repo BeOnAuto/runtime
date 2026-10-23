@@ -7,7 +7,10 @@ import {
   describing,
   directoryWith,
   documentWithServer,
+  documentsIn,
+  refusalOf,
 } from '../api-testing/described-documents.ts';
+import { shippedDocumentOf } from '../settings/server-settings.ts';
 import { serveFakeApi, type FakeApiServer } from '../testing/index.ts';
 
 const notes =
@@ -78,6 +81,32 @@ describe('the operations of an openapi server that need a header', () => {
   });
 });
 
+describe('the document of an openapi server a provider ships', () => {
+  it('is the text the providers read, described as a file is, and nothing is read from the directory of the server', async () => {
+    const graph = new TextEncoder().encode(documentWithServer('https://graph.example.com/v1'));
+    const byName = new Map([['documents/graph.json', shippedDocumentOf(graph)]]);
+
+    const described = await describedApiOf(
+      { graph: { document: 'documents/graph.json', org: 'acme', security: keyed } },
+      { documents: { kind: 'shipped', byName } },
+    );
+
+    expect(described?.baseUrl).toBe('https://graph.example.com/v1');
+    expect(described?.operations).toHaveLength(9);
+  });
+
+  it('is refused when the providers ship no document of that name', async () => {
+    const refused = await refusalOf(
+      { graph: { document: 'documents/notes.json', org: 'acme' } },
+      { documents: { kind: 'shipped', byName: new Map() } },
+    );
+
+    expect(refused).toBe(
+      'The tool server settings are invalid. TOOL_SERVERS: /graph/document: Expected an https URL, or an http URL on a loopback address, or a document the providers ship',
+    );
+  });
+});
+
 describe('the document of an openapi server, read from a file at start', () => {
   it('is JSON or YAML in the directory of the configuration file', async () => {
     const directory = directoryWith({
@@ -87,9 +116,9 @@ describe('the document of an openapi server, read from a file at start', () => {
 
     const graph = await describedApiOf(
       { graph: { document: 'graph.json', org: 'acme', security: keyed } },
-      { directory },
+      documentsIn(directory),
     );
-    const listed = await describedApiOf({ notes: { document: 'notes.yaml', org: 'acme' } }, { directory });
+    const listed = await describedApiOf({ notes: { document: 'notes.yaml', org: 'acme' } }, documentsIn(directory));
 
     expect(graph?.baseUrl).toBe('https://graph.example.com/v1');
     expect(graph?.operations).toHaveLength(9);
@@ -104,9 +133,9 @@ describe('the document of an openapi server, read from a file at start', () => {
       'graph.json': documentWithServer('https://{region}.graph.example.com/{stage}', { region: { default: 'eu' } }),
     });
 
-    expect((await describedApiOf({ graph: { document: 'graph.json', org: 'acme' } }, { directory }))?.baseUrl).toBe(
-      'https://eu.graph.example.com/%7Bstage%7D',
-    );
+    expect(
+      (await describedApiOf({ graph: { document: 'graph.json', org: 'acme' } }, documentsIn(directory)))?.baseUrl,
+    ).toBe('https://eu.graph.example.com/%7Bstage%7D');
   });
 
   it('sends the calls to the first server it names without the slashes it ends in, as base_url is read', async () => {
@@ -118,7 +147,8 @@ describe('the document of an openapi server, read from a file at start', () => {
     expect(
       await Promise.all(
         ['graph.json', 'root.json'].map(
-          async (document) => (await describedApiOf({ graph: { document, org: 'acme' } }, { directory }))?.baseUrl,
+          async (document) =>
+            (await describedApiOf({ graph: { document, org: 'acme' } }, documentsIn(directory)))?.baseUrl,
         ),
       ),
     ).toEqual(['https://graph.example.com/v1', 'https://graph.example.com']);
@@ -130,8 +160,8 @@ describe('the address of the first server a document names', () => {
     const braces = '{'.repeat(200_000);
     const directory = directoryWith({ 'graph.json': documentWithServer(`https://graph.example.com/${braces}`) });
 
-    expect((await describedApiOf({ graph: { document: 'graph.json', org: 'acme' } }, { directory }))?.baseUrl).toBe(
-      `https://graph.example.com/${'%7B'.repeat(200_000)}`,
-    );
+    expect(
+      (await describedApiOf({ graph: { document: 'graph.json', org: 'acme' } }, documentsIn(directory)))?.baseUrl,
+    ).toBe(`https://graph.example.com/${'%7B'.repeat(200_000)}`);
   });
 });

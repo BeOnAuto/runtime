@@ -1,4 +1,5 @@
 import type { Issue } from '@on.auto/operations';
+import type { ShippedDocument } from '@on.auto/tool-servers';
 import { Option, Order, Result } from 'effect';
 
 import type { ProviderEntry } from '../entry/provider-entry.ts';
@@ -11,7 +12,7 @@ export interface Provider {
 
 export interface ProviderList {
   readonly providers: readonly Provider[];
-  readonly documents: string;
+  readonly documents: ReadonlyMap<string, ShippedDocument>;
 }
 
 function required<A>(value: A | undefined): A {

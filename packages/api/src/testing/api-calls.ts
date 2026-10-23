@@ -1,7 +1,9 @@
 import type { Authenticator } from '@on.auto/identity';
 import { allPermissions, type CallSummary } from '@on.auto/operations';
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 
 import { createApiHandler, type ApiHandler, type ApiOptions, type RegisterRoutes } from '../index.ts';
+import { readPageStyle } from '../landing/page-style.ts';
 import { hostedStudio } from './studios.ts';
 
 export interface Call {
@@ -35,6 +37,8 @@ const admitEveryone: Authenticator = {
     }),
 };
 
+const pageStyle = await readPageStyle(shippedFilesOnDisk);
+
 export function createTestHandler(options: Partial<ApiOptions> = {}): {
   handler: ApiHandler;
   reported: ReportedThrown[];
@@ -45,6 +49,7 @@ export function createTestHandler(options: Partial<ApiOptions> = {}): {
     studio: hostedStudio,
     authenticator: admitEveryone,
     routes: [],
+    pageStyle,
     reportIncident: (incident, error, requestId, summary) => {
       reported.push({ incident, requestId, message: error.message, cause: error.cause, call: summary });
     },

@@ -1,3 +1,4 @@
+import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { machineSandboxOf } from '@on.auto/workflow-engine/dsl';
 import { openWorkflowHost, type WorkflowHost } from '@on.auto/workflow-host';
 import { recordedReactions, recordedWaiting } from '@on.auto/workflow-host/testing';
@@ -11,7 +12,7 @@ import { testPlaybookNames } from './test-sandbox.ts';
 export function testHost(nested: Playbook): Promise<WorkflowHost> {
   return openWorkflowHost({
     database: { store: 'sqlite', file: ':memory:' },
-    machine: workflowMachineOptionsOf(machineSandboxOf(), testPlaybookNames),
+    machine: workflowMachineOptionsOf(machineSandboxOf(shippedFilesOnDisk), testPlaybookNames),
     perform: definitionCalls(nested.executeNested),
     settle: nested.settle,
     reports: {

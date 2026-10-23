@@ -3,9 +3,9 @@ import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { ledgerOfAnotherVersion } from '../database/ledger-of-another-version.ts';
-import { optionsComposing, optionsServing } from '../testing/entries/serving-options.ts';
+import { servedBy } from '../server-options/server-options.ts';
+import { optionsComposing, optionsServing, defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { isAcceptingConnections } from '../testing/processes/accepting-connections.ts';
-import { defaultServerOptions, servedBy } from './lifecycle.ts';
 import { exitOnStartupFailure, runServer, type ServerProcess } from './run-server.ts';
 import { stopInsistedBy, stopRequestedBy, type StopSignal } from './stop-request.ts';
 

@@ -3,8 +3,8 @@ import { Ledger } from '@on.auto/operations';
 import { Cause, Effect, Exit, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { readSettings } from '../settings/settings.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerDatabaseOf, withARefusedLayoutExplained } from './ledger-database.ts';
 import { LedgerOfAnotherVersion } from './ledger-of-another-version.ts';
 
@@ -12,7 +12,7 @@ const somePools: unknown = expect.any(Function);
 
 describe('the database of the ledger and the workflow host', () => {
   it('is the file of the ledger when the ledger is kept in SQLite', () => {
-    expect(ledgerDatabaseOf(readSettings({ LEDGER_FILE: '/data/ledger.db' }))).toEqual({
+    expect(ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: '/data/ledger.db' }))).toEqual({
       store: 'sqlite',
       file: '/data/ledger.db',
     });
@@ -21,7 +21,7 @@ describe('the database of the ledger and the workflow host', () => {
   it('is reached through the pools the server composes when the ledger is kept in PostgreSQL', () => {
     expect(
       ledgerDatabaseOf(
-        readSettings({
+        readSettingsOf({
           DATABASE_URL: 'postgresql://playbooks:secret@db.example.com/playbooks',
           SECRETS_KEY: secretsKey,
         }),
@@ -46,7 +46,7 @@ describe('a ledger that refuses the layout of its database as it opens', () => {
     const refused = await builtFrom(
       withARefusedLayoutExplained(
         Layer.effect(Ledger, Effect.die(refusedLayout)),
-        readSettings({ LEDGER_FILE: '/data/ledger.db' }),
+        readSettingsOf({ LEDGER_FILE: '/data/ledger.db' }),
       ),
     );
 
@@ -62,7 +62,7 @@ describe('a ledger that refuses the layout of its database as it opens', () => {
     const refused = await builtFrom(
       withARefusedLayoutExplained(
         Layer.effect(Ledger, Effect.die(refusedLayout)),
-        readSettings({ LEDGER_FILE: '/app/data/ledger.db', RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' }),
+        readSettingsOf({ LEDGER_FILE: '/app/data/ledger.db', RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' }),
       ),
     );
 
@@ -81,7 +81,7 @@ describe('a ledger that refuses the layout of its database as it opens', () => {
       await builtFrom(
         withARefusedLayoutExplained(
           Layer.effect(Ledger, Effect.die(unreachable)),
-          readSettings({ LEDGER_FILE: '/data/ledger.db' }),
+          readSettingsOf({ LEDGER_FILE: '/data/ledger.db' }),
         ),
       ),
     ).toBe(unreachable);

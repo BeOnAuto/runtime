@@ -4,8 +4,8 @@ import type { SignInSettings } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
 import { release } from '../composition/release.ts';
-import type { Install } from '../lifecycle/lifecycle.ts';
 import type { ColorDepth } from '../logging/terminal.ts';
+import type { Install } from '../server-options/server-options.ts';
 import { servedLocally, type LocalServerHost } from './local-server.ts';
 
 interface Served {

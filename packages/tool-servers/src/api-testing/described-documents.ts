@@ -7,14 +7,14 @@ import { onTestFinished } from 'vitest';
 
 import type { DescribedApiSettings, Describing } from '../openapi/described-api.ts';
 import { describedToolServers } from '../openapi/described-servers.ts';
-import { readToolServerSettings } from '../settings/settings-reading.ts';
+import { readToolServerSettings, type ToolServerSettingsContext } from '../settings/settings-reading.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import { fakeApiDocument } from './fake-api-document.ts';
 
 type Entries = Readonly<Record<string, unknown>>;
 
 export interface DescribingOptions extends Partial<Describing> {
-  readonly directory?: string;
+  readonly documents?: ToolServerSettingsContext['documents'];
 }
 
 const refused = 'The documents of the tool servers could not be read. TOOL_SERVERS: /graph';
@@ -65,11 +65,15 @@ export function countedFetch<Args extends readonly [unknown, unknown?]>(
   };
 }
 
-export function describing(entries: Entries, { directory, ...more }: DescribingOptions = {}) {
+export function documentsIn(directory: string): DescribingOptions {
+  return { documents: { kind: 'directory', path: directory } };
+}
+
+export function describing(entries: Entries, { documents, ...more }: DescribingOptions = {}) {
   const leftOut: (Parameters<Describing['reportLeftOut']>[1] & { readonly server: string })[] = [];
   const effect = readToolServerSettings(
     { TOOL_SERVERS: JSON.stringify(entries), GRAPH_API_KEY: 'graph-api-key-4f1d9a7c2b' },
-    { modelProviders: [], ...(directory === undefined ? {} : { documentsDirectory: directory }) },
+    { modelProviders: [], ...(documents === undefined ? {} : { documents }) },
   ).pipe(
     Effect.flatMap((settings) =>
       describedToolServers(settings, {

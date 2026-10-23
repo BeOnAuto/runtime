@@ -1,6 +1,5 @@
-import { serveJobs } from '@on.auto/workflow-engine/job-loop';
+import { serveJobsWith } from '@on.auto/workflow-engine/job-loop';
 
-import { checkerOf } from './checking.ts';
-import { keptSandboxLib } from './kept-lib.ts';
+import { handedChecks } from './kept-lib.ts';
 
-serveJobs({ check: checkerOf(keptSandboxLib()) });
+serveJobsWith(handedChecks);

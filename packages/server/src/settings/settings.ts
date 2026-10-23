@@ -18,7 +18,7 @@ import {
 } from './access-settings.ts';
 import { readContentSettings, type ContentSettings } from './content-settings.ts';
 import { readLedgerAndSecrets, type LedgerAndSecrets } from './secrets-settings.ts';
-import { readServedSettings, type ServedSettings } from './served-settings.ts';
+import { readServedSettings, type ServedSettings, type ShippedSettings } from './served-settings.ts';
 
 interface ConfigFileSources {
   readonly path: string;
@@ -42,14 +42,14 @@ function sourcesOf(file: FileUse | undefined): ConfigFileSources | undefined {
   return file === undefined ? undefined : { path: file.path, fromFile: file.fromFile, overridden: file.overridden };
 }
 
-export function readSettings(given: Environment): Settings {
+export function readSettings(given: Environment, shipped: ShippedSettings): Settings {
   const { environment, file } = Result.getOrThrow(configurationOf(given, fileSettings));
   const { host, port } = readServerConfig(environment);
   const { allowedOrigins, logFormat, logLevel } = Effect.runSync(readAccessSettings(environment));
   const credentials = readCredentialSettings(environment, host);
   const { ledger, secrets, keepers } = Effect.runSync(readLedgerAndSecrets(environment));
   const content = Effect.runSync(readContentSettings(environment));
-  const served = readServedSettings(environment, file, { host, ...credentials });
+  const served = readServedSettings(environment, file, { host, ...credentials }, shipped);
   const telemetry = Effect.runSync(readTelemetrySettings(environment));
   const usagePing = Effect.runSync(readUsagePingSettings(environment));
   return {

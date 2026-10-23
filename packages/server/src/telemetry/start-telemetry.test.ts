@@ -5,7 +5,7 @@ import { Effect, ManagedRuntime, Metric } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { release } from '../composition/release.ts';
-import { readSettings } from '../settings/settings.ts';
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { logsIn, metricNamesIn, resourceIn, spansIn } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp, type OtlpReceiver, type ReceivedExport } from '../testing/telemetry/otlp-receiver.ts';
 import { noTelemetry, startTelemetry } from './start-telemetry.ts';
@@ -19,7 +19,7 @@ async function collector(): Promise<OtlpReceiver> {
 const effectRuns = Metric.counter('auto.on.test.effect_runs');
 
 async function exportedBy(environment: Environment): Promise<void> {
-  const telemetry = startTelemetry(readSettings(environment).telemetry);
+  const telemetry = startTelemetry(readSettingsOf(environment).telemetry);
   const runtime = ManagedRuntime.make(telemetry.layer);
   await runtime.runPromise(
     Effect.logInfo('working').pipe(Effect.andThen(Metric.update(effectRuns, 1)), Effect.withSpan('effect work')),
@@ -35,7 +35,7 @@ describe('telemetry whose collector cannot be reached', () => {
   it('stops within a second and a half, leaving behind what it could not send', async () => {
     const gone = await receivingOtlp();
     await gone.close();
-    const telemetry = startTelemetry(readSettings({ OTEL_EXPORTER_OTLP_ENDPOINT: gone.endpoint }).telemetry);
+    const telemetry = startTelemetry(readSettingsOf({ OTEL_EXPORTER_OTLP_ENDPOINT: gone.endpoint }).telemetry);
     trace.getTracer('test').startSpan('lost work').end();
     const stopping = performance.now();
     await telemetry.shutdown();
@@ -46,7 +46,7 @@ describe('telemetry whose collector cannot be reached', () => {
 
 describe('telemetry with no OTLP endpoint', () => {
   it('is no telemetry at all', () => {
-    expect(startTelemetry(readSettings({}).telemetry)).toBe(noTelemetry);
+    expect(startTelemetry(readSettingsOf({}).telemetry)).toBe(noTelemetry);
   });
 });
 

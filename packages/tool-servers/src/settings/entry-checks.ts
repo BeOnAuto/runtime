@@ -7,7 +7,13 @@ import { apiTransport } from './api-entry-checks.ts';
 import { accepted, at, problemsOf, refused, rejected, redactedValuesOf, type Checked } from './checked.ts';
 import { checkedAuth, checkedHeaders } from './remote-checks.ts';
 import { toolServersSetting, type ServerEntryFields } from './server-entries.ts';
-import type { McpServerSettings, ServerSettings, ServerType, StdioServerSettings } from './server-settings.ts';
+import type {
+  DocumentsPlace,
+  McpServerSettings,
+  ServerSettings,
+  ServerType,
+  StdioServerSettings,
+} from './server-settings.ts';
 import { toolListProblems } from './tool-lists.ts';
 
 type Transport<S extends ServerSettings> = S extends ServerSettings
@@ -133,7 +139,7 @@ function transportOf(
   name: string,
   fields: ServerEntryFields,
   type: ServerType | undefined,
-  directory: string,
+  documents: DocumentsPlace,
 ): Checked<Transport<ServerSettings>> {
   const { url, command, document } = fields;
   if (type === 'mcp' && url !== undefined) {
@@ -143,17 +149,17 @@ function transportOf(
     return stdioTransport(name, fields, command);
   }
   return type === 'openapi' && document !== undefined
-    ? apiTransport(name, fields, document, directory)
+    ? apiTransport(name, fields, document, documents)
     : missingTransport(name, type);
 }
 
 function checkedTransport(
   name: string,
   fields: ServerEntryFields,
-  directory: string,
+  documents: DocumentsPlace,
 ): Checked<Transport<ServerSettings>> {
   const type = typeOf(fields);
-  const transport = transportOf(name, fields, type, directory);
+  const transport = transportOf(name, fields, type, documents);
   const foreign = type === undefined ? [] : foreignFieldProblems(name, fields, type);
   return transport.ok && foreign.length === 0 ? transport : rejected([...foreign, ...problemsOf(transport)]);
 }
@@ -173,7 +179,7 @@ export function servedFieldsOf({ playbooks, allowed, record_content, request_id 
 
 interface EntryContext {
   readonly modelProviders: readonly string[];
-  readonly directory: string;
+  readonly documents: DocumentsPlace;
   readonly secrets: readonly Redacted.Redacted[];
   readonly provider: string | null;
 }
@@ -181,11 +187,11 @@ interface EntryContext {
 export function checkedEntry(
   name: string,
   fields: ServerEntryFields,
-  { modelProviders, directory, secrets, provider }: EntryContext,
+  { modelProviders, documents, secrets, provider }: EntryContext,
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
   const named = checkedName(name, modelProviders);
   const scope = servedScopeOf(toolServersSetting, name, fields, 'server');
-  const transport = checkedTransport(name, fields, directory);
+  const transport = checkedTransport(name, fields, documents);
   const toolLists = toolListProblems(name, fields);
   if (!named.ok || Result.isFailure(scope) || !transport.ok || toolLists.length > 0) {
     return Result.fail([

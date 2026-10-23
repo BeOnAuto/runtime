@@ -3,11 +3,12 @@ import { programPool, type CheckOutcome, type CheckJob, type ProgramPool } from 
 import { Effect, Exit } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { measuredPoolSettings } from '../testing/read-on-disk.ts';
 import { checkingWithin } from '../testing/time/patient-checks.ts';
 import * as checkWorkerModule from './check-worker.ts';
 import { checkDeadlineMs, checkedAtSave, checkWorker, warmedChecks } from './save-check.ts';
 
-const pool = programPool({ workers: 1, heapMegabytes: 256 });
+const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 const patient = checkingWithin(pool);
 
