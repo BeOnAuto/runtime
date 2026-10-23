@@ -172,7 +172,7 @@ describe('a run a trigger starts of a workflow with an input schema', () => {
 
   it('starts with the input of its trigger, which the schema refuses from a caller', async () => {
     const { starts, recording } = recordingStarts();
-    const prepared = Effect.runSync(recordingWorkflows(recording).prepare(booking));
+    const prepared = await Effect.runPromise(recordingWorkflows(recording).prepare(booking));
     const due = { schedule: { due: '2026-10-19T09:00:00.000Z' } };
 
     const triggered = [

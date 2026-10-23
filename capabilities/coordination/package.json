@@ -13,6 +13,8 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "@hyperjump/json-schema": "1.18.0",
+    "@hyperjump/json-schema-formats": "1.1.0",
     "@on.auto/config": "workspace:*",
     "@on.auto/definitions": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
@@ -21,10 +23,12 @@
     "@on.auto/workflow-host": "workspace:*",
     "@openworkflowspec/sdk": "1.0.3-alpha8",
     "effect": "catalog:",
+    "semver": "7.8.5",
     "yaml": "2.9.1"
   },
   "devDependencies": {
     "@on.auto/prediction": "workspace:*",
+    "@types/semver": "7.8.0",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

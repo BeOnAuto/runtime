@@ -52,7 +52,7 @@ describe('the run a run of a workflow starts', () => {
 describe('the run a run of a workflow starts for a call or a trigger', () => {
   it('carries the call that started it and the trigger that started it, when it has them', async () => {
     const { starts, recording } = recordingStarts();
-    const prepared = Effect.runSync(recordingWorkflows(recording).prepare(flow));
+    const prepared = await Effect.runPromise(recordingWorkflows(recording).prepare(flow));
     const context = {
       id: runId,
       org: 'acme',
