@@ -5,7 +5,7 @@ import { systemClock } from '../loop/host-clock.ts';
 import { until } from '../testing/until.ts';
 import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
-import { dueAwaitedMs, dueInOneTick, duePerformedAtOnce } from './due-work.ts';
+import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork, type FakeDueWork } from './fake-due-work.ts';
 
 function rowsDueBy(count: number, dueAt: number, { callsOut }: { readonly callsOut: boolean }): FakeDueWork {
@@ -20,7 +20,7 @@ function rowsDueBy(count: number, dueAt: number, { callsOut }: { readonly callsO
 }
 
 describe('the due rows of a projection, in the loop of the host', () => {
-  it('are performed before the timers of the same tick, at most 256 a tick and 16 at once, the rest at once after', async () => {
+  it('are performed before the timers of the same wake-up, at most 256 a wake-up and 16 at once, the rest at once after', async () => {
     const now = Date.now();
     const rows = rowsDueBy(300, now - 1000, { callsOut: false });
     rows.hold();
@@ -30,11 +30,11 @@ describe('the due rows of a projection, in the loop of the host', () => {
     rows.release();
     await until(rows.performed, (performed) => performed.length === 300);
 
-    expect(looping.order()).toEqual([`timer 1 after ${dueInOneTick} rows`]);
+    expect(looping.order()).toEqual([`timer 1 after ${dueInOneWakeUp} rows`]);
     expect([rows.mostAtOnce(), new Set(rows.performed().map(({ at }) => at)).size]).toEqual([duePerformedAtOnce, 1]);
   });
 
-  it('that call out are handed out as many a tick as are performed at once, the rest as places free, holding no timer', async () => {
+  it('that call out are handed out as many a wake-up as are performed at once, the rest as places free, holding no timer', async () => {
     const now = Date.now();
     const rows = fakeDueWork();
     for (const key of keysOf(40, 'row')) {
@@ -68,7 +68,7 @@ describe('the due rows of a projection, in the loop of the host', () => {
 });
 
 describe('due rows whose perform never ends, as a delivery through a tool that never answers', () => {
-  it('hold no timer, of the tick that hands them out or of the ticks after, 16 of them at once', async () => {
+  it('hold no timer, of the wake-up that hands them out or of the wake-ups after, 16 of them at once', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
     const rows = fakeDueWork();
@@ -91,7 +91,7 @@ describe('due rows whose perform never ends, as a delivery through a tool that n
 });
 
 describe('a due row that calls out nowhere and whose perform never ends', () => {
-  it('holds the timers of the tick that hands it out a second at most, and those of the ticks after not at all', async () => {
+  it('holds the timers of the wake-up that hands it out a second at most, and those of the wake-ups after not at all', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
     const rows = fakeDueWork();
@@ -137,14 +137,14 @@ describe('due rows in flight', () => {
   it('wake the loop when one of them ends, to hand out the rows behind it', async () => {
     const now = Date.now();
     const rows = fakeDueWork(50);
-    for (const key of Array.from({ length: dueInOneTick + 20 }, (_, index) => `row-${index}`)) {
+    for (const key of Array.from({ length: dueInOneWakeUp + 20 }, (_, index) => `row-${index}`)) {
       rows.add(key, now - 1000);
     }
 
     await dueLooping(rows);
-    const performed = await until(rows.performed, (done) => done.length === dueInOneTick + 20);
+    const performed = await until(rows.performed, (done) => done.length === dueInOneWakeUp + 20);
 
-    expect(performed).toHaveLength(dueInOneTick + 20);
+    expect(performed).toHaveLength(dueInOneWakeUp + 20);
   });
 });
 
