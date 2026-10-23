@@ -231,14 +231,16 @@ A module that does not load, and a fold that raises, runs out of work or memory,
 
 Measured on 2026-10-05 on an Apple M4 Max with Node 26.10.0, SQLite 3.52.0 through `sqlite3` 6.0.1, and PostgreSQL 18.6 in a local container with its default settings, three times for the timers, whose lateness varies from one measurement to the next, and once for the rest:
 
-| What                                                                | SQLite                                                | PostgreSQL                                        |
-| ------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------- |
-| timer lateness over 1,000 timers                                    | 0 ms at the median, 2 to 5 ms at p99, 4 to 11 at most | 1 ms at the median, 5 ms at p99, 10 to 17 at most |
-| the long-run loop, 3,000 inputs of one run                          | 2.85 s, 1,053 inputs a second                         | 16.82 s, 178 inputs a second                      |
-| 100 runs of 100 inputs side by side                                 | 6.90 s, 1,450 inputs a second                         | 8.21 s, 1,218 inputs a second                     |
-| the host opened again                                               | 3.0 ms                                                | 27.3 ms                                           |
-| the first input after it, snapshot of 1,101,463 bytes and 50 events | 2.4 ms                                                | 22.2 ms                                           |
-| the next input, the run kept                                        | 0.6 ms                                                | 2.8 ms                                            |
+| What                                                                | SQLite                                                            | PostgreSQL                                        |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------- |
+| timer lateness over 1,000 timers                                    | 0 ms at the median, 2 to 5 ms at p99, 4 to 11 at most             | 1 ms at the median, 5 ms at p99, 10 to 17 at most |
+| the long-run loop, 3,000 inputs of one run                          | 11.59 to 12.39 s, 242 to 259 inputs a second on 2026-10-23, below | 16.82 s, 178 inputs a second                      |
+| 100 runs of 100 inputs side by side                                 | 6.90 s, 1,450 inputs a second                                     | 8.21 s, 1,218 inputs a second                     |
+| the host opened again                                               | 3.0 ms                                                            | 27.3 ms                                           |
+| the first input after it, snapshot of 1,101,463 bytes and 50 events | 2.4 ms                                                            | 22.2 ms                                           |
+| the next input, the run kept                                        | 0.6 ms                                                            | 2.8 ms                                            |
+
+The long-run loop on SQLite was measured again on 2026-10-23 from 11:04 to 11:08 UTC, on the same machine with Node 26.10.0 and the same SQLite, once the host's work had become a wake-up: six rounds of `throughputOn` of `measure/throughput.ts`, the part of the measurement that gives this row, run on its own, three at a time alternately with the code just before, at a one-minute load average of 4.3 to 7.8. The wake-up took 11.59 to 12.39 s, 242 to 259 inputs a second, and the code before 11.54 to 11.89 s, 252 to 260 inputs a second, in five of its rounds, and 22.98 s, 131 a second, in the one during which the load rose from 4.3 to 7.8. The wake-up costs nothing measurable; one run's inputs take about four times as long as they did on 2026-10-05, and the code before takes as long.
 
 The rebuild of a view over 100,000 matching events, in pages of up to 1,000 records and then of up to 100, as before, one after the other, and the idle views, against the same measurement of the projector before it read rows without their views, measured on 2026-10-06 on the same machine and stores:
 
