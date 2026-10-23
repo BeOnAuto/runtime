@@ -5,8 +5,9 @@ import { handedFileIn, type HandedFile } from '@on.auto/workflow-engine/job-loop
 
 import { handedWorkersWithChecks, keptLibOf } from '../program-check/save-check.ts';
 
-export const measuredPoolSettings: Pick<PoolSettings, 'handed' | 'environment'> = {
+export const measuredPoolSettings: Pick<PoolSettings, 'handed' | 'instances' | 'environment'> = {
   handed: await handedWorkersWithChecks(shippedFilesOnDisk),
+  instances: 'fresh',
   environment: measuredEnvironment,
 };
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
 import { adding, byCampaign, folded, pageOf, runningClock, slowFirstFold, viewOf } from '../pool-testing/fold-pages.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { workerStackBytes } from '../programs/sandbox-bounds.ts';
 
 const smallMemoryBytes = 16_777_216;
@@ -85,11 +86,11 @@ const stallingFolds: readonly (readonly [string, string, Json, Readonly<Record<s
   ],
 ];
 
-describe('a view that stalls in a page of folds', () => {
+describe.each(sourcesUnderTest)('a view that stalls in a page of folds on $name instances', ({ source }) => {
   it.each(stallingFolds)(
     'stalls at the event when its fold %s, never folding another',
     async (_ending, fold, view, stall) => {
-      const page = await folded(pageOf([viewOf(fold, { view }), viewOf(adding, { view: 0 })]));
+      const page = await folded(source, pageOf([viewOf(fold, { view }), viewOf(adding, { view: 0 })]));
 
       expect(page.views[0]).toMatchObject({ view, folded: 0, lastFolded: -1, stall: { at: 0, ...stall } });
       expect(page.views[1]).toMatchObject({ view: 3, folded: 3 });
@@ -98,9 +99,10 @@ describe('a view that stalls in a page of folds', () => {
 
   it('stalls a view whose initial value does not fit its sandbox, or whose context does not freeze in time', async () => {
     const page = await folded(
+      source,
       pageOf([viewOf(adding, { view: 'x'.repeat(20_000_000) })], { memoryBytes: smallMemoryBytes }),
     );
-    const late = await folded(pageOf([viewOf(adding, { view: 0 })]), runningClock(20_000));
+    const late = await folded(source, pageOf([viewOf(adding, { view: 0 })]), runningClock(20_000));
 
     expect(page.views[0]?.stall).toMatchObject({ at: 0, kind: 'memory' });
     expect(late.views[0]).toMatchObject({ overtime: 0 });
@@ -108,6 +110,7 @@ describe('a view that stalls in a page of folds', () => {
 
   it('stalls a view as raised when its fold runs deeper than the stack of the thread it runs on', async () => {
     const page = await folded(
+      source,
       pageOf([viewOf('export function fold(view) {\n  return fold(view + 1);\n}', { view: 0 })], {
         stackBytes: workerStackBytes,
       }),
@@ -121,7 +124,7 @@ describe('a view that stalls in a page of folds', () => {
   });
 });
 
-describe('a view that stalls on what its fold answers', () => {
+describe.each(sourcesUnderTest)('a view that stalls on what its fold answers on $name instances', ({ source }) => {
   it('stalls a view at the memory of its sandbox when the view the next fold is handed does not fit beside what the fold kept', async () => {
     const keeping = [
       'const kept = [];',
@@ -132,7 +135,7 @@ describe('a view that stalls on what its fold answers', () => {
       '}',
     ].join('\n');
 
-    const page = await folded(pageOf([viewOf(keeping, { view: [] })], { memoryBytes: smallMemoryBytes }));
+    const page = await folded(source, pageOf([viewOf(keeping, { view: [] })], { memoryBytes: smallMemoryBytes }));
 
     expect(page.views[0]?.stall).toMatchObject({ at: 0, kind: 'memory' });
   });
@@ -140,7 +143,7 @@ describe('a view that stalls on what its fold answers', () => {
   it('stalls when the view it answers is not what the view schema allows, keeping the view before', async () => {
     const schema = { type: 'object', maxProperties: 1 };
 
-    const page = await folded(pageOf([viewOf(byCampaign, { schema })]));
+    const page = await folded(source, pageOf([viewOf(byCampaign, { schema })]));
 
     expect(page.views[0]).toMatchObject({
       folded: 1,
@@ -151,7 +154,8 @@ describe('a view that stalls on what its fold answers', () => {
   });
 
   it('cuts the message of a stall at 1,024 bytes', async () => {
-    const page = await folded(pageOf([viewOf('export function fold() {\n  throw new Error("x".repeat(5000));\n}')]));
+    const throwing = 'export function fold() {\n  throw new Error("x".repeat(5000));\n}';
+    const page = await folded(source, pageOf([viewOf(throwing)]));
 
     expect(page.views[0]?.stall?.message).toBe(`Error: ${'x'.repeat(1017)}…`);
   });
@@ -159,6 +163,7 @@ describe('a view that stalls on what its fold answers', () => {
   it('marks the event whose fold ran past its deadline, so it can be tried again, and folds nothing more', async () => {
     const slow = 'export function fold(view) {\n  for (;;) {}\n}';
     const page = await folded(
+      source,
       pageOf([viewOf(slow, { view: 0 }), viewOf(adding, { view: 0 })], { foldDeadlineMs: 10, pageBudgetMs: 1_000_000 }),
       slowFirstFold(20),
     );

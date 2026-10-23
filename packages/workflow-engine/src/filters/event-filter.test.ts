@@ -1,8 +1,8 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
 import { filterSandboxOf } from '../instances/host-sandboxes.ts';
+import { sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
 import {
   playbookWideFilterOf,
   listenFiltersOf,
@@ -16,8 +16,6 @@ import { filterVerdictsOf, type FilterSandbox } from './filter-verdicts.ts';
 const at = '/schedule/on/one';
 
 const now = Date.parse('2026-10-01T09:00:00.000Z');
-
-const sandbox: FilterSandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
 
 const monthClosed: JsonObject = {
   specversion: '1.0',
@@ -37,10 +35,26 @@ function filterOf(filter: Json): LiteralFilter {
   return reading.filter;
 }
 
-async function matched(attributes: JsonObject, event: JsonObject = monthClosed): Promise<FilterVerdict | undefined> {
-  const [verdict] = await filterVerdictsOf([filterOf({ with: attributes })], event, sandbox, now);
-  return verdict;
+interface Matching extends SourceUnderTest {
+  readonly sandbox: FilterSandbox;
+  readonly matched: (attributes: JsonObject, event?: JsonObject) => Promise<FilterVerdict | undefined>;
+  readonly matchedIfRead: (filter: LiteralFilter | undefined) => Promise<FilterVerdict | undefined>;
 }
+
+function matchingOn({ name, source }: SourceUnderTest): Matching {
+  const sandbox = filterSandboxOf(source, () => 0);
+  const verdictOf = async (filters: readonly LiteralFilter[], event: JsonObject) =>
+    (await filterVerdictsOf(filters, event, sandbox, now))[0];
+  return {
+    name,
+    source,
+    sandbox,
+    matched: (attributes, event = monthClosed) => verdictOf([filterOf({ with: attributes })], event),
+    matchedIfRead: (filter) => verdictOf(filter === undefined ? [] : [filter], monthClosed),
+  };
+}
+
+const matchings: readonly Matching[] = sourcesUnderTest.map((under) => matchingOn(under));
 
 function rejectionsOf(filter: Json) {
   const reading = literalFilterOf(filter, at);
@@ -71,7 +85,7 @@ describe('an event filter matched over the event alone', () => {
   });
 });
 
-describe('matching an event over the event alone', () => {
+describe.each(matchings)('matching an event over the event alone on $name instances', ({ matched, sandbox }) => {
   it('matches the type, the source and the subject as written', async () => {
     expect(await matched({ type: 'com.acme.ledger.month-closed' })).toBe(true);
     expect(await matched({ type: 'com.acme.ledger.month-closed', source: '/ledger/eu', subject: 'september' })).toBe(
@@ -120,7 +134,7 @@ describe('matching an event over the event alone', () => {
   });
 });
 
-describe('matching an event whose data expression fails', () => {
+describe.each(matchings)('matching an event whose data expression fails on $name instances', ({ matched, source }) => {
   it('answers the error a run would raise, at the place of the filter', async () => {
     const verdict = await matched({ type: 'com.acme.ledger.month-closed', data: '${ $data.totals.missing.value }' });
 
@@ -148,7 +162,7 @@ describe('matching an event whose data expression fails', () => {
 
   it('answers an error for a filter whose context did not freeze in time', async () => {
     const ticking = { at: 0 };
-    const late = filterSandboxOf(shippedFilesOnDisk, () => {
+    const late = filterSandboxOf(source, () => {
       ticking.at += 5000;
       return ticking.at;
     });
@@ -224,45 +238,47 @@ describe('an event filter that names the attributes of the context', () => {
   });
 });
 
-async function matchedIfRead(filter: LiteralFilter | undefined): Promise<FilterVerdict | undefined> {
-  return filter === undefined ? undefined : (await filterVerdictsOf([filter], monthClosed, sandbox, now))[0];
-}
+describe.each(matchings)(
+  'a filter of a listen task that reaches events beyond its run on $name instances',
+  ({ matchedIfRead }) => {
+    it('is one whose type is written out, and none whose type is computed, missing or empty', () => {
+      const filters: readonly Json[] = [
+        { with: { type: 'com.acme.closed', source: '/ledger' } },
+        { with: { type: '${ "com.acme.closed" }' } },
+        { with: { source: '/ledger' } },
+        { with: { type: '' } },
+        'not a filter',
+      ];
 
-describe('a filter of a listen task that reaches events beyond its run', () => {
-  it('is one whose type is written out, and none whose type is computed, missing or empty', () => {
-    const filters: readonly Json[] = [
-      { with: { type: 'com.acme.closed', source: '/ledger' } },
-      { with: { type: '${ "com.acme.closed" }' } },
-      { with: { source: '/ledger' } },
-      { with: { type: '' } },
-      'not a filter',
-    ];
-
-    expect(filters.map((filter) => playbookWideFilterOf(filter))).toEqual([
-      { type: 'com.acme.closed', source: '/ledger' },
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-    ]);
-  });
-
-  it('is matched by its literal attributes and its expressions, which name the data alone', async () => {
-    const listener = listenerFilterOf(
-      { type: 'com.acme.ledger.month-closed', subject: 'september', data: '${ $data.region == "eu" }' },
-      '/do/0/await/listen/to/one',
-    );
-    const closed = listenerFilterOf({ type: 'com.acme.ledger.month-closed', data: '${ $data.region == "us" }' }, '/x');
-
-    expect(listener).toEqual({
-      reference: '/do/0/await/listen/to/one',
-      type: 'com.acme.ledger.month-closed',
-      attributes: { type: 'com.acme.ledger.month-closed', subject: 'september', data: '${ $data.region == "eu" }' },
+      expect(filters.map((filter) => playbookWideFilterOf(filter))).toEqual([
+        { type: 'com.acme.closed', source: '/ledger' },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ]);
     });
-    expect(await Promise.all([listener, closed].map((filter) => matchedIfRead(filter)))).toEqual([true, false]);
-    expect(listenerFilterOf({ type: '${ "x" }' }, '/x')).toBeUndefined();
-  });
-});
+
+    it('is matched by its literal attributes and its expressions, which name the data alone', async () => {
+      const listener = listenerFilterOf(
+        { type: 'com.acme.ledger.month-closed', subject: 'september', data: '${ $data.region == "eu" }' },
+        '/do/0/await/listen/to/one',
+      );
+      const closed = listenerFilterOf(
+        { type: 'com.acme.ledger.month-closed', data: '${ $data.region == "us" }' },
+        '/x',
+      );
+
+      expect(listener).toEqual({
+        reference: '/do/0/await/listen/to/one',
+        type: 'com.acme.ledger.month-closed',
+        attributes: { type: 'com.acme.ledger.month-closed', subject: 'september', data: '${ $data.region == "eu" }' },
+      });
+      expect(await Promise.all([listener, closed].map((filter) => matchedIfRead(filter)))).toEqual([true, false]);
+      expect(listenerFilterOf({ type: '${ "x" }' }, '/x')).toBeUndefined();
+    });
+  },
+);
 
 describe('the filters of a listen task that reach events beyond its run', () => {
   it('are those whose type is written out, of one, any or all, and none of a task that is no listen', () => {

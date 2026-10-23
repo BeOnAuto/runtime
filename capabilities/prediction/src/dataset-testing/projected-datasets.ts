@@ -1,5 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances } from '@on.auto/workflow-engine/dsl';
 import { someFolder, type DatabaseSettings } from '@on.auto/workflow-host';
 import { projectedFolders, type ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
@@ -86,7 +86,7 @@ type Folding = Partial<Omit<DatasetFolding, 'filters'>>;
 
 export function testDatasetFolder(folding: Folding = {}): ReturnType<typeof datasetFolder> {
   return datasetFolder({
-    filters: filterSandboxOf(shippedFilesOnDisk),
+    filters: filterSandboxOf(freshInstances(shippedFilesOnDisk)),
     triesBeforeStall: Number.POSITIVE_INFINITY,
     ...folding,
   });

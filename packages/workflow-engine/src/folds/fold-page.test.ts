@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
 import {
   adding,
   byCampaign,
@@ -14,6 +15,7 @@ import {
   viewOf,
   type Timing,
 } from '../pool-testing/fold-pages.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 
 function foldsTaking(stepMs: number, mark: (text: string) => void): Timing {
   const time = { now: 0 };
@@ -50,23 +52,30 @@ interface Folding {
 
 const nothingFolded: Folding = { view: {}, work: 0 };
 
-async function foldedInPages(size: number, from: Folding = nothingFolded, start = 0): Promise<Folding> {
+async function foldedInPages(source: InstanceSource, size: number, from = nothingFolded, start = 0): Promise<Folding> {
   if (start >= thirty.length) {
     return from;
   }
   const events = thirty.slice(start, start + size);
   const page = await folded(
+    source,
     pageOf([viewOf(counting, { view: from.view, events: events.map((_, index) => index) })], { events }),
   );
   const [result] = page.views;
-  return foldedInPages(size, { view: result?.view ?? null, work: from.work + (result?.work ?? 0) }, start + size);
+  return foldedInPages(
+    source,
+    size,
+    { view: result?.view ?? null, work: from.work + (result?.work ?? 0) },
+    start + size,
+  );
 }
 
-describe('a page of folds', () => {
+describe.each(sourcesUnderTest)('a page of folds on $name instances', ({ source }) => {
   it('folds each event a view considers and its filters match, in order, each fold a function of the view and the event', async () => {
     const marks: string[] = [];
 
     const page = await folded(
+      source,
       pageOf([viewOf(byCampaign), viewOf(adding, { view: 0, events: [2, 3] })]),
       stillTiming((mark) => {
         marks.push(mark);
@@ -98,26 +107,26 @@ describe('a page of folds', () => {
     const stamping = 'export function fold(view) {\n  return [...view, new Date().toISOString()];\n}';
     const timeless = { ...springApproved, time: 7 };
 
-    const page = await folded(pageOf([viewOf(stamping, { view: [] })], { events: [springApproved, timeless] }));
+    const page = await folded(source, pageOf([viewOf(stamping, { view: [] })], { events: [springApproved, timeless] }));
 
     expect(page.views[0]?.view).toEqual(['2026-10-01T09:00:00.000Z', '1970-01-01T00:00:00.000Z']);
   });
 });
 
-describe('the events a page of folds folds', () => {
+describe.each(sourcesUnderTest)('the events a page of folds folds on $name instances', ({ source }) => {
   it('keeps a view as it was when no event of the page is one it considers', async () => {
-    expect((await folded(pageOf([viewOf(byCampaign, { events: [] })]))).views[0]).toEqual({
+    expect((await folded(source, pageOf([viewOf(byCampaign, { events: [] })]))).views[0]).toEqual({
       view: {},
       folded: 0,
       lastFolded: -1,
       through: 3,
       work: 0,
     });
-    expect(await folded(pageOf([], { events: [] }))).toEqual({ early: false, views: [] });
+    expect(await folded(source, pageOf([], { events: [] }))).toEqual({ early: false, views: [] });
   });
 
   it('ends early once its budget of time is spent, before the next fold, each view answering how far it went', async () => {
-    const page = await folded(pageOf([viewOf(adding, { view: 0 })], { pageBudgetMs: 5 }), runningClock(3));
+    const page = await folded(source, pageOf([viewOf(adding, { view: 0 })], { pageBudgetMs: 5 }), runningClock(3));
 
     expect(page).toMatchObject({ early: true, views: [{ view: 1, folded: 1, lastFolded: 0, through: 0 }] });
   });
@@ -127,6 +136,7 @@ describe('the events a page of folds folds', () => {
     const views = Array.from({ length: 4 }, () => viewOf(adding, { view: 0, events: [0] }));
 
     const page = await folded(
+      source,
       pageOf(views, { events: [springApproved], foldDeadlineMs: 5000 }),
       foldsTaking(2100, (mark) => {
         marks.push(mark);
@@ -147,21 +157,25 @@ describe('the events a page of folds folds', () => {
   });
 
   it('runs at least one fold a page, however small its budget', async () => {
-    const page = await folded(pageOf([viewOf(adding, { view: 0 })], { pageBudgetMs: 0 }), runningClock(3));
+    const page = await folded(source, pageOf([viewOf(adding, { view: 0 })], { pageBudgetMs: 0 }), runningClock(3));
 
     expect(page).toMatchObject({ early: true, views: [{ folded: 1, through: 0 }] });
   });
 });
 
-describe('the filters of a view in a page of folds', () => {
+describe.each(sourcesUnderTest)('the filters of a view in a page of folds on $name instances', ({ source }) => {
   it('match an event by an expression over its data, under the deadline and the budget of its fold', async () => {
     const approved = [{ type: 'run_succeeded', data: '${ $data.output.verdict == "approve" }' }];
     const slowFilter = [{ type: 'run_succeeded', data: '${ (() => { for (;;) {} })() }' }];
     const approving = viewOf(adding, { view: 0, filters: approved });
     const slow = viewOf(adding, { view: 0, filters: slowFilter });
 
-    const timed = await folded(pageOf([slow], { foldDeadlineMs: 10, pageBudgetMs: 1_000_000 }), slowFirstFold(20));
-    const counted = await folded(pageOf([approving, slow]));
+    const timed = await folded(
+      source,
+      pageOf([slow], { foldDeadlineMs: 10, pageBudgetMs: 1_000_000 }),
+      slowFirstFold(20),
+    );
+    const counted = await folded(source, pageOf([approving, slow]));
 
     expect(timed.views[0]).toMatchObject({ view: 0, folded: 0, overtime: 0 });
     expect(counted.views[0]).toMatchObject({ view: 1, folded: 1, through: 3 });
@@ -171,7 +185,7 @@ describe('the filters of a view in a page of folds', () => {
   it('do not match an event when their expression raises', async () => {
     const filters = [{ type: 'run_succeeded', data: '${ $data.missing.field }' }];
 
-    expect((await folded(pageOf([viewOf(adding, { view: 0, filters })]))).views[0]).toMatchObject({
+    expect((await folded(source, pageOf([viewOf(adding, { view: 0, filters })]))).views[0]).toMatchObject({
       view: 0,
       folded: 0,
       through: 3,
@@ -181,15 +195,17 @@ describe('the filters of a view in a page of folds', () => {
   it('do not match an event when their expression is not erasable', async () => {
     const filters = [{ type: 'run_succeeded', data: '${ <number>$data }' }];
 
-    expect((await folded(pageOf([viewOf(adding, { view: 0, filters })]))).views[0]).toMatchObject({ folded: 0 });
+    expect((await folded(source, pageOf([viewOf(adding, { view: 0, filters })]))).views[0]).toMatchObject({
+      folded: 0,
+    });
   });
 });
 
-describe('the folds of one view', () => {
+describe.each(sourcesUnderTest)('the folds of one view on $name instances', ({ source }) => {
   it('give the same view and the same work whatever the size of the pages they are folded in', async () => {
-    const whole = await foldedInPages(30);
+    const whole = await foldedInPages(source, 30);
 
     expect(whole.work).toBeGreaterThan(0);
-    expect([await foldedInPages(7), await foldedInPages(1)]).toEqual([whole, whole]);
+    expect([await foldedInPages(source, 7), await foldedInPages(source, 1)]).toEqual([whole, whole]);
   });
 });

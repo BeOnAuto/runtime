@@ -1,7 +1,7 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 
 import {
-  freshInstance,
+  freshInstances,
   handedWorkersOf,
   programPool,
   runMemoryBytes,
@@ -9,7 +9,7 @@ import {
   unitMemoryBytes,
   type ProgramRun,
 } from '../src/dsl.ts';
-import { sandboxModuleFile } from '../src/instances/fresh-instances.ts';
+import { sandboxModuleFile } from '../src/instances/compiled-module.ts';
 import { expressionUnitOf } from '../src/programs/expression-units.ts';
 import { filterContextOf } from '../src/programs/kept-contexts.ts';
 import { moduleRun } from '../src/programs/module-runs.ts';
@@ -52,7 +52,7 @@ async function ranModule(
   args: readonly string[],
   evaluation: Evaluation = unbounded,
 ): Promise<ProgramRun> {
-  const run = moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, {
+  const run = moduleRun(await freshInstances(shippedFilesOnDisk)(unitMemoryBytes), settings, {
     source,
     entry: 'default',
     arguments: args,
@@ -66,15 +66,15 @@ async function ranModule(
 
 async function instanceLines(): Promise<readonly string[]> {
   const wasm = await shippedFilesOnDisk.bytes(sandboxModuleFile);
-  await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+  await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
   const fresh = await medianAsync(50, async () => {
     const started = performance.now();
-    await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+    await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
     return performance.now() - started;
   });
   const withPrelude = await medianAsync(50, async () => {
     const started = performance.now();
-    const runtime = sandboxRuntimeOf(await freshInstance(shippedFilesOnDisk, runMemoryBytes), settings);
+    const runtime = sandboxRuntimeOf(await freshInstances(shippedFilesOnDisk)(runMemoryBytes), settings);
     runtime.context().close();
     const milliseconds = performance.now() - started;
     runtime.close();
@@ -115,13 +115,13 @@ async function checkpointLines(): Promise<readonly string[]> {
 }
 
 async function expressionLines(): Promise<readonly string[]> {
-  const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+  const instance = await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
   const unit = expressionUnitOf(() => instance, settings);
   const fresh = medianMillisecondsOf(201, () => {
     unit.evaluate('$context.decision.decision == "approve"', { context: decision }, unbounded);
   });
   unit.close();
-  const filters = filterContextOf(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, unbounded);
+  const filters = filterContextOf(await freshInstances(shippedFilesOnDisk)(unitMemoryBytes), settings, unbounded);
   const test = filters.define(' $data.decision.decision == "approve" ');
   const freezing = millisecondsOf(() => {
     filters.freeze();
@@ -169,7 +169,12 @@ async function valueLines(): Promise<readonly string[]> {
 }
 
 async function stackLines(): Promise<readonly string[]> {
-  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
+  const pool = programPool({
+    handed: await handedWorkersOf(shippedFilesOnDisk),
+    instances: 'fresh',
+    workers: 1,
+    heapMegabytes: 256,
+  });
   const deepest =
     'export default function () {\n  let deepest = 0;\n  const down = (depth) => {\n    deepest = depth;\n    return down(depth + 1);\n  };\n  try {\n    down(0);\n  } catch {\n    return deepest;\n  }\n  return -1;\n}';
   const depthAt = async (stackBytes: number): Promise<string> => {

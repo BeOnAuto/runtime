@@ -1,7 +1,7 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 
-import { handedWorkersOf, machineSandboxOf, programPool } from '../src/dsl.ts';
+import { freshInstances, handedWorkersOf, machineSandboxOf, programPool } from '../src/dsl.ts';
 import { mostFilterMs } from '../src/dsl/evaluation.ts';
 import { filterVerdictsOf } from '../src/filters/filter-verdicts.ts';
 import { decidedOnce } from '../src/pool-testing/decided-once.ts';
@@ -63,11 +63,16 @@ function evaluationMs(sandbox: MachineSandbox): number {
 }
 
 export async function evaluationsMeasured(): Promise<readonly string[]> {
-  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
+  const pool = programPool({
+    handed: await handedWorkersOf(shippedFilesOnDisk),
+    instances: 'fresh',
+    workers: 1,
+    heapMegabytes: 256,
+  });
   const { machine, filters } = pool.evaluations;
   const coldMs = await timed(() => Effect.runPromise(machine.reserve));
   const inWorker = evaluationMs(machine);
-  const here = machineSandboxOf(shippedFilesOnDisk);
+  const here = machineSandboxOf(freshInstances(shippedFilesOnDisk));
   await Effect.runPromise(here.reserve);
   const inThread = evaluationMs(here);
   const decideMs = await timed(() => decidedOnce(machine, churning(4_194_304), startedAt));

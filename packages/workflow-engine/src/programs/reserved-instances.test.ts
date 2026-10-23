@@ -2,13 +2,13 @@ import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { freshInstance } from '../instances/fresh-instances.ts';
+import { freshInstances } from '../instances/fresh-instances.ts';
 import type { Evaluation, ProgramRun } from './program-run.ts';
 import { reservedSandbox, reusedSandbox, type MachineSandbox } from './reserved-instances.ts';
 import { unitMemoryBytes } from './sandbox-bounds.ts';
 import type { SandboxInstance } from './sandbox-session.ts';
 
-const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+const instance = await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
 
 const evaluation: Evaluation = { budget: 250, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 

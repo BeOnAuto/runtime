@@ -3,11 +3,17 @@ import { workerData } from 'node:worker_threads';
 import type { ShippedFiles } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
-import { freshInstancesOf, sandboxModuleFile } from '../instances/fresh-instances.ts';
-import type { Instances } from '../instances/instance-stock.ts';
-import type { HandedFiles, HandedWorkers } from '../jobs/pool-contract.ts';
+import { sandboxModuleFile } from '../instances/compiled-module.ts';
+import type { InstanceSource, SandboxFiles } from '../instances/instance-source.ts';
+import { InstanceSourceNameSchema, instanceSources, type InstanceSourceName } from '../instances/instance-sources.ts';
+import type { HandedFiles, HandedWorkers, PoolSettings } from '../jobs/pool-contract.ts';
 
 export type HandedFile = (file: Readonly<URL>) => Readonly<Uint8Array>;
+
+interface HandedData {
+  readonly handed: HandedFiles;
+  readonly instances: InstanceSourceName;
+}
 
 interface Handed {
   readonly handed: HandedFiles;
@@ -16,6 +22,11 @@ interface Handed {
 const decodeHanded = Schema.decodeUnknownOption(
   Schema.Struct({ handed: Schema.Record(Schema.String, Schema.instanceOf(Uint8Array)) }),
 );
+
+const decodeNamed = Schema.decodeUnknownOption(Schema.Struct({ instances: InstanceSourceNameSchema }));
+
+const unnamedSource: InstanceSource = () =>
+  Promise.reject(new Error('The pool named this worker no source of instances of the sandbox'));
 
 export async function handedFilesOf(shippedFiles: ShippedFiles, files: readonly Readonly<URL>[]): Promise<HandedFiles> {
   const contents = await Promise.all(files.map(async (file) => [file.href, await shippedFiles.bytes(file)] as const));
@@ -33,6 +44,13 @@ export function handedTo({ sandbox, modules = {} }: HandedWorkers, module: Reado
   return modules[module.href] ?? sandbox;
 }
 
+export function handedData(
+  { handed, instances }: Pick<PoolSettings, 'handed' | 'instances'>,
+  module: Readonly<URL>,
+): HandedData {
+  return { handed: handedTo(handed, module), instances };
+}
+
 export function handedFileIn(handed: HandedFiles): HandedFile {
   return (file) =>
     Option.getOrThrowWith(
@@ -47,6 +65,13 @@ export function handedFile(file: Readonly<URL>, data: unknown = workerData): Rea
   );
 }
 
-export function handedSandboxOf(data: unknown): Instances {
-  return freshInstancesOf(() => Promise.try(() => handedFile(sandboxModuleFile, data)));
+function handedSandboxFiles(data: unknown): SandboxFiles {
+  return { bytes: (file) => Promise.try(() => handedFile(file, data)) };
+}
+
+export function handedSandboxOf(data: unknown): InstanceSource {
+  return Option.match(decodeNamed(data), {
+    onNone: () => unnamedSource,
+    onSome: ({ instances }) => instanceSources[instances](handedSandboxFiles(data)),
+  });
 }

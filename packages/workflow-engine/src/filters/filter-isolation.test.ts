@@ -1,8 +1,8 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
 import type { JsonObject } from '../dsl/json.ts';
 import { filterSandboxOf } from '../instances/host-sandboxes.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { filterVerdictsOf, type FilterSandbox } from './filter-verdicts.ts';
 
 const now = Date.parse('2026-10-01T09:00:00.000Z');
@@ -20,10 +20,10 @@ function filterAt(reference: string, data = writingTheIteratorPrototype) {
   return { reference, attributes: { type: 'com.acme.ledger.month-closed', data } };
 }
 
-describe('the filters of a sandbox that breaks', () => {
+describe.each(sourcesUnderTest)('the filters of a sandbox that breaks on $name instances', ({ source }) => {
   it('pass on a failure that is not a raise of the filter, unchanged', async () => {
     const failure = new TypeError('the sandbox broke');
-    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
+    const sandbox = filterSandboxOf(source, () => 0);
     const breaking: FilterSandbox = {
       ...sandbox,
       session: async (opening) => ({
@@ -38,10 +38,10 @@ describe('the filters of a sandbox that breaks', () => {
   });
 });
 
-describe('the filters of one batch', () => {
+describe.each(sourcesUnderTest)('the filters of one batch on $name instances', ({ source }) => {
   it('share no state through an intrinsic no global names, so each answers as it would alone', async () => {
     const [first, second] = [filterAt('/first'), filterAt('/second')];
-    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
+    const sandbox = filterSandboxOf(source, () => 0);
 
     const together = await filterVerdictsOf([first, second], closed, sandbox, now);
     const alone = [
@@ -54,7 +54,7 @@ describe('the filters of one batch', () => {
   });
 
   it('take a fresh context after one its sandbox refused, so one filter that fills its memory fails no other', async () => {
-    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
+    const sandbox = filterSandboxOf(source, () => 0);
 
     const verdicts = await filterVerdictsOf(
       [
@@ -72,7 +72,7 @@ describe('the filters of one batch', () => {
   });
 
   it('say a filter was stopped when its memory or its deadline ended it, which no event causes, and not when its work did', async () => {
-    const sandbox = filterSandboxOf(shippedFilesOnDisk, () => 0);
+    const sandbox = filterSandboxOf(source, () => 0);
 
     const verdicts = await filterVerdictsOf(
       [filterAt('/working', working), filterAt('/filling', filling), filterAt('/eu', '${ $data.region == "eu" }')],

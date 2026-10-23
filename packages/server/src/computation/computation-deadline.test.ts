@@ -52,6 +52,7 @@ describe('a run of a computation function that does not end by itself, over HTTP
             heapMegabytes: computationBounds.heapMegabytes,
             worker: blockingOnTwoRows,
             handed,
+            instances: 'fresh',
           }),
         ),
     });

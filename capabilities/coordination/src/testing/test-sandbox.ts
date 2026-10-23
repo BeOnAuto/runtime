@@ -7,14 +7,14 @@ import {
   type MachineSandbox,
   type MachineSettings,
 } from '@on.auto/workflow-engine';
-import { freshInstance, unitMemoryBytes } from '@on.auto/workflow-engine/dsl';
+import { freshInstances, unitMemoryBytes } from '@on.auto/workflow-engine/dsl';
 
 import { workflowFacts } from '../capability/workflow.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from '../document/workflow-functions.ts';
 import { workflowMachineOptionsOf, workflowMachineSettingsOf } from '../runs/workflow-machine-options.ts';
 
 export const testSandbox: MachineSandbox = reusedSandbox(
-  await freshInstance(shippedFilesOnDisk, unitMemoryBytes),
+  await freshInstances(shippedFilesOnDisk)(unitMemoryBytes),
   () => 0,
 );
 

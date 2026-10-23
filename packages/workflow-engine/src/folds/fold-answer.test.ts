@@ -1,17 +1,15 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { freshInstance } from '../instances/fresh-instances.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 import { foldAnswerOf, foldPageData } from './fold-answer.ts';
 import type { FoldHost } from './fold-page.ts';
 import { foldProgress, progressOf } from './fold-progress.ts';
 
-async function hostOf(views: number, more: Partial<FoldHost> = {}): Promise<FoldHost> {
-  const instances = await Promise.all(
-    Array.from({ length: views }, () => freshInstance(shippedFilesOnDisk, unitMemoryBytes)),
-  );
+async function hostOf(source: InstanceSource, views: number, more: Partial<FoldHost> = {}): Promise<FoldHost> {
+  const instances = await Promise.all(Array.from({ length: views }, () => source(unitMemoryBytes)));
   return {
     now: () => 0,
     folding: Function.constVoid,
@@ -45,9 +43,9 @@ const page = {
   mostViewBytes: 1000,
 };
 
-describe('the answer of a worker that folds a page', () => {
+describe.each(sourcesUnderTest)('the answer of a worker that folds a page on $name instances', ({ source }) => {
   it('folds the page it is given, as the page crosses to it, and answers each view as JSON text', async () => {
-    expect(foldAnswerOf(foldPageData(page), await hostOf(1))).toEqual({
+    expect(foldAnswerOf(foldPageData(page), await hostOf(source, 1))).toEqual({
       ran: 'folded',
       early: false,
       views: [{ view: '3', folded: 1, lastFolded: 0, through: 0, work: someWork }],
@@ -56,7 +54,7 @@ describe('the answer of a worker that folds a page', () => {
 
   it('answers that it could not read a page whose events or views are not the JSON a page crosses as', async () => {
     const data = foldPageData(page);
-    const host = await hostOf(1);
+    const host = await hostOf(source, 1);
     const tooDeep = `[{"data":${'['.repeat(600)}${']'.repeat(600)}}]`;
 
     expect([
@@ -68,10 +66,10 @@ describe('the answer of a worker that folds a page', () => {
   });
 });
 
-describe('the budget of a page a worker folds', () => {
+describe.each(sourcesUnderTest)('the budget of a page a worker folds on $name instances', ({ source }) => {
   it('counts from its first fold, so what the worker does before it folds never spends it', async () => {
     const time = { now: 0 };
-    const slowToPrepare = await hostOf(1, {
+    const slowToPrepare = await hostOf(source, 1, {
       now: () => time.now,
       checkOf: () => {
         time.now += 5000;

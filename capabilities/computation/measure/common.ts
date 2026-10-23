@@ -50,5 +50,5 @@ export function request(
 }
 
 export function poolOfOne(): ProgramPool {
-  return programPool({ handed, workers: 1, heapMegabytes: computationBounds.heapMegabytes });
+  return programPool({ handed, instances: 'fresh', workers: 1, heapMegabytes: computationBounds.heapMegabytes });
 }
