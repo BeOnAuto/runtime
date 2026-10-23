@@ -1,5 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf, freshInstances } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { someFolder, type DatabaseSettings } from '@on.auto/workflow-host';
 import { projectedFolders, type ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
@@ -9,6 +9,10 @@ import { datasetDetailsOf } from '../capability/prediction-definitions.ts';
 import { datasetFolder, datasetsOf, type DatasetFolding } from '../dataset/dataset-folder.ts';
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import { parsePredictionDocument } from '../document/document-parsing.ts';
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 export const alphaKey = 'playbook/acme/alpha/';
 
@@ -86,7 +90,7 @@ type Folding = Partial<Omit<DatasetFolding, 'filters'>>;
 
 export function testDatasetFolder(folding: Folding = {}): ReturnType<typeof datasetFolder> {
   return datasetFolder({
-    filters: filterSandboxOf(freshInstances(shippedFilesOnDisk)),
+    filters: filterSandboxOf(freshInstances(sandboxModule)),
     triesBeforeStall: Number.POSITIVE_INFINITY,
     ...folding,
   });

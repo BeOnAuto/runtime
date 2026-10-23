@@ -1,10 +1,12 @@
-import { handedWorkersWithChecks } from '@on.auto/definitions/check';
+import { handedWorkersWithChecks, checkShippedRoots } from '@on.auto/definitions/check';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { programPool, type Json, type ProgramPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
 
 import { computationBounds } from '../src/run/run-bounds.ts';
 
-export const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
+const checkFiles = shippedFilesOnDisk(checkShippedRoots);
+
+export const handed = await handedWorkersWithChecks(checkFiles);
 
 export function millisecondsOf(work: () => void): number {
   const started = performance.now();

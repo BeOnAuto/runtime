@@ -52,8 +52,9 @@ export type {
   ViewCheck,
 } from './folds/fold-page.ts';
 export type { FoldPlace } from './folds/fold-progress.ts';
+export { sandboxModuleIn, sandboxShippedRoots } from './instances/compiled-module.ts';
 export { freshInstances } from './instances/fresh-instances.ts';
-export type { InstanceSource } from './instances/instance-source.ts';
+export type { InstanceSource, SandboxModule } from './instances/instance-source.ts';
 export type { InstanceSourceName } from './instances/instance-sources.ts';
 export { keptInstances } from './instances/kept-instances.ts';
 export { filterSandboxOf, hostClock, machineSandboxOf } from './instances/host-sandboxes.ts';

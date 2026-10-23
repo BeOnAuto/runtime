@@ -1,11 +1,13 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf, freshInstances } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import type { PageEvent } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { DatasetData } from './dataset-data.ts';
 import { datasetMatchingOf } from './dataset-matching.ts';
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
 
 const dataNamedFirst: DatasetData = {
   period: 'week',
@@ -37,7 +39,7 @@ describe('the matching of a dataset whose filters name their data before their t
   it('tests an event against the data tests of the filters of its own type alone, matching each type first', async () => {
     const matching = datasetMatchingOf(
       dataNamedFirst,
-      filterSandboxOf(freshInstances(shippedFilesOnDisk), () => 0),
+      filterSandboxOf(freshInstances(await sandboxModuleIn(sandboxFiles)), () => 0),
     );
 
     const match = await Effect.runPromise(matching.matchOf(placed));

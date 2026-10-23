@@ -5,10 +5,12 @@ import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { shippedFilesInMemory } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { readPageStyle, type ApiHandler } from '../index.ts';
+import { readPageStyle, type ApiHandler, apiShippedRoots } from '../index.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
 import { operationServer } from '../testing/operation-server.ts';
 import { servedStudio } from '../testing/studios.ts';
+
+const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots);
 
 const fromABrowser = { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' };
 
@@ -162,10 +164,10 @@ describe('what the page at the root of the server loads', () => {
   it('has its typefaces read through the files the server ships once, before the server answers, and none read again for a page', async () => {
     const read: string[] = [];
     const shippedFiles: ShippedFiles = {
-      ...shippedFilesOnDisk,
+      ...apiFilesOnDisk,
       bytes: (file) => {
-        read.push(file.pathname.slice(file.pathname.lastIndexOf('/') + 1));
-        return shippedFilesOnDisk.bytes(file);
+        read.push(file.path.slice(file.path.lastIndexOf('/') + 1));
+        return apiFilesOnDisk.bytes(file);
       },
     };
     const { handler } = createTestHandler({ pageStyle: await readPageStyle(shippedFiles) });

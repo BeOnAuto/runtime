@@ -35,7 +35,7 @@ export function textToKeep(text: string, mediaType: string): ContentToKeep {
 }
 
 async function decoded(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const utf8 = new TextDecoder('utf-8', { fatal: true });
+  const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
   let text = '';
   for await (const part of stream) {
     text += utf8.decode(part, { stream: true });

@@ -1,3 +1,4 @@
+import { URL as NodeUrl } from 'node:url';
 import { Worker, type WorkerOptions } from 'node:worker_threads';
 
 import { Option, Schema } from 'effect';
@@ -203,8 +204,12 @@ export function workerOptions(settings: PoolSettings): WorkerOptions {
   };
 }
 
+export function workerModuleOf(module: Readonly<URL>): NodeUrl {
+  return new NodeUrl(module.href);
+}
+
 function workerStarting(module: Readonly<URL>, settings: PoolSettings): Worker {
-  return new Worker(module, { ...workerOptions(settings), workerData: handedData(settings, module) });
+  return new Worker(workerModuleOf(module), { ...workerOptions(settings), workerData: handedData(settings, module) });
 }
 
 function threadOf(start: Job<unknown>, settings: PoolSettings, hooks: ThreadHooks<Envelope>): Thread<Envelope> {

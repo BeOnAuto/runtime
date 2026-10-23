@@ -181,8 +181,10 @@ describe('a pool that closes', () => {
     const script = [
       `const { programPool } = await import('${new URL('program-pool.ts', import.meta.url).href}');`,
       `const { handedWorkersOf } = await import('${new URL('handed-files.ts', import.meta.url).href}');`,
+      `const { sandboxShippedRoots } = await import('${new URL('../instances/compiled-module.ts', import.meta.url).href}');`,
       `const { shippedFilesOnDisk } = await import('${import.meta.resolve('@on.auto/operations/shipped-files-on-disk')}');`,
-      "const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), instances: 'fresh', workers: 2, heapMegabytes: 64 });",
+      'const handed = await handedWorkersOf(shippedFilesOnDisk(sandboxShippedRoots));',
+      "const pool = programPool({ handed, instances: 'fresh', workers: 2, heapMegabytes: 64 });",
       "const source = 'export default function (input) { return input + 1; }';",
       "const outcome = await pool.run({ source, arguments: [1], entry: 'default', moment: 0, budget: 500, memoryBytes: 67108864, stackBytes: 1048576, deadlineMs: 10000, mostOutputBytes: 100 });",
       closing,

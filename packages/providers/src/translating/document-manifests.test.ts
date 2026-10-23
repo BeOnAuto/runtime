@@ -1,6 +1,4 @@
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-import type { ShippedFiles } from '@on.auto/operations';
+import { shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
 import { shippedFilesInMemory } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -47,24 +45,24 @@ function fetchingFrom(answered: ReadonlyMap<string, unknown>): Fetching {
   };
 }
 
-const folder = pathToFileURL('/shipped/documents/');
+const folder: ShippedFile = { package: '@acme/shipped', path: 'documents' };
 
-function pathOf(file: string): string {
-  return fileURLToPath(new URL(file, folder));
+function fileOf(name: string): ShippedFile {
+  return shippedFileIn(folder, name);
 }
 
 function shippedWith(files: Readonly<Record<string, unknown>>): ShippedFiles {
   onTestFinished(() => {
     fetched.splice(0);
   });
-  return shippedFilesInMemory(
-    Object.fromEntries(
+  return shippedFilesInMemory({
+    [folder.package]: Object.fromEntries(
       Object.entries(files).map(([name, content]: readonly [string, unknown]) => [
-        new URL(name, folder).href,
+        fileOf(name).path,
         JSON.stringify(content),
       ]),
     ),
-  );
+  });
 }
 
 function parsed(text: string): unknown {
@@ -108,7 +106,7 @@ describe('the documents translated from their manifests', () => {
     const written = await translatedIn(shipped);
 
     const read = written.map(({ text }) => parsed(text));
-    expect(written.map(({ path }) => path)).toEqual([pathOf('tracker.openapi.json'), pathOf('tracker.manifest.json')]);
+    expect(written.map(({ file }) => file)).toEqual([fileOf('tracker.openapi.json'), fileOf('tracker.manifest.json')]);
     expect(read).toEqual([trackerTranslated, remade]);
     expect(written.map(({ text }) => text)).toEqual(read.map((value) => textOf(value)));
     expect(fetched).toEqual([trackerManifest.discovery, trackerManifest.authorization_server]);
@@ -120,7 +118,7 @@ describe('the documents translated from their manifests', () => {
 
     const written = await translatedIn(shipped, ['tracker=/given/tracker-v1.json'], answers, given);
 
-    expect(written.map(({ path }) => path)).toEqual([pathOf('tracker.openapi.json'), pathOf('tracker.manifest.json')]);
+    expect(written.map(({ file }) => file)).toEqual([fileOf('tracker.openapi.json'), fileOf('tracker.manifest.json')]);
     expect(fetched).toEqual([trackerManifest.authorization_server]);
     expect(await manifestNamesIn(shipped, folder)).toEqual(['bare', 'tracker']);
   });
@@ -220,8 +218,8 @@ describe('the documents translated from the manifests of OpenAPI and Swagger doc
 
     const read = written.map(({ text }) => parsed(text));
     const converted = { info: notesManifest.info, security: [{ oauth2: [] }] };
-    expect(written.map(({ path }) => path)).toEqual(
-      ['about', 'notes', 'tracker'].map((name) => pathOf(`${name}.openapi.json`)),
+    expect(written.map(({ file }) => file)).toEqual(
+      ['about', 'notes', 'tracker'].map((name) => fileOf(`${name}.openapi.json`)),
     );
     expect(read).toEqual([aboutTranslated, expect.objectContaining(converted), trackerOpenApiTranslated]);
     expect(written.map(({ text }) => text)).toEqual(read.map((value) => textOf(value)));

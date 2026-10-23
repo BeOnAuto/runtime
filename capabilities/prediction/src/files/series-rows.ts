@@ -111,5 +111,5 @@ export function seriesRowsOfStream(
   stream: ReadableStream<Uint8Array>,
   reading: SeriesReading,
 ): Promise<readonly SeriesRows[]> {
-  return seriesRowsFrom(() => Readable.fromWeb(stream), reading);
+  return seriesRowsFrom(() => Readable.from(stream, { objectMode: false }), reading);
 }

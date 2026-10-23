@@ -10,6 +10,9 @@ import {
   manifestNamesIn,
   type DocumentManifest,
 } from '../translating/document-manifests.ts';
+import { providersShippedRoots } from './shipped-providers.ts';
+
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
 
 const RequirementsSchema = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
 
@@ -32,7 +35,7 @@ type Held = ReturnType<typeof heldBy>;
 
 function heldBy(name: string) {
   const { security, paths, components } = decodeOperations(
-    readFileSync(new URL(`${name}.openapi.json`, documentsBesideTheEntries), 'utf8'),
+    readFileSync(new URL(`../entries/documents/${name}.openapi.json`, import.meta.url), 'utf8'),
   );
   const operations = Object.values(paths).flatMap((methods) => Object.values(methods));
   const requirements = [...security, ...operations.flatMap((operation) => operation.security ?? [])];
@@ -69,9 +72,9 @@ interface Kept {
 }
 
 const manifests: readonly Kept[] = await Promise.all(
-  (await manifestNamesIn(shippedFilesOnDisk, documentsBesideTheEntries)).map(async (name) => ({
+  (await manifestNamesIn(providersOnDisk, documentsBesideTheEntries)).map(async (name) => ({
     name,
-    manifest: await manifestIn(shippedFilesOnDisk, documentsBesideTheEntries, name),
+    manifest: await manifestIn(providersOnDisk, documentsBesideTheEntries, name),
   })),
 );
 

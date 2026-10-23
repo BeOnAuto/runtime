@@ -1,17 +1,21 @@
 import { writeFileSync } from 'node:fs';
 
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { freshInstances, sandboxAnswers } from '@on.auto/workflow-engine/dsl';
+import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 
 import { keptLibFiles } from './src/program-check/kept-lib.ts';
-import { sandboxLibOf } from './src/program-check/sandbox-lib.ts';
+import { compilerShippedRoots, sandboxLibOf } from './src/program-check/sandbox-lib.ts';
 
-const lib = await sandboxLibOf(shippedFilesOnDisk, (expressions) =>
-  sandboxAnswers(freshInstances(shippedFilesOnDisk), expressions),
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
+
+const lib = await sandboxLibOf(shippedFilesOnDisk(compilerShippedRoots), (expressions) =>
+  sandboxAnswers(freshInstances(sandboxModule), expressions),
 );
 
-writeFileSync(keptLibFiles.script, lib.script);
-writeFileSync(keptLibFiles.iterator, lib.iterator);
+const script = new URL(keptLibFiles.script.path, import.meta.url);
+const iterator = new URL(keptLibFiles.iterator.path, import.meta.url);
+writeFileSync(script, lib.script);
+writeFileSync(iterator, lib.iterator);
 process.stdout.write(
-  `Wrote the sandbox's lib, ${lib.script.length} and ${lib.iterator.length} characters, to ${keptLibFiles.script.pathname} and ${keptLibFiles.iterator.pathname}\n`,
+  `Wrote the sandbox's lib, ${lib.script.length} and ${lib.iterator.length} characters, to ${script.pathname} and ${iterator.pathname}\n`,
 );

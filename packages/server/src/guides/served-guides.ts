@@ -1,7 +1,8 @@
 import type { DefinitionType, Guide, Recipe } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
-import { capitalized, type ShippedFiles } from '@on.auto/operations';
+import { capitalized, shippedFileIn, type ShippedFiles } from '@on.auto/operations';
 
+import { documentation } from './guide-files.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
@@ -13,8 +14,6 @@ export interface ServedGuides {
   readonly recipes: readonly Recipe[];
 }
 
-const documentation = new URL('../../../../docs/', import.meta.url);
-
 const terminologyPage = 'concepts/terminology.md';
 
 function pageOfGuide(guide: string): string {
@@ -22,7 +21,7 @@ function pageOfGuide(guide: string): string {
 }
 
 function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
-  return shippedFiles.text(new URL(page, documentation));
+  return shippedFiles.text(shippedFileIn(documentation, page));
 }
 
 async function typeGuideOf(

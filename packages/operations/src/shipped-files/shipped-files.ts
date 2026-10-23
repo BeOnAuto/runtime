@@ -1,5 +1,20 @@
+export interface ShippedFile {
+  readonly package: string;
+  readonly path: string;
+}
+
+export type ShippedRoots = Readonly<Record<string, Readonly<URL>>>;
+
 export interface ShippedFiles {
-  readonly text: (file: Readonly<URL>) => Promise<string>;
-  readonly bytes: (file: Readonly<URL>) => Promise<Uint8Array>;
-  readonly list: (folder: Readonly<URL>) => Promise<readonly string[]>;
+  readonly text: (file: ShippedFile) => Promise<string>;
+  readonly bytes: (file: ShippedFile) => Promise<Uint8Array>;
+  readonly list: (folder: ShippedFile) => Promise<readonly string[]>;
+}
+
+export function shippedFileIn(folder: ShippedFile, name: string): ShippedFile {
+  return { package: folder.package, path: `${folder.path}/${name}` };
+}
+
+export function shippedFileName(file: ShippedFile): string {
+  return `${file.package}/${file.path}`;
 }

@@ -1,14 +1,14 @@
 import { workerData } from 'node:worker_threads';
 
-import type { ShippedFiles } from '@on.auto/operations';
+import { shippedFileName, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import { sandboxModuleFile } from '../instances/compiled-module.ts';
-import type { InstanceSource, SandboxFiles } from '../instances/instance-source.ts';
+import type { InstanceSource, InstanceSourceOf } from '../instances/instance-source.ts';
 import { InstanceSourceNameSchema, instanceSources, type InstanceSourceName } from '../instances/instance-sources.ts';
 import type { HandedFiles, HandedWorkers, PoolSettings } from '../jobs/pool-contract.ts';
 
-export type HandedFile = (file: Readonly<URL>) => Readonly<Uint8Array>;
+export type HandedFile = (file: ShippedFile) => Readonly<Uint8Array>;
 
 interface HandedData {
   readonly handed: HandedFiles;
@@ -28,8 +28,10 @@ const decodeNamed = Schema.decodeUnknownOption(Schema.Struct({ instances: Instan
 const unnamedSource: InstanceSource = () =>
   Promise.reject(new Error('The pool named this worker no source of instances of the sandbox'));
 
-export async function handedFilesOf(shippedFiles: ShippedFiles, files: readonly Readonly<URL>[]): Promise<HandedFiles> {
-  const contents = await Promise.all(files.map(async (file) => [file.href, await shippedFiles.bytes(file)] as const));
+export async function handedFilesOf(shippedFiles: ShippedFiles, files: readonly ShippedFile[]): Promise<HandedFiles> {
+  const contents = await Promise.all(
+    files.map(async (file) => [shippedFileName(file), await shippedFiles.bytes(file)] as const),
+  );
   return Object.fromEntries(contents);
 }
 
@@ -54,24 +56,29 @@ export function handedData(
 export function handedFileIn(handed: HandedFiles): HandedFile {
   return (file) =>
     Option.getOrThrowWith(
-      Option.fromNullishOr(handed[file.href]),
-      () => new Error(`The pool handed this worker no file at ${file.href}`),
+      Option.fromNullishOr(handed[shippedFileName(file)]),
+      () => new Error(`The pool handed this worker no file at ${shippedFileName(file)}`),
     );
 }
 
-export function handedFile(file: Readonly<URL>, data: unknown = workerData): Readonly<Uint8Array> {
+export function handedFile(file: ShippedFile, data: unknown = workerData): Readonly<Uint8Array> {
   return handedFileIn(Option.match(decodeHanded(data), { onNone: () => ({}), onSome: ({ handed }: Handed) => handed }))(
     file,
   );
 }
 
-function handedSandboxFiles(data: unknown): SandboxFiles {
-  return { bytes: (file) => Promise.try(() => handedFile(file, data)) };
+function madeOnFirstInstance(sourceOf: InstanceSourceOf, data: unknown): InstanceSource {
+  const made: { source?: InstanceSource } = {};
+  return (memoryBytes) =>
+    Promise.try(() => {
+      made.source ??= sourceOf({ bytes: handedFile(sandboxModuleFile, data) });
+      return made.source(memoryBytes);
+    });
 }
 
 export function handedSandboxOf(data: unknown): InstanceSource {
   return Option.match(decodeNamed(data), {
     onNone: () => unnamedSource,
-    onSome: ({ instances }) => instanceSources[instances](handedSandboxFiles(data)),
+    onSome: ({ instances }) => madeOnFirstInstance(instanceSources[instances], data),
   });
 }

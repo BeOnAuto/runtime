@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'node:url';
-
 import {
   placeholdersIn,
   placeIn,
@@ -9,7 +7,13 @@ import {
   type Position,
   type YamlKind,
 } from '@on.auto/config';
-import type { ShippedFiles } from '@on.auto/operations';
+import {
+  shippedFileIn,
+  shippedFileName,
+  type ShippedFile,
+  type ShippedFiles,
+  type ShippedRoots,
+} from '@on.auto/operations';
 import { isPinnableUrl, shippedDocumentOf, type ShippedDocument } from '@on.auto/tool-servers';
 import { Data, Option, Result, Schema, SchemaIssue, type StandardSchema } from 'effect';
 
@@ -33,12 +37,16 @@ type Read<A> = Result.Result<A, readonly Problem[]>;
 
 interface Entries {
   readonly shippedFiles: ShippedFiles;
-  readonly folder: Readonly<URL>;
+  readonly folder: ShippedFile;
 }
 
 type PathSegment = PropertyKey | StandardSchema.StandardSchemaV1.PathSegment;
 
-const shippedEntries = new URL('../entries/', import.meta.url);
+const providersPackage = '@on.auto/providers';
+
+export const providersShippedRoots: ShippedRoots = { [providersPackage]: new URL('../../', import.meta.url) };
+
+export const shippedEntries: ShippedFile = { package: providersPackage, path: 'src/entries' };
 
 const entryYaml: YamlKind = {
   noun: "a provider's entry",
@@ -84,7 +92,7 @@ async function documentBesideTheEntries(
   written: string,
 ): Promise<DocumentBesideTheEntries | undefined> {
   try {
-    const shipped = shippedDocumentOf(await shippedFiles.bytes(new URL(written, folder)));
+    const shipped = shippedDocumentOf(await shippedFiles.bytes(shippedFileIn(folder, written)));
     const parsed: unknown = JSON.parse(shipped.text);
     return Result.getOrUndefined(Result.map(decodeServers(parsed), (servers) => ({ shipped, servers })));
   } catch {
@@ -144,12 +152,12 @@ async function providerOf(entry: ProviderEntry, file: string, entries: Entries):
 }
 
 async function readProvider(entries: Entries, file: string): Promise<Result.Result<ProviderRead, readonly Located[]>> {
-  const at = new URL(file, entries.folder);
-  const path = fileURLToPath(at);
+  const at = shippedFileIn(entries.folder, file);
+  const name = shippedFileName(at);
   const reading = readYaml(await entries.shippedFiles.text(at), entryYaml);
   if ('problems' in reading) {
     return Result.fail(
-      reading.problems.map(({ position, detail }) => ({ place: placeIn(path, position, ''), detail })),
+      reading.problems.map(({ position, detail }) => ({ place: placeIn(name, position, ''), detail })),
     );
   }
   const { document } = reading;
@@ -159,7 +167,7 @@ async function readProvider(entries: Entries, file: string): Promise<Result.Resu
   });
   const located = ({ pointer, detail }: Problem): Located => {
     const position: Position = document.locate(pointer);
-    return { place: placeIn(path, position, pointer), detail };
+    return { place: placeIn(name, position, pointer), detail };
   };
   return Result.mapError(read, (problems) => problems.map((problem) => located(problem)));
 }
@@ -171,7 +179,7 @@ function invalid(located: readonly Located[]): ProvidersInvalid {
 
 export async function readProviders(
   shippedFiles: ShippedFiles,
-  folder: Readonly<URL> = shippedEntries,
+  folder: ShippedFile = shippedEntries,
 ): Promise<Result.Result<ProviderList, ProvidersInvalid>> {
   const entries: Entries = { shippedFiles, folder };
   const files = (await shippedFiles.list(folder)).filter((file) => file.endsWith('.yaml'));

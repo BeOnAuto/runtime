@@ -8,6 +8,8 @@ import {
   threadStackBytes,
   unitMemoryBytes,
   type ProgramRun,
+  sandboxModuleIn,
+  sandboxShippedRoots,
 } from '../src/dsl.ts';
 import { sandboxModuleFile } from '../src/instances/compiled-module.ts';
 import { expressionUnitOf } from '../src/programs/expression-units.ts';
@@ -16,6 +18,10 @@ import { moduleRun } from '../src/programs/module-runs.ts';
 import type { Evaluation } from '../src/programs/program-run.ts';
 import { sandboxRuntimeOf } from '../src/programs/sandbox-session.ts';
 import { medianMillisecondsOf, millisecondsOf } from './common.ts';
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const unbounded: Evaluation = { budget: Number.POSITIVE_INFINITY, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
@@ -52,7 +58,7 @@ async function ranModule(
   args: readonly string[],
   evaluation: Evaluation = unbounded,
 ): Promise<ProgramRun> {
-  const run = moduleRun(await freshInstances(shippedFilesOnDisk)(unitMemoryBytes), settings, {
+  const run = moduleRun(await freshInstances(sandboxModule)(unitMemoryBytes), settings, {
     source,
     entry: 'default',
     arguments: args,
@@ -65,16 +71,16 @@ async function ranModule(
 }
 
 async function instanceLines(): Promise<readonly string[]> {
-  const wasm = await shippedFilesOnDisk.bytes(sandboxModuleFile);
-  await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
+  const wasm = await sandboxFiles.bytes(sandboxModuleFile);
+  await freshInstances(sandboxModule)(unitMemoryBytes);
   const fresh = await medianAsync(50, async () => {
     const started = performance.now();
-    await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
+    await freshInstances(sandboxModule)(unitMemoryBytes);
     return performance.now() - started;
   });
   const withPrelude = await medianAsync(50, async () => {
     const started = performance.now();
-    const runtime = sandboxRuntimeOf(await freshInstances(shippedFilesOnDisk)(runMemoryBytes), settings);
+    const runtime = sandboxRuntimeOf(await freshInstances(sandboxModule)(runMemoryBytes), settings);
     runtime.context().close();
     const milliseconds = performance.now() - started;
     runtime.close();
@@ -115,13 +121,13 @@ async function checkpointLines(): Promise<readonly string[]> {
 }
 
 async function expressionLines(): Promise<readonly string[]> {
-  const instance = await freshInstances(shippedFilesOnDisk)(unitMemoryBytes);
+  const instance = await freshInstances(sandboxModule)(unitMemoryBytes);
   const unit = expressionUnitOf(() => instance, settings);
   const fresh = medianMillisecondsOf(201, () => {
     unit.evaluate('$context.decision.decision == "approve"', { context: decision }, unbounded);
   });
   unit.close();
-  const filters = filterContextOf(await freshInstances(shippedFilesOnDisk)(unitMemoryBytes), settings, unbounded);
+  const filters = filterContextOf(await freshInstances(sandboxModule)(unitMemoryBytes), settings, unbounded);
   const test = filters.define(' $data.decision.decision == "approve" ');
   const freezing = millisecondsOf(() => {
     filters.freeze();
@@ -170,7 +176,7 @@ async function valueLines(): Promise<readonly string[]> {
 
 async function stackLines(): Promise<readonly string[]> {
   const pool = programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: 'fresh',
     workers: 1,
     heapMegabytes: 256,

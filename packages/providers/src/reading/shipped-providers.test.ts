@@ -1,13 +1,23 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { shippedFileIn } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { documentServerOf, operatorVariablesOf, readProviders, type Provider } from '../index.ts';
+import {
+  documentServerOf,
+  operatorVariablesOf,
+  readProviders,
+  type Provider,
+  providersShippedRoots,
+} from '../index.ts';
+import { shippedEntries } from './shipped-providers.ts';
 
-const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+
+const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 
 const entriesUrl = new URL('../entries/', import.meta.url);
 
@@ -175,8 +185,8 @@ describe('the servers of the shipped providers', () => {
   it('hand on the documents beside the entries as the texts they read with the bytes each takes, by the name each entry writes', async () => {
     const onDisk = await Promise.all(
       documentsBesideTheEntries.map(async (written) => {
-        const file = new URL(written, entriesUrl);
-        return { text: await shippedFilesOnDisk.text(file), bytes: (await shippedFilesOnDisk.bytes(file)).byteLength };
+        const file = shippedFileIn(shippedEntries, written);
+        return { text: await providersOnDisk.text(file), bytes: (await providersOnDisk.bytes(file)).byteLength };
       }),
     );
 

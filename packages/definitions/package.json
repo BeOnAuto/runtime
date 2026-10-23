@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./check": "./src/check.ts",
+    "./check-handler": "./src/program-check/handed-checks.ts",
     "./document": "./src/document.ts",
     "./template": "./src/template.ts",
     "./testing": "./src/testing/index.ts"

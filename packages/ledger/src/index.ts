@@ -14,12 +14,16 @@ export type {
   DefinitionStream,
   EncodedEvent,
   EventStore,
+  LedgerStore,
   RecordedPoint,
+  RecordedStore,
   RecordedStream,
+  StatementExecutor,
   StoredPage,
   StoredPlace,
   StoredRecord,
 } from './event-store.ts';
+export { sqliteLayout, type LayoutDialect } from './layout/layout-dialects.ts';
 export { LedgerLayoutRefused } from './layout/ledger-layout-refused.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {
@@ -31,6 +35,8 @@ export {
   type StreamLoad,
 } from './ledger-service.ts';
 export { sqliteEventStore, sqliteLedgerLayer, type SQLiteStoreOptions } from './sqlite-event-store.ts';
+export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';
 export { recordedReaderOf } from './recorded/recorded-reader.ts';
+export { sqliteDefinitionStreamsIndexed, sqlitePlanOf } from './recorded/sqlite-plans.ts';
 export { retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
 export { streamAppends, streamSignalOf, type StreamAppended, type StreamSignal } from './signal/append-signal.ts';

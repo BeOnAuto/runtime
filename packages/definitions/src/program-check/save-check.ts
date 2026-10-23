@@ -1,8 +1,9 @@
-import { InvalidInput, Unavailable, type ShippedFiles } from '@on.auto/operations';
+import { InvalidInput, Unavailable, type ShippedFiles, type ShippedRoots } from '@on.auto/operations';
 import {
   handedFilesOf,
   handedWorkersOf,
   pooledJob,
+  sandboxShippedRoots,
   type CheckIssue,
   type CheckJob,
   type CheckOutcome,
@@ -15,9 +16,11 @@ import {
 import { Effect } from 'effect';
 
 import { changedExpressions, type StrippedForms } from '../capability/stripped-forms.ts';
-import { keptLibFiles } from './kept-lib.ts';
+import { definitionsShippedRoots, keptLibFiles } from './kept-lib.ts';
 
 export const checkWorker = new URL('./check-worker.ts', import.meta.url);
+
+export const checkShippedRoots: ShippedRoots = { ...sandboxShippedRoots, ...definitionsShippedRoots };
 
 export function keptLibOf(shippedFiles: ShippedFiles): Promise<HandedFiles> {
   return handedFilesOf(shippedFiles, Object.values(keptLibFiles));

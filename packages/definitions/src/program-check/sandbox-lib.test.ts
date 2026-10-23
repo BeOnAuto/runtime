@@ -1,17 +1,22 @@
+import { shippedFileName } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { freshInstances, sandboxAnswers } from '@on.auto/workflow-engine/dsl';
+import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { handedFileIn } from '@on.auto/workflow-engine/job-loop';
 import type { CheckJob } from '@on.auto/workflow-engine/worker';
 import { describe, expect, it } from 'vitest';
 
 import { keptLibOnDisk } from '../testing/read-on-disk.ts';
 import { handedChecks } from './handed-checks.ts';
-import { keptLibFiles, sandboxLibFrom } from './kept-lib.ts';
-import { sandboxLibOf } from './sandbox-lib.ts';
+import { definitionsShippedRoots, keptLibFiles, sandboxLibFrom } from './kept-lib.ts';
+import { compilerShippedRoots, sandboxLibOf } from './sandbox-lib.ts';
 
 const kept = sandboxLibFrom(keptLibOnDisk);
 
-const probe = (expressions: readonly string[]) => sandboxAnswers(freshInstances(shippedFilesOnDisk), expressions);
+const compilerFilesOnDisk = shippedFilesOnDisk(compilerShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
+
+const probe = (expressions: readonly string[]) => sandboxAnswers(freshInstances(sandboxModule), expressions);
 
 function computationReturning(output: string): CheckJob {
   return {
@@ -30,9 +35,13 @@ function declares(text: string): (fragment: string) => boolean {
 
 describe('the lib of the sandbox', () => {
   it('is what the generator makes from the compiler’s libs and the sandbox’s own answers, kept beside the package', async () => {
-    expect(await sandboxLibOf(shippedFilesOnDisk, probe)).toEqual(kept);
-    expect(keptLibFiles.script.pathname).toMatch(/\/definitions\/lib\/sandbox\.d\.ts\.txt$/u);
-    expect(keptLibFiles.iterator.pathname).toMatch(/\/definitions\/lib\/sandbox-iterator\.d\.ts\.txt$/u);
+    expect(await sandboxLibOf(compilerFilesOnDisk, probe)).toEqual(kept);
+    expect(
+      Object.values(keptLibFiles).map((file) => new URL(file.path, definitionsShippedRoots[file.package]).href),
+    ).toEqual([
+      new URL('../../lib/sandbox.d.ts.txt', import.meta.url).href,
+      new URL('../../lib/sandbox-iterator.d.ts.txt', import.meta.url).href,
+    ]);
   });
 
   it('declares nothing the prelude removes or the engine lacks, and what the engine has', () => {
@@ -88,7 +97,7 @@ describe('the checks of the worker the pool hands the kept lib', () => {
 
   it('cannot be made when the pool handed the worker no kept lib', () => {
     expect(() => handedChecks(handedFileIn({}))).toThrow(
-      `The pool handed this worker no file at ${keptLibFiles.script.href}`,
+      `The pool handed this worker no file at ${shippedFileName(keptLibFiles.script)}`,
     );
   });
 });

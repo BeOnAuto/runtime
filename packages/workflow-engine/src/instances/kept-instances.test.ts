@@ -1,6 +1,6 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
+import { sandboxModuleOnDisk } from '../pool-testing/test-pools.ts';
 import { expressionUnitOf } from '../programs/expression-units.ts';
 import { moduleRun } from '../programs/module-runs.ts';
 import { threadStackBytes, unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
@@ -23,7 +23,7 @@ function ranOn(instance: SandboxInstance, body: string): unknown {
 
 describe('the kept source of instances', () => {
   it('lends the next unit of the same maximum the instance the last one gave back intact', async () => {
-    const source = keptInstances(shippedFilesOnDisk);
+    const source = keptInstances(sandboxModuleOnDisk);
     const first = await source(unitMemoryBytes);
     ranOn(first, 'return 1;');
 
@@ -35,7 +35,7 @@ describe('the kept source of instances', () => {
   });
 
   it('lends a fresh instance after a unit whose instance refused to grow, or whose runtime broke', async () => {
-    const source = keptInstances(shippedFilesOnDisk);
+    const source = keptInstances(sandboxModuleOnDisk);
     const refusing = await source(pageBytes * 256);
     const refused = ranOn(refusing, 'return "x".repeat(2 ** 25).length;');
     const afterRefusal = await source(pageBytes * 256);
@@ -58,7 +58,7 @@ describe('the kept source of instances', () => {
   });
 
   it('keeps one instance for each maximum, and takes nothing back from a unit that gave its instance back before', async () => {
-    const source = keptInstances(shippedFilesOnDisk);
+    const source = keptInstances(sandboxModuleOnDisk);
     const [first, second] = [await source(unitMemoryBytes), await source(unitMemoryBytes)];
     first.release(true);
     second.release(true);

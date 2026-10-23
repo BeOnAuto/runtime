@@ -7,7 +7,9 @@ import { describedAccess, patientTiming, serveFakeApi } from '@on.auto/tool-serv
 import { Effect, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { providerNamed, readProviders } from '../index.ts';
+import { providerNamed, readProviders, providersShippedRoots } from '../index.ts';
+
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
 
 const page = readFileSync(new URL('../../../../docs/self-host/connections.md', import.meta.url), 'utf8');
 
@@ -19,7 +21,7 @@ const [, domainProperty = '', urlPrefixProperty = '', sentPath = ''] = [...sente
   ([, quoted = '']: readonly string[]) => quoted,
 );
 
-const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
+const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 
 const entriesFolder = new URL('../entries/', import.meta.url);
 

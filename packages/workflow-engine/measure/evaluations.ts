@@ -1,13 +1,22 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 
-import { freshInstances, handedWorkersOf, machineSandboxOf, programPool } from '../src/dsl.ts';
+import {
+  freshInstances,
+  handedWorkersOf,
+  machineSandboxOf,
+  programPool,
+  sandboxModuleIn,
+  sandboxShippedRoots,
+} from '../src/dsl.ts';
 import { mostFilterMs } from '../src/dsl/evaluation.ts';
 import { filterVerdictsOf } from '../src/filters/filter-verdicts.ts';
 import { decidedOnce } from '../src/pool-testing/decided-once.ts';
 import { answerGraceMs } from '../src/program-pool/evaluation-thread.ts';
 import type { MachineSandbox } from '../src/programs/reserved-instances.ts';
 import { medianMillisecondsOf, startedAt } from './common.ts';
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
 
 const decision = { decision: { decision: 'approve', reason: 'the budget is stated' } };
 
@@ -64,7 +73,7 @@ function evaluationMs(sandbox: MachineSandbox): number {
 
 export async function evaluationsMeasured(): Promise<readonly string[]> {
   const pool = programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: 'fresh',
     workers: 1,
     heapMegabytes: 256,
@@ -72,7 +81,7 @@ export async function evaluationsMeasured(): Promise<readonly string[]> {
   const { machine, filters } = pool.evaluations;
   const coldMs = await timed(() => Effect.runPromise(machine.reserve));
   const inWorker = evaluationMs(machine);
-  const here = machineSandboxOf(freshInstances(shippedFilesOnDisk));
+  const here = machineSandboxOf(freshInstances(await sandboxModuleIn(sandboxFiles)));
   await Effect.runPromise(here.reserve);
   const inThread = evaluationMs(here);
   const decideMs = await timed(() => decidedOnce(machine, churning(4_194_304), startedAt));

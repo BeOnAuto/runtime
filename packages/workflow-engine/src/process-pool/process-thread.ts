@@ -144,7 +144,7 @@ function watchOf<Answer>(
 }
 
 function spawnedOf({ command, arguments: given }: ProcessCommand, module: Readonly<URL>): Spawned {
-  const child = spawn(command, [...given, fileURLToPath(module)], {
+  const child = spawn(command, [...given, fileURLToPath(module.href)], {
     env: {},
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     serialization: 'json',

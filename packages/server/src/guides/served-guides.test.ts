@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
 
 import { mostGuideBytes, mostRecipeBytes } from '@on.auto/api';
@@ -7,9 +6,12 @@ import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { serverShippedRoots } from './guide-files.ts';
 import { withLinksResolved } from './page-links.ts';
 import { servedGuidesOf, type ServedGuides } from './served-guides.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
+
+const guideFiles = shippedFilesOnDisk(serverShippedRoots);
 
 function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capability {
   return defineCapability({
@@ -41,18 +43,22 @@ const everyType = [reasoning, computation, recall, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
-const served = await servedGuidesOf(shippedFilesOnDisk, everyType);
+const served = await servedGuidesOf(guideFiles, everyType);
 
-const servedWithInteraction = await servedGuidesOf(shippedFilesOnDisk, [...everyType, interaction]);
+const servedWithInteraction = await servedGuidesOf(guideFiles, [...everyType, interaction]);
 
-const servedForReasoningAndWorkflows = await servedGuidesOf(shippedFilesOnDisk, [reasoning, workflow]);
+const servedForReasoningAndWorkflows = await servedGuidesOf(guideFiles, [reasoning, workflow]);
 
 function recipeTextsOf({ recipes }: ServedGuides): Readonly<Record<string, string>> {
   return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
 }
 
+function byteLengthOf(text: string): number {
+  return new TextEncoder().encode(text).byteLength;
+}
+
 function bytesOf(texts: Readonly<Record<string, string>>, ...names: readonly string[]): readonly number[] {
-  return names.map((name) => Buffer.byteLength(texts[name] ?? ''));
+  return names.map((name) => byteLengthOf(texts[name] ?? ''));
 }
 
 function page(path: string): string {
@@ -147,8 +153,8 @@ describe('the size and the words of the guides of a server', () => {
     const everyGuide = servedWithInteraction.guides;
 
     expect(everyGuide.map(({ name }) => name)).toContain('interaction-function');
-    expect(everyGuide.filter(({ text }) => Buffer.byteLength(text, 'utf8') > mostGuideBytes)).toEqual([]);
-    expect(recipes.filter(({ text }) => Buffer.byteLength(text, 'utf8') > mostRecipeBytes)).toEqual([]);
+    expect(everyGuide.filter(({ text }) => byteLengthOf(text) > mostGuideBytes)).toEqual([]);
+    expect(recipes.filter(({ text }) => byteLengthOf(text) > mostRecipeBytes)).toEqual([]);
   });
 
   it('describe each guide in a sentence for a person or a client that lists them', () => {
@@ -172,7 +178,7 @@ describe('the recipes of a server', () => {
   });
 
   it('are none for a server that runs no type of definition', async () => {
-    expect((await servedGuidesOf(shippedFilesOnDisk, [])).recipes).toEqual([]);
+    expect((await servedGuidesOf(guideFiles, [])).recipes).toEqual([]);
   });
 
   it('ask the person in their own words, filled into what the prompt asks for', () => {
@@ -207,10 +213,9 @@ describe('the recipes that give a playbook tools', () => {
     expect(String(texts['first-playbook'])).toContain(
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
-    expect([
-      Buffer.byteLength(String(texts['give-tools'])),
-      Buffer.byteLength(String(texts['first-playbook'])),
-    ]).toEqual([2716, 1898]);
+    expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
+      2716, 1898,
+    ]);
   });
 });
 
@@ -285,7 +290,7 @@ describe('the terminology guide of a server', () => {
 describe('a server without the page of a type it runs', () => {
   it('fails to start', async () => {
     await expect(
-      servedGuidesOf(shippedFilesOnDisk, [capabilityOf('drafting', 'draft', { name: 'drafting-function' })]),
+      servedGuidesOf(guideFiles, [capabilityOf('drafting', 'draft', { name: 'drafting-function' })]),
     ).rejects.toThrow(/no such file or directory.*drafting-format\.md/u);
   });
 });

@@ -1,13 +1,17 @@
-import type { ShippedFiles } from './shipped-files.ts';
+import { shippedFileName, type ShippedFile, type ShippedFiles } from './shipped-files.ts';
 
 type Content = string | Readonly<Uint8Array>;
 
-type Held = ReadonlyMap<string, Content>;
+type Held = Readonly<Record<string, Readonly<Record<string, Content>>>>;
 
-function contentOf(held: Held, file: Readonly<URL>): Promise<Content> {
-  const content = held.get(file.href);
+function heldIn(held: Held, file: ShippedFile): Readonly<Record<string, Content>> {
+  return held[file.package] ?? {};
+}
+
+function contentOf(held: Held, file: ShippedFile): Promise<Content> {
+  const content = heldIn(held, file)[file.path];
   return content === undefined
-    ? Promise.reject(new Error(`No file is shipped at ${file.href}`))
+    ? Promise.reject(new Error(`No file is shipped at ${shippedFileName(file)}`))
     : Promise.resolve(content);
 }
 
@@ -19,21 +23,21 @@ function bytesOf(content: Content): Uint8Array {
   return typeof content === 'string' ? new TextEncoder().encode(content) : new Uint8Array(content);
 }
 
-function namesIn(held: Held, folder: Readonly<URL>): Promise<readonly string[]> {
-  const under = [...held.keys()].filter((href) => href.startsWith(folder.href));
+function namesIn(held: Held, folder: ShippedFile): Promise<readonly string[]> {
+  const prefix = `${folder.path}/`;
+  const under = Object.keys(heldIn(held, folder)).filter((path) => path.startsWith(prefix));
   if (under.length === 0) {
-    return Promise.reject(new Error(`No folder is shipped at ${folder.href}`));
+    return Promise.reject(new Error(`No folder is shipped at ${shippedFileName(folder)}`));
   }
   return Promise.resolve(
     under
-      .map((href) => href.slice(folder.href.length))
+      .map((path) => path.slice(prefix.length))
       .filter((name) => !name.includes('/'))
       .toSorted(),
   );
 }
 
-export function shippedFilesInMemory(files: Readonly<Record<string, Content>>): ShippedFiles {
-  const held: Held = new Map(Object.entries(files));
+export function shippedFilesInMemory(held: Held): ShippedFiles {
   return {
     text: (file) => contentOf(held, file).then(textOf),
     bytes: (file) => contentOf(held, file).then(bytesOf),

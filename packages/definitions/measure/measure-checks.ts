@@ -1,13 +1,21 @@
 import { cpus } from 'node:os';
 
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { freshInstances, programPool, sandboxAnswers, type CheckJob } from '@on.auto/workflow-engine/dsl';
+import {
+  freshInstances,
+  programPool,
+  sandboxAnswers,
+  sandboxModuleIn,
+  type CheckJob,
+} from '@on.auto/workflow-engine/dsl';
 
 import { checkerOf } from '../src/program-check/checking.ts';
 import { sandboxLibFrom } from '../src/program-check/kept-lib.ts';
-import { sandboxLibOf } from '../src/program-check/sandbox-lib.ts';
-import { checkWorker, handedWorkersWithChecks } from '../src/program-check/save-check.ts';
+import { sandboxLibOf, compilerShippedRoots } from '../src/program-check/sandbox-lib.ts';
+import { checkWorker, handedWorkersWithChecks, checkShippedRoots } from '../src/program-check/save-check.ts';
 import { keptLibOnDisk } from '../src/testing/read-on-disk.ts';
+
+const shippedFiles = shippedFilesOnDisk({ ...compilerShippedRoots, ...checkShippedRoots });
 
 const schemas = {
   input: {
@@ -111,10 +119,10 @@ function write(line: string): void {
 const [cpu] = cpus();
 write(`Node ${process.version} on ${cpu?.model ?? 'an unknown processor'}, ${cpus().length} cores`);
 
+const sandboxModule = await sandboxModuleIn(shippedFiles);
+
 const generating = performance.now();
-const generated = await sandboxLibOf(shippedFilesOnDisk, (probed) =>
-  sandboxAnswers(freshInstances(shippedFilesOnDisk), probed),
-);
+const generated = await sandboxLibOf(shippedFiles, (probed) => sandboxAnswers(freshInstances(sandboxModule), probed));
 write(
   `the lib generated in ${(performance.now() - generating).toFixed(0)} ms: ${generated.script.length} and ${generated.iterator.length} characters`,
 );
@@ -142,7 +150,7 @@ for (const [name, job] of cases) {
   );
 }
 
-const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
+const handed = await handedWorkersWithChecks(shippedFiles);
 const pool = programPool({ workers: 1, heapMegabytes: 256, handed, instances: 'fresh' });
 const checkedBy = { worker: checkWorker };
 const cold = await pool.check({ ...computation(pace), deadlineMs: 60_000, ...checkedBy });

@@ -10,9 +10,15 @@ import {
   type FoldRequest,
   type JsonObject,
   type ProgramPool,
+  sandboxModuleIn,
+  sandboxShippedRoots,
 } from '../src/dsl.ts';
 import { foldPage } from '../src/folds/fold-page.ts';
 import { millisecondsOf } from './common.ts';
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const reviewsFold = [
   'function fieldOf(value, name) {',
@@ -103,7 +109,7 @@ function inTurn<A, B>(items: readonly A[], step: (item: A) => Promise<B>): Promi
 
 async function onAFreshPool(page: FoldRequest): Promise<number> {
   const pool = programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: 'fresh',
     workers: 1,
     heapMegabytes: 256,
@@ -117,7 +123,7 @@ async function foldedOnThisThread(
   page: FoldRequest,
 ): Promise<{ readonly milliseconds: number; readonly views: string }> {
   const folded = { views: '' };
-  const instances = await Promise.all(page.views.map(() => freshInstances(shippedFilesOnDisk)(unitMemoryBytes)));
+  const instances = await Promise.all(page.views.map(() => freshInstances(sandboxModule)(unitMemoryBytes)));
   const host = {
     now: () => performance.now(),
     folding: Function.constVoid,
@@ -161,7 +167,7 @@ export async function pagesMeasured(): Promise<readonly string[]> {
   const page = pageOf(events);
   const start = await inTurn(Array.from({ length: turns }), () => onAFreshPool(pageOf(0)));
   const pool = programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: 'fresh',
     workers: 1,
     heapMegabytes: 256,

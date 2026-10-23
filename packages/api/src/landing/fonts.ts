@@ -1,8 +1,12 @@
-import type { ShippedFiles } from '@on.auto/operations';
+import type { ShippedFile, ShippedFiles, ShippedRoots } from '@on.auto/operations';
 
-const monoFile = new URL('./fonts/dm-mono-latin-500.woff2', import.meta.url);
+const apiPackage = '@on.auto/api';
 
-const sansFile = new URL('./fonts/dm-sans-latin-variable.woff2', import.meta.url);
+export const apiShippedRoots: ShippedRoots = { [apiPackage]: new URL('../../', import.meta.url) };
+
+const monoFile: ShippedFile = { package: apiPackage, path: 'src/landing/fonts/dm-mono-latin-500.woff2' };
+
+const sansFile: ShippedFile = { package: apiPackage, path: 'src/landing/fonts/dm-sans-latin-variable.woff2' };
 
 function embedded(font: Readonly<Uint8Array>): string {
   return `url(data:font/woff2;base64,${Buffer.from(font).toString('base64')}) format('woff2')`;

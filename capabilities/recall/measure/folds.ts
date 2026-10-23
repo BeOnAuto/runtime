@@ -1,4 +1,4 @@
-import { handedWorkersWithChecks } from '@on.auto/definitions/check';
+import { handedWorkersWithChecks, checkShippedRoots } from '@on.auto/definitions/check';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { programPool, type FoldRequest, type Json, type JsonObject } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result } from 'effect';
@@ -8,7 +8,9 @@ import { parseRecallDocument } from '../src/document/document-parsing.ts';
 import { recallBounds, recallFolding } from '../src/run/recall-bounds.ts';
 import { campaignReviews } from '../src/testing/campaign-reviews.ts';
 
-const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
+const checkFiles = shippedFilesOnDisk(checkShippedRoots);
+
+const handed = await handedWorkersWithChecks(checkFiles);
 
 export interface Folded {
   readonly events: number;

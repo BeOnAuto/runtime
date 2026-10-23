@@ -67,7 +67,7 @@ function validPrefixOf(bytes: Readonly<Uint8Array>): string {
     reached = scannedAt(bytes, at, sequence);
     at += reached === 'whole' ? sequence.length : 0;
   }
-  return new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes.subarray(0, at));
+  return new TextDecoder('utf-8', { fatal: false, ignoreBOM: true }).decode(bytes.subarray(0, at));
 }
 
 function isContinuation(byte: number | undefined): boolean {
