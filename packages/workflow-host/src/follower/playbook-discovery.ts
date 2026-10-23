@@ -1,3 +1,4 @@
+import { recordedCursorOf, type RecordedPoint } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { playbookCreatedOf, playbooksStreamOfOrg } from '@on.auto/playbooks';
 import { Effect, Schema } from 'effect';
@@ -11,7 +12,6 @@ import {
 } from '../triggers/definition-records.ts';
 import type { FollowedPlaybooks } from './followed-playbooks.ts';
 import { scannedListeners } from './listener-scan.ts';
-import type { PlaybookRecords } from './playbook-records.ts';
 
 export interface Discovery {
   readonly atStart: () => Effect.Effect<void>;
@@ -22,7 +22,7 @@ export interface Discovery {
 export interface DiscoveryParts {
   readonly database: HostDatabase;
   readonly playbooks: FollowedPlaybooks;
-  readonly records: PlaybookRecords;
+  readonly placeAtOpen: RecordedPoint;
   readonly applyDefinitionRecord: ApplyDefinitionRecord;
   readonly unreadable: (playbookKey: string, record: DefinitionRecord) => Effect.Effect<void>;
   readonly definitionType: string;
@@ -78,10 +78,10 @@ function seenOf(database: HostDatabase, stream: string): Effect.Effect<number | 
   ).pipe(Effect.map((rows) => rows.at(0)?.position));
 }
 
-function followedAtTailOn({
+function followedFromTheOpenOn({
   database,
   playbooks,
-  records,
+  placeAtOpen,
   applyDefinitionRecord,
   unreadable,
   definitionType,
@@ -93,7 +93,7 @@ function followedAtTailOn({
   return (playbook: PlaybookAddress) =>
     Effect.gen(function* () {
       const playbookKey = streamPrefixOfPlaybook(playbook);
-      yield* playbooks.follow(playbookKey, yield* records.tail(playbook));
+      yield* playbooks.follow(playbookKey, recordedCursorOf(playbookKey, placeAtOpen));
       const recorded = yield* Effect.promise(() =>
         database.store.read(`${playbookKey}definitions/${definitionType}`, 0),
       );
@@ -101,7 +101,10 @@ function followedAtTailOn({
     });
 }
 
-function registryReadOn({ database, playbooks }: DiscoveryParts, followedAtTail: ReturnType<typeof followedAtTailOn>) {
+function registryReadOn(
+  { database, playbooks }: DiscoveryParts,
+  followedFromTheOpen: ReturnType<typeof followedFromTheOpenOn>,
+) {
   return ({ stream, org }: Registry, after: number | undefined, atStart: boolean) =>
     Effect.gen(function* () {
       const { messages, version } = yield* Effect.promise(() => database.store.read(stream, after ?? 0));
@@ -116,7 +119,7 @@ function registryReadOn({ database, playbooks }: DiscoveryParts, followedAtTail:
         created,
         (playbook) =>
           atStart && after === undefined
-            ? followedAtTail(playbook)
+            ? followedFromTheOpen(playbook)
             : playbooks.follow(streamPrefixOfPlaybook(playbook), null),
         { discard: true },
       );
@@ -131,7 +134,7 @@ function registryReadOn({ database, playbooks }: DiscoveryParts, followedAtTail:
 
 export function playbookDiscoveryOn(parts: DiscoveryParts): Discovery {
   const { database, playbooks } = parts;
-  const registryRead = registryReadOn(parts, followedAtTailOn(parts));
+  const registryRead = registryReadOn(parts, followedFromTheOpenOn(parts));
   const everyRegistry = Effect.gen(function* () {
     const [streams, seen] = yield* orgsOf(database);
     const seenAt = new Map(seen.map(({ stream_id: stream, position }) => [stream, position]));

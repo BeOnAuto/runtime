@@ -44,7 +44,7 @@ export function followerOn(host: FollowerHost, assembly: FollowerAssembly): Foll
   const discovery = playbookDiscoveryOn({
     database,
     playbooks,
-    records: assembly.records,
+    placeAtOpen: host.placeAtOpen,
     applyDefinitionRecord: reacting.applyDefinitionRecord,
     unreadable,
     definitionType: assembly.options.definitionType,

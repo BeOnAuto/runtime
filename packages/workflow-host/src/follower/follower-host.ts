@@ -1,3 +1,4 @@
+import type { RecordedPoint } from '@on.auto/ledger';
 import type { Conflict } from '@on.auto/operations';
 import type { RunInput, Submission } from '@on.auto/workflow-engine';
 import type { Effect } from 'effect';
@@ -14,4 +15,5 @@ export interface FollowerHost {
   readonly sweepEveryMs: number;
   readonly reports: HostReports;
   readonly context?: HostContext;
+  readonly placeAtOpen: RecordedPoint;
 }

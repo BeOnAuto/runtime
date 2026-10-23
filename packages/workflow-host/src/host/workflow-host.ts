@@ -16,7 +16,7 @@ import {
 } from './run-requests.ts';
 import { storeOf, type StoreSettings } from './workflow-store.ts';
 
-export interface HostOptions extends Omit<ServingOptions, 'clock'> {
+export interface HostOptions extends Omit<ServingOptions, 'clock' | 'placeAtOpen'> {
   readonly database: StoreSettings;
   readonly clock?: HostClock;
   readonly holder?: string;
@@ -34,7 +34,8 @@ export interface WorkflowHost {
 export async function openWorkflowHost(options: HostOptions): Promise<WorkflowHost> {
   const clock = options.clock ?? systemClock;
   const store = await storeOf(options.database, options.reports.lostConnection, options.projector?.folders ?? []);
-  const standing = await standingOn(store, { ...options, clock }, options.holder);
+  const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
+  const standing = await standingOn(store, { ...options, clock, placeAtOpen }, options.holder);
   const { guarded, closed } = gate();
   const runs = runRequests({ database: store.database, clock, serving: standing.serving });
   const stopped = async (): Promise<void> => {
