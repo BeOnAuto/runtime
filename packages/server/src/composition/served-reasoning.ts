@@ -3,14 +3,19 @@ import type { DispatcherServices } from '@on.auto/operations';
 import type { ProxySettings } from '@on.auto/outbound';
 import {
   defineListModels,
-  makeReasoningFunctionAdapter,
+  installedPackages,
   makeModelAccess,
+  makeReasoningFunctionAdapter,
+  offeredModels,
+  providerStatus,
+  type LanguageModel,
   type ModelAccess,
+  type ModelCatalog,
   type ModelSettings,
   type ModelTelemetry,
 } from '@on.auto/reasoning';
 import type { ToolAccess } from '@on.auto/tool-servers';
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 
 import { logReasoning } from '../logging/logging.ts';
 import { logModelProviders, logOperatorHint, logProviderMessage } from '../logging/provider-logging.ts';
@@ -27,6 +32,10 @@ export interface ServedReasoning {
   readonly listModels: ReturnType<typeof defineListModels>;
 }
 
+type ReasoningSettings = Pick<Settings, 'models' | 'proxy' | 'reasoning' | 'providerSetup'>;
+
+export class ComposedModels extends Context.Service<ComposedModels, ModelAccess>()('@on.auto/server/ComposedModels') {}
+
 export const loggedModelAccess: ModelAccessOf = (settings, proxy, telemetry) =>
   makeModelAccess(settings, {
     proxy,
@@ -35,25 +44,45 @@ export const loggedModelAccess: ModelAccessOf = (settings, proxy, telemetry) =>
     telemetry,
   });
 
+export function modelsComposedBy(
+  { models, proxy, providerSetup }: ReasoningSettings,
+  modelAccessOf: ModelAccessOf,
+  telemetry?: ModelTelemetry,
+): Layer.Layer<ComposedModels> {
+  return Layer.effect(ComposedModels, modelAccessOf({ ...models, providerSetup }, proxy, telemetry));
+}
+
+function languageModelOf(models: Effect.Effect<ModelAccess>): LanguageModel['Service'] {
+  return {
+    admit: (request) => Effect.flatMap(models, ({ languageModel }) => languageModel.admit(request)),
+    generate: (request) => Effect.flatMap(models, ({ languageModel }) => languageModel.generate(request)),
+  };
+}
+
+function catalogOf(models: Effect.Effect<ModelAccess>): ModelCatalog {
+  return {
+    list: (provider) => Effect.flatMap(models, ({ catalog }) => catalog.list(provider)),
+    contextWindowOf: (model) => Effect.flatMap(models, ({ catalog }) => catalog.contextWindowOf(model)),
+  };
+}
+
 export async function reasoningServedBy(
   runtime: AppRuntime<DispatcherServices>,
-  settings: Pick<Settings, 'models' | 'proxy' | 'reasoning' | 'providerSetup'>,
-  modelAccessOf: ModelAccessOf,
+  settings: ReasoningSettings,
+  models: Effect.Effect<ModelAccess>,
   tools: ToolAccess,
 ): Promise<ServedReasoning> {
-  const { languageModel, status, offered, catalog } = await Effect.runPromise(
-    modelAccessOf({ ...settings.models, providerSetup: settings.providerSetup }, settings.proxy),
-  );
+  const status = providerStatus(settings.models, installedPackages());
   await runtime.run(logModelProviders(status));
   const { mostInputTokens } = settings.reasoning;
   await runtime.run(logReasoning(mostInputTokens));
-  const reading = { mostInputTokens, contextWindowOf: catalog.contextWindowOf };
+  const catalog = catalogOf(models);
   return {
     capability: makeReasoningFunctionAdapter({
-      languageModel,
-      offered,
+      languageModel: languageModelOf(models),
+      offered: offeredModels(status.configured, settings.models.aliases, settings.models.allowed),
       tools,
-      reading,
+      reading: { mostInputTokens, contextWindowOf: catalog.contextWindowOf },
       providerSetup: settings.providerSetup,
     }),
     listModels: defineListModels(catalog, settings.providerSetup),

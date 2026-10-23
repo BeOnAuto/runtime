@@ -1,4 +1,5 @@
 export { languageModelLayer } from './adapter/language-model-layer.ts';
+export { installedPackages } from './adapter/entra-id.ts';
 export { makeModelAccess, type ModelAccess } from './adapter/model-access.ts';
 export type {
   ModelAccessOptions,
@@ -31,6 +32,7 @@ export { makeReasoningFunctionAdapter, type ReasoningFunctionAdapterOptions } fr
 export { defaultMostInputTokens, type ModelReading } from './capability/definition-request.ts';
 export type { ReasoningFunctionDefinitionDocument } from './definition/reasoning-function-definition.ts';
 export { parseModelReference, type ModelReference } from './model/model-reference.ts';
+export { offeredModels, type OfferedModels } from './model/offered-models.ts';
 export type {
   ContentPart,
   GenerationSettings,

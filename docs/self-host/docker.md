@@ -264,7 +264,7 @@ Then run `docker compose up --detach`, which replaces Auto's container because i
 Rules for the file:
 
 - Secrets stay in `auto-runtime.env`. The file refers to them by name, such as `${GATEWAY_API_KEY}`.
-- An `openapi` tool server whose entry in `tool_servers` names its OpenAPI document by a path reads that document at start, from the directory of the file. Mount the document there too, as `--volume "$PWD/billing.json:/etc/auto-runtime/billing.json:ro"`, or name it by an https URL the container can reach.
+- An `openapi` tool server whose entry in `tool_servers` names its OpenAPI document by a path reads that document from the directory of the file, the first time a request needs the tool servers. Mount the document there too, as `--volume "$PWD/billing.json:/etc/auto-runtime/billing.json:ro"`, or name it by an https URL the container can reach.
 - A document that Auto cannot read stops the start, and the error names the entry.
 
 The [configuration reference](configuration.md) describes the file and every setting.

@@ -92,16 +92,3 @@ allowed_models: []
     );
   });
 });
-
-describe('an openapi server whose document cannot be read', () => {
-  it('stops the start, naming its entry', async () => {
-    const lines = (await startupLine('tool_servers:\n  billing:\n    document: billing.json\n    org: acme\n')).split(
-      '\n',
-    );
-
-    expect(lines.at(-2)).toBe(
-      'Auto Runtime could not start: tool_server_document_refused: The documents of the tool servers could not be read. ' +
-        'TOOL_SERVERS: /billing/document: The document does not exist',
-    );
-  });
-});

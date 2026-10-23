@@ -223,7 +223,7 @@ The folder of `PREDICTION_CACHE_DIR` follows these rules:
 
 - At start, the server creates the folder when it is missing, readable only by its own user, and does the same for each folder within it.
 - It refuses to start, naming the setting, when the folder cannot be made, belongs to another user, or other users may write to it. A folder another user may write to would let that user change a model before it is loaded.
-- The files found in the folder at start are read again, and kept only when their bytes match the digest in their name.
+- The files found in the folder are read again when a prediction first uses them, and kept only when their bytes match the digest in their name.
 - Each server keeps at most 1 GiB of model files and 1 GiB of rows, by its own count. Give two servers on one machine a folder each.
 
 ## Usage ping {#usage-ping}
@@ -276,11 +276,11 @@ A tool server gives functions tools to call. It comes from one of two places: an
 
 Each entry is one of three types. When `type` is left out, it is taken from the field that names the server:
 
-| Type      | Named by   | What it is                                                                                                       |
-| --------- | ---------- | ---------------------------------------------------------------------------------------------------------------- |
-| `mcp`     | `url`      | A remote MCP server, spoken to over Streamable HTTP                                                              |
-| `stdio`   | `command`  | An MCP server the runtime runs as a process                                                                      |
-| `openapi` | `document` | An HTTP API described by an OpenAPI document, 3.0 or 3.1, read once at start. Each of its operations is one tool |
+| Type      | Named by   | What it is                                                                                                                                           |
+| --------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mcp`     | `url`      | A remote MCP server, spoken to over Streamable HTTP                                                                                                  |
+| `stdio`   | `command`  | An MCP server the runtime runs as a process                                                                                                          |
+| `openapi` | `document` | An HTTP API described by an OpenAPI document, 3.0 or 3.1, read once, when a request first needs the tool servers. Each of its operations is one tool |
 
 ```yaml
 tool_servers:
@@ -396,10 +396,10 @@ Which credentials a call sends:
 - An operation is offered as a tool when the entry gives one of its alternatives.
 - A call sends the credentials of the first alternative the entry gives, in the document's order, and no other. Where the operation needs a header that the entry's `headers` do not name, it sends the first alternative the entry gives whose `apiKey` schemes place that header instead.
 - An operation whose requirement is empty, or of a document that declares none, sends none.
-- An operation for which the entry gives none of the alternatives is not offered as a tool. At start, the server logs a warning that names the schemes it needs.
+- An operation for which the entry gives none of the alternatives is not offered as a tool. When it reads the document, the server logs a warning that names the schemes it needs.
 - The scopes an `oauth2` requirement names are the operation's. The `auth` block asks for its own `scope`, so set it to cover what the operations require.
 
-The server stops at start, naming the entry, when:
+The server refuses the documents as it reads them, naming the entry, when:
 
 - a name under `security` is not a scheme the document declares;
 - a name under `security` is an `apiKey` the document places in a cookie;
@@ -412,7 +412,7 @@ The server stops at start, naming the entry, when:
 
 ### How an HTTP API becomes tools
 
-At start the server reads each `openapi` entry's document: at most 4 MiB and 500 operations, within 10 seconds. It stops, naming the entry, when:
+The server reads each `openapi` entry's document the first time a request needs the tool servers, such as a `search`, a call made with `execute`, a run of a function that calls tools, or a request of an interaction function that comes due: at most 4 MiB and 500 operations, within 10 seconds. It refuses the documents, naming the entry, when:
 
 - it cannot read the document;
 - the document's URL responds with a redirect, which the server does not follow;
@@ -425,6 +425,8 @@ At start the server reads each `openapi` entry's document: at most 4 MiB and 500
 - a reference does not resolve inside the document. This includes a reference to an http, https or file address, which the server never fetches;
 - its calls would have nowhere to go: no `base_url` and no server, or a server that is neither https nor on a loopback address.
 
+A refusal fails the request that needed the tool servers, with the incident of an unexpected error, and the server logs the incident with the refusal, naming the entry and the place. The next request reads the documents again, so a document put right while the server runs is read without a restart.
+
 Trailing slashes on `base_url` or on the server's URL are dropped.
 
 Each operation becomes one tool:
@@ -434,7 +436,7 @@ Each operation becomes one tool:
 - Its input is one object: each path and query parameter by its name, and `body` for a JSON request body, each required when the document says so. The schemas of `components` they refer to are held inside it, so a function's model reads one schema whole.
 - `GET` and `HEAD` are read-only, `DELETE` destructive, and `GET`, `HEAD`, `PUT` and `DELETE` idempotent. So `allowed`, `search` and a run's read-only calls read an API's tools as they read an MCP server's.
 
-Some operations are not offered as tools. At start, the server logs a warning for each operation it leaves out, naming the entry and the reason. It leaves out an operation that:
+Some operations are not offered as tools. When it reads the document, the server logs a warning for each operation it leaves out, naming the entry and the reason. It leaves out an operation that:
 
 - needs a cookie;
 - needs a header that the entry's `headers` do not name and its security scheme does not place. The warning says that `headers` can give it, or, for a header the server sets itself such as `Host`, that it does. A header parameter named `Accept`, `Content-Type` or `Authorization` is ignored, as the OpenAPI specification says;
