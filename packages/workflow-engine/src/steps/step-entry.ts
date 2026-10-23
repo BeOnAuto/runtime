@@ -61,21 +61,6 @@ export const ResumedSchema = Schema.Struct({ reference: Schema.String, run: RunC
 
 export type Resumed = typeof ResumedSchema.Type;
 
-const utf8 = new TextEncoder();
-
-export function cutToBytes(text: string, mostBytes: number): string {
-  let bytes = 0;
-  let end = 0;
-  for (const character of text) {
-    bytes += utf8.encode(character).byteLength;
-    if (bytes > mostBytes) {
-      return text.slice(0, end);
-    }
-    end += character.length;
-  }
-  return text;
-}
-
 export function keyOf({ reference, run, outcome, times }: Step): StepKey {
   return { reference, run, outcome, times };
 }
