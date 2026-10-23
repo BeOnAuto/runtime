@@ -35,6 +35,16 @@ describe('a page at an allowed origin, sending the session the identity service 
     },
   );
 
+  it('acts in the org of its subject when the session names no org, and is refused every other with 403', async () => {
+    const { server, fromPage } = await signedInServer();
+    const headers = await fromPage(defaultStudioOrigin, { o: undefined, sub: 'user_2ada' });
+
+    expect([
+      (await call(server.handler, '/v1/orgs/user_2ada/playbook-labels', { headers })).status,
+      (await call(server.handler, '/v1/orgs/acme/playbook-labels', { headers })).status,
+    ]).toEqual([200, 403]);
+  });
+
   it('is refused every other org with 403', async () => {
     const { server, fromPage } = await signedInServer();
 
@@ -65,11 +75,11 @@ describe('a session the runtime refuses', () => {
     expect(answer.headers.get('www-authenticate')).toMatch(/^Bearer error="invalid_token", /u);
   });
 
-  it('is answered 401 for a session without an organization, naming the o claim', async () => {
+  it('is answered 401 for a session that names its org in org_id, not o, naming the o claim', async () => {
     const { server, fromPage } = await signedInServer();
 
     const answer = await call(server.handler, '/v1/orgs/acme/playbook-labels', {
-      headers: await fromPage(defaultStudioOrigin, { o: undefined }),
+      headers: await fromPage(defaultStudioOrigin, { o: undefined, org_id: 'acme' }),
     });
 
     expect(answer).toMatchObject({

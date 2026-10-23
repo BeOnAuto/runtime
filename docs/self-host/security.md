@@ -4,13 +4,13 @@ Every request to the runtime comes from a caller. This page covers the tasks of 
 
 The runtime recognizes three kinds of caller:
 
-| Caller              | Who uses it                                                                                                 | How it authenticates                                                                                                  | What it may do                                                                                  |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| A signed-in person  | People, through their agent, an agent gateway, Auto Studio or a page you allow                              | Signs in through the Auto identity service, then sends a token or a page's session as `Authorization: Bearer <token>` | Acts in the org they signed in to, over every playbook, with the permissions their token grants |
-| An API key          | A machine, a pipeline or a trainer's agent that does not sign in, or any caller that needs a narrower grant | Sends a key listed in `API_KEYS` as `Authorization: Bearer <key>`                                                     | Acts in its one org, with the permissions and playbooks its entry lists                         |
-| The local developer | You, on your own machine, in [local mode](#local-mode)                                                      | Nothing: every request is trusted                                                                                     | Acts with every permission in whichever org a request names                                     |
+| Caller              | Who uses it                                                                                                 | How it authenticates                                                                                                  | What it may do                                                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| A signed-in person  | People, through their agent, an agent gateway, Auto Studio or a page you allow                              | Signs in through the Auto identity service, then sends a token or a page's session as `Authorization: Bearer <token>` | Acts in the org they signed in to, or in their own where they signed in to none, over every playbook, with the permissions their token grants |
+| An API key          | A machine, a pipeline or a trainer's agent that does not sign in, or any caller that needs a narrower grant | Sends a key listed in `API_KEYS` as `Authorization: Bearer <key>`                                                     | Acts in its one org, with the permissions and playbooks its entry lists                                                                       |
+| The local developer | You, on your own machine, in [local mode](#local-mode)                                                      | Nothing: every request is trusted                                                                                     | Acts with every permission in whichever org a request names                                                                                   |
 
-An [org](../concepts/terminology.md#orgs-and-callers) is the runtime's name for an organization in the Auto identity service.
+An [org](../concepts/terminology.md#orgs-and-callers) is the runtime's name for an organization in the Auto identity service, or for the org of a person who signs in with none, whose id is their subject.
 
 ## Who can call a server
 
@@ -64,7 +64,7 @@ With sign-in on, the server checks the identity service before it accepts a requ
 
 ### Organizations
 
-An org's id is its organization's id: a person who signs in to the organization `acme` acts in the org `acme`. The runtime keeps no list of people or orgs, since each token names its org.
+An org's id is its organization's id: a person who signs in to the organization `acme` acts in the org `acme`. A person who signs in with no organization of their own acts in an org of their own, whose id is the subject of their token, and in no other. The runtime keeps no list of people or orgs, since each token names its org, or, naming none, its subject does.
 
 A company whose people sign in through its own identity provider connects that provider to the identity service in Studio, not in the runtime. The runtime trusts one issuer, whichever provider a person used.
 

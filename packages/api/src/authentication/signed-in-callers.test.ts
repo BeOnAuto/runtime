@@ -104,6 +104,18 @@ describe('a request without a valid token, with sign-in on', () => {
   });
 });
 
+describe('a signed-in person whose token names no org, over HTTP', () => {
+  it('is admitted to the org of their subject, and refused every other with 403', async () => {
+    const { server, bearer } = await signedInServer();
+    const namingNoOrg = await bearer({ org_id: undefined, sub: 'user_2ada' });
+
+    expect([
+      (await call(server.handler, '/v1/orgs/user_2ada/playbook-labels', { headers: namingNoOrg })).status,
+      (await call(server.handler, '/v1/orgs/acme/playbook-labels', { headers: namingNoOrg })).status,
+    ]).toEqual([200, 403]);
+  });
+});
+
 describe('a token the runtime refuses, with sign-in on', () => {
   it('is answered 401 with invalid_token for an opaque token', async () => {
     const { server } = await signedInServer();
@@ -122,7 +134,11 @@ describe('a token the runtime refuses, with sign-in on', () => {
   });
 
   it.each([
-    ['no org', { org_id: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim'],
+    [
+      'its org in o, not org_id',
+      { org_id: undefined, o: { id: 'acme' } },
+      'ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim',
+    ],
     ['no sub', { sub: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its sub claim'],
     ['an expired one', { exp: 1 }, 'ERR_JWT_EXPIRED on its exp claim'],
   ])(

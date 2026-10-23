@@ -94,6 +94,30 @@ describe('a session read for its o claim', () => {
   });
 });
 
+describe('a session that names no org', () => {
+  it('is the person of the org of its sub, with every permission over every playbook, and of no other org', async () => {
+    const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const claims = { o: undefined, sub: 'user_2ada' };
+    const person = principalIn(
+      await identityService.personOf(await session(defaultStudioOrigin, claims), '', defaultStudioOrigin),
+    );
+
+    expect(person?.own).toEqual({ id: 'person:user_2ada', org: 'user_2ada', ...everyPermissionOverEveryPlaybook });
+    expect(person?.callerIn('acme')).toBeUndefined();
+  });
+
+  it('is refused for a sub that is no org id, naming the claim the org would come from', async () => {
+    const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const claims = { o: undefined, sub: 'user|ada' };
+
+    expect(await identityService.personOf(await session(defaultStudioOrigin, claims), '', defaultStudioOrigin)).toEqual(
+      {
+        because: 'its sub claim is not an org id other than local',
+      },
+    );
+  });
+});
+
 describe('a session given to the page the runtime serves at its own origin', () => {
   it('is the person of its org where the runtime serves Studio, since its public URL is then a page origin', async () => {
     const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart, servedStudio);
@@ -142,7 +166,6 @@ const refusedSessions: ReadonlyArray<readonly [string, string, Claims, string]> 
   ['the studio with a final slash', `${defaultStudioOrigin}/`, {}, pageRefusal],
   ['the public URL of the runtime', testPublicUrl, {}, pageRefusal],
   ['an azp that is not a string', defaultStudioOrigin, { azp: 7 }, pageRefusal],
-  ['no o', defaultStudioOrigin, { o: undefined }, noOrgClaim],
   ['no o, though it holds an org_id', defaultStudioOrigin, { o: undefined, org_id: 'acme' }, noOrgClaim],
   ['an o that is no object', defaultStudioOrigin, { o: 'acme' }, orgRefusal],
   ['an o without an id', defaultStudioOrigin, { o: {} }, orgRefusal],

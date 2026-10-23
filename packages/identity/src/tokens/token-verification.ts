@@ -31,17 +31,25 @@ type Payload = Readonly<Record<string, unknown>>;
 
 type Form = 'access token' | 'session';
 
-const orgClaimPaths: Readonly<Record<Form, readonly [string, ...string[]]>> = {
+type ClaimPath = readonly [string, ...string[]];
+
+const orgClaimPaths: Readonly<Record<Form, ClaimPath>> = {
   'access token': ['org_id'],
   session: ['o', 'id'],
 };
 
-function orgClaimOf(form: Form): string {
-  return orgClaimPaths[form][0];
+const subjectAsOrg: ClaimPath = ['sub'];
+
+function namesNoOrg(payload: Payload): boolean {
+  return Object.values(orgClaimPaths).every(([claim]) => !Predicate.hasProperty(payload, claim));
 }
 
-function orgIn(payload: Payload, form: Form): unknown {
-  return orgClaimPaths[form].reduce<unknown>(
+function orgClaimPathOf(payload: Payload, form: Form): ClaimPath {
+  return namesNoOrg(payload) ? subjectAsOrg : orgClaimPaths[form];
+}
+
+function orgIn(payload: Payload, path: ClaimPath): unknown {
+  return path.reduce<unknown>(
     (claims, claim) => (Predicate.hasProperty(claims, claim) ? claims[claim] : undefined),
     payload,
   );
@@ -81,9 +89,16 @@ function optionsOf({ issuer, audiences, now }: Expected, form: Form): JWTVerifyO
     ...(form === 'access token' ? { audience: [...audiences] } : {}),
     algorithms: signingAlgorithms,
     clockTolerance: leewaySeconds,
-    requiredClaims: ['exp', 'sub', orgClaimOf(form)],
+    requiredClaims: ['exp', 'sub'],
     currentDate: new Date(now),
   };
+}
+
+function orgClaimRefusal(payload: Payload, form: Form): string | undefined {
+  const [claim] = orgClaimPaths[form];
+  return namesNoOrg(payload) || Predicate.hasProperty(payload, claim)
+    ? undefined
+    : onItsClaim(errors.JWTClaimValidationFailed.code, claim);
 }
 
 function typeRefusal(typ: unknown): string | undefined {
@@ -119,7 +134,8 @@ function permissionsGrantedBy({ [scopeClaim]: scope = '' }: Payload, form: Form)
 
 function personIn(payload: Payload, form: Form, now: number): string | VerifiedPerson {
   const { iat, sub } = payload;
-  const org = orgIn(payload, form);
+  const orgClaimPath = orgClaimPathOf(payload, form);
+  const org = orgIn(payload, orgClaimPath);
   if (Predicate.isNumber(iat) && iat > now / 1000 + leewaySeconds) {
     return `its iat is more than ${leewaySeconds} seconds ahead`;
   }
@@ -127,7 +143,7 @@ function personIn(payload: Payload, form: Form, now: number): string | VerifiedP
     return `its sub is not a non-empty string of at most ${mostReferenceBytes} bytes without ${forbiddenCharactersInWords}`;
   }
   if (!isCredentialOrg(org)) {
-    return `its ${orgClaimPaths[form].join('.')} claim is not an org id other than local`;
+    return `its ${orgClaimPath.join('.')} claim is not an org id other than local`;
   }
   const permissions = permissionsGrantedBy(payload, form);
   return Predicate.isString(permissions) ? permissions : { subject: sub, org, permissions };
@@ -137,7 +153,10 @@ async function verified(token: string, keySet: JWTVerifyGetKey, expected: Expect
   const form = formOf(token);
   const { payload, protectedHeader } = await jwtVerify(token, keySet, optionsOf(expected, form));
   return (
-    typeRefusal(protectedHeader.typ) ?? pageRefusal(payload, form, expected) ?? personIn(payload, form, expected.now)
+    orgClaimRefusal(payload, form) ??
+    typeRefusal(protectedHeader.typ) ??
+    pageRefusal(payload, form, expected) ??
+    personIn(payload, form, expected.now)
   );
 }
 
