@@ -21,6 +21,7 @@ export interface GivenLineage {
   readonly callDepth: number;
   readonly calledBy: CallLink | null;
   readonly trigger: TriggerLink | null;
+  readonly attemptDied: boolean;
 }
 
 export class CallLineage extends Context.Service<CallLineage, GivenLineage>()('@on.auto/operations/CallLineage') {}

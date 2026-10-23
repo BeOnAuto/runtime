@@ -23,7 +23,7 @@ export interface PlaybookBinding {
 }
 
 export function playbookServicesOf(
-  { caller, org, playbook, lineage, depth, callDepth, calledBy, trigger }: PlaybookRequest,
+  { caller, org, playbook, lineage, depth, callDepth, calledBy, trigger, attemptDied }: PlaybookRequest,
   { ledger, lifecycle }: PlaybookBinding,
 ) {
   const prefix = streamPrefixOfPlaybook({ org, playbook });
@@ -46,6 +46,7 @@ export function playbookServicesOf(
       callDepth: callDepth ?? 0,
       calledBy: calledBy ?? null,
       trigger: trigger ?? null,
+      attemptDied: attemptDied === true,
     }),
   );
   return { forQueries, forCommands };

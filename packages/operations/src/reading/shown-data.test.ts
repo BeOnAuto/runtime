@@ -51,6 +51,29 @@ describe('the data of an event on a page', () => {
   });
 });
 
+describe('the data of a model call on a page', () => {
+  it('shows its messages, its response, the tool calls it asked for, its warnings and its issues by the same rule', () => {
+    const data = {
+      messages_bytes: 9000,
+      messages: { said: textOfBytes(mostShownFieldBytes) },
+      response_bytes: 20,
+      response: [{ role: 'assistant' }],
+      tool_calls: [{ call_id: textOfBytes(mostShownFieldBytes) }],
+      warnings: [{ detail: textOfBytes(mostShownFieldBytes) }],
+      issues: [],
+    };
+
+    expect(shownData(data, 'page')).toEqual({
+      messages_bytes: 9000,
+      response_bytes: 20,
+      response: [{ role: 'assistant' }],
+      tool_calls_bytes: mostShownFieldBytes + 14,
+      warnings_bytes: mostShownFieldBytes + 13,
+      issues: [],
+    });
+  });
+});
+
 describe('the data of an event read whole', () => {
   it('shows every field whole', () => {
     const data = { output: textOfBytes(10_000), result: { content: [] } };

@@ -4,7 +4,20 @@ import { mostPublicEventDataBytes, mostShownFieldBytes, mostToolFieldBytes } fro
 
 export type EventView = 'page' | 'whole' | 'tool';
 
-const largeFields: readonly string[] = ['input', 'output', 'record', 'answer', 'arguments', 'result', 'data'];
+const largeFields: readonly string[] = [
+  'input',
+  'output',
+  'record',
+  'answer',
+  'arguments',
+  'result',
+  'data',
+  'messages',
+  'response',
+  'tool_calls',
+  'warnings',
+  'issues',
+];
 
 const utf8 = new TextEncoder();
 
