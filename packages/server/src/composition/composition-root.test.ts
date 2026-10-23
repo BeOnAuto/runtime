@@ -27,6 +27,7 @@ describe('the services the playbook operations run on', () => {
     await runtime.dispose();
 
     expect(keys.filter((key) => !key.startsWith('effect/')).toSorted()).toEqual([
+      '@on.auto/definitions/LiveAttempts',
       '@on.auto/ledger/LedgerChores',
       '@on.auto/ledger/LedgerConnection',
       '@on.auto/operations/IncidentReporter',

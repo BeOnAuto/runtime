@@ -3,7 +3,7 @@ import { storesAndConnectionsOf } from '../connections/served-connections.ts';
 import { ledgerConnectionIn, ledgerDatabaseOf, withARefusedLayoutExplained } from '../database/ledger-database.ts';
 import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
-import { applicationLayer } from './application-layer.ts';
+import { applicationLayer, withLiveAttemptsClosedFirst } from './application-layer.ts';
 import { functionWiringOf, type FunctionWiring } from './function-wiring.ts';
 import { ledgerLayerFor } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
@@ -54,7 +54,7 @@ export function compositionRootWith(
           ...(clock === undefined ? {} : { clock }),
         };
         const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
-        return { ...served, routes: [...served.routes, clientMetadata] };
+        return withLiveAttemptsClosedFirst(runtime, { ...served, routes: [...served.routes, clientMetadata] });
       },
     };
   });
