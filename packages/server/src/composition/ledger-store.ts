@@ -28,8 +28,10 @@ export function ledgerLayerFor(
   database: LedgerDatabase,
   appends?: AppendSignal,
 ): Layer.Layer<Ledger> {
-  const content = contentStoreOf(settings);
-  return content === undefined
+  const composing = contentStoreOf(settings);
+  return composing === undefined
     ? ledgerLayerOf(database, appends)
-    : Layer.unwrap(Effect.as(content.reached, ledgerLayerOf(database, appends, content.store)));
+    : Layer.unwrap(
+        Effect.flatMap(composing, ({ reached, store }) => Effect.as(reached, ledgerLayerOf(database, appends, store))),
+      );
 }

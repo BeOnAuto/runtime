@@ -1,5 +1,5 @@
 import type { Environment } from '@on.auto/config';
-import { contentLocationOf, type ContentLocation } from '@on.auto/object-storage';
+import { contentLocationOf, type ContentLocation } from '@on.auto/object-storage/location';
 import { Config, ConfigProvider, Effect, Option } from 'effect';
 
 import { InvalidSettingsError } from './invalid-settings-error.ts';

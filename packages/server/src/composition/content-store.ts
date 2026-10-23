@@ -1,4 +1,3 @@
-import { objectContentOn, objectStoreReached, storageClientOf } from '@on.auto/object-storage';
 import type { ContentStore } from '@on.auto/operations';
 import { awsCredentialChain } from '@on.auto/outbound/aws';
 import { Effect } from 'effect';
@@ -17,23 +16,32 @@ function hostOf(endpoint: string | undefined): string {
   return endpoint === undefined ? 'the S3 endpoint of its region' : new URL(endpoint).host;
 }
 
-export function contentStoreOf({ content, proxy }: ContentStoreSettings): ComposedContentStore | undefined {
+export function contentStoreOf({
+  content,
+  proxy,
+}: ContentStoreSettings): Effect.Effect<ComposedContentStore> | undefined {
   if (content.store === 'ledger') {
     return undefined;
   }
   const { endpoint, region, location } = content;
-  const client = storageClientOf({ endpoint, region, proxy }, awsCredentialChain(proxy));
-  client.middlewareStack.add(commandSpansIn(location.bucket), commandSpanStep);
   const unreachable = (answer: string) =>
     new Error(
       `CONTENT_STORE_URL names the bucket ${location.bucket} on ${hostOf(endpoint)}, which could not be reached: ${answer}`,
     );
-  return {
-    store: objectContentOn(() => client, location),
-    reached: objectStoreReached(() => client, location).pipe(
-      Effect.catchTag('object_store_unreachable', ({ answer }: { readonly answer: string }) =>
-        Effect.die(unreachable(answer)),
+  return Effect.gen(function* () {
+    const { objectContentOn, objectStoreReached, storageClientOf } = yield* Effect.promise(
+      () => import('@on.auto/object-storage'),
+    );
+    const client = storageClientOf({ endpoint, region, proxy }, awsCredentialChain(proxy));
+    client.middlewareStack.add(commandSpansIn(location.bucket), commandSpanStep);
+    const composed: ComposedContentStore = {
+      store: objectContentOn(() => client, location),
+      reached: objectStoreReached(() => client, location).pipe(
+        Effect.catchTag('object_store_unreachable', ({ answer }: { readonly answer: string }) =>
+          Effect.die(unreachable(answer)),
+        ),
       ),
-    ),
-  };
+    };
+    return composed;
+  });
 }

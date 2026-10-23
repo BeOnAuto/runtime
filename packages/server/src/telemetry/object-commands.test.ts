@@ -39,17 +39,17 @@ async function aStoreHoldingNothing(): Promise<string> {
   return `http://127.0.0.1:${String(decodeAddress(server.address()).port)}`;
 }
 
-function composedOn(environment: Readonly<Record<string, string>>): ComposedContentStore {
+function composedOn(environment: Readonly<Record<string, string>>): Promise<ComposedContentStore> {
   vi.stubEnv('AWS_ACCESS_KEY_ID', 'an-access-key');
   vi.stubEnv('AWS_SECRET_ACCESS_KEY', 'a-secret-access-key');
   onTestFinished(() => {
     vi.unstubAllEnvs();
   });
-  const composed = contentStoreOf(readSettingsOf(environment));
-  if (composed === undefined) {
+  const composing = contentStoreOf(readSettingsOf(environment));
+  if (composing === undefined) {
     throw new TypeError('CONTENT_STORE_URL is set, so the content is kept in an object store');
   }
-  return composed;
+  return Effect.runPromise(composing);
 }
 
 async function spansOfAReadOfNothing(): Promise<readonly ExportedSpan[]> {
@@ -63,7 +63,7 @@ async function spansOfAReadOfNothing(): Promise<readonly ExportedSpan[]> {
     OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
   };
   const telemetry = startTelemetry(readSettingsOf(environment).telemetry);
-  const { reached, store } = composedOn(environment);
+  const { reached, store } = await composedOn(environment);
   await Effect.runPromise(reached);
   await Effect.runPromise(store.content.get(alpha, sha256Of('{"kept":false}')));
   await telemetry.shutdown();
