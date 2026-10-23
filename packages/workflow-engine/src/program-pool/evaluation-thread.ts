@@ -30,7 +30,7 @@ export interface PoolEvaluations {
 }
 
 interface Live {
-  readonly worker: Worker;
+  readonly stop: () => Promise<number>;
   readonly port: MessagePort;
   readonly flags: Int32Array;
   readonly ready: Promise<void>;
@@ -60,7 +60,7 @@ function started(module: Readonly<URL>, settings: PoolSettings): Live {
     workerData: { port: port2, flags: flags.buffer, ...handedData(settings, module) },
     transferList: [port2],
   });
-  const state = { gone: false };
+  const state = { gone: false, stopping: false };
   const ended = Promise.withResolvers<void>();
   const end = (): void => {
     state.gone = true;
@@ -70,8 +70,14 @@ function started(module: Readonly<URL>, settings: PoolSettings): Live {
   const signalled = Promise.resolve(Atomics.waitAsync(flags, readyFlag, 0).value);
   const ready = (async (): Promise<void> => {
     await Promise.race([signalled, ended.promise]);
-    worker.unref();
+    if (!state.stopping) {
+      worker.unref();
+    }
   })();
+  const stop = (): Promise<number> => {
+    state.stopping = true;
+    return worker.terminate();
+  };
   const post = (request: AnsweredRequest, waitMs: number): void => {
     port1.postMessage({ ...request, evaluation: { ...request.evaluation, deadlineAt: absoluteNow() + waitMs } }, []);
   };
@@ -90,7 +96,7 @@ function started(module: Readonly<URL>, settings: PoolSettings): Live {
     post(request, waitMs);
     return promise;
   };
-  return { worker, port: port1, flags, ready, gone: () => state.gone, post, answer };
+  return { stop, port: port1, flags, ready, gone: () => state.gone, post, answer };
 }
 
 function remainingUntil(at: number): number {
@@ -107,7 +113,7 @@ function keeperOf(module: Readonly<URL>, settings: PoolSettings): Keeper {
       return state.closed ? undefined : state.live;
     },
     replaced: () => {
-      void state.live?.worker.terminate();
+      void state.live?.stop();
       state.live = started(module, settings);
     },
     release: (unit) => {
@@ -115,7 +121,7 @@ function keeperOf(module: Readonly<URL>, settings: PoolSettings): Keeper {
     },
     close: async () => {
       state.closed = true;
-      await state.live?.worker.terminate();
+      await state.live?.stop();
     },
   };
 }
