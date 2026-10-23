@@ -39,7 +39,20 @@ interface Waiting {
 
 export type CallAnswer = CallResult | Waiting;
 
-export type Perform = (call: StartCall, run: RunContext, origin: OutputOrigin) => Effect.Effect<CallAnswer>;
+export interface CallAttempt {
+  readonly attemptDied: boolean;
+}
+
+export type Perform = (
+  call: StartCall,
+  run: RunContext,
+  origin: OutputOrigin,
+  attempt: CallAttempt,
+) => Effect.Effect<CallAnswer>;
+
+const firstAttempt: CallAttempt = { attemptDied: false };
+
+const afterAnAttemptDied: CallAttempt = { attemptDied: true };
 
 export type Deliver = (key: CallKey, result: CallResult) => Effect.Effect<unknown, unknown>;
 
@@ -72,7 +85,7 @@ interface Starting {
 }
 
 interface Calls {
-  readonly begin: (key: string, starting: Starting, parent?: SpanIdentity) => void;
+  readonly begin: (key: string, starting: Starting, attempt: CallAttempt, parent?: SpanIdentity) => void;
   readonly answerAgain: (key: string, callKey: CallKey, result: CallResult) => void;
   readonly isRunning: (key: string) => boolean;
   readonly interrupt: (key: string) => Effect.Effect<void>;
@@ -137,10 +150,10 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
     answer.status === 'waiting' ? waited(key, call, answer.child) : settled(key, call, answer);
   const roots = runSerialiser();
   return {
-    begin: (key, { call, run, origin }, parent) => {
+    begin: (key, { call, run, origin }, attempt, parent) => {
       running.run(
         key,
-        atOnce.withPermit(perform(call, run, origin)).pipe(
+        atOnce.withPermit(perform(call, run, origin, attempt)).pipe(
           Effect.flatMap((answer) => answered(key, call, answer)),
           Effect.catchCause((cause: Cause.Cause<unknown>) => trouble('A call could not record its answer', cause)),
           Effect.withSpan(`call ${call.function}`, callSpanOf(call, parent)),
@@ -176,7 +189,7 @@ function startedOnce(
     }
     const inserted = yield* startedRow(database, key, { call, run, origin, child: childOf(call, run), root });
     if (inserted) {
-      calls.begin(key, { call, run, origin }, yield* currentSpanIdentity);
+      calls.begin(key, { call, run, origin }, firstAttempt, yield* currentSpanIdentity);
     }
     return inserted;
   }).pipe((counted) => calls.underItsRoot(correlationOfRun(run.runId, run.attributes), counted));
@@ -200,7 +213,7 @@ function startedAgain(
   if (state === 'waiting' || calls.isRunning(key)) {
     return 'running';
   }
-  calls.begin(key, starting, parent);
+  calls.begin(key, starting, afterAnAttemptDied, parent);
   return 'started_again';
 }
 
@@ -216,7 +229,7 @@ function started(parts: ExecutorParts, calls: Calls, starting: Starting): Effect
 
 function resumedIn(calls: Calls, { key, call, run, origin, result }: UnfinishedCall): void {
   if (result === null) {
-    calls.begin(key, { call, run, origin });
+    calls.begin(key, { call, run, origin }, afterAnAttemptDied);
   } else {
     calls.answerAgain(key, call.key, result);
   }

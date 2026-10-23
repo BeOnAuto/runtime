@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { callResultOfEnding, definitionCalls } from './function-calls.ts';
 import type { DefinitionRunRequest, DefinitionRunResult } from './function-run.ts';
 
+const firstAttempt = { attemptDied: false };
+
 const workflowRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const run = {
@@ -54,7 +56,7 @@ describe('a workflow call of a workflow', () => {
   it('starts the workflow one call deeper, naming the call it answers, and waits for its run', async () => {
     const { perform, asked } = answering({ status: 'waiting' });
 
-    const answer = await Effect.runPromise(perform(review, run, { version: 2 }));
+    const answer = await Effect.runPromise(perform(review, run, { version: 2 }, firstAttempt));
 
     expect(answer).toEqual({ status: 'waiting', child: nestedRunId(workflowRun, '/do/0/review', 2) });
     expect(asked()).toMatchObject([
