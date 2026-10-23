@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { authenticatorFor, createApiKey, defaultStudioOrigin, type ApiKey, type IdentityService } from '../index.ts';
+import {
+  authenticatorFor,
+  createApiKey,
+  defaultStudioOrigin,
+  type ApiKey,
+  type ApiKeySource,
+  type IdentityService,
+} from '../index.ts';
 import { fakeIssuer, principalIn } from '../testing/index.ts';
 
 const reader = createApiKey({ id: 'acme-reader', org: 'acme', permissions: ['playbook:read'], playbooks: ['alpha'] });
@@ -193,5 +200,72 @@ describe('authenticatorFor with the identity service', () => {
     expect(principalIn(await authenticator.authenticate(admin.key, anyPath))?.own.id).toBe('acme-admin');
     expect(await authenticator.authenticate(wrongSecret, anyPath)).toEqual(unexplained);
     expect(tokensSeen).toEqual([]);
+  });
+});
+
+interface FakeKeySource extends ApiKeySource {
+  readonly revoke: (id: string) => void;
+  readonly asked: () => readonly string[];
+}
+
+function fakeKeySource(entries: readonly ApiKey[]): FakeKeySource {
+  const held = new Map(entries.map((entry) => [entry.id, entry]));
+  const asked: string[] = [];
+  return {
+    keyOf: (id) => {
+      asked.push(id);
+      return Promise.resolve(held.get(id));
+    },
+    revoke: (id) => {
+      held.delete(id);
+    },
+    asked: () => [...asked],
+  };
+}
+
+describe('authenticatorFor with a source of API keys', () => {
+  it('admits a key the source answers, asking it for the id the key names', async () => {
+    const source = fakeKeySource([reader.entry]);
+    const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys, apiKeySource: source });
+
+    expect(principalIn(await authenticator.authenticate(reader.key, anyPath))?.own.id).toBe('acme-reader');
+    expect(source.asked()).toEqual(['acme-reader']);
+  });
+
+  it('refuses a key the source does not know, though the configured list holds it', async () => {
+    const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys, apiKeySource: fakeKeySource([]) });
+
+    expect(await authenticator.authenticate(admin.key, anyPath)).toEqual(unexplained);
+  });
+
+  it('refuses a key on the authenticator that admitted it, once the source answers nothing for it', async () => {
+    const source = fakeKeySource(keys);
+    const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys, apiKeySource: source });
+    const beforeTheRevocation = principalIn(await authenticator.authenticate(admin.key, anyPath))?.own.id;
+    source.revoke('acme-admin');
+
+    expect([beforeTheRevocation, await authenticator.authenticate(admin.key, anyPath)]).toEqual([
+      'acme-admin',
+      unexplained,
+    ]);
+    expect(principalIn(await authenticator.authenticate(reader.key, anyPath))?.own.id).toBe('acme-reader');
+  });
+
+  it('asks the source nothing for a credential that is not a key, and refuses it', async () => {
+    const source = fakeKeySource(keys);
+    const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys, apiKeySource: source });
+
+    expect(await authenticator.authenticate('abk_not-a-key', anyPath)).toEqual(unexplained);
+    expect(source.asked()).toEqual([]);
+  });
+
+  it('asks the source nothing in local mode or once closed, where no key is checked', async () => {
+    const source = fakeKeySource(keys);
+    const local = authenticatorFor({ host: '127.0.0.1', apiKeys: undefined, apiKeySource: source });
+    const closed = authenticatorFor({ host: '0.0.0.0', apiKeys: [], apiKeySource: source });
+
+    expect(principalIn(await local.authenticate(admin.key, anyPath))?.own.id).toBe('local');
+    expect(await closed.authenticate(admin.key, anyPath)).toEqual(unexplained);
+    expect(source.asked()).toEqual([]);
   });
 });

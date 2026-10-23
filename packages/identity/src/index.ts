@@ -1,4 +1,5 @@
 export { createApiKey, type ApiKey, type CreatedKey, type KeyGrant } from './keys/api-key.ts';
+export { configuredApiKeys, type ApiKeySource } from './keys/api-key-source.ts';
 export { ApiKeysSchema, apiKeysVariable, readApiKeys } from './keys/api-keys-setting.ts';
 export { authenticatorFor, type AccessSettings, type Authenticator } from './access/authenticator.ts';
 export { accessModeOf, type AccessFacts, type AccessMode, type DeclaredAccessMode } from './access/access-mode.ts';
@@ -25,3 +26,11 @@ export {
   type SignInSettings,
 } from './identity-service/identity-service.ts';
 export type { IssuerFetch, IssuerRequests } from './identity-service/issuer-requests.ts';
+export {
+  discoveredIssuerKeys,
+  issuerKeysAt,
+  issuerKeysGiven,
+  IssuerKeySetSchema,
+  type IssuerKeySet,
+  type IssuerKeySource,
+} from './identity-service/issuer-keys.ts';

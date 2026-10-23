@@ -1,12 +1,28 @@
 import { readPageStyle } from '@on.auto/api';
 import type { Environment } from '@on.auto/config';
-import { authenticatorFor, identityServiceOf } from '@on.auto/identity';
+import {
+  authenticatorFor,
+  configuredApiKeys,
+  discoveredIssuerKeys,
+  identityServiceOf,
+  issuerKeysAt,
+  issuerKeysGiven,
+  type IssuerKeySource,
+} from '@on.auto/identity';
 
 import type { RunningServer, ServerOptions } from '../server-options/server-options.ts';
+import type { IdentityKeySet } from '../settings/access-settings.ts';
 import { readShippedSettings } from '../settings/served-settings.ts';
 import { readSettings } from '../settings/settings.ts';
 import { startTelemetry } from '../telemetry/start-telemetry.ts';
 import { started } from './server-start.ts';
+
+function issuerKeysOf(keySet: IdentityKeySet): IssuerKeySource {
+  if (keySet.from === 'given') {
+    return issuerKeysGiven(keySet.keySet);
+  }
+  return keySet.from === 'url' ? issuerKeysAt(keySet.url) : discoveredIssuerKeys;
+}
 
 export async function startServer<R>(environment: Environment, options: ServerOptions<R>): Promise<RunningServer> {
   const [shipped, pageStyle] = await Promise.all([
@@ -21,8 +37,13 @@ export async function startServer<R>(environment: Environment, options: ServerOp
           ...settings.signIn,
           studio: settings.studio,
           allowedOrigins: settings.allowedOrigins,
+          issuerKeys: issuerKeysOf(settings.identityKeySet),
         });
-  const authenticator = authenticatorFor({ ...settings, identityService });
+  const authenticator = authenticatorFor({
+    ...settings,
+    apiKeySource: configuredApiKeys(settings.apiKeys),
+    identityService,
+  });
   const telemetry = startTelemetry(settings.telemetry);
   try {
     return await started({ settings, authenticator, telemetry, options, pageStyle });

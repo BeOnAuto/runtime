@@ -1,4 +1,5 @@
 import type { IdentityService, ProtectedResource } from '../identity-service/identity-service.ts';
+import { configuredApiKeys, type ApiKeySource } from '../keys/api-key-source.ts';
 import { keyPrefix, type ApiKey } from '../keys/api-key.ts';
 import { verifyKey } from '../keys/verify-key.ts';
 import { accessModeOf, type AccessMode, type DeclaredAccessMode } from './access-mode.ts';
@@ -18,20 +19,21 @@ export interface Authenticator {
 export interface AccessSettings {
   readonly host: string;
   readonly apiKeys: readonly ApiKey[] | undefined;
+  readonly apiKeySource?: ApiKeySource | undefined;
   readonly identityService?: IdentityService | undefined;
   readonly accessMode?: DeclaredAccessMode | undefined;
 }
 
-function keyHolderOf(keys: readonly ApiKey[], presented: string | undefined): Authentication {
-  const key = presented === undefined ? undefined : verifyKey(keys, presented);
+async function keyHolderOf(source: ApiKeySource, presented: string | undefined): Promise<Authentication> {
+  const key = presented === undefined ? undefined : await verifyKey(source, presented);
   return key === undefined ? unexplained : principalOf(key);
 }
 
-function credentialHolderOf(keys: readonly ApiKey[], identityService?: IdentityService): Authenticator['authenticate'] {
+function credentialHolderOf(source: ApiKeySource, identityService?: IdentityService): Authenticator['authenticate'] {
   return (presented, resourcePath, requestOrigin) =>
     presented !== undefined && identityService !== undefined && !presented.startsWith(keyPrefix)
       ? identityService.personOf(presented, resourcePath, requestOrigin)
-      : Promise.resolve(keyHolderOf(keys, presented));
+      : keyHolderOf(source, presented);
 }
 
 const localAccess: Authenticator = {
@@ -40,21 +42,27 @@ const localAccess: Authenticator = {
   authenticate: () => Promise.resolve(localDeveloper),
 };
 
-const closedAccess: Authenticator = { mode: 'closed', resource: undefined, authenticate: credentialHolderOf([]) };
+const closedAccess: Authenticator = {
+  mode: 'closed',
+  resource: undefined,
+  authenticate: credentialHolderOf(configuredApiKeys([])),
+};
 
-function credentialAccessOf(keys: readonly ApiKey[], identityService: IdentityService | undefined): Authenticator {
+function credentialAccessOf(source: ApiKeySource, identityService: IdentityService | undefined): Authenticator {
   return {
     mode: 'credentials',
     resource: identityService?.resource,
-    authenticate: credentialHolderOf(keys, identityService),
+    authenticate: credentialHolderOf(source, identityService),
   };
 }
 
-function accessOf(mode: AccessMode, { apiKeys, identityService }: AccessSettings): Authenticator {
+function accessOf(mode: AccessMode, { apiKeys, apiKeySource, identityService }: AccessSettings): Authenticator {
   if (mode === 'local') {
     return localAccess;
   }
-  return mode === 'closed' ? closedAccess : credentialAccessOf(apiKeys ?? [], identityService);
+  return mode === 'closed'
+    ? closedAccess
+    : credentialAccessOf(apiKeySource ?? configuredApiKeys(apiKeys), identityService);
 }
 
 export function authenticatorFor(settings: AccessSettings): Authenticator {

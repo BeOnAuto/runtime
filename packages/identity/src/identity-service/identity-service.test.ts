@@ -165,7 +165,6 @@ const refusedPersons: ReadonlyArray<readonly [string, Claims, string]> = [
   ['a sub over 256 bytes', { sub: 'ü'.repeat(129) }, subjectRefusal],
   ['a sub with a control character', { sub: 'ada\u0000' }, subjectRefusal],
   ['a sub with a noncharacter', { sub: 'ada\uFFFF' }, subjectRefusal],
-  ['no org_id', { org_id: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim'],
   ['an org_id that is no org id', { org_id: 'ac me' }, 'its org_id claim is not an org id other than local'],
   ['the org of local mode', { org_id: 'local' }, 'its org_id claim is not an org id other than local'],
   ['an org_id that is not a string', { org_id: 7 }, 'its org_id claim is not an org id other than local'],
@@ -192,6 +191,38 @@ describe('a token the runtime refuses, saying why', () => {
     const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
 
     expect(await identityService.personOf(await token(claims), '/mcp')).toEqual({ because });
+  });
+});
+
+const noOrgClaim = { org_id: undefined, o: undefined };
+
+const subjectAsOrgRefusal = 'its sub claim is not an org id other than local';
+
+describe('the person a token that names no org names', () => {
+  it('is admitted to the org of its sub, with the permissions its scopes grant over every playbook, and nowhere else', async () => {
+    const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const person = principalIn(
+      await identityService.personOf(await token({ ...noOrgClaim, sub: 'user_2ada', scope: 'playbook:read' }), '/mcp'),
+    );
+
+    expect(person?.own).toEqual({
+      id: 'person:user_2ada',
+      org: 'user_2ada',
+      permissions: ['playbook:read'],
+      playbooks: '*',
+    });
+    expect(['user_2ada', 'acme'].map((org) => person?.callerIn(org)?.org)).toEqual(['user_2ada', undefined]);
+  });
+
+  it.each([
+    ['a sub that is no org id', 'user|ada'],
+    ['the sub local, the org of local mode', 'local'],
+  ])('is refused for %s, naming the claim the org would come from', async (_case, sub) => {
+    const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+
+    expect(await identityService.personOf(await token({ ...noOrgClaim, sub }), '/mcp')).toEqual({
+      because: subjectAsOrgRefusal,
+    });
   });
 });
 

@@ -2,7 +2,7 @@
 
 This page sets out the rules the runtime applies to credentials: how it reads one, what a token must hold, what a signed-in person may do and what a refused client is told. It also sets out how the runtime checks calls from a browser and requests in local mode. [Authentication and security](../self-host/security.md) covers the tasks: turning sign-in on, making API keys, local mode and calls from a browser.
 
-A signed-in person acts in an [org](../concepts/terminology.md#orgs-and-callers), the runtime's name for an organization in the Auto identity service.
+A signed-in person acts in an [org](../concepts/terminology.md#orgs-and-callers), the runtime's name for an organization in the Auto identity service, or, for a person who signs in with none, for an org of their own, whose id is their subject.
 
 ## How a credential is read
 
@@ -21,6 +21,13 @@ With sign-in on, the server reads the identity service before it accepts a reque
 
 Each read waits at most 10 seconds for a response and reads at most 64 KiB. It follows no redirect: an address that responds with one is refused, like an address that does not respond.
 
+The key set may instead be given, for a service that publishes its keys another way, or a server that should read nothing of the service at start:
+
+- With `IDENTITY_JWKS_URL`, the server reads no metadata, and reads the key set at that `https` URL in place of the `jwks_uri`, as step 3 does, with the same bounds.
+- With `IDENTITY_JWKS`, the JSON of the key set itself, which must hold a key, the server reads nothing of the service, at start or later.
+
+Setting both stops the start with an `InvalidSettingsError`. The tokens are checked the same way whichever gives the key set.
+
 A service whose metadata or key set cannot be used stops the start with an `UnusableIdentityServiceError`. The error names the service and each address the server read.
 
 ## The two token forms
@@ -36,31 +43,35 @@ A token that holds `aud` is an access token, even when it also holds an `azp`.
 
 The runtime accepts a token only when it meets every rule:
 
-| Claim or property | Rule                                                                                                                                                                                                                                                              |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Size              | At most 8 KiB                                                                                                                                                                                                                                                     |
-| `alg` (header)    | `RS256`, `PS256`, `ES256`, or `EdDSA` on `Ed25519`. `none` and every other algorithm are refused                                                                                                                                                                  |
-| `typ` (header)    | `at+jwt`, `application/at+jwt`, `JWT` or `application/jwt`, in any letter case, or none                                                                                                                                                                           |
-| Signature         | By a key of the service's key set that verifies its algorithm, chosen by the token's `kid`. A token without a `kid` uses the only key of its type in the set; one that several keys fit is refused                                                                |
-| Signing key       | Never an RSA key under 2048 bits, a key meant for encryption, or a key named for another algorithm                                                                                                                                                                |
-| `iss`             | The issuer, `IDENTITY_ISSUER`                                                                                                                                                                                                                                     |
-| `aud`             | For an access token, an audience the runtime accepts: see [The audience of a token](#the-audience-of-a-token)                                                                                                                                                     |
-| `azp`             | For a session, an origin the runtime allows, equal to the request's `Origin` header                                                                                                                                                                               |
-| `exp`             | Present and not past, with 60 seconds of leeway                                                                                                                                                                                                                   |
-| `nbf` and `iat`   | Not ahead, with 60 seconds of leeway                                                                                                                                                                                                                              |
-| `sub`             | A non-empty string of at most 256 bytes, without control characters, unpaired surrogates or noncharacters. These are the bounds of a name in the facts, since `sub` becomes part of the name recorded for the person                                              |
-| `org_id`          | For an access token: present, and an org id of 1 to 64 letters, digits, `_` and `-`, other than `local`. It is the id of the organization the person signed in to. The identity service puts it in the token when the person grants `user:org:read`               |
-| `o`               | For a session: an object whose `id` is an org id under the same rule. Version 2 of the service's session token names the organization in `o`, beside its slug, the person's role, their permissions and a feature-permission map. The runtime reads only the `id` |
-| `scope`           | For an access token that holds it, a string of scopes separated by spaces, as the identity service issues it. The `scope` of a session is not read                                                                                                                |
+| Claim or property | Rule                                                                                                                                                                                                                                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Size              | At most 8 KiB                                                                                                                                                                                                                                                                                                                 |
+| `alg` (header)    | `RS256`, `PS256`, `ES256`, or `EdDSA` on `Ed25519`. `none` and every other algorithm are refused                                                                                                                                                                                                                              |
+| `typ` (header)    | `at+jwt`, `application/at+jwt`, `JWT` or `application/jwt`, in any letter case, or none                                                                                                                                                                                                                                       |
+| Signature         | By a key of the service's key set that verifies its algorithm, chosen by the token's `kid`. A token without a `kid` uses the only key of its type in the set; one that several keys fit is refused                                                                                                                            |
+| Signing key       | Never an RSA key under 2048 bits, a key meant for encryption, or a key named for another algorithm                                                                                                                                                                                                                            |
+| `iss`             | The issuer, `IDENTITY_ISSUER`                                                                                                                                                                                                                                                                                                 |
+| `aud`             | For an access token, an audience the runtime accepts: see [The audience of a token](#the-audience-of-a-token)                                                                                                                                                                                                                 |
+| `azp`             | For a session, an origin the runtime allows, equal to the request's `Origin` header                                                                                                                                                                                                                                           |
+| `exp`             | Present and not past, with 60 seconds of leeway                                                                                                                                                                                                                                                                               |
+| `nbf` and `iat`   | Not ahead, with 60 seconds of leeway                                                                                                                                                                                                                                                                                          |
+| `sub`             | A non-empty string of at most 256 bytes, without control characters, unpaired surrogates or noncharacters. These are the bounds of a name in the facts, since `sub` becomes part of the name recorded for the person. For a token that names no org, an org id other than `local` too, since it is the org the person acts in |
+| `org_id`          | For an access token that names an org: present, and an org id of 1 to 64 letters, digits, `_` and `-`, other than `local`. It is the id of the organization the person signed in to. The identity service puts it in the token when the person grants `user:org:read`                                                         |
+| `o`               | For a session that names an org: an object whose `id` is an org id under the same rule. Version 2 of the service's session token names the organization in `o`, beside its slug, the person's role, their permissions and a feature-permission map. The runtime reads only the `id`                                           |
+| `scope`           | For an access token that holds it, a string of scopes separated by spaces, as the identity service issues it. The `scope` of a session is not read                                                                                                                                                                            |
 
-The org comes from the org claim of the token's form alone: `org_id` for an access token, the `id` of `o` for a session. A token without it is refused; a session issued while the person has no active organization is one example. No org is taken from the subject or from anything else the token holds. That includes the `org_id` of a session and the `o` of an access token.
+The org comes from the org claim of the token's form: `org_id` for an access token, the `id` of `o` for a session. A token that holds neither `org_id` nor `o` names no org, as the token of a person signed in with no organization of their own does, such as a session issued while the person has no active organization. It acts in the org whose id is its `sub`, and in no other, and the runtime's rules then hold there as in any org. A token that holds the org claim of the other form without its own is refused. No org is taken from anything else the token holds. That includes the `org_id` of a session and the `o` of an access token.
 
 ## How the key set is kept
+
+A key set read at start, through the metadata or at `IDENTITY_JWKS_URL`, is kept this way:
 
 - The server reads the key set again for a `kid` it does not hold, once 60 seconds have passed since the last read that succeeded.
 - It reads the set again at the first token after the set is ten minutes old. So a key the service removes is trusted for ten minutes at most.
 - When it cannot read the set again for an unknown `kid`, the keys it held stay in use.
 - When it cannot read the set once ten minutes have passed, every token is refused. An identity service that is unreachable for longer than that keeps sign-ins out until it responds again.
+
+A key set that `IDENTITY_JWKS` gives is read from nowhere: its keys are the ones trusted until the server restarts with others, and a token signed with any other key is refused.
 
 ## When a token is refused
 
@@ -69,10 +80,11 @@ A token that fails any rule is refused `401` with `invalid_token`, and so is an 
 | Token                                                                                   | Detail                                                                              |
 | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | An expired token                                                                        | `The token was refused: ERR_JWT_EXPIRED on its exp claim`                           |
-| An access token without `org_id`                                                        | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim`        |
+| An access token without `org_id` that holds an `o`                                      | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim`        |
 | An access token whose `org_id` is not an org id other than `local`                      | `The token was refused: its org_id claim is not an org id other than local`         |
-| A session without `o`, such as one issued while the person has no active organization   | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim`             |
+| A session without `o` that holds an `org_id`                                            | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim`             |
 | A session whose `o` is no object, or holds no `id` that is an org id other than `local` | `The token was refused: its o.id claim is not an org id other than local`           |
+| A token that names no org, whose `sub` is not an org id other than `local`              | `The token was refused: its sub claim is not an org id other than local`            |
 | An access token for another resource                                                    | Ends `on its aud claim`                                                             |
 | A session given to a page at an origin the runtime does not allow, or naming no origin  | Ends `on its azp claim`                                                             |
 | A session sent without an `Origin` header, or from another origin than its `azp`        | `The token was refused: the session was not presented by the page it was issued to` |
@@ -145,6 +157,7 @@ The identity service defines each permission as a scope of its own, with a sente
 What a token then allows:
 
 - A session admits the person to the org the `id` of its `o` names, over every playbook, with all four permissions, as they act in Studio. The role and permissions its `o` names do not change that.
+- A token that names no org admits the person to the org whose id is its `sub`, over every playbook, with the permissions of its form: every permission for a session, and those among its scopes for an access token.
 - An access token admits the person to the org its `org_id` names, over every playbook, with the permissions among the scopes in its `scope` claim. Only `org:read`, `org:write`, `playbook:read` and `playbook:write` are permissions. Any other scope grants none, `user:org:read` included.
 - An access token that grants none of the four, or holds no `scope`, still admits the person to their org, with no permission. Every operation then refuses them `403` with `insufficient_scope`. The challenge's `scope` names the permissions the operation needs, so a client asks the identity service for a token with more.
 - For an access token, `org_id` binds the org, not `user:org:read`. An access token that holds `org_id` and the four permissions, but not `user:org:read`, admits the person to that org with all four permissions.

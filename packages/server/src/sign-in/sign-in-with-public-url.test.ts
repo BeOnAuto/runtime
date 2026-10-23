@@ -81,3 +81,34 @@ describe('a runtime on its own loopback address', () => {
     );
   });
 });
+
+const everySignInScope = signInScopes.join(' ');
+
+describe('a runtime given the key set of its identity service', () => {
+  it('reads nothing of the service at start with IDENTITY_JWKS, and admits a token signed with a key of the set', async () => {
+    const issuer = await issuerOverHttps();
+    const keySet = await (await issuer.answer(new Request(`${issuer.issuer}/jwks`))).text();
+    const port = await aPortNothingListensOn();
+    const ownAddress = `http://localhost:${port}`;
+
+    await startedOn(port, { IDENTITY_ISSUER: issuer.issuer, IDENTITY_JWKS: keySet, PUBLIC_URL: ownAddress });
+
+    expect(await statusOfPlaybooks(port, await accessTokenOf(issuer, ownAddress, everySignInScope))).toBe(200);
+    expect(issuer.keySetReads()).toBe(1);
+  });
+
+  it('reads the key set at IDENTITY_JWKS_URL, and not the metadata, which names another', async () => {
+    const issuer = await issuerOverHttps({ metadata: { jwks_uri: 'http://127.0.0.1/jwks' } });
+    const port = await aPortNothingListensOn();
+    const ownAddress = `http://localhost:${port}`;
+
+    await startedOn(port, {
+      IDENTITY_ISSUER: issuer.issuer,
+      IDENTITY_JWKS_URL: `${issuer.issuer}/jwks`,
+      PUBLIC_URL: ownAddress,
+    });
+
+    expect(await statusOfPlaybooks(port, await accessTokenOf(issuer, ownAddress, everySignInScope))).toBe(200);
+    expect(issuer.keySetReads()).toBe(1);
+  });
+});

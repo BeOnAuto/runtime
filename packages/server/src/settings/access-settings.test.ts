@@ -99,3 +99,54 @@ describe('readSettings rejects invalid credential settings', () => {
     },
   );
 });
+
+const keySet = {
+  keys: [{ kty: 'OKP', crv: 'Ed25519', x: '11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo', kid: 'one', use: 'sig' }],
+};
+
+describe('readSettings given the key set of the identity service', () => {
+  it('finds it through the metadata of the issuer when neither IDENTITY_JWKS nor IDENTITY_JWKS_URL is set', () => {
+    expect(readSettingsOf({ PUBLIC_URL: 'https://runtime.example.com' }).identityKeySet).toEqual({ from: 'discovery' });
+  });
+
+  it('takes the key set IDENTITY_JWKS gives, as the JSON of a key set', () => {
+    expect(readSettingsOf({ IDENTITY_JWKS: JSON.stringify(keySet) }).identityKeySet).toEqual({
+      from: 'given',
+      keySet,
+    });
+  });
+
+  it('reads the key set at the https URL IDENTITY_JWKS_URL names', () => {
+    expect(readSettingsOf({ IDENTITY_JWKS_URL: 'https://identity.example/keys/jwks.json' }).identityKeySet).toEqual({
+      from: 'url',
+      url: 'https://identity.example/keys/jwks.json',
+    });
+  });
+
+  it('refuses both, naming the two settings', () => {
+    expect(
+      String(errorFrom({ IDENTITY_JWKS: JSON.stringify(keySet), IDENTITY_JWKS_URL: 'https://identity.example/jwks' })),
+    ).toBe('InvalidSettingsError: IDENTITY_JWKS: Set one of IDENTITY_JWKS and IDENTITY_JWKS_URL, not more');
+  });
+
+  it.each([
+    ['text that is not JSON', '{keys:[]}', 'Expected a valid JSON string\n  at ["IDENTITY_JWKS"]'],
+    ['a set of no keys', '{"keys":[]}', 'Missing key\n  at ["IDENTITY_JWKS"]["keys"][0]'],
+    ['a key without a kty', '{"keys":[{"kid":"one"}]}', 'Missing key\n  at ["IDENTITY_JWKS"]["keys"][0]["kty"]'],
+  ])('refuses as IDENTITY_JWKS %s, naming the setting and where in it', (_case, value, words) => {
+    expect(String(errorFrom({ IDENTITY_JWKS: value }))).toBe(`InvalidSettingsError: SchemaError(${words})`);
+  });
+
+  it('takes an empty IDENTITY_JWKS as not set', () => {
+    expect(readSettingsOf({ IDENTITY_JWKS: '' }).identityKeySet).toEqual({ from: 'discovery' });
+  });
+
+  it.each(['http://identity.example/jwks', 'identity.example/jwks', 'ftp://identity.example/jwks'])(
+    'refuses IDENTITY_JWKS_URL="%s", which is not an https URL, naming the setting',
+    (url) => {
+      expect(String(errorFrom({ IDENTITY_JWKS_URL: url }))).toBe(
+        'InvalidSettingsError: SchemaError(Expected the https URL of the key set of the identity service, such as https://identity.example.com/.well-known/jwks.json\n  at ["IDENTITY_JWKS_URL"])',
+      );
+    },
+  );
+});

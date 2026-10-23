@@ -97,11 +97,11 @@ A prediction function, the predictive model a version of it holds and the predic
 
 | Term             | Meaning                                                                                                                                                                                                                   |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Org              | The runtime's name for an organization in the Auto identity service; an org's id is that organization's id. Every playbook and every key belongs to one org.                                                              |
+| Org              | The runtime's name for an organization in the Auto identity service, under that organization's id, or for the org of a person signed in with none, under their subject. Every playbook and every key belongs to one org.  |
 | Caller           | Whoever a request acts for: a key, the local developer or a signed-in person, named on every fact it records. A run acts for the caller that started it, and a run a trigger starts acts as the playbook itself.          |
 | Key              | A credential the runtime issues itself, for a machine, a pipeline, a trainer's agent or a grant over some of an org's playbooks.                                                                                          |
 | Local developer  | The caller of every request in local mode, on the developer's own machine, with every permission in every org. A server is in local mode when it listens only on a loopback address and neither sign-in nor keys are set. |
-| Signed-in person | A person the Auto identity service signs in. They act in the org their sign-in names, with the permissions their token grants, and are recorded under their subject.                                                      |
+| Signed-in person | A person the Auto identity service signs in. They act in the org their sign-in names, or in their own where it names none, with the permissions their token grants, and are recorded under their subject.                 |
 
 ## Supporting assets
 
