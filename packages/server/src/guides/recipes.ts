@@ -1,5 +1,7 @@
 import type { Guide, Recipe } from '@on.auto/api';
-import type { ShippedFiles } from '@on.auto/operations';
+import { shippedFileIn, type ShippedFiles } from '@on.auto/operations';
+
+import { recipesFolder } from './guide-files.ts';
 
 type RecipeOutline = Omit<Recipe, 'text'>;
 
@@ -89,7 +91,7 @@ async function textOf(
   { name }: RecipeOutline,
   carried: ReadonlySet<string>,
 ): Promise<string> {
-  const text = await shippedFiles.text(new URL(`recipes/${name}.md`, import.meta.url));
+  const text = await shippedFiles.text(shippedFileIn(recipesFolder, `${name}.md`));
   const insertion = carried.has(interactionGuide) ? whereInteractionIsServed[name] : undefined;
   return insertion === undefined ? text : text.replace(insertion.after, `${insertion.after}${insertion.words}`);
 }

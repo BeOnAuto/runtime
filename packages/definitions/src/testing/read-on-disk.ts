@@ -3,12 +3,14 @@ import { measuredEnvironment } from '@on.auto/operations/testing';
 import type { PoolSettings } from '@on.auto/workflow-engine/dsl';
 import { handedFileIn, type HandedFile } from '@on.auto/workflow-engine/job-loop';
 
-import { handedWorkersWithChecks, keptLibOf } from '../program-check/save-check.ts';
+import { checkShippedRoots, handedWorkersWithChecks, keptLibOf } from '../program-check/save-check.ts';
+
+const checkFilesOnDisk = shippedFilesOnDisk(checkShippedRoots);
 
 export const measuredPoolSettings: Pick<PoolSettings, 'handed' | 'instances' | 'environment'> = {
-  handed: await handedWorkersWithChecks(shippedFilesOnDisk),
+  handed: await handedWorkersWithChecks(checkFilesOnDisk),
   instances: 'fresh',
   environment: measuredEnvironment,
 };
 
-export const keptLibOnDisk: HandedFile = handedFileIn(await keptLibOf(shippedFilesOnDisk));
+export const keptLibOnDisk: HandedFile = handedFileIn(await keptLibOf(checkFilesOnDisk));

@@ -1,6 +1,6 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import type { FilterVerdict, MatchedFilter } from '@on.auto/workflow-engine';
-import { filterSandboxOf, freshInstances, sandboxModuleIn } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { Array, Effect, Function } from 'effect';
 
 import { filterMatchingOf, filterStops, type FilterStops, type MatchFilters } from '../filtering/filter-matching.ts';
@@ -9,7 +9,9 @@ import { subscriptionStarts } from '../reactions/subscription-starts.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { saidRefusals, type followedRecordOf } from './followed-records.ts';
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const topRuns: ReadonlyMap<string, string> = new Map([
   ['r-of-close', 'close'],

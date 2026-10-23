@@ -1,8 +1,7 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { sandboxModuleOnDisk } from '../pool-testing/test-pools.ts';
+import { sandboxFilesOnDisk, sandboxModuleOnDisk } from '../pool-testing/test-pools.ts';
 import { moduleRun } from '../programs/module-runs.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 import type { SandboxInstance } from '../programs/sandbox-session.ts';
@@ -39,7 +38,7 @@ describe('the fresh source of instances', () => {
   });
 
   it('makes its instances of a module the host compiled already, as of the bytes it compiles itself', async () => {
-    const compiled = await compile(await shippedFilesOnDisk.bytes(sandboxModuleFile));
+    const compiled = await compile(await sandboxFilesOnDisk.bytes(sandboxModuleFile));
     const source = freshInstances({ compiled });
     const [first, second] = [await source(unitMemoryBytes), await source(unitMemoryBytes)];
 

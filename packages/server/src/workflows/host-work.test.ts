@@ -9,6 +9,7 @@ import {
   machineSandboxOf,
   programPool,
   sandboxModuleIn,
+  sandboxShippedRoots,
 } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -16,7 +17,9 @@ import { describe, expect, it } from 'vitest';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { hostWorkOf } from './host-work.ts';
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const unknownRun = { org: 'acme', playbook: 'alpha', id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
 
@@ -26,7 +29,7 @@ describe('the machine the workflow host decides runs with', () => {
   it("is the coordination's functions, runtime and context of each record on the pool's sandbox, so no setting of the server reaches the machine's bound on tasks without waiting", async () => {
     const runtime = await memoryRuntime();
     const pool = programPool({
-      handed: await handedWorkersOf(shippedFilesOnDisk),
+      handed: await handedWorkersOf(sandboxFiles),
       instances: 'fresh',
       workers: 1,
       heapMegabytes: 64,

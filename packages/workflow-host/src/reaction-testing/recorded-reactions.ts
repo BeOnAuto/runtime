@@ -1,12 +1,14 @@
 import type { Emission } from '@on.auto/definitions';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf, freshInstances, sandboxModuleIn } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 
 import { StartRefused, type ReactionOptions, type ReactionStart } from '../reactions/reaction-options.ts';
 import { StartRejected } from '../reactions/start-rejected.ts';
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 export interface RecordedReactions {
   readonly options: ReactionOptions;

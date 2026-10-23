@@ -5,6 +5,7 @@ import {
   unitMemoryBytes,
   workerStackBytes,
   type ProgramPool,
+  sandboxShippedRoots,
 } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Schema } from 'effect';
 
@@ -15,7 +16,9 @@ import type { KeptView } from '../src/views/view-rows.ts';
 import { viewsFolder } from '../src/views/views-folder.ts';
 import { viewsPortOn } from '../src/views/views-port.ts';
 
-const handed = await handedWorkersOf(shippedFilesOnDisk);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const handed = await handedWorkersOf(sandboxFiles);
 
 export function measuringPool(): ProgramPool {
   return programPool({ handed, instances: 'fresh', workers: 4, heapMegabytes: 256 });

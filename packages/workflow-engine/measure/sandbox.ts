@@ -9,6 +9,7 @@ import {
   unitMemoryBytes,
   type ProgramRun,
   sandboxModuleIn,
+  sandboxShippedRoots,
 } from '../src/dsl.ts';
 import { sandboxModuleFile } from '../src/instances/compiled-module.ts';
 import { expressionUnitOf } from '../src/programs/expression-units.ts';
@@ -18,7 +19,9 @@ import type { Evaluation } from '../src/programs/program-run.ts';
 import { sandboxRuntimeOf } from '../src/programs/sandbox-session.ts';
 import { medianMillisecondsOf, millisecondsOf } from './common.ts';
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const unbounded: Evaluation = { budget: Number.POSITIVE_INFINITY, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
@@ -68,7 +71,7 @@ async function ranModule(
 }
 
 async function instanceLines(): Promise<readonly string[]> {
-  const wasm = await shippedFilesOnDisk.bytes(sandboxModuleFile);
+  const wasm = await sandboxFiles.bytes(sandboxModuleFile);
   await freshInstances(sandboxModule)(unitMemoryBytes);
   const fresh = await medianAsync(50, async () => {
     const started = performance.now();
@@ -173,7 +176,7 @@ async function valueLines(): Promise<readonly string[]> {
 
 async function stackLines(): Promise<readonly string[]> {
   const pool = programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: 'fresh',
     workers: 1,
     heapMegabytes: 256,

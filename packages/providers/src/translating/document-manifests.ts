@@ -1,15 +1,14 @@
-import { fileURLToPath } from 'node:url';
-
-import { listed, type ShippedFiles } from '@on.auto/operations';
+import { listed, shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { shippedEntries } from '../reading/shipped-providers.ts';
 import { CutSchema } from './discovery-cuts.ts';
 import { OpenApiTranslationSchema } from './openapi-operations.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
 import { curatedOpenApiOf } from './translate-openapi.ts';
 
-export const documentsBesideTheEntries = new URL('../entries/documents/', import.meta.url);
+export const documentsBesideTheEntries: ShippedFile = shippedFileIn(shippedEntries, 'documents');
 
 const AuthorizationServerAddressSchema = Schema.String.annotate({
   description: 'The address of the metadata of the authorization server whose endpoints the oauth2 scheme names',
@@ -66,14 +65,14 @@ const documentSuffix = '.openapi.json';
 export type Fetching = (address: string) => Promise<Response>;
 
 export interface Translating {
-  readonly folder: Readonly<URL>;
+  readonly folder: ShippedFile;
   readonly shippedFiles: ShippedFiles;
   readonly fetching: Fetching;
   readonly readGiven: (path: string) => Promise<string>;
 }
 
 export interface Written {
-  readonly path: string;
+  readonly file: ShippedFile;
   readonly text: string;
 }
 
@@ -85,7 +84,7 @@ interface Asked {
 const usage =
   'Usage: pnpm --filter @on.auto/providers documents:translate [<name>[=<Discovery document>]]..., each name a manifest beside the documents, every manifest when none is named';
 
-export async function manifestNamesIn(shippedFiles: ShippedFiles, folder: Readonly<URL>): Promise<readonly string[]> {
+export async function manifestNamesIn(shippedFiles: ShippedFiles, folder: ShippedFile): Promise<readonly string[]> {
   return (await shippedFiles.list(folder))
     .filter((file) => file.endsWith(manifestSuffix))
     .map((file) => file.slice(0, -manifestSuffix.length))
@@ -94,10 +93,10 @@ export async function manifestNamesIn(shippedFiles: ShippedFiles, folder: Readon
 
 export async function manifestIn(
   shippedFiles: ShippedFiles,
-  folder: Readonly<URL>,
+  folder: ShippedFile,
   name: string,
 ): Promise<DocumentManifest> {
-  return decodeManifest(await shippedFiles.text(new URL(`${name}${manifestSuffix}`, folder)));
+  return decodeManifest(await shippedFiles.text(shippedFileIn(folder, `${name}${manifestSuffix}`)));
 }
 
 function askedOf(commandArgument: string, names: readonly string[]): Asked {
@@ -128,10 +127,6 @@ function jsonText(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function pathIn(folder: Readonly<URL>, file: string): string {
-  return fileURLToPath(new URL(file, folder));
-}
-
 async function discoveryTranslated(
   { name, given }: Asked,
   manifest: DiscoveryManifest,
@@ -144,9 +139,9 @@ async function discoveryTranslated(
   const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
   const remade = { type, discovery: address, revision, authorization_server: authorizationServer, methods };
   return [
-    { path: pathIn(folder, `${name}${documentSuffix}`), text: jsonText(document) },
+    { file: shippedFileIn(folder, `${name}${documentSuffix}`), text: jsonText(document) },
     {
-      path: pathIn(folder, `${name}${manifestSuffix}`),
+      file: shippedFileIn(folder, `${name}${manifestSuffix}`),
       text: jsonText(cuts === undefined ? remade : { ...remade, cuts }),
     },
   ];
@@ -173,7 +168,7 @@ async function openApiTranslated(
   const documents = await fetchedAt(asked, manifest.sources, translating);
   const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
   const document = curatedOpenApiOf(documents, manifest, metadata);
-  return [{ path: pathIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
+  return [{ file: shippedFileIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
 }
 
 async function swaggerConverted(
@@ -188,7 +183,7 @@ async function swaggerConverted(
   );
   const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
   const document = convertedDocumentOf(documents, manifest, metadata);
-  return [{ path: pathIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
+  return [{ file: shippedFileIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
 }
 
 async function translatedOne(asked: Asked, translating: Translating): Promise<readonly Written[]> {

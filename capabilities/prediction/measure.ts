@@ -1,10 +1,12 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { handedWorkersOf, programPool } from '@on.auto/workflow-engine/dsl';
+import { handedWorkersOf, programPool, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 
 import { rebuiltOn, type Folding, type History } from './measure/dataset-rebuild.ts';
 import { dailyOrders, seriesMeasured, testedDailyOrders } from './measure/order-history.ts';
 import { measuredStores, type MeasuredStore } from './measure/stores.ts';
 import { writtenOn, type FileRead } from './measure/written-files.ts';
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
 
 const postgresqlServer = process.env['LEDGER_MEASURE_POSTGRESQL_URL'] ?? '';
 
@@ -71,7 +73,7 @@ async function testedOn({ store, aDatabase }: MeasuredStore, history: History): 
 
 async function measuredOn(measured: MeasuredStore): Promise<void> {
   const pool = programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: 'fresh',
     workers: 1,
     heapMegabytes: 256,

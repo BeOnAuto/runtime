@@ -1,5 +1,5 @@
 import * as releaseSync from '@jitl/quickjs-wasmfile-release-sync';
-import type { ShippedFiles } from '@on.auto/operations';
+import type { ShippedFile, ShippedFiles, ShippedRoots } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { newQuickJSWASMModuleFromVariant, newVariant, type QuickJSSyncVariant } from 'quickjs-emscripten-core';
 
@@ -31,7 +31,13 @@ interface Bounded {
 
 export const pageBytes = 65_536;
 
-export const sandboxModuleFile = new URL(import.meta.resolve('@jitl/quickjs-wasmfile-release-sync/wasm'));
+const sandboxPackage = '@jitl/quickjs-wasmfile-release-sync';
+
+export const sandboxModuleFile: ShippedFile = { package: sandboxPackage, path: 'dist/emscripten-module.wasm' };
+
+export const sandboxShippedRoots: ShippedRoots = {
+  [sandboxPackage]: new URL('.', import.meta.resolve(`${sandboxPackage}/package.json`)),
+};
 
 const initialPages = 256;
 

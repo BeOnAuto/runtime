@@ -1,5 +1,4 @@
-import { pathToFileURL } from 'node:url';
-
+import { shippedFileIn, shippedFileName, type ShippedFile } from '@on.auto/operations';
 import { shippedFilesInMemory } from '@on.auto/operations/testing';
 import { Result, Schema, SchemaIssue } from 'effect';
 
@@ -26,16 +25,16 @@ export interface EntryFolder {
   readonly read: () => Promise<string>;
 }
 
-const folder = '/shipped/entries';
+const entries: ShippedFile = { package: '@acme/shipped', path: 'entries' };
 
-const entries = pathToFileURL(`${folder}/`);
+const folder = shippedFileName(entries);
 
 export function entryFolderWith(files: Readonly<Record<string, string>>): EntryFolder {
-  const shipped = shippedFilesInMemory(
-    Object.fromEntries(
-      Object.entries(files).map(([name, text]: readonly [string, string]) => [new URL(name, entries).href, text]),
+  const shipped = shippedFilesInMemory({
+    [entries.package]: Object.fromEntries(
+      Object.entries(files).map(([name, text]: readonly [string, string]) => [shippedFileIn(entries, name).path, text]),
     ),
-  );
+  });
   return {
     read: async () =>
       Result.match(await readProviders(shipped, entries), {

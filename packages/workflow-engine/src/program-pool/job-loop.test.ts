@@ -134,13 +134,13 @@ describe.each(sourcesUnderTest)('a loop that starts serving jobs on $name instan
   });
 
   it('makes its handlers of the files the pool handed its worker', async () => {
-    const note = new URL('file:///shipped/note.txt');
+    const note = { package: '@acme/shipped', path: 'note.txt' };
     const ask = servedWith(
       name,
       (handed) => ({
         check: () => ({ ran: 'checked', issues: [{ at: 0, line: 1, detail: new TextDecoder().decode(handed(note)) }] }),
       }),
-      { [note.href]: new TextEncoder().encode('Handed at start') },
+      { '@acme/shipped/note.txt': new TextEncoder().encode('Handed at start') },
     );
 
     expect(await ask({ job: 1, kind: 'check', request: checkRequest })).toMatchObject({

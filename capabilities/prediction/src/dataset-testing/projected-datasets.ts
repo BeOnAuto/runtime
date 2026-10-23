@@ -1,5 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf, freshInstances, sandboxModuleIn } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { someFolder, type DatabaseSettings } from '@on.auto/workflow-host';
 import { projectedFolders, type ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
@@ -10,7 +10,9 @@ import { datasetFolder, datasetsOf, type DatasetFolding } from '../dataset/datas
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import { parsePredictionDocument } from '../document/document-parsing.ts';
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 export const alphaKey = 'playbook/acme/alpha/';
 

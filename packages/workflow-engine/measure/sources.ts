@@ -11,13 +11,16 @@ import {
   type InstanceSourceName,
   type ProgramPool,
   sandboxModuleIn,
+  sandboxShippedRoots,
 } from '../src/dsl.ts';
 import { instanceSources } from '../src/instances/instance-sources.ts';
 import { moduleRun } from '../src/programs/module-runs.ts';
 
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+
 type Timings = Readonly<Record<InstanceSourceName, number>>;
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const answering = 'export default function () {\n  return 0;\n}';
 
@@ -80,7 +83,7 @@ async function onThread(): Promise<Readonly<Record<'cold' | 'warm' | 'spent', Ti
 
 async function poolOf(name: InstanceSourceName): Promise<ProgramPool> {
   return programPool({
-    handed: await handedWorkersOf(shippedFilesOnDisk),
+    handed: await handedWorkersOf(sandboxFiles),
     instances: name,
     workers: 1,
     heapMegabytes: 256,

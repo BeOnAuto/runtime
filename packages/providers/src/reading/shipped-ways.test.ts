@@ -2,9 +2,17 @@ import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { hostAlternativesOf, readProviders, type CredentialWay, type ProviderEntry } from '../index.ts';
+import {
+  hostAlternativesOf,
+  readProviders,
+  type CredentialWay,
+  type ProviderEntry,
+  providersShippedRoots,
+} from '../index.ts';
 
-const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+
+const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 
 const google = 'accounts.google.com';
 

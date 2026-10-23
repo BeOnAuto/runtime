@@ -1,4 +1,4 @@
-import type { ShippedFiles } from '@on.auto/operations';
+import { shippedFileIn, type ShippedFile, type ShippedFiles, type ShippedRoots } from '@on.auto/operations';
 import { sandboxRemovals } from '@on.auto/workflow-engine/worker';
 import ts from 'typescript6';
 
@@ -37,7 +37,13 @@ interface LibFile {
   readonly candidates: Candidates;
 }
 
-const libFolder = new URL(import.meta.resolve('typescript6').replace(/typescript\.js$/u, ''));
+const compilerPackage = 'typescript6';
+
+export const compilerShippedRoots: ShippedRoots = {
+  [compilerPackage]: new URL('.', import.meta.resolve(`${compilerPackage}/package.json`)),
+};
+
+const compilerLib: ShippedFile = { package: compilerPackage, path: 'lib' };
 
 const skipped = /intl|weakref/u;
 
@@ -49,7 +55,7 @@ const iteratorLib = 'lib.es2025.iterator.d.ts';
 
 async function libSource(shippedFiles: ShippedFiles, name: string): Promise<ts.SourceFile> {
   const fileName = `lib.${name}.d.ts`;
-  const text = await shippedFiles.text(new URL(fileName, libFolder));
+  const text = await shippedFiles.text(shippedFileIn(compilerLib, fileName));
   return ts.createSourceFile(fileName, text, ts.ScriptTarget.ES2025, true);
 }
 

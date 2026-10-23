@@ -1,7 +1,7 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { measuredEnvironment } from '@on.auto/operations/testing';
 
-import { sandboxModuleIn } from '../instances/compiled-module.ts';
+import { sandboxModuleIn, sandboxShippedRoots } from '../instances/compiled-module.ts';
 import { freshInstances } from '../instances/fresh-instances.ts';
 import { machineSandboxOf } from '../instances/host-sandboxes.ts';
 import type { InstanceSource, SandboxModule } from '../instances/instance-source.ts';
@@ -15,9 +15,11 @@ export interface SourceUnderTest {
   readonly source: InstanceSource;
 }
 
-export const sandboxModuleOnDisk: SandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+export const sandboxFilesOnDisk = shippedFilesOnDisk(sandboxShippedRoots);
 
-export const handedWorkers: HandedWorkers = await handedWorkersOf(shippedFilesOnDisk);
+export const sandboxModuleOnDisk: SandboxModule = await sandboxModuleIn(sandboxFilesOnDisk);
+
+export const handedWorkers: HandedWorkers = await handedWorkersOf(sandboxFilesOnDisk);
 
 export const handedSandbox: HandedFiles = handedWorkers.sandbox;
 

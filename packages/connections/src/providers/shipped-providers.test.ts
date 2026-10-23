@@ -6,6 +6,7 @@ import {
   type Placeholder,
   type Provider,
   type ProviderAddition,
+  providersShippedRoots,
 } from '@on.auto/providers';
 import {
   describedToolServers,
@@ -20,11 +21,14 @@ import { describe, expect, it } from 'vitest';
 import { additionIssuesOf, readAddition, type AdditionInput } from '../entries/entry-checks.ts';
 import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
 
-const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk));
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
 
-const filesBesideTheEntries = await shippedFilesOnDisk.list(
-  new URL('entries/documents/', import.meta.resolve('@on.auto/providers')),
-);
+const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
+
+const filesBesideTheEntries = await providersOnDisk.list({
+  package: '@on.auto/providers',
+  path: 'src/entries/documents',
+});
 
 const checking = {
   org: 'acme',

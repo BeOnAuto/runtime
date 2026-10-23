@@ -30,7 +30,7 @@ export {
   operatorVariablesIn,
   operatorVariablesOf,
 } from './reading/provider-reach.ts';
-export { ProvidersInvalid, readProviders } from './reading/shipped-providers.ts';
+export { ProvidersInvalid, providersShippedRoots, readProviders } from './reading/shipped-providers.ts';
 export {
   additionOfProvider,
   type GivenToProvider,
