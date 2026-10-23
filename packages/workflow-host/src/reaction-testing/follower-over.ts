@@ -10,8 +10,9 @@ import { refusalsOn } from '../reactions/refusals.ts';
 import { recordingReports } from '../testing/recording-reports.ts';
 import { recordedReactions, type RecordedReactions } from './recorded-reactions.ts';
 
-export function followerOver(database: HostDatabase, sweepEveryMs: number): RecordedReactions {
+export async function followerOver(database: HostDatabase, sweepEveryMs: number): Promise<RecordedReactions> {
   const reactions = recordedReactions();
+  const { through: placeAtOpen } = await database.store.readAppended(undefined, 0);
   const follower = startReacting(
     {
       database,
@@ -19,6 +20,7 @@ export function followerOver(database: HostDatabase, sweepEveryMs: number): Reco
       clock: systemClock,
       sweepEveryMs,
       reports: recordingReports().reports,
+      placeAtOpen,
     },
     { ...reactions.options, appended: streamSignalOf() },
     { refusals: refusalsOn(database, Date.now), stops: filterStops() },

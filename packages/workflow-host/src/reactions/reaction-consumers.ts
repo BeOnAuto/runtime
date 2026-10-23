@@ -16,7 +16,7 @@ export interface ReactionUse {
 }
 
 export function reactionConsumersOf(
-  host: FollowerHost,
+  host: Pick<FollowerHost, 'database' | 'submitted' | 'clock' | 'reports'>,
   { options, refusals, stops }: ReactionUse,
   starting: Starting,
 ): readonly RecordConsumer[] {

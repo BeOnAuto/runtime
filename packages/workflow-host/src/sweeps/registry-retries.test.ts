@@ -53,7 +53,7 @@ describe('a playbook another process creates, swept before its registry could be
   it('is passed from its first record, so its first event starts a workflow without another append', async () => {
     const database = await openedOn(await onSQLite());
     const held = sweptAtOnceAndRegistryFailing(database, beta);
-    const reactions = followerOver(held.database, 20);
+    const reactions = await followerOver(held.database, 20);
     const trigger = eventTrigger({ type: 'com.acme.closed' });
 
     await playbookCreated(database.store, 'beta');

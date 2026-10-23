@@ -28,7 +28,7 @@ interface Batch {
   readonly more: boolean;
 }
 
-export interface RecordConsumer<Followed extends CallRecord = FollowedRecord> {
+export interface RecordConsumer<Followed = FollowedRecord> {
   readonly name: string;
   readonly skippedAfterSweeps: number;
   readonly batchOf: (followed: Followed, after: string | undefined, most: number) => Effect.Effect<Batch>;
@@ -38,24 +38,39 @@ export interface Consumer extends RecordConsumer {
   readonly types: readonly string[];
 }
 
-export interface CallConsumer extends RecordConsumer<CallRecord> {
-  readonly types: readonly string[];
-}
-
 export interface BoundConsumer {
   readonly name: string;
   readonly skippedAfterSweeps: number;
   readonly batchOf: (after: string | undefined, most: number) => Effect.Effect<Batch>;
 }
 
-export function boundTo<Followed extends CallRecord>(
-  consumer: RecordConsumer<Followed>,
-  followed: Followed,
-): BoundConsumer {
+export function boundTo<Followed>(consumer: RecordConsumer<Followed>, followed: Followed): BoundConsumer {
   return {
     name: consumer.name,
     skippedAfterSweeps: consumer.skippedAfterSweeps,
     batchOf: (after, most) => consumer.batchOf(followed, after, most),
+  };
+}
+
+export type Reading = BoundConsumer | 'unreadable';
+
+export interface CallConsumer {
+  readonly types: readonly string[];
+  readonly read: (call: CallRecord) => Reading;
+}
+
+interface CallReader<Read> extends RecordConsumer<Read> {
+  readonly types: readonly string[];
+  readonly readOf: (call: CallRecord) => Read | undefined;
+}
+
+export function callConsumerOf<Read>(reader: CallReader<Read>): CallConsumer {
+  return {
+    types: reader.types,
+    read: (call) => {
+      const read = reader.readOf(call);
+      return read === undefined ? 'unreadable' : boundTo(reader, read);
+    },
   };
 }
 

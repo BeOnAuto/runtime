@@ -31,7 +31,7 @@ function startsReaching(reacting: ReactingHost, count: number) {
 }
 
 describe('a playbook its org created before the host started', () => {
-  it('is followed from its latest record, with the triggers its workflows already had', async () => {
+  it('is followed from where the ledger stood as the host opened, with the triggers its workflows already had', async () => {
     const settings = await onSQLite();
     const { store } = await openedOn(settings);
     await playbookCreated(store, 'alpha');

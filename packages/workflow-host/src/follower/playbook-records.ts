@@ -27,7 +27,6 @@ export interface PlaybookRecords {
     cursor: string | null,
     delivers: ReadonlySet<string>,
   ) => Effect.Effect<RecordedPage>;
-  readonly tail: (playbook: PlaybookAddress) => Effect.Effect<string | null>;
 }
 
 export function relativeRecord(playbookKey: string, record: RecordedEvent): RecordedEvent {
@@ -49,10 +48,6 @@ export function playbookRecordsOf(store: EventStore): PlaybookRecords {
             ...(cursor === null ? {} : { cursor }),
           },
         ),
-      ),
-    tail: (playbook) =>
-      Effect.orDie(read(playbook, { kind: 'everything' }, { order: 'desc', limit: 1, dataOf: [] })).pipe(
-        Effect.map(({ records }) => records.reduce<string | null>((_, { cursor }) => cursor, null)),
       ),
   };
 }

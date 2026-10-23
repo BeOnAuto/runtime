@@ -45,11 +45,10 @@ async function latestOf(opened: Opened): Promise<string | null> {
   return records[0]?.cursor ?? null;
 }
 
-async function untilAt(opened: Opened, cursor: string | null): Promise<void> {
-  const [place] = await placesOf(opened);
-  if (place !== cursor) {
+async function untilPlaced(opened: Opened, reached: (places: readonly (string | null)[]) => boolean): Promise<void> {
+  if (!reached(await placesOf(opened))) {
     await setTimeout(2);
-    await untilAt(opened, cursor);
+    await untilPlaced(opened, reached);
   }
 }
 
@@ -65,13 +64,13 @@ export async function finishCatchUpOn(database: DatabaseSettings, finishes: numb
   const opened = await openHostDatabase(database, Function.constVoid);
   await playbookCreated(opened.store, 'alpha');
   const following = await measuredHost(database);
-  await untilAt(opened, await latestOf(opened));
+  await untilPlaced(opened, (places) => places.length > 0);
   await following.host.stop();
   await finishedInTurn(opened, finishes);
   const latest = await latestOf(opened);
   const started = performance.now();
   const catchingUp = await measuredHost(database);
-  await untilAt(opened, latest);
+  await untilPlaced(opened, ([place]) => place === latest);
   const milliseconds = performance.now() - started;
   await catchingUp.host.stop();
   await opened.close();

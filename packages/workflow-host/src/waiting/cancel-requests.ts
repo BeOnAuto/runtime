@@ -4,7 +4,13 @@ import type { RunInput, Submission } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { DeliveryFailed, type CallConsumer, type CallRecord, type Delivery } from '../follower/consumers.ts';
+import {
+  callConsumerOf,
+  DeliveryFailed,
+  type CallConsumer,
+  type CallRecord,
+  type Delivery,
+} from '../follower/consumers.ts';
 import { runKeyOf } from '../runs/run-address.ts';
 import { passedOverRow } from './pending-cancel-rows.ts';
 import type { WaitingOptions } from './waiting-options.ts';
@@ -21,6 +27,9 @@ interface Asked {
   readonly playbook: PlaybookAddress;
   readonly record: RecordedEvent;
   readonly request: CancelRequested;
+}
+
+interface AskedOfARun extends Asked {
   readonly type: string;
   readonly runId: string;
 }
@@ -33,7 +42,7 @@ function lineageOf({ id, correlationId }: RecordedEvent): Lineage {
   return { causationId: id, correlationId };
 }
 
-function cancelledWorkflow(parts: CancelParts, { playbook, record, request, runId }: Asked) {
+function cancelledWorkflow(parts: CancelParts, { playbook, record, request, runId }: AskedOfARun) {
   const { kind, reason } = request.data;
   const { by } = request.context;
   const runKey = runKeyOf({ ...playbook, runId });
@@ -44,7 +53,7 @@ function cancelledWorkflow(parts: CancelParts, { playbook, record, request, runI
   );
 }
 
-function cancelled(parts: CancelParts, asked: Asked): Effect.Effect<void, DeliveryFailed> {
+function cancelled(parts: CancelParts, asked: AskedOfARun): Effect.Effect<void, DeliveryFailed> {
   const { playbook, record, request, type, runId } = asked;
   if (type === parts.workflows) {
     return cancelledWorkflow(parts, asked);
@@ -56,32 +65,38 @@ function cancelled(parts: CancelParts, asked: Asked): Effect.Effect<void, Delive
     .pipe(Effect.mapError(failedWith));
 }
 
-function deliveriesOf(parts: CancelParts, { playbook, record }: CallRecord): readonly Delivery[] {
+function askedOf({ playbook, record }: CallRecord): Asked | undefined {
   const request = cancelRequestOf(record);
+  return request === undefined ? undefined : { playbook, record, request };
+}
+
+function deliveriesOf(parts: CancelParts, asked: Asked): readonly Delivery[] {
+  const { record } = asked;
   const type = record.context.definitionType;
-  if (request === undefined || type === undefined) {
+  if (type === undefined) {
     return [];
   }
   const runId = record.stream.slice(record.stream.lastIndexOf('/') + 1);
   const delivery: Delivery = {
     key: 'cancel',
     workflow: runId,
-    deliver: cancelled(parts, { playbook, record, request, type, runId }),
+    deliver: cancelled(parts, { ...asked, type, runId }),
     skipped: () => Effect.void,
   };
   return [delivery];
 }
 
 export function cancelRequests(parts: CancelParts): CallConsumer {
-  return {
+  return callConsumerOf({
     name: 'cancel_requests',
     types: ['run_cancel_requested'],
     skippedAfterSweeps: Number.POSITIVE_INFINITY,
-    batchOf: (followed, after) =>
+    readOf: askedOf,
+    batchOf: (asked, after) =>
       Effect.sync(() => ({
-        deliveries: after === undefined ? deliveriesOf(parts, followed) : [],
+        deliveries: after === undefined ? deliveriesOf(parts, asked) : [],
         through: undefined,
         more: false,
       })),
-  };
+  });
 }

@@ -52,7 +52,6 @@ function decliningEveryOffer(database: HostDatabase): Declining {
           return { outcome: 'stale', version: 2, declined: 'The run took no event of this kind' } as const;
         }),
       clock: { now: () => 0, sleep: () => Effect.void },
-      sweepEveryMs: 1000,
       reports: {
         unsettled: () => Effect.void,
         trouble: () => Effect.void,
