@@ -11,6 +11,13 @@ import { outputFailure } from './output-failure.ts';
 
 export type Answered = Omit<ModelResult, 'duration_ms'>;
 
+export type SettledAnswer = Result.Result<Answered, ModelFailure>;
+
+export interface Responded {
+  readonly id: string | null;
+  readonly cost: { readonly cost_usd?: number };
+}
+
 export interface SdkResult {
   readonly text: string;
   readonly finishReason: SdkFinishReason;
@@ -33,9 +40,10 @@ export interface Generated {
   readonly warnings: readonly SdkWarning[];
   readonly answeredModel: string;
   readonly responseId: string | null;
+  readonly cost: { readonly cost_usd?: number };
 }
 
-export function projected(result: SdkResult, responseId: string | null): Generated {
+export function projected(result: SdkResult, { id, cost }: Responded): Generated {
   return {
     text: result.text,
     finishReason: result.finishReason,
@@ -43,7 +51,8 @@ export function projected(result: SdkResult, responseId: string | null): Generat
     usage: result.usage,
     warnings: Arr.flatten(Arr.fromNullishOr(result.warnings)),
     answeredModel: result.response.modelId,
-    responseId,
+    responseId: id,
+    cost,
   };
 }
 
@@ -55,6 +64,7 @@ function answered(target: ModelTarget, generated: Generated, tools: ModelTools |
     usage: tokenUsage(generated.usage),
     model: { requested: target.requested, resolved: target.resolved, answered: generated.answeredModel },
     response_id: generated.responseId,
+    ...generated.cost,
     warnings: [
       ...generated.warnings.map((warning) => warningOf(warning)),
       ...inputSchemaWarnings(tools, target.provider),
@@ -67,7 +77,7 @@ export function settledAnswer(
   generated: Generated,
   output: ReadOutput,
   tools: ModelTools | undefined,
-): Result.Result<Answered, ModelFailure> {
+): SettledAnswer {
   if (generated.finishReason === 'content-filter' || output.kind === 'missing') {
     return Result.fail(outputFailure({ provider: target.provider, ...generated, cause: undefined }));
   }

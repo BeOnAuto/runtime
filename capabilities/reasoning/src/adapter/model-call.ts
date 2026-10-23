@@ -1,10 +1,10 @@
 import { generateText, wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
-import { Result } from 'effect';
+import { Array as Arr, Result } from 'effect';
 
-import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelRequest, ToolCallSignals } from '../model/model-request.ts';
 import { toolLoop, turnsOf } from '../tools/tool-loop.ts';
-import { projected, readOutput, settledAnswer, type Answered } from './answer-settling.ts';
+import { costOf } from './answer-mapping.ts';
+import { projected, readOutput, settledAnswer, type Responded, type SettledAnswer } from './answer-settling.ts';
 import {
   callSettingsOf,
   promptOf,
@@ -19,9 +19,32 @@ import type { StepDeadline } from './stopped-call.ts';
 
 type DoGenerate = Parameters<NonNullable<LanguageModelMiddleware['wrapGenerate']>>[0]['doGenerate'];
 
-type Settled = Result.Result<Answered, ModelFailure>;
-
 type Turns = ReturnType<typeof turnsOf>;
+
+interface RespondingModel {
+  readonly model: ReturnType<typeof wrapLanguageModel>;
+  readonly responded: () => Responded;
+}
+
+function summedCost(costs: readonly number[]): Responded['cost'] {
+  return costs.length === 0 ? {} : { cost_usd: costs.reduce((total, cost) => total + cost, 0) };
+}
+
+function respondingModel(target: ModelTarget): RespondingModel {
+  const response: { id: string | null; costs: number[] } = { id: null, costs: [] };
+  const model = wrapLanguageModel({
+    model: target.model(),
+    middleware: {
+      wrapGenerate: async ({ doGenerate }: { readonly doGenerate: DoGenerate }) => {
+        const generated = await doGenerate();
+        response.id = generated.response?.id ?? null;
+        response.costs.push(...Arr.fromNullishOr(costOf(generated.response?.headers, target.costHeader)));
+        return generated;
+      },
+    },
+  });
+  return { model, responded: () => ({ id: response.id, cost: summedCost(response.costs) }) };
+}
 
 function callOf(request: ModelRequest, step: StepDeadline, turns: Turns) {
   return {
@@ -51,7 +74,7 @@ interface CallHooks extends Calling {
 
 export interface CallingModel {
   readonly turns: Turns;
-  readonly settled: Promise<Settled>;
+  readonly settled: Promise<SettledAnswer>;
 }
 
 async function modelAnswer(
@@ -59,18 +82,8 @@ async function modelAnswer(
   request: ModelRequest,
   signals: ToolCallSignals,
   { step, turns, telemetry }: CallHooks,
-): Promise<Settled> {
-  const response: { id: string | null } = { id: null };
-  const model = wrapLanguageModel({
-    model: target.model(),
-    middleware: {
-      wrapGenerate: async ({ doGenerate }: { readonly doGenerate: DoGenerate }) => {
-        const generated = await doGenerate();
-        response.id = generated.response?.id ?? null;
-        return generated;
-      },
-    },
-  });
+): Promise<SettledAnswer> {
+  const { model, responded } = respondingModel(target);
   const loop = toolLoop(request.tools, signals.cancelled, turns);
   const { tools, prepareStep, stopWhen } = loop;
   const call = {
@@ -86,7 +99,7 @@ async function modelAnswer(
     const result = await generateText(call);
     return (
       loop.unanswered(target.provider, result.finishReason, result.usage) ??
-      settledAnswer(target, projected(result, response.id), { kind: 'text' }, request.tools)
+      settledAnswer(target, projected(result, responded()), { kind: 'text' }, request.tools)
     );
   }
   const output = jsonOutput(request.output);
@@ -98,7 +111,7 @@ async function modelAnswer(
     loop.unanswered(target.provider, result.finishReason, result.usage) ??
     settledAnswer(
       target,
-      projected(result, response.id),
+      projected(result, responded()),
       readOutput(() => result.output),
       request.tools,
     )

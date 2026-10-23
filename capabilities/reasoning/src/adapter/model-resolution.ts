@@ -15,6 +15,7 @@ export interface ModelTarget {
   readonly requested: string;
   readonly resolved: string;
   readonly model: () => SdkModel;
+  readonly costHeader: string | null;
 }
 
 export type ModelResolution = (
@@ -59,7 +60,7 @@ function notAllowed(requested: string, provider: string): ModelNotAllowed {
   return new ModelNotAllowed({ detail: `${requested} is not one of the models this server offers`, provider });
 }
 
-export type ResolutionSettings = Pick<ModelSettings, 'aliases' | 'allowed' | 'providerSetup'>;
+export type ResolutionSettings = Pick<ModelSettings, 'aliases' | 'allowed' | 'providerSetup' | 'gateways'>;
 
 export function modelResolution(
   models: ReadonlyMap<string, ModelFactory>,
@@ -68,6 +69,7 @@ export function modelResolution(
 ): ModelResolution {
   const resolve = aliasResolution(settings.aliases);
   const offer = modelOffer(settings.allowed);
+  const costHeaders = new Map(settings.gateways.map(({ name, cost_header }) => [name, cost_header]));
   return (requested) => {
     const resolved = resolve(requested);
     return Option.match(parseModelReference(resolved), {
@@ -79,7 +81,13 @@ export function modelResolution(
         const factory = models.get(provider);
         return factory === undefined
           ? Result.fail(notConfigured(provider, status, settings))
-          : Result.succeed({ provider, requested, resolved, model: () => factory(model) });
+          : Result.succeed({
+              provider,
+              requested,
+              resolved,
+              model: () => factory(model),
+              costHeader: costHeaders.get(provider) ?? null,
+            });
       },
     });
   };

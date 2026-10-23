@@ -27,6 +27,7 @@ const internal = {
   include_usage: true,
   expose_provider_messages: true,
   allowed_provider_options: ['metadata', 'user'],
+  cost_header: 'X-Cost',
 };
 
 describe('MODEL_GATEWAYS', () => {
@@ -47,6 +48,7 @@ describe('MODEL_GATEWAYS', () => {
         include_usage: true,
         expose_provider_messages: true,
         allowed_provider_options: new Set(['metadata', 'user']),
+        cost_header: 'x-cost',
       },
       {
         name: 'local',
@@ -59,6 +61,7 @@ describe('MODEL_GATEWAYS', () => {
         include_usage: false,
         expose_provider_messages: false,
         allowed_provider_options: new Set(),
+        cost_header: null,
       },
     ]);
     expect(exposedText(settings.gateways)).not.toContain(secret);
@@ -114,7 +117,7 @@ describe('malformed MODEL_GATEWAYS', () => {
       { name: 'Internal', base_url: 'https://a.example' },
       { name: 'openai', base_url: 'https://b.example' },
       { name: 'mine', base_url: 'https://c.example' },
-      { name: 'mine', base_url: 'mailto:someone', api_key_env: 'NOT_SET' },
+      { name: 'mine', base_url: 'mailto:someone', api_key_env: 'NOT_SET', cost_header: 'x cost' },
     ];
 
     expect(await problemsOf(gateways(entries))).toEqual([
@@ -127,6 +130,7 @@ describe('malformed MODEL_GATEWAYS', () => {
       { setting: 'MODEL_GATEWAYS', pointer: '/3/name', detail: 'mine is used twice' },
       { setting: 'MODEL_GATEWAYS', pointer: '/3/base_url', detail: 'Expected an http or https URL' },
       { setting: 'MODEL_GATEWAYS', pointer: '/3/api_key_env', detail: 'The variable it names is not set' },
+      { setting: 'MODEL_GATEWAYS', pointer: '/3/cost_header', detail: 'Expected the name of an HTTP header' },
     ]);
   });
 });

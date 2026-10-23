@@ -41,6 +41,7 @@ export interface ModelResult {
   readonly usage: TokenUsage;
   readonly model: ModelIdentity;
   readonly response_id: string | null;
+  readonly cost_usd?: number;
   readonly warnings: readonly ModelWarning[];
   readonly duration_ms: number;
 }

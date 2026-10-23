@@ -117,6 +117,10 @@
               "type": "string"
             },
             "description": "The top-level request body fields a reasoning function may set for this gateway through provider_options, such as user and metadata. Default none"
+          },
+          "cost_header": {
+            "type": "string",
+            "description": "A gateway entry names the header its gateway answers the call's cost in, in US dollars, or names none and no cost is kept. A run keeps the cost as cost_usd"
           }
         },
         "required": ["name", "base_url"],

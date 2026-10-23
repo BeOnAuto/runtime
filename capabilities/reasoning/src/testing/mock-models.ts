@@ -30,7 +30,7 @@ export function mockGeneration(model: () => MockLanguageModelV4, reportHint: Rep
   installSdkGlobals();
   const status = { configured: ['mock'], unconfigured: [] };
   const { generate } = generation(
-    modelResolution(new Map([['mock', model]]), { aliases: new Map(), allowed: null }, status),
+    modelResolution(new Map([['mock', model]]), { aliases: new Map(), allowed: null, gateways: [] }, status),
     {
       configured: ['mock'],
       showsProviderMessages: () => true,

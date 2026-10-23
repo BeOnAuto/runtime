@@ -343,6 +343,7 @@ More rules:
 | `finish_reason`, `raw_finish_reason` | Why the answer ended: `stop`, `length`, `content_filter`, `tool_calls`, `error` or `other`; and the provider's own word for it |
 | `usage`                              | Input tokens (uncached, cache read, cache write), output tokens (text, reasoning) and the total; `null` where unknown          |
 | `response_id`                        | The provider's id of the response; for Bedrock, its request id                                                                 |
+| `cost_usd`                           | What the run's model calls cost in US dollars, added up, where the gateway answered a cost; absent when it answered none       |
 | `warnings`                           | What the provider said it ignored or changed, and the parts of a tool's input schema that are not portable to it; at most 20   |
 | `duration_ms`                        | How long the call took                                                                                                         |
 | `prompt`                             | The rendered `instructions` and `message`, and `truncated`                                                                     |
