@@ -131,7 +131,7 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 | `run_definition` | `POST /definitions/{type}/{name}/run` | Run a function or workflow once, with its `input` and an optional `run_id` |
 | `get_run`        | `GET /runs/{run_id}`                  | Read a run, with its detailed `record`                                     |
 | `list_runs`      | `GET /runs`                           | List the playbook's runs, newest first                                     |
-| `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that waits                                                    |
+| `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that is still going                                           |
 | `send_run_event` | `POST /runs/{run_id}/events`          | Deliver an event to a workflow run that is still `started`                 |
 
 [Runs and results](http.md#runs-and-results) covers input limits and which runs finish later, and [Retrying under a run id](http.md#retrying-under-a-run-id) what a request under an earlier run's id returns. [Cancelling a run](http.md#cancelling-a-run), [Sending an event to a run](http.md#sending-an-event-to-a-run) and [Run history and playbook events](http.md#run-history-and-playbook-events) give the rest.

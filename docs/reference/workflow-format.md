@@ -347,7 +347,7 @@ The status is the workflow error's own. It equals the HTTP status of the same re
 A function that called tools may have changed something outside the playbook, so a run of it that called tools and did not succeed is never run again under its run id ([Retrying under a run id](http.md#retrying-under-a-run-id)). In a workflow:
 
 - A function that called tools and could not finish raises `tools_unfinished`, status 503, when its server marks every tool it called read-only, so a `catch` on status 503 may run it again safely, and `effect_unknown`, status 409, otherwise, which such a `catch` does not run again. Their `because` field is `tool_error` when a tool returned an error, and `server_failed` when a tool server failed ([Limits on time and failures](reasoning-format.md#limits-on-time-and-failures)). A reasoning function whose tools are not offered has the kind `tool_not_offered`, and one whose tool server cannot be used `tool_server_failed` ([Before the model is called](reasoning-format.md#before-the-model-is-called)).
-- A step that meets a run whose tools may have been called before, such as when the server restarted during the step, raises `https://on.auto/problems/tools_called`, never `runtime`. A workflow that ends with it is rejected as a `conflict` of that kind: check the run's history and start a new run.
+- A step the server performs again, such as when it restarted during the step, goes on with a reasoning function's run from what it recorded ([A run performed again](reasoning-format.md#a-run-performed-again)). A step that meets an interaction function's run whose tool may have been called before raises `https://on.auto/problems/tools_called`, never `runtime`. A workflow that ends with it is rejected as a `conflict` of that kind: check the run's history and start a new run.
 - A `retry` that catches every error, or status 409, also takes `effect_unknown` and `tools_called`: it runs the function again under a new id, which calls its tools again.
 
 Other function types:
@@ -460,7 +460,7 @@ A retry policy is written inline or named from `use.retries`:
 
 A `timeout` on a task cancels the task when its duration passes, and raises a `timeout` error at that task. A `timeout` on the document does the same for the whole run. A call it cancels stops the function's run at once:
 
-- A reasoning function's tool calls still in flight are cancelled at their tool servers. Its run ends `rejected` as `cancelled` with the kind `deadline`, its history showing each of those calls started and never finished.
+- A reasoning function's tool calls still in flight are cancelled at their tool servers. Its run ends `rejected` as `cancelled` with the kind `deadline` and the spending of its model calls so far, its history showing each of those calls, and a model call in flight, ended as `interrupted`.
 - A cancelled run is final under its id, whether or not it recorded a tool call: a request with its id and input returns its cancellation.
 - The error is still a plain `timeout`, which says nothing of the tools. A `retry` that matches timeouts calls the function again, under a new id, and so calls its tools again. To keep them from being called again, leave timeouts out of such a retry, for example with `exceptWhen: '${ $error.status === 408 }'`. Check the run's history before starting another.
 

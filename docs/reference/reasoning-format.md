@@ -71,13 +71,13 @@ A run takes these steps:
 
 1. It applies `input.default`: each top-level field the supplied input leaves out takes its default. It checks the result against `input.schema`. The input may be at most 256 KiB as JSON and 512 levels deep. A run without input gets `{}`.
 2. It renders the [template](#the-template). The system block becomes the system instructions, and everything else becomes one user message.
-3. It calls the model. A function with `tools` lets the model call them before it answers; see [Tools](#tools).
+3. It calls the model, one call at a time, and records each [model call](#the-run-s-model-calls) in the run's history. A function with `tools` lets the model call them before it answers; see [Tools](#tools).
 4. It checks a JSON answer against `output.schema`, or against the shape `output.shape` names.
 5. It records the output and a [record](#what-a-run-records) of the call.
 
 An external agent can pass evidence it collected through its own connections as input. The function itself cannot reach that agent's tools.
 
-Supply a `run_id` to read a run later or to retry it. The same id and input return a recorded success or `invalid_input` without calling the model again. After `unavailable`, `conflict` or a failure, they run the definition again. A run that called tools is the exception; see [When a tool-calling run cannot finish](#when-a-tool-calling-run-cannot-finish). [Retrying under a run id](http.md#retrying-under-a-run-id) gives every case. The [HTTP reference](http.md) gives the other rules of the run operations.
+Supply a `run_id` to read a run later or to retry it. The same id and input return a recorded success or `invalid_input` without calling the model again. After `unavailable`, `conflict` or a failure, they run the definition again. A run that called tools is the exception; see [When a tool-calling run cannot finish](#when-a-tool-calling-run-cannot-finish). A run that is still `started` is not started a second time: it goes on from what it recorded; see [A run performed again](#a-run-performed-again). [Retrying under a run id](http.md#retrying-under-a-run-id) gives every case. The [HTTP reference](http.md) gives the other rules of the run operations.
 
 ## The template
 
@@ -264,7 +264,7 @@ Each call adds two events to the run's history, appended as they happen:
 1. `tool_call_started`, recorded before the call is sent. It has the call's number, the id the model gave it, the server, the tool and the size of its arguments. It has `read_only: true` when the server marks the tool read-only, and the SHA-256 digest of the arguments when they are kept.
 2. Then one of:
    - `tool_call_answered`, when the tool answered: `is_error`, the size of the result and its digest when it is kept, `shown_bytes` when the model read less than all of it, the duration and the JSON-RPC id.
-   - `tool_call_failed`, when it did not: `because` (`arguments_refused`, `server_failure`, `timed_out`, `too_large` for a result larger than the transport reads, or `cancelled`), the failure message, the duration and the JSON-RPC id.
+   - `tool_call_failed`, when it did not: `because` (`arguments_refused`, `server_failure`, `timed_out`, `too_large` for a result larger than the transport reads, `cancelled`, or `interrupted` for a call whose attempt ended before it answered, which the run makes again; see [A run performed again](#a-run-performed-again)), the failure message, the duration and the JSON-RPC id.
 
 Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the operator sets `record_content: false` for the server. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.
 
@@ -281,10 +281,10 @@ Both endings name, in words, the tools the run called. They keep the `because` f
 
 The same run id never runs that work again. [Retrying under a run id](http.md#retrying-under-a-run-id) gives the rule for every run; for a tool-calling run:
 
-- `run_definition` with the `run_id` of a tool-calling run that did not succeed returns `conflict` with the kind `tools_called`. When the run has ended and every tool it called only reads, the rejection also has `because: "only_read"`, and its words say nothing was changed.
-- A run of a function with `tools` that is still `started` also cannot restart under its id, even before its first recorded call, since it may still be in progress. It also returns `tools_called`.
+- `run_definition` with the `run_id` of a tool-calling run that ended without succeeding returns `conflict` with the kind `tools_called`. When every tool it called only reads, the rejection also has `because: "only_read"`, and its words say nothing was changed.
+- A run that is still `started` is not started again: it goes on from what it recorded, and calls again only a tool its server marks read-only whose call has no answer; see [A run performed again](#a-run-performed-again).
 
-A caller that disconnects before the run returns interrupts the run, which is recorded as `failed`. Tool calls in flight are cancelled and may already have had external effects.
+A caller that disconnects before the run returns does not stop the run: it goes on to its end and records it, and a request with its `run_id` is given what it recorded. Only the server stopping cuts a run off, and that leaves it to be performed again from what it recorded; see [A run performed again](#a-run-performed-again).
 
 Inspect its history and any external effects before deliberately starting a new run with a new id. Retrying a successful run returns its recorded result without calling tools again.
 
@@ -296,26 +296,29 @@ Tool access works in every runtime, whether started with npx or Docker, once the
 
 Every rejection is a problem document, and is recorded on the run.
 
-| What happened                                                                            | Rejection                                                                    | HTTP       |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------- |
-| The input is not a JSON object, or does not match the input schema                       | `invalid_input`, with the issues under `/input`                              | 422        |
-| The template reads a missing field outside a condition                                   | `invalid_input` at `/input/<field>`, with the line                           | 422        |
-| A filter rejects an input value, a render limit is reached, or the message renders empty | `invalid_input`, with the line                                               | 422        |
-| The model refuses the content under its policy                                           | `invalid_input`                                                              | 422        |
-| The provider rejects the model, the schema or a setting                                  | `conflict`, kind `unworkable`                                                | 409        |
-| A provider option its gateway does not allow, or a namespace nothing reads               | `conflict`, kind `unworkable`; nothing is called                             | 409        |
-| A JSON answer is cut off at `max_output_tokens`                                          | `conflict`, kind `unworkable`: raise `config.max_output_tokens`              | 409        |
-| The answer is too large for the 1 MiB a run records                                      | `conflict`, kind `unworkable`: lower `config.max_output_tokens`              | 409        |
-| The provider signals the request is too long                                             | `conflict`, kind `unworkable`                                                | 409        |
-| The model is outside the operator's allowed models                                       | `unavailable`, kind `model_not_offered`, `because: "model_not_allowed"`      | 503        |
-| The provider is not configured, or its certificate is not trusted                        | `unavailable`                                                                | 503        |
-| The provider rejects the credentials                                                     | `unavailable`, with the HTTP status                                          | 503        |
-| The provider limits the rate of requests                                                 | `unavailable`, with the seconds to wait when it said                         | 503        |
-| The provider cannot be reached or cannot serve now, or does not respond in time          | `unavailable`: try again later                                               | 503        |
-| A JSON answer does not match the schema                                                  | `unavailable`, with the first issues: try again                              | 503        |
-| A tool cannot be used before the model is called                                         | `unavailable`, kind `tool_not_offered` or `tool_server_failed`               | 503        |
-| A run that called tools cannot finish                                                    | `unavailable`, kind `tools_unfinished`, or `conflict`, kind `effect_unknown` | 503 or 409 |
-| The caller disconnects before the run returns                                            | The run is interrupted and recorded as `failed`                              | 499        |
+| What happened                                                                            | Rejection                                                                                               | HTTP       |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------- |
+| The input is not a JSON object, or does not match the input schema                       | `invalid_input`, with the issues under `/input`                                                         | 422        |
+| The template reads a missing field outside a condition                                   | `invalid_input` at `/input/<field>`, with the line                                                      | 422        |
+| A filter rejects an input value, a render limit is reached, or the message renders empty | `invalid_input`, with the line                                                                          | 422        |
+| The model refuses the content under its policy                                           | `invalid_input`                                                                                         | 422        |
+| The provider rejects the model, the schema or a setting                                  | `conflict`, kind `unworkable`                                                                           | 409        |
+| A provider option its gateway does not allow, or a namespace nothing reads               | `conflict`, kind `unworkable`; nothing is called                                                        | 409        |
+| A JSON answer is cut off at `max_output_tokens`                                          | `conflict`, kind `unworkable`: raise `config.max_output_tokens`                                         | 409        |
+| The answer is too large for the 1 MiB a run records                                      | `conflict`, kind `unworkable`: lower `config.max_output_tokens`                                         | 409        |
+| The provider signals the request is too long                                             | `conflict`, kind `unworkable`                                                                           | 409        |
+| The model is outside the operator's allowed models                                       | `unavailable`, kind `model_not_offered`, `because: "model_not_allowed"`                                 | 503        |
+| The provider is not configured, or its certificate is not trusted                        | `unavailable`                                                                                           | 503        |
+| The provider rejects the credentials                                                     | `unavailable`, with the HTTP status                                                                     | 503        |
+| The provider limits the rate of requests                                                 | `unavailable`, with the seconds to wait when it said                                                    | 503        |
+| The provider cannot be reached or cannot serve now, or does not respond in time          | `unavailable`: try again later                                                                          | 503        |
+| A JSON answer does not match the schema                                                  | `unavailable`, with the first issues: try again                                                         | 503        |
+| A tool cannot be used before the model is called                                         | `unavailable`, kind `tool_not_offered` or `tool_server_failed`                                          | 503        |
+| A run that called tools cannot finish                                                    | `unavailable`, kind `tools_unfinished`, or `conflict`, kind `effect_unknown`                            | 503 or 409 |
+| The run under the `run_id` is still `started`, and its last event is recent              | `conflict`, kind `taken`: the run is still running; see [A run performed again](#a-run-performed-again) | 409        |
+| The server restarted before the run finished, and the run kept no content to go on from  | `unavailable`, `because: "restarted_without_content"`                                                   | 503 or 409 |
+| The server restarted while the run called a tool its server does not mark read-only      | `conflict`, kind `effect_unknown`, `because: "call_outcome_unknown"`                                    | 409        |
+| The caller disconnects before the run returns                                            | The run goes on to its end and records it; a request with its `run_id` is given its result              | 499        |
 
 What the rejections say:
 
@@ -335,27 +338,54 @@ More rules:
 
 `get_run` returns the output of a succeeded run with its `record`:
 
-| Field                                | What it holds                                                                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `model`                              | The model as `requested`, as `resolved` through the aliases, and as the provider `answered`                                    |
-| `settings`                           | The settings sent, with the default `max_output_tokens` filled in                                                              |
-| `output_format`                      | `text` or `json`                                                                                                               |
-| `finish_reason`, `raw_finish_reason` | Why the answer ended: `stop`, `length`, `content_filter`, `tool_calls`, `error` or `other`; and the provider's own word for it |
-| `usage`                              | Input tokens (uncached, cache read, cache write), output tokens (text, reasoning) and the total; `null` where unknown          |
-| `response_id`                        | The provider's id of the response; for Bedrock, its request id                                                                 |
-| `cost_usd`                           | What the run's model calls cost in US dollars, added up, where the gateway answered a cost; absent when it answered none       |
-| `warnings`                           | What the provider said it ignored or changed, and the parts of a tool's input schema that are not portable to it; at most 20   |
-| `duration_ms`                        | How long the call took                                                                                                         |
-| `prompt`                             | The rendered `instructions` and `message`, and `truncated`                                                                     |
+| Field                                | What it holds                                                                                                                                              |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`                              | The model as `requested`, as `resolved` through the aliases, and as the provider `answered`                                                                |
+| `settings`                           | The settings sent, with the default `max_output_tokens` filled in                                                                                          |
+| `output_format`                      | `text` or `json`                                                                                                                                           |
+| `finish_reason`, `raw_finish_reason` | Why the answer ended: `stop`, `length`, `content_filter`, `tool_calls`, `error` or `other`; and the provider's own word for it                             |
+| `usage`                              | Input tokens (uncached, cache read, cache write), output tokens (text, reasoning) and the total, added up over the run's model calls; `null` where unknown |
+| `response_id`                        | The provider's id of the last response; for Bedrock, its request id                                                                                        |
+| `cost_usd`                           | What the run's model calls cost in US dollars, added up, where the gateway answered a cost; absent when it answered none                                   |
+| `warnings`                           | What the provider said it ignored or changed, and the parts of a tool's input schema that are not portable to it; at most 20                               |
+| `duration_ms`                        | How long the run's model calls took, added up                                                                                                              |
+| `prompt`                             | The rendered `instructions` and `message`, and `truncated`                                                                                                 |
 
 - The output and the record may be at most 1 MiB together; see [Runs and results](http.md#runs-and-results). When the prompt does not fit beside the answer, the record keeps the start of the instructions and of the message, and sets `truncated: true`.
 - The record contains no credentials. It also leaves out the provider options, which the definition already contains.
-- A run rejected after its model answered keeps a record with only `usage` and `duration_ms`, and the playbook's analytics count its tokens. That happens when:
-  - the answer does not match the schema, or is cut off;
-  - the model refused the content;
-  - the model kept calling tools in the last step;
-  - the answer is too large for the 1 MiB.
-- A rejection that comes before the model answers records no usage, since none is known. Neither does a call stopped by its deadline, by the run's bound or by failing tool servers.
+- A run rejected after one of its model calls ended keeps a record with only `usage`, `duration_ms` and `cost_usd`, added up over the model calls that ended, and the playbook's analytics count its tokens. That holds for every ending: an answer that does not match the schema or is cut off, content the model refused, a model that kept calling tools in the last step, an answer too large for the 1 MiB, and a run stopped by a call's deadline, by its bound or by failing tool servers. A count the provider did not report is `null`.
+- A rejection that comes before any model call ended records no usage, since none is known.
+
+## The run's model calls
+
+A run calls its model one call at a time. Each call adds two events to the run's history, appended as they happen:
+
+1. `model_call_started`, recorded before the call is sent. It has the call's `number`, counted from 1 across the run, the `model` asked for, `tools_offered`, and `messages_bytes`, the size of the messages the call adds to the conversation: the prompt for the first call, the answers of the tools for a later one, and for the last step of a run that called tools, the conversation told again in one message.
+2. Then one of:
+   - `model_call_answered`, when the model answered: `finish_reason` and `raw_finish_reason`, `usage`, `cost_usd` where the gateway answered a cost, `response_id`, `duration_ms`, `request_bytes`, the size of the request the call sent, `response_bytes`, the model as `resolved_model` and `answered_model`, the provider's `warnings`, and `tool_calls`, one for each tool call the model asked for, with its `call_id`, the `tool` and `server` it names, and the digest of its arguments.
+   - `model_call_failed`, when it did not: `because` (`cancelled`, `content_refused`, `credentials_rejected`, `definition_invalid`, `interrupted`, `model_not_allowed`, `output_invalid`, `provider_not_configured`, `provider_unavailable`, `rate_limited`, `request_too_long` or `timed_out`), the `provider`, the failure message as `detail`, `duration_ms`, and, where they apply, the `usage` and `cost_usd` of an answer the run could not use, `finish_reason`, `retry_after_ms`, the provider's own words and the issues it named.
+
+The messages each call adds and the model's response are kept in full, scrubbed of the secrets of the run's tool servers, when every tool server of the run keeps content, as `record_content` keeps it unless the operator turns it off. A run without tools always keeps them. The events then carry their SHA-256 digests, `messages_sha256` and `response_sha256`, and each tool call the digest of its arguments, `arguments_sha256`. A call keeps only what it adds, never the whole conversation again, so what a run keeps grows with its length. A run goes on from the scrubbed messages and response whether it keeps them or not, so a secret of a tool server in the prompt or in the model's answer reaches no model call and no tool. A JSON answer is checked against its schema again once scrubbed, and one that no longer matches, such as a number that held a secret, ends the run as an answer that does not match its schema does. A run's history shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.
+
+A gateway that answers what a call cost, in US dollars, in a response header gives the call its `cost_usd`; [Gateway fields](model-settings.md#gateway-fields) names the header. The [record](#what-a-run-records) of the run adds up its model calls.
+
+## A run performed again
+
+A run is not interrupted by its client going away; only the server stopping cuts it off, and that leaves it to be performed again from what it recorded. A run a workflow's step started goes on within that step: it stops when the step's server stops or hands its workflows to another server, and the server that runs the workflow then goes on with it. Nothing limits how many runs go on after their clients went away: each is bounded as any run is, and its client started it. `cancel_run` cancels a run that is still `started`, whether its client is there or gone: the server where a run its client started is going stops it at once, ending each call it has in flight as `interrupted`, as the workflow that started a run does when it cancels it, and a run a workflow's step started that `cancel_run` cancels, or one going in another server, stops before its next model call or tool call, a call it already sent still recording its answer, and a run whose last model call answers ends with that answer. Otherwise the run ends `rejected` with the reason `cancelled`, with the spending of its model calls so far; see [Cancelling a run](http.md#cancelling-a-run). A run that is still `started` is never started a second time. `run_definition` with its `run_id` goes on with it from what it recorded, at the version it started with, and answers when the run ends. The workflow host does the same for the calls its workflows wait on, once a server starts again after one stopped.
+
+A run is told to be still running by its events alone. Every model call and every tool call has a bound: the model call's limit under [Limits on time and failures](#limits-on-time-and-failures), and the server's bound of a tool call, 30 seconds unless the operator sets another. The two together are longer than any gap between two events of a run that is still going. A run whose last event is newer than that may still be running, so a request for it is refused as `conflict` with the kind `taken`, saying the run is still running, and makes no second attempt. Once its last event is older, the attempt that wrote it has ended, and the request goes on with the run. The age of the last event is read from the database's clock, so two servers that share a database need not agree on the time. The workflow host, which knows the server it replaces stopped, goes on at once. In the server where the run is going, a request for it waits for it to end and is given what it recorded, so two requests for one run in one server make one attempt of it, and a client that sends a request twice is answered once. Each model call and each tool call is numbered, and an event is recorded only under the next number, or as the end of a call that is still open, so of two attempts that go on at once, from two servers too, the second stops at its first event, before it calls anything, and no call is ever started a second time.
+
+The run goes on from its events and the content it kept, and reads them before it does anything else: it takes its prompt from what its first model call kept and does not render the template again, and an ending it meets before its first call, such as a tool server that cannot be opened yet, names the tools it called and records the spending of its model calls, as every other ending does.
+
+- The bound of a run that calls tools, 10 minutes, counts from its start.
+- A model call that was answered is not made again. A model call started without an answer ends as `interrupted` and is made again from the same messages, under the next number.
+- When the last model call asked for tool calls, each call that has an answer gives the model that answer again, rebuilt from what the run kept, and a call that failed gives the model its failure. A call without an answer ends as `interrupted`, and is made again when its server marks the tool read-only. Every call counts toward the run's 25, the ones made before included.
+- A call without an answer of a tool its server does not mark read-only is not made again, since it may already have changed something outside the playbook, and neither is any other call of the same step without an answer, even one of a read-only tool. Each ends as `interrupted`, and the run ends as `conflict`, kind `effect_unknown`, with `because: "call_outcome_unknown"`.
+- A call of a tool the run no longer offers, because its tool server changed while the run was stopped, is not sent. The model is told so and goes on.
+- A model call that failed ends the run as that failure did, and a run whose cancel was asked ends cancelled, neither calling anything.
+- A run that kept no content, because a tool server of the run has `record_content: false`, cannot go on. Each of its calls without an answer ends as `interrupted`, so every call it started has an end, and the run ends as `unavailable` with `because: "restarted_without_content"`, or, once it called a tool, as `tools_unfinished` or `effect_unknown` with that `because`; see [When a tool-calling run cannot finish](#when-a-tool-calling-run-cannot-finish).
+
+A run that has ended is never performed again in this way; [Retrying under a run id](http.md#retrying-under-a-run-id) gives the rule.
 
 ## The overview
 

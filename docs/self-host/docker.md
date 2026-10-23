@@ -341,4 +341,4 @@ The secrets in a backup open only under the `SECRETS_KEY` that sealed them, so a
 
 ## Stop
 
-`docker stop auto-runtime`, or `docker compose stop runtime` with Compose, sends `SIGTERM`. Auto finishes the work it already accepted, records where its workflows are, and exits, usually in well under a second. Calls it cut off run again when it next starts, except a function run that may have called tools ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). [Starting, stopping and restarting](workflows.md#starting-stopping-and-restarting) describes the stop in detail.
+`docker stop auto-runtime`, or `docker compose stop runtime` with Compose, sends `SIGTERM`. Auto finishes the work it already accepted, records where its workflows are, and exits, usually in well under a second. Calls it cut off run again when it next starts, except an interaction function's run that may have called its tool; a reasoning function's run goes on from what it recorded ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). [Starting, stopping and restarting](workflows.md#starting-stopping-and-restarting) describes the stop in detail.
