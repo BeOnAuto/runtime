@@ -1,7 +1,7 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import type { Evaluation } from '../programs/program-run.ts';
 import { filterSandboxOf, hostClock, machineSandboxOf } from './host-sandboxes.ts';
 
@@ -11,10 +11,10 @@ const fits = '"x".repeat(16 * 1024 * 1024).length';
 
 const overflows = '"x".repeat(96 * 1024 * 1024).length';
 
-describe('the sandboxes of a host', () => {
+describe.each(sourcesUnderTest)('the sandboxes of a host on the $name source', ({ source }) => {
   it('reserves an instance of 64 MiB for each input of a workflow, read against the clock of the host by default', async () => {
-    const sandbox = machineSandboxOf(shippedFilesOnDisk);
-    const counted = machineSandboxOf(shippedFilesOnDisk, () => 12);
+    const sandbox = machineSandboxOf(source);
+    const counted = machineSandboxOf(source, () => 12);
 
     await Effect.runPromise(sandbox.reserve);
     const unit = sandbox.unit();
@@ -31,7 +31,7 @@ describe('the sandboxes of a host', () => {
   });
 
   it('opens a context on an instance of 64 MiB for each group of filters, read against the clock of the host by default', async () => {
-    const sandbox = filterSandboxOf(shippedFilesOnDisk);
+    const sandbox = filterSandboxOf(source);
 
     const session = await sandbox.session(() => evaluation);
     const [fitting, overflowing] = [session.define(fits), session.define(overflows)];

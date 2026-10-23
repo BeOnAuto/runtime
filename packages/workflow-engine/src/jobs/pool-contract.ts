@@ -1,6 +1,7 @@
 import type { Json } from '../dsl/json.ts';
 import type { FoldPage } from '../folds/fold-page.ts';
 import type { FoldPlace } from '../folds/fold-progress.ts';
+import type { InstanceSourceName } from '../instances/instance-sources.ts';
 import type { CheckAnswer, CheckJob } from './check-messages.ts';
 import type { FoldAnswer } from './fold-messages.ts';
 import type { Ending, Interrupted } from './job-endings.ts';
@@ -18,6 +19,7 @@ export interface PoolSettings {
   readonly workers: number;
   readonly heapMegabytes: number;
   readonly handed: HandedWorkers;
+  readonly instances: InstanceSourceName;
   readonly worker?: Readonly<URL>;
   readonly foldWorker?: Readonly<URL>;
   readonly evaluationWorker?: Readonly<URL>;

@@ -1,7 +1,7 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
-import { freshInstance } from '../instances/fresh-instances.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { moduleRun, type ModuleRequest } from './module-runs.ts';
 import { threadStackBytes, unitMemoryBytes } from './sandbox-bounds.ts';
 
@@ -19,17 +19,17 @@ function requestOf(source: string, more: Partial<ModuleRequest> = {}): ModuleReq
   };
 }
 
-async function ran(source: string, more: Partial<ModuleRequest> = {}): Promise<unknown> {
-  return moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings, requestOf(source, more));
+async function ran(source: InstanceSource, program: string, more: Partial<ModuleRequest> = {}): Promise<unknown> {
+  return moduleRun(await source(unitMemoryBytes), settings, requestOf(program, more));
 }
 
-describe('a run of a module', () => {
+describe.each(sourcesUnderTest)('a run of a module on $name instances', ({ source }) => {
   it('calls the function its entry names with its arguments and answers its value as JSON', async () => {
-    const source =
+    const program =
       'export default function (input) {\n  return `Hello, ${input.name}`;\n}\nexport function shout(text) {\n  return text.toUpperCase();\n}';
 
-    expect(await ran(source)).toEqual({ ran: 'answered', text: '"Hello, Ada"', work: 0 });
-    expect(await ran(source, { entry: 'shout', arguments: ['"quiet"'] })).toEqual({
+    expect(await ran(source, program)).toEqual({ ran: 'answered', text: '"Hello, Ada"', work: 0 });
+    expect(await ran(source, program, { entry: 'shout', arguments: ['"quiet"'] })).toEqual({
       ran: 'answered',
       text: '"QUIET"',
       work: 0,
@@ -37,26 +37,28 @@ describe('a run of a module', () => {
   });
 
   it('refuses a module that does not load, as JavaScript the check would not have stripped, or that exports no function of its entry', async () => {
-    expect(await ran('export default function (): number {\n  return 1;\n}')).toMatchObject({
+    expect(await ran(source, 'export default function (): number {\n  return 1;\n}')).toMatchObject({
       ran: 'refused',
       issue: { detail: syntaxError, line: 1 },
     });
-    expect(await ran('export default function () {\n  return 1 +;\n}')).toMatchObject({
+    expect(await ran(source, 'export default function () {\n  return 1 +;\n}')).toMatchObject({
       ran: 'refused',
       issue: { detail: "SyntaxError: unexpected token in expression: ';'", line: 2 },
     });
-    expect(await ran('throw new Error("not now");\nexport default function () {\n  return 1;\n}')).toMatchObject({
+    expect(
+      await ran(source, 'throw new Error("not now");\nexport default function () {\n  return 1;\n}'),
+    ).toMatchObject({
       ran: 'refused',
       issue: { detail: 'Error: not now', line: 1 },
     });
-    expect(await ran('export const answer = 42;')).toEqual({
+    expect(await ran(source, 'export const answer = 42;')).toEqual({
       ran: 'refused',
       issue: { detail: 'The program exports no function default', line: null },
     });
   });
 
   it('ends a module whose loading does more work than its budget allows, as a run that ran out of it', async () => {
-    expect(await ran('for (;;) {}\nexport default function () {\n  return 1;\n}')).toMatchObject({
+    expect(await ran(source, 'for (;;) {}\nexport default function () {\n  return 1;\n}')).toMatchObject({
       ran: 'exhausted',
       limit: 'work',
     });

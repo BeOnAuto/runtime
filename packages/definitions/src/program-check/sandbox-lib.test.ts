@@ -1,5 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { sandboxAnswers } from '@on.auto/workflow-engine/dsl';
+import { freshInstances, sandboxAnswers } from '@on.auto/workflow-engine/dsl';
 import { handedFileIn } from '@on.auto/workflow-engine/job-loop';
 import type { CheckJob } from '@on.auto/workflow-engine/worker';
 import { describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import { sandboxLibOf } from './sandbox-lib.ts';
 
 const kept = sandboxLibFrom(keptLibOnDisk);
 
-const probe = (expressions: readonly string[]) => sandboxAnswers(shippedFilesOnDisk, expressions);
+const probe = (expressions: readonly string[]) => sandboxAnswers(freshInstances(shippedFilesOnDisk), expressions);
 
 function computationReturning(output: string): CheckJob {
   return {

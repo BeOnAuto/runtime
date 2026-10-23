@@ -1,8 +1,17 @@
 import { shippedFilesInMemory } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { sandboxModuleFile } from '../instances/fresh-instances.ts';
-import { handedFile, handedFileIn, handedFilesOf, handedTo, handedWorkersOf } from './handed-files.ts';
+import { sandboxModuleFile } from '../instances/compiled-module.ts';
+import { unitMemoryBytes } from '../programs/sandbox-bounds.ts';
+import {
+  handedData,
+  handedFile,
+  handedFileIn,
+  handedFilesOf,
+  handedSandboxOf,
+  handedTo,
+  handedWorkersOf,
+} from './handed-files.ts';
 
 const shipped = new URL('file:///shipped/');
 
@@ -39,6 +48,15 @@ describe('the files a composition hands the workers of a pool', () => {
     expect(bytesOf(handedTo({ sandbox: handed.sandbox }, checker))).toEqual({ [sandboxModuleFile.href]: [1, 2] });
   });
 
+  it('cross to a worker with the source of instances the pool names', async () => {
+    const handed = await handedWorkersOf(memory, { [checker.href]: await handedFilesOf(memory, [lib]) });
+
+    expect(handedData({ handed, instances: 'kept' }, checker)).toEqual({
+      handed: { [lib.href]: Uint8Array.of(3) },
+      instances: 'kept',
+    });
+  });
+
   it('fail to be read when the reader cannot read one of them', async () => {
     await expect(handedFilesOf(memory, [new URL('missing.bin', shipped)])).rejects.toThrow('missing.bin');
   });
@@ -57,5 +75,11 @@ describe('a file a worker reads of those it was handed', () => {
     expect(() => handedFile(lib, { handed: { [lib.href]: 'not bytes' } })).toThrow(refused);
     expect(() => handedFile(lib)).toThrow(refused);
     expect(() => handedFileIn({})(lib)).toThrow(refused);
+  });
+});
+
+describe('the instances of the sandbox a worker takes', () => {
+  it('are refused when the pool named the worker no source of them', async () => {
+    await expect(handedSandboxOf({ handed: {} })(unitMemoryBytes)).rejects.toThrow('no source of instances');
   });
 });

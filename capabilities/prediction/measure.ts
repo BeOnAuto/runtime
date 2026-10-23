@@ -70,7 +70,12 @@ async function testedOn({ store, aDatabase }: MeasuredStore, history: History): 
 }
 
 async function measuredOn(measured: MeasuredStore): Promise<void> {
-  const pool = programPool({ handed: await handedWorkersOf(shippedFilesOnDisk), workers: 1, heapMegabytes: 256 });
+  const pool = programPool({
+    handed: await handedWorkersOf(shippedFilesOnDisk),
+    instances: 'fresh',
+    workers: 1,
+    heapMegabytes: 256,
+  });
   const history = { days, liveDays, filters: pool.evaluations.filters };
   try {
     await untestedOn(measured, history);

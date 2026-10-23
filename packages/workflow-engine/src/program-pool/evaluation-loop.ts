@@ -2,7 +2,7 @@ import { MessagePort, workerData } from 'node:worker_threads';
 
 import { Option, Schema } from 'effect';
 
-import { instanceStock, type Instances } from '../instances/instance-stock.ts';
+import { instanceStock, type InstanceSource } from '../instances/instance-source.ts';
 import {
   answeredFlag,
   EvaluationRequestSchema,
@@ -23,7 +23,7 @@ interface PreparedFilters {
 }
 
 interface Held {
-  readonly instances: Instances;
+  readonly instances: InstanceSource;
   readonly units: Map<number, OpenedUnit>;
   readonly filters: Map<number, PreparedFilters>;
 }
@@ -114,6 +114,7 @@ export function serveEvaluations(data: unknown = workerData): void {
   const sandbox = handedSandboxOf(data);
   served(port, answer, { instances: instanceStock(sandbox), units: new Map(), filters: new Map() });
   void sandbox(unitMemoryBytes).then((instance) => {
+    instance.release(true);
     Atomics.store(flags, readyFlag, 1);
     Atomics.notify(flags, readyFlag);
     return instance;

@@ -12,7 +12,7 @@ import {
   type Evaluations,
 } from '../jobs/remote-evaluations.ts';
 import { exhaustedBy, type ProgramRun } from '../programs/program-run.ts';
-import { handedTo } from './handed-files.ts';
+import { handedData } from './handed-files.ts';
 import { workerOptions } from './pool-threads.ts';
 
 export const answerGraceMs = 50;
@@ -57,7 +57,7 @@ function started(module: Readonly<URL>, settings: PoolSettings): Live {
   const flags = new Int32Array(new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT));
   const worker = new Worker(module, {
     ...workerOptions(settings),
-    workerData: { port: port2, flags: flags.buffer, handed: handedTo(settings.handed, module) },
+    workerData: { port: port2, flags: flags.buffer, ...handedData(settings, module) },
     transferList: [port2],
   });
   const state = { gone: false };

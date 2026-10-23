@@ -26,6 +26,7 @@ const bombs: readonly Bomb[] = [
 async function termination(): Promise<string> {
   const pool = programPool({
     handed,
+    instances: 'fresh',
     workers: 1,
     heapMegabytes: computationBounds.heapMegabytes,
     worker: blocking,

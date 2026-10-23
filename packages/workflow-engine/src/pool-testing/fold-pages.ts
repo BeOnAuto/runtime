@@ -1,4 +1,3 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Function } from 'effect';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
@@ -10,7 +9,7 @@ import {
   type FoldingView,
   type ViewCheck,
 } from '../folds/fold-page.ts';
-import { freshInstance } from '../instances/fresh-instances.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 
 export type Timing = Pick<FoldHost, 'now' | 'folding'>;
@@ -98,7 +97,11 @@ export function slowFirstFold(stepMs: number): Timing {
   };
 }
 
-export async function folded(page: FoldPage, timing: Timing = stillTiming()): Promise<FoldedPage> {
-  const instances = await Promise.all(page.views.map(() => freshInstance(shippedFilesOnDisk, page.memoryBytes)));
+export async function folded(
+  source: InstanceSource,
+  page: FoldPage,
+  timing: Timing = stillTiming(),
+): Promise<FoldedPage> {
+  const instances = await Promise.all(page.views.map(() => source(page.memoryBytes)));
   return foldPage(page, { ...timing, checkOf: entriesAtMost, instances });
 }

@@ -1,8 +1,8 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
-import { freshInstance } from '../instances/fresh-instances.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
 import { mostEventBytes } from '../machine/limits.ts';
+import { sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
 import { expressionUnitOf, type ExpressionUnit } from '../programs/expression-units.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 import { enclosedBody, expressionSource, runExpression } from './expressions.ts';
@@ -12,18 +12,20 @@ const now = Date.parse('2026-10-01T09:00:00.000Z');
 
 const budget = { now, mostWork: 250, deadlineAt: Number.POSITIVE_INFINITY };
 
-async function unitOf(clock: () => number = () => 0): Promise<ExpressionUnit> {
-  const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+async function unitOf(source: InstanceSource, clock: () => number = () => 0): Promise<ExpressionUnit> {
+  const instance = await source(unitMemoryBytes);
   return expressionUnitOf(() => instance, { stackBytes: threadStackBytes, mostAnswerBytes: mostEventBytes, clock });
 }
 
-const unit = await unitOf();
+const prepared: readonly (SourceUnderTest & { readonly unit: ExpressionUnit })[] = await Promise.all(
+  sourcesUnderTest.map(async ({ name, source }) => ({ name, source, unit: await unitOf(source) })),
+);
 
 function nestedIn(levels: number): Json {
   return levels === 0 ? 0 : [nestedIn(levels - 1)];
 }
 
-describe('an expression', () => {
+describe.each(prepared)('an expression on $name instances', ({ unit }) => {
   it('is the body of a string enclosed in ${ }', () => {
     expect(enclosedBody('${ $data.name }')).toBe(' $data.name ');
     expect(enclosedBody('  ${$data.a}  ')).toBe('$data.a');
@@ -67,7 +69,7 @@ describe('an expression', () => {
   });
 });
 
-describe('a failing expression', () => {
+describe.each(prepared)('a failing expression on $name instances', ({ unit }) => {
   it('gives a problem with the error it raised, and its line when it spans several', () => {
     expect(runExpression(unit, '$data.a.b', { data: {} }, budget)).toMatchObject({
       problem: "$data.a.b: TypeError: cannot read property 'b' of undefined",
@@ -92,7 +94,7 @@ describe('a failing expression', () => {
   });
 });
 
-describe('an expression that answers what it may not', () => {
+describe.each(prepared)('an expression that answers what it may not on $name instances', ({ unit }) => {
   it('gives a problem when its answer is larger than an event holds', () => {
     expect(runExpression(unit, '"x".repeat(1572865)', { data: null }, budget)).toMatchObject({
       problem: `"x".repeat(1572865): The answer takes more than ${mostEventBytes} bytes as JSON`,
@@ -134,7 +136,7 @@ describe('an expression that answers what it may not', () => {
   });
 });
 
-describe('an expression that runs out of what it may use', () => {
+describe.each(prepared)('an expression that runs out of what it may use on $name instances', ({ source, unit }) => {
   it('is exhausted by its work, counted in checkpoints', () => {
     expect(runExpression(unit, '(() => { for (;;) {} })()', { data: null }, budget)).toEqual({
       problem: '(() => { for (;;) {} })(): The program did more work than it may',
@@ -146,7 +148,7 @@ describe('an expression that runs out of what it may use', () => {
 
   it('is exhausted by the deadline of its clock', async () => {
     const ticking = { at: 0 };
-    const late = await unitOf(() => {
+    const late = await unitOf(source, () => {
       ticking.at += 1000;
       return ticking.at;
     });
@@ -157,7 +159,7 @@ describe('an expression that runs out of what it may use', () => {
   });
 
   it('is exhausted by the memory of its sandbox, and the sandbox answers so after it', async () => {
-    const bounded = await unitOf();
+    const bounded = await unitOf(source);
     const bomb = '(() => { const kept = []; for (;;) kept.push("y".repeat(1048576) + kept.length) })()';
 
     expect(runExpression(bounded, bomb, { data: null }, budget)).toMatchObject({ exhausted: true, limit: 'memory' });

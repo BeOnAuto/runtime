@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
 import { folded, pageOf, viewOf } from '../pool-testing/fold-pages.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import type { FoldStall } from './fold-page.ts';
 
 interface Folding {
@@ -11,15 +13,20 @@ interface Folding {
 
 const considered = [0, 2, 3];
 
-async function inPagesOf(size: number, fold: string, view: Json, start = 0): Promise<Folding> {
-  const events = considered.slice(start, start + size);
-  if (events.length === 0) {
-    return { view };
-  }
-  const [result] = (await folded(pageOf([viewOf(fold, { view, events })]))).views;
-  return result?.stall === undefined
-    ? inPagesOf(size, fold, result?.view ?? null, start + size)
-    : { view: result.view, stall: result.stall };
+type InPages = (size: number, fold: string, view: Json, start?: number) => Promise<Folding>;
+
+function inPagesOn(source: InstanceSource): InPages {
+  const inPagesOf: InPages = async (size, fold, view, start = 0) => {
+    const events = considered.slice(start, start + size);
+    if (events.length === 0) {
+      return { view };
+    }
+    const [result] = (await folded(source, pageOf([viewOf(fold, { view, events })]))).views;
+    return result?.stall === undefined
+      ? inPagesOf(size, fold, result?.view ?? null, start + size)
+      : { view: result.view, stall: result.stall };
+  };
+  return inPagesOf;
 }
 
 function writingTo(holder: string): string {
@@ -50,7 +57,9 @@ const holders: readonly (readonly [string, string])[] = [
   ],
 ];
 
-describe('the intrinsics of a page that no global names', () => {
+describe.each(sourcesUnderTest)('the intrinsics of a page that no global names on $name instances', ({ source }) => {
+  const inPagesOf = inPagesOn(source);
+
   it.each(holders)(
     'are frozen with the rest, so a fold that writes to %s stalls at its first event in pages of one and of three',
     async (_holder, holder) => {
@@ -64,7 +73,9 @@ describe('the intrinsics of a page that no global names', () => {
   );
 });
 
-describe('a fold in a frozen page', () => {
+describe.each(sourcesUnderTest)('a fold in a frozen page on $name instances', ({ source }) => {
+  const inPagesOf = inPagesOn(source);
+
   it('still iterates with helpers, generators, matchAll and the iterators of a Map and a Set', async () => {
     const iterating = [
       'export function fold(view) {',
@@ -122,7 +133,9 @@ const droppedByJson: readonly (readonly [string, string, Json])[] = [
   ],
 ];
 
-describe('the view a fold is handed', () => {
+describe.each(sourcesUnderTest)('the view a fold is handed on $name instances', ({ source }) => {
+  const inPagesOf = inPagesOn(source);
+
   it.each(droppedByJson)(
     'is the JSON the last fold wrote, so %s it answered is gone in pages of one and of three',
     async (_dropped, fold, view) => {

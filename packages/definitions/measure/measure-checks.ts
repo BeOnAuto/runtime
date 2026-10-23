@@ -1,7 +1,7 @@
 import { cpus } from 'node:os';
 
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { programPool, sandboxAnswers, type CheckJob } from '@on.auto/workflow-engine/dsl';
+import { freshInstances, programPool, sandboxAnswers, type CheckJob } from '@on.auto/workflow-engine/dsl';
 
 import { checkerOf } from '../src/program-check/checking.ts';
 import { sandboxLibFrom } from '../src/program-check/kept-lib.ts';
@@ -112,7 +112,9 @@ const [cpu] = cpus();
 write(`Node ${process.version} on ${cpu?.model ?? 'an unknown processor'}, ${cpus().length} cores`);
 
 const generating = performance.now();
-const generated = await sandboxLibOf(shippedFilesOnDisk, (probed) => sandboxAnswers(shippedFilesOnDisk, probed));
+const generated = await sandboxLibOf(shippedFilesOnDisk, (probed) =>
+  sandboxAnswers(freshInstances(shippedFilesOnDisk), probed),
+);
 write(
   `the lib generated in ${(performance.now() - generating).toFixed(0)} ms: ${generated.script.length} and ${generated.iterator.length} characters`,
 );
@@ -141,7 +143,7 @@ for (const [name, job] of cases) {
 }
 
 const handed = await handedWorkersWithChecks(shippedFilesOnDisk);
-const pool = programPool({ workers: 1, heapMegabytes: 256, handed });
+const pool = programPool({ workers: 1, heapMegabytes: 256, handed, instances: 'fresh' });
 const checkedBy = { worker: checkWorker };
 const cold = await pool.check({ ...computation(pace), deadlineMs: 60_000, ...checkedBy });
 const warm = await pool.check({ ...computation(pace), deadlineMs: 60_000, ...checkedBy });

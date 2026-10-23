@@ -6,7 +6,7 @@ import type { FoldPage } from '../folds/fold-page.ts';
 import { foldProgress, type FoldProgress } from '../folds/fold-progress.ts';
 import type { CheckJob } from '../jobs/check-messages.ts';
 import { answerOf, type OutputCheck } from '../jobs/program-answer.ts';
-import { handedSandbox } from '../pool-testing/test-pools.ts';
+import { handedSandbox, sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
 import { serveJobs, serveJobsWith } from './job-loop.ts';
 
@@ -31,12 +31,16 @@ afterEach(() => {
   }
 });
 
-function servedWith(handlersOf: HandlersOf, handed: Readonly<Record<string, Readonly<Uint8Array>>> = {}): Ask {
+function servedWith(
+  instances: SourceUnderTest['name'],
+  handlersOf: HandlersOf,
+  handed: Readonly<Record<string, Readonly<Uint8Array>>> = {},
+): Ask {
   const { port1, port2 } = new MessageChannel();
   channels.push({ port1, port2 });
   const ready = Promise.withResolvers<unknown>();
   port2.once('message', ready.resolve);
-  serveJobsWith(handlersOf, port1, { handed: { ...handedSandbox, ...handed } });
+  serveJobsWith(handlersOf, port1, { handed: { ...handedSandbox, ...handed }, instances });
   return async (message) => {
     await ready.promise;
     const { promise, resolve } = Promise.withResolvers<unknown>();
@@ -48,8 +52,8 @@ function servedWith(handlersOf: HandlersOf, handed: Readonly<Record<string, Read
   };
 }
 
-function served(handlers: ReturnType<HandlersOf>): Ask {
-  return servedWith(() => handlers);
+function served(instances: SourceUnderTest['name'], handlers: ReturnType<HandlersOf>): Ask {
+  return servedWith(instances, () => handlers);
 }
 
 function inTurn(ask: Ask, messages: readonly unknown[]): Promise<readonly unknown[]> {
@@ -117,7 +121,7 @@ function refusingEvery(detail: string): OutputCheck {
   return () => [{ pointer: '', detail }];
 }
 
-describe('a loop that starts serving jobs', () => {
+describe.each(sourcesUnderTest)('a loop that starts serving jobs on $name instances', ({ name }) => {
   it('tells the pool it is ready once it listens, before any job', async () => {
     const { port1, port2 } = new MessageChannel();
     channels.push({ port1, port2 });
@@ -132,6 +136,7 @@ describe('a loop that starts serving jobs', () => {
   it('makes its handlers of the files the pool handed its worker', async () => {
     const note = new URL('file:///shipped/note.txt');
     const ask = servedWith(
+      name,
       (handed) => ({
         check: () => ({ ran: 'checked', issues: [{ at: 0, line: 1, detail: new TextDecoder().decode(handed(note)) }] }),
       }),
@@ -145,9 +150,9 @@ describe('a loop that starts serving jobs', () => {
   });
 });
 
-describe('a loop that serves jobs', () => {
+describe.each(sourcesUnderTest)('a loop that serves jobs on $name instances', ({ name }) => {
   it('answers each job by its id, with the answer of the handler of its kind and whether the worker may be kept', async () => {
-    const ask = served({
+    const ask = served(name, {
       program: answerOf,
       fold: foldAnswerOf,
       check: ({ expressions }) => ({
@@ -166,7 +171,7 @@ describe('a loop that serves jobs', () => {
   });
 
   it('runs each program in a fresh instance, so nothing one job leaves reaches the next', async () => {
-    const ask = served({ program: answerOf });
+    const ask = served(name, { program: answerOf });
 
     expect(
       await inTurn(ask, [
@@ -182,15 +187,15 @@ describe('a loop that serves jobs', () => {
   it('marks the place of each fold in the memory the envelope shares, so the pool can name the fold that was going', async () => {
     const progress = foldProgress();
 
-    await served({ fold: foldAnswerOf })(foldJob(1, [{}, {}], { progress }));
+    await served(name, { fold: foldAnswerOf })(foldJob(1, [{}, {}], { progress }));
 
     expect(progress.last()).toEqual({ event: 0, view: 1 });
   });
 });
 
-describe('the worker of a loop that serves jobs', () => {
+describe.each(sourcesUnderTest)('the worker of a loop that serves jobs on $name instances', ({ name }) => {
   it('is kept after every program but one its deadline ended, and after every page but one with a view past its deadline', async () => {
-    const ask = served({ program: answerOf, fold: foldAnswerOf });
+    const ask = served(name, { program: answerOf, fold: foldAnswerOf });
     const pastItsDeadline = { deadlineAt: performance.timeOrigin + performance.now() - 1 };
     const endless = 'export function fold(view) {\n  for (;;) {}\n}';
 
@@ -207,9 +212,9 @@ describe('the worker of a loop that serves jobs', () => {
   });
 });
 
-describe('a loop given a job it cannot serve', () => {
+describe.each(sourcesUnderTest)('a loop given a job it cannot serve on $name instances', ({ name }) => {
   it('answers a page whose events it cannot read as unreadable, and does not keep its worker', async () => {
-    expect(await served({ fold: foldAnswerOf })(foldJob(1, [{}], { events: '{' }))).toEqual({
+    expect(await served(name, { fold: foldAnswerOf })(foldJob(1, [{}], { events: '{' }))).toEqual({
       job: 1,
       answer: { ran: 'unreadable' },
       keep: false,
@@ -217,8 +222,8 @@ describe('a loop given a job it cannot serve', () => {
   });
 
   it('answers what is not an envelope, or a kind it has no handler for, as unreadable, naming the job when it can', async () => {
-    const programs = served({ program: answerOf });
-    const folds = served({ fold: foldAnswerOf });
+    const programs = served(name, { program: answerOf });
+    const folds = served(name, { fold: foldAnswerOf });
 
     expect([
       ...(await inTurn(programs, [{ nonsense: true }, { job: 8, kind: 'program' }, foldJob(9, [{}]), checkJob(10)])),
@@ -233,14 +238,14 @@ describe('a loop given a job it cannot serve', () => {
   });
 });
 
-describe('the output checks a loop keeps between jobs', () => {
+describe.each(sourcesUnderTest)('the output checks a loop keeps between jobs on $name instances', ({ name }) => {
   it('compiles the check of a context once for each schema, and checks nothing when a job gives none or the loop was given no checks', async () => {
     const compiled: Json[] = [];
     const output = (schema: Json): OutputCheck => {
       compiled.push(schema);
       return refusingEvery('refused by the check');
     };
-    const ask = served({ program: answerOf, checks: { output, view: () => () => 'never asked' } });
+    const ask = served(name, { program: answerOf, checks: { output, view: () => () => 'never asked' } });
     const string = { context: { type: 'string' } };
     const echo = program('return input;');
 
@@ -252,20 +257,20 @@ describe('the output checks a loop keeps between jobs', () => {
       { answer: { ran: 'answered' } },
     ]);
     expect(compiled).toEqual([{ type: 'string' }]);
-    expect(await served({ program: answerOf })(programJob(4, echo, string))).toMatchObject({
+    expect(await served(name, { program: answerOf })(programJob(4, echo, string))).toMatchObject({
       answer: { ran: 'answered' },
     });
   });
 });
 
-describe('the view checks a loop keeps between pages', () => {
+describe.each(sourcesUnderTest)('the view checks a loop keeps between pages on $name instances', ({ name }) => {
   it('compiles the check of a schema once for each schema, and stalls every view that keeps one when it was given no checks', async () => {
     const compiled: Json[] = [];
     const view = (schema: JsonObject): (() => string) => {
       compiled.push(schema);
       return () => 'refused by the check';
     };
-    const ask = served({ fold: foldAnswerOf, checks: { output: () => refusingEvery('never asked'), view } });
+    const ask = served(name, { fold: foldAnswerOf, checks: { output: () => refusingEvery('never asked'), view } });
     const integer = { schema: { type: 'integer' } };
 
     expect(await inTurn(ask, [foldJob(1, [integer, integer]), foldJob(2, [integer])])).toMatchObject([
@@ -273,7 +278,7 @@ describe('the view checks a loop keeps between pages', () => {
       { answer: { views: [{ stall: { kind: 'schema' } }] } },
     ]);
     expect(compiled).toEqual([{ type: 'integer' }]);
-    expect(await served({ fold: foldAnswerOf })(foldJob(3, [integer]))).toMatchObject({
+    expect(await served(name, { fold: foldAnswerOf })(foldJob(3, [integer]))).toMatchObject({
       answer: { views: [{ stall: { kind: 'schema', message: noSchemaChecked } }] },
     });
   });

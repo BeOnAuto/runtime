@@ -1,7 +1,7 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { describe, expect, it } from 'vitest';
 
-import { freshInstance } from '../instances/fresh-instances.ts';
+import type { InstanceSource } from '../instances/instance-source.ts';
+import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { moduleRun } from './module-runs.ts';
 import type { Evaluation, ProgramRun } from './program-run.ts';
 import { threadStackBytes, unitMemoryBytes, workerStackBytes } from './sandbox-bounds.ts';
@@ -12,11 +12,12 @@ const evaluation: Evaluation = { budget: 1000, deadlineAt: Number.POSITIVE_INFIN
 const settings: SandboxSettings = { stackBytes: threadStackBytes, mostAnswerBytes: 1_048_576, clock: () => 0 };
 
 async function ran(
+  source: InstanceSource,
   body: string,
   more: Partial<Evaluation> = {},
   runSettings: SandboxSettings = settings,
 ): Promise<ProgramRun> {
-  const run = moduleRun(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), runSettings, {
+  const run = moduleRun(await source(unitMemoryBytes), runSettings, {
     source: `export default function (input) {\n  ${body}\n}`,
     entry: 'default',
     arguments: ['null'],
@@ -41,9 +42,9 @@ const branching = [
   '  return [fib(22), sorted[2500]];',
 ].join('\n');
 
-describe('the work of a program', () => {
+describe.each(sourcesUnderTest)('the work of a program on $name instances', ({ source }) => {
   it('is counted in checkpoints, one every 10,000 polls of the engine, the same on every run', async () => {
-    const runs = await Promise.all([ran(branching), ran(branching), ran(branching)]);
+    const runs = await Promise.all([ran(source, branching), ran(source, branching), ran(source, branching)]);
 
     expect(runs.map((run) => run.work)).toEqual([runs[0]?.work, runs[0]?.work, runs[0]?.work]);
     expect(runs[0]).toMatchObject({ ran: 'answered', text: '[17711,500]' });
@@ -53,6 +54,7 @@ describe('the work of a program', () => {
   it('ends a program that does more than its budget, which no try catches and no finally resumes', async () => {
     expect(
       await ran(
+        source,
         'let rounds = 0;\n  for (;;) {\n    try {\n      for (;;) {}\n    } finally {\n      rounds += 1;\n    }\n  }',
         { budget: 5 },
       ),
@@ -65,20 +67,23 @@ describe('the work of a program', () => {
   });
 
   it('interrupts a regular expression that backtracks without end', async () => {
-    expect(await ran('return /^(a+)+$/.test("a".repeat(30) + "b");', { budget: 50 })).toMatchObject({
+    expect(await ran(source, 'return /^(a+)+$/.test("a".repeat(30) + "b");', { budget: 50 })).toMatchObject({
       ran: 'exhausted',
       limit: 'work',
     });
   });
 });
 
-describe('the memory of a program', () => {
+describe.each(sourcesUnderTest)('the memory of a program on $name instances', ({ source }) => {
   it('is bounded by the maximum of its instance, which ends a program that keeps allocating at the same checkpoint every time', async () => {
     const strings = 'const kept = [];\n  for (;;) kept.push("y".repeat(1048576) + kept.length);';
     const objects = 'const kept = [];\n  for (let index = 0; ; index++) kept.push({ index, text: "w" + index });';
 
-    const [first, second] = [await ran(strings), await ran(strings)];
-    const [many, again] = [await ran(objects, { budget: 100_000 }), await ran(objects, { budget: 100_000 })];
+    const [first, second] = [await ran(source, strings), await ran(source, strings)];
+    const [many, again] = [
+      await ran(source, objects, { budget: 100_000 }),
+      await ran(source, objects, { budget: 100_000 }),
+    ];
 
     expect(first).toMatchObject({ ran: 'exhausted', limit: 'memory' });
     expect(second).toEqual(first);
@@ -90,14 +95,17 @@ describe('the memory of a program', () => {
     const catching =
       'let caught = "";\n  try {\n    "x".repeat(2 ** 27).length;\n  } catch (error) {\n    caught = String(error);\n  }';
 
-    expect([await ran(`${catching}\n  return caught;`), await ran(`${catching}\n  for (;;) {}`)]).toMatchObject([
+    expect([
+      await ran(source, `${catching}\n  return caught;`),
+      await ran(source, `${catching}\n  for (;;) {}`),
+    ]).toMatchObject([
       { ran: 'exhausted', limit: 'memory' },
       { ran: 'exhausted', limit: 'memory' },
     ]);
   });
 });
 
-describe('the deadline of a program', () => {
+describe.each(sourcesUnderTest)('the deadline of a program on $name instances', ({ source }) => {
   it('ends it at the first checkpoint after the clock passed it', async () => {
     const ticking = { at: 0 };
     const late: SandboxSettings = {
@@ -108,23 +116,26 @@ describe('the deadline of a program', () => {
       },
     };
 
-    expect(await ran('for (;;) {}', { deadlineAt: 1000 }, late)).toMatchObject({ ran: 'exhausted', limit: 'deadline' });
+    expect(await ran(source, 'for (;;) {}', { deadlineAt: 1000 }, late)).toMatchObject({
+      ran: 'exhausted',
+      limit: 'deadline',
+    });
   });
 });
 
-describe('the stack of a program', () => {
+describe.each(sourcesUnderTest)('the stack of a program on $name instances', ({ source }) => {
   it('overflows at the same depth for the same bound, an error the program may catch', async () => {
     const deepest =
       'let deepest = 0;\n  const down = (depth) => {\n    deepest = depth;\n    return down(depth + 1);\n  };\n  try {\n    down(0);\n  } catch (error) {\n    return [deepest, String(error)];\n  }\n  return -1;';
 
-    const [first, second] = [await ran(deepest), await ran(deepest)];
+    const [first, second] = [await ran(source, deepest), await ran(source, deepest)];
 
     expect(first).toEqual(second);
     expect(first).toEqual({ ran: 'answered', text: '[1363,"InternalError: stack overflow"]', work: 0 });
   });
 
   it('ends a program whose bound is deeper than the stack of the thread it runs on, which then answers no more', async () => {
-    const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+    const instance = await source(unitMemoryBytes);
     const runtime = sandboxRuntimeOf(instance, { ...settings, stackBytes: workerStackBytes });
     const context = runtime.context();
     const fn = keptOf(
@@ -144,16 +155,20 @@ describe('the stack of a program', () => {
   });
 });
 
-describe('what a program throws', () => {
+describe.each(sourcesUnderTest)('what a program throws on $name instances', ({ source }) => {
   it('is described by its name and message, or as text, with the line it was thrown on', async () => {
-    expect(await ran('throw "plain text";')).toMatchObject({
+    expect(await ran(source, 'throw "plain text";')).toMatchObject({
       ran: 'raised',
       issue: { detail: 'plain text', line: null },
     });
-    expect(await ran('throw { message: "only a message" };')).toMatchObject({ issue: { detail: 'only a message' } });
-    expect(await ran('throw { name: "", message: "unnamed" };')).toMatchObject({ issue: { detail: 'unnamed' } });
-    expect(await ran('throw { code: 7 };')).toMatchObject({ issue: { detail: '[object Object]' } });
-    expect(await ran('\n  null.field;')).toMatchObject({
+    expect(await ran(source, 'throw { message: "only a message" };')).toMatchObject({
+      issue: { detail: 'only a message' },
+    });
+    expect(await ran(source, 'throw { name: "", message: "unnamed" };')).toMatchObject({
+      issue: { detail: 'unnamed' },
+    });
+    expect(await ran(source, 'throw { code: 7 };')).toMatchObject({ issue: { detail: '[object Object]' } });
+    expect(await ran(source, '\n  null.field;')).toMatchObject({
       issue: { detail: "TypeError: cannot read property 'field' of null", line: 3 },
     });
   });
@@ -161,24 +176,25 @@ describe('what a program throws', () => {
   it('is described the same when the program changed the prototypes the description is written with', async () => {
     expect(
       await ran(
+        source,
         'Object.defineProperty(Object.prototype, "toJSON", { value: () => undefined });\n  String.prototype.slice = () => "";\n  throw new RangeError("kept");',
       ),
     ).toMatchObject({ ran: 'raised', issue: { detail: 'RangeError: kept', line: 4 } });
   });
 
   it('is described as unreadable when reading it fails or takes more than a little work', async () => {
-    expect(await ran('throw { get message() { throw new Error("no") } };')).toMatchObject({
+    expect(await ran(source, 'throw { get message() { throw new Error("no") } };')).toMatchObject({
       issue: { detail: 'an error that is not written as text' },
     });
-    expect(await ran('throw { get message() { for (;;) {} } };')).toMatchObject({
+    expect(await ran(source, 'throw { get message() { for (;;) {} } };')).toMatchObject({
       issue: { detail: 'an error that could not be read' },
     });
   });
 });
 
-describe('a context of the sandbox', () => {
+describe.each(sourcesUnderTest)('a context of the sandbox on $name instances', ({ source }) => {
   it('calls a function over the values it parsed, and lets go of what it is told to forget', async () => {
-    const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+    const instance = await source(unitMemoryBytes);
     const runtime = sandboxRuntimeOf(instance, settings);
     const context = runtime.context();
     const fn = keptOf(context.expression('((value) => (\n[value]\n))', evaluation));
@@ -197,7 +213,7 @@ describe('a context of the sandbox', () => {
   });
 
   it('answers no function for an export that is not one, and raises text that is not JSON as an argument', async () => {
-    const runtime = sandboxRuntimeOf(await freshInstance(shippedFilesOnDisk, unitMemoryBytes), settings);
+    const runtime = sandboxRuntimeOf(await source(unitMemoryBytes), settings);
     const context = runtime.context();
     const fn = keptOf(context.expression('((value) => (\n[value]\n))', evaluation));
     const unreadable = {
@@ -214,9 +230,9 @@ describe('a context of the sandbox', () => {
   });
 });
 
-describe('a context whose instance breaks', () => {
+describe.each(sourcesUnderTest)('a context whose instance breaks on $name instances', ({ source }) => {
   it('answers the failure of a program that breaks the instance it runs on, rather than throwing', async () => {
-    const instance = await freshInstance(shippedFilesOnDisk, 16_777_216);
+    const instance = await source(16_777_216);
     const runtime = sandboxRuntimeOf(instance, settings);
     const context = runtime.context();
 
@@ -231,7 +247,7 @@ describe('a context whose instance breaks', () => {
   });
 
   it('throws what breaks it for another reason, as a defect of the host', async () => {
-    const instance = await freshInstance(shippedFilesOnDisk, unitMemoryBytes);
+    const instance = await source(unitMemoryBytes);
     const runtime = sandboxRuntimeOf(instance, settings);
     const context = runtime.context();
     context.close();

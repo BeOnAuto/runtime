@@ -26,6 +26,7 @@ const oneModule: Naming = (index) => (index % 2 === 0 ? { worker: checkedWorker,
 async function burstOf(naming: Naming): Promise<number> {
   const pool = programPool({
     handed,
+    instances: 'fresh',
     workers: permits,
     heapMegabytes: computationBounds.heapMegabytes,
   });

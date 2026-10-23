@@ -4,7 +4,7 @@ import { Option, Schema } from 'effect';
 
 import type { FoldAnswerData } from '../folds/fold-answer.ts';
 import { progressOf } from '../folds/fold-progress.ts';
-import { instanceStock, type Instances } from '../instances/instance-stock.ts';
+import { instanceStock, type InstanceSource } from '../instances/instance-source.ts';
 import { JobSchema, type JobAnswer, type JobEnvelope } from '../jobs/job-envelopes.ts';
 import { keptFor, type JobHandlers, type Kept } from '../jobs/job-kit.ts';
 import type { ProgramAnswerData } from '../jobs/program-answer.ts';
@@ -20,7 +20,7 @@ type CheckEnvelope = Extract<JobEnvelope, { readonly kind: 'check' }>;
 interface Serving {
   readonly handlers: JobHandlers;
   readonly kept: Kept;
-  readonly instances: Instances;
+  readonly instances: InstanceSource;
 }
 
 const decodeJob = Schema.decodeUnknownOption(JobSchema);

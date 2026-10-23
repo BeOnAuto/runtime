@@ -17,7 +17,7 @@ export interface ServedComputation {
 }
 
 export const workerPool: ProgramPoolOf = ({ workers }, handed) =>
-  programPool({ workers, heapMegabytes: computationBounds.heapMegabytes, handed });
+  programPool({ workers, heapMegabytes: computationBounds.heapMegabytes, handed, instances: 'fresh' });
 
 export async function computationServedBy(
   settings: ComputationSettings,

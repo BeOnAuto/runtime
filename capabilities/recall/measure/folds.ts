@@ -24,7 +24,7 @@ const document = Result.getOrThrow(parseRecallDocument(campaignReviews));
 const { details } = document;
 
 async function strippedFold(): Promise<string> {
-  const pool = programPool({ handed, workers: 1, heapMegabytes: recallBounds.heapMegabytes });
+  const pool = programPool({ handed, instances: 'fresh', workers: 1, heapMegabytes: recallBounds.heapMegabytes });
   const { module = details.fold } = await Effect.runPromise(documentCheck(pool)(document));
   await pool.close();
   return module;
@@ -77,7 +77,7 @@ async function foldedInPages(
   events: number,
   size: number,
 ): Promise<Progress & { readonly pages: number }> {
-  const pool = programPool({ handed, workers: 1, heapMegabytes: recallBounds.heapMegabytes });
+  const pool = programPool({ handed, instances: 'fresh', workers: 1, heapMegabytes: recallBounds.heapMegabytes });
   const starts = Array.from({ length: Math.ceil(events / size) }, (_, index) => index * size);
   const done = await starts.reduce<Promise<Progress>>(
     async (before, start) => {

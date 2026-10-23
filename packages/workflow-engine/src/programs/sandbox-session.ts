@@ -10,6 +10,7 @@ export interface SandboxInstance {
   readonly module: Readonly<QuickJSWASMModule>;
   readonly memoryBytes: number;
   readonly refusedGrowth: () => boolean;
+  readonly release: (intact: boolean) => void;
 }
 
 export interface SandboxSettings {
@@ -257,9 +258,11 @@ export function sandboxRuntimeOf(instance: SandboxInstance, settings: SandboxSet
     context: (freezes = false) => contextOf(() => runtime, counter, settings.mostAnswerBytes, freezes),
     broken: counter.broken,
     close: () => {
-      if (!counter.broken()) {
+      const intact = !counter.broken();
+      if (intact) {
         runtime.dispose();
       }
+      instance.release(intact);
     },
   };
 }

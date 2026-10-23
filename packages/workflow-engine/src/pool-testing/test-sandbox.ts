@@ -1,7 +1,7 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 
 import { workflowMachine } from '../decider/workflow-machine.ts';
-import { freshInstance } from '../instances/fresh-instances.ts';
+import { freshInstances } from '../instances/fresh-instances.ts';
 import type { RunDecider } from '../machine/run-decider.ts';
 import { reusedSandbox, type MachineSandbox } from '../programs/reserved-instances.ts';
 import { unitMemoryBytes } from '../programs/sandbox-bounds.ts';
@@ -10,7 +10,7 @@ import { testMachineOf } from '../testing/driver-inputs.ts';
 import { memoryDriver, type DriverOptions, type MemoryDriver } from '../testing/memory-driver.ts';
 
 export const testSandbox: MachineSandbox = reusedSandbox(
-  await freshInstance(shippedFilesOnDisk, unitMemoryBytes),
+  await freshInstances(shippedFilesOnDisk)(unitMemoryBytes),
   () => 0,
 );
 
