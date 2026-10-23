@@ -4,6 +4,7 @@ import { playbookCreatedOf, playbooksStreamOfOrg } from '@on.auto/playbooks';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
+import { isAfter } from '../pages/history-points.ts';
 import {
   definitionRecordsIn,
   type ApplyDefinitionRecord,
@@ -77,14 +78,31 @@ function seenOf(database: HostDatabase, stream: string): Effect.Effect<number | 
   ).pipe(Effect.map((rows) => rows.at(0)?.position));
 }
 
-function followedFromTheOpenOn({
-  database,
-  playbooks,
-  placeAtOpen,
-  applyDefinitionRecord,
-  unreadable,
-  definitionType,
-}: DiscoveryParts) {
+function recordedBefore(
+  { database, placeAtOpen, unreadable }: Pick<DiscoveryParts, 'database' | 'placeAtOpen' | 'unreadable'>,
+  playbookKey: string,
+  records: readonly DefinitionRecord[],
+): Effect.Effect<readonly DefinitionRecord[]> {
+  const keptOf = (count: number): Effect.Effect<number> => {
+    const newest = records[count - 1];
+    if (newest === undefined) {
+      return Effect.succeed(0);
+    }
+    return Effect.flatMap(
+      Effect.promise(() => database.store.readRecordedEvent(playbookKey, newest.id)),
+      (stored): Effect.Effect<number> => {
+        if (stored === undefined) {
+          return Effect.andThen(unreadable(playbookKey, newest), keptOf(count - 1));
+        }
+        return isAfter(stored.point, placeAtOpen) ? keptOf(count - 1) : Effect.succeed(count);
+      },
+    );
+  };
+  return Effect.map(keptOf(records.length), (kept) => records.slice(0, kept));
+}
+
+function followedFromTheOpenOn(parts: DiscoveryParts) {
+  const { database, playbooks, placeAtOpen, applyDefinitionRecord, unreadable, definitionType } = parts;
   const applied = (playbookKey: string, record: DefinitionRecord) =>
     Effect.flatMap(applyDefinitionRecord(playbookKey, record), (outcome) =>
       outcome === 'unreadable' ? unreadable(playbookKey, record) : Effect.void,
@@ -96,7 +114,8 @@ function followedFromTheOpenOn({
       const recorded = yield* Effect.promise(() =>
         database.store.read(`${playbookKey}definitions/${definitionType}`, 0),
       );
-      yield* Effect.forEach(definitionRecordsIn(recorded), (record) => applied(playbookKey, record), { discard: true });
+      const beforeTheOpen = yield* recordedBefore(parts, playbookKey, definitionRecordsIn(recorded));
+      yield* Effect.forEach(beforeTheOpen, (record) => applied(playbookKey, record), { discard: true });
     });
 }
 
