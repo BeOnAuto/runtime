@@ -50,6 +50,16 @@ function answering(result: DefinitionRunResult) {
   return { perform, asked };
 }
 
+describe('a workflow call to a saved definition whose earlier attempt died', () => {
+  it('says so when it runs the definition, so that a run left started goes on', async () => {
+    const { perform, asked } = answering({ status: 'succeeded', output: null });
+
+    await Effect.runPromise(perform(classify, run, origin, { attemptDied: true }));
+
+    expect(asked.map(({ attemptDied }) => attemptDied)).toEqual([true]);
+  });
+});
+
 describe('a workflow call to a saved definition', () => {
   it.each(['reasoning', 'custom-operation'])(
     'executes a %s definition for the original caller under a derived run id',
