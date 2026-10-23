@@ -205,6 +205,9 @@ catalogs:
       specifier: 5.0.3
       version: 5.0.3
 
+patchedDependencies:
+  '@openworkflowspec/sdk@1.0.3-alpha8': 0262a21b41e0999009ab1087b52a8546c502f99e25445f1ac1626835bf0fec19
+
 importers:
 
   .:
@@ -317,7 +320,7 @@ importers:
         version: link:../../packages/workflow-host
       '@openworkflowspec/sdk':
         specifier: 1.0.3-alpha8
-        version: 1.0.3-alpha8
+        version: 1.0.3-alpha8(patch_hash=0262a21b41e0999009ab1087b52a8546c502f99e25445f1ac1626835bf0fec19)
       effect:
         specifier: 'catalog:'
         version: 4.0.0
@@ -6964,7 +6967,7 @@ snapshots:
 
   '@opentelemetry/semantic-conventions@1.43.0': {}
 
-  '@openworkflowspec/sdk@1.0.3-alpha8':
+  '@openworkflowspec/sdk@1.0.3-alpha8(patch_hash=0262a21b41e0999009ab1087b52a8546c502f99e25445f1ac1626835bf0fec19)':
     dependencies:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)

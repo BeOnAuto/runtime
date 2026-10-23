@@ -22,3 +22,6 @@ allowBuilds:
   onnxruntime-node: false
   protobufjs: false
   sqlite3: true
+
+patchedDependencies:
+  '@openworkflowspec/sdk@1.0.3-alpha8': patches/@openworkflowspec__sdk@1.0.3-alpha8.patch
