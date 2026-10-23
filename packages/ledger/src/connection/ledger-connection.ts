@@ -9,6 +9,11 @@ export type ReadRows = (statement: Statement) => Promise<Rows>;
 
 export type Dialect = 'sqlite' | 'postgresql';
 
+export interface LedgerReads {
+  readonly read: ReadRows;
+  readonly close: () => Promise<void>;
+}
+
 export interface ConnectionPorts {
   readonly dialect: Dialect;
   readonly streams: LedgerStreams;

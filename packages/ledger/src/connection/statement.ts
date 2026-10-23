@@ -11,6 +11,10 @@ export function statement(strings: TemplateStringsArray, ...values: readonly Sta
   return { strings, values };
 }
 
+export function statementOf(parts: readonly string[], values: readonly StatementValue[]): Statement {
+  return { strings: Object.assign([...parts], { raw: [...parts] }), values };
+}
+
 export function onSQLite({ strings, values }: Statement): SQL {
   return SQL(strings, ...values);
 }

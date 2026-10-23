@@ -2,22 +2,15 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
-import type { ContentStore, RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
 import type { Layer } from 'effect';
 
-import type { AppendSignal } from './appends/append-signal.ts';
 import { sqliteLedgerLayer } from './connection/sqlite-opening.ts';
-import type { AppendObserver } from './event-store.ts';
-import type { LedgerServices } from './ledger-layer.ts';
+import { sqliteLedgerReadsOn } from './connection/sqlite-reads.ts';
+import type { LedgerServices, StoreLayerOptions } from './ledger-layer.ts';
 import { sqliteSecretRowsOn, type SecretRowsOptions } from './secrets/sqlite-secret-rows.ts';
 
-export interface LedgerOptions {
+export interface LedgerOptions extends StoreLayerOptions {
   readonly fileName: string;
-  readonly runOutcomes?: RunOutcomeMapping;
-  readonly projections?: readonly KeyedProjection[];
-  readonly appends?: AppendSignal;
-  readonly content?: ContentStore;
-  readonly observer?: AppendObserver | undefined;
 }
 
 const pageCacheOfEightMebibytes = -8192;
@@ -57,4 +50,8 @@ export function ledgerLayer({
 
 export function sqliteSecretRows({ fileName }: SecretRowsOptions) {
   return sqliteSecretRowsOn(() => sqlite3OptionsOf(fileName));
+}
+
+export function sqliteLedgerReads({ fileName }: Pick<LedgerOptions, 'fileName'>) {
+  return sqliteLedgerReadsOn(() => sqlite3OptionsOf(fileName));
 }

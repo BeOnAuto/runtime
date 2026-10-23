@@ -5,8 +5,20 @@ export {
   type AppendListener,
   type AppendSignal,
 } from './appends/append-signal.ts';
-export { LedgerConnection, type ConnectionPorts, type Dialect, type ReadRows } from './connection/ledger-connection.ts';
-export { statement, textOnPostgreSQL, type Statement, type StatementValue } from './connection/statement.ts';
+export {
+  LedgerConnection,
+  type ConnectionPorts,
+  type Dialect,
+  type LedgerReads,
+  type ReadRows,
+} from './connection/ledger-connection.ts';
+export {
+  statement,
+  statementOf,
+  textOnPostgreSQL,
+  type Statement,
+  type StatementValue,
+} from './connection/statement.ts';
 export { LedgerChores, type ChorePorts } from './content/content-sweep.ts';
 export { eventAppenderOf, type EventAppender } from './event-appender.ts';
 export { eventCodecOf, type EventCodec } from './event-codec.ts';

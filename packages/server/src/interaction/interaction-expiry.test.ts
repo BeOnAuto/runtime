@@ -1,5 +1,3 @@
-import { DatabaseSync } from 'node:sqlite';
-
 import { openRequests } from '@on.auto/interaction';
 import { projectedTableOf } from '@on.auto/operations';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -11,6 +9,7 @@ import {
   interactionServerOn,
   servingInteractions,
 } from '../testing/interaction-servers/interaction-server.ts';
+import { everyRowSet, onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 
@@ -20,11 +19,11 @@ function ledgerFile(): string {
   return ledger.fileName;
 }
 
-function expiredAgo(file: string, milliseconds: number): void {
-  const database = new DatabaseSync(file);
+async function expiredAgo(file: string, milliseconds: number): Promise<void> {
   const past = Date.now() - milliseconds;
-  database.prepare(`UPDATE ${projectedTableOf(openRequests)} SET expires_at = ?, ending_due_at = ?`).run(past, past);
-  database.close();
+  await onTheLedgerIn(file, (connection) =>
+    connection.write(everyRowSet(projectedTableOf(openRequests), { expires_at: past, ending_due_at: past })),
+  );
 }
 
 const unansweredAsExpired = { status: 'rejected', rejection: { reason: 'unanswered', kind: 'expired' } };
@@ -38,7 +37,7 @@ describe('requests past their expiry while the server was stopped', () => {
     const uncaught = await first.workflow('approval', `do:\n${asking('approve-brief', 'approve')}`);
     await first.openRequests(3);
     await first.stop();
-    expiredAgo(file, 1000);
+    await expiredAgo(file, 1000);
 
     const second = await interactionServerOn({ LEDGER_FILE: file });
 

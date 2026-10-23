@@ -1,5 +1,3 @@
-import { DatabaseSync } from 'node:sqlite';
-
 import { openRequests } from '@on.auto/interaction';
 import { chatDelivery } from '@on.auto/interaction/testing';
 import { projectedTableOf } from '@on.auto/operations';
@@ -7,15 +5,16 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { chatEnvironment, chatServer, deliveryHistoryOf } from '../testing/interaction-servers/chat-deliveries.ts';
 import { interactionServerOn, servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
+import { everyRowSet, onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const aNumber: unknown = expect.any(Number);
 
-function dueNow(file: string): void {
-  const database = new DatabaseSync(file);
-  database.prepare(`UPDATE ${projectedTableOf(openRequests)} SET next_attempt_at = 0, attempt_due_at = 0`).run();
-  database.close();
+async function dueNow(file: string): Promise<void> {
+  await onTheLedgerIn(file, (connection) =>
+    connection.write(everyRowSet(projectedTableOf(openRequests), { next_attempt_at: 0, attempt_due_at: 0 })),
+  );
 }
 
 describe('a tool its operator disallowed after a request asked through it', () => {
@@ -34,7 +33,7 @@ describe('a tool its operator disallowed after a request asked through it', () =
       (seen) => seen.length >= 2,
     );
     await first.stop();
-    dueNow(ledger.fileName);
+    await dueNow(ledger.fileName);
 
     const chat = await chatServer();
     const second = await interactionServerOn({
