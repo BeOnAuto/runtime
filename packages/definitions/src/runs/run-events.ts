@@ -29,6 +29,7 @@ const coreFactSchemas = [
       input: Schema.Json,
       calls_tools: Schema.optionalKey(Schema.Literal(true)),
       finishes_later: Schema.optionalKey(Schema.Literal(true)),
+      resumes: Schema.optionalKey(Schema.Literal(true)),
       output_shape: Schema.optionalKey(OutputShapeNameSchema),
     }),
     RunContextSchema,
@@ -153,3 +154,28 @@ export type RequestAnswered = FactNamed<'request_answered'>;
 export type ReplyIdentity = typeof ReplyIdentitySchema.Type;
 
 export type RunFinished = FactNamed<'run_succeeded' | 'run_rejected' | 'run_failed'>;
+
+type CallFactType =
+  | 'tool_call_started'
+  | 'tool_call_answered'
+  | 'tool_call_failed'
+  | 'model_call_started'
+  | 'model_call_answered'
+  | 'model_call_failed';
+
+export type RecordedCallFact = FactNamed<CallFactType>;
+
+export type RecordedCall = RecordedRunFact<CallFactType>;
+
+const callFactTypes: ReadonlySet<string> = new Set<CallFactType>([
+  'tool_call_started',
+  'tool_call_answered',
+  'tool_call_failed',
+  'model_call_started',
+  'model_call_answered',
+  'model_call_failed',
+]);
+
+export function isCallFact(event: RecordedRunEvent): event is RecordedRunFact<CallFactType> {
+  return callFactTypes.has(event.type);
+}

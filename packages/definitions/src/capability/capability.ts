@@ -1,23 +1,12 @@
-import type {
-  CallerIdentity,
-  CallLink,
-  Conflict,
-  InvalidInput,
-  Issue,
-  Noun,
-  Rejection,
-  Settlement,
-  TriggerLink,
-  Unavailable,
-} from '@on.auto/operations';
-import type { CallEnded, CallStarted } from '@on.auto/tool-servers';
+import type { Conflict, InvalidInput, Issue, Noun, RunCancelled, Settlement, Unavailable } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
+import type { CallEnd } from '../journal/call-numbering.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
-import type { CallFact } from '../runs/run-commands.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import type { RecordedAnswer, RecordedWork } from '../runs/run-state.ts';
+import type { RunAttempt, RunContext } from './run-context.ts';
 import type { SavedDefinitions } from './saved-definitions.ts';
 import { noStrippedForms, type StrippedForms } from './stripped-forms.ts';
 
@@ -41,36 +30,6 @@ export interface StandingRequest {
 
 export type Standing = (request: StandingRequest) => Effect.Effect<Schema.JsonObject | undefined>;
 
-export type CallRefused = Rejection<'not_found' | 'conflict' | 'cancelled'> | Conflict;
-
-export interface RunJournal {
-  readonly modelCallsBefore: number;
-  readonly started: (fact: CallStarted) => Effect.Effect<number | undefined>;
-  readonly ended: (number: number, fact: CallEnded) => Effect.Effect<boolean>;
-  readonly record: (fact: CallFact) => Effect.Effect<number, CallRefused>;
-}
-
-export interface RunLineage {
-  readonly startId: string;
-  readonly correlationId: string;
-}
-
-export interface RunContext {
-  readonly id: string;
-  readonly org: string;
-  readonly playbook: string;
-  readonly caller: CallerIdentity;
-  readonly definition: { readonly name: string; readonly version: number };
-  readonly journal: RunJournal;
-  readonly lineage: RunLineage;
-  readonly depth: number;
-  readonly callDepth: number;
-  readonly calledBy?: CallLink;
-  readonly trigger?: TriggerLink;
-  readonly longestRunOf: (type: string, name: string) => Effect.Effect<number | undefined>;
-  readonly longestRunFor: (type: string, name: string, input: Schema.Json) => Effect.Effect<number | undefined>;
-}
-
 export interface Finished {
   readonly output: Schema.Json;
   readonly record: Schema.JsonObject;
@@ -83,7 +42,7 @@ export interface FinishesLater {
 
 export type CapabilityAnswer = Finished | FinishesLater;
 
-export type CapabilityRejection = InvalidInput | Unavailable | Conflict;
+export type CapabilityRejection = InvalidInput | Unavailable | Conflict | RunCancelled;
 
 export interface CancelledRun {
   readonly run: { readonly org: string; readonly playbook: string; readonly id: string };
@@ -95,6 +54,18 @@ export interface CancelledRun {
 }
 
 export type CancelDecision = (run: CancelledRun) => Settlement;
+
+export interface CancelledAttempt {
+  readonly ends: readonly CallEnd[];
+  readonly record?: Schema.JsonObject;
+}
+
+export interface Resumption<Parsed> {
+  readonly afterMs: (parsed: Parsed) => number;
+  readonly cancelledAttempt: (parsed: Parsed, attempt: RunAttempt) => CancelledAttempt;
+}
+
+const nothingToEnd: CancelledAttempt = { ends: [] };
 
 export interface CapabilityGuide {
   readonly name: string;
@@ -151,6 +122,7 @@ export interface CapabilityDeclaration<Parsed> {
   readonly answersItsShapeFor?: (parsed: NoInfer<Parsed>, input: Schema.Json) => boolean;
   readonly longestRunOf?: (parsed: NoInfer<Parsed>) => number;
   readonly longestRunFor?: (parsed: NoInfer<Parsed>, input: Schema.Json) => number;
+  readonly resumes?: Resumption<NoInfer<Parsed>>;
   readonly cancel?: CancelDecision;
   readonly answerIssues?: AnswerIssues;
   readonly runWords?: Partial<RunWords>;
@@ -164,11 +136,13 @@ export interface PreparedDefinition {
   readonly check: (saved: SavedDefinitions) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
+  readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;
   readonly callsTools: boolean;
   readonly finishesLaterFor: (input: Schema.Json) => boolean;
   readonly answersItsShapeFor: (input: Schema.Json) => boolean;
   readonly longestRunMs: number;
   readonly longestRunMsFor: (input: Schema.Json) => number;
+  readonly resumesAfterMs: number;
 }
 
 function callsNoTools(): boolean {
@@ -213,6 +187,7 @@ export interface Capability {
   readonly answerIssues: AnswerIssues;
   readonly runWords: RunWords;
   readonly facts: CapabilityFacts;
+  readonly resumes: boolean;
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
@@ -265,6 +240,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
   const bounds = declaredBounds(definition);
   const { check, whenCancelled, callsTools, answersItsShapeFor, finishesLaterFor, longestRunOf, longestRunFor } =
     declaredRuns(definition, bounds.longestAnyRunMs);
+  const { resumes: resumption } = definition;
   if (!isDefinitionTypeName(type)) {
     throw new Error(`The type ${type} is malformed`);
   }
@@ -276,6 +252,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
     describeOutput,
     mediaType,
     ...bounds,
+    resumes: resumption !== undefined,
     prepare: (source, stripped = noStrippedForms) =>
       parse(source).pipe(
         Effect.map((parsed) => ({
@@ -283,11 +260,13 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
           check: (saved) => Effect.suspend(() => check(parsed, source, saved)),
           run: (input, context) => run(parsed, input, context, stripped),
           whenCancelled,
+          cancelledAttempt: (attempt) => resumption?.cancelledAttempt(parsed, attempt) ?? nothingToEnd,
           callsTools: callsTools(parsed),
           finishesLaterFor: (input) => finishesLaterFor(parsed, input),
           answersItsShapeFor: (input) => answersItsShapeFor(parsed, input),
           longestRunMs: longestRunOf(parsed),
           longestRunMsFor: (input) => longestRunFor(parsed, input),
+          resumesAfterMs: resumption?.afterMs(parsed) ?? Number.POSITIVE_INFINITY,
         })),
       ),
   };

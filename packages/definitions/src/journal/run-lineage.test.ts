@@ -1,9 +1,9 @@
 import type { Lineage } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { idAt, journalled, linksIn } from '../journal-testing/run-links.ts';
+import { idAt, linksIn } from '../journal-testing/run-links.ts';
 import { acmeAdmin } from '../testing/callers.ts';
-import { answerOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
+import { toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
@@ -74,20 +74,6 @@ describe('the lineage of a run that calls tools', () => {
         toAlpha(acmeAdmin, { type: 'tool-user', name: 'caller', input: { calls: 0 }, lineage }),
       ),
     ).toMatchObject({ status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/lineage' }] });
-  });
-});
-
-describe('the journal of a run, given an answer to a call it has no start of', () => {
-  it('links the answer to the answer before it, or to the start of the run', async () => {
-    const definitions = harness();
-
-    expect(await journalled(definitions, (journal) => journal.ended(9, answerOfCall(9)))).toBe(true);
-    expect((await linksIn(definitions)).at(-1)).toEqual({
-      type: 'tool_call_answered',
-      id: idAt(2),
-      causationId: idAt(1),
-      correlationId: runId,
-    });
   });
 });
 

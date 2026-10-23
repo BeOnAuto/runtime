@@ -9,9 +9,13 @@ import {
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import { recordedAttempt } from '../attempts/recorded-attempt.ts';
+import type { RunAttempt } from '../capability/run-context.ts';
 import type { RunFinish, RunStart } from '../runs/run-commands.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { startedRunOf, type RunState, type RunStreamState } from '../runs/run-state.ts';
+import { stillRunning } from '../runs/run-decisions.ts';
+import { answerOf } from '../runs/run-lookup.ts';
+import { lastModelCallOf, startedRunOf, type RunState, type RunStreamState } from '../runs/run-state.ts';
 import { commandMetadata } from './command-metadata.ts';
 
 export const newRunId = Effect.sync(() => randomUUIDv7());
@@ -26,6 +30,10 @@ export function loadRun(id: string): Effect.Effect<RunState, never, PlaybookRead
   return Effect.map(loadRunStream(id), startedRunOf);
 }
 
+const streamOf = Effect.fnUntraced(function* (id: string) {
+  return `${streamPrefixOfPlaybook(yield* PlaybookContext)}${runStreamNameOf(id)}`;
+});
+
 export const recordRun = Effect.fnUntraced(function* (id: string, command: RunStart | RunFinish, lineage: Lineage) {
   const metadata = yield* commandMetadata;
   const { state, version } = yield* (yield* PlaybookWriter).execute(
@@ -34,8 +42,38 @@ export const recordRun = Effect.fnUntraced(function* (id: string, command: RunSt
     { ...command, ...metadata, runId: id },
     lineage,
   );
+  const recorded = startedRunOf(state);
   return {
-    state: startedRunOf(state),
-    messageId: messageIdOf(`${streamPrefixOfPlaybook(yield* PlaybookContext)}${runStreamNameOf(id)}`, version),
+    state: recorded,
+    messageId: messageIdOf(yield* streamOf(id), version),
+    startedAt: metadata.at,
+    modelCallsBefore: lastModelCallOf(recorded),
   };
+});
+
+export const answeredRun = Effect.fnUntraced(function* (id: string, command: RunFinish, lineage: Lineage) {
+  return yield* answerOf(id, (yield* recordRun(id, command, lineage)).state);
+});
+
+export const answerAfterAnother = Effect.fnUntraced(function* (id: string) {
+  const answer = yield* answerOf(id, yield* loadRunStream(id));
+  return answer.status === 'started' ? yield* stillRunning : answer;
+});
+
+const attemptIn = Effect.fnUntraced(function* (id: string) {
+  const { state, version } = yield* (yield* PlaybookReader).load(runStreamNameOf(id), recordedAttempt);
+  const { startedAt, modelCallsBefore, calls } = state;
+  const attempt: RunAttempt = { startedAt, modelCallsBefore, calls };
+  return { attempt, version };
+});
+
+export const loadAttempt = Effect.fnUntraced(function* (id: string) {
+  const { attempt, version } = yield* attemptIn(id);
+  const quietMs = yield* (yield* PlaybookReader).ageOfLastAppend(runStreamNameOf(id));
+  return { attempt, quietMs, lastMessageId: messageIdOf(yield* streamOf(id), version) };
+});
+
+export const loadCalls = Effect.fnUntraced(function* (id: string) {
+  const { attempt } = yield* attemptIn(id);
+  return attempt;
 });

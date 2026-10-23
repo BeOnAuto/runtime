@@ -1,11 +1,20 @@
-import { PlaybookContext, PlaybookWriter, Caller, messageIdOf, streamPrefixOfPlaybook } from '@on.auto/operations';
+import {
+  Conflict,
+  PlaybookContext,
+  PlaybookWriter,
+  Caller,
+  messageIdOf,
+  streamPrefixOfPlaybook,
+} from '@on.auto/operations';
 import type { CallEnded } from '@on.auto/tool-servers';
-import { DateTime, Effect, Exit, Ref, Semaphore } from 'effect';
+import { DateTime, Effect, Exit, Ref, Schema, Semaphore } from 'effect';
 
-import type { RunJournal, RunLineage } from '../capability/capability.ts';
+import type { RunAttempt, RunJournal, RunLineage } from '../capability/run-context.ts';
 import type { CallFact } from '../runs/run-commands.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { lastCallOf, lastModelCallOf, startedRunOf, type RunState } from '../runs/run-state.ts';
+import type { ToolCallEnded } from '../runs/run-events.ts';
+import { lastCallOf, startedRunOf, type RunState } from '../runs/run-state.ts';
+import { isCallStart } from './call-numbering.ts';
 
 export interface LedgerJournal extends RunJournal {
   readonly latest: Effect.Effect<string>;
@@ -14,10 +23,6 @@ export interface LedgerJournal extends RunJournal {
 interface Calls {
   readonly answered: string;
   readonly started: ReadonlyMap<string, string>;
-}
-
-function isStart({ type }: CallFact): boolean {
-  return type === 'tool_call_started' || type === 'model_call_started';
 }
 
 function keyOf({ type }: CallFact, number: number): string {
@@ -29,19 +34,16 @@ function numberOf(fact: CallFact, state: RunState): number {
 }
 
 function causeOf(fact: CallFact, calls: Calls): string {
-  if (fact.type === 'tool_call_started' || fact.type === 'model_call_started') {
-    return calls.answered;
-  }
-  return calls.started.get(keyOf(fact, fact.data.number)) ?? calls.answered;
+  return isCallStart(fact) ? calls.answered : (calls.started.get(keyOf(fact, fact.data.number)) ?? calls.answered);
 }
 
 function noted(fact: CallFact, calls: Calls, number: number, id: string): Calls {
-  return isStart(fact)
+  return isCallStart(fact)
     ? { ...calls, started: new Map([...calls.started, [keyOf(fact, number), id]]) }
     : { ...calls, answered: id };
 }
 
-export function toolEnded(number: number, fact: CallEnded): CallFact {
+export function toolEnded(number: number, fact: CallEnded): ToolCallEnded {
   return fact.type === 'tool_call_answered'
     ? { type: fact.type, data: { number, ...fact.data } }
     : { type: fact.type, data: { number, ...fact.data } };
@@ -51,7 +53,14 @@ function recorded<A, E>(appended: Effect.Effect<A, E>): Effect.Effect<boolean> {
   return appended.pipe(Effect.exit, Effect.map(Exit.isSuccess));
 }
 
-export const runJournal = Effect.fnUntraced(function* (id: string, lineage: RunLineage, started: RunState) {
+const changedMeanwhile = new Conflict({
+  detail: 'The run changed while this attempt recorded a call, so this attempt does not go on with it',
+  kind: 'taken',
+});
+
+const isChangedWhileRecorded = Schema.is(Schema.Struct({ kind: Schema.Literal('concurrent_change') }));
+
+export const runJournal = Effect.fnUntraced(function* (id: string, lineage: RunLineage, attempt: RunAttempt) {
   const writer = yield* PlaybookWriter;
   const stream = `${streamPrefixOfPlaybook(yield* PlaybookContext)}${runStreamNameOf(id)}`;
   const { id: by } = yield* Caller;
@@ -62,19 +71,24 @@ export const runJournal = Effect.fnUntraced(function* (id: string, lineage: RunL
       Effect.gen(function* () {
         const at = DateTime.formatIso(yield* DateTime.now);
         const known = yield* Ref.get(calls);
-        const { state, version } = yield* writer.execute(
-          runStreamNameOf(id),
-          runDecider,
-          { type: 'call', fact, runId: id, by, at },
-          { causationId: causeOf(fact, known), correlationId: lineage.correlationId },
-        );
+        const { state, version } = yield* writer
+          .execute(
+            runStreamNameOf(id),
+            runDecider,
+            { type: 'call', fact, runId: id, by, at },
+            { causationId: causeOf(fact, known), correlationId: lineage.correlationId },
+          )
+          .pipe(
+            Effect.catchTag('not_found', Effect.die),
+            Effect.catchIf(isChangedWhileRecorded, () => Effect.fail(changedMeanwhile)),
+          );
         const number = numberOf(fact, startedRunOf(state));
         yield* Ref.set(calls, noted(fact, known, number, messageIdOf(stream, version)));
         return number;
       }),
     );
   const journal: LedgerJournal = {
-    modelCallsBefore: lastModelCallOf(started),
+    attempt,
     started: (data) => record({ type: 'tool_call_started', data }).pipe(Effect.catchCause(() => Effect.undefined)),
     ended: (number, fact) => recorded(record(toolEnded(number, fact))),
     record,

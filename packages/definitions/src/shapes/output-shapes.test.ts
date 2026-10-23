@@ -2,7 +2,14 @@ import { compileJsonSchema, jsonSchemaLimits, nestedDeeperThan, utf8Bytes } from
 import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { declaredShape, outputShapeNamed, outputShapeNames, shapeMismatchOf, type OutputShapeName } from '../index.ts';
+import {
+  declaredShape,
+  outputShapeNamed,
+  outputShapeNames,
+  outputShapeOf,
+  shapeMismatchOf,
+  type OutputShapeName,
+} from '../index.ts';
 import { shapeNamed } from '../testing/index.ts';
 import { outputShapeOfSchema } from './output-shapes.ts';
 
@@ -55,6 +62,9 @@ describe('the output shapes', () => {
     expect(outputShapeNames()).toEqual(['series', 'categories', 'table', 'text']);
     expect(outputShapeNames().map((name) => outputShapeNamed(name)?.name)).toEqual(outputShapeNames());
     expect([outputShapeNamed('chart'), outputShapeNamed('Series')]).toEqual([undefined, undefined]);
+    expect(outputShapeNames().map((name) => outputShapeOf(name))).toEqual(
+      outputShapeNames().map((name) => outputShapeNamed(name)),
+    );
     expect(() => shapeNamed('chart')).toThrow('There is no shape chart');
   });
 

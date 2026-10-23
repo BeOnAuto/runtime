@@ -3,7 +3,6 @@ import { Effect } from 'effect';
 
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { startedRunOf } from '../runs/run-state.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import type { Harness } from '../testing/harness.ts';
 import { testRunId } from '../testing/run-facts.ts';
@@ -25,7 +24,7 @@ function linksOf({ type, id, causationId, correlationId }: RecordedEvent): Linke
   return { type, id, causationId, correlationId };
 }
 
-export async function linksIn({ ledger, run }: Harness): Promise<readonly Linked[]> {
+async function recordsIn({ ledger, run }: Harness): Promise<readonly RecordedEvent[]> {
   const { records } = await run(
     Effect.orDie(
       ledger.service.readRecorded(
@@ -35,12 +34,20 @@ export async function linksIn({ ledger, run }: Harness): Promise<readonly Linked
       ),
     ),
   );
-  return records.map((record) => linksOf(record));
+  return records;
+}
+
+export async function linksIn(definitions: Harness): Promise<readonly Linked[]> {
+  return (await recordsIn(definitions)).map((record) => linksOf(record));
+}
+
+export async function endingIn(definitions: Harness): Promise<unknown> {
+  return (await recordsIn(definitions)).at(-1)?.data;
 }
 
 export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal) => Effect.Effect<A>): Promise<A> {
   const recording = Effect.gen(function* () {
-    const { state } = yield* definitions.ledger.service.execute(stream, runDecider, {
+    yield* definitions.ledger.service.execute(stream, runDecider, {
       type: 'start',
       definition_type: 'tool-user',
       name: 'caller',
@@ -52,7 +59,11 @@ export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal
       at: '2026-10-01T09:00:00.000Z',
     });
     return yield* use(
-      yield* runJournal(testRunId, { startId: idAt(1), correlationId: testRunId }, startedRunOf(state)),
+      yield* runJournal(
+        testRunId,
+        { startId: idAt(1), correlationId: testRunId },
+        { startedAt: '2026-10-01T09:00:00.000Z', modelCallsBefore: 0, calls: [] },
+      ),
     );
   }).pipe(
     Effect.provideService(PlaybookWriter, {

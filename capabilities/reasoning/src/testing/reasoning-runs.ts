@@ -1,6 +1,12 @@
-import type { CapabilityAnswer, RunContext, PreparedDefinition, Capability } from '@on.auto/definitions';
+import type {
+  CapabilityAnswer,
+  CapabilityRejection,
+  RunContext,
+  PreparedDefinition,
+  Capability,
+} from '@on.auto/definitions';
 import { noLongestRuns, recordingJournal, type RecordingJournal } from '@on.auto/definitions/testing';
-import { allPermissions, type Conflict, type InvalidInput, type Unavailable } from '@on.auto/operations';
+import { allPermissions } from '@on.auto/operations';
 import type { ToolAccess } from '@on.auto/tool-servers';
 import { noToolServers } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, type Exit, type Schema } from 'effect';
@@ -30,7 +36,7 @@ export const runContext: RunContext = {
   ...noLongestRuns,
 };
 
-export type Run = Exit.Exit<CapabilityAnswer, InvalidInput | Unavailable | Conflict>;
+export type Run = Exit.Exit<CapabilityAnswer, CapabilityRejection>;
 
 export interface ReasoningRun {
   readonly capability: Capability;

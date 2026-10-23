@@ -1,6 +1,12 @@
 export { answeringLaterMs, answeringNowMs, asking } from './asking.ts';
 export { echo } from './capabilities/echo.ts';
-export { recordingJournal, type RecordingJournal } from '../journal-testing/recording-journal.ts';
+export {
+  cancelledAfter,
+  cancelledByAnother,
+  recordingJournal,
+  type RecordingJournal,
+} from '../journal-testing/recording-journal.ts';
+export { recordedOnTheRun } from './run-facts.ts';
 export { noLongestRuns } from './longest-runs.ts';
 export { nothingSaved } from './nothing-saved.ts';
 export { checkingWithin, checksAwaitedAtMostMs } from './time/patient-checks.ts';

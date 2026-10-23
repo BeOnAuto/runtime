@@ -3,8 +3,6 @@ import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { modelCallSent } from '../journal-testing/model-calls.ts';
-import { runDecider } from '../runs/run-decider.ts';
-import { startedRunOf } from '../runs/run-state.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { runJournal } from './run-journal.ts';
 
@@ -14,7 +12,7 @@ describe('a fact the ledger cannot write', () => {
       const journal = yield* runJournal(
         '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
         { startId: 'start', correlationId: 'run' },
-        startedRunOf(runDecider.initialState),
+        { startedAt: '2026-10-01T09:00:00.000Z', modelCallsBefore: 0, calls: [] },
       );
       return yield* journal.record({ type: 'model_call_started', data: { number: 1, ...modelCallSent() } });
     }).pipe(

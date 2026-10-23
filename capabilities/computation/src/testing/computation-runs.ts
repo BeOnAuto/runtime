@@ -1,4 +1,10 @@
-import type { CapabilityAnswer, PreparedDefinition, Capability, RunContext } from '@on.auto/definitions';
+import type {
+  CapabilityAnswer,
+  CapabilityRejection,
+  PreparedDefinition,
+  Capability,
+  RunContext,
+} from '@on.auto/definitions';
 import {
   checkingWithin,
   measuredPoolSettings,
@@ -6,7 +12,7 @@ import {
   nothingSaved,
   recordingJournal,
 } from '@on.auto/definitions/testing';
-import { allPermissions, type Conflict, type InvalidInput, type Unavailable } from '@on.auto/operations';
+import { allPermissions } from '@on.auto/operations';
 import { programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Exit, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -31,7 +37,7 @@ const run: RunContext = {
   ...noLongestRuns,
 };
 
-export type Run = Exit.Exit<CapabilityAnswer, InvalidInput | Unavailable | Conflict>;
+export type Run = Exit.Exit<CapabilityAnswer, CapabilityRejection>;
 
 export interface ComputationRuns {
   readonly capability: Capability;

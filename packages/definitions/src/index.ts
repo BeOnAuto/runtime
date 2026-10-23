@@ -13,10 +13,10 @@ export {
   type AnsweringRun,
   defaultRunWords,
   type CancelDecision,
+  type CancelledAttempt,
   type CancelledRun,
+  type Resumption,
   type CapabilityAnswer,
-  type RunContext,
-  type RunLineage,
   type Finished,
   type FinishesLater,
   type PreparedDefinition,
@@ -29,9 +29,12 @@ export {
   type RunWords,
   type Standing,
   type StandingRequest,
-  type RunJournal,
-  type CallRefused,
 } from './capability/capability.ts';
+export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
+export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
+export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
+export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
+export { toolEnded } from './journal/run-journal.ts';
 export type { SavedDefinition, SavedDefinitions } from './capability/saved-definitions.ts';
 export {
   changedExpressions,
@@ -226,7 +229,7 @@ export { checkedInput, refusedByTheInputSchema, refusedInput, wordedIssuesOf } f
 export { checkedWorker } from './checking/worker-url.ts';
 export type { OutputShape } from './shapes/output-shape.ts';
 export { OutputShapeNameSchema, type OutputShapeName } from './shapes/shape-names.ts';
-export { outputShapeNamed, outputShapeNames, shapeMismatchOf } from './shapes/output-shapes.ts';
+export { outputShapeNamed, outputShapeNames, outputShapeOf, shapeMismatchOf } from './shapes/output-shapes.ts';
 export { declaredShape, type ShapeRefusal } from './shapes/shape-declarations.ts';
 export { publishedOutputOf } from './shapes/published-output.ts';
 export { seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';

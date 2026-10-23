@@ -9,7 +9,18 @@ import { recordOf } from './shape-values.ts';
 import { tableShape } from './table-shape.ts';
 import { textShape } from './text-shape.ts';
 
-const shapes: readonly OutputShape[] = [seriesShape, categoriesShape, tableShape, textShape];
+const shapesByName: Readonly<Record<OutputShapeName, OutputShape>> = {
+  series: seriesShape,
+  categories: categoriesShape,
+  table: tableShape,
+  text: textShape,
+};
+
+const shapes: readonly OutputShape[] = Object.values(shapesByName);
+
+export function outputShapeOf(name: OutputShapeName): OutputShape {
+  return shapesByName[name];
+}
 
 export function outputShapeNames(): readonly OutputShapeName[] {
   return shapes.map(({ name }) => name);

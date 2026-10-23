@@ -7813,7 +7813,7 @@
       "post": {
         "operationId": "cancel_run",
         "summary": "Cancel run",
-        "description": "Cancels a run that is still going and finishes later, such as a workflow, at the request of the person: the request is recorded on the run at once, and the run ends as cancelled within a moment, its workflow's steps stopped and the runs they wait for cancelled too. It cannot be undone, and what the run did before it ended stays done. Use it only when the person asks to stop that run; a run that ends within its call, as a reasoning, computation or recall function does, a prediction function asked a question or an interaction function that calls a tool, cannot be cancelled. `run_id` is the run's id and `reason`, kept on the run, says why; asking again records nothing more, and get_run shows how it ended.",
+        "description": "Cancels a run that is still going, such as a workflow or a reasoning function, at the request of the person: the request is recorded on the run at once, and the run ends as cancelled within a moment, a reasoning function's before its next call, a workflow's steps stopped and the runs they wait for cancelled too. It cannot be undone, and what the run did before it ended stays done. Use it only when the person asks to stop that run; a run that ends within its call, as a computation or recall function does, a prediction function asked a question or an interaction function that calls a tool, cannot be cancelled. `run_id` is the run's id and `reason`, kept on the run, says why; asking again records nothing more, and get_run shows how it ended.",
         "tags": [
           "runs"
         ],

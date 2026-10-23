@@ -7,8 +7,8 @@ import { commandMetadata } from '../operations/command-metadata.ts';
 import { RunIdInputField } from '../operations/definition-fields.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { runOf } from '../runs/run-lookup.ts';
 import { RunSchema, type Run } from '../runs/run.ts';
+import { runAfterItsAttemptHere } from './run-cancels.ts';
 
 const mostReasonLength = 1024;
 
@@ -17,10 +17,10 @@ const ReasonField = Schema.String.annotate({
 }).check(Schema.isMinLength(1), Schema.isMaxLength(mostReasonLength), refusingForbiddenCharacters, refusingBlankText);
 
 const description = [
-  'Cancels a run that is still going and finishes later, such as a workflow, at the request of the person:',
-  "the request is recorded on the run at once, and the run ends as cancelled within a moment, its workflow's steps stopped and the runs they wait for cancelled too.",
+  'Cancels a run that is still going, such as a workflow or a reasoning function, at the request of the person:',
+  "the request is recorded on the run at once, and the run ends as cancelled within a moment, a reasoning function's before its next call, a workflow's steps stopped and the runs they wait for cancelled too.",
   'It cannot be undone, and what the run did before it ended stays done.',
-  'Use it only when the person asks to stop that run; a run that ends within its call, as a reasoning, computation or recall function does, a prediction function asked a question or an interaction function that calls a tool, cannot be cancelled.',
+  'Use it only when the person asks to stop that run; a run that ends within its call, as a computation or recall function does, a prediction function asked a question or an interaction function that calls a tool, cannot be cancelled.',
   "`run_id` is the run's id and `reason`, kept on the run, says why; asking again records nothing more, and get_run shows how it ended.",
 ].join(' ');
 
@@ -35,7 +35,7 @@ const correlationOf = Effect.fnUntraced(function* (id: string) {
 const cancelled = Effect.fnUntraced(function* (id: string, reason: string | undefined) {
   const { by, at } = yield* commandMetadata;
   const correlationId = yield* Effect.orDie(correlationOf(id));
-  const { state } = yield* (yield* PlaybookWriter)
+  yield* (yield* PlaybookWriter)
     .execute(
       runStreamNameOf(id),
       runDecider,
@@ -43,7 +43,7 @@ const cancelled = Effect.fnUntraced(function* (id: string, reason: string | unde
       { causationId: null, correlationId },
     )
     .pipe(Effect.catchTag('cancelled', Effect.die));
-  return yield* runOf(id, state);
+  return yield* runAfterItsAttemptHere(id);
 });
 
 export function defineCancelRun(capabilities: readonly Capability[]) {

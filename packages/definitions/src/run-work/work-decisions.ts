@@ -1,55 +1,31 @@
-import { Conflict, type Rejection } from '@on.auto/operations';
+import { Conflict, RunCancelled, type Rejection } from '@on.auto/operations';
 import { Result } from 'effect';
 
+import { isCallStart, numberedCall } from '../journal/call-numbering.ts';
 import { takesAnAnswer } from '../requests/request-record.ts';
 import type { CapabilityFact, RunAnswer, RunCall, RunWork } from '../runs/run-commands.ts';
 import type { RunEvent } from '../runs/run-events.ts';
-import {
-  awaitsSettlement,
-  isRunning,
-  takesSettlement,
-  type RecordedRunState,
-  type RunState,
-} from '../runs/run-state.ts';
+import { awaitsSettlement, isRunning, takesSettlement, type AskedCancel, type RunState } from '../runs/run-state.ts';
 import { digestOf } from '../runs/settlement-keys.ts';
 
-type Decision = Result.Result<readonly RunEvent[], Rejection<'conflict'>>;
+type Decision = Result.Result<readonly RunEvent[], Rejection<'conflict' | 'cancelled'>>;
 
 export type AdmitsFact = (fact: CapabilityFact) => boolean;
 
-export const runEnded = new Conflict({ detail: 'The run has ended, so it records no more of its work' });
+export const runEnded = new Conflict({ detail: 'The run has ended, so it records no more of its work', kind: 'taken' });
 
-interface Numbering {
-  readonly last: number;
-  readonly noun: string;
+export function cancelledAsAsked({ reason, kind }: AskedCancel): RunCancelled {
+  return new RunCancelled({ detail: reason, kind });
 }
 
-function nextCallOf({ last, noun }: Numbering, number: number | undefined): Result.Result<number, Conflict> {
-  const next = last + 1;
-  return number === undefined || number === next
-    ? Result.succeed(next)
-    : Result.fail(
-        new Conflict({
-          detail: `The run records its ${noun}s in order, and ${noun} ${number} is not its next ${noun}, ${next}; another attempt recorded it first`,
-          kind: 'taken',
-        }),
-      );
-}
-
-function startedCall({ fact }: RunCall, state: RecordedRunState): Decision {
-  if (fact.type === 'tool_call_started') {
-    return Result.map(nextCallOf({ last: state.lastCall, noun: 'call' }, fact.data.number), (number) => [
-      { type: fact.type, data: { ...fact.data, number } },
-    ]);
+export function decideCall({ fact }: RunCall, state: RunState): Decision {
+  if (state === undefined || !isRunning(state)) {
+    return Result.fail(runEnded);
   }
-  if (fact.type === 'model_call_started') {
-    return Result.map(nextCallOf({ last: state.lastModelCall, noun: 'model call' }, fact.data.number), () => [fact]);
+  if (state.resumes && state.cancel !== undefined && isCallStart(fact)) {
+    return Result.fail(cancelledAsAsked(state.cancel));
   }
-  return Result.succeed([fact]);
-}
-
-export function decideCall(call: RunCall, state: RunState): Decision {
-  return state === undefined || !isRunning(state) ? Result.fail(runEnded) : startedCall(call, state);
+  return Result.map(numberedCall(state, fact), (numbered) => [numbered]);
 }
 
 function undeclared({ type }: CapabilityFact): Conflict {

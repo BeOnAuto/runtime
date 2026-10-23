@@ -1,6 +1,7 @@
 import type { CalledBy, RunContext, StartingTrigger } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
+import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
 import type { RunResult } from './run-commands.ts';
 import type { CancelRequestKind, RecordedRunEvent, RecordedRunFact, ReplyIdentity } from './run-events.ts';
 import type { RunRecord } from './run.ts';
@@ -25,14 +26,13 @@ export interface RecordedWork {
   readonly at: string;
 }
 
-export interface RecordedRunState {
+export interface RecordedRunState extends CallNumbering {
   readonly input: Schema.Json;
   readonly run: RunRecord;
   readonly finishesLater: boolean;
   readonly deferred: boolean;
   readonly callsTools: boolean;
-  readonly lastCall: number;
-  readonly lastModelCall: number;
+  readonly resumes: boolean;
   readonly mayHaveChanged: boolean;
   readonly calledOnlyReadOnly: boolean;
   readonly answer: RecordedAnswer | null;
@@ -62,16 +62,13 @@ export function cancelBeforeStartOf(state: RunStreamState): AskedCancel | undefi
   return state !== undefined && 'cancelledBeforeStart' in state ? state.cancelledBeforeStart : undefined;
 }
 
-type CallsBefore = Pick<RecordedRunState, 'lastCall' | 'lastModelCall' | 'mayHaveChanged' | 'calledOnlyReadOnly'>;
-
-const noCallsBefore: CallsBefore = { lastCall: 0, lastModelCall: 0, mayHaveChanged: false, calledOnlyReadOnly: true };
+type CallsBefore = CallNumbering & Pick<RecordedRunState, 'mayHaveChanged' | 'calledOnlyReadOnly'>;
 
 function callsBefore(earlier: RunState): CallsBefore {
   return earlier === undefined
-    ? noCallsBefore
+    ? { ...numberingFrom(0, 0), mayHaveChanged: false, calledOnlyReadOnly: true }
     : {
-        lastCall: earlier.lastCall,
-        lastModelCall: earlier.lastModelCall,
+        ...numberingFrom(earlier.lastCall, earlier.lastModelCall),
         mayHaveChanged: earlier.mayHaveChanged,
         calledOnlyReadOnly: earlier.calledOnlyReadOnly,
       };
@@ -84,7 +81,7 @@ function definitionOf({ definitionType, definitionName, definitionVersion }: Run
 type RecordedFinish = RecordedRunFact<'run_succeeded' | 'run_rejected' | 'run_failed'>;
 
 function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
-  const { input, calls_tools, finishes_later, output_shape } = data;
+  const { input, calls_tools, finishes_later, resumes, output_shape } = data;
   const { at, by, depth = 0, callDepth = 0, calledBy, trigger } = context;
   return {
     input,
@@ -98,6 +95,7 @@ function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: 
     finishesLater: finishes_later === true,
     deferred: false,
     callsTools: calls_tools === true,
+    resumes: resumes === true,
     ...callsBefore(earlier),
     answer: null,
     work: [],
@@ -174,22 +172,26 @@ function workOf({ data, context }: RecordedRunFact<'work'>): RecordedWork {
 
 type RecordedAfterTheStart = Exclude<RecordedRunEvent, RecordedRunFact<'run_started'>>;
 
-function evolveWork(state: RecordedRunState, event: RecordedAfterTheStart): RecordedRunState {
+type RecordedWorkFact = Exclude<
+  RecordedAfterTheStart,
+  RecordedRunFact<'run_cancel_requested' | 'run_deferred' | 'run_succeeded' | 'run_rejected' | 'run_failed'>
+>;
+
+function evolveWork(state: RecordedRunState, event: RecordedWorkFact): RecordedRunState {
   if (event.type === 'request_answered') {
     return { ...state, answer: recordedAnswerOf(event) };
   }
   if (event.type === 'work') {
     return { ...state, work: [...state.work, workOf(event)] };
   }
-  if (event.type === 'tool_call_started') {
-    return {
-      ...state,
-      lastCall: event.data.number,
-      mayHaveChanged: true,
-      calledOnlyReadOnly: state.calledOnlyReadOnly && event.data.read_only === true,
-    };
-  }
-  return event.type === 'model_call_started' ? { ...state, lastModelCall: event.data.number } : state;
+  const numbered = { ...state, ...numberingAfter(state, event) };
+  return event.type === 'tool_call_started'
+    ? {
+        ...numbered,
+        mayHaveChanged: true,
+        calledOnlyReadOnly: state.calledOnlyReadOnly && event.data.read_only === true,
+      }
+    : numbered;
 }
 
 function evolveStarted(state: RecordedRunState, event: RecordedAfterTheStart): RecordedRunState {

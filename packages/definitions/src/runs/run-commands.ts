@@ -30,6 +30,7 @@ export interface RunStart extends RunRequest {
   readonly called_by?: CallLink;
   readonly trigger?: StartingTrigger;
   readonly createOnly?: true;
+  readonly resumes?: true;
 }
 
 export type RunResult = RunFinished;
@@ -55,6 +56,8 @@ export type AnswerFact = RequestAnswered['data'];
 
 export interface InterruptedAttempt {
   readonly type: 'run_interrupted';
+  readonly resumes?: true;
+  readonly record?: Schema.JsonObject;
 }
 
 export interface RunFinish {

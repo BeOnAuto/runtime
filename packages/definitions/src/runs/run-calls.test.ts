@@ -7,7 +7,7 @@ import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts'
 import type { CallFact, CallStartedFact, ModelCallFact, RunCommand, ToolCallFact } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
-import { lastCallOf, startedRunOf } from './run-state.ts';
+import { lastCallOf, lastModelCallOf, startedRunOf } from './run-state.ts';
 
 const start = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
@@ -102,7 +102,7 @@ const toolsOnlyRead = new Conflict({
 
 const readCalled = meanwhile(startOfCall(1, true));
 
-const noMoreWork = new Conflict({ detail: 'The run has ended, so it records no more of its work' });
+const noMoreWork = new Conflict({ detail: 'The run has ended, so it records no more of its work', kind: 'taken' });
 
 describe('a tool call of a run', () => {
   it('is recorded while the run runs, numbered by the decider, with who and when as its context', () => {
@@ -163,7 +163,7 @@ describe('the calls a run recorded', () => {
   });
 
   it('name no last call for a run that never started', () => {
-    expect(lastCallOf(startedRunOf(stateAfter()))).toBe(0);
+    expect([lastCallOf(startedRunOf(stateAfter())), lastModelCallOf(startedRunOf(stateAfter()))]).toEqual([0, 0]);
   });
 
   it('are counted across a start that was recorded again, so numbers never repeat under one id', () => {
@@ -242,6 +242,51 @@ describe('a model call of a run', () => {
     expect(stateAfter(started, meanwhile(modelCallStarted(1)), failed, started)).toMatchObject({
       lastModelCall: 1,
       mayHaveChanged: false,
+    });
+  });
+});
+
+function notOpen(noun: string, number: number): Conflict {
+  return new Conflict({
+    detail: `The run's ${noun} ${number} is not open, so it takes no end: another attempt ended it, or it never started`,
+    kind: 'taken',
+  });
+}
+
+const callInterrupted = meanwhile({
+  type: 'tool_call_failed',
+  data: { number: 1, because: 'interrupted', duration_ms: 0, jsonrpc_id: null },
+});
+
+describe('the end of a call of a run', () => {
+  it('is refused unless its call is open, as when another attempt ended it first or it never started', () => {
+    const modelCallMade = meanwhile(modelCallStarted(1));
+
+    expect([
+      decided(recordingCall(answered), started),
+      decided(recordingCall(answered), started, callStarted, callInterrupted),
+      decided(recordingCall(modelCallEnded), started),
+      decided(recordingCall(modelCallEnded), started, modelCallMade, meanwhile(modelCallFailed)),
+    ]).toEqual([
+      Result.fail(notOpen('call', 1)),
+      Result.fail(notOpen('call', 1)),
+      Result.fail(notOpen('model call', 1)),
+      Result.fail(notOpen('model call', 1)),
+    ]);
+  });
+
+  it('closes its own call alone, and a start recorded again leaves no call of the run before it open', () => {
+    const modelCallMade = meanwhile(modelCallStarted(1));
+
+    expect(stateAfter(started, callStarted, meanwhile(startOfCall(2)), callAnswered, modelCallMade)).toMatchObject({
+      openCalls: new Set([2]),
+      openModelCalls: new Set([1]),
+    });
+    expect(stateAfter(started, callStarted, modelCallMade, failed, started)).toMatchObject({
+      lastCall: 1,
+      lastModelCall: 1,
+      openCalls: new Set(),
+      openModelCalls: new Set(),
     });
   });
 });
