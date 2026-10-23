@@ -1,7 +1,13 @@
 import { cpus } from 'node:os';
 
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { freshInstances, programPool, sandboxAnswers, type CheckJob } from '@on.auto/workflow-engine/dsl';
+import {
+  freshInstances,
+  programPool,
+  sandboxAnswers,
+  sandboxModuleIn,
+  type CheckJob,
+} from '@on.auto/workflow-engine/dsl';
 
 import { checkerOf } from '../src/program-check/checking.ts';
 import { sandboxLibFrom } from '../src/program-check/kept-lib.ts';
@@ -111,9 +117,11 @@ function write(line: string): void {
 const [cpu] = cpus();
 write(`Node ${process.version} on ${cpu?.model ?? 'an unknown processor'}, ${cpus().length} cores`);
 
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+
 const generating = performance.now();
 const generated = await sandboxLibOf(shippedFilesOnDisk, (probed) =>
-  sandboxAnswers(freshInstances(shippedFilesOnDisk), probed),
+  sandboxAnswers(freshInstances(sandboxModule), probed),
 );
 write(
   `the lib generated in ${(performance.now() - generating).toFixed(0)} ms: ${generated.script.length} and ${generated.iterator.length} characters`,

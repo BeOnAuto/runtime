@@ -1,13 +1,15 @@
 import { writeFileSync } from 'node:fs';
 
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { freshInstances, sandboxAnswers } from '@on.auto/workflow-engine/dsl';
+import { freshInstances, sandboxAnswers, sandboxModuleIn } from '@on.auto/workflow-engine/dsl';
 
 import { keptLibFiles } from './src/program-check/kept-lib.ts';
 import { sandboxLibOf } from './src/program-check/sandbox-lib.ts';
 
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
+
 const lib = await sandboxLibOf(shippedFilesOnDisk, (expressions) =>
-  sandboxAnswers(freshInstances(shippedFilesOnDisk), expressions),
+  sandboxAnswers(freshInstances(sandboxModule), expressions),
 );
 
 writeFileSync(keptLibFiles.script, lib.script);

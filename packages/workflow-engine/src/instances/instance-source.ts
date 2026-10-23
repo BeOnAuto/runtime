@@ -2,11 +2,9 @@ import type { SandboxInstance } from '../programs/sandbox-session.ts';
 
 export type InstanceSource = (memoryBytes: number) => Promise<SandboxInstance>;
 
-export interface SandboxFiles {
-  readonly bytes: (file: Readonly<URL>) => Promise<Readonly<Uint8Array>>;
-}
+export type SandboxModule = { readonly bytes: Readonly<Uint8Array> } | { readonly compiled: WebAssembly.Module };
 
-export type InstanceSourceOf = (files: SandboxFiles) => InstanceSource;
+export type InstanceSourceOf = (module: SandboxModule) => InstanceSource;
 
 export function instanceStock(source: InstanceSource): InstanceSource {
   const ready = new Map<number, Promise<SandboxInstance>>();

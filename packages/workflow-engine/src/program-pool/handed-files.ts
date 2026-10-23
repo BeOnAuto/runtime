@@ -4,7 +4,7 @@ import type { ShippedFiles } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import { sandboxModuleFile } from '../instances/compiled-module.ts';
-import type { InstanceSource, SandboxFiles } from '../instances/instance-source.ts';
+import type { InstanceSource, InstanceSourceOf } from '../instances/instance-source.ts';
 import { InstanceSourceNameSchema, instanceSources, type InstanceSourceName } from '../instances/instance-sources.ts';
 import type { HandedFiles, HandedWorkers, PoolSettings } from '../jobs/pool-contract.ts';
 
@@ -65,13 +65,18 @@ export function handedFile(file: Readonly<URL>, data: unknown = workerData): Rea
   );
 }
 
-function handedSandboxFiles(data: unknown): SandboxFiles {
-  return { bytes: (file) => Promise.try(() => handedFile(file, data)) };
+function madeOnFirstInstance(sourceOf: InstanceSourceOf, data: unknown): InstanceSource {
+  const made: { source?: InstanceSource } = {};
+  return (memoryBytes) =>
+    Promise.try(() => {
+      made.source ??= sourceOf({ bytes: handedFile(sandboxModuleFile, data) });
+      return made.source(memoryBytes);
+    });
 }
 
 export function handedSandboxOf(data: unknown): InstanceSource {
   return Option.match(decodeNamed(data), {
     onNone: () => unnamedSource,
-    onSome: ({ instances }) => instanceSources[instances](handedSandboxFiles(data)),
+    onSome: ({ instances }) => madeOnFirstInstance(instanceSources[instances], data),
   });
 }

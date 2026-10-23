@@ -8,12 +8,15 @@ import {
   handedWorkersOf,
   machineSandboxOf,
   programPool,
+  sandboxModuleIn,
 } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { hostWorkOf } from './host-work.ts';
+
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
 
 const unknownRun = { org: 'acme', playbook: 'alpha', id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
 
@@ -50,8 +53,8 @@ describe('the cancels the workflow host hands to the runtime of the server', () 
       startVersion: defineStartVersion([echo]),
       names: playbookOwnNamesOf([echo]),
       evaluations: {
-        machine: machineSandboxOf(freshInstances(shippedFilesOnDisk)),
-        filters: filterSandboxOf(freshInstances(shippedFilesOnDisk)),
+        machine: machineSandboxOf(freshInstances(sandboxModule)),
+        filters: filterSandboxOf(freshInstances(sandboxModule)),
       },
     });
 

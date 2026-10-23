@@ -1,6 +1,6 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import type { FilterVerdict, MatchedFilter } from '@on.auto/workflow-engine';
-import { filterSandboxOf, freshInstances } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn } from '@on.auto/workflow-engine/dsl';
 import { Array, Effect, Function } from 'effect';
 
 import { filterMatchingOf, filterStops, type FilterStops, type MatchFilters } from '../filtering/filter-matching.ts';
@@ -8,6 +8,8 @@ import type { ReactionStart } from '../reactions/reaction-options.ts';
 import { subscriptionStarts } from '../reactions/subscription-starts.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { saidRefusals, type followedRecordOf } from './followed-records.ts';
+
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
 
 const topRuns: ReadonlyMap<string, string> = new Map([
   ['r-of-close', 'close'],
@@ -65,7 +67,7 @@ interface CountingMatches {
 
 export function countingMatches(): CountingMatches {
   const evaluated: string[] = [];
-  const matching = filterMatchingOf(filterSandboxOf(freshInstances(shippedFilesOnDisk)));
+  const matching = filterMatchingOf(filterSandboxOf(freshInstances(sandboxModule)));
   return {
     match: (filters, event, now) => {
       evaluated.push(...filters.map(({ reference }) => reference));

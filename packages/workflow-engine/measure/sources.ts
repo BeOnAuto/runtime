@@ -10,11 +10,14 @@ import {
   type InstanceSource,
   type InstanceSourceName,
   type ProgramPool,
+  sandboxModuleIn,
 } from '../src/dsl.ts';
 import { instanceSources } from '../src/instances/instance-sources.ts';
 import { moduleRun } from '../src/programs/module-runs.ts';
 
 type Timings = Readonly<Record<InstanceSourceName, number>>;
+
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
 
 const answering = 'export default function () {\n  return 0;\n}';
 
@@ -62,7 +65,7 @@ async function alternately(times: number, sample: (name: InstanceSourceName) => 
 }
 
 function sourceOf(name: InstanceSourceName): InstanceSource {
-  return instanceSources[name](shippedFilesOnDisk);
+  return instanceSources[name](sandboxModule);
 }
 
 async function onThread(): Promise<Readonly<Record<'cold' | 'warm' | 'spent', Timings>>> {

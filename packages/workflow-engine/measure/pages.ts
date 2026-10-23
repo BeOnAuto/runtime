@@ -10,9 +10,12 @@ import {
   type FoldRequest,
   type JsonObject,
   type ProgramPool,
+  sandboxModuleIn,
 } from '../src/dsl.ts';
 import { foldPage } from '../src/folds/fold-page.ts';
 import { millisecondsOf } from './common.ts';
+
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
 
 const reviewsFold = [
   'function fieldOf(value, name) {',
@@ -117,7 +120,7 @@ async function foldedOnThisThread(
   page: FoldRequest,
 ): Promise<{ readonly milliseconds: number; readonly views: string }> {
   const folded = { views: '' };
-  const instances = await Promise.all(page.views.map(() => freshInstances(shippedFilesOnDisk)(unitMemoryBytes)));
+  const instances = await Promise.all(page.views.map(() => freshInstances(sandboxModule)(unitMemoryBytes)));
   const host = {
     now: () => performance.now(),
     folding: Function.constVoid,

@@ -1,10 +1,12 @@
 import type { Emission } from '@on.auto/definitions';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf, freshInstances } from '@on.auto/workflow-engine/dsl';
+import { filterSandboxOf, freshInstances, sandboxModuleIn } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 
 import { StartRefused, type ReactionOptions, type ReactionStart } from '../reactions/reaction-options.ts';
 import { StartRejected } from '../reactions/start-rejected.ts';
+
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk);
 
 export interface RecordedReactions {
   readonly options: ReactionOptions;
@@ -34,7 +36,7 @@ export function recordedReactions(behaviour: ReactionBehaviour = {}): RecordedRe
   return {
     options: {
       definitionType: 'workflow',
-      filters: filterSandboxOf(freshInstances(shippedFilesOnDisk)),
+      filters: filterSandboxOf(freshInstances(sandboxModule)),
       start: (start) =>
         Effect.suspend(() => {
           const failure = behaviour.failure?.(start) ?? null;

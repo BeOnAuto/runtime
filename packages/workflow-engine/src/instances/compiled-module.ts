@@ -1,9 +1,10 @@
 import * as releaseSync from '@jitl/quickjs-wasmfile-release-sync';
+import type { ShippedFiles } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { newQuickJSWASMModuleFromVariant, newVariant, type QuickJSSyncVariant } from 'quickjs-emscripten-core';
 
 import type { SandboxInstance } from '../programs/sandbox-session.ts';
-import type { SandboxFiles } from './instance-source.ts';
+import type { SandboxModule } from './instance-source.ts';
 
 export type Instantiated = Omit<SandboxInstance, 'release'>;
 
@@ -44,7 +45,7 @@ const variant = Schema.decodeUnknownSync(
   Schema.declare((value: unknown): value is QuickJSSyncVariant => Reflect.get(new Object(value), 'type') === 'sync'),
 )(releaseSync.default);
 
-const compiledThrough = new WeakMap<SandboxFiles, Promise<WebAssembly.Module>>();
+const compiledOnce = new WeakMap<SandboxModule, Promise<WebAssembly.Module>>();
 
 function boundedMemory(memoryBytes: number): Bounded {
   const growth = { failedInARow: 0, refused: false };
@@ -66,15 +67,22 @@ function boundedMemory(memoryBytes: number): Bounded {
   return { memory, refusedGrowth: () => growth.refused };
 }
 
-function compiledFrom(files: SandboxFiles): Promise<WebAssembly.Module> {
-  const compiled = compiledThrough.get(files) ?? files.bytes(sandboxModuleFile).then(webAssembly.compile);
-  compiledThrough.set(files, compiled);
+export async function sandboxModuleIn(shippedFiles: ShippedFiles): Promise<SandboxModule> {
+  return { bytes: await shippedFiles.bytes(sandboxModuleFile) };
+}
+
+function compiledFrom(sandboxModule: SandboxModule): Promise<WebAssembly.Module> {
+  if ('compiled' in sandboxModule) {
+    return Promise.resolve(sandboxModule.compiled);
+  }
+  const compiled = compiledOnce.get(sandboxModule) ?? webAssembly.compile(sandboxModule.bytes);
+  compiledOnce.set(sandboxModule, compiled);
   return compiled;
 }
 
-export async function instantiated(files: SandboxFiles, memoryBytes: number): Promise<Instantiated> {
+export async function instantiated(sandboxModule: SandboxModule, memoryBytes: number): Promise<Instantiated> {
   const { memory, refusedGrowth } = boundedMemory(memoryBytes);
-  const wasmModule = await compiledFrom(files);
+  const wasmModule = await compiledFrom(sandboxModule);
   const module = await newQuickJSWASMModuleFromVariant(newVariant(variant, { wasmModule, wasmMemory: memory }));
   return { module, memoryBytes, refusedGrowth };
 }

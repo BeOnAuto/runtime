@@ -82,4 +82,12 @@ describe('the instances of the sandbox a worker takes', () => {
   it('are refused when the pool named the worker no source of them', async () => {
     await expect(handedSandboxOf({ handed: {} })(unitMemoryBytes)).rejects.toThrow('no source of instances');
   });
+
+  it('come of the module of the sandbox read when a unit first asks for one, so a worker handed none is refused only then', async () => {
+    const source = handedSandboxOf({ handed: {}, instances: 'kept' });
+
+    await expect(source(unitMemoryBytes)).rejects.toThrow(
+      `The pool handed this worker no file at ${sandboxModuleFile.href}`,
+    );
+  });
 });
