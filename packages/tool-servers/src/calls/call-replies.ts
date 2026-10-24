@@ -1,14 +1,24 @@
 import type { ServerMessage } from '../access/caller-context.ts';
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
-import { failedOnce, failuresEnded, shownResult, type CallTally } from '../bounds/call-bounds.ts';
+import {
+  countsAgainstTheRun,
+  failedOnce,
+  failingBecause,
+  failuresEnded,
+  shownResult,
+  type CallTally,
+} from '../bounds/call-bounds.ts';
 import { bytesOf } from '../bounds/text-bytes.ts';
 import { errorTextForModel, errorTextForOperator, resultText, type ToolAnswer } from '../bounds/tool-results.ts';
 import { runIdKey, callIdKey } from './call-meta.ts';
 import type { Delivered, Forwarded, ForwardedOutcome } from './tool-calls.ts';
 
-interface ModelWords {
+export interface ToolReply {
   readonly text: string;
   readonly isError: boolean;
+}
+
+interface ModelWords extends ToolReply {
   readonly shownBytes?: number;
 }
 
@@ -41,15 +51,9 @@ export interface Tallied<A> {
   readonly value: A;
 }
 
-const failures: ReadonlySet<string> = new Set(['server_failure', 'timed_out']);
-
-export function failureCounted(
-  tally: CallTally,
-  done: Forwarded,
-  replying: Replying,
-): Tallied<CallsEndedBecause | undefined> {
-  if (!failures.has(done.outcome)) {
-    return { tally, value: undefined };
+export function reportedFailure(done: Forwarded, replying: Replying): boolean {
+  if (!countsAgainstTheRun(done.outcome)) {
+    return false;
   }
   replying.report({
     server: replying.server,
@@ -57,8 +61,19 @@ export function failureCounted(
     run_id: replying.meta[runIdKey] ?? null,
     call_id: replying.meta[callIdKey] ?? null,
   });
+  return true;
+}
+
+export function failureCounted(
+  tally: CallTally,
+  done: Forwarded,
+  replying: Replying,
+): Tallied<CallsEndedBecause | undefined> {
+  if (!reportedFailure(done, replying)) {
+    return { tally, value: undefined };
+  }
   const counted = failedOnce(tally);
-  const because = done.failure === 'rate_limited' ? 'rate_limited' : 'failing';
+  const because = failingBecause(done.failure === 'rate_limited');
   return { tally: counted, value: failuresEnded(counted) ? because : undefined };
 }
 

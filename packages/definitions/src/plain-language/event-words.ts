@@ -1,6 +1,7 @@
 import { capitalized, explanationOf, plainNumber, quoted, type StartingTrigger } from '@on.auto/operations';
 import { answeredInWords, failedInWords, toolInWords, type CallFailedBecause } from '@on.auto/tool-servers';
 
+import type { ModelCallFailedBecause } from '../run-work/model-call-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
 import type { DefinitionWords } from './definition-words.ts';
@@ -68,6 +69,40 @@ export function toolAnswered(number: number, isError: boolean): string {
 
 export function toolFailed(number: number, because: CallFailedBecause): string {
   return `Tool call ${plainNumber(number)} ${failedInWords[because]}.`;
+}
+
+function counted(count: number, one: string, many: string): string {
+  return `${plainNumber(count)} ${count === 1 ? one : many}`;
+}
+
+export function modelCalled(number: number, toolsOffered: number): string {
+  const offering = toolsOffered === 0 ? 'with no tools offered' : `offering ${counted(toolsOffered, 'tool', 'tools')}`;
+  return `A run made model call ${plainNumber(number)}, ${offering}.`;
+}
+
+export function modelAnswered(number: number, toolCalls: number): string {
+  return toolCalls === 0
+    ? `Model call ${plainNumber(number)} was answered.`
+    : `Model call ${plainNumber(number)} was answered, asking for ${counted(toolCalls, 'tool call', 'tool calls')}.`;
+}
+
+const modelFailures: Readonly<Record<ModelCallFailedBecause, string>> = {
+  cancelled: 'was cancelled',
+  content_refused: 'was refused by the provider under its content policy',
+  credentials_rejected: 'was refused by the provider, which did not take the credentials of this server',
+  definition_invalid: 'was refused by the provider, which did not take the request as written',
+  interrupted: 'was not answered before the attempt that made it ended, so it is made again',
+  model_not_allowed: 'was not made, since its model is not one this server offers',
+  output_invalid: 'was answered with an answer that does not match the output the definition asks for',
+  provider_not_configured: 'was not made, since its provider is not set up on this server',
+  provider_unavailable: 'failed at the provider',
+  rate_limited: 'was refused by the provider, which asked to slow down',
+  request_too_long: 'was refused by the provider as longer than the model takes',
+  timed_out: 'took too long, so it was given up',
+};
+
+export function modelFailed(number: number, because: ModelCallFailedBecause): string {
+  return `Model call ${plainNumber(number)} ${modelFailures[because]}.`;
 }
 
 export function eventPublished(type: string): string {

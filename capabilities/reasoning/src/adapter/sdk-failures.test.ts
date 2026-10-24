@@ -16,10 +16,10 @@ import { MockLanguageModelV4 } from 'ai/test';
 import { Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { mockGeneration } from '../provider-testing/mock-models.ts';
+import { recordingHints } from '../provider-testing/provider-errors.ts';
 import { jsonRequest, promptText, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
-import { mockGeneration } from '../testing/mock-models.ts';
-import { recordingHints } from '../testing/provider-errors.ts';
 
 function throwing(failure: Readonly<Error>): () => MockLanguageModelV4 {
   const doGenerate = (): Promise<never> => Promise.reject(failure);

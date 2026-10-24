@@ -7,7 +7,7 @@ import { faultyDatabase, type FaultyDatabase } from '../testing/faulty-database.
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { runKey } from '../testing/probe-subjects.ts';
 import { until } from '../testing/until.ts';
-import { hostExecutor, type Deliver, type HostExecutor } from './host-executor.ts';
+import { hostExecutor, type CallAttempt, type Deliver, type HostExecutor } from './host-executor.ts';
 
 const origin = { version: 2 };
 
@@ -27,6 +27,7 @@ interface Executing {
   readonly database: FaultyDatabase;
   readonly executorOn: (deliver?: Deliver) => HostExecutor;
   readonly performed: () => number;
+  readonly attempts: () => readonly CallAttempt[];
   readonly answered: () => readonly string[];
   readonly troubles: () => readonly string[];
 }
@@ -40,6 +41,7 @@ const neverAnswered: Answer = () => Effect.never;
 async function executing(answer: Answer = answeredSent): Promise<Executing> {
   const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
   const counts = { performed: 0 };
+  const attempts: CallAttempt[] = [];
   const answered: string[] = [];
   const troubles: string[] = [];
   const deliverAnswer: Deliver = (key: CallKey) =>
@@ -51,9 +53,10 @@ async function executing(answer: Answer = answeredSent): Promise<Executing> {
     executorOn: (deliver = deliverAnswer) =>
       hostExecutor({
         database,
-        perform: () =>
+        perform: (_call, _run, _origin, attempt) =>
           Effect.suspend(() => {
             counts.performed += 1;
+            attempts.push(attempt);
             return answer(database);
           }),
         deliver,
@@ -68,6 +71,7 @@ async function executing(answer: Answer = answeredSent): Promise<Executing> {
         cancelChild: () => Effect.succeed('requested'),
       }),
     performed: () => counts.performed,
+    attempts: () => attempts,
     answered: () => answered,
     troubles: () => troubles,
   };
@@ -85,7 +89,21 @@ describe('the executor of the host', () => {
     const resumedAgain = await Effect.runPromise(resumed.resume());
 
     expect([restarted, resumedAgain, calls.performed()]).toEqual([1, 0, 2]);
+    expect(calls.attempts()).toEqual([{ attemptDied: false }, { attemptDied: true }]);
     await Effect.runPromise(resumed.stop());
+  });
+
+  it('starts again a call a host that died was running when its run asks for it, saying the attempt died', async () => {
+    const calls = await executing(neverAnswered);
+    const died = calls.executorOn();
+    await Effect.runPromise(died.executor.start(call, run, origin));
+    await Effect.runPromise(died.stop());
+
+    const again = calls.executorOn();
+    const receipt = await Effect.runPromise(again.executor.start(call, run, origin));
+
+    expect([receipt, calls.attempts()]).toEqual(['started_again', [{ attemptDied: false }, { attemptDied: true }]]);
+    await Effect.runPromise(again.stop());
   });
 
   it('stops the calls it runs without reporting them as troubles', async () => {

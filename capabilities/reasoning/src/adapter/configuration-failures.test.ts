@@ -1,11 +1,11 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { anthropicMessage } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { readModelSettings } from '../settings/model-settings.ts';
 import { accessFor, failed, promptText, succeeded, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
-import { anthropicMessage } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 import { makeModelAccess } from './model-access.ts';
 
 const secret = 'SECRET-credential-material-91b0';

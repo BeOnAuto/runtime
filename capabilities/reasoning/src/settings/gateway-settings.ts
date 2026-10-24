@@ -23,6 +23,7 @@ export interface GatewaySettings {
   readonly include_usage: boolean;
   readonly expose_provider_messages: boolean;
   readonly allowed_provider_options: ReadonlySet<string>;
+  readonly cost_header: string | null;
 }
 
 interface GatewayReading {
@@ -41,6 +42,7 @@ interface GatewayEntry {
   readonly include_usage?: boolean;
   readonly expose_provider_messages?: boolean;
   readonly allowed_provider_options?: readonly string[];
+  readonly cost_header?: string;
 }
 
 interface ReadGateway {
@@ -60,6 +62,8 @@ const builtInProviders: ReadonlySet<string> = new Set([
 ]);
 
 const setting = 'MODEL_GATEWAYS';
+
+const headerName = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
 
 const gatewayName = /^[a-z][a-z0-9-]{0,31}$/u;
 
@@ -109,6 +113,12 @@ const gatewayFields = {
         'The top-level request body fields a reasoning function may set for this gateway through provider_options, such as user and metadata. Default none',
     }),
   ),
+  cost_header: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "A gateway entry names the header its gateway answers the call's cost in, in US dollars, or names none and no cost is kept. A run keeps the cost as cost_usd",
+    }),
+  ),
 };
 
 export const ModelGatewaysSchema = Schema.Array(Schema.Struct(gatewayFields));
@@ -132,6 +142,12 @@ function nameProblems(name: string, index: number, names: readonly string[]): re
   return names.indexOf(name) < index ? problemAt(setting, `/${index}/name`, `${name} is used twice`) : [];
 }
 
+function costHeaderProblems(header: string | undefined, index: number): readonly SettingProblem[] {
+  return header === undefined || headerName.test(header)
+    ? []
+    : problemAt(setting, `/${index}/cost_header`, 'Expected the name of an HTTP header');
+}
+
 const apiKeyOf = Effect.fnUntraced(function* (environment: Environment, name: string | undefined) {
   return name === undefined
     ? undefined
@@ -151,6 +167,16 @@ function keyProblems(
     : [];
 }
 
+function switchesOf(entry: GatewayEntry) {
+  return {
+    structured_outputs: entry.structured_outputs ?? false,
+    include_usage: entry.include_usage ?? false,
+    expose_provider_messages: entry.expose_provider_messages ?? false,
+    allowed_provider_options: new Set(entry.allowed_provider_options),
+    cost_header: entry.cost_header?.toLowerCase() ?? null,
+  };
+}
+
 const gatewayFrom = Effect.fnUntraced(function* (environment: Environment, entry: GatewayEntry, index: number) {
   const named = yield* apiKeyOf(environment, entry.api_key_env);
   const api_key = entry.api_key === undefined ? named : Redacted.make(entry.api_key);
@@ -159,6 +185,7 @@ const gatewayFrom = Effect.fnUntraced(function* (environment: Environment, entry
       ...urlProblems(setting, entry.base_url).map(({ detail }) => ({ setting, pointer: `/${index}/base_url`, detail })),
       ...keyProblems(entry, index, named),
       ...allowedOptionProblems(entry.allowed_provider_options ?? [], index),
+      ...costHeaderProblems(entry.cost_header, index),
     ],
     gateway: {
       name: entry.name,
@@ -167,10 +194,7 @@ const gatewayFrom = Effect.fnUntraced(function* (environment: Environment, entry
       api_key_env: entry.api_key_env ?? null,
       headers: redactedValuesOf(entry.headers ?? {}),
       query_params: redactedValuesOf(entry.query_params ?? {}),
-      structured_outputs: entry.structured_outputs ?? false,
-      include_usage: entry.include_usage ?? false,
-      expose_provider_messages: entry.expose_provider_messages ?? false,
-      allowed_provider_options: new Set(entry.allowed_provider_options),
+      ...switchesOf(entry),
     },
   };
   return read;

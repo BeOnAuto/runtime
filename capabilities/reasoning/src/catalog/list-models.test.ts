@@ -3,9 +3,9 @@ import { memoryPlaybookRegistry, memoryLedger, recordingReporter } from '@on.aut
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { anthropicModels, vercelGatewayModels } from '../provider-testing/model-lists.ts';
+import { jsonResponse } from '../provider-testing/recording-fetch.ts';
 import { catalogFor } from '../testing/catalog-harness.ts';
-import { anthropicModels, vercelGatewayModels } from '../testing/model-lists.ts';
-import { jsonResponse } from '../testing/recording-fetch.ts';
 import { defineListModels } from './list-models.ts';
 
 const reader: CallerIdentity = { id: 'acme-reader', org: 'acme', permissions: ['org:read'], playbooks: '*' };

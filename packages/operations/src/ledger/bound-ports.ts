@@ -19,6 +19,7 @@ import type {
   PlaybookRunOutcomesReader,
   RecordedReader,
   RunOutcomesReader,
+  StreamAges,
   StreamReader,
   StreamWriter,
 } from './stream-ports.ts';
@@ -54,6 +55,13 @@ export function prefixedReader(ledger: StreamReader, prefix: string): StreamRead
   return {
     load: (stream, fold) =>
       wellFormed(stream).pipe(Effect.flatMap((relative) => ledger.load(`${prefix}${relative}`, fold))),
+  };
+}
+
+export function prefixedAges(ledger: StreamAges, prefix: string): StreamAges {
+  return {
+    ageOfLastAppend: (stream) =>
+      wellFormed(stream).pipe(Effect.flatMap((relative) => ledger.ageOfLastAppend(`${prefix}${relative}`))),
   };
 }
 

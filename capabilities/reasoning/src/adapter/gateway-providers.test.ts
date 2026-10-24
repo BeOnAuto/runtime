@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { anthropicMessage, chatCompletion } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { chatCompletion } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 
 const gateway = {
   name: 'internal',
@@ -57,5 +57,32 @@ describe('a model gateway', () => {
     expect(request?.headers['authorization']).toBeUndefined();
     expect(result.json).toEqual({ verdict: 'approve' });
     expect(result.warnings).toContainEqual(expect.objectContaining({ type: 'unsupported', feature: 'responseFormat' }));
+  });
+});
+
+async function costOfACall(entry: object, headers: Readonly<Record<string, string>>): Promise<number | undefined> {
+  const recording = recordingFetch(() => jsonResponse(chatCompletion('Hello'), 200, headers));
+  const access = await accessFor(environmentWith(entry), { fetch: recording.fetch });
+  return (await succeeded(access, textRequest('internal/llama-3.3-70b'))).cost_usd;
+}
+
+const costing = { ...gateway, cost_header: 'X-Call-Cost' };
+
+describe('the cost of a call through a model gateway', () => {
+  it('is what the gateway answers in the header its entry names, and none when the entry names no header', async () => {
+    expect(await costOfACall(costing, { 'x-call-cost': '0.000412' })).toBe(0.000412);
+    expect(await costOfACall(costing, { 'x-other-cost': '1' })).toBeUndefined();
+    expect(await costOfACall(gateway, { 'x-call-cost': '1.5' })).toBeUndefined();
+  });
+
+  it.each(['', ' ', 'free', '-0.1', 'Infinity'])('is none when the header says %j', async (said) => {
+    expect(await costOfACall(costing, { 'x-call-cost': said })).toBeUndefined();
+  });
+
+  it('is none for a provider that is no gateway, whatever its headers say', async () => {
+    const recording = recordingFetch(() => jsonResponse(anthropicMessage('Hello'), 200, { 'x-call-cost': '0.5' }));
+    const access = await accessFor({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch });
+
+    expect((await succeeded(access, textRequest('anthropic/claude-sonnet-4-5'))).cost_usd).toBeUndefined();
   });
 });

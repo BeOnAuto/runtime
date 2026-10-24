@@ -1,5 +1,11 @@
 import { TimedOut } from '@on.auto/reasoning';
-import { answers, callingTools, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import {
+  answers,
+  callingTools,
+  textResult,
+  type ScriptedReplies,
+  type ScriptedReply,
+} from '@on.auto/reasoning/testing';
 import { fakeStdioServerPath, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -40,7 +46,7 @@ async function fakeGraph(): Promise<FakeMcpServer> {
   return fake;
 }
 
-async function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
+async function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
   const server = await servingReasoning(replies, {
     GRAPH_API_KEY: apiKey,
     GRAPH_PIN: pin,
@@ -95,7 +101,16 @@ const calledTools: unknown = expect.stringMatching(
   /^The run called tools and did not succeed, so it is not run again under its id/u,
 );
 
-const toolRun = ['run_started', 'tool_call_started', 'tool_call_answered', 'run_succeeded'];
+const toolRun = [
+  'run_started',
+  'model_call_started',
+  'model_call_answered',
+  'tool_call_started',
+  'tool_call_answered',
+  'model_call_started',
+  'model_call_answered',
+  'run_succeeded',
+];
 
 describe('a reasoning function that calls tools, over HTTP', () => {
   it('runs with a tool of a remote server it connects to as its release, and its history shows the call', async () => {
@@ -137,7 +152,7 @@ describe('running again a run that called tools, over HTTP', () => {
 
     expect(again).toMatchObject({ status: 200, body: first.body });
     expect(fake.received()).toHaveLength(1);
-    expect(server.modelCalls()).toBe(1);
+    expect(server.modelCalls()).toBe(2);
   });
 
   it('refuses to run again under its id a run that called tools and did not succeed', async () => {
@@ -170,7 +185,7 @@ describe('running again a run that called tools, over HTTP', () => {
       },
     });
     expect(fake.received()).toHaveLength(1);
-    expect(server.modelCalls()).toBe(1);
+    expect(server.modelCalls()).toBe(2);
   });
 });
 
@@ -212,7 +227,7 @@ describe('the secrets of a server, over HTTP', () => {
 
     expect([apiKey, pin].filter((secret) => seen.includes(secret))).toEqual([]);
     expect(seen).toContain('[redacted]');
-    expect(wholes).toHaveLength(4);
+    expect(wholes).toHaveLength(8);
   });
 });
 

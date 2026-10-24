@@ -7,7 +7,7 @@ import {
   type CapabilityAnswer,
   type CapabilityRejection,
   type Capability,
-  type ToolCallJournal,
+  type RunJournal,
 } from '../../index.ts';
 
 type Ending = 'succeed' | 'unavailable' | 'conflict' | 'stall';
@@ -50,7 +50,7 @@ const decodeInput = Schema.decodeUnknownSync(
   }),
 );
 
-function failureOfCall(number: number): CallEnded {
+export function failureOfCall(number: number): CallEnded {
   return { type: 'tool_call_failed', data: { because: 'timed_out', duration_ms: 30_000, jsonrpc_id: number } };
 }
 
@@ -58,7 +58,7 @@ function numbersUpTo(count: number): readonly number[] {
   return Array.from({ length: count }, (_, index) => index + 1);
 }
 
-function everyStart(count: number, journal: ToolCallJournal) {
+function everyStart(count: number, journal: RunJournal) {
   return Effect.forEach(
     numbersUpTo(count),
     (number) => Effect.map(journal.started(startOfCall(number)), (assigned) => assigned !== undefined),
@@ -66,7 +66,7 @@ function everyStart(count: number, journal: ToolCallJournal) {
   );
 }
 
-function everyAnswer(count: number, journal: ToolCallJournal, failing: boolean) {
+function everyAnswer(count: number, journal: RunJournal, failing: boolean) {
   const endOf = failing ? failureOfCall : answerOfCall;
   return Effect.forEach(numbersUpTo(count), (number) => journal.ended(number, endOf(number)), {
     concurrency: 'unbounded',
@@ -85,7 +85,7 @@ const endings: Readonly<
 };
 
 export function toolUser(): ToolUser {
-  const journals: ToolCallJournal[] = [];
+  const journals: RunJournal[] = [];
   const stalling = Promise.withResolvers<void>();
   const capability = defineCapability({
     type: 'tool-user',

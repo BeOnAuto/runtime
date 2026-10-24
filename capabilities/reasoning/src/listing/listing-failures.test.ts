@@ -1,9 +1,14 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import {
+  connectionFailure,
+  jsonResponse,
+  recordingFetch,
+  type Responder,
+} from '../provider-testing/recording-fetch.ts';
 import { accessFor } from '../testing/adapter-harness.ts';
 import { catalogFor, type CatalogHarness } from '../testing/catalog-harness.ts';
-import { connectionFailure, jsonResponse, recordingFetch, type Responder } from '../testing/recording-fetch.ts';
 
 const environment = {
   MODEL_GATEWAYS: JSON.stringify([

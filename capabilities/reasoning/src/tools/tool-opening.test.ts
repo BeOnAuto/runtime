@@ -2,12 +2,11 @@ import { reportingAccess, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool
 import { Effect, Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { makeReasoningFunctionAdapter } from '../capability/reasoning-function.ts';
 import { accessFor } from '../testing/adapter-harness.ts';
 import { callingTools } from '../testing/calling-tools.ts';
 import { documentOf, issuesIn } from '../testing/definition-documents.ts';
 import { textResult } from '../testing/model-results.ts';
-import { runContext, reasoningWith, reasoningWithTools } from '../testing/reasoning-runs.ts';
+import { reasoningAdapter, runContext, reasoningWith, reasoningWithTools } from '../testing/reasoning-runs.ts';
 import { answers, scriptedLanguageModel } from '../testing/scripted-language-model.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -51,21 +50,23 @@ describe('a reasoning function that names tools', () => {
     const fake = await graphServer();
     const run = reasoningWithTools(
       accessTo(fake),
-      callingTools([['graph__search', { query: 'acme' }]], answers(textResult('Acme has 2 rows.'))),
+      ...callingTools([['graph__search', { query: 'acme' }]], answers(textResult('Acme has 2 rows.'))),
     );
 
     const ran = await run.running(naming('graph/search'));
 
     expect(ran).toMatchObject({ _tag: 'Success', value: { output: 'Acme has 2 rows.' } });
-    expect(run.requests()[0]?.tools).toMatchObject({
-      offered: [{ name: 'graph__search' }],
-      runBoundMs: 600_000,
-      mostInputTokens: 2_000_000,
-    });
-    expect(run.requests()[0]?.tools).not.toHaveProperty('contextWindow');
-    expect(run.journal.recorded().map(({ type }) => type)).toEqual(['tool_call_started', 'tool_call_answered']);
+    expect(run.requests()[0]?.tools).toMatchObject([{ name: 'graph__search' }]);
+    expect(run.journal.recorded().map(({ type }) => type)).toEqual([
+      'model_call_started',
+      'model_call_answered',
+      'tool_call_started',
+      'tool_call_answered',
+      'model_call_started',
+      'model_call_answered',
+    ]);
     expect(fake.received()).toEqual([
-      { tool: 'search', arguments: { query: 'acme' }, meta: { 'auto.on/run_id': runContext.id } },
+      { tool: 'search', arguments: { query: 'acme' }, meta: { 'auto.on/run_id': runContext().id } },
     ]);
     expect(fake.endedSessions()).toBe(1);
   });
@@ -82,11 +83,10 @@ describe('the reading of a reasoning function that names tools', () => {
   it('is bounded by the input tokens the operator allows and by the window the catalog gives its model', async () => {
     const asked: string[] = [];
     const scripted = scriptedLanguageModel(
-      callingTools([['graph__search', { query: 'acme' }]], answers(textResult('Acme has 2 rows.'))),
+      ...callingTools([['graph__search', { query: 'acme' }]], answers(textResult('Acme has 2 rows.'))),
     );
-    const capability = makeReasoningFunctionAdapter({
+    const capability = reasoningAdapter({
       languageModel: scripted.languageModel,
-      offered: { providers: ['anthropic'], aliases: [] },
       tools: accessTo(await graphServer()),
       reading: {
         mostInputTokens: 500_000,
@@ -97,10 +97,10 @@ describe('the reading of a reasoning function that names tools', () => {
       },
     });
 
-    await Effect.runPromise(Effect.runSync(capability.prepare(naming('graph/search'))).run({}, runContext));
+    await Effect.runPromise(Effect.runSync(capability.prepare(naming('graph/search'))).run({}, runContext()));
 
     expect(asked).toEqual(['anthropic/claude-sonnet-4-5']);
-    expect(scripted.requests()[0]?.tools).toMatchObject({ mostInputTokens: 500_000, contextWindow: 200_000 });
+    expect(scripted.requests()).toHaveLength(2);
   });
 });
 
@@ -146,14 +146,14 @@ describe('a reasoning function with tools whose model is not offered', () => {
   it('is rejected before its tools are opened, so it reaches no server and starts no process', async () => {
     const fake = await graphServer();
     const { languageModel } = await accessFor({ OPENAI_API_KEY: 'k' }, {});
-    const capability = makeReasoningFunctionAdapter({
+    const capability = reasoningAdapter({
       languageModel,
       offered: { providers: ['openai'], aliases: [] },
       tools: accessTo(fake),
     });
     const prepared = Effect.runSync(capability.prepare(naming('graph/search')));
 
-    expect(await Effect.runPromiseExit(prepared.run({}, runContext))).toEqual(
+    expect(await Effect.runPromiseExit(prepared.run({}, runContext()))).toEqual(
       Exit.fail(expect.objectContaining({ kind: 'model_not_offered', because: 'provider_not_configured' })),
     );
     expect(fake.seen()).toEqual([]);

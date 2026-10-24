@@ -41,7 +41,7 @@ export const RunRejectionSchema = Schema.Union([
     because: Schema.optionalKey(
       RejectionBecauseSchema.annotate({
         description:
-          'Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, run_bound or no_answer',
+          'Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content',
       }),
     ),
   }),
@@ -56,7 +56,8 @@ export const RunRejectionSchema = Schema.Union([
     ),
     because: Schema.optionalKey(
       RejectionBecauseSchema.annotate({
-        description: 'Why, with effect_unknown: server_failed, tool_error, model_unavailable, run_bound or no_answer',
+        description:
+          'Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown',
       }),
     ),
   }),

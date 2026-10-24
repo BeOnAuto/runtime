@@ -2,11 +2,13 @@ import { keptTextOf } from '@on.auto/operations/testing';
 import { Effect, Option, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { toolBounds } from '../bounds/call-bounds.ts';
 import {
   controlledSignals,
   fakeStdioServerPath,
   fakeToolNames,
   longToolName,
+  noToolServers,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
@@ -149,6 +151,10 @@ describe('the tools of server/*', () => {
     const { access } = accessTo({});
 
     expect(access.configured).toBe(false);
+  });
+
+  it('bounds each call by the timing it was given, and by the bound of a call without one', () => {
+    expect([accessTo({}).access.callMs, noToolServers.callMs]).toEqual([patientTiming.callMs, toolBounds.callMs]);
   });
 });
 

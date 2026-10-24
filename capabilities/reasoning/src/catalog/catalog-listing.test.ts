@@ -1,9 +1,9 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { anthropicModels, vercelGatewayModels } from '../provider-testing/model-lists.ts';
+import { jsonResponse, type Responder } from '../provider-testing/recording-fetch.ts';
 import { catalogFor, idsIn } from '../testing/catalog-harness.ts';
-import { anthropicModels, vercelGatewayModels } from '../testing/model-lists.ts';
-import { jsonResponse, type Responder } from '../testing/recording-fetch.ts';
 
 const gateways = JSON.stringify([{ name: 'gateway', base_url: 'https://gateway.example.com/v1' }]);
 

@@ -1,5 +1,5 @@
 import type { McpSession } from '@on.auto/api/testing';
-import { answers, jsonResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { answers, jsonResult, type ScriptedReplies } from '@on.auto/reasoning/testing';
 import { campaignReviews } from '@on.auto/recall/testing';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Option, Schema } from 'effect';
@@ -29,7 +29,7 @@ export type Standing = typeof StandingSchema.Type.standing;
 
 const decodeStanding = Schema.decodeUnknownOption(StandingSchema);
 
-export function verdicts(...outputs: readonly Schema.Json[]): readonly ScriptedReply[] {
+export function verdicts(...outputs: readonly Schema.Json[]): readonly ScriptedReplies[] {
   return outputs.map((output) => answers(jsonResult(output)));
 }
 
@@ -143,7 +143,7 @@ export function inState(state: string): (standing: Standing) => boolean {
 }
 
 export function servingRecall(
-  replies: readonly ScriptedReply[],
+  replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
   programPoolOf: ProgramPoolOf = patientWorkerPool,
 ): Promise<ReasoningServer> {

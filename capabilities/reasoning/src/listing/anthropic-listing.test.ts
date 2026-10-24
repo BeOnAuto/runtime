@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { anthropicModels } from '../provider-testing/model-lists.ts';
+import { jsonResponse } from '../provider-testing/recording-fetch.ts';
 import { catalogFor } from '../testing/catalog-harness.ts';
-import { anthropicModels } from '../testing/model-lists.ts';
-import { jsonResponse } from '../testing/recording-fetch.ts';
 
 describe('the models of anthropic', () => {
   it('are read from its list of models with the key, and listed with the name and limits it reports', async () => {

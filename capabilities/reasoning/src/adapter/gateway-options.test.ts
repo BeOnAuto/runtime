@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ProviderOptions } from '../model/model-request.ts';
+import { chatCompletion, openAiResponse } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch, type RecordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { chatCompletion, openAiResponse } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch, type RecordingFetch } from '../testing/recording-fetch.ts';
 
 const gateway = { name: 'my-gateway', base_url: 'https://llm.internal.example/v1' };
 

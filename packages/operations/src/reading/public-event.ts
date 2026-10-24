@@ -69,7 +69,7 @@ const eventFields = {
 export const PublicEventSchema = Schema.Struct({
   ...eventFields,
   data: Schema.JsonObject.annotate({
-    description: `The fact, at most ${mostPublicEventDataBytes} bytes as JSON in UTF-8, with an input, output, record, answer, arguments or data past ${mostShownFieldBytes} bytes as its size`,
+    description: `The fact, at most ${mostPublicEventDataBytes} bytes as JSON in UTF-8, with an input, output, record, answer, arguments, data, messages, response or tool_calls past ${mostShownFieldBytes} bytes as its size`,
   }).check(
     Schema.makeFilter(fitsInPublicEventData, {
       expected: `data of at most ${mostPublicEventDataBytes} bytes as JSON in UTF-8`,

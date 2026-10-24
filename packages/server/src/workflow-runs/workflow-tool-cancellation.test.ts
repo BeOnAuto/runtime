@@ -66,7 +66,7 @@ function untilCancelled(fake: FakeMcpServer): Promise<Seen> {
 }
 
 describe('a workflow step that times out while its reasoning function calls a tool', () => {
-  it('aborts the call in flight at its MCP server, and leaves the run cancelled with the call started and unanswered', async () => {
+  it('aborts the call in flight at its MCP server, and ends the run cancelled with the call ended as interrupted and its spending', async () => {
     const fake = await serveFakeMcp({ bearer: apiKey });
     closing.push(fake.close);
     const clock = movedClock(Date.now());
@@ -95,12 +95,15 @@ describe('a workflow step that times out while its reasoning function calls a to
     expect(calls[0]?.session).toEqual(expect.any(String));
     expect(fake.received()).toMatchObject([{ tool: 'sleep', arguments: { ms: 60_000 } }]);
     expect(run).toMatchObject({
-      body: { status: 'rejected', rejection: { reason: 'cancelled', kind: 'deadline' } },
+      body: { status: 'rejected', rejection: { reason: 'cancelled', kind: 'deadline' }, record: { usage: {} } },
     });
     expect(decodeHistory(history.body).events.map(({ type }) => type)).toEqual([
       'run_started',
+      'model_call_started',
+      'model_call_answered',
       'tool_call_started',
       'run_cancel_requested',
+      'tool_call_failed',
       'run_rejected',
     ]);
     expect(again).toMatchObject({ status: 409, body: { reason: 'cancelled', kind: 'deadline' } });

@@ -20,6 +20,7 @@ export interface PlaybookRequest extends OrgRequest {
   readonly callDepth?: number;
   readonly calledBy?: CallLink;
   readonly trigger?: TriggerLink;
+  readonly attemptDied?: true;
 }
 
 export function callSummaryOf(operation: string, { org, caller }: OrgRequest, playbook?: string): CallSummary {

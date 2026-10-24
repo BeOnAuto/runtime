@@ -1,45 +1,31 @@
-import { Conflict, type Rejection } from '@on.auto/operations';
+import { Conflict, RunCancelled, type Rejection } from '@on.auto/operations';
 import { Result } from 'effect';
 
+import { isCallStart, numberedCall } from '../journal/call-numbering.ts';
 import { takesAnAnswer } from '../requests/request-record.ts';
-import type { CapabilityFact, RunAnswer, RunToolCall, RunWork } from '../runs/run-commands.ts';
+import type { CapabilityFact, RunAnswer, RunCall, RunWork } from '../runs/run-commands.ts';
 import type { RunEvent } from '../runs/run-events.ts';
-import {
-  awaitsSettlement,
-  isRunning,
-  takesSettlement,
-  type RecordedRunState,
-  type RunState,
-} from '../runs/run-state.ts';
+import { awaitsSettlement, isRunning, takesSettlement, type AskedCancel, type RunState } from '../runs/run-state.ts';
 import { digestOf } from '../runs/settlement-keys.ts';
 
-type Decision = Result.Result<readonly RunEvent[], Rejection<'conflict'>>;
+type Decision = Result.Result<readonly RunEvent[], Rejection<'conflict' | 'cancelled'>>;
 
 export type AdmitsFact = (fact: CapabilityFact) => boolean;
 
-export const runEnded = new Conflict({ detail: 'The run has ended, so it records no more of its work' });
+export const runEnded = new Conflict({ detail: 'The run has ended, so it records no more of its work', kind: 'taken' });
 
-function nextCallOf(state: RecordedRunState, number: number | undefined): Result.Result<number, Conflict> {
-  const next = state.lastCall + 1;
-  return number === undefined || number === next
-    ? Result.succeed(next)
-    : Result.fail(
-        new Conflict({
-          detail: `The run records its calls in order, and call ${number} is not its next call, ${next}; another attempt recorded it first`,
-        }),
-      );
+export function cancelledAsAsked({ reason, kind }: AskedCancel): RunCancelled {
+  return new RunCancelled({ detail: reason, kind });
 }
 
-export function decideToolCall({ fact }: RunToolCall, state: RunState): Decision {
+export function decideCall({ fact }: RunCall, state: RunState): Decision {
   if (state === undefined || !isRunning(state)) {
     return Result.fail(runEnded);
   }
-  if (fact.type !== 'tool_call_started') {
-    return Result.succeed([fact]);
+  if (state.resumes && state.cancel !== undefined && isCallStart(fact)) {
+    return Result.fail(cancelledAsAsked(state.cancel));
   }
-  return Result.map(nextCallOf(state, fact.data.number), (number): readonly RunEvent[] => [
-    { type: fact.type, data: { ...fact.data, number } },
-  ]);
+  return Result.map(numberedCall(state, fact), (numbered) => [numbered]);
 }
 
 function undeclared({ type }: CapabilityFact): Conflict {

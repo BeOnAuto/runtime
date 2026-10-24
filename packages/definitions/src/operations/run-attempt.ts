@@ -1,9 +1,16 @@
-import type { ConflictKind, InvalidInputKind, RejectionBecause, UnavailableKind } from '@on.auto/operations';
+import type {
+  CancelledKind,
+  ConflictKind,
+  InvalidInputKind,
+  RejectionBecause,
+  UnavailableKind,
+} from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { CapabilityAnswer, CapabilityRejection } from '../capability/capability.ts';
 import { withinResultLimit } from '../runs/recorded-size.ts';
 import type { RunOutcome, RunResult, InterruptedAttempt } from '../runs/run-commands.ts';
+import { runTaken } from '../runs/run-decisions.ts';
 import type { RunRejection } from '../runs/run.ts';
 import { issuesUnder, type Rejection } from './issue-pointers.ts';
 
@@ -16,7 +23,9 @@ const decodeExecuted = Schema.decodeUnknownEffect(
 
 export const failedAttempt: RunResult = { type: 'run_failed', data: {} };
 
-export const interruptedAttempt: InterruptedAttempt = { type: 'run_interrupted' };
+export function interruptedAttempt(resumesAfterMs: number): InterruptedAttempt {
+  return Number.isFinite(resumesAfterMs) ? { type: 'run_interrupted', resumes: true } : { type: 'run_interrupted' };
+}
 
 function recordedOutcome(ran: CapabilityAnswer): Effect.Effect<RunOutcome> {
   return 'finishesLater' in ran
@@ -97,6 +106,16 @@ function rejectedAsConflict(rejection: Clash): Effect.Effect<RunResult> {
   );
 }
 
+interface Cancel extends Recorded {
+  readonly detail: string;
+  readonly kind: CancelledKind;
+}
+
+function rejectedAsCancelled(rejection: Cancel): Effect.Effect<RunResult> {
+  const { detail, kind } = rejection;
+  return rejectedWith({ reason: 'cancelled', detail, kind }, rejection);
+}
+
 export function attempt(running: Effect.Effect<CapabilityAnswer, CapabilityRejection>): Effect.Effect<RunOutcome> {
   return running.pipe(
     Effect.flatMap(outcomeOf),
@@ -104,6 +123,15 @@ export function attempt(running: Effect.Effect<CapabilityAnswer, CapabilityRejec
       invalid_input: rejectedForInput,
       unavailable: rejectedAsUnavailable,
       conflict: rejectedAsConflict,
+      cancelled: rejectedAsCancelled,
     }),
+  );
+}
+
+export function isTakenByAnother(outcome: RunOutcome): boolean {
+  return (
+    outcome.type === 'run_rejected' &&
+    outcome.data.rejection.reason === 'conflict' &&
+    outcome.data.rejection.kind === runTaken.kind
   );
 }

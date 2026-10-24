@@ -26,6 +26,7 @@ const streams: LedgerStreams = {
   readRecordedEvent: (_, id) => Promise.resolve(new Map<string, StoredRecord>().get(id)),
   readAppended: () => Promise.resolve({ streams: [], through: ['0', '0'], more: false }),
   definitionStreams: () => Promise.resolve([]),
+  ageOfLastAppend: () => Promise.resolve(Number.POSITIVE_INFINITY),
 };
 
 function telling(failingOn = '', rowsOf = (text: string): readonly unknown[] => [{ answered: text }]): Telling {

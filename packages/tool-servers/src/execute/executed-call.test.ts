@@ -2,7 +2,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CallReply } from '../calls/call-replies.ts';
-import type { OfferedTool, RunTools } from '../calls/run-tools.ts';
+import type { OfferedTool } from '../calls/offered-tools.ts';
+import type { RunTools } from '../calls/run-tools.ts';
 import { playbookToolCalls, reportingAccess } from '../testing/index.ts';
 
 function noEnding(): undefined {
@@ -12,6 +13,9 @@ function noEnding(): undefined {
 function runToolsOffering(offered: readonly OfferedTool[]): RunTools {
   return {
     offered,
+    keepsContent: true,
+    argumentsDigest: () => 'a'.repeat(64),
+    scrubJson: (json) => json,
     callsEnded: () => false,
     ended: new AbortController().signal,
     ending: noEnding,
@@ -34,10 +38,19 @@ const unsent: CallReply = {
 
 const search: OfferedTool = {
   name: 'graph__search',
+  reference: { server: 'graph', tool: 'search' },
   server: { type: 'mcp', connection: null },
   description: 'Finds the rows of the graph that match a query.',
   inputSchema: { type: 'object' },
   annotations: { readOnlyHint: true },
+  readOnly: true,
+  start: ({ callId }) =>
+    Promise.resolve({ call_id: callId, server: 'graph', tool: 'search', arguments_bytes: 2, read_only: true }),
+  send: () =>
+    Promise.resolve({
+      ended: { type: 'tool_call_failed', data: { because: 'cancelled', duration_ms: 0, jsonrpc_id: null } },
+      reply: { text: unsent.text, isError: true },
+    }),
   call: () => Promise.resolve(unsent),
 };
 

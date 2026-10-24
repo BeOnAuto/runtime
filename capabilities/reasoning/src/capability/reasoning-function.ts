@@ -8,10 +8,13 @@ import {
 import { handCallPresenter } from '@on.auto/tool-servers';
 
 import { parse, summarize } from '../definition/definition-reading.ts';
+import { performedInProcess } from '../jobs/performed-in-process.ts';
 import type { OfferedModels } from '../model/offered-models.ts';
-import { longestRequestMs, longestRunMsOf } from './definition-request.ts';
-import { definitionRun, type RunServices } from './definition-run.ts';
+import { cancelledAttemptOf } from './before-the-steps.ts';
+import { longestRequestMs, longestRunMsOf, resumesAfterMsOf } from './definition-request.ts';
+import { definitionRun } from './definition-run.ts';
 import { onThisServer } from './on-this-server.ts';
+import type { RunServices } from './run-services.ts';
 
 export interface ReasoningFunctionAdapterOptions extends RunServices {
   readonly offered: OfferedModels;
@@ -19,7 +22,8 @@ export interface ReasoningFunctionAdapterOptions extends RunServices {
 }
 
 export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOptions): Capability {
-  const run = definitionRun(options);
+  const { languageModel, telemetry, performJob = performedInProcess(languageModel, telemetry) } = options;
+  const run = definitionRun({ ...options, performJob });
   return defineCapability({
     type: 'reasoning',
     title: functionCategoryLabels.reasoning,
@@ -35,6 +39,10 @@ export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOp
     run: (definition, input, context) => run(definition, input, context),
     longestAnyRunMs: longestRequestMs,
     longestRunOf: longestRunMsOf,
+    resumes: {
+      afterMs: (definition) => resumesAfterMsOf(definition, options.tools.callMs),
+      cancelledAttempt: cancelledAttemptOf,
+    },
     reachesOutside: true,
     mayChangeOutside: options.tools.configured,
     callsTools: ({ tools }) => tools.length > 0,

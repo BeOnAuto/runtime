@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { recordingHints } from '../provider-testing/provider-errors.ts';
+import { openAiResponse } from '../provider-testing/provider-replies.ts';
+import { connectionFailure, jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, textRequest } from '../testing/adapter-harness.ts';
-import { recordingHints } from '../testing/provider-errors.ts';
-import { openAiResponse } from '../testing/provider-replies.ts';
-import { connectionFailure, jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 
 describe('a provider certificate this server does not trust', () => {
   it('tells the caller that its operator must act, and the operator which setting to use', async () => {

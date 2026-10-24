@@ -80,27 +80,37 @@ describe('a run of a reasoning function that calls a tool, with telemetry on', (
     expect(decodeMeta(received?.meta).traceparent).toBe(`00-${String(traceId)}-${String(tool?.spanId)}-01`);
   });
 
-  it('keeps the trace on each event of the run it recorded, and on the log record of each', async () => {
-    const { traceId, history, server } = await tracedRun();
-    const logged = logsIn(server.receiver.received()).filter((log) => log.traceId === traceId);
-
-    expect(history).toEqual([
-      ['run_started', traceId],
-      ['tool_call_started', traceId],
-      ['tool_call_answered', traceId],
-      ['run_succeeded', traceId],
-    ]);
-    expect(logged.map(({ eventName, traceId: logTrace }) => [eventName, logTrace])).toEqual(
-      history.map(([type, trace]) => [type, trace]),
-    );
-  });
-
   it('records nothing that was sent to the model or the tool, or answered, unless TELEMETRY_CONTENT asks for it', async () => {
     const left = await tracedRun();
     const recorded = await tracedRun({ TELEMETRY_CONTENT: 'true' });
 
     expect([contentRecordedIn(left.spans), left.exported.includes(promptText)]).toEqual([[], false]);
-    expect(contentRecordedIn(recorded.spans)).toContain('gen_ai.input.messages');
+    expect(contentRecordedIn(recorded.spans)).toEqual(
+      expect.arrayContaining(['gen_ai.input.messages', 'gen_ai.tool.call.arguments', 'gen_ai.tool.call.result']),
+    );
     expect(recorded.exported).toContain(promptText);
+  });
+});
+
+describe('the events of a run of a reasoning function that calls a tool, with telemetry on', () => {
+  it('keep the trace of the run, as the log record of each does', async () => {
+    const { traceId, history, server } = await tracedRun();
+    const logged = logsIn(server.receiver.received()).filter((log) => log.traceId === traceId);
+
+    expect(history).toEqual(
+      [
+        'run_started',
+        'model_call_started',
+        'model_call_answered',
+        'tool_call_started',
+        'tool_call_answered',
+        'model_call_started',
+        'model_call_answered',
+        'run_succeeded',
+      ].map((type) => [type, traceId]),
+    );
+    expect(logged.map(({ eventName, traceId: logTrace }) => [eventName, logTrace])).toEqual(
+      history.map(([type, trace]) => [type, trace]),
+    );
   });
 });

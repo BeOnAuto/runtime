@@ -400,14 +400,17 @@ A run accepts an event with a given `id` only once, so a request can be retried 
 `cancel_run` needs `playbook:write`. It cancels:
 
 - a workflow run that is still `started`;
+- the run of a reasoning function that is still `started`, whether its client is there or gone;
 - the run of an interaction function whose request waits;
 - a prediction function's build, whether it is starting, waiting for its trainer or scoring.
 
 It takes an optional `reason`, 1 to 1,024 characters with no control character. The run keeps it as the detail of its ending; without one, the detail says who asked.
 
-1. The request is recorded on the run at once, whichever server takes it. `cancel_run` returns `200` with the run as it stands, still `started`.
+1. The request is recorded on the run at once, whichever server takes it. `cancel_run` returns `200` with the run as it stands: still `started`, or already `rejected` for a reasoning run the server that took the request was running.
 2. Within a moment the run stops its tasks and cancels each run it waits for.
 3. It ends `rejected` with the reason `cancelled` and the kind `requested`. Read it with `get_run`.
+
+A reasoning run its client started is stopped at once in the server where it is going, each call it has in flight ended as `interrupted`; so is one a workflow's step started when its workflow cancels it. One a workflow's step started that `cancel_run` cancels, or one going in another server, stops before its next model call or tool call, so it may go on for as long as one call of it may take: a call it already sent still answers and its answer is recorded, and a run whose last model call answers ends with that answer. Either way, the run records the spending of its model calls so far, and no call of it is left started without an end. A reasoning run whose server stopped before the run met the cancel stays `started`, its cancel recorded, until a request with its `run_id`, or the workflow that started it, asks for it again, which ends it cancelled.
 
 Asking again before the run has ended records nothing more.
 
@@ -419,7 +422,7 @@ Asking again before the run has ended records nothing more.
 
 These runs end within the request that started them, so they cannot be interrupted from outside:
 
-- the run of a reasoning, computation or recall function;
+- the run of a computation or recall function;
 - the run of an interaction function that calls a tool;
 - a prediction function's question.
 
@@ -469,28 +472,30 @@ A function's output past its bound ends the run `conflict` with the kind `unwork
 
 A request that reuses an id for another definition or another input returns `conflict`. A request with the same definition and input gets what the run under that id recorded:
 
-| The run under that id                                                                                                                  | A request with the same id and input                                                                             |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Succeeded                                                                                                                              | Returns the recorded output; nothing runs again                                                                  |
-| Was rejected as `invalid_input`                                                                                                        | Returns the same rejection                                                                                       |
-| Was cancelled                                                                                                                          | Returns its cancellation, `cancelled` (409)                                                                      |
-| Went unanswered                                                                                                                        | Returns `unanswered` (410), as [A request nobody answers](#a-request-nobody-answers) says                        |
-| Still waits: a workflow run, an interaction function's request, or a prediction function's build                                       | Returns the run as it stands, still `started`, and starts nothing                                                |
-| Has no final result: it ended `unavailable`, `conflict` or `failed`, or it is `started` without waiting, such as after an interruption | Runs the definition again, as a new attempt. The attempt may use the latest version, and records the one it used |
+| The run under that id                                                                                                                  | A request with the same id and input                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Succeeded                                                                                                                              | Returns the recorded output; nothing runs again                                                                                                                                                 |
+| Was rejected as `invalid_input`                                                                                                        | Returns the same rejection                                                                                                                                                                      |
+| Was cancelled                                                                                                                          | Returns its cancellation, `cancelled` (409)                                                                                                                                                     |
+| Went unanswered                                                                                                                        | Returns `unanswered` (410), as [A request nobody answers](#a-request-nobody-answers) says                                                                                                       |
+| Still waits: a workflow run, an interaction function's request, or a prediction function's build                                       | Returns the run as it stands, still `started`, and starts nothing                                                                                                                               |
+| Has no final result: it ended `unavailable`, `conflict` or `failed`, or it is `started` without waiting, such as after an interruption | Runs the definition again, as a new attempt. The attempt may use the latest version, and records the one it used. A `started` run of a reasoning function goes on from what it recorded instead |
 
-The last row has two exceptions.
+The last row has three exceptions.
 
 A workflow runs once for its id. A request with the id of a workflow run that ended without a final result returns `conflict` with the kind `unworkable`, once its input passes the workflow's input schema, which is checked first. Its detail says to use a new run id.
 
-A run that may have called a tool is never attempted again under its id. That is a run of a reasoning function with `tools`, or of an interaction function with `call`:
+A `started` run of a reasoning function is never started a second time. A request with its id goes on from what the run recorded, at the version it started with, and answers when the run ends. In the server where the run is going, the request waits for it to end. Elsewhere, while the run's last event, by the database's clock, is newer than the longest gap between two events of a run that is still going, the run may still be running, and the request returns `conflict` with the kind `taken`, saying so. [A run performed again](reasoning-format.md#a-run-performed-again) gives the rule, and what a model call or a tool call without an answer becomes.
 
-- A run that recorded a tool call and has no final result returns `conflict` with the kind `tools_called`. When the run has ended and every tool it called is one its server marks read-only, the rejection adds `because: "only_read"`, and its words say nothing was changed.
-- A run of such a function that is still `started` returns `tools_called` too, even before its first recorded call, since it may still be in progress.
+A run that may have called a tool is never attempted again under its id once it ended. That is a run of a reasoning function with `tools`, or of an interaction function with `call`:
+
+- A run that recorded a tool call and ended without a final result returns `conflict` with the kind `tools_called`. When every tool it called is one its server marks read-only, the rejection adds `because: "only_read"`, and its words say nothing was changed.
+- A run of an interaction function with `call` that is still `started` returns `tools_called` too, even before its first recorded call, since it may still be in progress.
 - A run that ended before its first call, for example with `tool_not_offered` or `tool_server_failed`, runs again like any other.
 
 After `tools_called`, read what the run called with `get_run_history`, and check its effects outside the playbook. Then start a new run under a new id, which calls the tools again. [When a tool-calling run cannot finish](reasoning-format.md#when-a-tool-calling-run-cannot-finish) gives the endings that come before it, `tools_unfinished` and `effect_unknown`.
 
-A workflow step that calls a function meets the same rules when the server performs the step again, for example after a restart. A function run that may have called a tool then raises `tools_called` in the workflow; see [When the function's run does not succeed](workflow-format.md#when-the-function-s-run-does-not-succeed).
+A workflow step that calls a function meets the same rules when the server performs the step again, for example after a restart. A reasoning function's run goes on at once from what it recorded, since the workflow host knows the server before it stopped. An interaction function's run that may have called its tool raises `tools_called` in the workflow; see [When the function's run does not succeed](workflow-format.md#when-the-function-s-run-does-not-succeed).
 
 The runtime records one final result for each run id. That does not mean an external effect happened only once.
 
@@ -571,7 +576,9 @@ Some types, sources and attributes are reserved for what the runtime records its
 | Sources    | Those beginning `/runs/`, `/definitions/` or `/callers/`                                                                              | `/event/source`                    |
 | Attributes | `causationid`, `correlationid`, `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind` and `triggerreference` | `/event/` and the attribute's name |
 
-The reserved types are `run_started`, `run_deferred`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `dataset_assembled`, `candidate_uploaded`, `candidate_refused`, `candidate_scored`, `candidate_disqualified`, `baseline_scored`, `baseline_not_walked`, `version_built`, `shadow_predicted`, `shadow_graded`, `shadow_passed`, `shadow_failed`, `version_activated`, `activation_refused`, `build_asked`, `build_ended`, `definition_created`, `definition_updated`, `definition_retired`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
+The reserved types are `run_started`, `run_deferred`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `dataset_assembled`, `candidate_uploaded`, `candidate_refused`, `candidate_scored`, `candidate_disqualified`, `baseline_scored`, `baseline_not_walked`, `version_built`, `shadow_predicted`, `shadow_graded`, `shadow_passed`, `shadow_failed`, `version_activated`, `activation_refused`, `build_asked`, `build_ended`, `definition_created`, `definition_updated`, `definition_retired`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
+
+A run of a reasoning function also records each call of its model: `model_call_started`, then `model_call_answered` with the tool calls the model asked for, or `model_call_failed` with `because`. [The run's model calls](reasoning-format.md#the-run-s-model-calls) gives their fields.
 
 The reserved attributes are the ones the playbook gives its own events; see [the playbook's events](recall-format.md#the-events). So a published event cannot claim a cause, a caller or a depth it does not have.
 
@@ -696,7 +703,7 @@ Each event has these fields, and no others:
 
 `data` keeps each event within 4 KiB:
 
-- Large values are shown in full when each is at most 2 KiB as JSON. They are an input, an output, a record, an answer, a call's arguments and result, and a published event's data. A larger one is shown as its size in bytes, under its name plus `_bytes`, such as `output_bytes`.
+- Large values are shown in full when each is at most 2 KiB as JSON. They are an input, an output, a record, an answer, a call's arguments and result, a model call's messages, response and tool calls, and a published event's data. A larger one is shown as its size in bytes, under its name plus `_bytes`, such as `output_bytes`.
 - When the event's data would still be larger than 4 KiB, its largest field is shown as its size first.
 - A definition's document and schemas appear as their sizes. Its description shows its first 300 characters, and its warnings as a count.
 - A rejection shows its reason, its detail shortened to fit, and for invalid input the number of issues and the first five.

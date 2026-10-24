@@ -158,8 +158,13 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   server_failed: 'because a tool server failed',
   tool_error: 'because the tool answered an error, which the details below give',
   model_unavailable: 'because the model stopped answering',
+  definition_refused: 'because its definition was refused before its model could be called again',
   run_bound: 'because it ran out of time',
   no_answer: 'because the model kept calling tools instead of answering',
+  restarted_without_content:
+    'because the server restarted before it finished, and the playbook keeps no content of its calls to go on from',
+  call_outcome_unknown:
+    'because the server restarted while it called a tool that may change something, so whether that call did is not known',
   only_read: "because every tool it called only reads, by its server's own account",
   builds_of_the_day: 'because the function has had its builds of the day',
   stalled: 'because its dataset stopped at an event its fold could not take',

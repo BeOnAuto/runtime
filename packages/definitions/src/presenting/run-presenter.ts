@@ -31,6 +31,7 @@ import {
 } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
 import { cutAtCodePoint, issuesShown, mostDetailBytes, mostNameBytes } from './event-data.ts';
+import { modelCallFact, type ModelCallShown } from './model-call-facts.ts';
 
 type Shown<Type extends RunEvent['type']> = RecordedRunFact<Type>;
 
@@ -118,8 +119,14 @@ function endingFact(event: Shown<'run_succeeded' | 'run_rejected' | 'run_failed'
 
 const toolCallTypes: ReadonlySet<string> = new Set(['tool_call_started', 'tool_call_answered', 'tool_call_failed']);
 
+const modelCallTypes: ReadonlySet<string> = new Set(['model_call_started', 'model_call_answered', 'model_call_failed']);
+
 function isToolCall(event: RecordedRunEvent): event is ToolCallShown {
   return toolCallTypes.has(event.type);
+}
+
+function isModelCall(event: RecordedRunEvent): event is ModelCallShown {
+  return modelCallTypes.has(event.type);
 }
 
 function isEnding(event: RecordedRunEvent): event is Shown<'run_succeeded' | 'run_rejected' | 'run_failed'> {
@@ -134,6 +141,9 @@ function coreFactOf(words: DefinitionWords, event: CoreShown, content: KeptConte
   }
   if (isToolCall(event)) {
     return toolCallFact(event, content);
+  }
+  if (isModelCall(event)) {
+    return modelCallFact(event, content);
   }
   if (event.type === 'run_started') {
     return startFact(words, event);

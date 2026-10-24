@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { finalStepMessages, toolsWithdrawn, type StepMessage } from './final-step.ts';
+import type { ModelMessage } from '../model/model-request.ts';
+import { finalStepMessages, toolsWithdrawn } from './final-step.ts';
 
-const prompt: readonly StepMessage[] = [
-  { role: 'system', content: 'Answer briefly' },
-  { role: 'system', content: 'For a sales team' },
-  { role: 'user', content: 'Summarize acme' },
-];
+const prompt: readonly ModelMessage[] = [{ role: 'user', content: [{ type: 'text', text: 'Summarize acme' }] }];
 
 const userSays = (...lines: readonly string[]) => ({
   role: 'user',
@@ -23,8 +20,8 @@ describe('the messages of the last step of a run that called tools', () => {
   it('tells the calls in words, and their answers in a fenced block of data, apart from saying the tools are withdrawn', () => {
     expect(
       finalStepMessages(
+        prompt,
         [
-          ...prompt,
           {
             role: 'assistant',
             content: [
@@ -43,8 +40,6 @@ describe('the messages of the last step of a run that called tools', () => {
         fence,
       ),
     ).toEqual([
-      { role: 'system', content: 'Answer briefly' },
-      { role: 'system', content: 'For a sales team' },
       userSays('Summarize acme'),
       {
         role: 'assistant',
@@ -59,6 +54,7 @@ describe('the answers told in the last step', () => {
   it('tells every kind of answer, and leaves out what says nothing', () => {
     expect(
       finalStepMessages(
+        [],
         [
           {
             role: 'tool',
@@ -90,6 +86,7 @@ describe('the answers told in the last step', () => {
 
     expect(
       finalStepMessages(
+        [],
         [
           {
             role: 'tool',

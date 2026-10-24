@@ -5,10 +5,10 @@ import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-re
 import { ignored } from '../clients/ignored.ts';
 import type { Observed } from '../clients/observed-requests.ts';
 import { failureOf, type FailureKind } from '../clients/server-failures.ts';
-import type { CallFailedBecause } from './call-facts.ts';
+import type { SentCallFailedBecause } from './call-facts.ts';
 import type { ServerSlot } from './server-slot.ts';
 
-export type ForwardedOutcome = 'result' | 'tool_error' | CallFailedBecause;
+export type ForwardedOutcome = 'result' | 'tool_error' | SentCallFailedBecause;
 
 export interface Forwarding {
   readonly slot: ServerSlot;
@@ -35,7 +35,7 @@ interface AnsweredCall extends ForwardedCall {
 }
 
 export interface FailedCall extends ForwardedCall {
-  readonly outcome: CallFailedBecause;
+  readonly outcome: SentCallFailedBecause;
   readonly result: null;
   readonly resultJson: null;
 }
@@ -76,7 +76,7 @@ function requestIdOf(forwarding: Forwarding, observed: Observed, result: ToolRes
 }
 
 function failed(
-  outcome: CallFailedBecause,
+  outcome: SentCallFailedBecause,
   failure: FailureKind | null,
   message: string,
   observed: Observed,

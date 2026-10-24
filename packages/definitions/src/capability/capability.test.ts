@@ -9,10 +9,9 @@ import {
   type RunContext,
   type CapabilityDeclaration,
 } from '../index.ts';
+import { recordingJournal } from '../journal-testing/recording-journal.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
-import { answerOfCall, startOfCall } from '../testing/capabilities/tool-user.ts';
 import { noLongestRuns } from '../testing/longest-runs.ts';
-import { recordingJournal } from '../testing/recording-journal.ts';
 
 const parseWords = (source: string) =>
   source.trim() === ''
@@ -111,23 +110,6 @@ describe('the change a capability may make outside the server', () => {
       defineRunDefinition([local]).registration.mayChangeOutside,
       defineRunDefinition([local, acting]).registration.mayChangeOutside,
     ]).toEqual([false, true]);
-  });
-});
-
-describe('a journal that records in memory, for tests', () => {
-  it('keeps what it records, numbering the calls it starts, and refuses what it is told to', async () => {
-    const journal = recordingJournal((fact) => 'type' in fact);
-    const refusingStarts = recordingJournal((fact) => 'call_id' in fact);
-
-    expect(await Effect.runPromise(journal.started(startOfCall(1)))).toBe(1);
-    expect(await Effect.runPromise(journal.started(startOfCall(2)))).toBe(2);
-    expect(await Effect.runPromise(journal.ended(1, answerOfCall(1)))).toBe(false);
-    expect(journal.recorded()).toEqual([
-      { number: 1, type: 'tool_call_started', data: startOfCall(1) },
-      { number: 2, type: 'tool_call_started', data: startOfCall(2) },
-    ]);
-    expect(await Effect.runPromise(recordingJournal().ended(2, answerOfCall(2)))).toBe(true);
-    expect(await Effect.runPromise(refusingStarts.started(startOfCall(1)))).toBeUndefined();
   });
 });
 

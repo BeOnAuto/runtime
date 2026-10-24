@@ -61,7 +61,9 @@ describe('the record of a run', () => {
   });
 
   it('cannot hold an answer that leaves no room for the prompt: the definition must ask for less', async () => {
-    const { running } = reasoningWith(answers(textResult('a'.repeat(oneMebibyte), { usage, duration_ms: 1500 })));
+    const { running } = reasoningWith(
+      answers(textResult('a'.repeat(oneMebibyte), { usage, duration_ms: 1500, cost_usd: 0.96 })),
+    );
 
     expect(await running(withoutInstructions, { text: 'Go' })).toEqual(
       Exit.fail(
@@ -69,9 +71,24 @@ describe('the record of a run', () => {
           detail:
             'The answer takes more than a run can record (1048576 bytes with its record); lower config.max_output_tokens in the reasoning function definition',
           kind: 'unworkable',
-          record: { usage, duration_ms: 1500 },
+          record: { usage, duration_ms: 1500, cost_usd: 0.96 },
         }),
       ),
+    );
+  });
+});
+
+describe('the cost of a run', () => {
+  it('is kept beside its tokens where the provider said what the run cost, and nowhere where it said nothing', async () => {
+    const priced = await reasoningWith(answers(textResult('Short', { cost_usd: 0.00042 }))).running(
+      withoutInstructions,
+      { text: 'Go' },
+    );
+    const unpriced = await reasoningWith(answers(textResult('Short'))).running(withoutInstructions, { text: 'Go' });
+
+    expect(priced).toMatchObject(Exit.succeed({ record: { cost_usd: 0.00042 } }));
+    expect(Exit.match(unpriced, { onSuccess: ({ record }) => 'cost_usd' in record, onFailure: () => true })).toBe(
+      false,
     );
   });
 });

@@ -1,4 +1,10 @@
-import type { CapabilityAnswer, PreparedDefinition, Capability, RunContext } from '@on.auto/definitions';
+import type {
+  CapabilityAnswer,
+  CapabilityRejection,
+  PreparedDefinition,
+  Capability,
+  RunContext,
+} from '@on.auto/definitions';
 import {
   checkingWithin,
   checksAwaitedAtMostMs,
@@ -7,7 +13,7 @@ import {
   nothingSaved,
   recordingJournal,
 } from '@on.auto/definitions/testing';
-import { allPermissions, type Conflict, type InvalidInput, type Unavailable } from '@on.auto/operations';
+import { allPermissions } from '@on.auto/operations';
 import { programPool, type FoldRequest, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import type { KeptView } from '@on.auto/workflow-host';
 import { Effect, type Exit, type Schema } from 'effect';
@@ -30,7 +36,7 @@ const reviewsRun: RunContext = {
   ...noLongestRuns,
 };
 
-type Run = Exit.Exit<CapabilityAnswer, InvalidInput | Unavailable | Conflict>;
+type Run = Exit.Exit<CapabilityAnswer, CapabilityRejection>;
 
 export interface RecallRuns extends KeptViews {
   readonly capability: Capability;

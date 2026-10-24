@@ -21,6 +21,7 @@ export interface DefinitionRunRequest {
   readonly depth: number;
   readonly callDepth: number;
   readonly calledBy: CallLink;
+  readonly attemptDied?: true;
 }
 
 export type EndedRunResult =

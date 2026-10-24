@@ -1,5 +1,5 @@
 import type { McpSession, ToolResult } from '@on.auto/api/testing';
-import type { ScriptedReply } from '@on.auto/reasoning/testing';
+import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import type { HostClock } from '@on.auto/workflow-host';
 import { Option, Schema } from 'effect';
 
@@ -13,7 +13,7 @@ const statusOf = Schema.decodeUnknownOption(Schema.Struct({ status: Schema.Strin
 const runOf = Schema.decodeUnknownSync(Schema.Struct({ run_id: Schema.String }));
 
 export function servingWorkflows(
-  replies: readonly ScriptedReply[],
+  replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
   programPoolOf?: ProgramPoolOf,
   clock?: HostClock,

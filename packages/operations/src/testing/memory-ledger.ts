@@ -34,6 +34,7 @@ interface Appended {
 
 interface Kept {
   readonly streams: Map<string, readonly AppendedFact[]>;
+  readonly appendedAt: Map<string, number>;
   readonly log: readonly MemoryRecord[];
   readonly logged: (records: readonly MemoryRecord[]) => void;
   readonly outcomes: MemoryRunOutcomes;
@@ -91,6 +92,12 @@ function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: numbe
     })),
   );
   kept.streams.set(stream, [...storedIn(kept, stream), ...stored]);
+  kept.appendedAt.set(stream, at);
+}
+
+function ageOn({ appendedAt }: Kept): Ledger['Service']['ageOfLastAppend'] {
+  return (stream) =>
+    Effect.map(Clock.currentTimeMillis, (now) => now - (appendedAt.get(stream) ?? Number.NEGATIVE_INFINITY));
 }
 
 function encodedWith<Event extends Recorded>(
@@ -140,6 +147,7 @@ export function memoryLedger(
   const log: MemoryRecord[] = [];
   const kept: Kept = {
     streams: new Map(),
+    appendedAt: new Map(),
     log,
     logged: (records) => {
       log.push(...records);
@@ -151,6 +159,7 @@ export function memoryLedger(
   const recordedReader = memoryRecordedReader(kept.log);
   const service = Ledger.of({
     load: (stream, fold) => Effect.suspend(() => folded(fold, storedIn(kept, stream))),
+    ageOfLastAppend: ageOn(kept),
     execute: executedOn(kept),
     readRecorded: recordedReader.readRecorded,
     readRecordedEvent: recordedReader.readRecordedEvent,

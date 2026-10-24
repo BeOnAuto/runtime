@@ -17,6 +17,7 @@ import type {
   OrgReader,
   OrgContext,
   OrgWriter,
+  StreamAges,
   StreamReader,
   StreamWriter,
 } from '../index.ts';
@@ -59,6 +60,7 @@ describe('the services a handler may ask for', () => {
     expectTypeOf<OrgWriter['Service']>().toEqualTypeOf<StreamWriter>();
     expectTypeOf<PlaybookReader['Service']>().toEqualTypeOf<
       StreamReader &
+        StreamAges &
         PlaybookRecordedReader &
         PlaybookRunOutcomesReader &
         PlaybookProjectionReader &

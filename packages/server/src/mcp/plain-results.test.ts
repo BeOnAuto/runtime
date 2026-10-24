@@ -13,6 +13,7 @@ import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { interactionsCalled } from '../testing/interaction-servers/interaction-calls.ts';
+import { servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { servingWithAToolServer, toolServerToolsCalled } from '../testing/servers/tool-server-calls.ts';
 import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
 
@@ -252,7 +253,7 @@ describe('the plain words that lead each result over MCP', () => {
 
 describe('the plain words for a reasoning function whose prompt names a model the server does not offer', () => {
   it('say that its provider is not set up while others are, and that it can be switched to a model the server lists', async () => {
-    server = await servingWorkflows([() => Effect.fail(unofferedProvider)]);
+    server = await servingReasoning([], {}, undefined, { admit: () => Effect.fail(unofferedProvider) });
 
     const unoffered = await executedOnce();
 

@@ -20,12 +20,18 @@ import { Context, Effect, Layer } from 'effect';
 import { logReasoning } from '../logging/logging.ts';
 import { logModelProviders, logOperatorHint, logProviderMessage } from '../logging/provider-logging.ts';
 import type { Settings } from '../settings/settings.ts';
+import { runtimeLedger } from './runtime-ledger.ts';
 
 export type ModelAccessOf = (
   settings: ModelSettings,
   proxy: ProxySettings,
   telemetry?: ModelTelemetry,
 ) => Effect.Effect<ModelAccess>;
+
+export interface ReasoningServices {
+  readonly tools: ToolAccess;
+  readonly telemetry: ModelTelemetry | undefined;
+}
 
 export interface ServedReasoning {
   readonly capability: ReturnType<typeof makeReasoningFunctionAdapter>;
@@ -70,7 +76,7 @@ export async function reasoningServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: ReasoningSettings,
   models: Effect.Effect<ModelAccess>,
-  tools: ToolAccess,
+  { tools, telemetry }: ReasoningServices,
 ): Promise<ServedReasoning> {
   const status = providerStatus(settings.models, installedPackages());
   await runtime.run(logModelProviders(status));
@@ -82,6 +88,8 @@ export async function reasoningServedBy(
       languageModel: languageModelOf(models),
       offered: offeredModels(status.configured, settings.models.aliases, settings.models.allowed),
       tools,
+      content: runtimeLedger(runtime).content,
+      telemetry,
       reading: { mostInputTokens, contextWindowOf: catalog.contextWindowOf },
       providerSetup: settings.providerSetup,
     }),

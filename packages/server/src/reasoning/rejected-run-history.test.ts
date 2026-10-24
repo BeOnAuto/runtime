@@ -79,12 +79,16 @@ describe('the history of a reasoning run rejected after its model was called', (
       succeeded: {
         events: [
           { type: 'run_started' },
+          { type: 'model_call_started', data: { number: 1 } },
+          { type: 'model_call_answered', data: { number: 1, usage: usageOf(1200, 80) } },
           { type: 'run_succeeded', data: { output: 'Profits rose.', record: await recordOf(succeeded) } },
         ],
       },
       rejected: {
         events: [
           { type: 'run_started' },
+          { type: 'model_call_started', data: { number: 1 } },
+          { type: 'model_call_failed', data: { number: 1, because: 'output_invalid', usage: usageOf(300, 20) } },
           { type: 'run_rejected', data: { reason: 'unavailable', record: await recordOf(rejected) } },
         ],
       },

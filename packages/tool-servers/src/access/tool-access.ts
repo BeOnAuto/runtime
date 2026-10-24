@@ -50,7 +50,7 @@ export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions
   return {
     configured: settings.servers.length > 0 || source.takesConnections,
     takesConnections: source.takesConnections,
-    ...runWaysOf(access, recording),
+    ...runWaysOf(access, recording, options.timing),
     ...listingWaysOf(access),
     close: async () => {
       await access.close();

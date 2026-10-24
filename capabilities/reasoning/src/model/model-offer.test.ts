@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { anthropicModels, vercelGatewayModels } from '../provider-testing/model-lists.ts';
+import { anthropicMessage } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, type Responder } from '../provider-testing/recording-fetch.ts';
 import { failed, succeeded, textRequest } from '../testing/adapter-harness.ts';
 import { catalogFor, idsIn } from '../testing/catalog-harness.ts';
-import { anthropicModels, vercelGatewayModels } from '../testing/model-lists.ts';
-import { anthropicMessage } from '../testing/provider-replies.ts';
-import { jsonResponse, type Responder } from '../testing/recording-fetch.ts';
 
 const answering: Responder = ({ url }) => {
   if (url.endsWith('/messages')) {

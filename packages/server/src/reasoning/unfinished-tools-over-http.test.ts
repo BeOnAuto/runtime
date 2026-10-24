@@ -1,12 +1,19 @@
-import { TimedOut, ToolsStopped, type ToolsStoppedBecause } from '@on.auto/reasoning';
-import { answers, callingTools, textResult, type ScriptedCall, type ScriptedReply } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeHints } from '@on.auto/tool-servers/testing';
+import { TimedOut, type TokenUsage } from '@on.auto/reasoning';
+import {
+  answers,
+  callingTools,
+  textResult,
+  toolCallsResult,
+  type ScriptedCall,
+  type ScriptedReplies,
+  type ScriptedReply,
+} from '@on.auto/reasoning/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -14,15 +21,22 @@ const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const source = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/*]', '---', 'Summarize acme.'].join('\n');
 
-const stoppedBy =
-  (because: ToolsStoppedBecause): ScriptedReply =>
-  () =>
-    Effect.fail(new ToolsStopped({ detail: 'The run stopped', provider: 'anthropic', because }));
-
 const timedOut: ScriptedReply = () =>
   Effect.fail(
     new TimedOut({ detail: 'anthropic did not answer within 60000 ms', provider: 'anthropic', timeout_ms: 60_000 }),
   );
+
+const unused = answers(textResult('Never asked.'));
+
+const heavy: TokenUsage = {
+  input: { total: 1_500_000, uncached: 1_500_000, cache_read: null, cache_write: null },
+  output: { total: 10, text: 10, reasoning: null },
+  total: null,
+};
+
+function callingThenKeptCalling(calls: readonly ScriptedCall[]): readonly ScriptedReply[] {
+  return callingTools(calls, answers(toolCallsResult(calls)), { usage: heavy });
+}
 
 const searched: ScriptedCall = ['graph__search', { query: 'acme' }];
 
@@ -30,8 +44,8 @@ const echoed: ScriptedCall = ['graph__echo', { said: 'acme' }];
 
 const broken = [1, 2, 3, 4, 5].map((attempt): ScriptedCall => ['graph__broken', { attempt }]);
 
-async function serving(replies: readonly ScriptedReply[], hints: FakeHints = {}): Promise<ReasoningServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey, hints });
+async function serving(replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
+  const fake = await serveFakeMcp({ bearer: apiKey });
   onTestFinished(fake.close);
   const server = await servingReasoning(replies, {
     GRAPH_API_KEY: apiKey,
@@ -45,8 +59,8 @@ async function serving(replies: readonly ScriptedReply[], hints: FakeHints = {})
   return server;
 }
 
-async function endedTwice(reply: ScriptedReply, hints?: FakeHints) {
-  const server = await serving([reply], hints);
+async function endedTwice(reply: ScriptedReplies) {
+  const server = await serving([reply]);
   const running = { body: { input: {}, run_id: runId } };
   const first = await server.call('POST', `${alpha}/definitions/reasoning/summary/run`, running);
   const again = await server.call('POST', `${alpha}/definitions/reasoning/summary/run`, running);
@@ -59,42 +73,25 @@ function endedAs(status: number, kind: string, because: string): readonly unknow
 
 describe('a reasoning run that called only tools that read and could not finish, over HTTP', () => {
   it.each([
-    ['five server failures', callingTools(broken, stoppedBy('server_failed')), 'server_failed'],
-    ['its run bound', callingTools([searched], stoppedBy('run_bound')), 'run_bound'],
+    ['five server failures', callingTools(broken, unused), 'server_failed'],
     ['a model that stopped answering', callingTools([searched], timedOut), 'model_unavailable'],
-    ['a final step that still called tools', callingTools([searched], stoppedBy('no_answer')), 'no_answer'],
+    ['a final step that still called tools', callingThenKeptCalling([searched]), 'no_answer'],
   ])('is tools_unfinished, 503, after %s, and tools_called under its id', async (_case, reply, because) => {
     expect(await endedTwice(reply)).toEqual(endedAs(503, 'tools_unfinished', because));
   });
 });
 
-const unanswered: ScriptedReply = (request) =>
-  Effect.promise(async () => {
-    const sleeping = request.tools?.offered.find(({ name }) => name === 'graph__sleep');
-    void sleeping?.call(
-      { callId: 'call-1', input: { ms: 5000 } },
-      { signal: AbortSignal.timeout(10_000), cancelled: new AbortController().signal },
-    );
-    await until(() => request.tools?.calledAny() !== false, Boolean);
-  }).pipe(Effect.andThen(stoppedBy('run_bound')(request)));
-
-const mayChange: ReadonlyArray<readonly [string, ScriptedReply, string, FakeHints]> = [
-  ['before the tools that read', callingTools([echoed, searched], timedOut), 'model_unavailable', {}],
-  ['after the tools that read', callingTools([searched, echoed], stoppedBy('no_answer')), 'no_answer', {}],
-  [
-    'whose servers then kept failing',
-    callingTools([echoed, ...broken], stoppedBy('server_failed')),
-    'server_failed',
-    {},
-  ],
-  ['and is still waiting for it', unanswered, 'run_bound', { sleep: { idempotentHint: true } }],
+const mayChange: ReadonlyArray<readonly [string, ScriptedReplies, string]> = [
+  ['before the tools that read', callingTools([echoed, searched], timedOut), 'model_unavailable'],
+  ['after the tools that read', callingThenKeptCalling([searched, echoed]), 'no_answer'],
+  ['whose servers then kept failing', callingTools([echoed, ...broken], unused), 'server_failed'],
 ];
 
 describe('a reasoning run that called a tool that may change something and could not finish, over HTTP', () => {
   it.each(mayChange)(
     'is effect_unknown, 409, when it called one %s, and tools_called under its id',
-    async (_case, reply, because, hints) => {
-      expect(await endedTwice(reply, hints)).toEqual(endedAs(409, 'effect_unknown', because));
+    async (_case, reply, because) => {
+      expect(await endedTwice(reply)).toEqual(endedAs(409, 'effect_unknown', because));
     },
   );
 
@@ -122,7 +119,7 @@ const retryingOn503 = workflowSource(
 `,
 );
 
-async function reviewed(replies: readonly ScriptedReply[]) {
+async function reviewed(replies: readonly ScriptedReplies[]) {
   const server = await serving(replies);
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'reviewing', source: retryingOn503 } });
   const started = await server.call('POST', `${alpha}/definitions/workflow/reviewing/run`, { body: { input: {} } });
@@ -137,7 +134,7 @@ describe('a workflow whose reasoning step called tools and could not finish', ()
         status: 'rejected',
         rejection: { reason: 'conflict', kind: 'effect_unknown', because: 'model_unavailable' },
       },
-      modelCalls: 1,
+      modelCalls: 2,
     });
   });
 
@@ -146,7 +143,7 @@ describe('a workflow whose reasoning step called tools and could not finish', ()
 
     expect(await reviewed([unfinished, unfinished, answers(textResult('Acme has 2 rows.'))])).toMatchObject({
       ended: { status: 'succeeded', output: 'Acme has 2 rows.' },
-      modelCalls: 3,
+      modelCalls: 5,
     });
   });
 });

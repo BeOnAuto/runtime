@@ -6,6 +6,7 @@ import {
   playbookBoundProjectionReader,
   playbookBoundRecordedReader,
   playbookBoundRunOutcomesReader,
+  prefixedAges,
   prefixedReader,
 } from '../ledger/bound-ports.ts';
 import { nothingKept } from '../testing/index.ts';
@@ -55,6 +56,7 @@ function keptOf(records: readonly RecordedEvent[], mostBytes: number, digests: r
         PlaybookReader,
         PlaybookReader.of({
           ...prefixedReader(service, 'playbook/acme/alpha/'),
+          ...prefixedAges(service, 'playbook/acme/alpha/'),
           ...playbookBoundRecordedReader(service, playbook),
           ...playbookBoundRunOutcomesReader(service, playbook),
           ...playbookBoundProjectionReader(service, playbook),

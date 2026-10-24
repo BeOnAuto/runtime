@@ -1,6 +1,5 @@
-import { textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { answeringFromTheTools, textResult } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/testing';
-import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';
@@ -13,11 +12,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-const answeringWhatItSaw: ScriptedReply = (request) =>
-  Effect.promise((signal) => {
-    const offered = Option.getOrThrow(Option.fromNullishOr(request.tools?.offered[0]));
-    return offered.call({ callId: 'call-1', input: {} }, { signal, cancelled: signal });
-  }).pipe(Effect.map(({ text }) => textResult(text)));
+const answeringWhatItSaw = answeringFromTheTools([['graph__profile', {}]], (texts) => textResult(texts.join('')));
 
 const profiling = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/profile]', '---', 'Profile acme.'].join(
   '\n',

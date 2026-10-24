@@ -8,6 +8,8 @@ import { checkedRequest } from '../model/request-checks.ts';
 
 export type ScriptedReply = (request: ModelRequest) => Effect.Effect<ModelResult, ModelFailure>;
 
+export type ScriptedReplies = ScriptedReply | readonly ScriptedReply[];
+
 export interface ScriptedLanguageModel {
   readonly languageModel: LanguageModel['Service'];
   readonly layer: Layer.Layer<LanguageModel>;
@@ -25,7 +27,8 @@ export function answers(result: ModelResult): ScriptedReply {
   return () => Effect.succeed(result);
 }
 
-export function scriptedLanguageModel(...replies: readonly ScriptedReply[]): ScriptedLanguageModel {
+export function scriptedLanguageModel(...scripted: readonly ScriptedReplies[]): ScriptedLanguageModel {
+  const replies = scripted.flat();
   const received: ModelRequest[] = [];
   const languageModel = LanguageModel.of({
     admit: checkedRequest,

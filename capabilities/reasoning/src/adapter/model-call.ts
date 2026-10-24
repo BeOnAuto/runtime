@@ -1,116 +1,94 @@
-import { generateText, wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
+import { generateText, isStepCount, wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
 import { Result } from 'effect';
 
-import type { ModelFailure } from '../failure/model-failure.ts';
-import type { ModelRequest, ToolCallSignals } from '../model/model-request.ts';
-import { toolLoop, turnsOf } from '../tools/tool-loop.ts';
-import { projected, readOutput, settledAnswer, type Answered } from './answer-settling.ts';
+import type { ModelRequest } from '../model/model-request.ts';
+import { costOf } from './answer-mapping.ts';
+import { projected, readOutput, settledAnswer, type Responded, type SettledAnswer } from './answer-settling.ts';
 import {
   callSettingsOf,
   promptOf,
   providerOptionsOf,
   retriesOf,
   telemetryOf,
+  toolsOf,
   type CallTelemetry,
 } from './call-options.ts';
 import { jsonOutput } from './json-output.ts';
 import type { ModelTarget } from './model-resolution.ts';
-import type { StepDeadline } from './stopped-call.ts';
 
 type DoGenerate = Parameters<NonNullable<LanguageModelMiddleware['wrapGenerate']>>[0]['doGenerate'];
 
-type Settled = Result.Result<Answered, ModelFailure>;
-
-type Turns = ReturnType<typeof turnsOf>;
-
-function callOf(request: ModelRequest, step: StepDeadline, turns: Turns) {
-  return {
-    ...promptOf(request),
-    ...callSettingsOf(request.settings),
-    ...providerOptionsOf(request.provider_options),
-    onLanguageModelCallStart: (sent: Parameters<Turns['started']>[0]) => {
-      step.started();
-      turns.started(sent);
-    },
-    onLanguageModelCallEnd: (answered: Parameters<Turns['ended']>[0]) => {
-      step.ended();
-      turns.ended(answered);
-    },
-    maxRetries: retriesOf(request),
-  };
+interface SentRequest {
+  readonly instructions?: unknown;
+  readonly messages: unknown;
+  readonly tools?: unknown;
 }
 
-interface Calling {
-  readonly step: StepDeadline;
-  readonly telemetry?: CallTelemetry;
+const utf8 = new TextEncoder();
+
+function bytesSent({ instructions, messages, tools }: SentRequest): number {
+  return utf8.encode(JSON.stringify({ instructions, messages, tools })).byteLength;
 }
 
-interface CallHooks extends Calling {
-  readonly turns: Turns;
+interface RespondingModel {
+  readonly model: ReturnType<typeof wrapLanguageModel>;
+  readonly responded: () => Responded;
 }
 
-export interface CallingModel {
-  readonly turns: Turns;
-  readonly settled: Promise<Settled>;
-}
-
-async function modelAnswer(
-  target: ModelTarget,
-  request: ModelRequest,
-  signals: ToolCallSignals,
-  { step, turns, telemetry }: CallHooks,
-): Promise<Settled> {
-  const response: { id: string | null } = { id: null };
+function respondingModel(target: ModelTarget): RespondingModel {
+  const response: { id: string | null; cost: number | undefined } = { id: null, cost: undefined };
   const model = wrapLanguageModel({
     model: target.model(),
     middleware: {
       wrapGenerate: async ({ doGenerate }: { readonly doGenerate: DoGenerate }) => {
         const generated = await doGenerate();
         response.id = generated.response?.id ?? null;
+        response.cost = costOf(generated.response?.headers, target.costHeader);
         return generated;
       },
     },
   });
-  const loop = toolLoop(request.tools, signals.cancelled, turns);
-  const { tools, prepareStep, stopWhen } = loop;
+  return {
+    model,
+    responded: () => ({ id: response.id, cost: response.cost === undefined ? {} : { cost_usd: response.cost } }),
+  };
+}
+
+export async function modelAnswer(
+  target: ModelTarget,
+  request: ModelRequest,
+  signal: Readonly<AbortSignal>,
+  telemetry: CallTelemetry,
+): Promise<SettledAnswer> {
+  const { model, responded } = respondingModel(target);
+  const sent = { bytes: 0 };
   const call = {
     model,
-    ...callOf(request, step, turns),
+    ...promptOf(request),
+    ...callSettingsOf(request.settings),
+    ...providerOptionsOf(request.provider_options),
     ...telemetryOf(telemetry),
-    tools: { ...tools },
-    prepareStep,
-    stopWhen,
-    abortSignal: signals.signal,
+    ...toolsOf(request.tools),
+    stopWhen: isStepCount(1),
+    abortSignal: signal,
+    maxRetries: retriesOf(request),
+    onLanguageModelCallStart: (started: SentRequest) => {
+      sent.bytes = bytesSent(started);
+    },
   };
   if (request.output.type === 'text') {
     const result = await generateText(call);
-    return (
-      loop.unanswered(target.provider, result.finishReason, result.usage) ??
-      settledAnswer(target, projected(result, response.id), { kind: 'text' }, request.tools)
-    );
+    return settledAnswer(target, projected(result, responded(), sent.bytes), { kind: 'text' });
   }
   const output = jsonOutput(request.output);
   if (Result.isFailure(output)) {
     return Result.fail(output.failure);
   }
   const result = await generateText({ ...call, output: output.success });
-  return (
-    loop.unanswered(target.provider, result.finishReason, result.usage) ??
-    settledAnswer(
-      target,
-      projected(result, response.id),
-      readOutput(() => result.output),
-      request.tools,
-    )
+  const asked = result.finishReason === 'tool-calls';
+  return settledAnswer(
+    target,
+    projected(result, responded(), sent.bytes),
+    asked ? { kind: 'text' } : readOutput(() => result.output),
   );
-}
-
-export function callingModel(
-  target: ModelTarget,
-  request: ModelRequest,
-  signals: ToolCallSignals,
-  { step, telemetry }: Calling,
-): CallingModel {
-  const turns = turnsOf(request.tools);
-  return { turns, settled: modelAnswer(target, request, signals, { step, turns, telemetry }) };
 }

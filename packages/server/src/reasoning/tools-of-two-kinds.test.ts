@@ -11,7 +11,9 @@ const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const decodeHistory = Schema.decodeUnknownSync(
   Schema.Struct({
-    events: Schema.Array(Schema.Struct({ type: Schema.String, data: Schema.Record(Schema.String, Schema.Json) })),
+    events: Schema.Array(
+      Schema.Struct({ type: Schema.String, data: Schema.Struct({ server: Schema.optionalKey(Schema.String) }) }),
+    ),
   }),
 );
 
@@ -61,14 +63,23 @@ describe('a reasoning function that names a tool of an MCP server and a tool of 
       status: 200,
       body: { status: 'succeeded', output: 'Acme has 2 rows in the graph and 2 in billing.' },
     });
-    expect(history.events.map(({ type, data }) => [type, data['server']])).toEqual([
-      ['run_started', undefined],
-      ['tool_call_started', 'graph'],
-      ['tool_call_answered', undefined],
-      ['tool_call_started', 'billing'],
-      ['tool_call_answered', undefined],
-      ['run_succeeded', undefined],
+    const types = history.events.map(({ type }) => type);
+    const calls = history.events.slice(3, -3);
+    expect([...types.slice(0, 3), ...types.slice(-3)]).toEqual([
+      'run_started',
+      'model_call_started',
+      'model_call_answered',
+      'model_call_started',
+      'model_call_answered',
+      'run_succeeded',
     ]);
+    expect(calls.map(({ type }) => type).toSorted()).toEqual([
+      'tool_call_answered',
+      'tool_call_answered',
+      'tool_call_started',
+      'tool_call_started',
+    ]);
+    expect(calls.map(({ data }) => data.server)).toEqual(expect.arrayContaining(['billing', 'graph', undefined]));
     expect(graph.received()).toEqual([
       { tool: 'search', arguments: { query: 'acme' }, meta: { 'auto.on/run_id': runId } },
     ]);

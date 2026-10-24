@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { openAiModels } from '../provider-testing/model-lists.ts';
+import { jsonResponse } from '../provider-testing/recording-fetch.ts';
 import { catalogFor, idsIn } from '../testing/catalog-harness.ts';
-import { openAiModels } from '../testing/model-lists.ts';
-import { jsonResponse } from '../testing/recording-fetch.ts';
 
 describe('the models of openai', () => {
   it('are read with the key, keeping only those a conversation can use by their documented names', async () => {

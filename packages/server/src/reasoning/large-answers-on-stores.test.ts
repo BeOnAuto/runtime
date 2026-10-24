@@ -27,6 +27,12 @@ const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const calls = toolBounds.callsInRun;
 
+const keptOfAToolCall = ['its arguments', 'its answer'];
+
+const keptOfAModelCall = ['the messages it sent', 'its response'];
+
+const modelCallsOfTheRun = ['the first, which asks for every call', 'the last, which tells the conversation again'];
+
 const kibibytesOf = (call: number): number => 1000 + call;
 
 const reading = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/large]', '---', 'Read it all.'].join('\n');
@@ -134,8 +140,11 @@ describe.each(stores)('a reasoning run whose every call answers 1 MB, on $store'
       const took = performance.now() - started;
 
       expect(ran.body).toMatchObject({ status: 'succeeded', output: 'Read them all.' });
+      expect(readBack).toHaveLength(calls);
       expect(readBack).toEqual(
-        Array.from({ length: calls }, (_, call) => ({ kibibytes: kibibytesOf(call), whole: true })),
+        expect.arrayContaining(
+          Array.from({ length: calls }, (_, call) => ({ kibibytes: kibibytesOf(call), whole: true })),
+        ),
       );
       expect(took).toBeLessThan(toolBounds.runMs);
     },
@@ -144,7 +153,7 @@ describe.each(stores)('a reasoning run whose every call answers 1 MB, on $store'
 
 describe(`a reasoning run whose every call answers 1 MB, its content on object storage${objectStoreNotice}`, () => {
   it.skipIf(objectStore === '')(
-    'keeps the arguments and the answer of each call as objects of the bucket under its playbook, and reads every answer back within the deadline of the run',
+    'keeps the arguments and the answer of each call, and the messages and the response of each model call, as objects of the bucket under its playbook, and reads every answer back within the deadline of the run',
     { timeout: toolBounds.runMs },
     async () => {
       const prefix = `large-answers/${randomUUID()}`;
@@ -159,10 +168,14 @@ describe(`a reasoning run whose every call answers 1 MB, its content on object s
       const kept = await objectsUnder(`${prefix}/`);
 
       expect(ran.body).toMatchObject({ status: 'succeeded', output: 'Read them all.' });
+      expect(readBack).toHaveLength(calls);
       expect(readBack).toEqual(
-        Array.from({ length: calls }, (_, call) => ({ kibibytes: kibibytesOf(call), whole: true })),
+        expect.arrayContaining(
+          Array.from({ length: calls }, (_, call) => ({ kibibytes: kibibytesOf(call), whole: true })),
+        ),
       );
-      expect(kept).toHaveLength(2 * calls);
+      expect(server.modelCalls()).toBe(modelCallsOfTheRun.length);
+      expect(kept).toHaveLength(calls * keptOfAToolCall.length + modelCallsOfTheRun.length * keptOfAModelCall.length);
       expect(kept.every((key) => /^playbook\/acme\/alpha\/[0-9a-f]{64}$/u.test(key))).toBe(true);
       expect(took).toBeLessThan(toolBounds.runMs);
     },

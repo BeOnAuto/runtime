@@ -75,7 +75,7 @@ When it stops, the server:
 
 What happens to the work it stopped:
 
-- A call cut off stays recorded. It runs again under the same run id when the server next starts, except a function run that may have called tools ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). A nested run that already has a final result returns it from the ledger.
+- A call cut off stays recorded. It runs again under the same run id when the server next starts, except an interaction function's run that may have called its tool; a reasoning function's run goes on from what it recorded ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). A nested run that already has a final result returns it from the ledger.
 - A call that waits for a run that finishes later, such as another workflow's, is not cut off. It keeps waiting without taking one of the calls that run at once. The end of that run completes the call whenever it is recorded, on whichever server.
 - The first sweep after a start fires the timers that came due while the server was stopped. It also carries out what a run had decided but not yet done, and resumes the calls.
 

@@ -49,7 +49,7 @@ function callAnswerOf(result: DefinitionRunResult, child: string): CallAnswer {
 }
 
 export function definitionCalls(runDefinition: RunDefinition): Perform {
-  return (call, run, origin) =>
+  return (call, run, origin, { attemptDied }) =>
     Option.match(attributesOfRun(run.attributes), {
       onNone: () => Effect.succeed(noCaller),
       onSome: ({ org, playbook, run_id: workflowRun, caller, lineage, depth = 0, call_depth = 0 }) => {
@@ -71,6 +71,7 @@ export function definitionCalls(runDefinition: RunDefinition): Perform {
           depth,
           callDepth: call_depth + 1,
           calledBy: { run_id: workflowRun, reference, run: count },
+          ...(attemptDied ? { attemptDied } : {}),
         }).pipe(Effect.map((result) => callAnswerOf(result, runId)));
       },
     });

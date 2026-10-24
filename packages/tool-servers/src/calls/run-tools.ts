@@ -1,23 +1,11 @@
-import type { Schema } from 'effect';
-
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
-import { callsEnded, cutToDescriptionBound, noCalls } from '../bounds/call-bounds.ts';
-import { isReadOnly, type ToolAnnotations } from '../bounds/tool-results.ts';
-import { scrubbedSchema } from '../listing/shown-tools.ts';
+import { callsEnded, noCalls } from '../bounds/call-bounds.ts';
+import { isReadOnly } from '../bounds/tool-results.ts';
 import { modelFacingNames } from '../names/model-facing-names.ts';
 import { toolsInWords } from '../names/tool-words.ts';
-import type { CallReply } from './call-replies.ts';
-import type { CallSignals, OfferedOnServer, RunState, RunToolsParts, ToolCallRequest } from './run-parts.ts';
-import { caller } from './tool-caller.ts';
-
-export interface OfferedTool {
-  readonly name: string;
-  readonly server: Pick<OfferedOnServer['slot']['settings'], 'type' | 'connection'>;
-  readonly description: string;
-  readonly inputSchema: Schema.JsonObject;
-  readonly annotations: ToolAnnotations | undefined;
-  readonly call: (request: ToolCallRequest, signals: CallSignals) => Promise<CallReply>;
-}
+import { offeredToolOf, type OfferedTool } from './offered-tools.ts';
+import { argumentsDigestOf, scrubbedJsonOf } from './recorded-calls.ts';
+import type { OfferedOnServer, RunState, RunToolsParts } from './run-parts.ts';
 
 export interface ToolsEnding {
   readonly because: CallsEndedBecause;
@@ -25,6 +13,9 @@ export interface ToolsEnding {
 
 export interface RunTools {
   readonly offered: readonly OfferedTool[];
+  readonly keepsContent: boolean;
+  readonly argumentsDigest: (input: unknown) => string;
+  readonly scrubJson: (json: string) => string;
   readonly callsEnded: () => boolean;
   readonly ended: Readonly<AbortSignal>;
   readonly ending: () => ToolsEnding | undefined;
@@ -57,16 +48,12 @@ export function runTools(parts: RunToolsParts): RunTools {
       answeredBytes += bytes;
     },
   };
-  const offered = modelFacingNames(parts.offered).map((tool): OfferedTool => ({
-    name: tool.name,
-    server: { type: tool.slot.settings.type, connection: tool.slot.settings.connection },
-    description: cutToDescriptionBound(parts.secrets.scrub(tool.tool.description ?? '')),
-    inputSchema: scrubbedSchema(tool.tool.inputSchema, parts.secrets.scrub),
-    annotations: tool.tool.annotations,
-    call: caller(parts, state, tool),
-  }));
+  const offered = modelFacingNames(parts.offered).map((tool) => offeredToolOf(parts, state, tool));
   return {
     offered,
+    keepsContent: parts.offered.every(({ slot }) => slot.settings.record_content),
+    argumentsDigest: (input) => argumentsDigestOf(input, parts.secrets),
+    scrubJson: (json) => scrubbedJsonOf(json, parts),
     callsEnded: () => callsEnded(tally),
     ended: stop.signal,
     ending: () => ending,

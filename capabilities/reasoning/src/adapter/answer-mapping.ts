@@ -65,3 +65,14 @@ export function warningOf(warning: SdkWarning): ModelWarning {
   }
   return { type: warning.type, feature: warning.feature, detail: warning.details ?? null };
 }
+
+type ResponseHeaders = Readonly<Record<string, string | undefined>>;
+
+export function costOf(headers: ResponseHeaders | undefined, header: string | null): number | undefined {
+  const said = header === null ? undefined : headers?.[header]?.trim();
+  if (said === undefined || said === '') {
+    return undefined;
+  }
+  const cost = Number(said);
+  return Number.isFinite(cost) && cost >= 0 ? cost : undefined;
+}

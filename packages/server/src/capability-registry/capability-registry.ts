@@ -16,6 +16,7 @@ import { composedOnFirstUse, scopeOfTheRuntime } from './first-use.ts';
 
 export interface CapabilityRegistry {
   readonly models: Effect.Effect<ModelAccess>;
+  readonly modelTelemetry: ModelTelemetry | undefined;
   readonly tools: Effect.Effect<ToolAccess, ToolServerDocumentRefused>;
 }
 
@@ -43,6 +44,7 @@ function capabilityRegistryOf(
       ComposedModels,
       modelsComposedBy(settings, wiring.modelAccessOf, wiring.telemetry.models),
     ),
+    modelTelemetry: Effect.succeed(wiring.telemetry.models),
     tools: composedOnFirstUse(ComposedTools, toolsComposedBy(runtime, settings, wiring)),
   });
 }

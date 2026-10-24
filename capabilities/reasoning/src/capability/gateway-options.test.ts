@@ -2,21 +2,21 @@ import { Conflict } from '@on.auto/operations';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { chatCompletion } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor } from '../testing/adapter-harness.ts';
 import { documentOf } from '../testing/definition-documents.ts';
-import { chatCompletion } from '../testing/provider-replies.ts';
-import { adapterWithoutTools, runContext } from '../testing/reasoning-runs.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
+import { reasoningAdapter, runContext } from '../testing/reasoning-runs.ts';
 
 const gateway = { name: 'internal', base_url: 'https://llm.internal.example/v1', allowed_provider_options: ['user'] };
 
 async function executedWith(providerOptions: string) {
   const recording = recordingFetch(() => jsonResponse(chatCompletion('Hello')));
   const access = await accessFor({ MODEL_GATEWAYS: JSON.stringify([gateway]) }, { fetch: recording.fetch });
-  const capability = adapterWithoutTools(access);
+  const capability = reasoningAdapter(access);
   const document = documentOf(`model: internal/llama-3.3-70b\nprovider_options:\n  internal: ${providerOptions}`, 'Hi');
   const prepared = Effect.runSync(capability.prepare(document));
-  const exit = await Effect.runPromiseExit(prepared.run({}, runContext));
+  const exit = await Effect.runPromiseExit(prepared.run({}, runContext()));
   return { exit, requests: recording.requests() };
 }
 

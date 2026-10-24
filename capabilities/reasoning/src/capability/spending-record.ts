@@ -23,6 +23,7 @@ interface RecordFields {
   readonly raw_finish_reason: string | null;
   readonly usage: Schema.JsonObject;
   readonly response_id: string | null;
+  readonly cost_usd?: number;
   readonly warnings: readonly Schema.JsonObject[];
   readonly duration_ms: number;
 }
@@ -64,8 +65,12 @@ function usageRecord({ input, output, total }: TokenUsage): Schema.JsonObject {
   };
 }
 
-export function spendingRecord(usage: TokenUsage, durationMs: number): Schema.JsonObject {
-  return { usage: usageRecord(usage), duration_ms: durationMs };
+export function spendingRecord(
+  usage: TokenUsage,
+  durationMs: number,
+  { cost_usd: cost }: { readonly cost_usd?: number } = {},
+): Schema.JsonObject {
+  return { usage: usageRecord(usage), duration_ms: durationMs, ...(cost === undefined ? {} : { cost_usd: cost }) };
 }
 
 function recordFields({ settings, format, result }: Answered): RecordFields {
@@ -79,6 +84,7 @@ function recordFields({ settings, format, result }: Answered): RecordFields {
     raw_finish_reason: result.raw_finish_reason,
     usage: usageRecord(result.usage),
     response_id: result.response_id,
+    ...(result.cost_usd === undefined ? {} : { cost_usd: result.cost_usd }),
     warnings: result.warnings.slice(0, mostWarnings).map(({ type, feature, detail }) => ({ type, feature, detail })),
     duration_ms: result.duration_ms,
   };
@@ -104,7 +110,7 @@ export function finishedWith(output: Schema.Json, answered: Answered): Effect.Ef
         new Conflict({
           detail: `The answer takes more than a run can record (${mostResultBytes} bytes with its record); lower config.max_output_tokens in the reasoning function definition`,
           kind: 'unworkable',
-          record: spendingRecord(answered.result.usage, answered.result.duration_ms),
+          record: spendingRecord(answered.result.usage, answered.result.duration_ms, answered.result),
         }),
       )
     : Effect.succeed({ output, record: { ...fields, prompt: promptWithin(answered.prompt, room) } });

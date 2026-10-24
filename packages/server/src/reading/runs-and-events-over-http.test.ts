@@ -138,11 +138,13 @@ describe.each(stores)('the history of a run over HTTP, on $store', ({ skipped, e
   it.skipIf(skipped)('reads a run whose input and output hold U+0000', async () => {
     await playbookWithTwoRuns(await environment());
 
-    expect(await eventually(`${alpha}/runs/${succeeded}/history`, holding(2))).toMatchObject({
+    expect(await eventually(`${alpha}/runs/${succeeded}/history`, holding(4))).toMatchObject({
       status: 200,
       body: {
         events: [
           { type: 'run_started', data: { input: { text: 'the\u0000quarter' } }, metadata: { run_id: succeeded } },
+          { type: 'model_call_started', metadata: { run_id: succeeded } },
+          { type: 'model_call_answered', metadata: { run_id: succeeded } },
           { type: 'run_succeeded', data: { output: 'Profits\u0000rose.' }, metadata: { run_id: succeeded } },
         ],
         has_more: false,
@@ -160,13 +162,15 @@ describe.each(stores)('the events of a playbook over HTTP, on $store', ({ skippe
   it.skipIf(skipped)('follow what happened in the playbook, in plain words, by type', async () => {
     await playbookWithTwoRuns(await environment());
 
-    const feed = eventsOf((await eventually(`${alpha}/events`, holding(5))).body);
+    const feed = eventsOf((await eventually(`${alpha}/events`, holding(7))).body);
     const created = eventsOf((await server.call('GET', `${alpha}/events?type=definition_created`)).body);
 
     expect(feed.events.map(({ type }) => type)).toEqual([
       'run_rejected',
       'run_started',
       'run_succeeded',
+      'model_call_answered',
+      'model_call_started',
       'run_started',
       'definition_created',
     ]);
@@ -249,6 +253,8 @@ describe.each(stores)('a retired playbook over HTTP, on $store', ({ skipped, env
   });
 });
 
+const historyOfARun = ['run_started', 'model_call_started', 'model_call_answered', 'run_succeeded'];
+
 async function anAppendLeftOpen(database: string): Promise<Client> {
   const client = new Client({ connectionString: database });
   await client.connect();
@@ -280,12 +286,12 @@ describe.skipIf(postgresql === '')(
       const behind = await server.call('GET', `${alpha}/runs/${succeeded}/history`);
       const newestFirst = await server.call('GET', `${alpha}/runs/${succeeded}/history?order=desc`);
       await open.query('COMMIT');
-      const after = await eventually(`${alpha}/runs/${succeeded}/history`, holding(2));
+      const after = await eventually(`${alpha}/runs/${succeeded}/history`, holding(4));
 
       expect(run).toMatchObject({ status: 200, body: { status: 'succeeded' } });
       expect(behind).toMatchObject({ status: 200, body: { events: [], has_more: false, next_cursor: null } });
-      expect(eventsOf(newestFirst.body).events.map(({ type }) => type)).toEqual(['run_succeeded', 'run_started']);
-      expect(eventsOf(after.body).events.map(({ type }) => type)).toEqual(['run_started', 'run_succeeded']);
+      expect(eventsOf(newestFirst.body).events.map(({ type }) => type)).toEqual(historyOfARun.toReversed());
+      expect(eventsOf(after.body).events.map(({ type }) => type)).toEqual(historyOfARun);
     });
   },
 );

@@ -1,8 +1,12 @@
 import { renderClockOf } from '@on.auto/definitions/template';
 import { InvalidInput } from '@on.auto/operations';
-import { Effect, JsonPointer, Result, type Clock } from 'effect';
+import { Effect, JsonPointer, Result, type Clock, type Schema } from 'effect';
 
+import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
+import type { Prompt } from '../steps/step-messages.ts';
 import type { CompiledTemplate, RenderedPrompt, RenderFailure, TemplateScope } from '../template/compiled-template.ts';
+import { promptOf } from './definition-request.ts';
+import { preparedInput } from './prepared-input.ts';
 
 const inputPath = /^input\./u;
 
@@ -50,7 +54,7 @@ const emptyMessage = rejection(
   'The message the template renders from this input is empty',
 );
 
-export function renderedPrompt(
+function renderedPrompt(
   template: CompiledTemplate,
   scope: TemplateScope,
   clock: Clock.Clock,
@@ -60,3 +64,15 @@ export function renderedPrompt(
     onSuccess: (prompt) => (prompt.message.trim() === '' ? Effect.fail(emptyMessage) : Effect.succeed(prompt)),
   });
 }
+
+export const renderedFor = Effect.fnUntraced(function* (
+  definition: ReasoningFunctionDefinitionDocument,
+  input: Schema.Json,
+  clock: Clock.Clock,
+) {
+  const fields = yield* preparedInput(input, definition.input);
+  const now = new Date(yield* clock.currentTimeMillis).toISOString();
+  const scope = { input: fields, today: now.slice(0, 10), now };
+  const prompt: Prompt = promptOf(yield* renderedPrompt(definition.template, scope, clock));
+  return prompt;
+});

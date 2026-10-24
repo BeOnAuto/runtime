@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { anthropicModels, liteLlmModels, openAiModels, vercelGatewayModels } from '../provider-testing/model-lists.ts';
+import { gatewayError, gatewayInternals } from '../provider-testing/provider-errors.ts';
+import { jsonResponse, type Responder } from '../provider-testing/recording-fetch.ts';
 import { catalogFor } from '../testing/catalog-harness.ts';
-import { anthropicModels, liteLlmModels, openAiModels, vercelGatewayModels } from '../testing/model-lists.ts';
-import { gatewayError, gatewayInternals } from '../testing/provider-errors.ts';
-import { jsonResponse, type Responder } from '../testing/recording-fetch.ts';
 import { modelsListed } from './catalog-words.ts';
 
 const environment = {

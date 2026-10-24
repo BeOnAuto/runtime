@@ -11,6 +11,7 @@ export const failedInWords: Readonly<Record<CallFailedBecause, string>> = {
   timed_out: 'took too long, so it was given up',
   cancelled: 'was cancelled when the run ended',
   too_large: 'answered more than one call may take, so its answer was not read',
+  interrupted: 'was not answered before the attempt that made it ended',
 };
 
 const conjunction = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });

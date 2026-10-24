@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { modelCallAnswered, modelCallSent, modelCallTimedOut } from '../journal-testing/model-calls.ts';
 import { declaredFactsOf } from '../run-work/declared-facts.ts';
 import type { RunEvent } from '../runs/run-events.ts';
 import { evolveRun, startedRunOf } from '../runs/run-state.ts';
@@ -52,6 +53,9 @@ const latestOfEveryType: Readonly<Record<string, RunEvent>> = {
     type: 'tool_call_failed',
     data: { number: 1, because: 'timed_out', duration_ms: 5, jsonrpc_id: 1 },
   },
+  model_call_started: { type: 'model_call_started', data: { number: 1, ...modelCallSent() } },
+  model_call_answered: { type: 'model_call_answered', data: { number: 1, ...modelCallAnswered() } },
+  model_call_failed: { type: 'model_call_failed', data: { number: 1, ...modelCallTimedOut } },
   request_answered: { type: 'request_answered', data: { answer: { choice: 'approve' } } },
   nudge_sent: { type: 'work', data: { fact: { type: 'nudge_sent', data: { number: 1 } } } },
 };

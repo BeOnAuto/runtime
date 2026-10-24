@@ -124,7 +124,7 @@ Health checks:
 - The image declares a Docker health check on it every 30 seconds.
 - On Kubernetes, point the liveness and readiness probes at `GET /health` on port `5555`.
 
-The server stops cleanly on `SIGTERM`, usually within a second. It finishes the work it already accepted, records where its workflows are, releases its claim on them and exits. A call cut off by the stop runs again when a server next starts, except a function run that may have called tools ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). A second `SIGTERM` or `SIGINT` ends the server at once. [Starting, stopping and restarting](workflows.md#starting-stopping-and-restarting) has the details.
+The server stops cleanly on `SIGTERM`, usually within a second. It finishes the work it already accepted, records where its workflows are, releases its claim on them and exits. A call cut off by the stop runs again when a server next starts, except an interaction function's run that may have called its tool; a reasoning function's run goes on from what it recorded ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). A second `SIGTERM` or `SIGINT` ends the server at once. [Starting, stopping and restarting](workflows.md#starting-stopping-and-restarting) has the details.
 
 ## Plan memory
 

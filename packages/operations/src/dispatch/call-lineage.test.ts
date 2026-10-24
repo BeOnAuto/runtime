@@ -37,12 +37,13 @@ const note = defineCommand('playbook', {
     trigger: Schema.NullOr(
       Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
     ),
+    attemptDied: Schema.Boolean,
   }),
   reasons: ['conflict'],
   handle: Effect.fnUntraced(function* () {
-    const { lineage, depth, callDepth, calledBy, trigger } = yield* CallLineage;
+    const { lineage, depth, callDepth, calledBy, trigger, attemptDied } = yield* CallLineage;
     const { version } = yield* (yield* PlaybookWriter).execute('notes', notes, null, lineage ?? undefined);
-    return { version, depth, callDepth, calledBy, trigger };
+    return { version, depth, callDepth, calledBy, trigger, attemptDied };
   }),
 });
 
@@ -82,7 +83,9 @@ describe('the lineage of a call', () => {
       { status: 'succeeded', output: { version: 2, depth: 0 } },
     ]);
   });
+});
 
+describe('the lineage of a call a workflow made', () => {
   it('carries how many calls are above the run and the call it answers, and none for a request that gave none', async () => {
     const { dispatcher, run } = harness();
     const calledBy = { run_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a', reference: '/do/0/ask', run: 2 };
@@ -93,8 +96,14 @@ describe('the lineage of a call', () => {
     ];
 
     expect(outcomes).toEqual([
-      { status: 'succeeded', output: { version: 1, depth: 0, callDepth: 2, calledBy, trigger: null } },
-      { status: 'succeeded', output: { version: 2, depth: 0, callDepth: 0, calledBy: null, trigger: null } },
+      {
+        status: 'succeeded',
+        output: { version: 1, depth: 0, callDepth: 2, calledBy, trigger: null, attemptDied: false },
+      },
+      {
+        status: 'succeeded',
+        output: { version: 2, depth: 0, callDepth: 0, calledBy: null, trigger: null, attemptDied: false },
+      },
     ]);
   });
 });
@@ -112,6 +121,22 @@ describe('the lineage of a run a trigger started', () => {
     expect(outcomes).toMatchObject([
       { status: 'succeeded', output: { version: 1, trigger } },
       { status: 'succeeded', output: { version: 2, trigger: null } },
+    ]);
+  });
+});
+
+describe('the lineage of a call made again', () => {
+  it('says the caller knows the attempt it made of the run before died, and says nothing of it otherwise', async () => {
+    const { dispatcher, run } = harness();
+
+    const outcomes = [
+      await run(dispatcher.dispatchToPlaybook(note.registration, { ...toAlpha(acmeAdmin), attemptDied: true })),
+      await run(dispatcher.dispatchToPlaybook(note.registration, toAlpha(acmeAdmin))),
+    ];
+
+    expect(outcomes).toMatchObject([
+      { status: 'succeeded', output: { version: 1, attemptDied: true } },
+      { status: 'succeeded', output: { version: 2, attemptDied: false } },
     ]);
   });
 });

@@ -1,4 +1,4 @@
-import { ToolServerDocumentRefused, type ToolAccess } from '@on.auto/tool-servers';
+import { defaultTiming, ToolServerDocumentRefused, type ToolAccess } from '@on.auto/tool-servers';
 import { noToolServers } from '@on.auto/tool-servers/testing';
 import { Cause, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -44,6 +44,16 @@ describe('the tool access a server makes at start', () => {
       { configured: false, takesConnections: false },
       { configured: true, takesConnections: true },
     ]);
+  });
+
+  it('bounds a call as its timing does, the default unless one is given, without composing anything', () => {
+    const { asked, composing } = countedComposing();
+
+    expect([
+      toolAccessOf(composing, noServers, { takesConnections: false }).callMs,
+      toolAccessOf(composing, noServers, { takesConnections: false }, { ...defaultTiming, callMs: 5000 }).callMs,
+      asked(),
+    ]).toEqual([defaultTiming.callMs, 5000, 0]);
   });
 
   it('fails a way used with the refusal of a composition that fails, as a defect', async () => {

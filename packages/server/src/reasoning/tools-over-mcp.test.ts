@@ -1,6 +1,12 @@
 import { listedTools, plainTextIn, withMcpSession, type McpSession } from '@on.auto/api/testing';
 import { TimedOut } from '@on.auto/reasoning';
-import { answers, callingTools, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import {
+  answers,
+  callingTools,
+  textResult,
+  type ScriptedReplies,
+  type ScriptedReply,
+} from '@on.auto/reasoning/testing';
 import { fakeStdioServerPath, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -28,7 +34,7 @@ const timedOut: ScriptedReply = () =>
 
 async function serving(
   fake: FakeMcpServer | undefined,
-  replies: readonly ScriptedReply[],
+  replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
 ): Promise<ReasoningServer> {
   const servers =
@@ -113,8 +119,15 @@ describe('run_definition over MCP on a server with tool servers', () => {
     expect(history.structuredContent).toMatchObject({
       events: [
         { type: 'run_started' },
+        { type: 'model_call_started', data: { number: 1, tools_offered: 1 } },
+        {
+          type: 'model_call_answered',
+          data: { number: 1, finish_reason: 'tool_calls', tool_calls: [{ server: 'graph', tool: 'search' }] },
+        },
         { type: 'tool_call_started', data: { server: 'graph', tool: 'search' } },
         { type: 'tool_call_answered', data: { is_error: false, answer: 'Found 2 rows for acme.' } },
+        { type: 'model_call_started', data: { number: 2 } },
+        { type: 'model_call_answered', data: { number: 2, finish_reason: 'stop', tool_calls: [] } },
         { type: 'run_succeeded' },
       ],
     });
@@ -132,8 +145,15 @@ describe('a reasoning function with tools over MCP', () => {
     expect(history.structuredContent).toMatchObject({
       events: [
         { type: 'run_started' },
+        { type: 'model_call_started', data: { number: 1, tools_offered: 1 } },
+        {
+          type: 'model_call_answered',
+          data: { number: 1, finish_reason: 'tool_calls', tool_calls: [{ server: 'limitless', tool: 'search' }] },
+        },
         { type: 'tool_call_started', data: { server: 'limitless', tool: 'search' } },
         { type: 'tool_call_answered', data: { is_error: false, answer: 'Found 2 rows for acme.' } },
+        { type: 'model_call_started', data: { number: 2 } },
+        { type: 'model_call_answered', data: { number: 2, finish_reason: 'stop', tool_calls: [] } },
         { type: 'run_succeeded' },
       ],
     });

@@ -1,13 +1,13 @@
-import { Result } from 'effect';
+import { Array as Arr, Result } from 'effect';
 
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { Answered } from './answer-settling.ts';
 import { scrubberFor, type CallPolicy } from './call-policy.ts';
 import { classified, operatorHintOf, providerTextOf, type ProviderText } from './failure-classification.ts';
-import { callingModel } from './model-call.ts';
+import { modelAnswer } from './model-call.ts';
 import type { ModelTarget } from './model-resolution.ts';
-import { deadlinesOf, stoppedFailure } from './stopped-call.ts';
+import { deadlineOf, stoppedFailure } from './stopped-call.ts';
 import type { UnclassifiedModelError } from './unclassified-model-error.ts';
 
 type Settled = Result.Result<Answered, ModelFailure | UnclassifiedModelError>;
@@ -27,19 +27,11 @@ export async function settledCall(
   interruption: Readonly<AbortSignal>,
   policy: CallPolicy,
 ): Promise<SettledCall> {
-  const deadlines = deadlinesOf(request);
-  const cancelled = AbortSignal.any([interruption, request.signal].filter((signal) => signal !== undefined));
-  const { whole, step } = deadlines;
-  const stops = [cancelled, whole?.signal, step.signal, request.tools?.ended].filter((signal) => signal !== undefined);
-  const calling = callingModel(
-    target,
-    request,
-    { signal: AbortSignal.any(stops), cancelled },
-    { step, telemetry: policy.telemetry },
-  );
+  const deadline = deadlineOf(request);
+  const signal = AbortSignal.any([interruption, ...Arr.fromNullishOr(deadline?.signal)]);
   try {
     return {
-      settled: await calling.settled,
+      settled: await modelAnswer(target, request, signal, policy.telemetry),
       providerText: null,
       operatorHint: null,
     };
@@ -52,14 +44,14 @@ export async function settledCall(
       now: Date.now(),
       showsProviderMessages: policy.showsProviderMessages(provider),
       scrub,
-      lastInputTokens: calling.turns.lastInputTokens(),
+      lastInputTokens: null,
     };
     return {
-      settled: Result.fail(stoppedFailure(provider, request, deadlines) ?? classified(error, context)),
+      settled: Result.fail(stoppedFailure(provider, deadline) ?? classified(error, context)),
       providerText: providerTextOf(error, scrub),
       operatorHint: operatorHintOf(error, provider, scrub),
     };
   } finally {
-    step.ended();
+    deadline?.ended();
   }
 }

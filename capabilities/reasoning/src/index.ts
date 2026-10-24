@@ -13,7 +13,6 @@ export type { AccessTokenSource, AwsCredentials, CredentialSources } from './ada
 export { defineListModels } from './catalog/list-models.ts';
 export type { ModelCatalog } from './catalog/catalog-listing.ts';
 export { ModelListSchema, type ModelEntry, type ModelList } from './catalog/model-list.ts';
-export { Cancelled } from './failure/cancelled.ts';
 export { ContentRefused } from './failure/content-refused.ts';
 export { CredentialsRejected } from './failure/credentials-rejected.ts';
 export type { FailureIssue } from './failure/failure-issue.ts';
@@ -26,7 +25,7 @@ export { RateLimited } from './failure/rate-limited.ts';
 export { DefinitionInvalid } from './failure/definition-invalid.ts';
 export { RequestTooLong } from './failure/request-too-long.ts';
 export { TimedOut } from './failure/timed-out.ts';
-export { ToolsStopped, type ToolsStoppedBecause } from './failure/tools-stopped.ts';
+export type { ToolsStoppedBecause } from './tools/tool-endings.ts';
 export { LanguageModel } from './model/language-model.ts';
 export { makeReasoningFunctionAdapter, type ReasoningFunctionAdapterOptions } from './capability/reasoning-function.ts';
 export { defaultMostInputTokens, type ModelReading } from './capability/definition-request.ts';
@@ -39,17 +38,13 @@ export type {
   JsonOutput,
   ModelMessage,
   ModelRequest,
-  ModelTool,
-  ModelTools,
   OutputRequest,
   ProviderOptions,
   ReasoningEffort,
   RetryOwner,
   TextOutput,
   TextPart,
-  ToolCallRequest,
-  ToolCallSignals,
-  ToolReply,
+  ToolDefinition,
 } from './model/model-request.ts';
 export type {
   FinishReason,

@@ -1,9 +1,9 @@
 import { getBearerTokenProvider } from '@azure/identity';
 import { describe, expect, it } from 'vitest';
 
+import { openAiResponse } from '../provider-testing/provider-replies.ts';
+import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, succeeded, textRequest } from '../testing/adapter-harness.ts';
-import { openAiResponse } from '../testing/provider-replies.ts';
-import { jsonResponse, recordingFetch } from '../testing/recording-fetch.ts';
 import { cognitiveServicesScope, entraIdentityLoader, entraIdentityOf, type AccessToken } from './entra-id.ts';
 
 const resource = { AZURE_RESOURCE_NAME: 'acme-openai' };

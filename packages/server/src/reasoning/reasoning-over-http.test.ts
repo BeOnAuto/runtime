@@ -1,4 +1,6 @@
+import { RateLimited } from '@on.auto/reasoning';
 import { answers, jsonResult, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
@@ -25,6 +27,18 @@ const verdict = [
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 let server: ReasoningServer;
+
+const decodeHistory = Schema.decodeUnknownSync(
+  Schema.Struct({
+    events: Schema.Array(
+      Schema.Struct({ type: Schema.String, data: Schema.Struct({ number: Schema.optionalKey(Schema.Number) }) }),
+    ),
+  }),
+);
+
+function numberedIn(body: unknown): readonly (readonly [string, number | null])[] {
+  return decodeHistory(body).events.map(({ type, data }) => [type, data.number ?? null]);
+}
 
 async function serving(...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
   server = await servingReasoning(replies);
@@ -62,6 +76,32 @@ describe('running a reasoning function definition over HTTP', () => {
   });
 });
 
+const limited: ScriptedReply = () =>
+  Effect.fail(
+    new RateLimited({ detail: 'anthropic is limiting the rate', provider: 'anthropic', retry_after_ms: null }),
+  );
+
+describe('a run of a reasoning function that ended unavailable, over HTTP', () => {
+  it('runs again under its id a run that ended unavailable, numbering its model calls after the first', async () => {
+    await serving(limited, answers(textResult('Profits rose.')));
+    const first = await running('summary', { input: { text: 'the quarter' }, run_id: runId });
+    const again = await running('summary', { input: { text: 'the quarter' }, run_id: runId });
+    const history = await server.call('GET', `${alpha}/runs/${runId}/history`);
+
+    expect([first.status, again.status]).toEqual([503, 200]);
+    expect(numberedIn(history.body)).toEqual([
+      ['run_started', null],
+      ['model_call_started', 1],
+      ['model_call_failed', 1],
+      ['run_rejected', null],
+      ['run_started', null],
+      ['model_call_started', 2],
+      ['model_call_answered', 2],
+      ['run_succeeded', null],
+    ]);
+  });
+});
+
 describe('the runs of a reasoning function definition over HTTP', () => {
   it('rejects an input that does not match the input schema with 422, under /input', async () => {
     await serving();
@@ -94,7 +134,7 @@ describe('the runs of a reasoning function definition over HTTP', () => {
         status: 'succeeded',
         output: 'Profits rose.',
         record: {
-          model: { requested: 'scripted/model', resolved: 'scripted/model', answered: 'model' },
+          model: { requested: 'anthropic/claude-sonnet-4-5', resolved: 'scripted/model', answered: 'model' },
           settings: { max_output_tokens: 1024 },
           output_format: 'text',
           finish_reason: 'stop',

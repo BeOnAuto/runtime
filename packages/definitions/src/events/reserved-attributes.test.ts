@@ -34,6 +34,9 @@ const typesOfThePlaybook = [
   'tool_call_started',
   'tool_call_answered',
   'tool_call_failed',
+  'model_call_started',
+  'model_call_answered',
+  'model_call_failed',
   'request_answered',
   'nudge_sent',
   'asking_requested',
@@ -79,6 +82,7 @@ describe('the types and sources of what the playbook records itself', () => {
       [
         'run_deferred',
         'tool_call_started',
+        'model_call_answered',
         'request_answered',
         'nudge_sent',
         'nudge_read',
@@ -86,7 +90,7 @@ describe('the types and sources of what the playbook records itself', () => {
         'event_published',
         'reaction_refused',
       ].map((type) => refusals({ type }).length),
-    ).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
+    ).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
     expect(refusals({ type: 'com.acme.ledger.month-closed', source: '/ledger/eu' })).toEqual([]);
   });
 });
