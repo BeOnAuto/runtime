@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 
 import type { RecordConsumer } from '../follower/consumers.ts';
 import type { FollowerHost } from '../follower/follower-host.ts';
-import type { Upkeep } from '../follower/follower-loop.ts';
+import type { Upkeep } from '../follower/follower-wake-up.ts';
 import { scheduleFiringOn } from '../schedules/schedule-firing.ts';
 import { definitionRecordsOn, type ApplyDefinitionRecord } from '../triggers/definition-records.ts';
 import { reactionConsumersOf, type ReactionUse } from './reaction-consumers.ts';

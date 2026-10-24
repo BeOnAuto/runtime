@@ -3,7 +3,7 @@ import type { ReactionUse } from '../reactions/reaction-consumers.ts';
 import { playbookSweepsOn } from '../sweeps/playbook-sweeps.ts';
 import { followedPlaybooksOn } from './followed-playbooks.ts';
 import type { FollowerHost } from './follower-host.ts';
-import { startFollower, type Follower, type FollowerParts } from './follower-loop.ts';
+import type { FollowerWork } from './follower-wake-up.ts';
 import { playbookDiscoveryOn } from './playbook-discovery.ts';
 import { passOf, type PassParts } from './playbook-pass.ts';
 import type { PlaybookRecords } from './playbook-records.ts';
@@ -11,13 +11,12 @@ import { playbookOfKey, type StepParts } from './record-steps.ts';
 
 export interface FollowerAssembly extends ReactionUse {
   readonly records: PlaybookRecords;
-  readonly appended: FollowerParts['appended'];
-  readonly pace: FollowerParts['pace'];
+  readonly appended: FollowerWork['appended'];
   readonly consumers: PassParts['registered'];
   readonly calls: PassParts['calls'];
 }
 
-export function followerOn(host: FollowerHost, assembly: FollowerAssembly): Follower {
+export function followerWorkOn(host: FollowerHost, assembly: FollowerAssembly): FollowerWork {
   const { database, clock, reports } = host;
   const playbooks = followedPlaybooksOn(database);
   const reacting = reactingOn(host, assembly);
@@ -49,16 +48,15 @@ export function followerOn(host: FollowerHost, assembly: FollowerAssembly): Foll
     unreadable,
     definitionType: assembly.options.definitionType,
   });
-  return startFollower({
+  return {
     pass,
     discovery,
     sweeps: playbookSweepsOn(database.store, playbooks),
     upkeep: reacting.upkeep,
     appended: assembly.appended,
     clock,
-    pace: assembly.pace,
     sweepEveryMs: host.sweepEveryMs,
     trouble: reports.trouble,
     context: host.context,
-  });
+  };
 }

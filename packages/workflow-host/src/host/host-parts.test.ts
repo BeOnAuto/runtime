@@ -7,8 +7,10 @@ import {
   hostWakeUp,
   openHostParts,
   openWorkflowStore,
+  runRequestsOf,
   type HostClock,
   type NextWake,
+  type RunRequests,
   type WorkflowStore,
   type Woken,
 } from '../index.ts';
@@ -29,6 +31,7 @@ interface OwnClocked {
   readonly settled: () => readonly string[];
   readonly troubles: () => readonly string[];
   readonly started: (runId: string, duration: string) => Promise<unknown>;
+  readonly requests: RunRequests;
   readonly wakeUp: (woken: Woken) => Promise<NextWake>;
   readonly closed: () => Promise<void>;
 }
@@ -53,6 +56,7 @@ async function ownClocked(clock: HostClock): Promise<OwnClocked> {
         parts.submitted({ ...start, kind: 'started', runId: runKeyOf(runAt(runId)), at: clock.now() }),
       );
     },
+    requests: runRequestsOf({ database: store.database, clock, serving: () => parts }),
     wakeUp: (woken) => Effect.runPromise(work.wakeUp(woken)),
     closed: async () => {
       await Effect.runPromise(work.stop());
@@ -82,5 +86,31 @@ describe('the parts of a host, woken by a clock of its own', () => {
     expect([first, second]).toEqual([{ nextDueAt: start + 2000 }, { nextDueAt: null }]);
     expect([settledAtFirst, own.settled()]).toEqual([[sooner], [sooner, later]]);
     expect([clock.asked(), await leaseHoldersOn(own.store.database), own.troubles()]).toEqual([[], [], []]);
+  });
+});
+
+const listening = workflow('do:\n  - approval: { listen: { to: { one: { with: { type: com.acme.approved } } } } }');
+
+describe('the requests of runs over the parts of a host a clock of its own wakes', () => {
+  it('start a run, give it an event and read its state, with no loop and no claim', async () => {
+    const clock = steppedClock(Date.now());
+    const own = await ownClocked(clock);
+    const run = runAt(sooner);
+
+    const started = await Effect.runPromise(own.requests.start(run, startOf(listening)));
+    const again = await Effect.runPromise(own.requests.start(run, startOf(listening)));
+    const delivered = await Effect.runPromise(
+      own.requests.deliver(run, { id: 'approved-1', type: 'com.acme.approved' }),
+    );
+    const { status } = await Effect.runPromise(own.requests.stateOf(runKeyOf(run)));
+    await own.closed();
+
+    expect([started, again, delivered, status, await leaseHoldersOn(own.store.database)]).toEqual([
+      'started',
+      'going',
+      'delivered',
+      'ended',
+      [],
+    ]);
   });
 });

@@ -1,9 +1,9 @@
-import { Cause, Effect, Fiber } from 'effect';
+import { Cause, Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { HostReports } from '../host/host-reports.ts';
-import { forkedIn, type HostContext } from '../loop/forked-fibers.ts';
-import type { HostClock } from '../loop/host-clock.ts';
+import { startListeningLoop, type LoopParts } from '../loop/host-loop.ts';
+import { oneWakeAtATime, type HostWakeUp, type WakeSignal } from '../loop/host-wake-up.ts';
 import type { SomeFolder } from './folder.ts';
 import { playbookKeyOfDefinitions } from './playbook-definitions.ts';
 import { playbookPass, type PassParts } from './playbook-pass.ts';
@@ -18,9 +18,6 @@ export interface ProjectorParts {
   readonly database: HostDatabase;
   readonly settings: ProjectorSettings;
   readonly reports: HostReports;
-  readonly clock: HostClock;
-  readonly sweepEveryMs: number;
-  readonly context?: HostContext;
 }
 
 const mostRemembered = 1024;
@@ -71,17 +68,15 @@ function playbooksWithRows(database: HostDatabase, folders: readonly SomeFolder[
   );
 }
 
-function swept(parts: ProjectorParts, schedule: Schedule): Effect.Effect<void> {
+function swept(parts: ProjectorParts, schedule: Schedule, sweep: boolean): Effect.Effect<void> {
   return Effect.gen(function* () {
-    const now = parts.clock.now();
-    const sweepDue = schedule.sweepDue(now);
     const discoveryDue = schedule.discoveryDue();
-    if (!sweepDue && !discoveryDue) {
+    if (!sweep && !discoveryDue) {
       return;
     }
     yield* discovered(parts, schedule);
-    if (sweepDue) {
-      schedule.swept(now);
+    if (sweep) {
+      schedule.swept();
       const playbooks = yield* Effect.orDie(playbooksWithRows(parts.database, parts.settings.folders));
       for (const playbook of playbooks) {
         schedule.want(playbook);
@@ -110,17 +105,6 @@ function round(parts: ProjectorParts, schedule: Schedule, passParts: PassParts):
   );
 }
 
-function waited({ clock }: ProjectorParts, schedule: Schedule): Effect.Effect<void> {
-  if (!schedule.idle()) {
-    return Effect.void;
-  }
-  const woken = schedule.woken();
-  return Effect.raceFirst(
-    clock.sleep(schedule.untilSweep(clock.now())),
-    Effect.promise(() => woken),
-  );
-}
-
 function passPartsOf({ database, settings, reports }: ProjectorParts, schedule: Schedule): PassParts {
   return {
     database,
@@ -133,8 +117,8 @@ function passPartsOf({ database, settings, reports }: ProjectorParts, schedule: 
   };
 }
 
-export function startProjector(parts: ProjectorParts): Projector {
-  const schedule = scheduleOf(parts.sweepEveryMs);
+export function projectorWakeUp(parts: ProjectorParts, signal: WakeSignal): HostWakeUp {
+  const schedule = scheduleOf();
   const passParts = passPartsOf(parts, schedule);
   const stopListening = parts.settings.appends?.listen((playbook) => {
     if (schedule.definitions.knows(playbook)) {
@@ -142,29 +126,32 @@ export function startProjector(parts: ProjectorParts): Projector {
     } else {
       schedule.discover();
     }
-    schedule.wake();
+    signal.raised();
   });
-  const cycle = Effect.andThen(
-    swept(parts, schedule),
-    Effect.suspend(() => round(parts, schedule, passParts)),
-  ).pipe(
-    Effect.catchCause((cause) =>
-      parts.reports.trouble('A sweep of the views failed; the next sweep tries again', cause),
-    ),
-  );
-  const fiber = forkedIn(
-    parts.context,
-    Effect.forever(
+  return {
+    wakeUp: oneWakeAtATime(({ now, sweep }) =>
       Effect.andThen(
-        cycle,
-        Effect.suspend(() => waited(parts, schedule)),
+        swept(parts, schedule, sweep),
+        Effect.suspend(() => round(parts, schedule, passParts)),
+      ).pipe(
+        Effect.catchCause((cause) =>
+          parts.reports.trouble('A sweep of the views failed; the next sweep tries again', cause),
+        ),
+        Effect.andThen(
+          Effect.sync(() => {
+            signal.renewed();
+            return { nextDueAt: schedule.idle() ? null : now };
+          }),
+        ),
       ),
     ),
-  );
-  return {
-    stop: async () => {
-      stopListening?.();
-      await Effect.runPromise(Fiber.interrupt(fiber));
-    },
+    stop: () =>
+      Effect.sync(() => {
+        stopListening?.();
+      }),
   };
+}
+
+export function startProjector(parts: ProjectorParts & LoopParts): Projector {
+  return startListeningLoop(parts, (signal) => projectorWakeUp(parts, signal));
 }

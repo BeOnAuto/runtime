@@ -67,7 +67,7 @@ function settledAgain(parts: RequestParts, engine: ServingEngine, runKey: string
   });
 }
 
-export function runRequests(parts: RequestParts): RunRequests {
+export function runRequestsOf(parts: RequestParts): RunRequests {
   const { database, clock } = parts;
   const runStore = ledgerRunLogStore(database);
   const stateOf = (runKey: string): Effect.Effect<RunState> =>

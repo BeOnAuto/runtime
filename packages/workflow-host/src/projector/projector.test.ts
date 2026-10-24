@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { onSQLite } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
+import { watchedClock } from '../testing/watched-clock.ts';
 import { failingOnce } from '../views-testing/pool-faults.ts';
+import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { counting, foldedAll, liveWith } from '../views-testing/view-documents.ts';
 import { viewHarness } from '../views-testing/view-harness.ts';
 import { firstSeenOf } from './projector.ts';
@@ -54,6 +56,21 @@ describe('a projector that fails', () => {
 
     expect(troubles[0]).toBe('A sweep of the views failed; the next sweep tries again');
     expect(kept).toMatchObject({ phase: 'live', view: 1 });
+  });
+
+  it('tries a sweep that failed again at the next sweep, a whole interval later, not at once', async () => {
+    const views = await viewHarness(await onSQLite());
+    await views.saved('runs', counting);
+    views.failingDiscovery(true);
+    const clock = watchedClock(steppedClock(Date.now()));
+    views.start({ sweepEveryMs: 1000, clock });
+
+    const asked = await until(clock.asked, (sleeps) => sleeps.length > 0);
+
+    expect([asked, views.reports.troubles()]).toEqual([
+      [1000],
+      ['A sweep of the views failed; the next sweep tries again'],
+    ]);
   });
 
   it('reports a pass of a playbook that failed, and passes again', async () => {

@@ -1,5 +1,5 @@
 import type { WorkflowEngine } from '@on.auto/workflow-engine';
-import { Effect } from 'effect';
+import { Deferred, Effect } from 'effect';
 
 import type { Trouble } from '../calls/host-executor.ts';
 import { duePerformer, type DuePerformer, type DueWork } from '../due-work/due-work.ts';
@@ -36,6 +36,28 @@ export interface WakeSignal {
 export interface HostWakeUp {
   readonly wakeUp: (woken: Woken) => Effect.Effect<NextWake>;
   readonly stop: () => Effect.Effect<void>;
+}
+
+type WakeUp = HostWakeUp['wakeUp'];
+
+export function oneWakeAtATime(wakeUp: WakeUp): WakeUp {
+  const running: { wake: Deferred.Deferred<NextWake> | undefined } = { wake: undefined };
+  return (woken) =>
+    Effect.suspend(() => {
+      if (running.wake !== undefined) {
+        return Deferred.await(running.wake);
+      }
+      const wake = Deferred.makeUnsafe<NextWake>();
+      running.wake = wake;
+      const round = wakeUp(woken).pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            running.wake = undefined;
+          }),
+        ),
+      );
+      return Effect.andThen(Deferred.into(round, wake), Deferred.await(wake));
+    });
 }
 
 const timersInOneWakeUp = 256;
@@ -113,11 +135,12 @@ export function hostWakeUp(parts: WakeUpParts, signal: WakeSignal): HostWakeUp {
     signal.renewed();
   });
   return {
-    wakeUp: (woken) =>
+    wakeUp: oneWakeAtATime((woken) =>
       Effect.uninterruptible(roundOf(parts, due, woken)).pipe(
         Effect.andThen(renewed),
         Effect.andThen(() => nextWakeOf(parts, due, woken.now)),
       ),
+    ),
     stop: due.stop,
   };
 }

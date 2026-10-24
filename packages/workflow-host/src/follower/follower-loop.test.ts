@@ -2,7 +2,7 @@ import { streamSignalOf } from '@on.auto/ledger';
 import { Effect, Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { systemClock } from '../loop/host-clock.ts';
+import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import type { Sweep } from '../sweeps/playbook-sweeps.ts';
 import { until } from '../testing/until.ts';
 import { startFollower } from './follower-loop.ts';
@@ -15,6 +15,7 @@ const nothingToSweep: Sweep = { registries: [], playbooks: [], again: false };
 interface Watched {
   readonly raise: (stream: string) => void;
   readonly log: () => readonly string[];
+  readonly asked: () => readonly number[];
 }
 
 interface Following {
@@ -25,6 +26,48 @@ interface Following {
   readonly schedulesFailing?: number;
   readonly sweepsFailing?: number;
   readonly followFailingOnce?: string;
+  readonly firesFailing?: number;
+  readonly startsAt?: number;
+  readonly sweepTakesMs?: number;
+}
+
+interface Paced {
+  readonly pace: HostClock;
+  readonly asked: () => readonly number[];
+  readonly passed: (milliseconds: number) => void;
+}
+
+function pacedFrom(startsAt: number | undefined): Paced {
+  const asked: number[] = [];
+  const time = { now: startsAt ?? 0 };
+  const recorded = (milliseconds: number): void => {
+    asked.push(milliseconds);
+  };
+  const stepped: HostClock = {
+    now: () => time.now,
+    sleep: (milliseconds) =>
+      Effect.suspend(() => {
+        recorded(milliseconds);
+        return milliseconds > 0 ? Effect.never : Effect.void;
+      }),
+  };
+  const system: HostClock = {
+    now: systemClock.now,
+    sleep: (milliseconds) =>
+      Effect.andThen(
+        Effect.sync(() => {
+          recorded(milliseconds);
+        }),
+        systemClock.sleep(milliseconds),
+      ),
+  };
+  return {
+    pace: startsAt === undefined ? system : stepped,
+    asked: () => asked,
+    passed: (milliseconds) => {
+      time.now += milliseconds;
+    },
+  };
 }
 
 function failingFirst<A>(times: number, read: Effect.Effect<A>): () => Effect.Effect<A> {
@@ -59,6 +102,11 @@ function followerWith(following: Following = {}): Watched {
   const appended = streamSignalOf();
   const passEnd = inTurn<PassEnd | 'fails'>(following.passEnds ?? [], 'caught_up');
   const sweep = inTurn(following.sweeps ?? [], nothingToSweep);
+  const { pace, asked, passed } = pacedFrom(following.startsAt);
+  const sweptAfter = (): Sweep => {
+    passed(following.sweepTakesMs ?? 0);
+    return sweep();
+  };
   const follower = startFollower({
     pass: (playbookKey, mode) =>
       Effect.suspend(() => {
@@ -74,7 +122,7 @@ function followerWith(following: Following = {}): Watched {
     },
     sweeps: {
       started: () => logged('anchored'),
-      next: failingFirst(following.sweepsFailing ?? 0, Effect.sync(sweep)),
+      next: failingFirst(following.sweepsFailing ?? 0, Effect.sync(sweptAfter)),
       passAgain: (playbookKey) => {
         log.push(`handed back ${playbookKey}`);
       },
@@ -82,17 +130,17 @@ function followerWith(following: Following = {}): Watched {
     },
     upkeep: {
       sweep: () => logged('sweep'),
-      fireSchedules: () => Effect.void,
+      fireSchedules: failingFirst(following.firesFailing ?? 0, Effect.void),
       nextScheduleAt: failingFirst(following.schedulesFailing ?? 0, Effect.succeed(null)),
     },
     appended,
-    clock: systemClock,
-    pace: systemClock,
+    clock: pace,
+    pace,
     sweepEveryMs: following.sweepEveryMs ?? anHour,
     trouble: (what) => logged(what),
   });
   onTestFinished(() => follower.stop());
-  return { raise: appended.raise, log: () => log };
+  return { raise: appended.raise, log: () => log, asked };
 }
 
 function logReaching(watched: Watched, length: number) {
@@ -210,6 +258,31 @@ describe('the follower of the playbooks, when a pass over a playbook fails', () 
       'A pass over a playbook failed; the next sweep passes the playbook again',
       'handed back playbook/acme/alpha/',
       'pass playbook/acme/beta/ signal',
+    ]);
+  });
+});
+
+describe('the follower of the playbooks, between its sweeps', () => {
+  it('sweeps again at once after a sweep that left more to read, and counts its next sweep from the sweep its loop asked for', async () => {
+    const more: Sweep = { ...nothingToSweep, again: true };
+    const watched = followerWith({ sweeps: [more], startsAt: 1_000_000, sweepTakesMs: 100 });
+
+    const asked = await until(watched.asked, (sleeps) => sleeps.length >= 2);
+
+    expect([asked.slice(0, 2), watched.log().filter((line) => line === 'sweep')]).toEqual([
+      [0, anHour - 200],
+      ['sweep', 'sweep'],
+    ]);
+  });
+
+  it('leaves the sweep to the next interval after a round that failed before its sweep, rather than sweeping again at once', async () => {
+    const watched = followerWith({ firesFailing: 1, startsAt: 1_000_000 });
+
+    const asked = await until(watched.asked, (sleeps) => sleeps.length > 0);
+
+    expect([asked, watched.log()]).toEqual([
+      [anHour],
+      ['anchored', 'start', 'The follower of the playbooks failed; it tries again'],
     ]);
   });
 });
