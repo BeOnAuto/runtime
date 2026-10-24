@@ -7,12 +7,11 @@ import {
   consentClientWith,
   finishAskedOf,
   registeredAt,
-  servedForConsent,
   startAskedAt,
   tokensKeptBy,
   type ClientRegistration,
-  type FakeMcpServer,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, FinishedConsent, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];

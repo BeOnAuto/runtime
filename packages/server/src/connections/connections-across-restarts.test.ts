@@ -1,7 +1,7 @@
 import { connectionsFold, connectionsStreamOfOrg } from '@on.auto/connections/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Ledger, sha256Of } from '@on.auto/operations';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Effect, ManagedRuntime, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 

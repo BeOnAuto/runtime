@@ -1,5 +1,5 @@
 import { answers, callingTools, textResult } from '@on.auto/reasoning/testing';
-import { serveFakeApi } from '@on.auto/tool-servers/testing';
+import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { servingReasoning } from '../testing/servers/reasoning-server.ts';

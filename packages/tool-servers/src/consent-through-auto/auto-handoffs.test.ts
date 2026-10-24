@@ -7,12 +7,11 @@ import {
   consentClientThrough,
   consentClientWith,
   handedOffAskedOf,
-  servedThroughAuto,
   startAskedAt,
   tokensKeptBy,
   type ClientRegistration,
-  type ThroughAuto,
 } from '../testing/index.ts';
+import { servedThroughAuto, type ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

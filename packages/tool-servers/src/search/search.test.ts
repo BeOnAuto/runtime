@@ -1,7 +1,8 @@
 import type { CallerIdentity } from '@on.auto/operations';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { playbookToolCalls, reportingAccess, serveFakeMcp, toolCaller, type FakeMcpServer } from '../testing/index.ts';
+import { playbookToolCalls, reportingAccess, toolCaller } from '../testing/index.ts';
+import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

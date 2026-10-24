@@ -2,7 +2,8 @@ import { Buffer } from 'node:buffer';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fakeApiKey, openFakeToolRun, verboseDescription } from '../testing/index.ts';
+import { verboseDescription } from '../testing/index.ts';
+import { fakeApiKey, openFakeToolRun } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

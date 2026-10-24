@@ -1,7 +1,7 @@
 import { registeredClientSecrets } from '@on.auto/connections';
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Redacted, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

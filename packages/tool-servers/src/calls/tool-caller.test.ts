@@ -3,14 +3,8 @@ import { getEventListeners } from 'node:events';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  controlledSignals,
-  fakeApiKey,
-  openFakeToolRun,
-  reportingAccess,
-  serveFakeMcp,
-  toolRun,
-} from '../testing/index.ts';
+import { controlledSignals, reportingAccess, toolRun } from '../testing/index.ts';
+import { fakeApiKey, openFakeToolRun, serveFakeMcp } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 import type { CallJournal } from './recorded-calls.ts';
 

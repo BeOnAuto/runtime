@@ -1,5 +1,5 @@
 import { callDocument } from '@on.auto/interaction/testing';
-import { fakeStdioServerPath } from '@on.auto/tool-servers/testing';
+import { fakeStdioServerPath } from '@on.auto/tool-servers/served-fakes';
 import { describe, expect, it } from 'vitest';
 
 import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';

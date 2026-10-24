@@ -3,20 +3,18 @@ import { createHash } from 'node:crypto';
 import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import { clockAt, type ClientRegistration, type FakeMcpServer } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
   postedToTheService,
   redeemedThrough,
-  servedThroughAuto,
   serviceCallsAt,
   studioSession,
   type ThroughAuto,
 } from './auto-consents.ts';
+import { servedThroughAuto } from './consent-servers.ts';
 import { serveFakeConsentService } from './fake-consent-service.ts';
-import { clockAt } from './served-consents.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

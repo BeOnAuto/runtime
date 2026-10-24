@@ -5,7 +5,7 @@ import { documentOf, toolsOf } from '../api-testing/derived-documents.ts';
 import { defaultTiming } from '../bounds/call-bounds.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { failureOf } from '../clients/server-failures.ts';
-import { serveFakeApi, type FakeApiServer } from '../testing/index.ts';
+import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
 import { apiClient } from './api-client.ts';
 import type { ApiOperation } from './api-tools.ts';
 import type { DescribedApiSettings } from './described-api.ts';

@@ -4,7 +4,8 @@ import { modulesReachedFrom } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { noToolServers, reportingAccess, serveFakeMcp, type FakeMcpServer } from '../testing/index.ts';
+import { noToolServers, reportingAccess } from '../testing/index.ts';
+import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

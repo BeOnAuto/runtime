@@ -5,7 +5,7 @@ import { keptTextOf } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { brokenPromise, deniedText, fakeStdioServerPath, patientTiming } from '../testing/index.ts';
+import { brokenPromise, deniedText, patientTiming } from '../testing/index.ts';
 import {
   calledOnce,
   echoCall,
@@ -19,6 +19,7 @@ import {
   closedAfter,
 } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
+import { fakeStdioServerPath } from '../testing/served-fakes.ts';
 
 const largeText = '\u{1F600}'.repeat(8 * 256);
 

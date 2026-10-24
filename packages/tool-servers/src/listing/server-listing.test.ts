@@ -2,8 +2,10 @@ import { Effect, Option, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
-import { recordingCallJournal, reportingAccess, serveFakeMcp, toolRun } from '../testing/index.ts';
-import { serveOnLoopback, type LoopbackServer } from '../testing/loopback-server.ts';
+import { type LoopbackServer } from '../testing/fetch-handler.ts';
+import { recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import { serveOnLoopback } from '../testing/loopback-server.ts';
+import { serveFakeMcp } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

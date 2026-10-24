@@ -1,6 +1,6 @@
 import { recordingTracer } from '@on.auto/operations/testing';
 import { failureReply } from '@on.auto/tool-servers/policy';
-import { openFakeToolRun, type FakeToolRun } from '@on.auto/tool-servers/testing';
+import { openFakeToolRun, type FakeToolRun } from '@on.auto/tool-servers/served-fakes';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

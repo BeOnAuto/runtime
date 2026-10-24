@@ -11,7 +11,7 @@ import type {
   HeldTokens,
   TokensEnded,
 } from '../consent/consent-client.ts';
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
 import { everyHost, returnAddress } from './consent-fakes.ts';
 

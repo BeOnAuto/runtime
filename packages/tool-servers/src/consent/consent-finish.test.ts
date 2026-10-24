@@ -10,12 +10,11 @@ import {
   finishAskedOf,
   memoryRegistrations,
   registeredAt,
-  servedForConsent,
   startAskedAt,
   tokensKeptBy,
   type ClientRegistration,
-  type FakeMcpServer,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import type { RegisteredClient } from './client-sources.ts';
 import type { ConsentClient, FinishAsked, FinishedConsent, StartAsked } from './consent-client.ts';
 

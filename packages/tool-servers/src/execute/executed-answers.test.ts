@@ -2,14 +2,8 @@ import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { answerDocument } from '../bounds/tool-results.ts';
-import {
-  fakeApiKey,
-  patientTiming,
-  playbookToolCalls,
-  reportingAccess,
-  serveFakeMcp,
-  threadReplies,
-} from '../testing/index.ts';
+import { patientTiming, playbookToolCalls, reportingAccess, threadReplies } from '../testing/index.ts';
+import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

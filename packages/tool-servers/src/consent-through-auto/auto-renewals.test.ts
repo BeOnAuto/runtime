@@ -16,14 +16,13 @@ import {
   memoryTokens,
   rowOf,
   servedOf,
-  servedThroughAuto,
   servedTokensOf,
   type ClientRegistration,
   type ConsentConnected,
   type MemoryTokens,
-  type ThroughAuto,
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
+import { servedThroughAuto, type ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

@@ -8,14 +8,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   controlledSignals,
-  fakeStdioServerPath,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
-  serveFakeMcp,
   toolRun,
   type ReportingAccess,
 } from '../testing/index.ts';
+import { fakeStdioServerPath, serveFakeMcp } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

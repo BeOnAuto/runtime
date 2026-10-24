@@ -12,15 +12,14 @@ import {
   gatedRequests,
   registeredAt,
   rowOf,
-  servedForConsent,
   servedOf,
   servedTokensOf,
   type ClientRegistration,
   type ConsentConnected,
-  type FakeMcpServer,
   type ManualClock,
   type MemoryTokens,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 import { keptValueOf, type KeptTokens } from './kept-tokens.ts';
 

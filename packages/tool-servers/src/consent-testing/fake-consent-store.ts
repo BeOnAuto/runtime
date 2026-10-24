@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { Option, Schema } from 'effect';
 
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import { consentRegistration } from './consent-fakes.ts';
 
 export type RefusedCall = 'start' | 'redeem' | 'refresh' | 'revoke';

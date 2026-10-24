@@ -9,17 +9,14 @@ import { toolBounds } from '../bounds/call-bounds.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import {
   controlledSignals,
-  fakeApiKey,
   fakeRequestIdKey,
-  fakeStdioServerPath,
   inTurn,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
-  serveFakeMcp,
   toolRun,
-  type FakeMcpOptions,
 } from '../testing/index.ts';
+import { fakeApiKey, fakeStdioServerPath, serveFakeMcp, type FakeMcpOptions } from '../testing/served-fakes.ts';
 import { failedData, recordingOf } from './recorded-calls.ts';
 
 type Call = readonly [string, Readonly<Record<string, unknown>>];

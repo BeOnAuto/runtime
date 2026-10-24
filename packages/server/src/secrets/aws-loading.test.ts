@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 
-import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/testing';
+import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/served-fakes';
 import { Effect, Logger } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 

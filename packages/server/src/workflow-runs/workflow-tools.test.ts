@@ -1,6 +1,6 @@
 import { TimedOut } from '@on.auto/reasoning';
 import { callingTools, type ScriptedReplies, type ScriptedReply } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

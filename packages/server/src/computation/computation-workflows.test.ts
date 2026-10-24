@@ -1,7 +1,7 @@
 import { withMcpSession } from '@on.auto/api/testing';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import { answeringFromTheTools, jsonResult, textResult, type ScriptedReplies } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

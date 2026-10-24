@@ -1,13 +1,7 @@
 import { signInScopes } from '@on.auto/identity';
 import { audiences } from '@on.auto/providers/testing';
-import {
-  consentRegistration,
-  consentSecret,
-  serveFakeApi,
-  serveFakeMcp,
-  type FakeApiServer,
-  type FakeMcpServer,
-} from '@on.auto/tool-servers/testing';
+import { serveFakeApi, serveFakeMcp, type FakeApiServer, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { consentRegistration, consentSecret } from '@on.auto/tool-servers/testing';
 import { Option } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

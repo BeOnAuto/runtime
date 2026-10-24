@@ -2,13 +2,8 @@ import { CallFetch } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  consentClientWith,
-  memoryRegistrations,
-  registeredAt,
-  servedForConsent,
-  startAskedAt,
-} from '../testing/index.ts';
+import { consentClientWith, memoryRegistrations, registeredAt, startAskedAt } from '../testing/index.ts';
+import { servedForConsent } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
 import type { MintingAuth } from '../settings/server-settings.ts';
-import { serveFakeMcp, type ClientRegistration, type FakeMcpServer } from '../testing/index.ts';
+import { type ClientRegistration } from '../testing/index.ts';
+import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { tokenSource, type UnauthorizedContext } from './token-source.ts';
 
 const clientSecret = 'graph-client-secret-81c2';

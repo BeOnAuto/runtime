@@ -4,15 +4,8 @@ import type { KeptContent, RecordedEvent } from '@on.auto/operations';
 import { keptTextOf, nothingKept } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  fakeApiKey,
-  fakeRequestIdKey,
-  inTurn,
-  patientTiming,
-  playbookToolCalls,
-  reportingAccess,
-  serveFakeMcp,
-} from '../testing/index.ts';
+import { fakeRequestIdKey, inTurn, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 import { handCallPresenter } from './hand-call-presenter.ts';
 
 const closing: (() => Promise<void>)[] = [];

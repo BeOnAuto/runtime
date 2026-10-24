@@ -1,13 +1,7 @@
 import type { Outcome, Succeeded } from '@on.auto/operations';
 import { audiences, providerListOf, providerOf } from '@on.auto/providers/testing';
-import {
-  consentedAt,
-  registeredAt,
-  servedForConsent,
-  type ClientRegistration,
-  type Consented,
-  type FakeMcpServer,
-} from '@on.auto/tool-servers/testing';
+import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { consentedAt, registeredAt, type ClientRegistration, type Consented } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 
 import type { Added } from './additions.ts';

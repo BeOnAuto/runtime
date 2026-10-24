@@ -5,14 +5,8 @@ import { keptTextOf } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  fakeApiKey,
-  fakeRequestIdKey,
-  patientTiming,
-  playbookToolCalls,
-  reportingAccess,
-  serveFakeMcp,
-} from '../testing/index.ts';
+import { fakeRequestIdKey, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

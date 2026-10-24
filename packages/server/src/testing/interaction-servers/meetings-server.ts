@@ -1,6 +1,6 @@
 import { listedTools, withMcpSession, type ListedTool, type McpSession } from '@on.auto/api/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 
 import { servingReasoning } from '../servers/reasoning-server.ts';
 

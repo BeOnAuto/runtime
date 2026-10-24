@@ -5,19 +5,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { toolBounds } from '../bounds/call-bounds.ts';
 import {
   controlledSignals,
-  fakeStdioServerPath,
   fakeToolNames,
   longToolName,
   noToolServers,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
-  serveFakeMcp,
   toolRun,
   toolRunId,
-  type FakeMcpOptions,
-  type FakeMcpServer,
 } from '../testing/index.ts';
+import { fakeStdioServerPath, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

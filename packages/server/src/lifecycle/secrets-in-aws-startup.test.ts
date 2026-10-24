@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { kmsCustodian } from '@on.auto/secrets/aws';
-import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/testing';
+import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/served-fakes';
 import { Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 

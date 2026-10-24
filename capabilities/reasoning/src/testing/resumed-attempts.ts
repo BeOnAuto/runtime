@@ -1,5 +1,6 @@
 import type { RecordedCall, RunAttempt } from '@on.auto/definitions';
-import { reportingAccess, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { reportingAccess } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 

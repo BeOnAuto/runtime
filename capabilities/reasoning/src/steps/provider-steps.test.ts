@@ -1,4 +1,4 @@
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

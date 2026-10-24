@@ -1,5 +1,5 @@
 import { nestedRunId } from '@on.auto/definitions';
-import { fakeStdioServerPath, serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { fakeStdioServerPath, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 

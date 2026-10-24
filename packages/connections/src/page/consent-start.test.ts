@@ -2,13 +2,8 @@ import { createHash } from 'node:crypto';
 
 import { servedStudio } from '@on.auto/identity/testing';
 import type { ReturnKind } from '@on.auto/tool-servers';
-import {
-  autoClientsOf,
-  consentedAt,
-  servedThroughAuto,
-  type ClientRegistration,
-  type FakeMcpServer,
-} from '@on.auto/tool-servers/testing';
+import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { autoClientsOf, consentedAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';

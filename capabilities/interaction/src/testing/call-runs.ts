@@ -7,7 +7,8 @@ import {
 } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
 import type { Timing } from '@on.auto/tool-servers';
-import { reportingAccess, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { reportingAccess } from '@on.auto/tool-servers/testing';
 import { Effect, Function, type Exit, type Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 

@@ -6,18 +6,20 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  fakeApiKey,
-  fakeStdioServerPath,
   fetchWithDeletion,
   patientTiming,
   playbookToolCalls,
   reportingAccess,
-  serveFakeMcp,
   type AccessOptions,
-  type FakeMcpOptions,
-  type FakeMcpServer,
   type WritesOptions,
 } from '../testing/index.ts';
+import {
+  fakeApiKey,
+  fakeStdioServerPath,
+  serveFakeMcp,
+  type FakeMcpOptions,
+  type FakeMcpServer,
+} from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 
 const closing: (() => Promise<void>)[] = [];

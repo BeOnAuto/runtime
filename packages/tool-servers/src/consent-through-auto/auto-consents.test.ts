@@ -9,13 +9,11 @@ import {
   consentClientWith,
   cuttingTimeouts,
   returnAddress,
-  servedThroughAuto,
   startAskedAt,
   studioBase,
   type ClientRegistration,
-  type FakeConsentService,
-  type ThroughAuto,
 } from '../testing/index.ts';
+import { servedThroughAuto, type FakeConsentService, type ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

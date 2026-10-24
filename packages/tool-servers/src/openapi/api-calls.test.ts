@@ -2,13 +2,8 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { CalledOnce } from '../one-call/called-once.ts';
-import {
-  describedAccess,
-  serveFakeApi,
-  type ClientRegistration,
-  type FakeApiOptions,
-  type FakeApiServer,
-} from '../testing/index.ts';
+import { describedAccess, type ClientRegistration } from '../testing/index.ts';
+import { serveFakeApi, type FakeApiOptions, type FakeApiServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

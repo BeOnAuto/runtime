@@ -1,6 +1,6 @@
 import { sha256Of } from '@on.auto/operations';
 import { kmsCustodian, parameterStoreKeeper, type AwsWaits, type KmsCustodianOptions } from '@on.auto/secrets/aws';
-import { serveFakeKms, type FakeKeyState } from '@on.auto/secrets/testing';
+import { serveFakeKms, type FakeKeyState } from '@on.auto/secrets/served-fakes';
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 

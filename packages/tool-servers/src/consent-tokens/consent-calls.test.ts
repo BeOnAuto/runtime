@@ -6,8 +6,7 @@ import { Effect, Option } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ConsentClient, ConsentServed } from '../consent/consent-client.ts';
-import type { ConsentAuth } from '../settings/server-settings.ts';
+import type { ConsentAuth, ConsentClient, ConsentServed } from '../index.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
 import {
   connectedByConsent,
@@ -20,14 +19,11 @@ import {
   reportingAccess,
   returnAddress,
   rowOf,
-  serveFakeApi,
-  servedForConsent,
   servedOf,
   studioBase,
-  type FakeApiServer,
-  type FakeMcpServer,
   clockAt,
 } from '../testing/index.ts';
+import { serveFakeApi, servedForConsent, type FakeApiServer, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

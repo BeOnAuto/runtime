@@ -5,14 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { refusalOf, servedDocumentAt } from '../api-testing/described-documents.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
-import {
-  describedAccess,
-  recordingCallJournal,
-  serveFakeApi,
-  toolRun,
-  type FakeApiServer,
-  type ReportingAccess,
-} from '../testing/index.ts';
+import { describedAccess, recordingCallJournal, toolRun, type ReportingAccess } from '../testing/index.ts';
+import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
 
 const key = 'k3y+With/Slash="Pad"==';
 

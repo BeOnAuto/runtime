@@ -1,5 +1,5 @@
 import { answers, callingTools, textResult } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import type { HostClock } from '@on.auto/workflow-host';
 import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';

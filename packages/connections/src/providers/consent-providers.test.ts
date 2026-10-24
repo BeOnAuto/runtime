@@ -1,13 +1,7 @@
 import { adverts, drive, providersOf } from '@on.auto/providers/testing';
 import type { ConsentClientOptions, ReturnKind } from '@on.auto/tool-servers';
-import {
-  autoClientsOf,
-  clockAt,
-  consentClientWith,
-  registeredAt,
-  serveFakeConsentService,
-  type FakeConsentService,
-} from '@on.auto/tool-servers/testing';
+import { serveFakeConsentService, type FakeConsentService } from '@on.auto/tool-servers/served-fakes';
+import { autoClientsOf, clockAt, consentClientWith, registeredAt } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

@@ -1,5 +1,5 @@
 import { answers, callingTools, textResult, type ScriptedReplies } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 

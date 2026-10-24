@@ -3,7 +3,8 @@ import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { describedAccess, patientTiming, serveFakeApi } from '@on.auto/tool-servers/testing';
+import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
+import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

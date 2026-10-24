@@ -14,7 +14,8 @@ import {
   servedDocumentAt,
 } from '../api-testing/described-documents.ts';
 import { shippedDocumentOf } from '../settings/server-settings.ts';
-import { fakeApiDocument, serveFakeApi } from '../testing/index.ts';
+import { fakeApiDocument } from '../testing/index.ts';
+import { serveFakeApi } from '../testing/served-fakes.ts';
 
 const brokenFetch: typeof globalThis.fetch = () =>
   Promise.resolve(

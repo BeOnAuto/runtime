@@ -11,14 +11,13 @@ import {
   registeredAfterAnother,
   registeredAt,
   rowOf,
-  servedForConsent,
   servedOf,
   servedTokensOf,
   type ClientRegistration,
-  type FakeMcpServer,
   type MemoryTokens,
   clockAt,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import type { KeptTokens } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];

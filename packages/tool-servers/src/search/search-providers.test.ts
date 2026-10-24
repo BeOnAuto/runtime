@@ -6,8 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { defineSearch, defineSearchInOrg, type OfferedProvider, type ProviderOffering } from '../index.ts';
 import { fakeConnections, type FakeConnections } from '../testing/fake-connections.ts';
 import { fakeProviders, type FakeProvider } from '../testing/fake-providers.ts';
-import { fakeApiKey, patientTiming, playbookToolCalls, serveFakeMcp, type FakeMcpServer } from '../testing/index.ts';
+import { patientTiming, playbookToolCalls } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
+import { fakeApiKey, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const adder: CallerIdentity = { id: 'person:ada', org: 'acme', permissions: ['org:read', 'org:write'], playbooks: '*' };
 

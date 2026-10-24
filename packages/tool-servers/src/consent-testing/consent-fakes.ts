@@ -4,7 +4,7 @@ import type { ClientRegistration } from '../authorization-testing/fake-clients.t
 import type { RegisteredClient } from '../consent/client-sources.ts';
 import type { ConsentClient, ConsentClientOptions, ConsentWay, StartAsked } from '../consent/consent-client.ts';
 import { makeConsentClient } from '../consent/consent-making.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import { memoryRegistrations } from './given-consents.ts';
 
 export const studioBase = 'https://studio.example.com/';
@@ -23,10 +23,6 @@ export function consentRegistration(changes: Partial<ClientRegistration> = {}): 
     redirectUris: [returnAddress],
     ...changes,
   };
-}
-
-export function servedForConsent(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  return serveFakeMcp({ client: consentRegistration(changes) });
 }
 
 export function registeredAt(issuer: string, changes: Partial<RegisteredClient> = {}): RegisteredClient {

@@ -1,6 +1,6 @@
 import type { McpSession, ToolResult } from '@on.auto/api/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 
 import type { ReasoningServer } from './reasoning-server.ts';
 import { servingWorkflows } from './workflow-server.ts';

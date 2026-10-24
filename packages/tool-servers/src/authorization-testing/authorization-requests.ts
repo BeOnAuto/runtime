@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 
 import { Schema } from 'effect';
 
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 
 export const redirectUri = 'https://studio.example.com/connect-return';
 

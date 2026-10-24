@@ -1,13 +1,7 @@
 import { custodianRefusal, memoryRows, type RecordingCustodian } from '@on.auto/secrets/testing';
 import type { ConnectionSource, ConnectionUnready, OrgConnection } from '@on.auto/tool-servers';
-import {
-  describedAccess,
-  fakeApiKey,
-  patientTiming,
-  playbookToolCalls,
-  serveFakeMcp,
-  type FakeMcpServer,
-} from '@on.auto/tool-servers/testing';
+import { fakeApiKey, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { describedAccess, patientTiming, playbookToolCalls } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Fiber, Logger, Option, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';

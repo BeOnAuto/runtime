@@ -4,7 +4,8 @@ import { Effect, Layer } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { defineSearchInOrg } from '../index.ts';
-import { reportingAccess, serveFakeMcp, type FakeMcpServer } from '../testing/index.ts';
+import { reportingAccess } from '../testing/index.ts';
+import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

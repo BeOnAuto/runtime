@@ -5,7 +5,8 @@ import type { ServerMessage } from '../access/caller-context.ts';
 import type { Timing } from '../bounds/call-bounds.ts';
 import type { CallReply } from '../calls/call-replies.ts';
 import type { RunTools } from '../calls/run-tools.ts';
-import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import { type FakeMcpOptions, type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
 import { reportingAccess } from './reporting-access.ts';
 import {
   controlledSignals,

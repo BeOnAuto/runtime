@@ -1,15 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { servedDocumentAt } from '../api-testing/described-documents.ts';
-import {
-  describedAccess,
-  playbookToolCalls,
-  reportingAccess,
-  serveFakeApi,
-  serveFakeMcp,
-  toolReader,
-  type FakeMcpServer,
-} from '../testing/index.ts';
+import { describedAccess, playbookToolCalls, reportingAccess, toolReader } from '../testing/index.ts';
+import { serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

@@ -3,15 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { documentWithServer, servedDocumentAt } from '../api-testing/described-documents.ts';
 import { fakeConnections, type FakeConnection } from '../testing/fake-connections.ts';
-import {
-  fakeApiKey,
-  patientTiming,
-  playbookToolCalls,
-  recordingCallJournal,
-  serveFakeApi,
-  toolRun,
-} from '../testing/index.ts';
+import { patientTiming, playbookToolCalls, recordingCallJournal, toolRun } from '../testing/index.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
+import { fakeApiKey, serveFakeApi } from '../testing/served-fakes.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 

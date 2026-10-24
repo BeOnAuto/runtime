@@ -3,7 +3,8 @@ import { setTimeout } from 'node:timers/promises';
 import { Effect, Fiber } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { recordingCallJournal, reportingAccess, serveFakeMcp, toolRun, type FakeMcpServer } from '../testing/index.ts';
+import { recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';

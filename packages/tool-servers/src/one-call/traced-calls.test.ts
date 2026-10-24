@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { ToolAccess } from '../access/tool-access.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { describedAccess, fakeApiKey, patientTiming, playbookToolCalls, serveFakeApi } from '../testing/index.ts';
+import { describedAccess, patientTiming, playbookToolCalls } from '../testing/index.ts';
 import { closedAfter, echoCall, oneCallKey, oneCallServer } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
+import { fakeApiKey, serveFakeApi } from '../testing/served-fakes.ts';
 
 const traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
 

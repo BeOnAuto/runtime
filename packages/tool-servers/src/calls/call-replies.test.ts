@@ -7,14 +7,13 @@ import { noCalls } from '../bounds/call-bounds.ts';
 import { ignored } from '../clients/ignored.ts';
 import {
   controlledSignals,
-  fakeApiKey,
   fakeRequestIdKey,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
-  serveFakeMcp,
   toolRun,
 } from '../testing/index.ts';
+import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 import { callReplyOf, failureCounted } from './call-replies.ts';
 
 const aDuration: unknown = expect.any(Number);

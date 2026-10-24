@@ -1,4 +1,4 @@
-import { serveFakeApi } from '@on.auto/tool-servers/testing';
+import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { release } from '../composition/release.ts';

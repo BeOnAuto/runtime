@@ -1,15 +1,8 @@
 import { Effect, Fiber } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  fakeStdioServerPath,
-  fakeToolNames,
-  reportingAccess,
-  serveFakeMcp,
-  verboseDescription,
-  type AccessOptions,
-  type FakeMcpServer,
-} from '../testing/index.ts';
+import { fakeToolNames, reportingAccess, verboseDescription, type AccessOptions } from '../testing/index.ts';
+import { fakeStdioServerPath, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';

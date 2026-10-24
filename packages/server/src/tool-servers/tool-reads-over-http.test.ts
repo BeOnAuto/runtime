@@ -1,7 +1,7 @@
 import { listedTools, withMcpSession } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
-import { serveFakeApi, serveFakeMcp, type FakeApiServer, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeApi, serveFakeMcp, type FakeApiServer, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';

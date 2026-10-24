@@ -1,12 +1,12 @@
 import {
   behaviourKey,
-  describedAccess,
   serversUnderTest,
   toolAccessBehaviour,
   type CredentialUnderTest,
   type SourcedEntry,
   type SourceUnderTest,
-} from '@on.auto/tool-servers/testing';
+} from '@on.auto/tool-servers/served-fakes';
+import { describedAccess } from '@on.auto/tool-servers/testing';
 import { Option, Redacted } from 'effect';
 import { expect } from 'vitest';
 

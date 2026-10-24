@@ -6,7 +6,7 @@ import {
   type AwsWaits,
   type ParameterStoreKeeperOptions,
 } from '@on.auto/secrets/aws';
-import { serveFakeParameterStore, type FakeParameterOperation } from '@on.auto/secrets/testing';
+import { serveFakeParameterStore, type FakeParameterOperation } from '@on.auto/secrets/served-fakes';
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 

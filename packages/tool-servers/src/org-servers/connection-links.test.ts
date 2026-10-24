@@ -2,8 +2,9 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { fakeApiKey, patientTiming, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/index.ts';
+import { patientTiming } from '../testing/index.ts';
 import { describedAccess, reportingAccess } from '../testing/reporting-access.ts';
+import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 

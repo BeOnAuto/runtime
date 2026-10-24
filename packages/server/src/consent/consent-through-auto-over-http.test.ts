@@ -1,4 +1,5 @@
-import { handleOf, servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/testing';
+import { servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/served-fakes';
+import { handleOf } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

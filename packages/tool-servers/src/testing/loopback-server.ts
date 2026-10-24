@@ -4,26 +4,7 @@ import { Readable } from 'node:stream';
 
 import { Schema } from 'effect';
 
-interface FailedRequest {
-  readonly method: string;
-  readonly path: string;
-  readonly error: string;
-}
-
-interface HeardRequest {
-  readonly method: string;
-  readonly path: string;
-  readonly userAgent: string | undefined;
-}
-
-export interface LoopbackServer {
-  readonly origin: string;
-  readonly heard: () => readonly HeardRequest[];
-  readonly failures: () => readonly FailedRequest[];
-  readonly close: () => Promise<void>;
-}
-
-export type FetchHandler = (request: Readonly<Request>) => Promise<Response>;
+import type { FailedRequest, FetchHandler, HeardRequest, LoopbackServer } from './fetch-handler.ts';
 
 interface Answering {
   readonly origin: string;
