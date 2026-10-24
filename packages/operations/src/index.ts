@@ -22,6 +22,7 @@ export {
 } from './caller/call-lineage.ts';
 export { PlaybookWriter } from './ledger/playbook-writer.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
+export { CallFetch } from './caller/call-fetch.ts';
 export {
   CallResultSchema,
   invalidArguments,

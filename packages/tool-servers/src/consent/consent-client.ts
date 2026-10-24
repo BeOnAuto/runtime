@@ -1,28 +1,14 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 import type { Reaches } from '@on.auto/outbound';
-import { Effect, type Redacted } from 'effect';
+import type { Effect, Redacted } from 'effect';
 
 import type { Timer } from '../clients/http-client.ts';
-import type { ConsentTokenSources, TokenSource } from '../clients/token-source.ts';
-import {
-  serviceClientsListed,
-  throughAutoOf,
-  usableClientsOf,
-  type AutoClients,
-  type ThroughAuto,
-} from '../consent-through-auto/auto-clients.ts';
-import type { ConsentRequests } from '../consent-through-auto/consents-by-source.ts';
-import { heldAmongSecrets, type KeptTokens, type TokenHolding } from '../consent-tokens/kept-tokens.ts';
+import type { ConsentTokenSources } from '../clients/token-source.ts';
+import type { AutoClients, ThroughAuto } from '../consent-through-auto/auto-clients.ts';
+import type { KeptTokens, TokenHolding } from '../consent-tokens/kept-tokens.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
-import {
-  sourcesHad,
-  sourceTakenOf,
-  type ClientSource,
-  type ClientsHad,
-  type HadSources,
-  type ServiceClient,
-  type WayOfClients,
-} from './client-sources.ts';
+import type { ClientSource, ClientsHad, HadSources, ServiceClient, WayOfClients } from './client-sources.ts';
+import type { RegistrationKeeping } from './dynamic-registration.ts';
 
 export interface ConsentWay extends WayOfClients {
   readonly parameters?: Readonly<Record<string, string>> | undefined;
@@ -147,6 +133,7 @@ export interface TokenServing extends TokenHolding {
   readonly name: string;
   readonly now: () => number;
   readonly timer: Timer;
+  readonly fetch?: FetchLike;
 }
 
 export interface RevokeAsked extends ConsentAsked {
@@ -189,67 +176,8 @@ export interface ConsentClient extends ConsentTokenSources {
   readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;
 }
 
-export interface LoadedOptions extends ConsentClientOptions {
+export interface LoadedOptions extends ConsentClientOptions, Omit<RegistrationKeeping, 'registrations'> {
   readonly auto: ThroughAuto;
   readonly serviceClients: Effect.Effect<readonly ServiceClient[]>;
   readonly renewalSpreadMs: number;
-}
-
-const mostRenewalSpreadMs = 5000;
-
-async function requestsOf(options: LoadedOptions): Promise<ConsentRequests> {
-  const { consentRequests } = await import('../consent-through-auto/consents-by-source.ts');
-  return consentRequests(options);
-}
-
-function loadedOf(options: ConsentClientOptions): LoadedOptions {
-  const auto = throughAutoOf(options);
-  const renewalSpreadMs = options.renewalSpreadMs ?? Math.floor(Math.random() * mostRenewalSpreadMs);
-  return { ...options, auto, serviceClients: serviceClientsListed(auto), renewalSpreadMs };
-}
-
-function hadSourcesOf(options: LoadedOptions, studioBase: string): Effect.Effect<HadSources> {
-  const usable = usableClientsOf(options.auto, studioBase, options.serviceClients);
-  return Effect.map(usable, (serviceClients) => ({
-    sourcesOf: (way: WayOfClients): readonly ClientSource[] => sourcesHad(way, { ...options, serviceClients }),
-    sourceOf: (way: WayOfClients) => sourceTakenOf(way, { ...options, serviceClients }),
-  }));
-}
-
-function servedTokens(
-  loaded: Effect.Effect<ConsentRequests>,
-  served: ConsentServed,
-  serving: TokenServing,
-): TokenSource {
-  const heldAt = serving.now();
-  heldAmongSecrets(served.held.tokens, serving);
-  const sourcing: { source?: Promise<TokenSource> } = {};
-  const sourceOnUse = (): Promise<TokenSource> => {
-    sourcing.source ??= Effect.runPromise(
-      Effect.map(loaded, (requests) => requests.tokenSource({ served, heldAt, serving })),
-    );
-    return sourcing.source;
-  };
-  return {
-    token: async () => (await sourceOnUse()).token(),
-    onUnauthorized: async (context) => {
-      await (await sourceOnUse()).onUnauthorized(context);
-    },
-  };
-}
-
-export function makeConsentClient(given: ConsentClientOptions): ConsentClient {
-  const options = loadedOf(given);
-  const loading: { requests?: Promise<ConsentRequests> } = {};
-  const loaded = Effect.promise(() => {
-    loading.requests ??= requestsOf(options);
-    return loading.requests;
-  });
-  return {
-    hadSources: (studioBase) => hadSourcesOf(options, studioBase),
-    start: (asked) => Effect.flatMap(loaded, (requests) => requests.start(asked)),
-    finish: (asked) => Effect.flatMap(loaded, (requests) => requests.finish(asked)),
-    tokenSource: (served, serving) => servedTokens(loaded, served, serving),
-    revoke: (asked) => Effect.flatMap(loaded, (requests) => requests.revoke(asked)),
-  };
 }

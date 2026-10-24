@@ -1,4 +1,5 @@
-export { makeToolAccess, type ToolAccess, type ToolAccessOptions } from './access/tool-access.ts';
+export { makeToolAccess } from './call-fetch/access-of-the-call.ts';
+export type { ToolAccess, ToolAccessOptions } from './access/tool-access.ts';
 export { ToolServerFailed, type CallsEndedBecause, type ServerFailedBecause } from './access/tool-server-failed.ts';
 export { ToolNotOffered, type NotOfferedBecause } from './access/tool-not-offered.ts';
 export type { CallerContext, ServerMessage, ToolsNotOpened } from './access/caller-context.ts';
@@ -81,8 +82,8 @@ export {
   type WayClientSource,
 } from './consent/client-sources.ts';
 export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
+export { makeConsentClient } from './consent/consent-making.ts';
 export {
-  makeConsentClient,
   type ChosenClient,
   type ClientRegistrations,
   type ConnectionTokens,

@@ -2,13 +2,8 @@ import { Function, Redacted } from 'effect';
 
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { RegisteredClient } from '../consent/client-sources.ts';
-import {
-  makeConsentClient,
-  type ConsentClient,
-  type ConsentClientOptions,
-  type ConsentWay,
-  type StartAsked,
-} from '../consent/consent-client.ts';
+import type { ConsentClient, ConsentClientOptions, ConsentWay, StartAsked } from '../consent/consent-client.ts';
+import { makeConsentClient } from '../consent/consent-making.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import { memoryRegistrations } from './given-consents.ts';
 
