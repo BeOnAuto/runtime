@@ -3,12 +3,12 @@ import { writeFileSync } from 'node:fs';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 
-import { keptLibFiles } from './src/program-check/kept-lib.ts';
-import { compilerShippedRoots, sandboxLibOf } from './src/program-check/sandbox-lib.ts';
+import { definitionsShippedRoots, keptLibFiles } from './src/program-check/kept-lib.ts';
+import { sandboxLibOf } from './src/program-check/sandbox-lib.ts';
 
 const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
 
-const lib = await sandboxLibOf(shippedFilesOnDisk(compilerShippedRoots), (expressions) =>
+const lib = await sandboxLibOf(shippedFilesOnDisk(definitionsShippedRoots), (expressions) =>
   sandboxAnswers(freshInstances(sandboxModule), expressions),
 );
 

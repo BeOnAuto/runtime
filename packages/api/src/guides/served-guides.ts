@@ -1,17 +1,17 @@
-import type { DefinitionType, Guide, Recipe } from '@on.auto/api';
-import type { Capability } from '@on.auto/definitions';
-import { capitalized, shippedFileIn, type ShippedFiles } from '@on.auto/operations';
+import { capitalized, shippedFileIn, type Noun, type ShippedFiles } from '@on.auto/operations';
 
+import type { DefinitionType } from '../mcp/instructions.ts';
 import { documentation } from './guide-files.ts';
+import { guideShelfOf, type Guide, type GuideShelf } from './guide-shelf.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
 import { terminologyGuideOf } from './terminology-guide.ts';
 
-export interface ServedGuides {
-  readonly definitionTypes: readonly DefinitionType[];
-  readonly guides: readonly Guide[];
-  readonly recipes: readonly Recipe[];
+export interface ServedType {
+  readonly type: string;
+  readonly noun: Noun;
+  readonly guide: { readonly name: string; readonly onThisServer?: string };
 }
 
 const terminologyPage = 'concepts/terminology.md';
@@ -26,7 +26,7 @@ function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
 
 async function typeGuideOf(
   shippedFiles: ShippedFiles,
-  { noun, guide }: Pick<Capability, 'noun' | 'guide'>,
+  { noun, guide }: Pick<ServedType, 'noun' | 'guide'>,
 ): Promise<Guide> {
   const page = pageOfGuide(guide.name);
   const text = withLinksResolved(withoutSiteMarkup(await pageText(shippedFiles, page)), page);
@@ -38,11 +38,8 @@ async function typeGuideOf(
   };
 }
 
-export async function servedGuidesOf(
-  shippedFiles: ShippedFiles,
-  capabilities: readonly Capability[],
-): Promise<ServedGuides> {
-  const definitionTypes: readonly DefinitionType[] = capabilities.map(({ type, noun, guide }) => ({
+export async function guideShelfFrom(shippedFiles: ShippedFiles, types: readonly ServedType[]): Promise<GuideShelf> {
+  const definitionTypes: readonly DefinitionType[] = types.map(({ type, noun, guide }) => ({
     type,
     noun: noun.one,
     guide: guide.name,
@@ -52,7 +49,7 @@ export async function servedGuidesOf(
       await pageText(shippedFiles, terminologyPage),
       definitionTypes.map(({ noun }) => noun),
     ),
-    ...(await Promise.all(capabilities.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
+    ...(await Promise.all(types.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
   ];
-  return { definitionTypes, guides, recipes: await recipesFor(shippedFiles, guides) };
+  return guideShelfOf(guides, await recipesFor(shippedFiles, guides), definitionTypes);
 }

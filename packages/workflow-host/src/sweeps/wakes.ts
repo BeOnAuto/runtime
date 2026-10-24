@@ -10,10 +10,6 @@ export interface Wakes {
   readonly playbooksWoken: () => readonly string[];
   readonly registriesWoken: () => readonly string[];
   readonly anyWoken: () => boolean;
-  readonly nextSignal: () => Promise<void>;
-  readonly sweepDue: (now: number) => boolean;
-  readonly sweepSoon: () => void;
-  readonly nextSweepAt: () => number;
 }
 
 function isPlaybookKey(playbookKey: string): boolean {
@@ -33,10 +29,9 @@ function takenFrom(keys: Set<string>): readonly string[] {
   return taken;
 }
 
-export function wakesOf(sweepEveryMs: number): Wakes {
+export function wakesOf(): Wakes {
   const playbooks = new Set<string>();
   const registries = new Set<string>();
-  const state = { signal: Promise.withResolvers<void>(), lastSweptAt: 0 };
   return {
     woken: (stream) => {
       const playbookKey = followedPlaybookOf(stream);
@@ -46,7 +41,6 @@ export function wakesOf(sweepEveryMs: number): Wakes {
       if (isOrgRegistry(stream)) {
         registries.add(stream);
       }
-      state.signal.resolve();
     },
     playbookAgain: (playbookKey) => {
       playbooks.add(playbookKey);
@@ -54,18 +48,5 @@ export function wakesOf(sweepEveryMs: number): Wakes {
     playbooksWoken: () => takenFrom(playbooks),
     registriesWoken: () => takenFrom(registries),
     anyWoken: () => playbooks.size > 0 || registries.size > 0,
-    nextSignal: () => {
-      state.signal = Promise.withResolvers();
-      return state.signal.promise;
-    },
-    sweepDue: (now) => {
-      const due = now >= state.lastSweptAt + sweepEveryMs;
-      state.lastSweptAt = due ? now : state.lastSweptAt;
-      return due;
-    },
-    sweepSoon: () => {
-      state.lastSweptAt = Number.NEGATIVE_INFINITY;
-    },
-    nextSweepAt: () => state.lastSweptAt + sweepEveryMs,
   };
 }

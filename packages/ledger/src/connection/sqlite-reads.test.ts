@@ -1,8 +1,8 @@
 import sqlite3 from 'sqlite3';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { sqliteLedgerReads } from '../sqlite3.ts';
-import { openConnection } from '../testing/open-ledger.ts';
+import { ledgerLayer, sqliteLedgerReads } from '../sqlite3.ts';
+import { openConnectionWith } from '../testing/open-ledger.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { statement } from './statement.ts';
 
@@ -46,7 +46,7 @@ function readsOf(fileName: string) {
 describe('the reads of the file of a ledger', () => {
   it('answer what the ledger keeps while another connection holds the file for writing, waiting for no lock', async () => {
     const fileName = aDatabaseFile();
-    const { connection, dispose } = await openConnection(fileName);
+    const { connection, dispose } = await openConnectionWith(ledgerLayer({ fileName }));
     await connection.migrated([statement`CREATE TABLE IF NOT EXISTS probes (name TEXT NOT NULL)`]);
     await connection.write(statement`INSERT INTO probes (name) VALUES (${'kept'})`);
     await dispose();

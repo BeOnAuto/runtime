@@ -1,7 +1,7 @@
 import {
   apiCatalogRoutes,
   guideRoutes,
-  guideShelfOf,
+  guideShelfFrom,
   mcpRoutes,
   openApiDocumentRoutes,
   operationRoutes,
@@ -19,7 +19,6 @@ import {
   type ShippedFiles,
 } from '@on.auto/operations';
 
-import { servedGuidesOf } from '../guides/served-guides.ts';
 import { logMcpError } from '../logging/logging.ts';
 import { release } from './release.ts';
 
@@ -38,8 +37,7 @@ export async function routesFor(
   runtime: AppRuntime<DispatcherServices>,
   { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, shippedFiles }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
-  const { guides, recipes, definitionTypes } = await servedGuidesOf(shippedFiles, capabilities);
-  const shelf = guideShelfOf(guides, recipes, definitionTypes);
+  const shelf = await guideShelfFrom(shippedFiles, capabilities);
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
     openApiDocumentRoutes({ catalog, serverInfo: release, shelf, identityIssuer }),

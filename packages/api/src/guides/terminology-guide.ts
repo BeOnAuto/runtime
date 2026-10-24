@@ -1,4 +1,4 @@
-import type { Guide } from '@on.auto/api';
+import type { Guide } from './guide-shelf.ts';
 
 interface Row {
   readonly term: string;

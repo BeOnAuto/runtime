@@ -1,8 +1,9 @@
-import { shippedFileIn, type ShippedFile, type ShippedFiles, type ShippedRoots } from '@on.auto/operations';
+import { dependencyFileOf, shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
 import { sandboxRemovals } from '@on.auto/workflow-engine/worker';
 import ts from 'typescript6';
 
 import { instanceSamples } from './instance-samples.ts';
+import { definitionsPackage } from './kept-lib.ts';
 
 export interface SandboxLib {
   readonly script: string;
@@ -37,13 +38,7 @@ interface LibFile {
   readonly candidates: Candidates;
 }
 
-const compilerPackage = 'typescript6';
-
-export const compilerShippedRoots: ShippedRoots = {
-  [compilerPackage]: new URL('.', import.meta.resolve(`${compilerPackage}/package.json`)),
-};
-
-const compilerLib: ShippedFile = { package: compilerPackage, path: 'lib' };
+const compilerLib: ShippedFile = dependencyFileOf(definitionsPackage, 'typescript6', 'lib');
 
 const skipped = /intl|weakref/u;
 

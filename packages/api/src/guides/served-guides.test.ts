@@ -1,17 +1,16 @@
 import { readFileSync } from 'node:fs';
 
-import { mostGuideBytes, mostRecipeBytes } from '@on.auto/api';
 import { defineCapability, type Capability, type CapabilityGuide } from '@on.auto/definitions';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { serverShippedRoots } from './guide-files.ts';
+import { apiShippedRoots, mostGuideBytes, mostRecipeBytes, type GuideShelf } from '../index.ts';
 import { withLinksResolved } from './page-links.ts';
-import { servedGuidesOf, type ServedGuides } from './served-guides.ts';
+import { guideShelfFrom } from './served-guides.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
 
-const guideFiles = shippedFilesOnDisk(serverShippedRoots);
+const guideFiles = shippedFilesOnDisk(apiShippedRoots);
 
 function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capability {
   return defineCapability({
@@ -43,13 +42,13 @@ const everyType = [reasoning, computation, recall, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
-const served = await servedGuidesOf(guideFiles, everyType);
+const served = await guideShelfFrom(guideFiles, everyType);
 
-const servedWithInteraction = await servedGuidesOf(guideFiles, [...everyType, interaction]);
+const servedWithInteraction = await guideShelfFrom(guideFiles, [...everyType, interaction]);
 
-const servedForReasoningAndWorkflows = await servedGuidesOf(guideFiles, [reasoning, workflow]);
+const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoning, workflow]);
 
-function recipeTextsOf({ recipes }: ServedGuides): Readonly<Record<string, string>> {
+function recipeTextsOf({ recipes }: GuideShelf): Readonly<Record<string, string>> {
   return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
 }
 
@@ -178,7 +177,7 @@ describe('the recipes of a server', () => {
   });
 
   it('are none for a server that runs no type of definition', async () => {
-    expect((await servedGuidesOf(guideFiles, [])).recipes).toEqual([]);
+    expect((await guideShelfFrom(guideFiles, [])).recipes).toEqual([]);
   });
 
   it('ask the person in their own words, filled into what the prompt asks for', () => {
@@ -290,7 +289,7 @@ describe('the terminology guide of a server', () => {
 describe('a server without the page of a type it runs', () => {
   it('fails to start', async () => {
     await expect(
-      servedGuidesOf(guideFiles, [capabilityOf('drafting', 'draft', { name: 'drafting-function' })]),
+      guideShelfFrom(guideFiles, [capabilityOf('drafting', 'draft', { name: 'drafting-function' })]),
     ).rejects.toThrow(/no such file or directory.*drafting-format\.md/u);
   });
 });

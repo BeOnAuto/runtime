@@ -14,7 +14,7 @@ const whatToDo =
 
 function whatWasFound(found: number | undefined): string {
   return found === undefined
-    ? "The ledger's database holds tables but no layout number of the ledger"
+    ? "The ledger's database holds tables of the ledger but no layout number"
     : `The ledger's database is in layout ${found} of the ledger`;
 }
 

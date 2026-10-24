@@ -1,6 +1,7 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { openConnection } from '../testing/open-ledger.ts';
+import { ledgerLayer } from '../sqlite3.ts';
+import { openConnectionWith } from '../testing/open-ledger.ts';
 import { statement, statementOf, textOnPostgreSQL } from './statement.ts';
 
 const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -16,7 +17,7 @@ describe('a statement beside the ledger', () => {
   });
 
   it('binds the same values on SQLite', async () => {
-    const { connection, dispose } = await openConnection(':memory:');
+    const { connection, dispose } = await openConnectionWith(ledgerLayer({ fileName: ':memory:' }));
     onTestFinished(dispose);
 
     const rows = await connection.read(statement`SELECT ${7} AS seven, ${null} AS empty`);

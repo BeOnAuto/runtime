@@ -3,10 +3,8 @@ import { describe, onTestFinished } from 'vitest';
 
 import { sqliteLayout, sqliteLedgerOpened } from './index.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
-import { keptSecretsBehaviour } from './secrets/kept-secrets-behaviour.ts';
 import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
-import { ledgerBehaviour } from './testing/ledger-behaviour.ts';
-import type { LedgerEntry } from './testing/ledger-entry.ts';
+import { keptSecretsBehaviour, ledgerBehaviour, type LedgerEntry } from './testing/index.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
 
 const openedOn: LedgerEntry['openedOn'] = (fileName) =>

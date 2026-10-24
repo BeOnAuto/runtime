@@ -1,4 +1,10 @@
-import { playbookStreamOf, projectedTableOf, rowKeyOf, type ProjectedRow } from '@on.auto/operations';
+import {
+  playbookStreamOf,
+  projectedTableOf,
+  rowKeyOf,
+  type KeyedProjection,
+  type ProjectedRow,
+} from '@on.auto/operations';
 
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import { inTurn } from './inline-projection.ts';
@@ -24,9 +30,16 @@ const messagesInABatch = 256;
 
 const mostBytesInABatch = 16 * 1024 * 1024;
 
+export type NamedProjection = Pick<KeyedProjection, 'name'>;
+
+export function versionOfTable({ name }: NamedProjection, table: string): number | undefined {
+  const version = new RegExp(`^${name}_(?<version>\\d+)$`, 'u').exec(table)?.groups?.['version'];
+  return version === undefined ? undefined : Number(version);
+}
+
 function isEarlierVersion({ projection }: ProjectionKeeping, table: string): boolean {
-  const version = new RegExp(`^${projection.name}_(?<version>\\d+)$`, 'u').exec(table)?.groups?.['version'];
-  return version !== undefined && Number(version) < projection.version;
+  const version = versionOfTable(projection, table);
+  return version !== undefined && version < projection.version;
 }
 
 function chunksOf<Item>(items: readonly Item[], size: number): readonly (readonly Item[])[] {

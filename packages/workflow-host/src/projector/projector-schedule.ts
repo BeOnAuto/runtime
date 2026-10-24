@@ -13,12 +13,8 @@ export interface Schedule {
   readonly wanted: () => readonly string[];
   readonly discover: () => void;
   readonly discoveryDue: () => boolean;
-  readonly sweepDue: (now: number) => boolean;
-  readonly swept: (now: number) => void;
-  readonly untilSweep: (now: number) => number;
+  readonly swept: () => void;
   readonly idle: () => boolean;
-  readonly woken: () => Promise<void>;
-  readonly wake: () => void;
   readonly resting: Resting;
 }
 
@@ -51,10 +47,10 @@ export function definitionsByType(): DefinitionsByType {
   };
 }
 
-export function scheduleOf(sweepEveryMs: number): Schedule {
+export function scheduleOf(): Schedule {
   const wanted = new Set<string>();
   const resting = restingUntilSwept();
-  const state = { discoveryDue: true, lastSweptAt: Number.NEGATIVE_INFINITY, wake: Promise.withResolvers<void>() };
+  const state = { discoveryDue: true };
   return {
     definitions: definitionsByType(),
     want: (playbook) => {
@@ -73,20 +69,10 @@ export function scheduleOf(sweepEveryMs: number): Schedule {
       state.discoveryDue = false;
       return due;
     },
-    sweepDue: (now) => now >= state.lastSweptAt + sweepEveryMs,
-    swept: (now) => {
-      state.lastSweptAt = now;
+    swept: () => {
       resting.wakeAll();
     },
-    untilSweep: (now) => Math.max(0, state.lastSweptAt + sweepEveryMs - now),
     idle: () => wanted.size === 0 && !state.discoveryDue,
-    woken: () => {
-      state.wake = Promise.withResolvers<void>();
-      return state.wake.promise;
-    },
-    wake: () => {
-      state.wake.resolve();
-    },
     resting,
   };
 }

@@ -3,8 +3,9 @@ import { setTimeout } from 'node:timers/promises';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { ledgerLayer } from '../sqlite3.ts';
 import { stamped } from '../testing/happenings.ts';
-import { openConnection, type OpenConnection } from '../testing/open-ledger.ts';
+import { openConnectionWith, type OpenConnection } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { ReadRows } from './ledger-connection.ts';
@@ -17,7 +18,7 @@ function aDatabaseFile(): string {
 }
 
 async function connectedTo(fileName: string): Promise<OpenConnection> {
-  const opened = await openConnection(fileName);
+  const opened = await openConnectionWith(ledgerLayer({ fileName }));
   onTestFinished(opened.dispose);
   return opened;
 }

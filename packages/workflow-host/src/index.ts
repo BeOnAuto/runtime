@@ -7,7 +7,15 @@ export type { FollowedEvent } from './follower/followed-events.ts';
 export { HostStopped } from './host/host-gate.ts';
 export { closeHostParts, openHostParts, type HostParts, type PartsOptions } from './host/host-parts.ts';
 export type { HostNote, HostReports, UnsettledRun } from './host/host-reports.ts';
-export { HostElsewhere, type DeliveryAnswer, type RunStart, type StartAnswer } from './host/run-requests.ts';
+export {
+  HostElsewhere,
+  runRequestsOf,
+  type DeliveryAnswer,
+  type RequestParts,
+  type RunRequests,
+  type RunStart,
+  type StartAnswer,
+} from './host/run-requests.ts';
 export { openWorkflowHost, type HostOptions, type WorkflowHost } from './host/workflow-host.ts';
 export { openWorkflowStore, type WorkflowStore } from './host/workflow-store.ts';
 export {
@@ -35,6 +43,8 @@ export {
   type Writing,
 } from './projector/folder.ts';
 export type { ProjectorSettings } from './projector/projector-settings.ts';
+export { projectorWakeUp, type ProjectorParts } from './projector/projector.ts';
+export { followerWakeUp, type FollowedParts, type FollowingParts } from './reactions/host-reactions.ts';
 export {
   ViewDetailsSchema,
   ViewFilterSchema,
@@ -56,7 +66,7 @@ export {
   type WakeUpParts,
   type Woken,
 } from './loop/host-wake-up.ts';
-export type { RunAddress } from './runs/run-address.ts';
+export { runKeyOf, type RunAddress } from './runs/run-address.ts';
 export { runLogContextOf } from './runs/run-log-context.ts';
 export { recordIdOf } from './runs/run-lineage.ts';
 export {

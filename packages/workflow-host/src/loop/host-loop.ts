@@ -1,17 +1,28 @@
 import { Effect, Fiber } from 'effect';
 
 import { forkedIn } from './forked-fibers.ts';
+import type { HostClock } from './host-clock.ts';
 import type { HostWakeUp, NextWake, WakeSignal, WakeUpParts } from './host-wake-up.ts';
 
-type LoopParts = Pick<WakeUpParts, 'clock' | 'sweepEveryMs' | 'context'>;
+export interface LoopParts extends Pick<WakeUpParts, 'clock' | 'sweepEveryMs' | 'context'> {
+  readonly pace?: HostClock;
+}
 
 export interface HostLoop {
   readonly armed: (dueAt: number) => void;
   readonly stop: () => Promise<void>;
 }
 
-export function startLoop(parts: LoopParts, wakeUpWith: (signal: WakeSignal) => HostWakeUp): HostLoop {
-  const { clock, sweepEveryMs } = parts;
+type WakeUpWith = (signal: WakeSignal) => HostWakeUp;
+
+interface RunningLoop {
+  readonly armed: HostLoop['armed'];
+  readonly work: HostWakeUp;
+  readonly ended: () => Effect.Effect<void>;
+}
+
+function runningLoop(parts: LoopParts, wakeUpWith: WakeUpWith): RunningLoop {
+  const { clock, sweepEveryMs, pace = clock } = parts;
   const plan = {
     wakeAt: Number.NEGATIVE_INFINITY,
     armedSince: Number.POSITIVE_INFINITY,
@@ -28,19 +39,21 @@ export function startLoop(parts: LoopParts, wakeUpWith: (signal: WakeSignal) => 
     },
   });
   const woken = Effect.suspend(() => {
-    const now = clock.now();
-    const sweep = now >= plan.lastSweptAt + sweepEveryMs;
+    const paced = pace.now();
+    const sweep = paced >= plan.lastSweptAt + sweepEveryMs;
     if (sweep) {
-      plan.lastSweptAt = now;
+      plan.lastSweptAt = paced;
     }
-    return work.wakeUp({ now, sweep });
+    return work.wakeUp({ now: clock.now(), sweep });
   });
   const slept = ({ nextDueAt }: NextWake) =>
     Effect.suspend(() => {
       const { promise } = plan.signal;
-      plan.wakeAt = Math.min(nextDueAt ?? Number.POSITIVE_INFINITY, plan.lastSweptAt + sweepEveryMs, plan.armedSince);
+      const now = clock.now();
+      const nextSweepAt = now + plan.lastSweptAt + sweepEveryMs - pace.now();
+      plan.wakeAt = Math.min(nextDueAt ?? Number.POSITIVE_INFINITY, nextSweepAt, plan.armedSince);
       return Effect.raceFirst(
-        clock.sleep(Math.max(0, plan.wakeAt - clock.now())),
+        pace.sleep(Math.max(0, plan.wakeAt - now)),
         Effect.promise(() => promise),
       );
     });
@@ -52,6 +65,17 @@ export function startLoop(parts: LoopParts, wakeUpWith: (signal: WakeSignal) => 
         plan.signal.resolve();
       }
     },
-    stop: () => Effect.runPromise(Fiber.interrupt(fiber).pipe(Effect.andThen(work.stop()))),
+    work,
+    ended: () => Effect.asVoid(Fiber.interrupt(fiber)),
   };
+}
+
+export function startLoop(parts: LoopParts, wakeUpWith: WakeUpWith): HostLoop {
+  const { armed, work, ended } = runningLoop(parts, wakeUpWith);
+  return { armed, stop: () => Effect.runPromise(Effect.andThen(ended(), work.stop())) };
+}
+
+export function startListeningLoop(parts: LoopParts, wakeUpWith: WakeUpWith): Pick<HostLoop, 'stop'> {
+  const { work, ended } = runningLoop(parts, wakeUpWith);
+  return { stop: () => Effect.runPromise(Effect.andThen(work.stop(), ended())) };
 }

@@ -7,7 +7,7 @@ import { Cause, Effect } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { ledgerLayer } from './sqlite3.ts';
-import { openChoresWith, openLedger } from './testing/open-ledger.ts';
+import { openChoresWith, openLedgerWith } from './testing/open-ledger.ts';
 import { tally } from './testing/tally.ts';
 import { temporaryDatabase, type TemporaryDatabase } from './testing/temporary-database.ts';
 
@@ -48,7 +48,7 @@ function descriptorsOpenOn(fileName: string): number {
 describe('a ledger on a database file', () => {
   it('closes every connection to the file when the runtime is disposed', async () => {
     const fileName = aDatabaseFile();
-    const { ledger, dispose } = await openLedger(fileName);
+    const { ledger, dispose } = await openLedgerWith(ledgerLayer({ fileName }));
     await Effect.runPromise(Effect.all([ledger.execute(tallies, tally, [1]), ledger.load('org/acme/other', tally)]));
     const whileOpen = descriptorsOpenOn(fileName);
 
@@ -83,11 +83,11 @@ describe('a ledger on a database file', () => {
 describe('a ledger on a database file in a directory that does not exist yet', () => {
   it('creates the directory and keeps what was written', async () => {
     const fileName = join(dirname(aDatabaseFile()), 'missing', 'deeper', 'ledger.db');
-    const first = await openLedger(fileName);
+    const first = await openLedgerWith(ledgerLayer({ fileName }));
     await Effect.runPromise(first.ledger.execute(tallies, tally, [2, 3]));
     await first.dispose();
 
-    const second = await openLedger(fileName);
+    const second = await openLedgerWith(ledgerLayer({ fileName }));
     const reloaded = await Effect.runPromise(second.ledger.load(tallies, tally));
     await second.dispose();
 
@@ -100,9 +100,9 @@ describe('a ledger on a database file in a directory that does not exist yet', (
 
 describe('a ledger in a private in-memory database', () => {
   it('shares nothing with another ledger in memory, and creates no directory for it', async () => {
-    const first = await openLedger(':memory:');
+    const first = await openLedgerWith(ledgerLayer({ fileName: ':memory:' }));
     await Effect.runPromise(first.ledger.execute(tallies, tally, [2, 3]));
-    const second = await openLedger(':memory:');
+    const second = await openLedgerWith(ledgerLayer({ fileName: ':memory:' }));
 
     const loaded = await Effect.runPromise(
       Effect.all([first.ledger.load(tallies, tally), second.ledger.load(tallies, tally)]),

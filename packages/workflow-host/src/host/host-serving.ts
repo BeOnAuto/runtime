@@ -1,17 +1,16 @@
 import type { RecordedPoint } from '@on.auto/ledger';
 import { Function } from 'effect';
 
-import type { HostDatabase } from '../database/host-database.ts';
 import { startLoop } from '../loop/host-loop.ts';
 import { hostWakeUp } from '../loop/host-wake-up.ts';
 import type { ProjectorSettings } from '../projector/projector-settings.ts';
 import { startProjector } from '../projector/projector.ts';
-import { startReacting, type FollowerConsumers } from '../reactions/host-reactions.ts';
+import { startFollowing, type FollowerConsumers } from '../reactions/host-reactions.ts';
 import { closeHostParts, openHostParts, type HostParts, type PartsOptions } from './host-parts.ts';
 import type { WorkflowStore } from './workflow-store.ts';
 
 export interface ServingOptions extends PartsOptions {
-  readonly consumers?: FollowerConsumers['consumers'];
+  readonly consumers?: FollowerConsumers;
   readonly projector?: ProjectorSettings;
   readonly placeAtOpen: RecordedPoint;
 }
@@ -22,23 +21,6 @@ export interface Serving {
   readonly stop: () => Promise<void>;
 }
 
-function followerOf(database: HostDatabase, options: ServingOptions, parts: HostParts) {
-  return startReacting(
-    {
-      database,
-      submitted: parts.submitted,
-      clock: options.clock,
-      sweepEveryMs: options.sweepEveryMs,
-      reports: options.reports,
-      context: options.context,
-      placeAtOpen: options.placeAtOpen,
-    },
-    options.reactions,
-    parts.reacting,
-    { consumers: options.consumers ?? [], calls: parts.calls },
-  );
-}
-
 export function startServing(store: WorkflowStore, options: ServingOptions): Serving {
   const { database } = store;
   const alarm: { armed: (dueAt: number) => void } = { armed: Function.constVoid };
@@ -47,7 +29,7 @@ export function startServing(store: WorkflowStore, options: ServingOptions): Ser
   });
   const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;
-  const follower = followerOf(database, options, parts);
+  const follower = startFollowing({ ...options, database, parts });
   const projector =
     options.projector === undefined
       ? undefined

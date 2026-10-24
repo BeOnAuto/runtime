@@ -8,11 +8,11 @@ import { describe, expect, it } from 'vitest';
 import { keptLibOnDisk } from '../testing/read-on-disk.ts';
 import { handedChecks } from './handed-checks.ts';
 import { definitionsShippedRoots, keptLibFiles, sandboxLibFrom } from './kept-lib.ts';
-import { compilerShippedRoots, sandboxLibOf } from './sandbox-lib.ts';
+import { sandboxLibOf } from './sandbox-lib.ts';
 
 const kept = sandboxLibFrom(keptLibOnDisk);
 
-const compilerFilesOnDisk = shippedFilesOnDisk(compilerShippedRoots);
+const compilerFilesOnDisk = shippedFilesOnDisk(definitionsShippedRoots);
 
 const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
 

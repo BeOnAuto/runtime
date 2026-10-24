@@ -3,7 +3,7 @@ import type { HandedFile } from '@on.auto/workflow-engine/job-loop';
 
 import type { SandboxLib } from './sandbox-lib.ts';
 
-const definitionsPackage = '@on.auto/definitions';
+export const definitionsPackage = '@on.auto/definitions';
 
 export const definitionsShippedRoots: ShippedRoots = { [definitionsPackage]: new URL('../../', import.meta.url) };
 

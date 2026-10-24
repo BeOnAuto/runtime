@@ -15,6 +15,15 @@ describe('the ledger entry points', () => {
     expect(packages).toContain('@event-driven-io/emmett-sqlite');
   });
 
+  it('keep the drivers out of the testing entry, so a suite run on a driver of its own loads neither', () => {
+    const packages = packagesReachableFrom('testing/index.ts');
+
+    expect(packages.filter((name) => name.includes('sqlite3'))).toEqual([]);
+    expect(packages.filter((name) => name.includes('postgresql'))).toEqual([]);
+    expect(packages).not.toContain('pg');
+    expect(packages).toContain('vitest');
+  });
+
   it('keep the PostgreSQL event store and its driver behind the postgresql entry', () => {
     const packages = packagesReachableFrom('postgresql/postgresql-ledger.ts');
 
@@ -28,5 +37,6 @@ describe('the ledger entry points', () => {
 
     expect(packages).toContain('@event-driven-io/emmett-sqlite/sqlite3');
     expect(packages).toContain('node:fs');
+    expect(modulesReachedFrom(import.meta.dirname, 'sqlite3.ts').files).toContain('layout/sqlite-file-in-layout.ts');
   });
 });

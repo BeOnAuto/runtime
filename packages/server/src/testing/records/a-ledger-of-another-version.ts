@@ -1,4 +1,5 @@
-import { aSQLiteFileInLayout, ledgerLayout } from '@on.auto/ledger/testing';
+import { aSQLiteFileInLayout } from '@on.auto/ledger/sqlite3';
+import { ledgerLayout } from '@on.auto/ledger/testing';
 
 export const anotherLayout = ledgerLayout + 1;
 

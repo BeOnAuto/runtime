@@ -8,7 +8,7 @@ import { gate, type HostStopped } from './host-gate.ts';
 import type { ServingOptions } from './host-serving.ts';
 import { standingOn } from './host-standing.ts';
 import {
-  runRequests,
+  runRequestsOf,
   type DeliveryAnswer,
   type HostElsewhere,
   type RunStart,
@@ -37,7 +37,7 @@ export async function openWorkflowHost(options: HostOptions): Promise<WorkflowHo
   const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
   const standing = await standingOn(store, { ...options, clock, placeAtOpen }, options.holder);
   const { guarded, closed } = gate();
-  const runs = runRequests({ database: store.database, clock, serving: standing.serving });
+  const runs = runRequestsOf({ database: store.database, clock, serving: standing.serving });
   const stopped = async (): Promise<void> => {
     await standing.stopReacting();
     await closed();

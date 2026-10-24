@@ -21,7 +21,12 @@ describe('the entries of the package', () => {
     const testing = modulesReachedFrom(source, 'testing/index.ts');
 
     expect(exports['./shipped-files-on-disk']).toBe(`./src/${diskReader}`);
-    expect(modulesReachedFrom(source, diskReader).packages).toEqual(['node:fs/promises']);
+    expect(modulesReachedFrom(source, diskReader).packages).toEqual([
+      'effect',
+      'node:fs/promises',
+      'node:module',
+      'node:url',
+    ]);
     expect(main.files).toContain('dispatch/dispatcher.ts');
     expect(main.files).not.toContain(diskReader);
     expect(testing.files).toContain('shipped-files/shipped-files-in-memory.ts');
