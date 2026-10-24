@@ -1,6 +1,7 @@
 import { Option } from 'effect';
 
 import { crashed, type Ending, type Stopped } from '../jobs/job-endings.ts';
+import type { ModuleAddress } from '../jobs/pool-contract.ts';
 import type { Job, Running } from '../jobs/pool-job.ts';
 import { admitted, poolSlots, type PoolSlots } from '../program-pool/pool-slots.ts';
 import { poolWorkers, type PoolWorkers, type RosterSettings } from '../program-pool/pool-workers.ts';
@@ -19,7 +20,7 @@ export interface ProcessPoolSettings {
 }
 
 export interface ProcessRequest {
-  readonly module: Readonly<URL>;
+  readonly module: ModuleAddress;
   readonly key: string;
   readonly kind: string;
   readonly payload: ProcessValue;
@@ -71,9 +72,10 @@ function answeredOf(answer: unknown): Option.Option<Answered> {
 }
 
 function jobOf(request: ProcessRequest, payload: unknown): Job<Answered, ProcessMessage> {
+  const module = request.module();
   return {
-    key: JSON.stringify([request.module.href, request.key]),
-    module: request.module,
+    key: JSON.stringify([module.href, request.key]),
+    module,
     envelope: (job) => ({ job, kind: request.kind, payload }),
     decode: answeredOf,
   };

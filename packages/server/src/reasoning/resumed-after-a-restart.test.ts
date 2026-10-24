@@ -150,7 +150,9 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
     const gateway = await gatewayThatHangsAfterATool({ name: 'graph__sleep', arguments: '{"ms":60000}' });
     const environment = {
       MODEL_GATEWAYS: gateway.gateways,
-      TOOL_SERVERS: JSON.stringify({ graph: { command: process.execPath, args: [fakeStdioServerPath], org: 'acme' } }),
+      TOOL_SERVERS: JSON.stringify({
+        graph: { command: process.execPath, args: [fakeStdioServerPath()], org: 'acme' },
+      }),
     };
     const first = workflowProcess(ledger.fileName, environment);
     const port = await first.port;

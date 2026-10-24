@@ -44,7 +44,9 @@ type PathSegment = PropertyKey | StandardSchema.StandardSchemaV1.PathSegment;
 
 const providersPackage = '@on.auto/providers';
 
-export const providersShippedRoots: ShippedRoots = { [providersPackage]: new URL('../../', import.meta.url) };
+export function providersShippedRoots(): ShippedRoots {
+  return { [providersPackage]: new URL('../../', import.meta.url) };
+}
 
 export const shippedEntries: ShippedFile = { package: providersPackage, path: 'src/entries' };
 

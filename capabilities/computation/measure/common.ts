@@ -4,7 +4,7 @@ import { programPool, type Json, type ProgramPool, type ProgramRequest } from '@
 
 import { computationBounds } from '../src/run/run-bounds.ts';
 
-const checkFiles = shippedFilesOnDisk(checkShippedRoots);
+const checkFiles = shippedFilesOnDisk(checkShippedRoots());
 
 export const handed = await handedWorkersWithChecks(checkFiles);
 

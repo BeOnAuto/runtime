@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { providerNamed, readProviders, providersShippedRoots } from '../index.ts';
 
-const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
 const page = readFileSync(new URL('../../../../docs/self-host/connections.md', import.meta.url), 'utf8');
 

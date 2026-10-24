@@ -16,7 +16,7 @@ import {
 import { instanceSources } from '../src/instances/instance-sources.ts';
 import { moduleRun } from '../src/programs/module-runs.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 type Timings = Readonly<Record<InstanceSourceName, number>>;
 

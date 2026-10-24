@@ -2,24 +2,23 @@ import { computationBounds } from '@on.auto/computation';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import { checkingWithin } from '@on.auto/definitions/testing';
 import { programPool } from '@on.auto/workflow-engine/dsl';
+import { moduleOfSource } from '@on.auto/workflow-engine/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
-const blockingOnTwoRows = new URL(
-  `data:text/javascript,${encodeURIComponent(
-    [
-      "import { parentPort, threadId } from 'node:worker_threads';",
-      'let jobs = 0;',
-      "parentPort.on('message', ({ job, request }) => {",
-      '  jobs += 1;',
-      '  if (JSON.parse(request.arguments[0]).rows.length === 2) { while (true) {} }',
-      '  const output = JSON.stringify({ jobs, thread: threadId });',
-      "  parentPort.postMessage({ job, answer: { ran: 'answered', output, bytes: output.length, work: 0 }, keep: true });",
-      '});',
-    ].join('\n'),
-  )}`,
+const blockingOnTwoRows = moduleOfSource(
+  [
+    "import { parentPort, threadId } from 'node:worker_threads';",
+    'let jobs = 0;',
+    "parentPort.on('message', ({ job, request }) => {",
+    '  jobs += 1;',
+    '  if (JSON.parse(request.arguments[0]).rows.length === 2) { while (true) {} }',
+    '  const output = JSON.stringify({ jobs, thread: threadId });',
+    "  parentPort.postMessage({ job, answer: { ran: 'answered', output, bytes: output.length, work: 0 }, keep: true });",
+    '});',
+  ].join('\n'),
 );
 
 const decodeRan = Schema.decodeUnknownSync(

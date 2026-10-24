@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { JsonObject } from '../dsl/json.ts';
-import type { FoldRequest, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
+import type { FoldRequest, ModuleAddress, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
+import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { longerThanTheTestMs } from '../pool-testing/waiting.ts';
 import { programPool } from '../program-pool/program-pool.ts';
@@ -27,19 +28,15 @@ const events: readonly JsonObject[] = [
   { ...noted, data: { n: 2 } },
 ];
 
-function workerOf(source: string): URL {
-  return new URL(`data:text/javascript,${encodeURIComponent(source)}`);
-}
-
-function markingThen(event: number, view: number, then: string): URL {
-  return workerOf(
+function markingThen(event: number, view: number, then: string): ModuleAddress {
+  return moduleOfSource(
     `import { parentPort } from "node:worker_threads"; parentPort.on("message", ({ progress }) => { const place = new Int32Array(progress); Atomics.store(place, 0, ${event}); Atomics.store(place, 1, ${view}); ${then} });`,
   );
 }
 
 const markingThenBlocking = markingThen(1, 0, 'while (true) {}');
 
-const foldingAtOnce = workerOf(
+const foldingAtOnce = moduleOfSource(
   'import { parentPort } from "node:worker_threads"; parentPort.on("message", ({ job }) => { parentPort.postMessage({ job, answer: { ran: "folded", early: false, views: [{ view: "3", folded: 2, lastFolded: 1, through: 1, work: 0 }] }, keep: true }); });',
 );
 
@@ -139,7 +136,7 @@ describe('a page of folds that waits for a worker', () => {
       stackBytes: workerStackBytes,
       deadlineMs: 6000,
       mostOutputBytes: 100,
-      worker: workerOf('while (true) {}'),
+      worker: moduleOfSource('while (true) {}'),
     });
 
     const folded = await pool.fold(request([viewOf(adding)], { deadlineMs: 5000 }));
@@ -164,7 +161,7 @@ describe('a page of folds that waits for a worker', () => {
 
 describe('a page of folds that does not end', () => {
   it('is answered as crashed when its worker answers with something else', async () => {
-    const nonsense = workerOf(
+    const nonsense = moduleOfSource(
       'import { parentPort } from "node:worker_threads"; parentPort.postMessage({ ran: "folded" });',
     );
 

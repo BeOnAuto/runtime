@@ -207,7 +207,7 @@ function stdioAccess() {
     {
       limitless: {
         command: process.execPath,
-        args: [fakeStdioServerPath],
+        args: [fakeStdioServerPath()],
         env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
         org: 'acme',
       },

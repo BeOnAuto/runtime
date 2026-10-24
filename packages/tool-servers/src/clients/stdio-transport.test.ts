@@ -34,7 +34,7 @@ function stdioSettings(args: readonly string[], changes: Partial<StdioServerSett
     type: 'stdio',
     name: 'limitless',
     command: process.execPath,
-    args: [fakeStdioServerPath, ...args],
+    args: [fakeStdioServerPath(), ...args],
     env: environment,
     orgs: ['acme'],
     allowed: null,

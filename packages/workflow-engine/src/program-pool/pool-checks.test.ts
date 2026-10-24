@@ -113,7 +113,9 @@ describe('the files the worker of a check starts with', () => {
     const lib = new URL('file:///shipped/lib.txt');
     const named = checkingWithTheFilesHanded('named');
     const other = checkingWithTheFilesHanded('other');
-    const pool = poolOf({ handed: { ...handedWorkers, modules: { [named.href]: { [lib.href]: Uint8Array.of(1) } } } });
+    const pool = poolOf({
+      handed: { ...handedWorkers, modules: { [named().href]: { [lib.href]: Uint8Array.of(1) } } },
+    });
 
     const ofTheNamed = await pool.check(checkOf({ worker: named }));
     const ofTheOther = await pool.check(checkOf({ worker: other }));

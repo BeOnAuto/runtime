@@ -9,7 +9,7 @@ import { workflowMachineOptionsOf } from '../runs/workflow-machine-options.ts';
 import type { Playbook } from './playbook.ts';
 import { testPlaybookNames } from './test-sandbox.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

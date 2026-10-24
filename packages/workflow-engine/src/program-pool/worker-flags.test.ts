@@ -8,18 +8,17 @@ import { spawnForTheTest } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
+import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { programPool } from './program-pool.ts';
 
-const reading = new URL(
-  `data:text/javascript,${encodeURIComponent(
-    [
-      "import { parentPort } from 'node:worker_threads';",
-      "parentPort.on('message', ({ job }) => {",
-      '  const output = JSON.stringify({ environment: Object.keys(process.env), flags: process.execArgv, preloaded: globalThis.preloaded === true });',
-      "  parentPort.postMessage({ job, answer: { ran: 'answered', output, bytes: output.length, work: 0 }, keep: true });",
-      '});',
-    ].join('\n'),
-  )}`,
+const reading = moduleOfSource(
+  [
+    "import { parentPort } from 'node:worker_threads';",
+    "parentPort.on('message', ({ job }) => {",
+    '  const output = JSON.stringify({ environment: Object.keys(process.env), flags: process.execArgv, preloaded: globalThis.preloaded === true });',
+    "  parentPort.postMessage({ job, answer: { ran: 'answered', output, bytes: output.length, work: 0 }, keep: true });",
+    '});',
+  ].join('\n'),
 );
 
 const request: ProgramRequest = {
@@ -49,7 +48,7 @@ function poolReading(environment?: Readonly<Record<string, string>>): ProgramPoo
 
 const server = [
   `const { programPool } = await import(${JSON.stringify(new URL('program-pool.ts', import.meta.url).href)});`,
-  `const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, worker: new URL(${JSON.stringify(reading.href)}) });`,
+  `const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, worker: () => new URL(${JSON.stringify(reading().href)}) });`,
   "const outcome = await pool.run({ source: '.', arguments: [null], entry: 'default', moment: 0, budget: 500, memoryBytes: 67108864, stackBytes: 1048576, deadlineMs: 10000, mostOutputBytes: 1000 });",
   'await pool.close();',
   'process.stdout.write(JSON.stringify({ secret: process.env.WORKER_SECRET, preloaded: globalThis.preloaded === true, outcome }));',

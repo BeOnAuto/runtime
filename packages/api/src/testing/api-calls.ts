@@ -7,7 +7,7 @@ import { readPageStyle } from '../landing/page-style.ts';
 import { apiShippedRoots } from '../shipped-files/api-roots.ts';
 import { hostedStudio } from './studios.ts';
 
-const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots);
+const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots());
 
 export interface Call {
   readonly method?: string;

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { ModuleAddress } from '../jobs/pool-contract.ts';
 import { fakeProcesses, type FakeProcesses } from '../process-testing/fake-processes.ts';
 import { memoryLimiter } from './memory-limit.ts';
 import { processPool, type ProcessOutcome, type ProcessPool, type ProcessPoolSettings } from './process-pool.ts';
@@ -50,7 +51,7 @@ function poolOf(settings: Pick<ProcessPoolSettings, 'path' | 'memoryBytes'>): Pr
   return pool;
 }
 
-function run(pool: ProcessPool, module: Readonly<URL>, kind: string, payload: ProcessValue): Promise<ProcessOutcome> {
+function run(pool: ProcessPool, module: ModuleAddress, kind: string, payload: ProcessValue): Promise<ProcessOutcome> {
   return pool.run({ module, key: 'a', kind, payload, deadlineMs: ordinaryDeadlineMs });
 }
 

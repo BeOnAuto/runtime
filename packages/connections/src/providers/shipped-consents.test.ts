@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { vendorsOfTheShippedWays, type VendorOfTheWay } from '../testing/shipped-vendors.ts';
 import { consentedAtTheVendor, harnessAtTheVendor, servedAsTheVendor } from '../testing/vendor-fakes.ts';
 
-const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
 const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 

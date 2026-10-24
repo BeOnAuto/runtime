@@ -18,16 +18,20 @@ import { Effect } from 'effect';
 import { changedExpressions, type StrippedForms } from '../capability/stripped-forms.ts';
 import { definitionsShippedRoots, keptLibFiles } from './kept-lib.ts';
 
-export const checkWorker = new URL('./check-worker.ts', import.meta.url);
+export function checkWorker(): URL {
+  return new URL('./check-worker.ts', import.meta.url);
+}
 
-export const checkShippedRoots: ShippedRoots = { ...sandboxShippedRoots, ...definitionsShippedRoots };
+export function checkShippedRoots(): ShippedRoots {
+  return { ...sandboxShippedRoots(), ...definitionsShippedRoots() };
+}
 
 export function keptLibOf(shippedFiles: ShippedFiles): Promise<HandedFiles> {
   return handedFilesOf(shippedFiles, Object.values(keptLibFiles));
 }
 
 export async function handedWorkersWithChecks(shippedFiles: ShippedFiles): Promise<HandedWorkers> {
-  return handedWorkersOf(shippedFiles, { [checkWorker.href]: await keptLibOf(shippedFiles) });
+  return handedWorkersOf(shippedFiles, { [checkWorker().href]: await keptLibOf(shippedFiles) });
 }
 
 export const checkDeadlineMs = 2000;

@@ -10,7 +10,7 @@ import { datasetFolder, datasetsOf, type DatasetFolding } from '../dataset/datas
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import { parsePredictionDocument } from '../document/document-parsing.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

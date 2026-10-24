@@ -57,7 +57,7 @@ const graphOf = (fake: FakeMcpServer, changes: Readonly<Record<string, unknown>>
 
 const limitless = {
   command: process.execPath,
-  args: [fakeStdioServerPath],
+  args: [fakeStdioServerPath()],
   env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
   org: 'acme',
 };
@@ -278,7 +278,7 @@ describe('a stdio server and the MCP client', () => {
 
   it('reports the errors the MCP client meets as messages of their server', async () => {
     const { access, messages } = accessTo({
-      limitless: { ...limitless, args: [fakeStdioServerPath, '--stdout', '{"not":"rpc"}\n'] },
+      limitless: { ...limitless, args: [fakeStdioServerPath(), '--stdout', '{"not":"rpc"}\n'] },
     });
 
     const tools = await offeredBy(access, 'limitless/search');

@@ -16,7 +16,7 @@ import { answerGraceMs } from '../src/program-pool/evaluation-thread.ts';
 import type { MachineSandbox } from '../src/programs/reserved-instances.ts';
 import { medianMillisecondsOf, startedAt } from './common.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const decision = { decision: { decision: 'approve', reason: 'the budget is stated' } };
 

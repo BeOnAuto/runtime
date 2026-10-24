@@ -1,4 +1,4 @@
-import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
+import type { ModuleAddress, ProgramPool } from '@on.auto/workflow-engine/dsl';
 
 export interface FoldingSettings {
   readonly budget: number;
@@ -7,7 +7,7 @@ export interface FoldingSettings {
   readonly foldDeadlineMs: number;
   readonly pageBudgetMs: number;
   readonly mostViewBytes: number;
-  readonly worker?: Readonly<URL>;
+  readonly worker?: ModuleAddress;
 }
 
 export interface ViewsFolding {

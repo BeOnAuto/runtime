@@ -10,7 +10,7 @@ import {
   providersShippedRoots,
 } from '../index.ts';
 
-const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
 const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 

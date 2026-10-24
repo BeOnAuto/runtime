@@ -5,21 +5,21 @@ import { join } from 'node:path';
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { moduleOfSource } from '../pool-testing/source-modules.ts';
+
 const evaluationMessages = new URL('../jobs/evaluation-messages.ts', import.meta.url).href;
 
-const readyAtOnce = new URL(
-  `data:text/javascript,${encodeURIComponent(
-    [
-      "import { writeFileSync } from 'node:fs';",
-      "import { workerData } from 'node:worker_threads';",
-      `import { readyFlag } from '${evaluationMessages}';`,
-      'const flags = new Int32Array(workerData.flags);',
-      'Atomics.store(flags, readyFlag, 1);',
-      'Atomics.notify(flags, readyFlag);',
-      "writeFileSync(process.env.READY_MARK, '');",
-      "workerData.port.on('message', () => {});",
-    ].join('\n'),
-  )}`,
+const readyAtOnce = moduleOfSource(
+  [
+    "import { writeFileSync } from 'node:fs';",
+    "import { workerData } from 'node:worker_threads';",
+    `import { readyFlag } from '${evaluationMessages}';`,
+    'const flags = new Int32Array(workerData.flags);',
+    'Atomics.store(flags, readyFlag, 1);',
+    'Atomics.notify(flags, readyFlag);',
+    "writeFileSync(process.env.READY_MARK, '');",
+    "workerData.port.on('message', () => {});",
+  ].join('\n'),
 );
 
 function closingWhileUnheard(mark: string): string {
@@ -27,7 +27,7 @@ function closingWhileUnheard(mark: string): string {
     `const { programPool } = await import(${JSON.stringify(new URL('program-pool.ts', import.meta.url).href)});`,
     `const { Effect } = await import(${JSON.stringify(import.meta.resolve('effect'))});`,
     "const { existsSync } = await import('node:fs');",
-    `const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, evaluationWorker: new URL(${JSON.stringify(readyAtOnce.href)}), environment: { READY_MARK: ${JSON.stringify(mark)} } });`,
+    `const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, evaluationWorker: () => new URL(${JSON.stringify(readyAtOnce().href)}), environment: { READY_MARK: ${JSON.stringify(mark)} } });`,
     'void Effect.runPromise(pool.evaluations.machine.reserve);',
     `while (!existsSync(${JSON.stringify(mark)})) {}`,
     'await pool.close();',

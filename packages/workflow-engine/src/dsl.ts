@@ -22,6 +22,7 @@ export type {
   FoldRequest,
   HandedFiles,
   HandedWorkers,
+  ModuleAddress,
   PoolOutcome,
   PoolSettings,
   ProgramPool,

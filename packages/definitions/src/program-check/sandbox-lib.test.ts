@@ -12,9 +12,9 @@ import { sandboxLibOf } from './sandbox-lib.ts';
 
 const kept = sandboxLibFrom(keptLibOnDisk);
 
-const compilerFilesOnDisk = shippedFilesOnDisk(definitionsShippedRoots);
+const compilerFilesOnDisk = shippedFilesOnDisk(definitionsShippedRoots());
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots()));
 
 const probe = (expressions: readonly string[]) => sandboxAnswers(freshInstances(sandboxModule), expressions);
 
@@ -37,7 +37,7 @@ describe('the lib of the sandbox', () => {
   it('is what the generator makes from the compiler’s libs and the sandbox’s own answers, kept beside the package', async () => {
     expect(await sandboxLibOf(compilerFilesOnDisk, probe)).toEqual(kept);
     expect(
-      Object.values(keptLibFiles).map((file) => new URL(file.path, definitionsShippedRoots[file.package]).href),
+      Object.values(keptLibFiles).map((file) => new URL(file.path, definitionsShippedRoots()[file.package]).href),
     ).toEqual([
       new URL('../../lib/sandbox.d.ts.txt', import.meta.url).href,
       new URL('../../lib/sandbox-iterator.d.ts.txt', import.meta.url).href,

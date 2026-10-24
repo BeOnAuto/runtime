@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { DatasetData } from './dataset-data.ts';
 import { datasetMatchingOf } from './dataset-matching.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const dataNamedFirst: DatasetData = {
   period: 'week',

@@ -63,7 +63,7 @@ async function recordedCalls(
       graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry },
       limitless: {
         command: process.execPath,
-        args: [fakeStdioServerPath],
+        args: [fakeStdioServerPath()],
         env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}', LIMITLESS_PIN: '${LIMITLESS_PIN}' },
         org: 'acme',
         ...entry,

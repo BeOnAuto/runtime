@@ -133,6 +133,8 @@ export {
 } from '../access-testing/servers-under-test.ts';
 export type { SourcedEntry, SourceUnderTest } from '../access-testing/sources-under-test.ts';
 
-export const fakeStdioServerPath = fileURLToPath(new URL('../mcp-testing/fake-stdio-server.ts', import.meta.url));
+export function fakeStdioServerPath(): string {
+  return fileURLToPath(new URL('../mcp-testing/fake-stdio-server.ts', import.meta.url));
+}
 
 export const patientTiming: Timing = { ...defaultTiming, callMs: 20_000, openMs: 20_000 };

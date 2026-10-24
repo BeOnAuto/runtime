@@ -38,3 +38,4 @@ export { endedWhileItRuns, stoppedWithinMs, type RunningProcess } from '../proce
 export { endWithTheTest, spawnForTheTest, type PidReader } from '../process-testing/test-processes.ts';
 export { measuredEnvironment } from '../process-testing/measured-environment.ts';
 export { modulesReachedFrom, type ModulesReached } from '../module-testing/modules-reached.ts';
+export { importedWithoutAnAddress } from '../module-testing/unaddressed-modules.ts';

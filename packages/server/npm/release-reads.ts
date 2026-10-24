@@ -9,10 +9,10 @@ function sizesOf(files: Readonly<Record<string, Readonly<Uint8Array>>>): readonl
   return Object.values(files).map(({ byteLength }) => byteLength);
 }
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots()));
 deepStrictEqual(await sandboxAnswers(freshInstances(sandboxModule), ['1 + 2']), ['3']);
 
-const handed = await handedWorkersWithChecks(shippedFilesOnDisk(checkShippedRoots));
+const handed = await handedWorkersWithChecks(shippedFilesOnDisk(checkShippedRoots()));
 const keptLib = Object.values(handed.modules ?? {}).flatMap((files) => sizesOf(files));
 deepStrictEqual(
   [sizesOf(handed.sandbox).length, keptLib.length, [...sizesOf(handed.sandbox), ...keptLib].every((size) => size > 0)],
@@ -20,7 +20,7 @@ deepStrictEqual(
 );
 
 const workflows = { type: 'workflow', noun: { one: 'workflow', other: 'workflows' }, guide: { name: 'workflow' } };
-const shelf = await guideShelfFrom(shippedFilesOnDisk(apiShippedRoots), [workflows]);
+const shelf = await guideShelfFrom(shippedFilesOnDisk(apiShippedRoots()), [workflows]);
 const pages = [...shelf.guides, ...shelf.recipes].map(({ name, text }) => [name, text.length > 0]);
 deepStrictEqual(pages, [
   ['terminology', true],

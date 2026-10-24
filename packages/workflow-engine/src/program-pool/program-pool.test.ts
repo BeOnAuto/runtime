@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
-import type { PoolSettings, ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
+import type { ModuleAddress, PoolSettings, ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
+import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { nextThreadStarted, threadEnded } from '../pool-testing/threads-alive.ts';
 import { isWatched, longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
@@ -12,14 +13,10 @@ const timerSlackMs = 2;
 
 const pools: ProgramPool[] = [];
 
-function workerOf(source: string): URL {
-  return new URL(`data:text/javascript,${encodeURIComponent(source)}`);
-}
+const blocking = moduleOfSource('while (true) {}');
 
-const blocking = workerOf('while (true) {}');
-
-function answeringWith(output: string): URL {
-  return workerOf(
+function answeringWith(output: string): ModuleAddress {
+  return moduleOfSource(
     [
       "import { parentPort } from 'node:worker_threads';",
       'parentPort.on("message", ({ job, request }) => {',
@@ -170,7 +167,7 @@ describe('the deadline and the memory of a worker', () => {
   });
 
   it('stop a worker whose own heap runs out', async () => {
-    const allocating = workerOf('const kept = []; while (true) { kept.push(new Array(100000).fill(1)); }');
+    const allocating = moduleOfSource('const kept = []; while (true) { kept.push(new Array(100000).fill(1)); }');
 
     expect(await poolOf({ heapMegabytes: 16, worker: allocating }).run(request('.'))).toMatchObject({
       ran: 'stopped',
@@ -243,7 +240,10 @@ describe('a worker that breaks', () => {
       'The worker answered job 2 while it ran job 1',
     ],
   ])('is answered as crashed when it %s', async (_crash, source, detail) => {
-    expect(await poolOf({ worker: workerOf(source) }).run(request('.'))).toMatchObject({ ran: 'crashed', detail });
+    expect(await poolOf({ worker: moduleOfSource(source) }).run(request('.'))).toMatchObject({
+      ran: 'crashed',
+      detail,
+    });
   });
 });
 

@@ -12,7 +12,7 @@ import {
 } from '../translating/document-manifests.ts';
 import { providersShippedRoots } from './shipped-providers.ts';
 
-const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
 const RequirementsSchema = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
 

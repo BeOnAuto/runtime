@@ -1,4 +1,5 @@
 import { InvalidInput, Unavailable } from '@on.auto/operations';
+import { importedWithoutAnAddress } from '@on.auto/operations/testing';
 import { programPool, type CheckOutcome, type CheckJob, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, Exit } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -47,8 +48,18 @@ describe('the check of a document when it is saved', () => {
       }),
     );
     expect(checkDeadlineMs).toBe(2000);
-    expect(checkWorker.pathname).toMatch(/\/program-check\/check-worker\.ts$/u);
+    expect(checkWorker().pathname).toMatch(/\/program-check\/check-worker\.ts$/u);
     expect(Object.keys(checkWorkerModule)).toEqual([]);
+  });
+
+  it('is named, with the roots of the files it is handed, by modules that load where import.meta.url names no file', async () => {
+    const saveCheck = await importedWithoutAnAddress(new URL('./save-check.ts', import.meta.url));
+    const keptLib = await importedWithoutAnAddress(new URL('./kept-lib.ts', import.meta.url));
+
+    expect([Object.keys(saveCheck), Object.keys(keptLib)]).toEqual([
+      ['checkDeadlineMs', 'checkShippedRoots', 'checkWorker', 'checkedAtSave', 'handedWorkersWithChecks', 'keptLibOf'],
+      ['definitionsPackage', 'definitionsShippedRoots', 'keptLibFiles', 'sandboxLibFrom'],
+    ]);
   });
 });
 

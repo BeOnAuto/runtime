@@ -60,7 +60,7 @@ async function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReplies
       crm: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'globex' },
       limitless: {
         command: process.execPath,
-        args: [fakeStdioServerPath],
+        args: [fakeStdioServerPath()],
         env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
         org: 'acme',
       },

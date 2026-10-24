@@ -4,7 +4,7 @@ import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
+import type { ModuleAddress, PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
 import { begun, counting, countingElsewhere } from '../pool-testing/counting-workers.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadsAlive } from '../pool-testing/threads-alive.ts';
@@ -47,7 +47,7 @@ function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
 function run(
   pool: ProgramPool,
   source: string,
-  worker: Readonly<URL> = counting,
+  worker: ModuleAddress = counting,
   deadlineMs = 10_000,
 ): Promise<PoolOutcome> {
   return pool.run({
@@ -68,7 +68,7 @@ function ranOf(outcome: PoolOutcome): Ran {
   return decodeRan(outcome.ran === 'answered' ? outcome.output : {});
 }
 
-async function counted(pool: ProgramPool, worker: Readonly<URL> = counting): Promise<Ran> {
+async function counted(pool: ProgramPool, worker: ModuleAddress = counting): Promise<Ran> {
   return ranOf(await run(pool, 'count', worker));
 }
 
@@ -183,7 +183,7 @@ describe('a pool that closes', () => {
       `const { handedWorkersOf } = await import('${new URL('handed-files.ts', import.meta.url).href}');`,
       `const { sandboxShippedRoots } = await import('${new URL('../instances/compiled-module.ts', import.meta.url).href}');`,
       `const { shippedFilesOnDisk } = await import('${import.meta.resolve('@on.auto/operations/shipped-files-on-disk')}');`,
-      'const handed = await handedWorkersOf(shippedFilesOnDisk(sandboxShippedRoots));',
+      'const handed = await handedWorkersOf(shippedFilesOnDisk(sandboxShippedRoots()));',
       "const pool = programPool({ handed, instances: 'fresh', workers: 2, heapMegabytes: 64 });",
       "const source = 'export default function (input) { return input + 1; }';",
       "const outcome = await pool.run({ source, arguments: [1], entry: 'default', moment: 0, budget: 500, memoryBytes: 67108864, stackBytes: 1048576, deadlineMs: 10000, mostOutputBytes: 100 });",

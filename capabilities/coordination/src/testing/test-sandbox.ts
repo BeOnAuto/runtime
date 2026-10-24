@@ -13,7 +13,7 @@ import { workflowFacts } from '../capability/workflow.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from '../document/workflow-functions.ts';
 import { workflowMachineOptionsOf, workflowMachineSettingsOf } from '../runs/workflow-machine-options.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 export const testSandbox: MachineSandbox = reusedSandbox(
   await freshInstances(await sandboxModuleIn(sandboxFiles))(unitMemoryBytes),

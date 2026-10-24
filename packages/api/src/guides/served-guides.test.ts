@@ -10,7 +10,7 @@ import { withLinksResolved } from './page-links.ts';
 import { guideShelfFrom } from './served-guides.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
 
-const guideFiles = shippedFilesOnDisk(apiShippedRoots);
+const guideFiles = shippedFilesOnDisk(apiShippedRoots());
 
 function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capability {
   return defineCapability({

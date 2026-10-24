@@ -191,7 +191,7 @@ describe('a call of a stdio server', () => {
     });
     const limitless = {
       command: process.execPath,
-      args: [fakeStdioServerPath, '--start-once', join(folder, 'started')],
+      args: [fakeStdioServerPath(), '--start-once', join(folder, 'started')],
       env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
       org: 'acme',
     };

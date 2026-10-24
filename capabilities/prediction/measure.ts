@@ -6,7 +6,7 @@ import { dailyOrders, seriesMeasured, testedDailyOrders } from './measure/order-
 import { measuredStores, type MeasuredStore } from './measure/stores.ts';
 import { writtenOn, type FileRead } from './measure/written-files.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const postgresqlServer = process.env['LEDGER_MEASURE_POSTGRESQL_URL'] ?? '';
 
