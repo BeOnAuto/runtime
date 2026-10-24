@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.19.0](https://github.com/BeOnAuto/runtime/compare/v0.18.0...v0.19.0) (2026-10-24)
+
+
+### Features
+
+* **reasoning:** a run proceeds one model call at a time, each call a fact on its stream ([#314](https://github.com/BeOnAuto/runtime/issues/314)) ([290cd75](https://github.com/BeOnAuto/runtime/commit/290cd75b98031b19476e014586b67838d2de9006))
+
+
+### Bug Fixes
+
+* **deps:** zod 4.6.6, which bounds the memory a constrained collection may take to validate ([#315](https://github.com/BeOnAuto/runtime/issues/315)) ([5fb0443](https://github.com/BeOnAuto/runtime/commit/5fb04436903cec68820e3ea4be5c7eb6de475afe))
+* **server:** six tests stage and read the ledger's file through the ledger's own library ([#309](https://github.com/BeOnAuto/runtime/issues/309)) ([e1d2c86](https://github.com/BeOnAuto/runtime/commit/e1d2c866b706af7bc036f712c793e2bf085721f1))
+* **workflow-host:** a trigger activated after the host opened matches no event recorded before it ([#311](https://github.com/BeOnAuto/runtime/issues/311)) ([36a2aee](https://github.com/BeOnAuto/runtime/commit/36a2aeea479c0d2df30124ba67c3862d86bd2abc))
+
+
+### Performance Improvements
+
+* **server:** the signer of database tokens loads with the first token, only for aws-iam ([#312](https://github.com/BeOnAuto/runtime/issues/312)) ([e98c07a](https://github.com/BeOnAuto/runtime/commit/e98c07afbaf2b7213302a4346944069409bbce8b))
+* **workflow-engine:** the long-run loop profiled, a step name cut once, a stopping worker kept ([#313](https://github.com/BeOnAuto/runtime/issues/313)) ([1ccfc26](https://github.com/BeOnAuto/runtime/commit/1ccfc2626b6530f2e8940e19d006aa4e7233a449))
+* **workflow-host:** a pass hands a fact to the reactions only when a trigger or listener names it ([#310](https://github.com/BeOnAuto/runtime/issues/310)) ([409162d](https://github.com/BeOnAuto/runtime/commit/409162dd11c77ab22daaacd21caeec189f7c145d))
+
 ## [0.18.0](https://github.com/BeOnAuto/runtime/compare/v0.17.0...v0.18.0) (2026-10-23)
 
 
