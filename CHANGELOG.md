@@ -5,6 +5,10 @@
 
 ### Features
 
+* **api:** the guide shelf is composed from the files it is given, `guideShelfFrom` ([#316](https://github.com/BeOnAuto/runtime/issues/316)) ([a4e6ca3](https://github.com/BeOnAuto/runtime/commit/a4e6ca34))
+* **definitions:** the checks of outputs and views are an entry of their own, `value-checks` ([#316](https://github.com/BeOnAuto/runtime/issues/316)) ([a4e6ca3](https://github.com/BeOnAuto/runtime/commit/a4e6ca34))
+* **ledger:** `keptSecretsBehaviour` is exported from the testing entry, and the layout check counts the ledger's own tables alone ([#316](https://github.com/BeOnAuto/runtime/issues/316)) ([a4e6ca3](https://github.com/BeOnAuto/runtime/commit/a4e6ca34))
+* **workflow-host:** run requests, the follower and the projector compose outside the host, `runRequestsOf`, `followerWakeUp`, `projectorWakeUp`, and `runKeyOf` is exported ([#316](https://github.com/BeOnAuto/runtime/issues/316)) ([a4e6ca3](https://github.com/BeOnAuto/runtime/commit/a4e6ca34))
 * **reasoning:** a run proceeds one model call at a time, each call a fact on its stream ([#314](https://github.com/BeOnAuto/runtime/issues/314)) ([290cd75](https://github.com/BeOnAuto/runtime/commit/290cd75b98031b19476e014586b67838d2de9006))
 
 
