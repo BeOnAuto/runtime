@@ -3,7 +3,6 @@ import { Effect, ManagedRuntime, type Layer, type Result } from 'effect';
 
 import { LedgerConnection, type ConnectionPorts } from '../connection/ledger-connection.ts';
 import { LedgerChores } from '../content/content-sweep.ts';
-import { ledgerLayer } from '../sqlite3.ts';
 
 export interface OpenLedger {
   readonly ledger: Ledger['Service'];
@@ -24,12 +23,8 @@ export async function openLedgerWith(layer: Layer.Layer<Ledger>): Promise<OpenLe
   return { ledger, dispose: () => runtime.dispose() };
 }
 
-export function openLedger(fileName = ':memory:'): Promise<OpenLedger> {
-  return openLedgerWith(ledgerLayer({ fileName }));
-}
-
-export async function openConnection(fileName = ':memory:'): Promise<OpenConnection> {
-  const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
+export async function openConnectionWith(layer: Layer.Layer<Ledger | LedgerConnection>): Promise<OpenConnection> {
+  const runtime = ManagedRuntime.make(layer);
   const [ledger, connection] = await runtime.runPromise(
     Effect.all([Effect.service(Ledger), Effect.service(LedgerConnection)]),
   );

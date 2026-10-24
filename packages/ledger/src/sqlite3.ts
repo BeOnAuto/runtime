@@ -9,6 +9,8 @@ import { sqliteLedgerReadsOn } from './connection/sqlite-reads.ts';
 import type { LedgerServices, StoreLayerOptions } from './ledger-layer.ts';
 import { sqliteSecretRowsOn, type SecretRowsOptions } from './secrets/sqlite-secret-rows.ts';
 
+export { aSQLiteFileInLayout } from './layout/sqlite-file-in-layout.ts';
+
 export interface LedgerOptions extends StoreLayerOptions {
   readonly fileName: string;
 }

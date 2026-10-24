@@ -6,7 +6,6 @@ import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3'
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { sqliteEventStore } from '../sqlite-event-store.ts';
-import { openLedger } from '../testing/open-ledger.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { IndexExecutor } from './missing-indexes.ts';
 import { createSQLitePlaybookIndexes } from './sqlite-indexes.ts';
@@ -54,13 +53,17 @@ function executorFinding(names: readonly string[]): { readonly execute: IndexExe
   };
 }
 
+async function migratedOnce(fileName: string): Promise<void> {
+  const store = sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName }));
+  await store.migrate();
+  await store.close();
+}
+
 describe("the playbook's indexes on SQLite", () => {
-  it('are created when the ledger opens, once however often it opens', async () => {
+  it('are created when the store migrates, as the ledger opens, once however often it migrates', async () => {
     const fileName = aDatabaseFile();
-    const first = await openLedger(fileName);
-    await first.dispose();
-    const second = await openLedger(fileName);
-    await second.dispose();
+    await migratedOnce(fileName);
+    await migratedOnce(fileName);
 
     expect(indexesOf(fileName)).toEqual(playbookIndexes);
   });
@@ -103,8 +106,7 @@ describe('an event store on SQLite given hooks of its own', () => {
 describe('the read of one message by its id on SQLite', () => {
   it('walks the index on the message id', async () => {
     const fileName = aDatabaseFile();
-    const opened = await openLedger(fileName);
-    await opened.dispose();
+    await migratedOnce(fileName);
     const database = new DatabaseSync(fileName, { readOnly: true });
     onTestFinished(() => {
       database.close();
