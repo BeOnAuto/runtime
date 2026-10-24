@@ -1,43 +1,4 @@
-import { statement, type ConnectionPorts, type Dialect, type Statement } from '@on.auto/ledger';
-import { Schema } from 'effect';
-
-interface AddedColumn {
-  readonly table: string;
-  readonly column: string;
-  readonly added: Statement;
-  readonly addedWhenMissing: Statement;
-}
-
-function columnsOnSQLite(table: string): Statement {
-  return statement`SELECT name FROM pragma_table_info(${table})`;
-}
-
-const addedColumns: readonly AddedColumn[] = [
-  {
-    table: 'workflow_timers',
-    column: 'armed_by',
-    added: statement`ALTER TABLE workflow_timers ADD COLUMN armed_by BIGINT`,
-    addedWhenMissing: statement`ALTER TABLE workflow_timers ADD COLUMN IF NOT EXISTS armed_by BIGINT`,
-  },
-  {
-    table: 'workflow_calls',
-    column: 'child',
-    added: statement`ALTER TABLE workflow_calls ADD COLUMN child TEXT`,
-    addedWhenMissing: statement`ALTER TABLE workflow_calls ADD COLUMN IF NOT EXISTS child TEXT`,
-  },
-  {
-    table: 'workflow_calls',
-    column: 'root_id',
-    added: statement`ALTER TABLE workflow_calls ADD COLUMN root_id TEXT`,
-    addedWhenMissing: statement`ALTER TABLE workflow_calls ADD COLUMN IF NOT EXISTS root_id TEXT`,
-  },
-];
-
-const indexesOfAddedColumns: readonly Statement[] = [
-  statement`CREATE INDEX IF NOT EXISTS workflow_calls_open_by_root ON workflow_calls (root_id)
-    WHERE state IN ('running', 'waiting')`,
-  statement`CREATE INDEX IF NOT EXISTS workflow_calls_waiting_by_run ON workflow_calls (run_key) WHERE state = 'waiting'`,
-];
+import { statement, type ConnectionPorts, type Statement } from '@on.auto/ledger';
 
 const followerTables: readonly Statement[] = [
   statement`CREATE TABLE IF NOT EXISTS workflow_followed_playbooks (
@@ -174,6 +135,9 @@ const hostTables: readonly Statement[] = [
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_unfinished ON workflow_calls (call_key)
     WHERE state = 'running' OR (state = 'answered' AND delivered = 0)`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_calls_open_by_root ON workflow_calls (root_id)
+    WHERE state IN ('running', 'waiting')`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_calls_waiting_by_run ON workflow_calls (run_key) WHERE state = 'waiting'`,
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_waiting_by_dispatch ON workflow_calls (dispatched_at)
     WHERE state = 'waiting'`,
   statement`CREATE TABLE IF NOT EXISTS workflow_pending_cancels (
@@ -204,35 +168,6 @@ const hostTables: readonly Statement[] = [
   ...followerTables,
 ];
 
-const ColumnRows = Schema.Array(Schema.Struct({ name: Schema.String }));
-
-async function columnAddedOn(connection: ConnectionPorts, { table, column, added }: AddedColumn): Promise<void> {
-  const columns = Schema.decodeUnknownSync(ColumnRows)(await connection.read(columnsOnSQLite(table)));
-  if (!columns.some(({ name }) => name === column)) {
-    await connection.write(added);
-  }
-}
-
-type TablesMade = (connection: ConnectionPorts, tables: readonly Statement[]) => Promise<void>;
-
-const tablesMadeIn: Readonly<Record<Dialect, TablesMade>> = {
-  sqlite: async (connection, tables) => {
-    await connection.migrated([...hostTables, ...tables]);
-    await addedColumns.reduce<Promise<void>>(
-      (before, column) => before.then(() => columnAddedOn(connection, column)),
-      Promise.resolve(),
-    );
-    await connection.migrated(indexesOfAddedColumns);
-  },
-  postgresql: (connection, tables) =>
-    connection.migrated([
-      ...hostTables,
-      ...tables,
-      ...addedColumns.map(({ addedWhenMissing }) => addedWhenMissing),
-      ...indexesOfAddedColumns,
-    ]),
-};
-
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {
-  return tablesMadeIn[connection.dialect](connection, tables);
+  return connection.migrated([...hostTables, ...tables]);
 }
