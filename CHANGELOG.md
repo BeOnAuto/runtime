@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.0](https://github.com/BeOnAuto/runtime/compare/v0.19.0...v0.20.0) (2026-10-24)
+
+
+### Features
+
+* **ledger:** each store raises the append signal its options give, the process's when none ([ade3815](https://github.com/BeOnAuto/runtime/commit/ade38150796488eddc4b3dc4c18fb7cf6e60d87a))
+* **workflow-engine:** foldPageData is exported from the dsl entry ([ade3815](https://github.com/BeOnAuto/runtime/commit/ade38150796488eddc4b3dc4c18fb7cf6e60d87a))
+* **workflow-engine:** keptFor is exported from the worker entry, with what it keeps and how long ([ade3815](https://github.com/BeOnAuto/runtime/commit/ade38150796488eddc4b3dc4c18fb7cf6e60d87a))
+
 ## [0.19.0](https://github.com/BeOnAuto/runtime/compare/v0.18.0...v0.19.0) (2026-10-24)
 
 
