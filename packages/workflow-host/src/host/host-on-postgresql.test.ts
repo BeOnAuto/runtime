@@ -1,15 +1,14 @@
-import { randomUUID } from 'node:crypto';
-
 import { Client } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
 import { reactionSuite } from '../reaction-testing/reaction-suite.ts';
-import { failureSuite } from '../testing/failure-suite.ts';
+import { dispatchSuite } from '../suite-testing/dispatch-suite.ts';
+import { failureSuite } from '../suite-testing/failure-suite.ts';
+import { claimSuite, leaseSuite } from '../suite-testing/lease-suite.ts';
+import { longRunSuite } from '../suite-testing/long-run-suite.ts';
+import { portSuite } from '../suite-testing/port-suite.ts';
+import { runSuite } from '../suite-testing/run-suite.ts';
 import { databaseSettingsOf, type ProcessDatabasesOf } from '../testing/host-processes.ts';
-import { claimSuite, leaseSuite } from '../testing/lease-suite.ts';
-import { longRunSuite } from '../testing/long-run-suite.ts';
-import { portSuite } from '../testing/port-suite.ts';
-import { runSuite } from '../testing/run-suite.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -28,7 +27,7 @@ async function administered(statement: string): Promise<void> {
 }
 
 const processDatabaseOnPostgreSQL: ProcessDatabasesOf = async () => {
-  const name = `workflow_host_${randomUUID().replaceAll('-', '')}`;
+  const name = `workflow_host_${crypto.randomUUID().replaceAll('-', '')}`;
   await administered(`CREATE DATABASE ${name}`);
   await administered(`ALTER DATABASE ${name} SET synchronous_commit = off`);
   onTestFinished(async () => {
@@ -48,6 +47,10 @@ describe.skipIf(skipped)(`the host on PostgreSQL${notice}`, () => {
 
   describe('a workflow it runs', () => {
     runSuite(onPostgreSQL);
+  });
+
+  describe('its waiting calls, dispatched again', () => {
+    dispatchSuite(onPostgreSQL);
   });
 
   describe('a long run', () => {

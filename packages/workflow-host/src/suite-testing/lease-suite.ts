@@ -4,11 +4,11 @@ import { Effect } from 'effect';
 import { expect, it } from 'vitest';
 
 import { HostElsewhere } from '../host/run-requests.ts';
-import { runAt, startOf, workflow } from './host-documents.ts';
-import { aSQLiteFile, leaseOn, openedOn, untilRenewedBy } from './host-files.ts';
-import { databaseSettingsOf, hostIn, type ProcessDatabasesOf } from './host-processes.ts';
-import { hostedOn } from './host-runs.ts';
-import { until } from './until.ts';
+import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import { aSQLiteFile, leaseOn, openedOn, untilRenewedBy } from '../testing/host-files.ts';
+import { databaseSettingsOf, hostIn, type ProcessDatabasesOf } from '../testing/host-processes.ts';
+import { hostedOn } from '../testing/host-runs.ts';
+import { until } from '../testing/until.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 

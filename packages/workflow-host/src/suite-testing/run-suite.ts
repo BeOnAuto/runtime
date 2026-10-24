@@ -1,10 +1,10 @@
 import { Effect } from 'effect';
 import { expect, it } from 'vitest';
 
-import { runAt, startOf, workflow } from './host-documents.ts';
-import type { SettingsOf } from './host-files.ts';
-import { hostedOn } from './host-runs.ts';
-import { until } from './until.ts';
+import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import type { SettingsOf } from '../testing/host-files.ts';
+import { hostedOn } from '../testing/host-runs.ts';
+import { until } from '../testing/until.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 

@@ -83,9 +83,14 @@ describe('the host database on SQLite, made before a column was added', () => {
           UNION ALL SELECT name FROM sqlite_master WHERE name LIKE 'workflow_calls_%_by_%' ORDER BY name`),
       ),
     ).toEqual(
-      ['armed_by', 'child', 'root_id', 'workflow_calls_open_by_root', 'workflow_calls_waiting_by_run'].map((name) => ({
-        name,
-      })),
+      [
+        'armed_by',
+        'child',
+        'root_id',
+        'workflow_calls_open_by_root',
+        'workflow_calls_waiting_by_dispatch',
+        'workflow_calls_waiting_by_run',
+      ].map((name) => ({ name })),
     );
   });
 });

@@ -31,14 +31,19 @@ const CallRowSchema = Schema.Struct({
   child: Schema.NullOr(Schema.String),
 });
 
-const UnfinishedRow = Schema.Struct({
+const StartedCallRow = Schema.Struct({
   call_key: Schema.String,
   run_key: Schema.String,
   call: CallText,
   attributes: AttributesText,
-  result: Schema.NullOr(ResultText),
   started_by: WholeNumber,
 });
+
+const UnfinishedRow = Schema.Struct({ ...StartedCallRow.fields, result: Schema.NullOr(ResultText) });
+
+const WaitingCallRow = Schema.Struct({ ...StartedCallRow.fields, child: Schema.String });
+
+const SoonestRow = Schema.Struct({ soonest: Schema.NullOr(WholeNumber) });
 
 const StartedByRow = Schema.Struct({ started_by: Schema.NullOr(WholeNumber) });
 
@@ -48,11 +53,18 @@ const CountRow = Schema.Struct({ open: WholeNumber });
 
 export type CallRow = typeof CallRowSchema.Type;
 
-export interface UnfinishedCall {
+export interface CallOfARun {
   readonly key: string;
   readonly call: StartCall;
   readonly run: RunContext;
   readonly origin: OutputOrigin;
+}
+
+export interface WaitingCallOfARun extends CallOfARun {
+  readonly child: string;
+}
+
+export interface UnfinishedCall extends CallOfARun {
   readonly result: CallResult | null;
 }
 
@@ -107,13 +119,29 @@ export function refusedRow(
     .pipe(Effect.map((rows) => rows.length > 0));
 }
 
-export function waitingRow(database: HostDatabase, key: string, child: string): Effect.Effect<boolean, DatabaseFailed> {
+export function waitingRow(
+  database: HostDatabase,
+  key: string,
+  { child, at }: { readonly child: string; readonly at: number },
+): Effect.Effect<boolean, DatabaseFailed> {
   return database
     .write(
-      statement`UPDATE workflow_calls SET state = 'waiting', child = ${child}
+      statement`UPDATE workflow_calls SET state = 'waiting', child = ${child}, dispatched_at = ${at}
         WHERE call_key = ${key} AND state = 'running' RETURNING state`,
     )
     .pipe(Effect.map((rows) => rows.length > 0));
+}
+
+export function dispatchedAgainRow(
+  database: HostDatabase,
+  key: string,
+  at: number,
+): Effect.Effect<void, DatabaseFailed> {
+  return Effect.asVoid(
+    database.write(
+      statement`UPDATE workflow_calls SET dispatched_at = ${at} WHERE call_key = ${key} AND state = 'waiting'`,
+    ),
+  );
 }
 
 export function cancelledRow(database: HostDatabase, key: string): Effect.Effect<void, DatabaseFailed> {
@@ -205,6 +233,16 @@ export function allWaitingCalls(database: HostDatabase): Effect.Effect<readonly 
   ).pipe(Effect.map(waitingOf));
 }
 
+function callOfARunIn({
+  call_key: key,
+  run_key: runKey,
+  call,
+  attributes,
+  started_by: version,
+}: typeof StartedCallRow.Type): CallOfARun {
+  return { key, call, run: { runId: runKey, attributes }, origin: { version } };
+}
+
 export function unfinishedCalls(database: HostDatabase): Effect.Effect<readonly UnfinishedCall[], DatabaseFailed> {
   return rowsOf(
     UnfinishedRow,
@@ -212,15 +250,32 @@ export function unfinishedCalls(database: HostDatabase): Effect.Effect<readonly 
       statement`SELECT call_key, run_key, call, attributes, result, started_by FROM workflow_calls
         WHERE state = 'running' OR (state = 'answered' AND delivered = 0)`,
     ),
-  ).pipe(
-    Effect.map((rows) =>
-      rows.map(({ call_key: key, run_key: runKey, call, attributes, result, started_by: version }) => ({
-        key,
-        call,
-        run: { runId: runKey, attributes },
-        origin: { version },
-        result,
-      })),
+  ).pipe(Effect.map((rows) => rows.map((row) => ({ ...callOfARunIn(row), result: row.result }))));
+}
+
+export function waitingDispatchedBy(
+  database: HostDatabase,
+  moment: number,
+  most: number,
+): Effect.Effect<readonly WaitingCallOfARun[], DatabaseFailed> {
+  return rowsOf(
+    WaitingCallRow,
+    database.read(
+      statement`SELECT call_key, run_key, call, attributes, started_by, child FROM workflow_calls
+        WHERE state = 'waiting' AND dispatched_at <= ${moment} ORDER BY dispatched_at, call_key LIMIT ${most}`,
     ),
-  );
+  ).pipe(Effect.map((rows) => rows.map((row) => ({ ...callOfARunIn(row), child: row.child }))));
+}
+
+export function soonestDispatchAfter(
+  database: HostDatabase,
+  moment: number,
+): Effect.Effect<number | null, DatabaseFailed> {
+  return oneRowOf(
+    SoonestRow,
+    database.read(
+      statement`SELECT MIN(dispatched_at) AS soonest FROM workflow_calls
+        WHERE state = 'waiting' AND dispatched_at > ${moment}`,
+    ),
+  ).pipe(Effect.map(({ soonest }) => soonest));
 }

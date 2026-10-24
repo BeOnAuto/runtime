@@ -12,8 +12,8 @@ import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { listenersKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts';
 import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import { ledgerRecordStore } from '../settlement/ledger-record-store.ts';
+import { knownRuns } from '../testing/known-runs.ts';
 import { sqlTimers } from '../timers/sql-timers.ts';
-import { knownRuns } from './known-runs.ts';
 
 export const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 

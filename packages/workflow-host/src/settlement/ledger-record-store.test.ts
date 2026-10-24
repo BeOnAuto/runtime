@@ -3,9 +3,9 @@ import type { Settlement } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { runKey } from '../suite-testing/probe-subjects.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { runKey } from '../testing/probe-subjects.ts';
 import { ledgerRecordStore } from './ledger-record-store.ts';
 
 const settledBy = { version: 2 };

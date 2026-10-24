@@ -39,7 +39,7 @@ describe('a host that died after it marked a call waiting and before it read the
     await recorded(database.store, `${alpha}runs/${child}`, ending, ofTheChild);
     await followedThroughTheLatest(database);
     await first.host.stop();
-    await Effect.runPromise(waitingRow(database, key, child));
+    await Effect.runPromise(waitingRow(database, key, { child, at: Date.now() }));
 
     const second = await hostedOn(settings, { answer: () => Effect.never });
     second.know(parentId);

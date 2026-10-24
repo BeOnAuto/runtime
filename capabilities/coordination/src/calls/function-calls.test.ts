@@ -62,7 +62,7 @@ describe('a workflow call to a saved definition whose earlier attempt died', () 
 
 describe('a workflow call to a saved definition', () => {
   it.each(['reasoning', 'custom-operation'])(
-    'executes a %s definition for the original caller under a derived run id',
+    'executes a %s definition for the original caller under a derived run id, for as long as the call may take',
     async (type) => {
       const { perform, asked } = answering({ status: 'succeeded', output: { urgency: 'high' } });
 
@@ -84,6 +84,7 @@ describe('a workflow call to a saved definition', () => {
           depth: 0,
           callDepth: 1,
           calledBy: { run_id: workflowRun, reference: '/do/0/classify', run: 1 },
+          longestMs: 60_000,
         },
       ]);
     },

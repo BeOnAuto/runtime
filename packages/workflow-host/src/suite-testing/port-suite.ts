@@ -11,8 +11,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
+import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { executorSubjectOn } from './executor-subject.ts';
-import { openedOn, type SettingsOf } from './host-files.ts';
 import {
   listenerSubjectOn,
   recordStoreSubjectOn,

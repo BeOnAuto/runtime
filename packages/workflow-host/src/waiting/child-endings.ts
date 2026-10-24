@@ -57,10 +57,13 @@ function answeredWith(parts: EndingParts, playbook: PlaybookAddress, { ending, c
   );
 }
 
+export function childStreamOf(playbook: PlaybookAddress, child: string): string {
+  return `${streamPrefixOfPlaybook(playbook)}runs/${child}`;
+}
+
 function childEndingOf(database: HostDatabase, playbook: PlaybookAddress, child: string) {
-  const stream = `${streamPrefixOfPlaybook(playbook)}runs/${child}`;
   return Effect.map(
-    Effect.promise(() => database.store.read(stream, 0)),
+    Effect.promise(() => database.store.read(childStreamOf(playbook, child), 0)),
     ({ messages }) => calledEndingOf(lastEndingOf(messages)),
   );
 }

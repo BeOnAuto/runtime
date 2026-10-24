@@ -17,6 +17,7 @@ export function executorSubjectOn(database: HostDatabase): ExecutorSubject {
   };
   const executorNow = (): HostExecutor =>
     hostExecutor({
+      now: Date.now,
       database,
       perform: (call) => Deferred.await(finisherOf(call.key)),
       deliver: (key) =>

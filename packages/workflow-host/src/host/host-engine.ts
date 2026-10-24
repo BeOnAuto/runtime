@@ -62,6 +62,7 @@ export function hostEngineOn(
     deliver: (key, result) => submitted({ kind: 'call_answered', runId: key.runId, at: clock.now(), key, result }),
     trouble: reports.trouble,
     mostAtOnce: options.mostCallsAtOnce,
+    now: clock.now,
     context: options.context,
     ...waiting,
   });

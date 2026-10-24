@@ -1,12 +1,13 @@
 import { describe } from 'vitest';
 
 import { reactionSuite } from '../reaction-testing/reaction-suite.ts';
-import { failureSuite } from '../testing/failure-suite.ts';
+import { dispatchSuite } from '../suite-testing/dispatch-suite.ts';
+import { failureSuite } from '../suite-testing/failure-suite.ts';
+import { claimSuite, leaseSuite } from '../suite-testing/lease-suite.ts';
+import { longRunSuite } from '../suite-testing/long-run-suite.ts';
+import { portSuite } from '../suite-testing/port-suite.ts';
+import { runSuite } from '../suite-testing/run-suite.ts';
 import { onSQLite } from '../testing/host-files.ts';
-import { claimSuite, leaseSuite } from '../testing/lease-suite.ts';
-import { longRunSuite } from '../testing/long-run-suite.ts';
-import { portSuite } from '../testing/port-suite.ts';
-import { runSuite } from '../testing/run-suite.ts';
 
 describe('the host on SQLite', () => {
   describe('its ports', () => {
@@ -15,6 +16,10 @@ describe('the host on SQLite', () => {
 
   describe('a workflow it runs', () => {
     runSuite(onSQLite);
+  });
+
+  describe('its waiting calls, dispatched again', () => {
+    dispatchSuite(onSQLite);
   });
 
   describe('a long run', () => {

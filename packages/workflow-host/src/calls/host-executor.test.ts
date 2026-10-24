@@ -3,11 +3,12 @@ import { callKeyText, type CallKey, type StartCall } from '@on.auto/workflow-eng
 import { Deferred, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { runKey } from '../suite-testing/probe-subjects.ts';
 import { faultyDatabase, type FaultyDatabase } from '../testing/faulty-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { runKey } from '../testing/probe-subjects.ts';
 import { until } from '../testing/until.ts';
-import { hostExecutor, type CallAttempt, type Deliver, type HostExecutor } from './host-executor.ts';
+import type { CallAttempt } from './call-starts.ts';
+import { hostExecutor, type Deliver, type HostExecutor } from './host-executor.ts';
 
 const origin = { version: 2 };
 
@@ -52,6 +53,7 @@ async function executing(answer: Answer = answeredSent): Promise<Executing> {
     database,
     executorOn: (deliver = deliverAnswer) =>
       hostExecutor({
+        now: Date.now,
         database,
         perform: (_call, _run, _origin, attempt) =>
           Effect.suspend(() => {

@@ -46,6 +46,7 @@ describe('the first resume of an executor', () => {
     const answered: CallResult[] = [];
     const ended: { result?: CallResult } = {};
     const executor = hostExecutor({
+      now: Date.now,
       database,
       perform: () => Effect.succeed({ status: 'waiting', child: 'child-1' }),
       deliver: (_key, result) =>
