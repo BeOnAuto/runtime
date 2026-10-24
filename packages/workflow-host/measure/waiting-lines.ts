@@ -43,10 +43,22 @@ async function firstResumesMeasuredOn(
 ): Promise<void> {
   write(firstResumeLine(store, await firstResumeOn(await aDatabase(), 10_000, 0)));
   write(firstResumeLine(store, await firstResumeOn(await aDatabase(), 10_000, 100)));
-  const { finishes, milliseconds } = await finishCatchUpOn(await aDatabase(), 1000);
-  write(
-    `${store}: a host that opened behind ${finishes} finishes of workflow runs, with nothing waiting on them, followed through them in ${milliseconds.toFixed(0)} ms, under a load average of ${loadAverage()}`,
-  );
+  await catchUpsMeasuredOn(store, aDatabase, write, 1);
+}
+
+export async function catchUpsMeasuredOn(
+  store: string,
+  aDatabase: () => Promise<DatabaseSettings>,
+  write: (line: string) => void,
+  rounds: number,
+): Promise<void> {
+  if (rounds > 0) {
+    const { finishes, milliseconds } = await finishCatchUpOn(await aDatabase(), 1000);
+    write(
+      `${store}: a host that opened behind ${finishes} finishes of workflow runs, with nothing waiting on them, followed through them in ${milliseconds.toFixed(0)} ms, under a load average of ${loadAverage()}`,
+    );
+    await catchUpsMeasuredOn(store, aDatabase, write, rounds - 1);
+  }
 }
 
 export async function waitingMeasuredOn(

@@ -39,7 +39,11 @@ export interface Stepping {
   readonly playbookKey: string;
   readonly gate: RunGate;
   readonly mode: Mode;
-  readonly delivers: ReadonlySet<string>;
+  readonly delivered: () => ReadonlySet<string>;
+  readonly pageRead: (delivered: ReadonlySet<string>) => void;
+  readonly readWithData: (type: string) => boolean;
+  readonly delivers: (type: string) => Effect.Effect<boolean>;
+  readonly reactsTo: (type: string) => Effect.Effect<boolean>;
   readonly wantsMore: () => Effect.Effect<boolean>;
 }
 
@@ -75,24 +79,32 @@ function runRecordStep(parts: StepParts, stepping: Stepping, progress: Progress,
   });
 }
 
-function followedReadingsOf(parts: StepParts, playbookKey: string, relative: RecordedEvent): readonly Reading[] {
+function followedReadingsOf(
+  parts: StepParts,
+  stepping: Stepping,
+  relative: RecordedEvent,
+): Effect.Effect<readonly Reading[]> {
+  const { playbookKey } = stepping;
   const event = followedEventOf(relative, parts.definitionType);
   if (event === 'none') {
-    return [];
+    return Effect.succeed([]);
   }
   if (event === 'unreadable') {
-    return ['unreadable'];
+    return Effect.succeed(['unreadable']);
   }
   const followed = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative, event };
   const wanting = parts.registered.filter(({ types }) => types.includes(event.event.type));
-  return [...parts.consumers, ...wanting].map((consumer) => boundTo(consumer, followed));
+  return Effect.map(stepping.reactsTo(event.event.type), (reacting) =>
+    [...(reacting ? parts.consumers : []), ...wanting].map((consumer) => boundTo(consumer, followed)),
+  );
 }
 
-function readingsOf(parts: StepParts, playbookKey: string, record: RecordedEvent): readonly Reading[] {
+function readingsOf(parts: StepParts, stepping: Stepping, record: RecordedEvent): Effect.Effect<readonly Reading[]> {
+  const { playbookKey } = stepping;
   const relative = relativeRecord(playbookKey, record);
   const call = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative };
   const calls = parts.calls.filter(({ types }) => types.includes(record.type)).map((consumer) => consumer.read(call));
-  return [...calls, ...followedReadingsOf(parts, playbookKey, relative)];
+  return Effect.map(followedReadingsOf(parts, stepping, relative), (followed) => [...calls, ...followed]);
 }
 
 function deliveredStep(
@@ -101,8 +113,7 @@ function deliveredStep(
   progress: Progress,
   record: RecordedEvent,
 ): Effect.Effect<Step> {
-  return Effect.suspend(() => {
-    const readings = readingsOf(parts, stepping.playbookKey, record);
+  return Effect.flatMap(readingsOf(parts, stepping, record), (readings) => {
     const consumers = readings.filter((reading) => reading !== 'unreadable');
     if (consumers.length < readings.length) {
       return unreadableStep(parts, stepping.playbookKey, record);
@@ -127,13 +138,15 @@ export function stepOf(
   progress: Progress,
   record: RecordedEvent,
 ): Effect.Effect<Step> {
-  const { playbookKey, delivers } = stepping;
+  const { playbookKey } = stepping;
   if (streamKindOf(record.stream.slice(playbookKey.length)) === 'run-logs') {
     return runRecordStep(parts, stepping, progress, record);
   }
-  const step: Effect.Effect<Step> = delivers.has(record.type)
+  const step: Effect.Effect<Step> = stepping.readWithData(record.type)
     ? deliveredStep(parts, stepping, progress, record)
-    : Effect.succeed({ progress: passedOver(record) });
+    : Effect.map(stepping.delivers(record.type), (namedSince): Step =>
+        namedSince ? { progress, end: 'more' } : { progress: passedOver(record) },
+      );
   if (record.stream === `${playbookKey}definitions/${parts.definitionType}`) {
     const readAgain: Effect.Effect<Step> = Effect.succeed({ progress, end: 'more' });
     return Effect.flatMap(parts.applyDefinitionRecord(playbookKey, record), (applied) =>

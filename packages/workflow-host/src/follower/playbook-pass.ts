@@ -28,9 +28,11 @@ function pagesPassed(
     let progress = start;
     let first = glance;
     for (let page = 0; page < pagesInAPass; page += 1) {
+      const reading = first === undefined ? stepping.delivered() : noRecordTypes;
       const { records, hasMore } =
-        first ?? (yield* parts.records.after(playbookOfKey(playbookKey), progress.cursor, stepping.delivers));
+        first ?? (yield* parts.records.after(playbookOfKey(playbookKey), progress.cursor, reading));
       first = undefined;
+      stepping.pageRead(reading);
       for (const record of records) {
         const step = yield* stepOf(parts, stepping, progress, record);
         progress = step.progress;
@@ -52,26 +54,48 @@ function pagesPassed(
   });
 }
 
-function deliveredTypesOf(parts: PassParts, playbookKey: string): Effect.Effect<ReadonlySet<string>> {
-  return Effect.map(
-    wantedTypesIn(parts.database, playbookKey),
-    (types) =>
-      new Set([
-        ...recordTypesOf([...types, ...parts.registered.flatMap((consumer) => consumer.types)]),
-        ...parts.calls.flatMap((consumer) => consumer.types),
-      ]),
-  );
+interface WantedTypes {
+  readonly reactedTo: ReadonlySet<string>;
+  readonly delivered: ReadonlySet<string>;
+}
+
+function wantedTypesOf(parts: PassParts, playbookKey: string): Effect.Effect<WantedTypes> {
+  return Effect.map(wantedTypesIn(parts.database, playbookKey), (types) => ({
+    reactedTo: new Set(types),
+    delivered: new Set([
+      ...recordTypesOf([...types, ...parts.registered.flatMap((consumer) => consumer.types)]),
+      ...parts.calls.flatMap((consumer) => consumer.types),
+    ]),
+  }));
 }
 
 function steppingOf(parts: PassParts, playbookKey: string, mode: Mode): Effect.Effect<Stepping> {
-  return Effect.map(deliveredTypesOf(parts, playbookKey), (delivers) => ({
-    playbookKey,
-    gate: runGateOf(parts.database, playbookKey),
-    mode,
-    delivers,
-    wantsMore: () =>
-      Effect.map(deliveredTypesOf(parts, playbookKey), (wanted) => [...wanted].some((type) => !delivers.has(type))),
-  }));
+  return Effect.map(wantedTypesOf(parts, playbookKey), (atStart) => {
+    const known = { wanted: atStart, page: atStart.delivered, readSinceThePage: true };
+    const refreshed = Effect.map(wantedTypesOf(parts, playbookKey), (now) => {
+      known.wanted = now;
+      known.readSinceThePage = true;
+      return now;
+    });
+    const naming = (namesOf: (wanted: WantedTypes) => ReadonlySet<string>) => (type: string) =>
+      namesOf(known.wanted).has(type) || known.readSinceThePage
+        ? Effect.succeed(namesOf(known.wanted).has(type))
+        : Effect.map(refreshed, (now) => namesOf(now).has(type));
+    return {
+      playbookKey,
+      gate: runGateOf(parts.database, playbookKey),
+      mode,
+      delivered: () => known.wanted.delivered,
+      pageRead: (delivered) => {
+        known.page = delivered;
+        known.readSinceThePage = false;
+      },
+      readWithData: (type) => known.page.has(type),
+      delivers: naming(({ delivered }) => delivered),
+      reactsTo: naming(({ reactedTo }) => reactedTo),
+      wantsMore: () => Effect.map(refreshed, (now) => [...now.delivered].some((type) => !known.page.has(type))),
+    };
+  });
 }
 
 export function passOf(parts: PassParts) {
@@ -89,6 +113,6 @@ export function passOf(parts: PassParts) {
         return 'caught_up';
       }
       const stepping = yield* steppingOf(parts, playbookKey, mode);
-      return yield* pagesPassed(parts, stepping, followed, stepping.delivers.size === 0 ? glance : undefined);
+      return yield* pagesPassed(parts, stepping, followed, stepping.delivered().size === 0 ? glance : undefined);
     });
 }
