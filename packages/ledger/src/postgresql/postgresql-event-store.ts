@@ -8,7 +8,7 @@ import { dataAsJsonText } from './json-text.ts';
 import type { PostgreSQLOptions, PostgreSQLPools } from './postgresql-options.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
 import { postgresqlRunOutcomesOf } from './postgresql-run-outcomes.ts';
-import { beforeTheSchema } from './postgresql-schema.ts';
+import { beforeTheSchemaOf } from './postgresql-schema.ts';
 
 export interface PostgreSQLStoreOptions extends PostgreSQLOptions {
   readonly reportLostConnection: (error: Readonly<Error>) => void;
@@ -35,7 +35,10 @@ export function postgresqlStoreOn(
       connectionOptions: { pool },
       schema: { autoMigration: 'None' },
       projections: [...projections.registrations],
-      hooks: { onBeforeSchemaCreated: beforeTheSchema, onAfterSchemaCreated: projections.afterTheSchema },
+      hooks: {
+        onBeforeSchemaCreated: beforeTheSchemaOf(projections.projections),
+        onAfterSchemaCreated: projections.afterTheSchema,
+      },
     }),
     { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, observer },
   );

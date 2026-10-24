@@ -39,7 +39,7 @@ describe('the layout of the ledger on SQLite, as the store migrates', () => {
   it('lists the tables of the schema and writes the layout into a table of one row of a database that holds none, all in one transaction', async () => {
     const { pool, asked } = aPoolHolding([]);
 
-    await sqliteLayoutKept(pool);
+    await sqliteLayoutKept(pool, []);
 
     expect(asked).toEqual([
       'BEGIN',

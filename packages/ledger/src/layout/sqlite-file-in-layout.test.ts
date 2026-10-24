@@ -14,7 +14,7 @@ describe('a SQLite file put in a layout of the ledger', () => {
 
     await aSQLiteFileInLayout(fileName, ledgerLayout + 1);
 
-    expect(await executedOn(fileName, (execute) => layoutFound(execute, sqliteLayout))).toEqual({
+    expect(await executedOn(fileName, (execute) => layoutFound(execute, sqliteLayout, []))).toEqual({
       layout: ledgerLayout + 1,
       tables: 1,
     });

@@ -6,7 +6,7 @@ import { contentTableNames } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { ledgerLayout } from '../layout/ledger-layout.ts';
 import { emmettsMigrationLock } from './postgresql-run-outcomes.ts';
-import { beforeTheSchema, postgresqlSchemaCreated } from './postgresql-schema.ts';
+import { beforeTheSchemaOf, postgresqlSchemaCreated } from './postgresql-schema.ts';
 
 function described(sql: SQL): string {
   return SQL.describe(sql, pgFormatter).replaceAll(/\s+/gu, ' ').trim();
@@ -107,7 +107,7 @@ describe('the layout of the ledger on PostgreSQL, as the migration begins', () =
   it('takes the migration lock, then lists the tables of the schema, and writes the layout into a table of one row before any other table of a database that holds none', async () => {
     const { execute, asked } = aDatabaseHolding({ tables: [] });
 
-    await beforeTheSchema({ execute });
+    await beforeTheSchemaOf([])({ execute });
 
     expect(asked).toEqual([
       lockTaken,
@@ -120,7 +120,7 @@ describe('the layout of the ledger on PostgreSQL, as the migration begins', () =
   it('reads the layout of a database that holds its table, and writes nothing when it is the layout kept', async () => {
     const { execute, asked } = aDatabaseHolding({ tables: ['emt_messages', 'ledger_layout'], layout: ledgerLayout });
 
-    await beforeTheSchema({ execute });
+    await beforeTheSchemaOf([])({ execute });
 
     expect(asked).toEqual([lockTaken, tablesListed, 'SELECT layout FROM ledger_layout']);
   });

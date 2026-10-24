@@ -14,6 +14,7 @@ export interface KeptTables {
 }
 
 export interface ProjectionParts {
+  readonly projections: readonly KeyedProjection[];
   readonly registrations: readonly InlineRegistration[];
   readonly prepare: (execute: StatementExecutor, inTransaction: InTransaction) => Promise<void>;
   readonly readerOn: (statements: ProjectionStatements) => ProjectionReader & ProjectionAdvancer;
@@ -25,6 +26,7 @@ export function projectionPartsOf(
 ): ProjectionParts {
   const kept = keptProjections(runOutcomes, projections);
   return {
+    projections: kept,
     registrations: projectionRegistrations(dialect, kept),
     prepare: (execute, inTransaction) =>
       preparedProjections(

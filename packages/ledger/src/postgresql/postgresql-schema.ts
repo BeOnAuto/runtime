@@ -1,3 +1,5 @@
+import type { KeyedProjection } from '@on.auto/operations';
+
 import { postgresqlContent } from '../content/content-dialects.ts';
 import { createdContentTables } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
@@ -11,9 +13,11 @@ interface Migration {
   readonly execute: StatementExecutor;
 }
 
-export async function beforeTheSchema(migration: Migration): Promise<void> {
-  await migrationLockTakenWithin()(migration);
-  await requireTheLayoutKept(migration.execute, postgresqlLayout);
+export function beforeTheSchemaOf(projected: readonly KeyedProjection[]): (migration: Migration) => Promise<void> {
+  return async (migration) => {
+    await migrationLockTakenWithin()(migration);
+    await requireTheLayoutKept(migration.execute, postgresqlLayout, projected);
+  };
 }
 
 export async function postgresqlSchemaCreated(execute: StatementExecutor): Promise<void> {

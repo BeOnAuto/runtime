@@ -5,10 +5,12 @@ import { namesFound } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { createMissingIndexes, type PlaybookIndex } from '../recorded/missing-indexes.ts';
 
-export const keptSecrets = SQL.identifier('kept_secrets');
+export const keptSecretsTableName = 'kept_secrets';
+
+export const keptSecrets = SQL.identifier(keptSecretsTableName);
 
 const keptSecretsTable: PlaybookIndex = {
-  name: 'kept_secrets',
+  name: keptSecretsTableName,
   create: () => SQL`CREATE TABLE IF NOT EXISTS ${keptSecrets} (
     id TEXT PRIMARY KEY,
     version INTEGER NOT NULL,
