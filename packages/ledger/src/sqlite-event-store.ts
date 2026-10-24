@@ -2,7 +2,7 @@ import { dumbo } from '@event-driven-io/dumbo';
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
-import type { AppendObserver, LedgerStore } from './event-store.ts';
+import type { AppendListeners, LedgerStore } from './event-store.ts';
 import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
 import { sqliteRunOutcomesOf } from './outcomes/sqlite-run-outcomes.ts';
 import type { KeptTables } from './projections/projection-parts.ts';
@@ -25,7 +25,7 @@ export function pooledOptionsOf<Driver extends AnyDriver>(optionsOf: () => SQLit
 export function sqliteEventStore<Driver extends AnyDriver>(
   optionsOf: () => SQLiteStoreOptions<Driver>,
   kept: KeptTables = {},
-  observer?: AppendObserver,
+  listeners: AppendListeners = {},
 ): LedgerStore {
   const options = pooledOptionsOf(optionsOf);
   const { pool } = options;
@@ -38,7 +38,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   const streams = emmettEventStore(store, {
     data: dataAsWritten,
     mostEventsInOneAppend: eventsWithinAHundredParameters,
-    observer,
+    ...listeners,
   });
   return {
     ...streams,

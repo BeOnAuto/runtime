@@ -103,6 +103,7 @@ const onPostgreSQL: LedgerEntry = {
       projections,
       ...(runOutcomes === undefined ? {} : { runOutcomes }),
     }),
+  ledgerRaisingOn: (database, appended) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), appended }),
   storeOn: (database) => postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection }),
   openedOn: (database) => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection }),
   queried,

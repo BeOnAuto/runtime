@@ -1,7 +1,7 @@
 import type { KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
 import { Pool } from 'pg';
 
-import type { AppendObserver } from '../event-store.ts';
+import type { AppendListeners } from '../event-store.ts';
 
 export interface PoolBounds {
   readonly max: number;
@@ -13,9 +13,8 @@ export function plainPoolsOn(connectionString: string): PostgreSQLPools {
   return ({ max }) => new Pool({ connectionString, max });
 }
 
-export interface PostgreSQLOptions {
+export interface PostgreSQLOptions extends AppendListeners {
   readonly pools: PostgreSQLPools;
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeyedProjection[];
-  readonly observer?: AppendObserver | undefined;
 }

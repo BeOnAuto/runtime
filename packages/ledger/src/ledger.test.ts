@@ -21,6 +21,7 @@ const onSQLite: LedgerEntry = {
   },
   ledgerOn: (fileName, runOutcomes, projections = []) =>
     ledgerLayer({ fileName, projections, ...(runOutcomes === undefined ? {} : { runOutcomes }) }),
+  ledgerRaisingOn: (fileName, appended) => ledgerLayer({ fileName, appended }),
   storeOn: (fileName) => openedOn(fileName).store,
   openedOn,
   queried,

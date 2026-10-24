@@ -2,6 +2,7 @@ import { Conflict } from '@on.auto/operations';
 import { Effect, Result, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { storeSignalsBehaviour } from '../signal/store-signals-behaviour.ts';
 import { streamAgesBehaviour } from '../stream-ages/stream-ages-behaviour.ts';
 import { aLedger, changedWhileDeciding, tallies, type LedgerEntry } from './ledger-entry.ts';
 import { outcomeOf } from './open-ledger.ts';
@@ -155,4 +156,5 @@ export function commandsBehaviour(entry: LedgerEntry): void {
   writersRacing(entry);
   aWriterAnotherGotAheadOf(entry);
   streamAgesBehaviour(entry);
+  storeSignalsBehaviour(entry);
 }
