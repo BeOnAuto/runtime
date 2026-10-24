@@ -5,18 +5,18 @@ import { Clock, Effect } from 'effect';
 
 import { modelCallMade } from './model-steps.ts';
 import { nextStep, type NextStep } from './step-decision.ts';
-import { interruptedOn, type CancelledEnding, type StepRefusal, type StepRun } from './step-run.ts';
+import { interruptedOn, type CancelledEnding, type StepRecording, type StepRefusal, type StepRun } from './step-run.ts';
 import { providerIn, type StepState } from './step-state.ts';
 import { toolCallsMade } from './tool-steps.ts';
 
-type StepsEnding = Exclude<NextStep, { readonly type: 'model_call' | 'tool_calls' }> | CancelledEnding;
+export type StepsEnding = Exclude<NextStep, { readonly type: 'model_call' | 'tool_calls' }> | CancelledEnding;
 
 export interface Stepped {
   readonly state: StepState;
   readonly ending: StepsEnding;
 }
 
-function decided(run: StepRun, state: StepState): Effect.Effect<NextStep> {
+export function decided(run: StepRecording, state: StepState): Effect.Effect<NextStep> {
   return Effect.map(Clock.currentTimeMillis, (now) =>
     nextStep(state, {
       bounds: run.bounds,

@@ -4,11 +4,10 @@ import { Effect, type Schema } from 'effect';
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import { promptOfTheAttempt } from './attempt-prompt.ts';
 import { beforeTheSteps } from './before-the-steps.ts';
-import { renderedOf } from './definition-request.ts';
 import type { DefinitionRejection } from './model-rejection.ts';
 import { answerOf } from './run-answer.ts';
 import type { RunServices } from './run-services.ts';
-import { finishedWith } from './spending-record.ts';
+import { finishedOf } from './spending-record.ts';
 
 export function definitionRun({
   languageModel,
@@ -32,11 +31,6 @@ export function definitionRun({
     const before = beforeTheSteps(run.journal, definition.model);
     const prompt = yield* promptOfTheAttempt({ content, clock: runClock }, { definition, input, run, before });
     const answered = yield* answerOf(answering, { definition, prompt, run, before });
-    return yield* finishedWith(answered.output, {
-      prompt: renderedOf(answered.prompt),
-      settings: definition.settings,
-      format: definition.output.type,
-      result: answered.result,
-    });
+    return yield* finishedOf(definition, answered);
   });
 }

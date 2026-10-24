@@ -28,6 +28,38 @@ export { TimedOut } from './failure/timed-out.ts';
 export type { ToolsStoppedBecause } from './tools/tool-endings.ts';
 export { LanguageModel } from './model/language-model.ts';
 export { makeReasoningFunctionAdapter, type ReasoningFunctionAdapterOptions } from './capability/reasoning-function.ts';
+export { stepRecordingOf } from './capability/steps-run.ts';
+export { beforeTheSteps, restartedWithoutContent, type BeforeTheSteps } from './capability/before-the-steps.ts';
+export { promptOfTheAttempt, type PromptOf, type PromptSources } from './capability/attempt-prompt.ts';
+export { requestFor, resumesAfterMsOf } from './capability/definition-request.ts';
+export { admitted, type DefinitionRejection } from './capability/model-rejection.ts';
+export { withTools, type Opening } from './tools/tool-opening.ts';
+export { stepsAnswerOf } from './capability/steps-answer.ts';
+export { finishedOf } from './capability/spending-record.ts';
+export type { StepsAnswer } from './steps/steps-answer.ts';
+export { performedInProcess, type ToolCallTelemetry } from './jobs/performed-in-process.ts';
+export type {
+  ModelCallJob,
+  ModelCallRequest,
+  OutputDocument,
+  PerformJob,
+  ToolCallAnswer,
+  ToolCallJob,
+} from './jobs/jobs.ts';
+export type { ModelCallSettled } from './steps/model-steps.ts';
+export { stateOfTheAttempt } from './steps/run-steps.ts';
+export {
+  answerRecorded,
+  jobsOf,
+  performedJob,
+  type JobAnswer,
+  type StepJob,
+  type StepJobs,
+} from './steps/step-jobs.ts';
+export type { StepsEnding } from './steps/step-loop.ts';
+export type { Prompt } from './steps/step-messages.ts';
+export type { StepRecording } from './steps/step-run.ts';
+export type { StepState } from './steps/step-state.ts';
 export { defaultMostInputTokens, type ModelReading } from './capability/definition-request.ts';
 export type { ReasoningFunctionDefinitionDocument } from './definition/reasoning-function-definition.ts';
 export { parseModelReference, type ModelReference } from './model/model-reference.ts';

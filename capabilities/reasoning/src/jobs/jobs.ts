@@ -17,7 +17,7 @@ export type OutputDocument = TextOutput | JsonOutputDocument;
 
 export type ModelCallRequest = Omit<ModelRequest, 'output'> & { readonly output: OutputDocument };
 
-interface ModelCallJob {
+export interface ModelCallJob {
   readonly request: ModelCallRequest;
 }
 

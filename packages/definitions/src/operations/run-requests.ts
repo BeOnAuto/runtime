@@ -4,7 +4,7 @@ import { Effect, Option } from 'effect';
 import { attemptKeyOf, LiveAttempts } from '../attempts/live-attempts.ts';
 import type { Capability } from '../capability/capability.ts';
 import type { RunRequest } from '../runs/run-commands.ts';
-import { claimOf, runTaken, stillRunning, type Claim } from '../runs/run-decisions.ts';
+import { attemptIsLive, claimOf, runTaken, stillRunning, type Claim } from '../runs/run-decisions.ts';
 import { answerOf } from '../runs/run-lookup.ts';
 import { outputShapeOf, preparedDefinition, preparedVersion } from './definition-preparation.ts';
 import { loadAttempt, loadRun, loadRunStream, newRunId, recordRun } from './run-access.ts';
@@ -75,7 +75,7 @@ const resumedRun = Effect.fnUntraced(function* (
   const run = yield* preparedVersion(capability, state.run.name, state.run.definition_version);
   const given: Called = { ...(yield* CallLineage), capabilities };
   const { attempt, quietMs, lastMessageId } = yield* loadAttempt(id);
-  if (state.cancel === undefined && !given.attemptDied && quietMs <= run.prepared.resumesAfterMs) {
+  if (state.cancel === undefined && !given.attemptDied && attemptIsLive(quietMs, run.prepared.resumesAfterMs)) {
     return yield* stillRunning;
   }
   const lineage = { startId: lastMessageId, correlationId: given.lineage?.correlationId ?? id };
