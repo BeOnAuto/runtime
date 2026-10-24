@@ -1,1 +1,3 @@
-export const checkedWorker = new URL('./checked-worker.ts', import.meta.url);
+export function checkedWorker(): URL {
+  return new URL('./checked-worker.ts', import.meta.url);
+}

@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { hostWorkOf } from './host-work.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

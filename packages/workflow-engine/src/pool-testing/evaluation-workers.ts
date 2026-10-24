@@ -5,6 +5,7 @@ import { Schema } from 'effect';
 import { mostFilterMs } from '../dsl/evaluation.ts';
 import type { FilterSandbox } from '../filters/filter-verdicts.ts';
 import { answerGraceMs } from '../program-pool/evaluation-thread.ts';
+import { moduleOfSource } from './source-modules.ts';
 import { nextThreadStarted } from './threads-alive.ts';
 
 export interface Replacement<Answer> {
@@ -43,17 +44,15 @@ export function filteringWithinOnceReplaced(filters: FilterSandbox, milliseconds
   return { ...filters, clock: () => filters.clock() + ahead.ms };
 }
 
-export const announcingEvaluations = new URL(
-  `data:text/javascript,${encodeURIComponent(
-    [
-      "import { BroadcastChannel, workerData } from 'node:worker_threads';",
-      `import { serveEvaluations } from '${evaluationLoop}';`,
-      `const asked = new BroadcastChannel(${JSON.stringify(asked)});`,
-      'asked.unref();',
-      "workerData.port.on('message', (request) => { asked.postMessage({ kind: request.kind }); });",
-      'serveEvaluations(workerData);',
-    ].join('\n'),
-  )}`,
+export const announcingEvaluations = moduleOfSource(
+  [
+    "import { BroadcastChannel, workerData } from 'node:worker_threads';",
+    `import { serveEvaluations } from '${evaluationLoop}';`,
+    `const asked = new BroadcastChannel(${JSON.stringify(asked)});`,
+    'asked.unref();',
+    "workerData.port.on('message', (request) => { asked.postMessage({ kind: request.kind }); });",
+    'serveEvaluations(workerData);',
+  ].join('\n'),
 );
 
 function nextAsked(kind: string): Promise<void> {

@@ -1,5 +1,8 @@
-function workerOf(lines: readonly string[]): URL {
-  return new URL(`data:text/javascript,${encodeURIComponent(lines.join('\n'))}`);
+import type { ModuleAddress } from '../jobs/pool-contract.ts';
+import { moduleOfSource } from './source-modules.ts';
+
+function workerOf(lines: readonly string[]): ModuleAddress {
+  return moduleOfSource(lines.join('\n'));
 }
 
 const answeringByThread = [
@@ -13,7 +16,7 @@ const answeringByThread = [
   '};',
 ];
 
-export function checkingReadyAfter(milliseconds: number): URL {
+export function checkingReadyAfter(milliseconds: number): ModuleAddress {
   return workerOf([...answeringByThread, `setTimeout(listen, ${milliseconds});`]);
 }
 
@@ -29,7 +32,7 @@ export const checkingForever = workerOf([
 
 export const brokenAtStart = workerOf(["throw new Error('broken on purpose');"]);
 
-export function checkingWithTheFilesHanded(tag: string): URL {
+export function checkingWithTheFilesHanded(tag: string): ModuleAddress {
   return workerOf([
     "import { parentPort, workerData } from 'node:worker_threads';",
     `const tag = ${JSON.stringify(tag)};`,

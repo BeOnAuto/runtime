@@ -1,5 +1,7 @@
 import { Schema } from 'effect';
 
+import { moduleOfSource } from './source-modules.ts';
+
 export interface Begun {
   readonly source: string;
   readonly thread: number;
@@ -8,10 +10,6 @@ export interface Begun {
 const beginnings = 'the jobs counting workers begin';
 
 const decodeBegun = Schema.decodeUnknownSync(Schema.Struct({ source: Schema.String, thread: Schema.Number }));
-
-function workerOf(source: string): URL {
-  return new URL(`data:text/javascript,${encodeURIComponent(source)}`);
-}
 
 const countingSource = [
   "import { pbkdf2Sync } from 'node:crypto';",
@@ -59,11 +57,11 @@ export function begun(jobs: number): Promise<readonly Begun[]> {
   return promise;
 }
 
-export const counting = workerOf(countingSource);
+export const counting = moduleOfSource(countingSource);
 
-export const countingElsewhere = workerOf(`${countingSource}\nvoid 0;`);
+export const countingElsewhere = moduleOfSource(`${countingSource}\nvoid 0;`);
 
-export const countingOnTheLoop = workerOf(
+export const countingOnTheLoop = moduleOfSource(
   [
     `import { serveJobs } from '${new URL('../program-pool/job-loop.ts', import.meta.url).href}';`,
     `import { answerOf } from '${new URL('../jobs/program-answer.ts', import.meta.url).href}';`,

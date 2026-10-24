@@ -15,7 +15,7 @@ export interface SourceUnderTest {
   readonly source: InstanceSource;
 }
 
-export const sandboxFilesOnDisk = shippedFilesOnDisk(sandboxShippedRoots);
+export const sandboxFilesOnDisk = shippedFilesOnDisk(sandboxShippedRoots());
 
 export const sandboxModuleOnDisk: SandboxModule = await sandboxModuleIn(sandboxFilesOnDisk);
 

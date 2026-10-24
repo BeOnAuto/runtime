@@ -9,6 +9,7 @@
     "@on.auto/definitions": "workspace:*",
     "@on.auto/server": "workspace:*",
     "effect": "catalog:",
+    "typescript6": "npm:typescript@6.0.3",
     "yaml": "2.9.1"
   }
 }

@@ -8,7 +8,7 @@ import { parse } from 'yaml';
 import type { RunStart } from '../host/run-requests.ts';
 import type { RunAddress } from '../runs/run-address.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 type JsonObject = typeof Schema.JsonObject.Type;
 

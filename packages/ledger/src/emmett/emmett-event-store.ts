@@ -2,8 +2,8 @@ import type { Event, EventStore as EmmettEventStore } from '@event-driven-io/emm
 import { contextOf, messageIdOf, noLineage, type Context, type Lineage } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
-import type { AppendObserver, MessageLineage, RecordedMessage, StreamStore } from '../event-store.ts';
-import { streamAppends, type StreamSignal } from '../signal/append-signal.ts';
+import type { AppendListeners, MessageLineage, RecordedMessage, StreamStore } from '../event-store.ts';
+import { streamAppends } from '../signal/append-signal.ts';
 
 export interface EmmettStore extends Pick<EmmettEventStore, 'readStream' | 'appendToStream'> {
   readonly schema: { readonly migrate: () => Promise<unknown> };
@@ -15,11 +15,9 @@ export interface StoredData<Stored extends Record<string, unknown>> {
   readonly read: (stored: Stored) => unknown;
 }
 
-export interface EmmettEventStoreOptions<Stored extends Record<string, unknown>> {
+export interface EmmettEventStoreOptions<Stored extends Record<string, unknown>> extends AppendListeners {
   readonly data: StoredData<Stored>;
   readonly mostEventsInOneAppend: number;
-  readonly appended?: StreamSignal;
-  readonly observer?: AppendObserver | undefined;
 }
 
 export const dataAsWritten: StoredData<Schema.JsonObject> = {

@@ -179,7 +179,7 @@ describe('a tool server that is a process', () => {
   it('lists the tools of the process the server starts', async () => {
     const limitless = {
       command: process.execPath,
-      args: [fakeStdioServerPath],
+      args: [fakeStdioServerPath()],
       env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
       org: 'acme',
       allowed: ['search'],

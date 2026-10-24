@@ -43,10 +43,11 @@ export function ledgerLayer({
   appends,
   content,
   observer,
+  appended,
 }: LedgerOptions): Layer.Layer<LedgerServices> {
   return sqliteLedgerLayer(
     { optionsOf: () => sqlite3OptionsOf(fileName), inMemory: fileName === privateMemory },
-    { runOutcomes, projections, appends, content, observer },
+    { runOutcomes, projections, appends, content, observer, appended },
   );
 }
 

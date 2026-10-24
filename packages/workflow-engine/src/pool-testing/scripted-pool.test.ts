@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { CheckRequest, FoldRequest, ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
 import { remoteEvaluations } from '../jobs/remote-evaluations.ts';
 import { scriptedPool } from './scripted-pool.ts';
+import { moduleOfSource } from './source-modules.ts';
 
 const asked: string[] = [];
 
@@ -59,7 +60,7 @@ const request: ProgramRequest = {
   mostOutputBytes: 1,
 };
 
-const checked: CheckRequest = { schemas: {}, expressions: [], deadlineMs: 1, worker: new URL('data:text/javascript,') };
+const checked: CheckRequest = { schemas: {}, expressions: [], deadlineMs: 1, worker: moduleOfSource('') };
 
 const page: FoldRequest = {
   events: [],

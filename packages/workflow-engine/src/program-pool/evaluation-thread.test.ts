@@ -151,7 +151,7 @@ describe('the evaluation worker of a pool that cannot answer', () => {
 
   it('ends an evaluation at its deadline while the worker it started has not loaded, and never ends a worker that is loading', async () => {
     const broken = new URL(`data:text/javascript,${encodeURIComponent("throw new Error('broken on purpose');")}`);
-    const { machine } = poolOf({ evaluationWorker: broken }).evaluations;
+    const { machine } = poolOf({ evaluationWorker: () => broken }).evaluations;
 
     await Effect.runPromise(machine.reserve);
     const { answer, ms } = await timed(() => evaluatedIn(machine, '1 + 1', 200));

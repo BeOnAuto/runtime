@@ -206,7 +206,7 @@ describe('a pool of processes that closes', () => {
     const script = [
       `const { processPool } = await import('${new URL('process-pool.ts', import.meta.url).href}');`,
       `const pool = processPool({ processes: 2, longJobs: 1, memoryBytes: 1073741824, path: ${JSON.stringify(fake.bare)} });`,
-      `const outcome = await pool.run({ module: new URL('${fake.module.href}'), key: 'a', kind: 'echo', payload: 1, deadlineMs: 10000 });`,
+      `const outcome = await pool.run({ module: () => new URL('${fake.module().href}'), key: 'a', kind: 'echo', payload: 1, deadlineMs: 10000 });`,
       closing,
       'process.stdout.write(JSON.stringify(outcome.ended));',
     ].join('\n');

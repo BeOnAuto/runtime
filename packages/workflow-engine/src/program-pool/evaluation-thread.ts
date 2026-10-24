@@ -4,7 +4,7 @@ import { Function, Schema } from 'effect';
 
 import { hostClock } from '../instances/host-sandboxes.ts';
 import { answeredFlag, ProgramRunSchema, readyFlag, type AnsweredRequest } from '../jobs/evaluation-messages.ts';
-import type { PoolSettings } from '../jobs/pool-contract.ts';
+import type { ModuleAddress, PoolSettings } from '../jobs/pool-contract.ts';
 import {
   remoteEvaluations,
   type EvaluationAsks,
@@ -103,18 +103,18 @@ function remainingUntil(at: number): number {
   return Math.max(0, at - performance.now());
 }
 
-function keeperOf(module: Readonly<URL>, settings: PoolSettings): Keeper {
+function keeperOf(module: ModuleAddress, settings: PoolSettings): Keeper {
   const state: ThreadState = { closed: false };
   return {
     current: () => {
       if (!state.closed && (state.live === undefined || state.live.gone())) {
-        state.live = started(module, settings);
+        state.live = started(module(), settings);
       }
       return state.closed ? undefined : state.live;
     },
     replaced: () => {
       void state.live?.stop();
-      state.live = started(module, settings);
+      state.live = started(module(), settings);
     },
     release: (unit) => {
       state.live?.port.postMessage({ kind: 'close', unit }, []);
@@ -204,7 +204,7 @@ function askingThreadOf(keeper: Keeper): EvaluationAsks {
   };
 }
 
-export function poolEvaluationsOf(module: Readonly<URL>, settings: PoolSettings): PoolEvaluations {
+export function poolEvaluationsOf(module: ModuleAddress, settings: PoolSettings): PoolEvaluations {
   const deciding = keeperOf(module, settings);
   const filtering = keeperOf(module, settings);
   return {

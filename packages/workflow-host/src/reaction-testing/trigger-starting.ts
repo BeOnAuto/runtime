@@ -9,7 +9,7 @@ import { subscriptionStarts } from '../reactions/subscription-starts.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { saidRefusals, type followedRecordOf } from './followed-records.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

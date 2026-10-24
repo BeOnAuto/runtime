@@ -2,7 +2,14 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { FoldingView } from '../folds/fold-page.ts';
-import type { FoldOutcome, FoldRequest, PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
+import type {
+  FoldOutcome,
+  FoldRequest,
+  ModuleAddress,
+  PoolOutcome,
+  PoolSettings,
+  ProgramPool,
+} from '../jobs/pool-contract.ts';
 import { begun, counting, countingElsewhere, countingOnTheLoop } from '../pool-testing/counting-workers.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadEnded, threadsAlive } from '../pool-testing/threads-alive.ts';
@@ -18,7 +25,7 @@ interface Ran {
 interface Running {
   readonly deadlineMs?: number;
   readonly signal?: Readonly<AbortSignal>;
-  readonly worker?: Readonly<URL>;
+  readonly worker?: ModuleAddress;
 }
 
 const pools: ProgramPool[] = [];
@@ -64,7 +71,7 @@ function ranOf(outcome: PoolOutcome): Ran {
   return decodeRan(outcome.ran === 'answered' ? outcome.output : {});
 }
 
-async function counted(pool: ProgramPool, worker: Readonly<URL> = counting): Promise<Ran> {
+async function counted(pool: ProgramPool, worker: ModuleAddress = counting): Promise<Ran> {
   return ranOf(await run(pool, 'count', { worker }));
 }
 

@@ -4,7 +4,7 @@ import { Context, Effect, Layer, Semaphore } from 'effect';
 import { signalledOn, type AppendSignal } from './appends/append-signal.ts';
 import { LedgerConnection, type ConnectionPorts } from './connection/ledger-connection.ts';
 import { LedgerChores, orphansSweptOf } from './content/content-sweep.ts';
-import type { AppendObserver, LedgerStore } from './event-store.ts';
+import type { AppendListeners, LedgerStore } from './event-store.ts';
 import { makeLedger } from './ledger-service.ts';
 
 export interface OpenedWith {
@@ -12,10 +12,9 @@ export interface OpenedWith {
   readonly content?: ContentStore | undefined;
 }
 
-export interface StoreLayerOptions extends OpenedWith {
+export interface StoreLayerOptions extends OpenedWith, AppendListeners {
   readonly runOutcomes?: RunOutcomeMapping | undefined;
   readonly projections?: readonly KeyedProjection[] | undefined;
-  readonly observer?: AppendObserver | undefined;
 }
 
 export interface OpenedLedger {

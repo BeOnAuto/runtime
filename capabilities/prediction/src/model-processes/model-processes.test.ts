@@ -2,13 +2,14 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { importedWithoutAnAddress } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { candidateUrl, type CandidateName } from '../build-testing/due-driving.ts';
 import { scriptedModels } from '../build-testing/scripted-models.ts';
 import { closedAfterTheTest, scratchDirectory } from '../testing/scratch.ts';
-import { modelDeadlines, modelProcesses, threadsOf } from './model-processes.ts';
+import { modelDeadlines, modelProcesses, modelProcessModule, threadsOf } from './model-processes.ts';
 
 function fileOf(name: CandidateName) {
   return { sha256: name, path: fileURLToPath(candidateUrl(name)) };
@@ -88,5 +89,14 @@ describe('a model process that fails', () => {
 describe('the threads of a model process', () => {
   it('share the cores among the processes, one at least', () => {
     expect([threadsOf(4, 16), threadsOf(4, 2), threadsOf(3, 8)]).toEqual([4, 1, 2]);
+  });
+});
+
+describe('the module a model process runs', () => {
+  it('is named by a module that loads where import.meta.url names no file, read only as a job is made', async () => {
+    const loaded = await importedWithoutAnAddress(new URL('./model-processes.ts', import.meta.url));
+
+    expect(Object.keys(loaded)).toContain('modelProcessModule');
+    expect(modelProcessModule().pathname).toMatch(/\/model-jobs\/model-process\.ts$/u);
   });
 });

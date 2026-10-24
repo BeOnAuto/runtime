@@ -15,7 +15,7 @@ import { sandboxLibOf } from '../src/program-check/sandbox-lib.ts';
 import { checkWorker, handedWorkersWithChecks, checkShippedRoots } from '../src/program-check/save-check.ts';
 import { keptLibOnDisk } from '../src/testing/read-on-disk.ts';
 
-const shippedFiles = shippedFilesOnDisk(checkShippedRoots);
+const shippedFiles = shippedFilesOnDisk(checkShippedRoots());
 
 const schemas = {
   input: {

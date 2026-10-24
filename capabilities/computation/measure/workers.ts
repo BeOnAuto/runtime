@@ -1,9 +1,10 @@
 import { programPool, workerStackMegabytes, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { moduleOfSource } from '@on.auto/workflow-engine/testing';
 
 import { computationBounds, mebibytes } from '../src/run/run-bounds.ts';
 import { formatted, functionOf, handed, inTurn, poolOfOne, request } from './common.ts';
 
-const blocking = new URL(`data:text/javascript,${encodeURIComponent('while (true) {}')}`);
+const blocking = moduleOfSource('while (true) {}');
 
 const recursion = functionOf('const down = (left) => (left === 0 ? 0 : down(left - 1));\n  return down(input);');
 

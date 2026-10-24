@@ -3,11 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import type { ModuleAddress } from '../jobs/pool-contract.ts';
 import { memoryLimiter } from '../process-pool/memory-limit.ts';
 
 export interface FakeProcesses {
-  readonly module: URL;
-  readonly missing: URL;
+  readonly module: ModuleAddress;
+  readonly missing: ModuleAddress;
   readonly limiting: string;
   readonly bare: string;
   readonly limitedWith: () => string | undefined;
@@ -73,8 +74,8 @@ export function fakeProcesses(): FakeProcesses {
   writeFileSync(limiter, fakeLimiterSource);
   chmodSync(limiter, 0o755);
   return {
-    module: pathToFileURL(module),
-    missing: pathToFileURL(join(directory, 'no-such-module.mjs')),
+    module: () => pathToFileURL(module),
+    missing: () => pathToFileURL(join(directory, 'no-such-module.mjs')),
     limiting,
     bare,
     limitedWith: () => (existsSync(limited) ? readFileSync(limited, 'utf8').trim() : undefined),

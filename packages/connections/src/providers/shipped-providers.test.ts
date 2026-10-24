@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { additionIssuesOf, readAddition, type AdditionInput } from '../entries/entry-checks.ts';
 import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
 
-const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
 const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 

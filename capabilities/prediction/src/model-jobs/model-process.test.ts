@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { spawnForTheTest } from '@on.auto/operations/testing';
+import type { ModuleAddress } from '@on.auto/workflow-engine/dsl';
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -23,7 +24,7 @@ const decodeManifest = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.S
 const loadedFile = 'loaded';
 
 interface WatchedProcess {
-  readonly module: Readonly<URL>;
+  readonly module: ModuleAddress;
   readonly loaded: string;
 }
 
@@ -44,10 +45,10 @@ function watchedModelProcess(): WatchedProcess {
       '    return nextLoad(url, context);',
       '  },',
       '});',
-      `await import('${modelProcessModule.href}');`,
+      `await import('${modelProcessModule().href}');`,
     ].join('\n'),
   );
-  return { module, loaded };
+  return { module: () => module, loaded };
 }
 
 function packageOf(directory: string): string {
@@ -84,7 +85,7 @@ const baselinesJob: Parameters<ModelProcesses['baselines']>[1] = {
 
 describe('the module a model process runs', () => {
   it('says it is ready to its server, and ends of itself when its server lets it go', async () => {
-    const child = spawnForTheTest(process.execPath, [...process.execArgv, fileURLToPath(modelProcessModule)], {
+    const child = spawnForTheTest(process.execPath, [...process.execArgv, fileURLToPath(modelProcessModule())], {
       serialization: 'json',
       stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     });

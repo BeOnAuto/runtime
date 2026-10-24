@@ -8,6 +8,8 @@ import type { Ending, Interrupted } from './job-endings.ts';
 import type { ProgramAnswer } from './program-messages.ts';
 import type { Evaluations } from './remote-evaluations.ts';
 
+export type ModuleAddress = () => Readonly<URL>;
+
 export type HandedFiles = Readonly<Record<string, Readonly<Uint8Array>>>;
 
 export interface HandedWorkers {
@@ -20,9 +22,9 @@ export interface PoolSettings {
   readonly heapMegabytes: number;
   readonly handed: HandedWorkers;
   readonly instances: InstanceSourceName;
-  readonly worker?: Readonly<URL>;
-  readonly foldWorker?: Readonly<URL>;
-  readonly evaluationWorker?: Readonly<URL>;
+  readonly worker?: ModuleAddress;
+  readonly foldWorker?: ModuleAddress;
+  readonly evaluationWorker?: ModuleAddress;
   readonly environment?: Readonly<Record<string, string>>;
   readonly idleMs?: number;
   readonly checkStartMs?: number;
@@ -39,7 +41,7 @@ export interface ProgramRequest {
   readonly stackBytes: number;
   readonly deadlineMs: number;
   readonly mostOutputBytes: number;
-  readonly worker?: Readonly<URL>;
+  readonly worker?: ModuleAddress;
   readonly context?: Json;
 }
 
@@ -48,7 +50,7 @@ export type PoolOutcome = Ending<ProgramAnswer> & { readonly milliseconds: numbe
 export interface FoldRequest extends FoldPage {
   readonly waitMs: number;
   readonly deadlineMs: number;
-  readonly worker?: Readonly<URL>;
+  readonly worker?: ModuleAddress;
 }
 
 export type FoldEnding = FoldAnswer | (Interrupted & { readonly progress?: FoldPlace });
@@ -57,7 +59,7 @@ export type FoldOutcome = FoldEnding & { readonly milliseconds: number };
 
 export interface CheckRequest extends CheckJob {
   readonly deadlineMs: number;
-  readonly worker: Readonly<URL>;
+  readonly worker: ModuleAddress;
 }
 
 export type CheckOutcome = Ending<CheckAnswer> & { readonly milliseconds: number };

@@ -1,3 +1,5 @@
+import { Struct } from 'effect';
+
 import { isJson, isList, isObject, type Json, type JsonObject } from '../dsl/json.ts';
 import type { FoldAnswerSchema, FoldJob } from '../jobs/fold-messages.ts';
 import { foldPage, type FoldHost, type FoldingView, type FoldPage, type FoldedPage } from './fold-page.ts';
@@ -30,12 +32,22 @@ function pageOf({ events, views, ...rest }: FoldJob): FoldPage | undefined {
   return read === undefined || known.length < views.length ? undefined : { ...rest, events: read, views: known };
 }
 
-export function foldPageData({ events, views, ...rest }: FoldPage): FoldJob {
+function jobOfThePage({ events, views, ...rest }: FoldPage): FoldJob {
   return {
     ...rest,
     events: JSON.stringify(events),
     views: views.map(({ view, ...each }) => ({ ...each, view: JSON.stringify(view) })),
   };
+}
+
+interface RequestedPage extends FoldPage {
+  readonly waitMs?: number;
+  readonly deadlineMs?: number;
+  readonly worker?: unknown;
+}
+
+export function foldPageData(request: RequestedPage): FoldJob {
+  return jobOfThePage(Struct.omit(request, ['waitMs', 'deadlineMs', 'worker']));
 }
 
 function answerFrom({ early, views }: FoldedPage): FoldAnswerData {

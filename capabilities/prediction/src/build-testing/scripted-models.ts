@@ -2,6 +2,7 @@ import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import type { ModuleAddress } from '@on.auto/workflow-engine/dsl';
 import { expect, vi } from 'vitest';
 
 import { scratchDirectory } from '../testing/scratch.ts';
@@ -22,7 +23,7 @@ export type Script =
   | 'unreadable';
 
 export interface ScriptedModels {
-  readonly module: Readonly<URL>;
+  readonly module: ModuleAddress;
   readonly next: (script: Script) => void;
   readonly untilSleeping: (jobs: readonly string[]) => Promise<void>;
 }
@@ -113,7 +114,7 @@ export function scriptedModels(): ScriptedModels {
   writeFileSync(files.sleeping, '');
   writeFileSync(module, sourceOf());
   return {
-    module,
+    module: () => module,
     next: (script) => {
       scriptNamed(files, script);
     },

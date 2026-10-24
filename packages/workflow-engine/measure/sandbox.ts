@@ -19,7 +19,7 @@ import type { Evaluation } from '../src/programs/program-run.ts';
 import { sandboxRuntimeOf } from '../src/programs/sandbox-session.ts';
 import { medianMillisecondsOf, millisecondsOf } from './common.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

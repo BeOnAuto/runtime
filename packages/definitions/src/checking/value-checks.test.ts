@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import { modulesReachedFrom } from '@on.auto/operations/testing';
+import { importedWithoutAnAddress, modulesReachedFrom } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { outputShapeNamed } from '../index.ts';
@@ -76,8 +76,14 @@ describe('the check of a view against the view schema', () => {
 describe('the checked worker', () => {
   it('checks outputs and views with these checks, from a module that exports nothing and serves only in a worker', () => {
     expect([valueChecks.output, valueChecks.view]).toEqual([outputCheckOf, viewCheckOf]);
-    expect(checkedWorker.pathname).toMatch(/\/checking\/checked-worker\.ts$/u);
+    expect(checkedWorker().pathname).toMatch(/\/checking\/checked-worker\.ts$/u);
     expect(Object.keys(checkedWorkerModule)).toEqual([]);
+  });
+
+  it('is named by a module that loads where import.meta.url names no file, read only as a pool makes the job', async () => {
+    const loaded = await importedWithoutAnAddress(new URL('./worker-url.ts', import.meta.url));
+
+    expect(Object.keys(loaded)).toEqual(['checkedWorker']);
   });
 });
 

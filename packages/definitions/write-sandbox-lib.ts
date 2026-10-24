@@ -6,9 +6,9 @@ import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } 
 import { definitionsShippedRoots, keptLibFiles } from './src/program-check/kept-lib.ts';
 import { sandboxLibOf } from './src/program-check/sandbox-lib.ts';
 
-const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots));
+const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots()));
 
-const lib = await sandboxLibOf(shippedFilesOnDisk(definitionsShippedRoots), (expressions) =>
+const lib = await sandboxLibOf(shippedFilesOnDisk(definitionsShippedRoots()), (expressions) =>
   sandboxAnswers(freshInstances(sandboxModule), expressions),
 );
 

@@ -36,10 +36,12 @@ describe('the check of an output against the output schema', () => {
     expect(await run.running(programDocument(functionOf('return input;')), 1)).toMatchObject(
       Exit.succeed({ output: 1 }),
     );
-    expect(requests.map(({ worker, context }) => ({ worker: worker?.pathname.split('/').at(-1), context }))).toEqual([
-      { worker: 'checked-worker.ts', context: run.prepared(campaignPace).summary.outputSchema },
-      { worker: 'checked-worker.ts', context: null },
-    ]);
+    expect(requests.map(({ worker, context }) => ({ worker: worker?.().pathname.split('/').at(-1), context }))).toEqual(
+      [
+        { worker: 'checked-worker.ts', context: run.prepared(campaignPace).summary.outputSchema },
+        { worker: 'checked-worker.ts', context: null },
+      ],
+    );
   });
 
   it('refuses an output the schema refuses, naming at most three of its issues in the one wording of them', async () => {

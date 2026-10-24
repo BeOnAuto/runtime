@@ -16,7 +16,7 @@ import type { KeptView } from '../src/views/view-rows.ts';
 import { viewsFolder } from '../src/views/views-folder.ts';
 import { viewsPortOn } from '../src/views/views-port.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const handed = await handedWorkersOf(sandboxFiles);
 

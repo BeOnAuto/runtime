@@ -34,9 +34,11 @@ describe('the worker an answer runs in', () => {
     const answered = [await run.running(withoutASchema), await run.running(withASchema)];
 
     expect(answered).toMatchObject([Exit.succeed({ output: 2 }), Exit.succeed({ output: 2 })]);
-    expect(requests.map(({ worker, context }) => ({ worker: worker?.pathname.split('/').at(-1), context }))).toEqual([
-      { worker: 'checked-worker.ts', context: null },
-      { worker: 'checked-worker.ts', context: { type: 'integer' } },
-    ]);
+    expect(requests.map(({ worker, context }) => ({ worker: worker?.().pathname.split('/').at(-1), context }))).toEqual(
+      [
+        { worker: 'checked-worker.ts', context: null },
+        { worker: 'checked-worker.ts', context: { type: 'integer' } },
+      ],
+    );
   });
 });

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { shippedFileIn } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { importedWithoutAnAddress } from '@on.auto/operations/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -15,7 +16,7 @@ import {
 } from '../index.ts';
 import { shippedEntries } from './shipped-providers.ts';
 
-const providersOnDisk = shippedFilesOnDisk(providersShippedRoots);
+const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
 const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 
@@ -229,5 +230,14 @@ describe('the shipped providers of Google', () => {
       ['google-slides', ['drive.readonly']],
       ['search-ads-360', []],
     ]);
+  });
+});
+
+describe('the roots of the files the providers ship', () => {
+  it('load where import.meta.url names no file, and are named only when the files are read', async () => {
+    const loaded = await importedWithoutAnAddress(new URL('./shipped-providers.ts', import.meta.url));
+
+    expect(Object.keys(loaded)).toContain('providersShippedRoots');
+    expect(providersShippedRoots()).toEqual({ '@on.auto/providers': new URL('../../', import.meta.url) });
   });
 });

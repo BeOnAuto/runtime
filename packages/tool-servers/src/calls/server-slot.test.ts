@@ -25,7 +25,7 @@ async function stdioRun(args: readonly string[] = []) {
     {
       limitless: {
         command: process.execPath,
-        args: [fakeStdioServerPath, ...args],
+        args: [fakeStdioServerPath(), ...args],
         env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
         org: 'acme',
       },

@@ -33,7 +33,9 @@ export const pageBytes = 65_536;
 
 const enginePackage = '@on.auto/workflow-engine';
 
-export const sandboxShippedRoots: ShippedRoots = { [enginePackage]: new URL('../../', import.meta.url) };
+export function sandboxShippedRoots(): ShippedRoots {
+  return { [enginePackage]: new URL('../../', import.meta.url) };
+}
 
 export const sandboxModuleFile: ShippedFile = dependencyFileOf(
   enginePackage,

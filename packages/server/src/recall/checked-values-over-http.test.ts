@@ -44,11 +44,11 @@ function recordingModules(pool: ProgramPool, modules: Set<string | undefined>): 
   return {
     ...pool,
     run: (request, signal) => {
-      modules.add(request.worker?.pathname.split('/').at(-1));
+      modules.add(request.worker?.().pathname.split('/').at(-1));
       return pool.run(request, signal);
     },
     fold: (request, signal) => {
-      modules.add(request.worker?.pathname.split('/').at(-1));
+      modules.add(request.worker?.().pathname.split('/').at(-1));
       return pool.fold(request, signal);
     },
   };

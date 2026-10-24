@@ -21,11 +21,32 @@ registerHooks({
     nextResolve(aliased(specifier), context),
 });
 
-const outcomes = await Promise.allSettled(subpaths.map((subpath): Promise<unknown> => import(subpath)));
-const failures = outcomes.flatMap((outcome: Readonly<PromiseSettledResult<unknown>>, index) =>
-  outcome.status === 'rejected' ? [`${subpaths[index] ?? ''}: ${String(outcome.reason)}`] : [],
+function failuresOf(imported: readonly string[], outcomes: readonly Readonly<PromiseSettledResult<unknown>>[]) {
+  return outcomes.flatMap((outcome: Readonly<PromiseSettledResult<unknown>>, index) =>
+    outcome.status === 'rejected' ? [`${imported[index] ?? ''}: ${String(outcome.reason)}`] : [],
+  );
+}
+
+const failures = failuresOf(
+  subpaths,
+  await Promise.allSettled(subpaths.map((subpath): Promise<unknown> => import(subpath))),
+);
+
+const { importedWithoutAnAddress } = await import('@on.auto/operations/testing');
+
+const besideTests = subpaths.filter((subpath) => !subpath.endsWith('/testing'));
+
+const failuresWithoutAnAddress = failuresOf(
+  besideTests,
+  await Promise.allSettled(
+    besideTests.map((subpath) => importedWithoutAnAddress(new URL(import.meta.resolve(subpath)))),
+  ),
 );
 
 it('imports every subpath of the package, the names of its packages aliased to them', () => {
   expect(failures).toEqual([]);
+});
+
+it('imports every subpath but the testing ones where import.meta.url names no file, so none makes a URL of it as it loads', () => {
+  expect([besideTests.length > 0, failuresWithoutAnAddress]).toEqual([true, []]);
 });

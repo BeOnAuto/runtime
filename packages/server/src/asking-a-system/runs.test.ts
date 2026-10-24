@@ -37,7 +37,7 @@ describe('a run that asks a system whose session or process is gone', () => {
       TOOL_SERVERS: JSON.stringify({
         notes: {
           command: process.execPath,
-          args: [fakeStdioServerPath],
+          args: [fakeStdioServerPath()],
           env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
           org: 'acme',
         },

@@ -6,7 +6,7 @@ import { Effect } from 'effect';
 import { StartRefused, type ReactionOptions, type ReactionStart } from '../reactions/reaction-options.ts';
 import { StartRejected } from '../reactions/start-rejected.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

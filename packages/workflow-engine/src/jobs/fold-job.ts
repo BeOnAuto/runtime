@@ -1,4 +1,4 @@
-import { Schema, Struct } from 'effect';
+import { Schema } from 'effect';
 
 import { foldPageData } from '../folds/fold-answer.ts';
 import { foldProgress, type FoldPlace } from '../folds/fold-progress.ts';
@@ -25,7 +25,7 @@ export function foldJobOf(
   signal?: Readonly<AbortSignal>,
 ): FoldJob {
   const { waitMs, deadlineMs } = request;
-  const page = foldPageData(Struct.omit(request, ['waitMs', 'deadlineMs', 'worker']));
+  const page = foldPageData(request);
   const progress = foldProgress();
   const job: Job<FoldAnswer> = {
     key: module.href,

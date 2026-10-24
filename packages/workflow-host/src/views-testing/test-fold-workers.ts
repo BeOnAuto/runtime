@@ -1,5 +1,12 @@
 import { measuredPoolSettings } from '@on.auto/definitions/testing';
-import { mostValueDepth, programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import {
+  mostValueDepth,
+  programPool,
+  type ModuleAddress,
+  type PoolSettings,
+  type ProgramPool,
+} from '@on.auto/workflow-engine/dsl';
+import { moduleOfSource } from '@on.auto/workflow-engine/testing';
 
 export const breaksTheWorker = 'breaks the worker';
 
@@ -18,7 +25,7 @@ interface Folding {
 
 const hostClock = { starting: '', now: 'host.now' };
 
-export function foldingWorker({ prelude, whenFolding, serving, clock = hostClock }: Folding): URL {
+export function foldingWorker({ prelude, whenFolding, serving, clock = hostClock }: Folding): ModuleAddress {
   const source = [
     `import { serveJobs } from '${jobLoop}';`,
     `import { foldAnswerOf } from '${answerers}';`,
@@ -34,7 +41,7 @@ export function foldingWorker({ prelude, whenFolding, serving, clock = hostClock
     '};',
     serving,
   ];
-  return new URL(`data:text/javascript,${encodeURIComponent(source.join('\n'))}`);
+  return moduleOfSource(source.join('\n'));
 }
 
 export const testFoldWorker = foldingWorker({

@@ -2,6 +2,7 @@ import type { ContentStore } from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
 import type { AppendSignal } from '../appends/append-signal.ts';
+import { listenersOf } from '../event-store.ts';
 import { ledgerLayerOver, type LedgerServices, type OpenedLedger } from '../ledger-layer.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
 import { postgresqlConnectionOn } from './postgresql-connection.ts';
@@ -29,10 +30,10 @@ export interface PostgreSQLLedgerOptions extends PostgreSQLOptions {
 const connectionsForTheStatementsBeside = 4;
 
 export function postgresqlLedgerOpened(options: PostgreSQLStoreOptions): OpenedLedger {
-  const { observer } = options;
+  const listeners = listenersOf(options);
   const pool = poolOf(options, connectionsOfOneLedger);
   const besides = poolOf(options, connectionsForTheStatementsBeside);
-  const store = postgresqlStoreOn(() => pool, options, observer);
+  const store = postgresqlStoreOn(() => pool, options, listeners);
   return {
     store: {
       ...store,
@@ -43,7 +44,7 @@ export function postgresqlLedgerOpened(options: PostgreSQLStoreOptions): OpenedL
     },
     connection: postgresqlConnectionOn(
       besides,
-      postgresqlStoreOn(() => pool, {}, observer),
+      postgresqlStoreOn(() => pool, {}, listeners),
     ),
   };
 }

@@ -5,7 +5,9 @@ import type { SandboxLib } from './sandbox-lib.ts';
 
 export const definitionsPackage = '@on.auto/definitions';
 
-export const definitionsShippedRoots: ShippedRoots = { [definitionsPackage]: new URL('../../', import.meta.url) };
+export function definitionsShippedRoots(): ShippedRoots {
+  return { [definitionsPackage]: new URL('../../', import.meta.url) };
+}
 
 export const keptLibFiles: Readonly<Record<keyof SandboxLib, ShippedFile>> = {
   script: { package: definitionsPackage, path: 'lib/sandbox.d.ts.txt' },

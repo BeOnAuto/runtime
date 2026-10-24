@@ -14,7 +14,7 @@ const formatter = fileURLToPath(new URL('../../node_modules/.bin/oxfmt', import.
 
 const written = await translatedDocuments(process.argv.slice(2), {
   folder: documentsBesideTheEntries,
-  shippedFiles: shippedFilesOnDisk(providersShippedRoots),
+  shippedFiles: shippedFilesOnDisk(providersShippedRoots()),
   fetching: fetch,
   readGiven: (path) => readFile(path, 'utf8'),
 });

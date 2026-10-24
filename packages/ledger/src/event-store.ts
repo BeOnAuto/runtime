@@ -13,6 +13,8 @@ import type {
 } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
+import type { StreamSignal } from './signal/append-signal.ts';
+
 export interface EncodedEvent {
   readonly type: string;
   readonly data: Schema.JsonObject;
@@ -37,6 +39,15 @@ export interface AppendPlace {
 
 export interface AppendObserver {
   readonly appended: (stream: string, events: readonly EncodedEvent[], place: AppendPlace) => void;
+}
+
+export interface AppendListeners {
+  readonly observer?: AppendObserver | undefined;
+  readonly appended?: StreamSignal | undefined;
+}
+
+export function listenersOf({ observer, appended }: AppendListeners): AppendListeners {
+  return { observer, appended };
 }
 
 export interface RecordedStream {

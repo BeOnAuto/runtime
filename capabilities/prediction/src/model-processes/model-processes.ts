@@ -1,6 +1,12 @@
 import { availableParallelism } from 'node:os';
 
-import { pooledJob, type ProcessOutcome, type ProcessPool, type ProcessValue } from '@on.auto/workflow-engine/dsl';
+import {
+  pooledJob,
+  type ModuleAddress,
+  type ProcessOutcome,
+  type ProcessPool,
+  type ProcessValue,
+} from '@on.auto/workflow-engine/dsl';
 import { Effect, Option, Schema } from 'effect';
 
 import { BaselineSchema } from '../document/evaluation-names.ts';
@@ -16,7 +22,9 @@ export interface ModelDeadlines {
 
 export const modelDeadlines: ModelDeadlines = { check: 30_000, run: 10_000, walk: 600_000, baselines: 30_000 };
 
-export const modelProcessModule = new URL('../model-jobs/model-process.ts', import.meta.url);
+export function modelProcessModule(): URL {
+  return new URL('../model-jobs/model-process.ts', import.meta.url);
+}
 
 const Floats = Schema.declare((value: unknown): value is Readonly<Float32Array> => value instanceof Float32Array);
 
@@ -84,7 +92,7 @@ export interface ModelProcesses {
 
 export interface ModelProcessSettings {
   readonly pool: ProcessPool;
-  readonly module?: Readonly<URL>;
+  readonly module?: ModuleAddress;
   readonly deadlines?: ModelDeadlines;
 }
 

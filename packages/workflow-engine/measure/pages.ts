@@ -16,7 +16,7 @@ import {
 import { foldPage } from '../src/folds/fold-page.ts';
 import { millisecondsOf } from './common.ts';
 
-const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots);
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 

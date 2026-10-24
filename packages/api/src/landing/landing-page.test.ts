@@ -10,7 +10,7 @@ import { call, createTestHandler } from '../testing/api-calls.ts';
 import { operationServer } from '../testing/operation-server.ts';
 import { servedStudio } from '../testing/studios.ts';
 
-const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots);
+const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots());
 
 const fromABrowser = { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' };
 

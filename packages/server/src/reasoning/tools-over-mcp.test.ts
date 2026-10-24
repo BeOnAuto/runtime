@@ -45,7 +45,7 @@ async function serving(
             graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
             limitless: {
               command: process.execPath,
-              args: [fakeStdioServerPath],
+              args: [fakeStdioServerPath()],
               env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
               org: 'acme',
             },

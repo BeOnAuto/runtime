@@ -8,7 +8,7 @@ import { parseRecallDocument } from '../src/document/document-parsing.ts';
 import { recallBounds, recallFolding } from '../src/run/recall-bounds.ts';
 import { campaignReviews } from '../src/testing/campaign-reviews.ts';
 
-const checkFiles = shippedFilesOnDisk(checkShippedRoots);
+const checkFiles = shippedFilesOnDisk(checkShippedRoots());
 
 const handed = await handedWorkersWithChecks(checkFiles);
 

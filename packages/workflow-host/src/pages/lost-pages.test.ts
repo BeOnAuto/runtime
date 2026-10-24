@@ -1,3 +1,4 @@
+import { moduleOfSource } from '@on.auto/workflow-engine/testing';
 import { describe, expect, it } from 'vitest';
 
 import { onSQLite } from '../testing/host-files.ts';
@@ -31,10 +32,6 @@ function heardOn(channel: string): Promise<void> {
     resolve();
   });
   return promise;
-}
-
-function workerOf(source: string): URL {
-  return new URL(`data:text/javascript,${encodeURIComponent(source)}`);
 }
 
 function markingThen(event: number, then: string): string {
@@ -90,7 +87,7 @@ describe('a page of folds the pool cannot finish', () => {
   it.each(workersThatStop)(
     'counts against the fold that was going when it %s, and stalls it after its tries',
     async (_way, source, kind, message) => {
-      const views = await viewHarness(await onSQLite(), { foldWorker: workerOf(source), heapMegabytes: 16 });
+      const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(source), heapMegabytes: 16 });
       await views.saved('runs', counting);
       await views.ran('reasoning/runs', 1);
       views.start(quick);
@@ -104,7 +101,7 @@ describe('a page of folds the pool cannot finish', () => {
   it.each(workersThatNameNoFold)(
     'is reported and tried again, counting against no fold, when its worker %s',
     async (_way, source, trouble) => {
-      const views = await viewHarness(await onSQLite(), { foldWorker: workerOf(source) });
+      const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(source) });
       await views.saved('runs', counting);
       await views.ran('reasoning/runs', 1);
       views.start(quick);
@@ -133,7 +130,7 @@ describe('a page of folds the pool cannot finish', () => {
 describe('a page of folds lost twice', () => {
   it('counts a try and keeps the checkpoint when what it folds before the event breaks its worker too', async () => {
     const atTheSecondRun = markingThen(2, 'throw new Error("broken on purpose");');
-    const views = await viewHarness(await onSQLite(), { foldWorker: workerOf(atTheSecondRun) });
+    const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(atTheSecondRun) });
     await views.saved('runs', counting);
     await views.ranEach('reasoning/runs', [1, 2]);
     views.start(quick);

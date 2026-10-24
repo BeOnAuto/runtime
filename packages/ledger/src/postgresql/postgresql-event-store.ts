@@ -2,7 +2,7 @@ import { getPostgreSQLEventStore } from '@event-driven-io/emmett-postgresql';
 import { pgEventStoreDriver } from '@event-driven-io/emmett-postgresql/pg';
 
 import { emmettEventStore } from '../emmett/emmett-event-store.ts';
-import type { AppendObserver, LedgerStore } from '../event-store.ts';
+import { listenersOf, type AppendListeners, type LedgerStore } from '../event-store.ts';
 import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgresql-reads/postgresql-recorded.ts';
 import { dataAsJsonText } from './json-text.ts';
 import type { PostgreSQLOptions, PostgreSQLPools } from './postgresql-options.ts';
@@ -25,7 +25,7 @@ export const connectionsOfOneLedger = 10;
 export function postgresqlStoreOn(
   pooled: () => PostgreSQLPool,
   kept: StoreKept,
-  observer?: AppendObserver,
+  listeners: AppendListeners = {},
 ): LedgerStore {
   const pool = pooled();
   const projections = postgresqlProjectionsOf(kept);
@@ -40,7 +40,7 @@ export function postgresqlStoreOn(
         onAfterSchemaCreated: projections.afterTheSchema,
       },
     }),
-    { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, observer },
+    { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, ...listeners },
   );
   const query: Query = async (text, values) =>
     (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
@@ -63,5 +63,5 @@ export function poolOf({ pools, reportLostConnection }: PostgreSQLStoreOptions, 
 }
 
 export function postgresqlEventStore(options: PostgreSQLStoreOptions): LedgerStore {
-  return postgresqlStoreOn(() => poolOf(options, connectionsOfOneLedger), options, options.observer);
+  return postgresqlStoreOn(() => poolOf(options, connectionsOfOneLedger), options, listenersOf(options));
 }
