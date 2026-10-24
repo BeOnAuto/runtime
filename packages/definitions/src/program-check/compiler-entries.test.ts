@@ -23,7 +23,15 @@ const checkHandler = 'program-check/handed-checks.ts';
 
 describe('the compiler', () => {
   it('is reached by the check worker, which the pool starts with the first check, and by the entry of the handler it serves, and by no other entry of the package, the check entry among them', () => {
-    expect(entries).toEqual(['index.ts', 'check.ts', checkHandler, 'document.ts', 'template.ts', 'testing/index.ts']);
+    expect(entries).toEqual([
+      'index.ts',
+      'check.ts',
+      checkHandler,
+      'document.ts',
+      'template.ts',
+      'testing/index.ts',
+      'checking/value-checks.ts',
+    ]);
     expect(entries.filter((entry) => entry !== checkHandler).flatMap((entry) => compilersReachedFrom(entry))).toEqual(
       [],
     );

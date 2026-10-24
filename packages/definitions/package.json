@@ -10,7 +10,8 @@
     "./check-handler": "./src/program-check/handed-checks.ts",
     "./document": "./src/document.ts",
     "./template": "./src/template.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./value-checks": "./src/checking/value-checks.ts"
   },
   "scripts": {
     "measure:checks": "node measure/measure-checks.ts",

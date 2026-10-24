@@ -1,3 +1,6 @@
+import { fileURLToPath } from 'node:url';
+
+import { modulesReachedFrom } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { outputShapeNamed } from '../index.ts';
@@ -75,5 +78,13 @@ describe('the checked worker', () => {
     expect([valueChecks.output, valueChecks.view]).toEqual([outputCheckOf, viewCheckOf]);
     expect(checkedWorker.pathname).toMatch(/\/checking\/checked-worker\.ts$/u);
     expect(Object.keys(checkedWorkerModule)).toEqual([]);
+  });
+});
+
+describe('the checks of values, as the value-checks entry exports them', () => {
+  it('reach no Node module and no compiler, so a pool on another platform checks outputs and views as the checked worker does', () => {
+    const { packages } = modulesReachedFrom(fileURLToPath(new URL('..', import.meta.url)), 'checking/value-checks.ts');
+
+    expect(packages).toEqual(['@on.auto/json-schema', '@on.auto/workflow-engine/worker']);
   });
 });
