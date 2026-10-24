@@ -78,6 +78,8 @@ const impure: readonly Forbidden[] = [
   { what: 'the host locale or time zone', pattern: /\bIntl\./u },
 ];
 
+const resolution: readonly Forbidden[] = [{ what: 'a resolved package', pattern: /\bimport\.meta\.resolve\b/u }];
+
 const growingCache: readonly Forbidden[] = [
   {
     what: 'a module-level collection',
@@ -204,6 +206,11 @@ describe('the engine core', () => {
     ]);
     expect(sourcesUnder('workers').length).toBeGreaterThan(1);
     expect(findingsIn(sourcesUnder('workers'), hostOnly)).toEqual([]);
+  });
+
+  it('resolves no package when a module loads, so a host that bundles the modules loads every one of them, and names a file a dependency ships under the engine, for the reader to find', () => {
+    expect(findingsIn(everySource, resolution)).toEqual([]);
+    expect(caught("import.meta.resolve('a-package/package.json')", resolution)).toEqual(['a resolved package']);
   });
 
   it('keeps no module-level cache that could grow with the history of a run: a collection built empty at module level is one; a constant collection of literals is not, nor a WeakMap, whose entries go with the values they describe', () => {

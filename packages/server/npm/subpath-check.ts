@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { linked } from '../src/command-line/launch.ts';
+import { installedRelease, linked } from '../src/command-line/launch.ts';
 
 export interface SubpathCheck {
   readonly packageName: string;
@@ -12,6 +12,12 @@ export interface SubpathCheck {
   readonly modules: ReadonlyMap<string, string>;
   readonly aliasedNames: readonly string[];
   readonly subpaths: readonly string[];
+}
+
+function readInARelease(program: string): void {
+  const release = installedRelease(join(program, 'package'), join(program, 'cache'));
+  cpSync(fileURLToPath(new URL('release-reads.ts', import.meta.url)), join(release, 'release-reads.ts'));
+  execFileSync(process.execPath, [join(release, 'release-reads.ts')], { cwd: release, stdio: 'inherit' });
 }
 
 export function importedSubpaths({ packageName, tarball, modules, aliasedNames, subpaths }: SubpathCheck): void {
@@ -41,6 +47,7 @@ export function importedSubpaths({ packageName, tarball, modules, aliasedNames, 
         },
       },
     );
+    readInARelease(program);
   } finally {
     rmSync(program, { recursive: true, force: true });
   }

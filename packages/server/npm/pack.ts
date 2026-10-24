@@ -295,5 +295,5 @@ importedSubpaths({
   subpaths: Object.keys(subpaths),
 });
 process.stdout.write(
-  `Packed ${shippedNames.length} workspace packages and ${Object.keys(dependencies).length} dependencies into ${tarball}, and imported its ${Object.keys(subpaths).length} subpaths\n`,
+  `Packed ${shippedNames.length} workspace packages and ${Object.keys(dependencies).length} dependencies into ${tarball}, imported its ${Object.keys(subpaths).length} subpaths and read the files it ships in a release of it\n`,
 );
