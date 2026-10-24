@@ -52,6 +52,7 @@ export type {
   StallKind,
   ViewCheck,
 } from './folds/fold-page.ts';
+export { foldPageData } from './folds/fold-answer.ts';
 export type { FoldPlace } from './folds/fold-progress.ts';
 export { sandboxModuleIn, sandboxShippedRoots } from './instances/compiled-module.ts';
 export { freshInstances } from './instances/fresh-instances.ts';
