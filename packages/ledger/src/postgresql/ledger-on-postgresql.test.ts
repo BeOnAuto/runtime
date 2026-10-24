@@ -5,9 +5,7 @@ import { executorOn } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
-import { keptSecretsBehaviour } from '../secrets/kept-secrets-behaviour.ts';
-import { ledgerBehaviour } from '../testing/ledger-behaviour.ts';
-import type { LedgerEntry } from '../testing/ledger-entry.ts';
+import { keptSecretsBehaviour, ledgerBehaviour, type LedgerEntry } from '../testing/index.ts';
 import {
   plainPoolsOn,
   postgresqlEventStore,

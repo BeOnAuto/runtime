@@ -7,6 +7,7 @@ import {
   hostWakeUp,
   openHostParts,
   openWorkflowStore,
+  runKeyOf,
   runRequestsOf,
   type HostClock,
   type NextWake,
@@ -14,7 +15,6 @@ import {
   type WorkflowStore,
   type Woken,
 } from '../index.ts';
-import { runKeyOf } from '../runs/run-address.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, connectedOn, leaseHoldersOn } from '../testing/host-files.ts';
 import { recordedOptionsOf } from '../testing/host-runs.ts';

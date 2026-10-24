@@ -66,7 +66,7 @@ export {
   type WakeUpParts,
   type Woken,
 } from './loop/host-wake-up.ts';
-export type { RunAddress } from './runs/run-address.ts';
+export { runKeyOf, type RunAddress } from './runs/run-address.ts';
 export { runLogContextOf } from './runs/run-log-context.ts';
 export { recordIdOf } from './runs/run-lineage.ts';
 export {
