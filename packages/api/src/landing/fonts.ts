@@ -1,8 +1,6 @@
-import type { ShippedFile, ShippedFiles, ShippedRoots } from '@on.auto/operations';
+import type { ShippedFile, ShippedFiles } from '@on.auto/operations';
 
-const apiPackage = '@on.auto/api';
-
-export const apiShippedRoots: ShippedRoots = { [apiPackage]: new URL('../../', import.meta.url) };
+import { apiPackage } from '../shipped-files/api-roots.ts';
 
 const monoFile: ShippedFile = { package: apiPackage, path: 'src/landing/fonts/dm-mono-latin-500.woff2' };
 

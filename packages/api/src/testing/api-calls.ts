@@ -3,8 +3,8 @@ import { allPermissions, type CallSummary } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 
 import { createApiHandler, type ApiHandler, type ApiOptions, type RegisterRoutes } from '../index.ts';
-import { apiShippedRoots } from '../landing/fonts.ts';
 import { readPageStyle } from '../landing/page-style.ts';
+import { apiShippedRoots } from '../shipped-files/api-roots.ts';
 import { hostedStudio } from './studios.ts';
 
 const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots);

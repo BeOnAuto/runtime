@@ -1,7 +1,7 @@
 export { createApiHandler } from './api-handler.ts';
 export type { ApiHandler } from './api-handler.ts';
 export type { ApiOptions } from './api-options.ts';
-export { apiShippedRoots } from './landing/fonts.ts';
+export { apiShippedRoots } from './shipped-files/api-roots.ts';
 export { readPageStyle, type PageStyle } from './landing/page-style.ts';
 export type { ApiStudio, HostedStudio, ServedStudio, StudioAnswer, StudioHost } from './studio/served-studio.ts';
 export {
@@ -42,6 +42,7 @@ export {
   type RecipeWords,
 } from './guides/guide-shelf.ts';
 export { guideAddress, guideMediaType } from './guides/guide-resources.ts';
+export { guideShelfFrom, type ServedType } from './guides/served-guides.ts';
 export {
   mostArgumentDescriptionCharacters,
   mostDescriptionCharacters,

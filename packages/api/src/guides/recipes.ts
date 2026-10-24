@@ -1,7 +1,7 @@
-import type { Guide, Recipe } from '@on.auto/api';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/operations';
 
 import { recipesFolder } from './guide-files.ts';
+import type { Guide, Recipe } from './guide-shelf.ts';
 
 type RecipeOutline = Omit<Recipe, 'text'>;
 

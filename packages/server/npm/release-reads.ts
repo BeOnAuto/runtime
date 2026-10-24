@@ -1,5 +1,6 @@
 import { deepStrictEqual } from 'node:assert/strict';
 
+import { apiShippedRoots, guideShelfFrom } from '@on.auto/api';
 import { checkShippedRoots, handedWorkersWithChecks } from '@on.auto/definitions/check';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
@@ -18,6 +19,15 @@ deepStrictEqual(
   [1, 2, true],
 );
 
+const workflows = { type: 'workflow', noun: { one: 'workflow', other: 'workflows' }, guide: { name: 'workflow' } };
+const shelf = await guideShelfFrom(shippedFilesOnDisk(apiShippedRoots), [workflows]);
+const pages = [...shelf.guides, ...shelf.recipes].map(({ name, text }) => [name, text.length > 0]);
+deepStrictEqual(pages, [
+  ['terminology', true],
+  ['workflow', true],
+  ['schedule', true],
+]);
+
 process.stdout.write(
-  `Read, in a release of the package, the module of the sandbox, which answered 1 + 2 with 3, and the kept lib of the check, ${keptLib.join(' and ')} bytes\n`,
+  `Read, in a release of the package, the module of the sandbox, which answered 1 + 2 with 3, the kept lib of the check, ${keptLib.join(' and ')} bytes, and the guide shelf of a server of workflows, ${shelf.everyGuide.map(({ name }) => name).join(', ')}\n`,
 );
