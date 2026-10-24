@@ -1,8 +1,9 @@
 import { SQL, type SQLExecutor } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
-import type { AppendedStreams, RecordedStore } from '../event-store.ts';
+import type { AppendedStreams, RecordedStore, StreamAgesStore } from '../event-store.ts';
 import { kindKeyOfStream } from '../recorded/sqlite-indexes.ts';
+import { sqliteStreamAges } from '../stream-ages/sqlite-stream-ages.ts';
 
 const defaultPartition = 'emt:default';
 
@@ -18,7 +19,11 @@ async function newestPoint(execute: SQLExecutor): Promise<AppendedStreams> {
   return { streams: [], through: [String(newest.position)], more: false };
 }
 
-export function sqliteAppended(execute: SQLExecutor): RecordedStore['readAppended'] {
+export function sqliteAppended(execute: SQLExecutor): Pick<RecordedStore, 'readAppended'> & StreamAgesStore {
+  return { readAppended: appendedAfter(execute), ...sqliteStreamAges(execute) };
+}
+
+function appendedAfter(execute: SQLExecutor): RecordedStore['readAppended'] {
   return async (after, most) => {
     if (after === undefined) {
       return newestPoint(execute);

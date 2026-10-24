@@ -121,7 +121,11 @@ export interface DefinitionStreamsStore {
   readonly definitionStreams: (definitionType: string) => Promise<readonly DefinitionStream[]>;
 }
 
-export interface LedgerStreams extends Streams, RecordedStore, DefinitionStreamsStore {}
+export interface StreamAgesStore {
+  readonly ageOfLastAppend: (stream: string) => Promise<number>;
+}
+
+export interface LedgerStreams extends Streams, RecordedStore, DefinitionStreamsStore, StreamAgesStore {}
 
 export interface EventStore extends StreamStore, LedgerStreams {}
 

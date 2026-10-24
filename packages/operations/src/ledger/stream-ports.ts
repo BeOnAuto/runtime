@@ -22,6 +22,10 @@ export interface StreamReader {
   ) => Effect.Effect<StreamState<State>>;
 }
 
+export interface StreamAges {
+  readonly ageOfLastAppend: (stream: string) => Effect.Effect<number>;
+}
+
 export interface StreamWriter {
   readonly execute: <State, Command, Event extends Recorded, R extends DeclarableReason>(
     stream: string,

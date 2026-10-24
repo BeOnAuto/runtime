@@ -4,7 +4,13 @@ import { Schema } from 'effect';
 import { sqliteAppended } from '../appended/sqlite-appended.ts';
 import { sqliteContentOn } from '../content/content-store.ts';
 import { sqliteDefinitionStreams } from '../definitions/sqlite-definition-streams.ts';
-import type { DefinitionStreamsStore, LedgerStore, RecordedStore, TransactionalPool } from '../event-store.ts';
+import type {
+  DefinitionStreamsStore,
+  LedgerStore,
+  RecordedStore,
+  StreamAgesStore,
+  TransactionalPool,
+} from '../event-store.ts';
 import {
   pointKey,
   recordOf,
@@ -129,11 +135,11 @@ function recordWithId(execute: SQLExecutor): RecordedStore['readRecordedEvent'] 
   };
 }
 
-export function sqliteRecordedStore(execute: SQLExecutor): RecordedStore & DefinitionStreamsStore {
+export function sqliteRecordedStore(execute: SQLExecutor): RecordedStore & DefinitionStreamsStore & StreamAgesStore {
   return {
     ...sqliteDefinitionStreams(execute),
+    ...sqliteAppended(execute),
     pointLength: 1,
-    readAppended: sqliteAppended(execute),
     readRecordedEvent: recordWithId(execute),
     readRecorded: recordedReadingOver({
       firstPointSince: firstPointSince(execute),
@@ -146,6 +152,6 @@ export function sqliteRecordedStore(execute: SQLExecutor): RecordedStore & Defin
 
 export function sqliteRecordedStoreOn(
   pool: TransactionalPool<SQLExecutor>,
-): RecordedStore & DefinitionStreamsStore & Pick<LedgerStore, 'content' | 'sweepContent'> {
+): RecordedStore & DefinitionStreamsStore & StreamAgesStore & Pick<LedgerStore, 'content' | 'sweepContent'> {
   return { ...sqliteRecordedStore(pool.execute), ...sqliteContentOn(pool) };
 }

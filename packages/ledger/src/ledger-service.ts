@@ -89,6 +89,7 @@ export function makeLedger(store: LedgerStore): Ledger['Service'] {
 
   return Ledger.of({
     load,
+    ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     execute: (stream, decider, command, lineage) =>
       decisionLoop(
         (named: string) => load(named, decider),

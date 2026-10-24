@@ -14,6 +14,7 @@ import {
   type RecordedPageRequest,
   type RecordedSelection,
 } from '../index.ts';
+import { prefixedAges } from '../ledger/bound-ports.ts';
 import { memoryLedger, type MemoryLedger } from './memory-ledger.ts';
 
 const HappenedSchema = Schema.Struct({
@@ -277,5 +278,21 @@ describe('the in-memory lineage of what a playbook recorded', () => {
     expect(page.records.map(({ id, causationId, correlationId }) => ({ id, causationId, correlationId }))).toEqual([
       { id: messageIdOf('playbook/acme/alpha/runs/r1', 1), causationId: null, correlationId: null },
     ]);
+  });
+});
+
+describe('the age of the last append to a stream of the memory ledger', () => {
+  it('is how long ago by its clock the stream was last appended to, endless for one never appended to', async () => {
+    const ledger = memoryLedger();
+    const bound = prefixedAges(ledger.service, 'playbook/acme/alpha/');
+    const ages = Effect.all([
+      ledger.service.ageOfLastAppend('playbook/acme/alpha/runs/r1'),
+      bound.ageOfLastAppend('runs/r2'),
+      bound.ageOfLastAppend('runs/r3'),
+    ]);
+
+    expect(
+      await run(aPlaybookWith(ledger).pipe(Effect.andThen(TestClock.setTime(4250)), Effect.andThen(ages))),
+    ).toEqual([1250, 250, Number.POSITIVE_INFINITY]);
   });
 });

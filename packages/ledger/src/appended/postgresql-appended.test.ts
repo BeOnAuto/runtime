@@ -33,7 +33,7 @@ describe('a read on PostgreSQL of the streams appended to after a point', () => 
       [{ id: '58' }],
       [group('playbook/acme/alpha/events/', 2, '60', '7'), group('org/acme/playbooks', 1, '61', '3')],
     );
-    const readAppended = postgresqlAppended(query);
+    const { readAppended } = postgresqlAppended(query);
 
     const now = await readAppended(undefined, 100);
     const appended = await readAppended(now.through, 100);
@@ -62,7 +62,7 @@ describe('a read on PostgreSQL of the streams appended to after a point', () => 
       [],
       [group('playbook/acme/alpha/events/', 2, '61', '9'), group('playbook/acme/beta/events/', 1, '61', '4')],
     );
-    const readAppended = postgresqlAppended(query);
+    const { readAppended } = postgresqlAppended(query);
 
     const across = await readAppended(['50', '0'], 3);
     const within = await readAppended(['50', '0'], 3);

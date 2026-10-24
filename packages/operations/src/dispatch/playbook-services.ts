@@ -8,6 +8,7 @@ import {
   playbookBoundProjectionReader,
   playbookBoundRecordedReader,
   playbookBoundRunOutcomesReader,
+  prefixedAges,
   prefixedReader,
   prefixedWriter,
   streamPrefixOfPlaybook,
@@ -32,6 +33,7 @@ export function playbookServicesOf(
     Context.add(PlaybookLifecycle, lifecycle),
     Context.add(PlaybookReader, {
       ...prefixedReader(ledger, prefix),
+      ...prefixedAges(ledger, prefix),
       ...playbookBoundRecordedReader(ledger, { org, playbook }),
       ...playbookBoundRunOutcomesReader(ledger, { org, playbook }),
       ...playbookBoundProjectionReader(ledger, { org, playbook }),

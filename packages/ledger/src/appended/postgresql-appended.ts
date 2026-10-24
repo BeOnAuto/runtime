@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import type { AppendedStreams, RecordedStore } from '../event-store.ts';
+import type { AppendedStreams, RecordedStore, StreamAgesStore } from '../event-store.ts';
 import { kindKeyOfStream } from '../postgresql-reads/playbook-indexes.ts';
 import {
   binding,
@@ -9,6 +9,7 @@ import {
   writesOpenElsewhere,
   type Query,
 } from '../postgresql-reads/recorded-parts.ts';
+import { postgresqlStreamAges } from '../stream-ages/postgresql-stream-ages.ts';
 
 const AppendedRows = Schema.NonEmptyArray(
   Schema.Union([
@@ -57,7 +58,11 @@ function appendedOf(horizon: string, groups: readonly Group[], most: number): Ap
   return { streams, through: [String(last.transaction), String(last.position)], more: true };
 }
 
-export function postgresqlAppended(query: Query): RecordedStore['readAppended'] {
+export function postgresqlAppended(query: Query): Pick<RecordedStore, 'readAppended'> & StreamAgesStore {
+  return { readAppended: appendedAfter(query), ...postgresqlStreamAges(query) };
+}
+
+function appendedAfter(query: Query): RecordedStore['readAppended'] {
   return async (after, most) => {
     const elsewhere = await writesOpenElsewhere(query);
     const { values, bind } = binding();

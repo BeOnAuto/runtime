@@ -264,6 +264,7 @@ export type {
   PlaybookRunOutcomesReader,
   RecordedReader,
   RunOutcomesReader,
+  StreamAges,
   StreamReader,
   StreamWriter,
 } from './ledger/stream-ports.ts';

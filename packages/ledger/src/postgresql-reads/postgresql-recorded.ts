@@ -2,7 +2,7 @@ import { Schema } from 'effect';
 
 import { postgresqlAppended } from '../appended/postgresql-appended.ts';
 import { postgresqlContentOn, type ContentConnections } from '../content/postgresql-content.ts';
-import type { DefinitionStreamsStore, LedgerStore, RecordedStore } from '../event-store.ts';
+import type { DefinitionStreamsStore, LedgerStore, RecordedStore, StreamAgesStore } from '../event-store.ts';
 import { dataAsJsonText } from '../postgresql/json-text.ts';
 import {
   pointKey,
@@ -185,11 +185,11 @@ function recordWithId(query: Query): RecordedStore['readRecordedEvent'] {
   };
 }
 
-export function postgresqlRecordedStore(query: Query): RecordedStore & DefinitionStreamsStore {
+export function postgresqlRecordedStore(query: Query): RecordedStore & DefinitionStreamsStore & StreamAgesStore {
   return {
     ...postgresqlDefinitionStreams(query),
+    ...postgresqlAppended(query),
     pointLength: 2,
-    readAppended: postgresqlAppended(query),
     readRecordedEvent: recordWithId(query),
     readRecorded: recordedReadingOver({
       firstPointSince: firstPointSince(query),
@@ -203,6 +203,6 @@ export function postgresqlRecordedStore(query: Query): RecordedStore & Definitio
 export function postgresqlRecordedStoreOn(
   query: Query,
   connections: ContentConnections,
-): RecordedStore & DefinitionStreamsStore & Pick<LedgerStore, 'content' | 'sweepContent'> {
+): RecordedStore & DefinitionStreamsStore & StreamAgesStore & Pick<LedgerStore, 'content' | 'sweepContent'> {
   return { ...postgresqlRecordedStore(query), ...postgresqlContentOn(connections) };
 }
