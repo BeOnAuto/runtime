@@ -11,11 +11,11 @@ import {
 
 import { checkerOf } from '../src/program-check/checking.ts';
 import { sandboxLibFrom } from '../src/program-check/kept-lib.ts';
-import { sandboxLibOf, compilerShippedRoots } from '../src/program-check/sandbox-lib.ts';
+import { sandboxLibOf } from '../src/program-check/sandbox-lib.ts';
 import { checkWorker, handedWorkersWithChecks, checkShippedRoots } from '../src/program-check/save-check.ts';
 import { keptLibOnDisk } from '../src/testing/read-on-disk.ts';
 
-const shippedFiles = shippedFilesOnDisk({ ...compilerShippedRoots, ...checkShippedRoots });
+const shippedFiles = shippedFilesOnDisk(checkShippedRoots);
 
 const schemas = {
   input: {
