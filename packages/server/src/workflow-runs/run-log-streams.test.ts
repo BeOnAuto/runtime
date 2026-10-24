@@ -1,9 +1,9 @@
-import { DatabaseSync } from 'node:sqlite';
-
+import { statement } from '@on.auto/ledger';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { readOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { runIdIn, servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
@@ -49,19 +49,13 @@ afterEach(async () => {
   ledger.remove();
 });
 
-function firstMessagesOfThePlaybook(): readonly FirstMessage[] {
-  const database = new DatabaseSync(ledger.fileName, { readOnly: true });
-  try {
-    return decodeFirstMessages(
-      database
-        .prepare(
-          'SELECT stream_id AS stream, message_type AS type FROM emt_messages WHERE stream_position = 1 AND substr(stream_id, 1, ?) = ?',
-        )
-        .all(playbookKey.length, playbookKey),
-    );
-  } finally {
-    database.close();
-  }
+async function firstMessagesOfThePlaybook(): Promise<readonly FirstMessage[]> {
+  return decodeFirstMessages(
+    await readOfTheLedgerIn(
+      ledger.fileName,
+      statement`SELECT stream_id AS stream, message_type AS type FROM emt_messages WHERE stream_position = 1 AND substr(stream_id, 1, ${playbookKey.length}) = ${playbookKey}`,
+    ),
+  );
 }
 
 function kindKeyOf(stream: string): string {
@@ -108,7 +102,7 @@ describe('the run log of a workflow', () => {
     await definedInTurn(Object.entries(workflows));
     const runIds = await startedInTurn(Object.keys(workflows));
 
-    const messages = await until(() => Promise.resolve(firstMessagesOfThePlaybook()), holdsTheLogOfEvery(runIds));
+    const messages = await until(firstMessagesOfThePlaybook, holdsTheLogOfEvery(runIds));
 
     expect(streamsOfKind(messages, 'runs').filter(({ type }) => type === 'input_applied')).toEqual([]);
     expect(streamsOfKind(messages, 'runs').map(({ stream }) => stream)).toEqual(

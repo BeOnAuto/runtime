@@ -1,5 +1,3 @@
-import { DatabaseSync } from 'node:sqlite';
-
 import { conversations, listInteractions, openRequests, openRequestsName } from '@on.auto/interaction';
 import {
   alpha,
@@ -18,6 +16,7 @@ import { Effect, Layer, ManagedRuntime, Schema } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { onTheLedgerIn, tableDropped } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
 const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -54,16 +53,10 @@ function onSQLite(): Promise<Place> {
   onTestFinished(ledger.remove);
   return Promise.resolve({
     open: () => opened(ledgerLayer({ fileName: ledger.fileName, projections })),
-    dropTables: () => {
-      const database = new DatabaseSync(ledger.fileName);
-      try {
-        for (const table of tables) {
-          database.exec(`DROP TABLE ${table}`);
-        }
-      } finally {
-        database.close();
-      }
-      return Promise.resolve();
+    dropTables: async () => {
+      await onTheLedgerIn(ledger.fileName, (connection) =>
+        Promise.all(tables.map((table) => connection.write(tableDropped(table)))),
+      );
     },
   });
 }

@@ -1,10 +1,10 @@
-import { DatabaseSync } from 'node:sqlite';
-
+import { statement } from '@on.auto/ledger';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { SpawnedServer } from '../testing/processes/spawned-server.ts';
 import { requestTo, settledOver, workflowProcess, type Answer } from '../testing/processes/workflow-process.ts';
+import { readOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { workflows } from '../testing/servers/workflow-calls.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
@@ -33,12 +33,7 @@ async function definedOn(port: number): Promise<void> {
 }
 
 function callStatesIn(file: string): () => Promise<readonly unknown[]> {
-  return () => {
-    const database = new DatabaseSync(file, { readOnly: true });
-    const states = database.prepare('SELECT state FROM workflow_calls').all();
-    database.close();
-    return Promise.resolve(states);
-  };
+  return () => readOfTheLedgerIn(file, statement`SELECT state FROM workflow_calls`);
 }
 
 function waitingOnce(states: readonly unknown[]): boolean {
