@@ -1,6 +1,6 @@
-export { languageModelLayer } from './adapter/language-model-layer.ts';
-export { installedPackages } from './adapter/entra-id.ts';
-export { makeModelAccess, type ModelAccess } from './adapter/model-access.ts';
+export { languageModelLayer } from './providers/language-model-layer.ts';
+export type { EntraIdentityLoader } from './providers/entra-id.ts';
+export { makeModelAccess, type ModelAccess } from './providers/model-access.ts';
 export type {
   ModelAccessOptions,
   ModelTelemetry,
@@ -8,8 +8,8 @@ export type {
   ProviderMessageReport,
   ReportOperatorHint,
   ReportProviderMessage,
-} from './adapter/model-access-options.ts';
-export type { AccessTokenSource, AwsCredentials, CredentialSources } from './adapter/credential-sources.ts';
+} from './providers/model-access-options.ts';
+export type { AccessTokenSource, AwsCredentials, CredentialSources } from './providers/credential-sources.ts';
 export { defineListModels } from './catalog/list-models.ts';
 export type { ModelCatalog } from './catalog/catalog-listing.ts';
 export { ModelListSchema, type ModelEntry, type ModelList } from './catalog/model-list.ts';

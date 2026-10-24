@@ -1,14 +1,14 @@
 import { Clock, Effect, Result } from 'effect';
 
+import { UnclassifiedModelError } from '../failure/unclassified-model-error.ts';
 import type { LanguageModel } from '../model/language-model.ts';
 import type { ModelRequest } from '../model/model-request.ts';
+import type { ModelResolution, ModelTarget } from '../model/model-resolution.ts';
 import type { ModelResult } from '../model/model-result.ts';
 import { checkedRequest } from '../model/request-checks.ts';
 import type { CallPolicy } from './call-policy.ts';
 import { settledCall, type CallReports } from './call-settling.ts';
 import { callFailed, callSucceeded } from './model-metrics.ts';
-import type { ModelResolution, ModelTarget } from './model-resolution.ts';
-import { UnclassifiedModelError } from './unclassified-model-error.ts';
 
 function reportsOf(
   policy: CallPolicy,

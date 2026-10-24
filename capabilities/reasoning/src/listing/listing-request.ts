@@ -1,7 +1,7 @@
 import { Effect, Option, Predicate, Result, Schema } from 'effect';
 
-import { OutboundFailure } from '../adapter/outbound-failure.ts';
-import type { Fetch } from '../adapter/sdk-model.ts';
+import { OutboundFailure } from '../providers/outbound-failure.ts';
+import type { Fetch } from '../providers/sdk-model.ts';
 import type { ListedModel } from './listed-model.ts';
 
 const listingTimeoutMs = 10_000;

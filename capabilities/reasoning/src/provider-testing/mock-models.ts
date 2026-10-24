@@ -1,13 +1,13 @@
 import type { MockLanguageModelV4 } from 'ai/test';
 import { Effect, Result } from 'effect';
 
-import { generation } from '../adapter/generation.ts';
-import type { ReportOperatorHint } from '../adapter/model-access-options.ts';
-import { modelResolution } from '../adapter/model-resolution.ts';
-import { installSdkGlobals } from '../adapter/sdk-globals.ts';
 import type { ModelFailure } from '../failure/model-failure.ts';
+import { generation } from '../model-calls/generation.ts';
 import type { ModelRequest } from '../model/model-request.ts';
+import { modelResolution } from '../model/model-resolution.ts';
 import type { ModelResult } from '../model/model-result.ts';
+import type { ReportOperatorHint } from '../providers/model-access-options.ts';
+import { installSdkGlobals } from '../providers/sdk-globals.ts';
 
 type GenerateResult = Awaited<ReturnType<MockLanguageModelV4['doGenerate']>>;
 

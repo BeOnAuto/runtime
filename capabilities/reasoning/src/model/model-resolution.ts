@@ -3,12 +3,12 @@ import { Option, Result } from 'effect';
 import { DefinitionInvalid } from '../failure/definition-invalid.ts';
 import { ModelNotAllowed } from '../failure/model-not-allowed.ts';
 import { ProviderNotConfigured } from '../failure/provider-not-configured.ts';
-import { aliasResolution } from '../model/model-alias.ts';
-import { modelOffer } from '../model/model-offer.ts';
-import { parseModelReference } from '../model/model-reference.ts';
+import type { ModelFactory, SdkModel } from '../providers/sdk-model.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import type { ProviderStatus } from '../settings/provider-status.ts';
-import type { ModelFactory, SdkModel } from './sdk-model.ts';
+import { aliasResolution } from './model-alias.ts';
+import { modelOffer } from './model-offer.ts';
+import { parseModelReference } from './model-reference.ts';
 
 export interface ModelTarget {
   readonly provider: string;

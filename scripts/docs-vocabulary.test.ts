@@ -78,7 +78,7 @@ const allowances: readonly Allowance[] = [
   {
     text: 'inferenceConfig',
     in: [
-      'capabilities/reasoning/src/adapter/cloud-providers.test.ts',
+      'capabilities/reasoning/src/providers/cloud-providers.test.ts',
       'capabilities/reasoning/src/definition/definition-settings.test.ts',
       reasoningReference,
     ],
@@ -100,7 +100,7 @@ const allowances: readonly Allowance[] = [
   {
     text: 'toolSpec',
     in: [
-      'capabilities/reasoning/src/adapter/cloud-providers.test.ts',
+      'capabilities/reasoning/src/providers/cloud-providers.test.ts',
       'capabilities/reasoning/src/steps/provider-steps.test.ts',
     ],
   },

@@ -1,10 +1,10 @@
 import { Effect } from 'effect';
 
-import type { OperatorHintReport, ProviderMessageReport } from '../adapter/model-access-options.ts';
-import type { ModelAccess } from '../adapter/model-access.ts';
 import type { ModelList } from '../catalog/model-list.ts';
 import { recordingHints, recordingReporter } from '../provider-testing/provider-errors.ts';
 import { recordingFetch, type RecordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
+import type { OperatorHintReport, ProviderMessageReport } from '../providers/model-access-options.ts';
+import type { ModelAccess } from '../providers/model-access.ts';
 import type { Environment } from '../settings/setting-values.ts';
 import { accessFor } from './adapter-harness.ts';
 

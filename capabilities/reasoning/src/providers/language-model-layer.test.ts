@@ -6,6 +6,7 @@ import { anthropicMessage } from '../provider-testing/provider-replies.ts';
 import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { readModelSettings } from '../settings/model-settings.ts';
 import { textRequest } from '../testing/adapter-harness.ts';
+import { loadEntraIdentity } from './installed-packages.ts';
 import { languageModelLayer } from './language-model-layer.ts';
 import { makeModelAccess } from './model-access.ts';
 
@@ -38,7 +39,7 @@ describe('languageModelLayer', () => {
 });
 
 describe('makeModelAccess with its defaults', () => {
-  it('builds every provider from the default fetch and credential chains without contacting anyone', async () => {
+  it('builds every provider from the default fetch and credential chains without contacting anyone, and one provider without a key only given the loader of its identity library', async () => {
     const settings = await Effect.runPromise(
       readModelSettings({
         AWS_REGION: 'us-east-1',
@@ -49,7 +50,15 @@ describe('makeModelAccess with its defaults', () => {
     );
 
     const access = await Effect.runPromise(makeModelAccess(settings));
+    const withTheLibrary = await Effect.runPromise(makeModelAccess(settings, { loadEntraIdentity }));
 
-    expect(access.status.configured).toEqual(['bedrock', 'bedrock-anthropic', 'azure', 'vertex', 'vertex-anthropic']);
+    expect(access.status.configured).toEqual(['bedrock', 'bedrock-anthropic', 'vertex', 'vertex-anthropic']);
+    expect(withTheLibrary.status.configured).toEqual([
+      'bedrock',
+      'bedrock-anthropic',
+      'azure',
+      'vertex',
+      'vertex-anthropic',
+    ]);
   });
 });

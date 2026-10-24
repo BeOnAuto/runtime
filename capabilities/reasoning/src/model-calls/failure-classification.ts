@@ -18,10 +18,10 @@ import { DefinitionInvalid } from '../failure/definition-invalid.ts';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import { ProviderNotConfigured } from '../failure/provider-not-configured.ts';
 import { ProviderUnavailable } from '../failure/provider-unavailable.ts';
+import { UnclassifiedModelError } from '../failure/unclassified-model-error.ts';
+import { credentialLookupMarker, OutboundFailure } from '../providers/outbound-failure.ts';
 import { apiCallFailure } from './api-call-failure.ts';
-import { credentialLookupMarker, OutboundFailure } from './outbound-failure.ts';
 import { outputFailure } from './output-failure.ts';
-import { UnclassifiedModelError } from './unclassified-model-error.ts';
 
 export interface FailureContext {
   readonly provider: string;

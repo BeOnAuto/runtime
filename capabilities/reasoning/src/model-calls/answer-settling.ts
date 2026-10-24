@@ -2,9 +2,9 @@ import type { FinishReason as SdkFinishReason } from 'ai';
 import { Array as Arr, Result, type Schema } from 'effect';
 
 import type { ModelFailure } from '../failure/model-failure.ts';
+import type { ModelTarget } from '../model/model-resolution.ts';
 import type { ModelResult } from '../model/model-result.ts';
 import { finishReasonOf, tokenUsage, warningOf, type SdkUsage, type SdkWarning } from './answer-mapping.ts';
-import type { ModelTarget } from './model-resolution.ts';
 import { outputFailure } from './output-failure.ts';
 
 export type Answered = Omit<ModelResult, 'duration_ms'>;

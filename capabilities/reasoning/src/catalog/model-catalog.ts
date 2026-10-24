@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 
-import type { ModelAccessOptions } from '../adapter/model-access-options.ts';
-import { withCertificateFailures } from '../adapter/outbound-fetch.ts';
 import { modelSources } from '../listing/model-sources.ts';
+import type { ModelAccessOptions } from '../providers/model-access-options.ts';
+import { withCertificateFailures } from '../providers/outbound-fetch.ts';
 import { secretScrubber } from '../settings/message-exposure.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import type { ProviderStatus } from '../settings/provider-status.ts';

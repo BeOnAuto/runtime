@@ -2,7 +2,6 @@ import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing'
 import { Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { AwsCredentials } from '../adapter/credential-sources.ts';
 import {
   anthropicMessage,
   chatCompletion,
@@ -19,6 +18,7 @@ import {
   geminiFunctionCall,
   openAiFunctionCall,
 } from '../provider-testing/tool-call-replies.ts';
+import type { AwsCredentials } from '../providers/credential-sources.ts';
 import { documentOf } from '../testing/definition-documents.ts';
 import { fakeGraphKey, providerRun, type ProviderSetup } from '../testing/provider-runs.ts';
 import { toolsWithdrawn } from '../tools/final-step.ts';

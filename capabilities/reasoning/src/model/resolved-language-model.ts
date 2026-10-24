@@ -1,14 +1,14 @@
 import { Effect } from 'effect';
 
-import { LanguageModel } from '../model/language-model.ts';
+import { generation } from '../model-calls/generation.ts';
+import type { ModelAccessOptions } from '../providers/model-access-options.ts';
+import type { ModelFactory } from '../providers/sdk-model.ts';
+import { gatewayOptionsCheck } from '../settings/gateway-options.ts';
 import { providersShowingMessages, secretScrubber } from '../settings/message-exposure.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import type { ProviderStatus } from '../settings/provider-status.ts';
-import { gatewayOptionsCheck } from './gateway-options.ts';
-import { generation } from './generation.ts';
-import type { ModelAccessOptions } from './model-access-options.ts';
+import { LanguageModel } from './language-model.ts';
 import { modelResolution } from './model-resolution.ts';
-import type { ModelFactory } from './sdk-model.ts';
 
 export function resolvedLanguageModel(
   models: ReadonlyMap<string, ModelFactory>,

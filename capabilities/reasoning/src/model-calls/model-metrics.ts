@@ -1,7 +1,7 @@
 import { Effect, Metric } from 'effect';
 
+import type { ModelTarget } from '../model/model-resolution.ts';
 import type { ModelResult } from '../model/model-result.ts';
-import type { ModelTarget } from './model-resolution.ts';
 
 type TokenType = 'input' | 'output';
 

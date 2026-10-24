@@ -4,9 +4,9 @@ import { Result, type Schema } from 'effect';
 import type { JSONSchema7 } from 'json-schema';
 
 import { DefinitionInvalid } from '../failure/definition-invalid.ts';
+import { AnswerMismatch } from '../model-calls/answer-mismatch.ts';
 import type { JsonOutput } from '../model/model-request.ts';
-import type { AnswerSchema } from '../schema/answer-schema.ts';
-import { AnswerMismatch } from './answer-mismatch.ts';
+import type { AnswerSchema } from './answer-schema.ts';
 
 function isProviderSchema(document: Schema.JsonObject): document is Schema.JsonObject & JSONSchema7 {
   return shapeIssues(document).length === 0;

@@ -3,12 +3,12 @@ import { Effect } from 'effect';
 import { modelCatalogOf } from '../catalog/model-catalog.ts';
 import type { LanguageModel } from '../model/language-model.ts';
 import { offeredModels, type OfferedModels } from '../model/offered-models.ts';
+import { resolvedLanguageModel } from '../model/resolved-language-model.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import { providerStatus, type ProviderStatus } from '../settings/provider-status.ts';
-import { azureTokensFor, loadEntraIdentity } from './entra-id.ts';
+import { azureTokensFor, noEntraIdentity } from './entra-id.ts';
 import type { ModelAccessOptions } from './model-access-options.ts';
 import { modelFactories } from './model-factories.ts';
-import { resolvedLanguageModel } from './resolved-language-model.ts';
 
 export interface ModelAccess {
   readonly languageModel: LanguageModel['Service'];
@@ -22,7 +22,7 @@ export const makeModelAccess = Effect.fnUntraced(function* (settings: ModelSetti
   const azureTokens = yield* azureTokensFor(
     settings.azure,
     credentials.azure,
-    options.loadEntraIdentity ?? loadEntraIdentity,
+    options.loadEntraIdentity ?? noEntraIdentity,
   );
   const status = providerStatus(settings, { entraId: azureTokens !== undefined });
   const fetch = options.fetch ?? globalThis.fetch;

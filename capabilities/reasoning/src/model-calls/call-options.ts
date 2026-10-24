@@ -8,7 +8,7 @@ import type {
   ProviderOptions,
   ToolDefinition,
 } from '../model/model-request.ts';
-import type { ModelTelemetry } from './model-access-options.ts';
+import type { ModelTelemetry } from '../providers/model-access-options.ts';
 
 export type CallTelemetry = ModelTelemetry | undefined;
 

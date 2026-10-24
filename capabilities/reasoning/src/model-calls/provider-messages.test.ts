@@ -8,9 +8,9 @@ import {
   recordingReporter,
 } from '../provider-testing/provider-errors.ts';
 import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
+import type { ProviderMessageReport } from '../providers/model-access-options.ts';
 import { accessFor, failed, promptText, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
-import type { ProviderMessageReport } from './model-access-options.ts';
 
 const apiKey = 'sk-openai-SECRET-5d2f';
 

@@ -1,7 +1,7 @@
 import { Effect, Predicate, Redacted, Schema } from 'effect';
 
-import { defaultBaseUrls } from '../adapter/direct-providers.ts';
-import type { Fetch } from '../adapter/sdk-model.ts';
+import { defaultBaseUrls } from '../providers/direct-providers.ts';
+import type { Fetch } from '../providers/sdk-model.ts';
 import type { AnthropicSettings } from '../settings/provider-settings.ts';
 import { listedModels } from './listed-model.ts';
 import {

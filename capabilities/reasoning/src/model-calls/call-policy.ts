@@ -1,6 +1,6 @@
 import type { ModelRequest } from '../model/model-request.ts';
-import type { ProviderOptionsCheck } from './gateway-options.ts';
-import type { ModelTelemetry, ReportOperatorHint, ReportProviderMessage } from './model-access-options.ts';
+import type { ModelTelemetry, ReportOperatorHint, ReportProviderMessage } from '../providers/model-access-options.ts';
+import type { ProviderOptionsCheck } from '../settings/gateway-options.ts';
 
 export interface CallPolicy {
   readonly configured: readonly string[];

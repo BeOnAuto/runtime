@@ -1,6 +1,6 @@
 import { Effect, Predicate, Redacted, Schema } from 'effect';
 
-import type { Fetch } from '../adapter/sdk-model.ts';
+import type { Fetch } from '../providers/sdk-model.ts';
 import type { GoogleSettings } from '../settings/provider-settings.ts';
 import { listedModels } from './listed-model.ts';
 import {

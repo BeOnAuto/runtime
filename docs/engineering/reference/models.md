@@ -6,7 +6,7 @@ This repository-only page describes the library behind [Set up a model provider]
 
 `readModelSettings(environment)` reads every model setting from an environment record with Effect `Config` (`src/settings/model-settings.ts`). It fails with `ModelSettingsInvalid`, tagged `model_settings_invalid`, whose `message` is `The model settings are invalid. ` followed by each `SETTING: detail`, and whose `problems` list `{ setting, detail }`. No problem repeats a value.
 
-`makeModelAccess(settings, options)` (`src/adapter/model-access.ts`) builds everything else and returns:
+`makeModelAccess(settings, options)` (`src/providers/model-access.ts`) builds everything else and returns:
 
 | Field           | What it is                                                                                                                                              |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -17,7 +17,7 @@ This repository-only page describes the library behind [Set up a model provider]
 
 `status.unconfigured` holds every built-in provider that is not configured, with the names of the settings it lacks. `partial: true` marks one that has some of its settings, which the server logs as a warning of its own. Azure configured without `AZURE_API_KEY`, where `@azure/identity` cannot be loaded, is unconfigured and partial, with `missing` naming `AZURE_API_KEY, or the optional package @azure/identity for Microsoft Entra ID`.
 
-The options of `makeModelAccess` (`ModelAccessOptions`, `src/adapter/model-access-options.ts`) are all optional:
+The options of `makeModelAccess` (`ModelAccessOptions`, `src/providers/model-access-options.ts`) are all optional:
 
 | Option                  | What it injects                                                                                                                                                           |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,7 +44,7 @@ Neither the language model nor the catalog logs anything. They report through th
 
 A model call reports a message for every `APICallError` whose message is not empty. A list of models reports one for every answer with an error status, reading at most 64 KiB of its body: `The answer was larger than 64 KiB` or `The answer had no message` stand in where the body gives nothing usable.
 
-`OperatorHintReport` is `{ provider, model, hint, run_id }`. A call reports a hint for an untrusted certificate and for the AI SDK's `LoadAPIKeyError` and `LoadSettingError`, in the SDK's words, scrubbed and cut at 2,000 characters (`operatorHintOf` in `src/adapter/failure-classification.ts`). A list of models reports `The list of models of <provider> could not be read: <reason>` for every failure that is not an error status.
+`OperatorHintReport` is `{ provider, model, hint, run_id }`. A call reports a hint for an untrusted certificate and for the AI SDK's `LoadAPIKeyError` and `LoadSettingError`, in the SDK's words, scrubbed and cut at 2,000 characters (`operatorHintOf` in `src/model-calls/failure-classification.ts`). A list of models reports `The list of models of <provider> could not be read: <reason>` for every failure that is not an error status.
 
 ## `list_models`
 
@@ -81,7 +81,7 @@ A `ModelRequest` (`src/model/model-request.ts`) has `model`, optional `instructi
 - `seed` not an integer of 0 or more;
 - `timeout_ms` not an integer of 1 or more.
 
-`admit(request)` runs those checks, resolves the model (`modelResolution` in `src/adapter/model-resolution.ts`) and checks the provider options against the gateways (`gatewayOptionsCheck`), all without calling a provider. `generate` does the same and then calls the provider.
+`admit(request)` runs those checks, resolves the model (`modelResolution` in `src/model/model-resolution.ts`) and checks the provider options against the gateways (`gatewayOptionsCheck`), all without calling a provider. `generate` does the same and then calls the provider.
 
 ### Failure objects
 
@@ -102,37 +102,37 @@ Every failure is an Effect `Data.TaggedError` in `src/failure`. Each has a `_tag
 | `timed_out`               | `timeout_ms`                                                                                                                                                                                                                                                                                                                                                              |
 | `cancelled`               | Nothing more; the caller's `signal` aborted                                                                                                                                                                                                                                                                                                                               |
 
-`classified` (`src/adapter/failure-classification.ts`) maps what the AI SDK throws, after unwrapping up to four layers of `RetryError` to the last attempt:
+`classified` (`src/model-calls/failure-classification.ts`) maps what the AI SDK throws, after unwrapping up to four layers of `RetryError` to the last attempt:
 
 - `OutboundFailure('untrusted_certificate')` from `withCertificateFailures`, which asks `isUntrustedCertificate` of `@on.auto/outbound`, becomes `provider_not_configured`;
 - `OutboundFailure('credential_lookup_failed')`, which `guarded` credential sources throw, and any error whose message carries that marker, become `credentials_rejected`;
-- `APICallError` goes to `apiCallFailure` (`src/adapter/api-call-failure.ts`), which reads the status, the body's `error.code` and `error.type`, and the `retry-after` headers;
+- `APICallError` goes to `apiCallFailure` (`src/model-calls/api-call-failure.ts`), which reads the status, the body's `error.code` and `error.type`, and the `retry-after` headers;
 - `NoObjectGeneratedError` becomes `content_refused` for a `content-filter` finish, otherwise `output_invalid`;
 - `InvalidArgumentError`, `UnsupportedFunctionalityError`, `NoSuchModelError` and `InvalidPromptError` become `definition_invalid`;
 - `InvalidResponseDataError`, `EmptyResponseBodyError` and `JSONParseError` become `provider_unavailable`;
 - `LoadAPIKeyError` and `LoadSettingError` become `provider_not_configured`.
 
-Anything else is a defect: `generate` dies with `UnclassifiedModelError`, whose message names the provider and the error's `name` and nothing else, and records `error.type` `unclassified`. A classified failure records its `_tag` as `error.type` (`src/adapter/model-metrics.ts`).
+Anything else is a defect: `generate` dies with `UnclassifiedModelError`, whose message names the provider and the error's `name` and nothing else, and records `error.type` `unclassified`. A classified failure records its `_tag` as `error.type` (`src/model-calls/model-metrics.ts`).
 
 No failure or defect carries the request or response bodies the SDK keeps on its errors (`requestBodyValues`, `responseBody`, `data`), the errors of earlier attempts (`RetryError.errors`), the texts and values on parse and validation errors, or the SDK's own error objects.
 
 ### Retries
 
-`retries` is `'adapter'`, the default, or `'caller'` (`retriesOf` in `src/adapter/call-options.ts`). `'adapter'` passes `maxRetries: 2` to the AI SDK, whose own policy retries a retryable `APICallError` (HTTP 408, 409, 429 and 5xx) and connection failures after 2 and then 4 seconds, or after a `retry-after` of less than a minute. `'caller'` passes `maxRetries: 0`, so exactly one request is made, for a caller that retries on its own. Only the test harness passes `'caller'`: the reasoning function adapter leaves the default, so a workflow's retry policy retries on top of the adapter's retries. `timeout_ms` covers every attempt; the adapter sets it to 60 seconds plus 25 ms for each token of `max_output_tokens` (`timeoutFor` in `src/capability/definition-request.ts`).
+`retries` is `'adapter'`, the default, or `'caller'` (`retriesOf` in `src/model-calls/call-options.ts`). `'adapter'` passes `maxRetries: 2` to the AI SDK, whose own policy retries a retryable `APICallError` (HTTP 408, 409, 429 and 5xx) and connection failures after 2 and then 4 seconds, or after a `retry-after` of less than a minute. `'caller'` passes `maxRetries: 0`, so exactly one request is made, for a caller that retries on its own. Only the test harness passes `'caller'`: the reasoning function adapter leaves the default, so a workflow's retry policy retries on top of the adapter's retries. `timeout_ms` covers every attempt; the adapter sets it to 60 seconds plus 25 ms for each token of `max_output_tokens` (`timeoutFor` in `src/capability/definition-request.ts`).
 
 ### Scrubbing
 
-`secretScrubber(settings)` (`src/settings/message-exposure.ts`) replaces every redacted value of the settings that is at least 8 characters long with `[redacted]`. `scrubberFor(policy, request)` (`src/adapter/call-policy.ts`) first replaces the trimmed instructions and each message text of the request, each at least 8 characters long, with `[prompt]`. `providersShowingMessages(settings)` gives the providers whose `provider_message` may reach the caller.
+`secretScrubber(settings)` (`src/settings/message-exposure.ts`) replaces every redacted value of the settings that is at least 8 characters long with `[redacted]`. `scrubberFor(policy, request)` (`src/model-calls/call-policy.ts`) first replaces the trimmed instructions and each message text of the request, each at least 8 characters long, with `[prompt]`. `providersShowingMessages(settings)` gives the providers whose `provider_message` may reach the caller.
 
 ## SDK globals
 
-`installSdkGlobals` (`src/adapter/sdk-globals.ts`), which `modelFactories` calls, sets `AI_SDK_DEFAULT_PROVIDER` to `customProvider({})`, so a model id without a provider never reaches the AI SDK's default gateway, and `AI_SDK_LOG_WARNINGS` to `false`, so the SDK's warnings arrive in the result's `warnings` and are not written to the console.
+`installSdkGlobals` (`src/providers/sdk-globals.ts`), which `modelFactories` calls, sets `AI_SDK_DEFAULT_PROVIDER` to `customProvider({})`, so a model id without a provider never reaches the AI SDK's default gateway, and `AI_SDK_LOG_WARNINGS` to `false`, so the SDK's warnings arrive in the result's `warnings` and are not written to the console.
 
 ## Credentials
 
-- Bedrock takes `credentialProvider` from the AWS default chain (`awsCredentialChainOf(proxy)` of `@on.auto/outbound`), which `modelFactories` loads once, when model access is built with Bedrock configured and no `aws` credential source given (`bedrockEntries` in `src/adapter/model-factories.ts`), so a server without Bedrock loads no part of it for the capability. `AWS_BEARER_TOKEN_BEDROCK`, when set, is passed as `apiKey`, which the provider sends instead of signing. The chain's own STS and SSO clients make agents of their own, which `NODE_USE_ENV_PROXY` does not reach, so `awsClientSettingsOf(proxy)` gives them the proxy's variables when the switch is on.
-- Vertex takes tokens from `GoogleAuth` with the scope `https://www.googleapis.com/auth/cloud-platform` (`googleCredentialChain`), wrapped in an `OAuth2Client` for `vertex` and passed as `generateAuthToken` for `vertex-anthropic`. A `vertex-anthropic` call reads the access token twice, because the AI SDK's Anthropic model resolves its headers twice per request; the token client caches it, so this costs no extra exchange. `GoogleAuth` and `OAuth2Client` are `google-auth-library`'s, which the AI SDK's two Vertex providers import too, and all three are in `src/adapter/vertex-providers.ts`, which `modelFactories` imports once, when model access is built with Vertex configured (`vertexEntries` in `src/adapter/model-factories.ts`), so a server without Vertex never loads them, which were 75 files and 0.8 MiB of its start, and 10 ms of it in a CPU profile (`src/adapter/credential-libraries.test.ts`; measured on 2026-10-23, at the median of 11 starts and of 7 profiles).
-- Azure without a key loads `@azure/identity` once, when model access is built (`azureTokensFor` in `src/adapter/entra-id.ts`). A missing module (`ERR_MODULE_NOT_FOUND`) leaves Azure unconfigured; any other import error is not swallowed. With the module, tokens come from `getBearerTokenProvider(new DefaultAzureCredential(), 'https://cognitiveservices.azure.com/.default')`, looked up again when they expire.
+- Bedrock takes `credentialProvider` from the AWS default chain (`awsCredentialChainOf(proxy)` of `@on.auto/outbound`), which `modelFactories` loads once, when model access is built with Bedrock configured and no `aws` credential source given (`bedrockEntries` in `src/providers/model-factories.ts`), so a server without Bedrock loads no part of it for the capability. `AWS_BEARER_TOKEN_BEDROCK`, when set, is passed as `apiKey`, which the provider sends instead of signing. The chain's own STS and SSO clients make agents of their own, which `NODE_USE_ENV_PROXY` does not reach, so `awsClientSettingsOf(proxy)` gives them the proxy's variables when the switch is on.
+- Vertex takes tokens from `GoogleAuth` with the scope `https://www.googleapis.com/auth/cloud-platform` (`googleCredentialChain`), wrapped in an `OAuth2Client` for `vertex` and passed as `generateAuthToken` for `vertex-anthropic`. A `vertex-anthropic` call reads the access token twice, because the AI SDK's Anthropic model resolves its headers twice per request; the token client caches it, so this costs no extra exchange. `GoogleAuth` and `OAuth2Client` are `google-auth-library`'s, which the AI SDK's two Vertex providers import too, and all three are in `src/providers/vertex-providers.ts`, which `modelFactories` imports once, when model access is built with Vertex configured (`vertexEntries` in `src/providers/model-factories.ts`), so a server without Vertex never loads them, which were 75 files and 0.8 MiB of its start, and 10 ms of it in a CPU profile (`src/providers/credential-libraries.test.ts`; measured on 2026-10-23, at the median of 11 starts and of 7 profiles).
+- Azure without a key loads `@azure/identity` once, when model access is built (`azureTokensFor` in `src/providers/entra-id.ts`). A missing module (`ERR_MODULE_NOT_FOUND`) leaves Azure unconfigured; any other import error is not swallowed. With the module, tokens come from `getBearerTokenProvider(new DefaultAzureCredential(), 'https://cognitiveservices.azure.com/.default')`, looked up again when they expire.
 
 ## Answer schemas
 
@@ -142,4 +142,4 @@ No failure or defect carries the request or response bodies the SDK keeps on its
 - `not_portable`: what some providers reject or do not enforce, with the prefixes concerned (`src/schema/schema-portability.ts`);
 - `unchecked`: what is sent to the provider but not checked here, the keywords the compiler does not know. A `format` is not among them: the compiler checks `date`, `date-time`, `time`, `email`, `uri` and `uuid` whatever the provider enforces, and any other is `unsupported`.
 
-A definition is rejected for `unsupported` issues, and carries the `not_portable` and `unchecked` ones as `warnings`, at most 100 (`src/definition/definition-schemas.ts`). `jsonOutput` (`src/adapter/json-output.ts`) hands the schema to the AI SDK's `Output.object` with a validator that checks the answer against the schema as written; a document the SDK cannot take fails as `definition_invalid` with `The output schema is not one this package can validate`.
+A definition is rejected for `unsupported` issues, and carries the `not_portable` and `unchecked` ones as `warnings`, at most 100 (`src/definition/definition-schemas.ts`). `jsonOutput` (`src/schema/json-output.ts`) hands the schema to the AI SDK's `Output.object` with a validator that checks the answer against the schema as written; a document the SDK cannot take fails as `definition_invalid` with `The output schema is not one this package can validate`.

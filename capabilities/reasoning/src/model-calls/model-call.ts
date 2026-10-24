@@ -2,6 +2,8 @@ import { generateText, isStepCount, wrapLanguageModel, type LanguageModelMiddlew
 import { Result } from 'effect';
 
 import type { ModelRequest } from '../model/model-request.ts';
+import type { ModelTarget } from '../model/model-resolution.ts';
+import { jsonOutput } from '../schema/json-output.ts';
 import { costOf } from './answer-mapping.ts';
 import { projected, readOutput, settledAnswer, type Responded, type SettledAnswer } from './answer-settling.ts';
 import {
@@ -13,8 +15,6 @@ import {
   toolsOf,
   type CallTelemetry,
 } from './call-options.ts';
-import { jsonOutput } from './json-output.ts';
-import type { ModelTarget } from './model-resolution.ts';
 
 type DoGenerate = Parameters<NonNullable<LanguageModelMiddleware['wrapGenerate']>>[0]['doGenerate'];
 

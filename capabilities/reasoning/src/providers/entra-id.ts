@@ -1,7 +1,6 @@
 import { Effect, Predicate } from 'effect';
 
 import type { AzureSettings } from '../settings/provider-settings.ts';
-import type { OptionalPackages } from '../settings/provider-status.ts';
 import type { Availability } from '../settings/setting-values.ts';
 import type { AccessTokenSource } from './credential-sources.ts';
 
@@ -19,7 +18,7 @@ export interface EntraIdentity {
   readonly bearerTokens: (credential: TokenCredential, scope: string) => AccessTokenSource;
 }
 
-export type EntraIdentityLoader = () => Promise<EntraIdentity | undefined>;
+export type EntraIdentityLoader = () => Promise<EntraIdentity | null>;
 
 export const entraIdVariables: readonly string[] = [
   'AZURE_TENANT_ID',
@@ -36,7 +35,7 @@ export const entraIdVariables: readonly string[] = [
 
 export const cognitiveServicesScope = 'https://cognitiveservices.azure.com/.default';
 
-function isMissingModule(error: unknown): boolean {
+export function isMissingModule(error: unknown): boolean {
   return Predicate.hasProperty(error, 'code') && error.code === 'ERR_MODULE_NOT_FOUND';
 }
 
@@ -46,24 +45,6 @@ export async function importUnlessMissing<Module>(load: () => Promise<Module>): 
   } catch (error) {
     if (isMissingModule(error)) {
       return undefined;
-    }
-    throw error;
-  }
-}
-
-export type Resolve = (specifier: string) => string;
-
-function resolvedInPlace(specifier: string): string {
-  return import.meta.resolve(specifier);
-}
-
-export function installedPackages(resolve: Resolve = resolvedInPlace): OptionalPackages {
-  try {
-    resolve('@azure/identity');
-    return { entraId: true };
-  } catch (error) {
-    if (isMissingModule(error)) {
-      return { entraId: false };
     }
     throw error;
   }
@@ -84,11 +65,11 @@ export function entraIdentityOf(library: IdentityLibrary): EntraIdentity {
 export function entraIdentityLoader(load: () => Promise<IdentityLibrary>): EntraIdentityLoader {
   return async () => {
     const library = await importUnlessMissing(load);
-    return library === undefined ? undefined : entraIdentityOf(library);
+    return library === undefined ? null : entraIdentityOf(library);
   };
 }
 
-export const loadEntraIdentity = entraIdentityLoader(() => import('@azure/identity'));
+export const noEntraIdentity: EntraIdentityLoader = () => Promise.resolve(null);
 
 export function entraTokens(identity: EntraIdentity): AccessTokenSource {
   return identity.bearerTokens(identity.defaultCredential(), cognitiveServicesScope);
@@ -104,5 +85,5 @@ export const azureTokensFor = Effect.fnUntraced(function* (
     return override;
   }
   const identity = yield* Effect.promise(load);
-  return identity === undefined ? undefined : entraTokens(identity);
+  return identity === null ? undefined : entraTokens(identity);
 });

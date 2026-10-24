@@ -3,7 +3,7 @@ import { JsonPointer, Result } from 'effect';
 import { DefinitionInvalid } from '../failure/definition-invalid.ts';
 import type { ProviderOptions } from '../model/model-request.ts';
 import { providerNamespaces } from '../model/offered-provider-options.ts';
-import type { GatewaySettings } from '../settings/gateway-settings.ts';
+import type { GatewaySettings } from './gateway-settings.ts';
 
 export type ProviderOptionsCheck = (
   provider: string,

@@ -105,6 +105,17 @@ describe('the azure provider with Microsoft Entra ID', () => {
 });
 
 describe('the azure provider without the identity library', () => {
+  it('is not configured when model access is given no loader of the library, as a shell elsewhere gives none', async () => {
+    const recording = replying();
+    const access = await accessFor(resource, { fetch: recording.fetch });
+
+    expect(await failed(access, textRequest('azure/gpt-5-deployment'))).toMatchObject({
+      _tag: 'provider_not_configured',
+      provider: 'azure',
+    });
+    expect(recording.requests()).toEqual([]);
+  });
+
   it('is not configured, and says what to install', async () => {
     const recording = replying();
     const access = await accessFor(resource, { fetch: recording.fetch, loadEntraIdentity: notInstalled });
