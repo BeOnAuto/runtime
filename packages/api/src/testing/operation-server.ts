@@ -20,6 +20,7 @@ import {
   type ApiHandler,
   type ApiStudio,
   type AppRuntime,
+  type CallContext,
   type McpRoutesOptions,
   type RegisterRoutes,
   type RetryStateKeys,
@@ -87,6 +88,7 @@ export interface OperationServerOptions {
   readonly tracer?: Tracer.Tracer;
   readonly retryStateKeys?: RetryStateKeys;
   readonly heartbeatEveryMs?: number;
+  readonly callContext?: CallContext;
 }
 
 function tracingWith(tracer: Tracer.Tracer | undefined): Layer.Layer<never> {
@@ -119,6 +121,7 @@ export async function operationServer({
   tracer,
   retryStateKeys = testRetryStateKeys,
   heartbeatEveryMs,
+  callContext,
 }: OperationServerOptions = {}): Promise<OperationServer> {
   const ledger = memoryLedger();
   const recording = recordingReporter();
@@ -143,6 +146,7 @@ export async function operationServer({
     ...(studio === undefined ? {} : { studio }),
     routes,
     ...(requests === undefined ? {} : { requests }),
+    ...(callContext === undefined ? {} : { callContext }),
   });
   return {
     handler,

@@ -7,7 +7,7 @@ import { healthRoutes } from './discovery/health.ts';
 import { middlewareFor } from './middleware/middleware-chain.ts';
 import { errorHandler, failureOfThrown } from './problem/error-boundary.ts';
 import { problemOf, problemResponse } from './problem/problem.ts';
-import type { ApiApp, Close } from './routes.ts';
+import { noContextOfTheCall, type ApiApp, type Close } from './routes.ts';
 import { studioRoutes } from './studio/served-studio.ts';
 
 export function createApp(options: ApiOptions): ApiApp {
@@ -43,6 +43,7 @@ export function createApp(options: ApiOptions): ApiApp {
       },
       reportThrown,
       resource,
+      callContext: options.callContext ?? noContextOfTheCall,
     });
   }
   app.notFound(() => problemResponse(problemOf('not_found', 'No route matches the path')));

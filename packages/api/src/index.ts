@@ -58,6 +58,6 @@ export type { ServerInfo } from './mcp/mcp-connection.ts';
 export type { ReportIncident } from './problem/error-boundary.ts';
 export { problemOf, problemResponse } from './problem/problem.ts';
 export type { Problem, OptionalProblemMembers, ProblemIssue, ProblemReason } from './problem/problem-document.ts';
-export type { Close, RegisterRoutes, RouteHandler, Routes } from './routes.ts';
+export type { CallContext, Close, RegisterRoutes, RouteHandler, Routes } from './routes.ts';
 export { makeAppRuntime } from './app-runtime.ts';
 export type { AppRuntime } from './app-runtime.ts';
