@@ -2,7 +2,7 @@ import { playbooksStreamOfOrg } from '@on.auto/playbooks';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import { playbookCreated } from '../reaction-testing/playbook-writes.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aSQLiteFile, openedOn, type DatabaseSettings } from '../testing/host-files.ts';
 import { hostedOn, type HostedOptions } from '../testing/host-runs.ts';
 import { settledIn, type FollowedHost } from './followed-host.ts';
 
@@ -26,8 +26,14 @@ function registryHeldUntil(released: Promise<void>, database: HostDatabase): Hos
   };
 }
 
-export async function heldFollower(options: HostedOptions = {}): Promise<HeldFollower> {
-  const settings = { store: 'sqlite', file: aSQLiteFile() } as const;
+function aSQLiteLedger(): DatabaseSettings {
+  return { store: 'sqlite', file: aSQLiteFile() };
+}
+
+export async function heldFollower(
+  options: HostedOptions = {},
+  settings: DatabaseSettings = aSQLiteLedger(),
+): Promise<HeldFollower> {
   const database = await openedOn(settings);
   await playbookCreated(database.store, 'alpha');
   const released = Promise.withResolvers<void>();

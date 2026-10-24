@@ -38,12 +38,25 @@ export interface HostedOptions {
   readonly projector?: HostOptions['projector'];
   readonly dueWork?: HostOptions['dueWork'];
   readonly context?: HostOptions['context'];
+  readonly reactions?: HostOptions['reactions'];
 }
 
 const answeredWithNull = (): ReturnType<HostOptions['perform']> =>
   Effect.succeed({ status: 'succeeded', output: null });
 
 const ledgerUp = (): boolean => false;
+
+type PassedThrough = Pick<HostOptions, 'clock' | 'holder' | 'projector' | 'dueWork' | 'context'>;
+
+function passedThrough({ clock, holder, projector, dueWork, context }: HostedOptions): PassedThrough {
+  return {
+    ...(clock === undefined ? {} : { clock }),
+    ...(holder === undefined ? {} : { holder }),
+    ...(projector === undefined ? {} : { projector }),
+    ...(dueWork === undefined ? {} : { dueWork }),
+    ...(context === undefined ? {} : { context }),
+  };
+}
 
 export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions {
   const performed: StartCall[] = [];
@@ -61,13 +74,9 @@ export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions 
       reports: recorded.reports,
       sweepEveryMs: options.sweepEveryMs ?? 50,
       mostCallsAtOnce: 4,
-      reactions: recordedReactions().options,
+      reactions: options.reactions ?? recordedReactions().options,
       waiting: options.waiting ?? recordedWaiting().options,
-      ...(options.clock === undefined ? {} : { clock: options.clock }),
-      ...(options.holder === undefined ? {} : { holder: options.holder }),
-      ...(options.projector === undefined ? {} : { projector: options.projector }),
-      ...(options.dueWork === undefined ? {} : { dueWork: options.dueWork }),
-      ...(options.context === undefined ? {} : { context: options.context }),
+      ...passedThrough(options),
     },
     calls: () => performed,
     settlements: settling.settlements,

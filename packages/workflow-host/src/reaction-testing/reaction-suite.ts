@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import type { SettingsOf } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
+import { firstFollowSuite } from './first-follow-suite.ts';
 import { movedClock } from './moved-clock.ts';
 import { at, cronTrigger, eventTrigger, everyTrigger, published, definitionRecorded } from './playbook-writes.ts';
 import { reactingHost } from './reacting-host.ts';
@@ -41,6 +42,7 @@ export function reactionSuite(settings: SettingsOf): void {
   });
 
   scheduleSuite(settings);
+  firstFollowSuite(settings);
 }
 
 function scheduleSuite(settings: SettingsOf): void {
