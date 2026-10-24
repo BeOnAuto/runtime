@@ -91,16 +91,24 @@ export function utf8BytesWithin(text: string, most: number): number {
   return bytes;
 }
 
-export function textWithin(text: string, mostBytes: number): string {
-  const ellipsis = '…';
+function lengthWithin(text: string, mostBytes: number): number {
   let bytes = 0;
-  let cut = 0;
+  let length = 0;
   for (const character of text) {
     bytes += utf8BytesOf(character);
     if (bytes > mostBytes) {
-      return `${text.slice(0, cut)}${ellipsis}`;
+      return length;
     }
-    cut += character.length;
+    length += character.length;
   }
-  return text;
+  return length;
+}
+
+export function textCutAt(text: string, mostBytes: number): string {
+  return text.slice(0, lengthWithin(text, mostBytes));
+}
+
+export function textWithin(text: string, mostBytes: number): string {
+  const kept = lengthWithin(text, mostBytes);
+  return kept === text.length ? text : `${text.slice(0, kept)}…`;
 }

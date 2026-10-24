@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { jsonBytesOf, type Json } from '../dsl/json.ts';
-import { jsonBytesWithin, textWithin } from './byte-sizes.ts';
+import { jsonBytesWithin, textCutAt, textWithin } from './byte-sizes.ts';
 
 const everyCodeUnitBelow256 = Array.from({ length: 256 }, (_, unit) => String.fromCodePoint(unit)).join('');
 
@@ -91,5 +91,16 @@ describe('a text cut to a number of bytes', () => {
     expect(textWithin('é'.repeat(10), 5)).toBe('éé…');
     expect(textWithin('\u{1F600}\u{1F600}', 5)).toBe('\u{1F600}…');
     expect(textWithin('ab', 0)).toBe('…');
+  });
+});
+
+describe('a text cut at a number of bytes, unmarked', () => {
+  it('keeps the whole characters that fit in UTF-8, never half of one, the bytes a TextEncoder makes of them', () => {
+    const lone = '\uD800';
+
+    expect([textCutAt('stop', 4), textCutAt('', 0), textCutAt('ab', 0)]).toEqual(['stop', '', '']);
+    expect([textCutAt('é'.repeat(10), 5), textCutAt('\u{1F600}\u{1F600}', 5)]).toEqual(['éé', '\u{1F600}']);
+    expect([textCutAt(`${lone}x`, 3), textCutAt(`${lone}x`, 2)]).toEqual([lone, '']);
+    expect(new TextEncoder().encode(lone).byteLength).toBe(3);
   });
 });

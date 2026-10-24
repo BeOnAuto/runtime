@@ -1,8 +1,8 @@
 import { taskNameOf } from '../dsl/tasks.ts';
 import type { DslError } from '../machine/dsl-error.ts';
 import type { TaskFrame } from '../machine/run-state.ts';
+import { textCutAt } from '../programs/byte-sizes.ts';
 import {
-  cutToBytes,
   keyOf,
   mostNameBytes,
   mostTitleBytes,
@@ -48,7 +48,7 @@ function errorShown(error: DslError | undefined): Pick<Step, 'error'> {
     return {};
   }
   const { type, title } = error;
-  return { error: { type, ...(title === undefined ? {} : { title: cutToBytes(title, mostTitleBytes) }) } };
+  return { error: { type, ...(title === undefined ? {} : { title: textCutAt(title, mostTitleBytes) }) } };
 }
 
 function stepOf({ reference, run }: Pick<StepKey, 'reference' | 'run'>): string {
@@ -88,7 +88,7 @@ export function stepJournalOf(): StepJournal {
       const place = placeOfStep.get(stepOf(key));
       const step = {
         ...key,
-        name: cutToBytes(taskNameOf(reference), mostNameBytes),
+        name: textCutAt(taskNameOf(reference), mostNameBytes),
         caused_by: place?.step.caused_by ?? earlier.get(stepOf(key)) ?? course.cause,
         ...errorShown(entry.error),
         ...(waitsFor === undefined ? {} : { waits_for: waitsFor }),
