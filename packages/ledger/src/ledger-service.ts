@@ -9,12 +9,14 @@ import {
   type DeclarableReason,
   type Recorded,
   type Rejection,
+  type StreamReader,
   type StreamState,
+  type StreamWriter,
 } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
 import { eventAppenderOf } from './event-appender.ts';
-import type { LedgerStore } from './event-store.ts';
+import type { LedgerStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
 import { recordedEventReaderOf, recordedReaderOf } from './recorded/recorded-reader.ts';
@@ -84,22 +86,27 @@ export function decisionLoop<
     retriedOnVersionConflict(attempt(stream, command)).pipe(Effect.flatMap(Effect.fromResult));
 }
 
-export function makeLedger(store: LedgerStore): Ledger['Service'] {
-  const load = streamReaderOf(store);
-
-  return Ledger.of({
+export function streamPortsOf(streams: Streams): StreamReader & StreamWriter {
+  const load = streamReaderOf(streams);
+  return {
     load,
-    ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     execute: (stream, decider, command, lineage) =>
       decisionLoop(
         (named: string) => load(named, decider),
         (named, events, place) =>
-          eventAppenderOf(store, decider.eventSchema)(named, events, {
+          eventAppenderOf(streams, decider.eventSchema)(named, events, {
             ...place,
             ...(lineage === undefined ? {} : { lineage }),
           }),
         decider,
       )(stream, command).pipe(Effect.map(({ state, version }) => ({ state, version }))),
+  };
+}
+
+export function makeLedger(store: LedgerStore): Ledger['Service'] {
+  return Ledger.of({
+    ...streamPortsOf(store),
+    ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     readRecorded: recordedReaderOf(store),
     readRecordedEvent: recordedEventReaderOf(store),
     readRunOutcomes: runOutcomesReaderOf(store),
