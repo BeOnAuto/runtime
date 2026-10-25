@@ -38,19 +38,22 @@ export function background(context?: HostContext): Background {
     has: (key) => fibers.has(key),
     size: () => fibers.size,
     awaited: (keys) =>
-      Effect.asVoid(
-        Fiber.awaitAll(
-          keys.flatMap((key) => {
-            const fiber = fibers.get(key);
-            return fiber === undefined ? [] : [fiber];
-          }),
+      Effect.suspend(() =>
+        Effect.asVoid(
+          Fiber.awaitAll(
+            keys.flatMap((key) => {
+              const fiber = fibers.get(key);
+              return fiber === undefined ? [] : [fiber];
+            }),
+          ),
         ),
       ),
-    interrupt: (key) => {
-      const fiber = fibers.get(key);
-      return fiber === undefined ? Effect.void : Fiber.interrupt(fiber);
-    },
-    idle: () => Effect.asVoid(Fiber.awaitAll([...fibers.values()])),
+    interrupt: (key) =>
+      Effect.suspend(() => {
+        const fiber = fibers.get(key);
+        return fiber === undefined ? Effect.void : Fiber.interrupt(fiber);
+      }),
+    idle: () => Effect.suspend(() => Effect.asVoid(Fiber.awaitAll([...fibers.values()]))),
     stop: () =>
       Effect.suspend(() => {
         lifecycle.stopped = true;
