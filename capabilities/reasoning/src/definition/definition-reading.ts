@@ -6,7 +6,9 @@ import { Effect, Result } from 'effect';
 import { parseDefinitionDocument } from './definition-parsing.ts';
 import type { ReasoningFunctionDefinitionDocument } from './reasoning-function-definition.ts';
 
-export function parse(source: string): Effect.Effect<ReasoningFunctionDefinitionDocument, InvalidInput> {
+export function readReasoningFunctionDefinition(
+  source: string,
+): Effect.Effect<ReasoningFunctionDefinitionDocument, InvalidInput> {
   return Result.match(parseDefinitionDocument(source), {
     onSuccess: (definition) => Effect.succeed(definition),
     onFailure: (issues) =>

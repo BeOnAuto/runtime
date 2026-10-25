@@ -9,6 +9,7 @@ import { callFieldsShown, keptAnswerOf, keptArgumentsOf } from '@on.auto/tool-se
 
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
 import {
+  attemptResumed,
   cancelAsked,
   requestAnswered,
   runBrokeDown,
@@ -91,6 +92,10 @@ function cancelFact({ type, data }: Shown<'run_cancel_requested'>): PresentedFac
   };
 }
 
+function resumedFact({ type, data }: Shown<'attempt_resumed'>): PresentedFact {
+  return { type, summary: attemptResumed(data.attempt), data };
+}
+
 function answerFact({ type, data }: Shown<'request_answered'>): PresentedFact {
   const { answer, claimed_for: claimedFor, reply } = data;
   return {
@@ -150,6 +155,9 @@ function coreFactOf(words: DefinitionWords, event: CoreShown, content: KeptConte
   }
   if (event.type === 'run_cancel_requested') {
     return cancelFact(event);
+  }
+  if (event.type === 'attempt_resumed') {
+    return resumedFact(event);
   }
   return isEnding(event) ? endingFact(event) : answerFact(event);
 }

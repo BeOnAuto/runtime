@@ -5,6 +5,7 @@ import { defineCapability, mostCallDepth } from '../index.ts';
 import { answeringLaterMs, answeringNowMs, asking } from '../testing/asking.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { quietMs, resumer } from '../testing/capabilities/resumer.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
@@ -13,6 +14,10 @@ const toAlpha = toPlaybook('acme', 'alpha');
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const calledBy = { run_id: '0199a3c4-7d2e-7c1a-9b3f-000000000001', reference: '/do/0/ask', run: 2 } as const;
+
+function known(milliseconds: readonly (number | undefined)[]): readonly (number | null)[] {
+  return milliseconds.map((ms) => ms ?? null);
+}
 
 const measuring = defineCapability({
   type: 'measuring',
@@ -38,12 +43,21 @@ const measuring = defineCapability({
         yield* run.longestRunFor('probe', 'plain', {}),
         yield* run.longestRunFor('nothing', 'at-all', {}),
       ];
-      return { output: { longest: longest.map((ms) => ms ?? null), callDepth: run.callDepth }, record: {} };
+      const resumesAfter = [
+        yield* run.resumesAfterOf('resumer', 'again'),
+        yield* run.resumesAfterOf('probe', 'plain'),
+        yield* run.resumesAfterOf('resumer', 'missing'),
+        yield* run.resumesAfterOf('nothing', 'at-all'),
+      ];
+      return {
+        output: { longest: known(longest), resumesAfter: known(resumesAfter), callDepth: run.callDepth },
+        record: {},
+      };
     }),
 });
 
 async function playbookMeasuring() {
-  const operations = definitionOperationsFor([measuring, probe().capability, asking]);
+  const operations = definitionOperationsFor([measuring, probe().capability, asking, resumer().capability]);
   const definitions = harness();
   const created = (type: string, name: string) =>
     definitions.call(operations.createDefinition, toAlpha(acmeAdmin, { type, name, source: 'text' }));
@@ -51,6 +65,7 @@ async function playbookMeasuring() {
   await created('probe', 'plain');
   await created('asking', 'approve');
   await created('probe', 'retired');
+  await created('resumer', 'again');
   await definitions.call(operations.retireDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'retired' }));
   const measured = (depths: { readonly callDepth?: number; readonly calledBy?: typeof calledBy } = {}) =>
     definitions.call(operations.runDefinition, {
@@ -97,6 +112,16 @@ describe('a run that answers a call of another run', () => {
         'This run would sit 9 calls below the run at the top of its tree, more than the 8 a run may: workflows that call workflows reach at most 8 calls deep',
     });
     expect(deeper.ledger.streamNames().filter((stream) => stream.includes('/runs/'))).toEqual([]);
+  });
+});
+
+describe('the interval after which a started run of a definition may be resumed, as a run resolves it', () => {
+  it('is what the capability whose runs resume declares for the active latest version, and nothing for one whose runs do not resume or that it cannot run', async () => {
+    const { measured } = await playbookMeasuring();
+
+    expect(await measured()).toMatchObject({
+      output: { output: { resumesAfter: [quietMs, null, null, null] } },
+    });
   });
 });
 

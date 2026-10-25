@@ -60,9 +60,17 @@ export interface InterruptedAttempt {
   readonly record?: Schema.JsonObject;
 }
 
+export const firstAttempt = 1;
+
 export interface RunFinish {
   readonly type: 'finish';
   readonly result: RunOutcome | InterruptedAttempt;
+  readonly attempt?: number;
+}
+
+export interface RunResume {
+  readonly type: 'resume';
+  readonly attempt: number;
 }
 
 export interface RunCall {
@@ -99,6 +107,6 @@ export interface RunCancel extends CommandMetadata {
 }
 
 export type RunCommand =
-  | ((RunStart | RunFinish | RunCall | RunWork | RunAnswer) & CommandMetadata)
+  | ((RunStart | RunFinish | RunResume | RunCall | RunWork | RunAnswer) & CommandMetadata)
   | RunSettlement
   | RunCancel;

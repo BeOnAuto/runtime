@@ -7,7 +7,7 @@ import {
 } from '@on.auto/definitions';
 import { handCallPresenter } from '@on.auto/tool-servers';
 
-import { parse, summarize } from '../definition/definition-reading.ts';
+import { readReasoningFunctionDefinition, summarize } from '../definition/definition-reading.ts';
 import { performedInProcess } from '../jobs/performed-in-process.ts';
 import type { OfferedModels } from '../model/offered-models.ts';
 import { cancelledAttemptOf } from './before-the-steps.ts';
@@ -34,7 +34,7 @@ export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOp
     noun: { one: functionResourceLabels.reasoning.singular, other: functionResourceLabels.reasoning.plural },
     describeOutput: outputInWords('answer'),
     mediaType: 'text/markdown',
-    parse,
+    parse: readReasoningFunctionDefinition,
     summarize,
     run: (definition, input, context) => run(definition, input, context),
     longestAnyRunMs: longestRequestMs,

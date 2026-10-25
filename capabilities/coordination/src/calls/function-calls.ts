@@ -44,15 +44,31 @@ export function callResultOfEnding(ending: RunEnding): CallResult {
   return callResultOf(endedRunResultOf(ending));
 }
 
-function callAnswerOf(result: DefinitionRunResult, child: string): CallAnswer {
-  return result.status === 'waiting' ? { status: 'waiting', child } : callResultOf(result);
+function callAnswerOf(result: DefinitionRunResult, child: string, resumesAfterMs: number | undefined): CallAnswer {
+  if (result.status !== 'waiting') {
+    return callResultOf(result);
+  }
+  return resumesAfterMs === undefined ? { status: 'waiting', child } : { status: 'waiting', child, resumesAfterMs };
+}
+
+function resumesAfterOfTheTask(reference: string, byTask: Readonly<Record<string, number>> = {}): number | undefined {
+  return Object.hasOwn(byTask, reference) ? byTask[reference] : undefined;
 }
 
 export function definitionCalls(runDefinition: RunDefinition): Perform {
   return (call, run, origin, { attemptDied }) =>
     Option.match(attributesOfRun(run.attributes), {
       onNone: () => Effect.succeed(noCaller),
-      onSome: ({ org, playbook, run_id: workflowRun, caller, lineage, depth = 0, call_depth = 0 }) => {
+      onSome: ({
+        org,
+        playbook,
+        run_id: workflowRun,
+        caller,
+        lineage,
+        depth = 0,
+        call_depth = 0,
+        resumes_after_ms_by_task: byTask,
+      }) => {
         const definition = definitionArgumentsOf(call.arguments);
         if (isArgumentsProblem(definition)) {
           return Effect.succeed<CallAnswer>({ status: 'rejected', reason: invalidArguments, detail: definition.title });
@@ -61,6 +77,7 @@ export function definitionCalls(runDefinition: RunDefinition): Perform {
         const runId = nestedRunId(workflowRun, reference, count);
         const startedBy = recordIdOf(run.runId, origin.version);
         const correlationId = lineage?.correlation ?? workflowRun;
+        const resumesAfterMs = resumesAfterOfTheTask(reference, byTask);
         return runDefinition({
           org,
           playbook,
@@ -72,8 +89,9 @@ export function definitionCalls(runDefinition: RunDefinition): Perform {
           callDepth: call_depth + 1,
           calledBy: { run_id: workflowRun, reference, run: count },
           longestMs: call.longestMs,
+          ...(resumesAfterMs === undefined ? {} : { resumesAfterMs }),
           ...(attemptDied ? { attemptDied } : {}),
-        }).pipe(Effect.map((result) => callAnswerOf(result, runId)));
+        }).pipe(Effect.map((result) => callAnswerOf(result, runId, resumesAfterMs)));
       },
     });
 }

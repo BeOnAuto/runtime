@@ -7,7 +7,7 @@ export {
   type RecordingJournal,
 } from '../journal-testing/recording-journal.ts';
 export { recordedOnTheRun } from './run-facts.ts';
-export { noLongestRuns } from './longest-runs.ts';
+export { noCalledDefinitions } from './called-definitions.ts';
 export { nothingSaved } from './nothing-saved.ts';
 export { checkingWithin, checksAwaitedAtMostMs } from './time/patient-checks.ts';
 export { measuredPoolSettings } from './read-on-disk.ts';

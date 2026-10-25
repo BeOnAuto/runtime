@@ -9,10 +9,10 @@ import {
   type StreamReader,
   type StreamWriter,
 } from '@on.auto/operations';
-import { DateTime, Effect, Equal, Schema } from 'effect';
+import { DateTime, Effect, Schema } from 'effect';
 
 import type { AnswerFact, CapabilityFact } from '../runs/run-commands.ts';
-import { changedSinceRead, runDecider, runStreamNameOf, type RunDeciders } from '../runs/run-decider.ts';
+import { isChangedSinceRead, runDecider, runStreamNameOf, type RunDeciders } from '../runs/run-decider.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import { startedRunOf, type RecordedRunState } from '../runs/run-state.ts';
 
@@ -46,10 +46,6 @@ function admitted(): undefined {
   return undefined;
 }
 
-function changedMeanwhile(error: unknown): boolean {
-  return Equal.equals(error, changedSinceRead);
-}
-
 export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunDeciders): RecordWork {
   const recordedAsRead = Effect.fnUntraced(function* (
     run: RunStreamAddress,
@@ -76,7 +72,7 @@ export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunD
     return { id: messageIdOf(stream, version), at };
   });
   return (run, work, lineage, rule = admitted) =>
-    recordedAsRead(run, work, lineage, rule).pipe(Effect.retry({ times: readsAgainAtMost, while: changedMeanwhile }));
+    recordedAsRead(run, work, lineage, rule).pipe(Effect.retry({ times: readsAgainAtMost, while: isChangedSinceRead }));
 }
 
 export type AnswerRun = (id: string, answer: AnswerFact, by: string, lineage: Lineage) => Effect.Effect<void, Conflict>;

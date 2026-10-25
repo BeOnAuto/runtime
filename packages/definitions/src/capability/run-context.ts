@@ -39,4 +39,5 @@ export interface RunContext {
   readonly trigger?: TriggerLink;
   readonly longestRunOf: (type: string, name: string) => Effect.Effect<number | undefined>;
   readonly longestRunFor: (type: string, name: string, input: Schema.Json) => Effect.Effect<number | undefined>;
+  readonly resumesAfterOf: (type: string, name: string) => Effect.Effect<number | undefined>;
 }

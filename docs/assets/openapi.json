@@ -9302,6 +9302,7 @@
               "type": "string",
               "enum": [
                 "run_started",
+                "attempt_resumed",
                 "run_succeeded",
                 "run_rejected",
                 "run_failed",

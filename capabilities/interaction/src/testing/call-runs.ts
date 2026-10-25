@@ -1,6 +1,6 @@
 import type { CapabilityAnswer, CapabilityRejection, RunContext } from '@on.auto/definitions';
 import {
-  noLongestRuns,
+  noCalledDefinitions,
   onTheStandingClock,
   recordingJournal,
   type RecordingJournal,
@@ -44,7 +44,7 @@ function contextOf(journal: RecordingJournal): RunContext {
     lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: callRunId },
     depth: 0,
     callDepth: 0,
-    ...noLongestRuns,
+    ...noCalledDefinitions,
   };
 }
 

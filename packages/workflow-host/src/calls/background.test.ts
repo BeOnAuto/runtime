@@ -63,3 +63,42 @@ describe('the work a host does in the background', () => {
     expect([noted.begun(), running.has('call')]).toEqual([[], false]);
   });
 });
+
+interface Later {
+  readonly done: () => readonly string[];
+  readonly work: (name: string) => Effect.Effect<void>;
+}
+
+function doneLater(): Later {
+  const done: string[] = [];
+  return {
+    done: () => done,
+    work: (name) =>
+      Effect.sleep('20 millis').pipe(
+        Effect.andThen(
+          Effect.sync(() => {
+            done.push(name);
+          }),
+        ),
+      ),
+  };
+}
+
+describe('the waits and the stops of the work a host does in the background', () => {
+  it('read the work of their moment as they run, so one made before the work began waits for it or stops it', async () => {
+    const running = background();
+    const later = doneLater();
+    const idle = running.idle();
+    const awaited = running.awaited(['awaited']);
+    const interrupted = running.interrupt('interrupted');
+
+    running.run('idle', later.work('idle'));
+    await Effect.runPromise(idle);
+    running.run('awaited', later.work('awaited'));
+    await Effect.runPromise(awaited);
+    running.run('interrupted', later.work('interrupted'));
+    await Effect.runPromise(interrupted);
+
+    expect([later.done(), running.size()]).toEqual([['idle', 'awaited'], 0]);
+  });
+});

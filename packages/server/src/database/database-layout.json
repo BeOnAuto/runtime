@@ -1,5 +1,5 @@
 {
-  "layout": 4,
+  "layout": 5,
   "catalog": [
     {
       "name": "conversations_3",
@@ -147,7 +147,11 @@
     },
     {
       "name": "workflow_calls",
-      "sql": "CREATE TABLE workflow_calls (call_key TEXT NOT NULL PRIMARY KEY, run_key TEXT NOT NULL, state TEXT NOT NULL, call TEXT, attributes TEXT, result TEXT, delivered INTEGER NOT NULL DEFAULT 0, child TEXT, root_id TEXT, started_by BIGINT, dispatched_at BIGINT)"
+      "sql": "CREATE TABLE workflow_calls (call_key TEXT NOT NULL PRIMARY KEY, run_key TEXT NOT NULL, state TEXT NOT NULL, call TEXT, attributes TEXT, result TEXT, delivered INTEGER NOT NULL DEFAULT 0, child TEXT, root_id TEXT, started_by BIGINT, resumes_after_ms BIGINT, due_again_at BIGINT)"
+    },
+    {
+      "name": "workflow_calls_due_again",
+      "sql": "CREATE INDEX workflow_calls_due_again ON workflow_calls (due_again_at) WHERE state = 'waiting'"
     },
     {
       "name": "workflow_calls_open_by_root",
@@ -156,10 +160,6 @@
     {
       "name": "workflow_calls_unfinished",
       "sql": "CREATE INDEX workflow_calls_unfinished ON workflow_calls (call_key) WHERE state = 'running' OR (state = 'answered' AND delivered = 0)"
-    },
-    {
-      "name": "workflow_calls_waiting_by_dispatch",
-      "sql": "CREATE INDEX workflow_calls_waiting_by_dispatch ON workflow_calls (dispatched_at) WHERE state = 'waiting'"
     },
     {
       "name": "workflow_calls_waiting_by_run",

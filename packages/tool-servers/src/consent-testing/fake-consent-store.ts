@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Option, Schema } from 'effect';
 
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import { consentRegistration } from './consent-fakes.ts';
+import { consentRegistration, studioBase } from './consent-fakes.ts';
 
 export type RefusedCall = 'start' | 'redeem' | 'refresh' | 'revoke';
 
@@ -12,6 +12,16 @@ export interface FakeConsentServiceOptions {
   readonly vendor: Pick<FakeMcpServer, 'origin'>;
   readonly now: () => number;
   readonly scopes?: readonly string[];
+  readonly fetch?: typeof globalThis.fetch;
+  readonly studioBase?: string;
+}
+
+export function studioBaseOf({ studioBase: given }: Pick<FakeConsentServiceOptions, 'studioBase'>): string {
+  return given ?? studioBase;
+}
+
+export function returnAddressOf(options: Pick<FakeConsentServiceOptions, 'studioBase'>): string {
+  return new URL('connect-return', studioBaseOf(options)).href;
 }
 
 export const GivenSchema = Schema.String.check(Schema.isMinLength(1));
@@ -171,6 +181,7 @@ export function postedToTheVendor(
   path: string,
   form: Readonly<Record<string, string>>,
 ): Promise<Response> {
+  const { fetch = globalThis.fetch } = store.options;
   return fetch(`${store.options.vendor.origin}${path}`, {
     method: 'POST',
     headers: asTheClient(),

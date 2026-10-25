@@ -54,6 +54,16 @@ describe('the presenter of a run that answers a call of another run', () => {
   });
 });
 
+describe('the presenter of an attempt that resumed a run', () => {
+  it("says which attempt went on from the run's facts", () => {
+    expect(presented({ type: 'attempt_resumed', data: { attempt: 2 } })).toMatchObject({
+      type: 'attempt_resumed',
+      summary: 'The run went on from its facts in attempt 2, after the attempt before it stopped.',
+      data: { attempt: 2 },
+    });
+  });
+});
+
 describe('the presenter of a cancel request', () => {
   it.each([
     ['requested', 'Someone allowed to change the playbook asked for the run to be cancelled.'],

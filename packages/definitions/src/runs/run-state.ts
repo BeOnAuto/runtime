@@ -2,7 +2,7 @@ import type { CalledBy, RunContext, StartingTrigger } from '@on.auto/operations'
 import type { Schema } from 'effect';
 
 import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
-import type { RunResult } from './run-commands.ts';
+import { firstAttempt, type RunResult } from './run-commands.ts';
 import type { CancelRequestKind, RecordedRunEvent, RecordedRunFact, ReplyIdentity } from './run-events.ts';
 import type { RunRecord } from './run.ts';
 
@@ -27,6 +27,7 @@ export interface RecordedWork {
 }
 
 export interface RecordedRunState extends CallNumbering {
+  readonly attempt: number;
   readonly input: Schema.Json;
   readonly run: RunRecord;
   readonly finishesLater: boolean;
@@ -84,6 +85,7 @@ function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: 
   const { input, calls_tools, finishes_later, resumes, output_shape } = data;
   const { at, by, depth = 0, callDepth = 0, calledBy, trigger } = context;
   return {
+    attempt: firstAttempt,
     input,
     run: {
       ...definitionOf(context),
@@ -174,7 +176,9 @@ type RecordedAfterTheStart = Exclude<RecordedRunEvent, RecordedRunFact<'run_star
 
 type RecordedWorkFact = Exclude<
   RecordedAfterTheStart,
-  RecordedRunFact<'run_cancel_requested' | 'run_deferred' | 'run_succeeded' | 'run_rejected' | 'run_failed'>
+  RecordedRunFact<
+    'run_cancel_requested' | 'run_deferred' | 'attempt_resumed' | 'run_succeeded' | 'run_rejected' | 'run_failed'
+  >
 >;
 
 function evolveWork(state: RecordedRunState, event: RecordedWorkFact): RecordedRunState {
@@ -201,6 +205,9 @@ function evolveStarted(state: RecordedRunState, event: RecordedAfterTheStart): R
   }
   if (event.type === 'run_deferred') {
     return { ...state, deferred: true, record: event.data.record };
+  }
+  if (event.type === 'attempt_resumed') {
+    return { ...state, attempt: event.data.attempt };
   }
   return event.type === 'run_succeeded' || event.type === 'run_rejected' || event.type === 'run_failed'
     ? finishedRun(state, event)

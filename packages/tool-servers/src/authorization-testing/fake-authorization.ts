@@ -100,6 +100,10 @@ async function asClient(clients: FakeClients, asking: Asking, granted: Granted):
   return client === undefined ? json({ error: 'invalid_client' }, 401) : granted({ form, client, requested });
 }
 
+async function formOf(request: Readonly<Request>): Promise<URLSearchParams> {
+  return new URLSearchParams(new TextDecoder().decode(await request.arrayBuffer()));
+}
+
 export function fakeAuthorization(origin: string, registration: ClientRegistration): FakeAuthorization {
   const clients = fakeClients(registration);
   const tokens = fakeTokens(registration);
@@ -112,14 +116,14 @@ export function fakeAuthorization(origin: string, registration: ClientRegistrati
   ]);
   const token = async (request: Readonly<Request>): Promise<Response> => {
     requested += 1;
-    const form = new URLSearchParams(await request.text());
+    const form = await formOf(request);
     const granted = grantsByType.get(form.get('grant_type') ?? '');
     return granted === undefined
       ? json({ error: 'unsupported_grant_type' }, 400)
       : asClient(clients, { request, form, requested }, granted);
   };
   const revoke = async (request: Readonly<Request>): Promise<Response> =>
-    asClient(clients, { request, form: new URLSearchParams(await request.text()), requested }, grants.revoke);
+    asClient(clients, { request, form: await formOf(request), requested }, grants.revoke);
   const routes = new Map<string, (request: Readonly<Request>) => Promise<Response>>([
     ['/token', token],
     ['/authorize', grants.authorize],

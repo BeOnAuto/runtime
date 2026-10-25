@@ -1,5 +1,5 @@
 import type { RunContext } from '@on.auto/definitions';
-import { noLongestRuns, onTheStandingClock, recordingJournal } from '@on.auto/definitions/testing';
+import { noCalledDefinitions, onTheStandingClock, recordingJournal } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -27,7 +27,7 @@ const aRun: RunContext = {
   lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: runId },
   depth: 0,
   callDepth: 0,
-  ...noLongestRuns,
+  ...noCalledDefinitions,
 };
 
 function openDocument(to: string, message: string): string {

@@ -32,6 +32,8 @@ export {
 } from './capability/capability.ts';
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
+export { nextAttemptOf, type NextAttempt } from './operations/next-attempts.ts';
+export { attemptEnded, type AttemptOfARun } from './operations/run-contexts.ts';
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
 export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
 export { toolEnded } from './journal/run-journal.ts';

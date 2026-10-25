@@ -140,6 +140,16 @@ function appendingWithAnExpectedVersion(entry: LedgerEntry): void {
       expect(await eventsOf(store.read(run))).toEqual({ version: 0, events: [] });
     });
 
+    it("rejects the append itself with the ledger's VersionConflict, the error any streams reject with when a stream moved", async () => {
+      const store = await aStore(entry);
+      await store.append(run, numbered(1, 2), { expectedVersion: 0, context: stamped });
+
+      await expect(store.append(run, three, { expectedVersion: 1, context: stamped })).rejects.toBeInstanceOf(
+        VersionConflict,
+      );
+      expect(await eventsOf(store.read(run))).toEqual({ version: 2, events: [{ n: 1 }, { n: 2 }] });
+    });
+
     it('keeps the same event appended twice as two events', async () => {
       const store = await aStore(entry);
       await store.append(run, numbered(1, 1), { expectedVersion: 0, context: stamped });

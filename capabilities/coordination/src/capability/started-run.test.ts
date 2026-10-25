@@ -3,7 +3,7 @@ import {
   answeringNowMs,
   asking,
   echo,
-  noLongestRuns,
+  noCalledDefinitions,
   recordingJournal,
 } from '@on.auto/definitions/testing';
 import { memoryLedger } from '@on.auto/operations/testing';
@@ -65,7 +65,7 @@ describe('the run a run of a workflow starts for a call or a trigger', () => {
       callDepth: 1,
       calledBy: { run_id: 'r-0', reference: '/do/0/flow', run: 1 },
       trigger: { kind: 'event', reference: '/schedule/on' },
-      ...noLongestRuns,
+      ...noCalledDefinitions,
     } as const;
 
     await Effect.runPromise(prepared.run({}, context));
