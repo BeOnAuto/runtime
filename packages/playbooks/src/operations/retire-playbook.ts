@@ -10,10 +10,9 @@ export const retirePlaybook = defineCommand('org', {
   name: 'retire_playbook',
   title: 'Retire playbook',
   description: [
-    'Retires a playbook of the org for good and returns it: it keeps its history and can still be read,',
-    'but it can no longer change, and there is no way to restore it or to use its id again.',
+    'Retires a playbook for good and returns it, readable with its history but never to change, be restored or have its id used again.',
     'Use it only when the person asks to retire that playbook; update_playbook changes its name or description instead.',
-    '`playbook` is the id of the playbook, and retiring a playbook already retired changes nothing.',
+    'Retiring a retired playbook changes nothing.',
   ].join(' '),
   irreversible: true,
   repeatable: true,

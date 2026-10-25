@@ -179,14 +179,13 @@ describe('the name of a connection', () => {
 });
 
 describe('the description of adding a connection', () => {
-  it("opens with a person's account at a service, named by a provider search lists, claims a service a playbook will use whatever connector the agent has, keeps a server given by hand and the page the person finishes on, and ends with what the call does not grant", () => {
+  it("opens with a person's account at a service, by a provider search lists or a server given by hand, claims a service a playbook will use whatever connector the agent has, keeps the page the person finishes on, and ends with what the call does not grant", () => {
     expect(operationNamed(harness().operations, 'add_connection').registration.description).toBe(
       [
-        "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page.",
+        "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
         'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
-        'A server given by hand takes name, type, entry and credential instead, none holding a secret.',
-        'The person approves it, and gives its credential, on the page the link opens within ten minutes.',
-        'Nothing is granted by this call and no credential passes through it: the person allows it at the service, or gives its credential, on the page the link opens, or nothing happens.',
+        "It answers pending with a link to Studio's page, where the person approves it within ten minutes.",
+        'Nothing is granted by this call and no credential passes through it.',
       ].join(' '),
     );
   });

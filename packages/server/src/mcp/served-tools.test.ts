@@ -131,25 +131,23 @@ describe('the descriptions of the tools of /mcp', () => {
 });
 
 describe('the descriptions of the tools that find and connect a provider', () => {
-  it('name in search the providers that match a service and no server serves yet, at 798 of its 800 characters', () => {
+  it('name in search the providers that match a service and no server serves yet, at 454 characters', () => {
     const searching = descriptionOf('search');
 
     expect(searching).toContain(
-      'With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name.',
+      'With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.',
     );
-    expect(searching).toHaveLength(798);
+    expect(searching).toHaveLength(454);
   });
 
-  it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, and end it with what the call does not grant, at 637 characters", () => {
+  it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, and end it with what the call does not grant, at 426 characters", () => {
     const adding = descriptionOf('add_connection');
 
     expect(adding).toMatch(
-      /^Starts connecting a person's account at a service, named by a provider that search lists, .*\. A service a playbook will use is connected here, whatever connector the agent has of its own for it\. /u,
+      /^Starts connecting a person's account at a service, by the name of a provider that search lists, .*\. A service a playbook will use is connected here, whatever connector the agent has of its own for it\. /u,
     );
-    expect(adding).toMatch(
-      / Nothing is granted by this call and no credential passes through it: the person allows it at the service, or gives its credential, on the page the link opens, or nothing happens\.$/u,
-    );
-    expect(adding).toHaveLength(637);
+    expect(adding).toMatch(/ Nothing is granted by this call and no credential passes through it\.$/u);
+    expect(adding).toHaveLength(426);
   });
 });
 

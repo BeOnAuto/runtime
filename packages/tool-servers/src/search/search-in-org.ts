@@ -20,8 +20,8 @@ import { noServerNamed, searchSentences } from './search.ts';
 
 const description = [
   ...searchSentences,
-  'Without `playbook` it searches every tool server of the org, with the playbooks each serves.',
-  'With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name.',
+  'Each server names the playbooks it serves.',
+  'With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.',
 ].join(' ');
 
 export type PlaybookLookup = (playbook: string) => Effect.Effect<unknown, NotFound, OrgReader>;
