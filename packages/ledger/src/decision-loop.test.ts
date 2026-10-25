@@ -176,6 +176,20 @@ function aheadOnce(streams: Streams): Streams {
   };
 }
 
+function inConflictOnce(streams: Streams): Streams {
+  const met = { conflict: false };
+  return {
+    ...streams,
+    append: async (stream, events, place) => {
+      if (!met.conflict) {
+        met.conflict = true;
+        throw new VersionConflict();
+      }
+      await streams.append(stream, events, place);
+    },
+  };
+}
+
 describe('the stream reader and writer over any streams', () => {
   it('execute a command and load the state it left, as a ledger does, over streams a shell lends', async () => {
     const { load, execute } = streamPortsOf(await lentStreams());
@@ -193,5 +207,13 @@ describe('the stream reader and writer over any streams', () => {
     const { execute } = streamPortsOf(aheadOnce(await lentStreams()));
 
     expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 101, version: 2 });
+  });
+
+  it("decide again when the streams reject an append with the ledger's VersionConflict, as streams a shell lends across a boundary do", async () => {
+    const lent = await lentStreams();
+    const { execute } = streamPortsOf(inConflictOnce(lent));
+
+    expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1 });
+    expect((await lent.read('tally/1')).version).toBe(1);
   });
 });

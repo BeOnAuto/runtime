@@ -1,9 +1,14 @@
-import type { Event, EventStore as EmmettEventStore } from '@event-driven-io/emmett';
+import {
+  isExpectedVersionConflictError,
+  type Event,
+  type EventStore as EmmettEventStore,
+} from '@event-driven-io/emmett';
 import { contextOf, messageIdOf, noLineage, type Context, type Lineage } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { AppendListeners, MessageLineage, RecordedMessage, StreamStore } from '../event-store.ts';
 import { streamAppends } from '../signal/append-signal.ts';
+import { VersionConflict } from '../version-conflict.ts';
 
 export interface EmmettStore extends Pick<EmmettEventStore, 'readStream' | 'appendToStream'> {
   readonly schema: { readonly migrate: () => Promise<unknown> };
@@ -80,15 +85,22 @@ export function emmettEventStore<Stored extends Record<string, unknown>>(
       };
     },
     append: async (stream, events, { expectedVersion, context, lineage = noLineage }) => {
-      await store.appendToStream(
-        stream,
-        events.map((event, index) => ({
-          type: event.type,
-          data: data.stored(event.data),
-          metadata: metadataOf(messageIdOf(stream, expectedVersion + index + 1), lineage, context),
-        })),
-        { expectedStreamVersion: BigInt(expectedVersion), observability: observabilityOf(lineage, context) },
-      );
+      try {
+        await store.appendToStream(
+          stream,
+          events.map((event, index) => ({
+            type: event.type,
+            data: data.stored(event.data),
+            metadata: metadataOf(messageIdOf(stream, expectedVersion + index + 1), lineage, context),
+          })),
+          { expectedStreamVersion: BigInt(expectedVersion), observability: observabilityOf(lineage, context) },
+        );
+      } catch (error) {
+        if (isExpectedVersionConflictError(error)) {
+          throw new VersionConflict();
+        }
+        throw error;
+      }
       appended.raise(stream);
       observer?.appended(stream, events, { expectedVersion, context, lineage });
     },

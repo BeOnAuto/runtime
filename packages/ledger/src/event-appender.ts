@@ -1,4 +1,3 @@
-import { isExpectedVersionConflictError } from '@event-driven-io/emmett';
 import { checkedContext, recordingOf, type Decided, type Recorded } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
@@ -39,9 +38,7 @@ export function eventAppenderOf<Event extends Recorded>(
           ),
         ),
       ),
-      Effect.catch((error) =>
-        isExpectedVersionConflictError(error) ? Effect.fail(new VersionConflict()) : Effect.die(error),
-      ),
+      Effect.catch((error) => (error instanceof VersionConflict ? Effect.fail(error) : Effect.die(error))),
     );
   };
 }

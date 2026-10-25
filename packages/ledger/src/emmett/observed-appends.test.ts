@@ -1,4 +1,3 @@
-import { isExpectedVersionConflictError } from '@event-driven-io/emmett';
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { EmmettInstrumentation } from '@event-driven-io/emmett/otel';
@@ -6,7 +5,7 @@ import { noLineage } from '@on.auto/operations';
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import type { AppendPlace, EncodedEvent } from '../index.ts';
+import { VersionConflict, type AppendPlace, type EncodedEvent } from '../index.ts';
 import { stamped } from '../testing/happenings.ts';
 import { dataAsWritten, emmettEventStore, type EmmettStore } from './emmett-event-store.ts';
 
@@ -45,8 +44,8 @@ describe('the observer of an event store over an Emmett event store', () => {
     await store.migrate();
 
     await store.append(run, firstThree, { expectedVersion: 0, context: stamped });
-    await expect(store.append(run, firstThree, { expectedVersion: 0, context: stamped })).rejects.toSatisfy(
-      isExpectedVersionConflictError,
+    await expect(store.append(run, firstThree, { expectedVersion: 0, context: stamped })).rejects.toBeInstanceOf(
+      VersionConflict,
     );
 
     expect(told).toEqual([
