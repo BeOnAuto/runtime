@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.22.0](https://github.com/BeOnAuto/runtime/compare/v0.21.2...v0.22.0) (2026-10-25)
+
+
+### Features
+
+* **connections:** the names of the package's two streams are exported ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **definitions:** a shell drives a started run's next attempt from the pieces of the resume ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **global:** a waiting call is dispatched again after the interval its own run resumes after ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **ledger:** any streams reject an append in conflict with the ledger's own VersionConflict ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **reasoning:** the reader of a reasoning function definition is exported ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **tool-servers:** the fake consent service takes a fetch and any Studio base ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+
+
+### Bug Fixes
+
+* **definitions:** a shell claims the next attempt of a run as a fact, and one attempt ends it ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **definitions:** the next attempt of a run of another type is refused as run_definition does ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **ledger:** the loop knows a version conflict by its tag, never by its class ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **tool-servers:** the fake authorization server reads a form as a form, never as text ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **tool-servers:** the fake consent service names its return and checks its base as the runtime ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+* **workflow-host:** the waits and stops of the host's background work read it as they run ([#327](https://github.com/BeOnAuto/runtime/issues/327)) ([6fb95a6](https://github.com/BeOnAuto/runtime/commit/6fb95a6ab9b98a607be11dc93a70c90829326cbc))
+
 ## [0.21.2](https://github.com/BeOnAuto/runtime/compare/v0.21.1...v0.21.2) (2026-10-25)
 
 
