@@ -70,6 +70,27 @@ describe('a workflow call of a workflow', () => {
   });
 });
 
+describe('a workflow call of a run that may be resumed, handed to a queue', () => {
+  it('carries the interval its run resumes after, the one the workflow read for its step when it started, in its request and in its answer that it waits', async () => {
+    const { perform, asked } = answering({ status: 'waiting' });
+    const resuming = {
+      ...run,
+      attributes: { ...run.attributes, resumes_after_ms_by_task: { '/do/0/review': 115_000 } },
+    };
+
+    const answer = await Effect.runPromise(perform(review, resuming, { version: 2 }, firstAttempt));
+    const another = await Effect.runPromise(
+      perform({ ...review, key: { ...review.key, reference: '/do/1/other' } }, resuming, { version: 2 }, firstAttempt),
+    );
+
+    expect([answer, another]).toEqual([
+      { status: 'waiting', child: nestedRunId(workflowRun, '/do/0/review', 2), resumesAfterMs: 115_000 },
+      { status: 'waiting', child: nestedRunId(workflowRun, '/do/1/other', 2) },
+    ]);
+    expect(asked().map(({ resumesAfterMs }) => ({ resumesAfterMs }))).toEqual([{ resumesAfterMs: 115_000 }, {}]);
+  });
+});
+
 describe('the ending of a run a step waits for', () => {
   it('answers the step with the output of a run that succeeded, unless the output is larger than a workflow takes', () => {
     expect([

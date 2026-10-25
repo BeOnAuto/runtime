@@ -13,7 +13,6 @@ export interface PartsOptions extends EngineOptions {
   readonly waiting: WaitingOptions;
   readonly mostOpenCalls?: number;
   readonly dueWork?: readonly DueWork[];
-  readonly dispatchedAgainAfterMs?: number;
 }
 
 export interface HostParts extends WakeUpParts, Pick<HostEngine, 'submitted' | 'reacting' | 'executor'> {
@@ -40,10 +39,7 @@ export function openHostParts(
   return {
     clock,
     timers: engine.timers,
-    dueWork: [
-      ...(options.dueWork ?? []),
-      ...callsDueAgainOf(database, engine.executor, options.dispatchedAgainAfterMs),
-    ],
+    dueWork: [...(options.dueWork ?? []), callsDueAgainOf(database, engine.executor)],
     engine: engine.engine,
     fire: ({ runKey, timerId }, at) =>
       Effect.andThen(

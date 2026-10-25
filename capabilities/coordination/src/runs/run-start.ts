@@ -4,7 +4,7 @@ import type { StartAnswer, WorkflowHost } from '@on.auto/workflow-host';
 import { Effect, Random, type Schema } from 'effect';
 
 import type { WorkflowDefinitionDocument } from '../document/workflow-document.ts';
-import { longestCallsOf } from './call-limits.ts';
+import { longestCallsOf, resumesAfterCallsOf } from './call-limits.ts';
 import { unavailableUnless } from './host-refusals.ts';
 import type { RunAttributes } from './run-attributes.ts';
 
@@ -36,6 +36,7 @@ export function started(
   const { id, org, playbook, caller, definition, lineage, depth, callDepth, calledBy, trigger } = run;
   return Effect.gen(function* () {
     const seed = yield* Random.nextIntBetween(0, mostSeed);
+    const resumesAfterMsByTask = yield* resumesAfterCallsOf(document, run);
     const attributes: RunAttributes = {
       org,
       playbook,
@@ -47,6 +48,7 @@ export function started(
       ...(calledBy === undefined ? {} : { called_by: calledBy }),
       ...(trigger === undefined ? {} : { trigger }),
       lineage: { start: lineage.startId, correlation: lineage.correlationId },
+      ...(Object.keys(resumesAfterMsByTask).length === 0 ? {} : { resumes_after_ms_by_task: resumesAfterMsByTask }),
     };
     const longestCallMsByTask = yield* longestCallsOf(document, run);
     const limits = { mostDurationMs, longestCallMs, longestCallMsByTask };

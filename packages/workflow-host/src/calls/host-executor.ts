@@ -18,10 +18,10 @@ import {
   allWaitingCalls,
   answeredRow,
   deliveredRow,
-  dispatchedAgainRow,
+  dueAgainRow,
   unfinishedCalls,
   waitingRow,
-  type CallOfARun,
+  type WaitingCallOfARun,
   type UnfinishedCall,
   type WaitingCall,
 } from './call-rows.ts';
@@ -30,6 +30,7 @@ import { afterAnAttemptDied, started, type CallAttempt, type StartParts, type St
 interface Waiting {
   readonly status: 'waiting';
   readonly child: string;
+  readonly resumesAfterMs?: number;
 }
 
 export type CallAnswer = CallResult | Waiting;
@@ -58,7 +59,7 @@ export interface ExecutorParts extends StartParts {
 
 export interface HostExecutor {
   readonly executor: Executor;
-  readonly dispatchedAgain: (waiting: CallOfARun, at: number) => Effect.Effect<void, DatabaseFailed>;
+  readonly dispatchedAgain: (waiting: WaitingCallOfARun, at: number) => Effect.Effect<void, DatabaseFailed>;
   readonly resume: () => Effect.Effect<number>;
   readonly idle: () => Effect.Effect<void>;
   readonly stop: () => Effect.Effect<void>;
@@ -100,10 +101,10 @@ function dispatchedAgainBy(
   atOnce: Semaphore.Semaphore,
   settled: Settled,
 ): HostExecutor['dispatchedAgain'] {
-  return ({ key, call, run, origin }, at) =>
+  return ({ key, call, run, origin, resumesAfterMs }, at) =>
     atOnce.withPermit(perform(call, run, origin, afterAnAttemptDied)).pipe(
       Effect.flatMap((answer) =>
-        answer.status === 'waiting' ? dispatchedAgainRow(database, key, at) : settled(key, call, answer),
+        answer.status === 'waiting' ? dueAgainRow(database, key, at + resumesAfterMs) : settled(key, call, answer),
       ),
       Effect.withSpan(`call ${call.function}`, callSpanOf(call)),
     );
@@ -127,12 +128,12 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
     Effect.flatMap(parts.childAnswerOf(call.key.runId, child), (ended) =>
       ended === undefined ? Effect.void : settled(key, call, ended),
     );
-  const waited = (key: string, call: StartCall, child: string): Effect.Effect<void, DatabaseFailed> =>
-    writtenUntilItIs(waitingRow(database, key, { child, at: now() }), trouble).pipe(
+  const waited = (key: string, call: StartCall, { child, resumesAfterMs }: Waiting) =>
+    writtenUntilItIs(waitingRow(database, key, { child, at: now(), resumesAfterMs }), trouble).pipe(
       Effect.andThen(answeredIfEnded({ key, call, child })),
     );
   const answered = (key: string, call: StartCall, answer: CallAnswer): Effect.Effect<void, DatabaseFailed> =>
-    answer.status === 'waiting' ? waited(key, call, answer.child) : settled(key, call, answer);
+    answer.status === 'waiting' ? waited(key, call, answer) : settled(key, call, answer);
   const roots = runSerialiser();
   return {
     begin: (key, { call, run, origin }, attempt, parent) => {

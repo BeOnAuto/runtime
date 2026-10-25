@@ -2,7 +2,7 @@ import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { workflow } from '../testing/workflows.ts';
-import { callMarginMs, longestCallsOf } from './call-limits.ts';
+import { callMarginMs, longestCallsOf, resumesAfterCallsOf } from './call-limits.ts';
 
 const longestRuns: Readonly<Record<string, number>> = {
   'reasoning/classify': 85_000,
@@ -57,6 +57,20 @@ const countingItems = {
   longestRunFor: (_type: string, _name: string, input: Schema.Json) =>
     Effect.succeed(JSON.stringify(input).length * 1000),
 };
+
+const resumeIntervals: Readonly<Record<string, number>> = { 'reasoning/classify': 115_000 };
+
+function resumesAfterOf(type: string, name: string): Effect.Effect<number | undefined> {
+  return Effect.succeed(resumeIntervals[`${type}/${name}`]);
+}
+
+describe('the interval after which the run of each step of a workflow may be resumed', () => {
+  it('is the one of the definition it names, written out, wherever the step sits, and none for a run that does not resume, one computed at run time or one not saved', async () => {
+    expect(await Effect.runPromise(resumesAfterCallsOf(document, { resumesAfterOf }))).toEqual({
+      '/do/0/classify': 115_000,
+    });
+  });
+});
 
 describe('the longest call of a step that gives the function its input written out', () => {
   it('is the longest run of that input, and the longest of any input when an expression computes any part of it', async () => {

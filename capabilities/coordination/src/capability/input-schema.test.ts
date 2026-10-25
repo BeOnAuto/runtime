@@ -1,5 +1,5 @@
 import type { RunContext } from '@on.auto/definitions';
-import { noLongestRuns, recordingJournal } from '@on.auto/definitions/testing';
+import { noCalledDefinitions, recordingJournal } from '@on.auto/definitions/testing';
 import { InvalidInput } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import type { Json } from '@on.auto/workflow-engine';
@@ -163,7 +163,7 @@ function contextOf(links: Partial<Pick<RunContext, 'trigger'>>): RunContext {
     depth: 1,
     callDepth: 0,
     ...links,
-    ...noLongestRuns,
+    ...noCalledDefinitions,
   };
 }
 

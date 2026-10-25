@@ -18,11 +18,18 @@ const child = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
 
 const origin = { version: 3 };
 
-const againAfterMs = 30_000;
-
 const startedAt = 1000;
 
-const waiting: CallAnswer = { status: 'waiting', child };
+const quickMs = 30_000;
+
+const slowMs = 90_000;
+
+const resumesAfterMsOf: Readonly<Record<string, number>> = { '/do/0/a': quickMs, '/do/1/b': slowMs };
+
+function waitingFor({ key }: StartCall): CallAnswer {
+  const resumesAfterMs = resumesAfterMsOf[key.reference];
+  return resumesAfterMs === undefined ? { status: 'waiting', child } : { status: 'waiting', child, resumesAfterMs };
+}
 
 function callAt(reference: string): StartCall {
   return {
@@ -34,7 +41,7 @@ function callAt(reference: string): StartCall {
   };
 }
 
-const [first, second] = [callAt('/do/0/a'), callAt('/do/1/b')];
+const [quick, slow, notResuming] = [callAt('/do/0/a'), callAt('/do/1/b'), callAt('/do/2/c')];
 
 async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall) => CallAnswer) {
   const database = await openedOn(await settings());
@@ -46,7 +53,7 @@ async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall)
     perform: (call, _run, _origin, attempt) =>
       Effect.sync(() => {
         attempts.push({ reference: call.key.reference, ...attempt });
-        return attempt.attemptDied ? againAnswers(call) : waiting;
+        return attempt.attemptDied ? againAnswers(call) : waitingFor(call);
       }),
     deliver: (_key, result) =>
       Effect.sync(() => {
@@ -59,9 +66,8 @@ async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall)
     childAnswerOf: () => Effect.undefined,
     cancelChild: () => Effect.succeed('requested'),
   });
-  const works = callsDueAgainOf(database, executor, againAfterMs);
-  const dueAt = async (now: number, callsOut = true) =>
-    (await Effect.runPromise(Effect.forEach(works, (work) => work.due(now, 16, callsOut)))).flat();
+  const work = callsDueAgainOf(database, executor);
+  const dueAt = (now: number, callsOut = true) => Effect.runPromise(work.due(now, 16, callsOut));
   return {
     executor,
     factOfTheChild: () => recorded(database.store, `${alpha}runs/${child}`, { type: 'run_started', data: {} }),
@@ -74,7 +80,7 @@ async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall)
       await Effect.runPromise(Effect.forEach(items, (item) => item.perform(now)));
       return keysOf(items);
     },
-    nextAfter: (moment: number) => Effect.runPromise(Effect.forEach(works, (work) => work.nextDueAt(moment))),
+    nextAfter: (moment: number) => Effect.runPromise(work.nextDueAt(moment)),
     started: (...calls: readonly StartCall[]) =>
       Effect.runPromise(
         Effect.andThen(
@@ -85,47 +91,59 @@ async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall)
   };
 }
 
-const stillWaiting = (): CallAnswer => waiting;
+const stillWaiting = (call: StartCall): CallAnswer => waitingFor(call);
 
 function keysOf(items: readonly DueItem[]): readonly string[] {
   return items.map(({ key }) => key);
 }
 
+function againAttemptsOf(attempts: readonly (CallAttempt & { readonly reference: string })[]): readonly string[] {
+  return attempts.filter(({ attemptDied }) => attemptDied).map(({ reference }) => reference);
+}
+
 export function dispatchSuite(settings: SettingsOf): void {
-  it('dispatches a waiting call again, told the attempt before died, once it has waited the interval since it was last dispatched, and each interval after, among the work that calls out', async () => {
+  it('dispatches each waiting call again, told the attempt before died, once it has waited the interval its own run resumes after since it was last dispatched, and each interval after, among the work that calls out', async () => {
     const calls = await dispatching(settings, stillWaiting);
-    await calls.started(first);
+    await calls.started(quick, slow, notResuming);
 
-    const before = await calls.dueAt(startedAt + againAfterMs - 1);
+    const before = await calls.dueAt(startedAt + quickMs - 1);
     const firstNext = await calls.nextAfter(startedAt);
-    const again = await calls.performedAt(startedAt + againAfterMs);
-    const secondNext = await calls.nextAfter(startedAt + againAfterMs);
+    const quickAgain = await calls.performedAt(startedAt + quickMs);
+    const secondNext = await calls.nextAfter(startedAt + quickMs);
+    const bothAgain = await calls.performedAt(startedAt + slowMs);
 
-    expect([before, again, await calls.dueAtAmongTheRest(startedAt + againAfterMs * 3)]).toEqual([
+    expect([before, quickAgain, bothAgain]).toEqual([
       [],
-      [callKeyText(first.key)],
+      [callKeyText(quick.key)],
+      [callKeyText(quick.key), callKeyText(slow.key)],
+    ]);
+    expect([firstNext, secondNext]).toEqual([startedAt + quickMs, startedAt + quickMs * 2]);
+    expect([await calls.dueAtAmongTheRest(startedAt + slowMs * 3), againAttemptsOf(calls.attempts())]).toEqual([
       [],
+      ['/do/0/a', '/do/0/a', '/do/1/b'],
     ]);
-    expect([firstNext, secondNext]).toEqual([[startedAt + againAfterMs], [startedAt + againAfterMs * 2]]);
-    expect(calls.attempts()).toEqual([
-      { reference: '/do/0/a', attemptDied: false },
-      { reference: '/do/0/a', attemptDied: true },
-    ]);
+  });
+
+  it('never dispatches again a waiting call whose run does not resume, which names no interval', async () => {
+    const calls = await dispatching(settings, stillWaiting);
+    await calls.started(notResuming);
+
+    expect([await calls.dueAt(startedAt + slowMs * 100), await calls.nextAfter(0)]).toEqual([[], null]);
   });
 
   it('answers a call that its dispatch again answers, and leaves alone one its deadline cancelled, so neither is due again', async () => {
     const calls = await dispatching(settings, () => ({ status: 'succeeded', output: 'classified' }));
-    await calls.started(first, second);
+    await calls.started(quick, slow);
     await Effect.runPromise(
-      calls.executor.executor.cancel({ kind: 'cancel_call', key: second.key, reason: 'deadline' }, run, origin),
+      calls.executor.executor.cancel({ kind: 'cancel_call', key: slow.key, reason: 'deadline' }, run, origin),
     );
 
-    const again = await calls.performedAt(startedAt + againAfterMs);
+    const again = await calls.performedAt(startedAt + slowMs);
 
-    expect([again, await calls.dueAt(startedAt + againAfterMs * 3), await calls.nextAfter(0)]).toEqual([
-      [callKeyText(first.key)],
+    expect([again, await calls.dueAt(startedAt + slowMs * 3), await calls.nextAfter(0)]).toEqual([
+      [callKeyText(quick.key)],
       [],
-      [null],
+      null,
     ]);
     expect(calls.answered()).toEqual([{ status: 'succeeded', output: 'classified' }]);
   });
@@ -133,19 +151,19 @@ export function dispatchSuite(settings: SettingsOf): void {
 }
 
 function aLiveRunWaitedFor(settings: SettingsOf): void {
-  it('waits, rather than dispatching again, while the run the call waits for shows a fact within the interval, and is due again once the run has been quiet that long', async () => {
+  it('waits, rather than dispatching again, while the run the call waits for shows a fact within its interval, and is due again once the run has been quiet that long', async () => {
     const calls = await dispatching(settings, stillWaiting);
-    await calls.started(first);
+    await calls.started(quick);
     await calls.factOfTheChild();
 
-    const handedOut = await calls.performedAt(startedAt + againAfterMs);
-    const [next] = await calls.nextAfter(startedAt + againAfterMs);
+    const handedOut = await calls.performedAt(startedAt + quickMs);
+    const next = await calls.nextAfter(startedAt + quickMs);
 
     expect([handedOut, calls.attempts()]).toEqual([
-      [callKeyText(first.key)],
+      [callKeyText(quick.key)],
       [{ reference: '/do/0/a', attemptDied: false }],
     ]);
-    expect(next).toBeGreaterThan(startedAt + againAfterMs);
-    expect(next).toBeLessThanOrEqual(startedAt + againAfterMs * 2);
+    expect(next).toBeGreaterThan(startedAt + quickMs);
+    expect(next).toBeLessThanOrEqual(startedAt + quickMs * 2);
   });
 }

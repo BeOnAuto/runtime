@@ -28,6 +28,8 @@
   },
   "devDependencies": {
     "@on.auto/prediction": "workspace:*",
+    "@on.auto/reasoning": "workspace:*",
+    "@on.auto/tool-servers": "workspace:*",
     "@types/semver": "7.8.0",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"

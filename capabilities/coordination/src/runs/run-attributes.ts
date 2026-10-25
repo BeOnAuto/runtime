@@ -14,6 +14,7 @@ const RunAttributesSchema = Schema.Struct({
     Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
   ),
   lineage: Schema.optionalKey(Schema.Struct({ start: Schema.String, correlation: Schema.String })),
+  resumes_after_ms_by_task: Schema.optionalKey(Schema.Record(Schema.String, Schema.Int)),
 });
 
 export type RunAttributes = typeof RunAttributesSchema.Type;

@@ -34,7 +34,7 @@ export interface WorkParts {
   readonly names: PlaybookOwnNames;
 }
 
-type RunInProcess = (run: Omit<DefinitionRunRequest, 'longestMs'>) => ReturnType<RunDefinition>;
+type RunInProcess = (run: Omit<DefinitionRunRequest, 'longestMs' | 'resumesAfterMs'>) => ReturnType<RunDefinition>;
 
 export function nestedRuns(
   runtime: AppRuntime<DispatcherServices>,

@@ -33,26 +33,30 @@ export interface StartedAttempt {
   readonly attempt: RunAttempt;
 }
 
-type LongestOf = (prepared: PreparedDefinition) => number;
+type MeasureOf = (prepared: PreparedDefinition) => number;
 
-const longestRunIn = Effect.fnUntraced(function* (capability: Capability, name: string, longestOf: LongestOf) {
+const measuredIn = Effect.fnUntraced(function* (capability: Capability, name: string, measureOf: MeasureOf) {
   const { prepared } = yield* preparedDefinition(capability, name);
-  return longestOf(prepared);
+  return measureOf(prepared);
 });
 
-const longestRunsIn = Effect.fnUntraced(function* (capabilities: readonly Capability[]) {
+const calledDefinitionsIn = Effect.fnUntraced(function* (capabilities: readonly Capability[]) {
   const reader = yield* PlaybookReader;
-  return (type: string, name: string, longestOf: LongestOf): Effect.Effect<number | undefined> => {
+  return (type: string, name: string, measureOf: MeasureOf): Effect.Effect<number | undefined> => {
     const capability = capabilities.find((candidate) => candidate.type === type);
     return capability === undefined
       ? Effect.undefined
-      : longestRunIn(capability, name, longestOf).pipe(
+      : measuredIn(capability, name, measureOf).pipe(
           Effect.option,
           Effect.map(Option.getOrUndefined),
           Effect.provideService(PlaybookReader, reader),
         );
   };
 });
+
+function finiteOnly(milliseconds: number | undefined): number | undefined {
+  return milliseconds !== undefined && Number.isFinite(milliseconds) ? milliseconds : undefined;
+}
 
 export const contextOf = Effect.fnUntraced(function* (
   id: string,
@@ -62,7 +66,7 @@ export const contextOf = Effect.fnUntraced(function* (
 ) {
   const { org, playbook } = yield* PlaybookContext;
   const journal = yield* runJournal(id, lineage, before);
-  const longestRun = yield* longestRunsIn(given.capabilities);
+  const called = yield* calledDefinitionsIn(given.capabilities);
   const context: JournalledRun = {
     id,
     org,
@@ -75,8 +79,13 @@ export const contextOf = Effect.fnUntraced(function* (
     callDepth: given.callDepth,
     ...(given.calledBy === null ? {} : { calledBy: given.calledBy }),
     ...(given.trigger === null ? {} : { trigger: given.trigger }),
-    longestRunOf: (type, name) => longestRun(type, name, ({ longestRunMs }) => longestRunMs),
-    longestRunFor: (type, name, input) => longestRun(type, name, ({ longestRunMsFor }) => longestRunMsFor(input)),
+    longestRunOf: (type, name) => called(type, name, ({ longestRunMs }) => longestRunMs),
+    longestRunFor: (type, name, input) => called(type, name, ({ longestRunMsFor }) => longestRunMsFor(input)),
+    resumesAfterOf: (type, name) =>
+      Effect.map(
+        called(type, name, ({ resumesAfterMs }) => resumesAfterMs),
+        finiteOnly,
+      ),
   };
   return context;
 });

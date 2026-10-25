@@ -11,7 +11,7 @@ import {
 } from '../index.ts';
 import { recordingJournal } from '../journal-testing/recording-journal.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
-import { noLongestRuns } from '../testing/longest-runs.ts';
+import { noCalledDefinitions } from '../testing/called-definitions.ts';
 
 const parseWords = (source: string) =>
   source.trim() === ''
@@ -42,7 +42,7 @@ const run: RunContext = {
   lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' },
   depth: 0,
   callDepth: 0,
-  ...noLongestRuns,
+  ...noCalledDefinitions,
 };
 
 describe('a capability', () => {

@@ -334,6 +334,12 @@ importers:
       '@on.auto/prediction':
         specifier: workspace:*
         version: link:../prediction
+      '@on.auto/reasoning':
+        specifier: workspace:*
+        version: link:../reasoning
+      '@on.auto/tool-servers':
+        specifier: workspace:*
+        version: link:../../packages/tool-servers
       '@types/semver':
         specifier: 7.8.0
         version: 7.8.0

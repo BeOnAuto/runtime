@@ -22,6 +22,7 @@ export interface DefinitionRunRequest {
   readonly callDepth: number;
   readonly calledBy: CallLink;
   readonly longestMs: number;
+  readonly resumesAfterMs?: number;
   readonly attemptDied?: true;
 }
 

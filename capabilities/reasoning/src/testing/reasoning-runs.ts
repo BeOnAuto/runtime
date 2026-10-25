@@ -6,7 +6,12 @@ import type {
   PreparedDefinition,
   Capability,
 } from '@on.auto/definitions';
-import { cancelledAfter, noLongestRuns, recordingJournal, type RecordingJournal } from '@on.auto/definitions/testing';
+import {
+  cancelledAfter,
+  noCalledDefinitions,
+  recordingJournal,
+  type RecordingJournal,
+} from '@on.auto/definitions/testing';
 import { allPermissions, type RecordedContent } from '@on.auto/operations';
 import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { noToolServers } from '@on.auto/tool-servers/testing';
@@ -51,7 +56,7 @@ export function runContextWith(journal: RecordingJournal): RunContext {
     lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' },
     depth: 0,
     callDepth: 0,
-    ...noLongestRuns,
+    ...noCalledDefinitions,
   };
 }
 
