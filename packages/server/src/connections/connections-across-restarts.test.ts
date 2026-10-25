@@ -1,11 +1,9 @@
-import { connectionsFold, connectionsStreamOfOrg } from '@on.auto/connections/testing';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
-import { Ledger, sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/operations';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { Effect, ManagedRuntime, Option, Redacted } from 'effect';
+import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
-import { secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
+import { connectionFactsIn, secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
@@ -49,20 +47,6 @@ async function connectedBeforeARestart(): Promise<{ readonly fileName: string; r
   const id = await connectedWith(first, aSecretHeader('crm', crm.url), `Bearer ${crmKey}`);
   await first.stop();
   return { fileName: ledger.fileName, id };
-}
-
-async function connectionFactsIn(fileName: string): Promise<readonly string[]> {
-  const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
-  onTestFinished(() => runtime.dispose());
-  const collecting = {
-    ...connectionsFold,
-    initialState: [],
-    evolve: (types: readonly string[], { type }: { readonly type: string }) => [...types, type],
-  };
-  const { state } = await runtime.runPromise(
-    Effect.flatMap(Ledger, (read) => read.load(connectionsStreamOfOrg('acme'), collecting)),
-  );
-  return state;
 }
 
 const echoing = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [crm/echo]', '---', 'Echo a note.'].join('\n');
@@ -117,7 +101,7 @@ describe('a connection whose credential the secret store of a restarted runtime 
     expect(read.body).toMatchObject({ status: 'connected' });
     expect(sealedAgain).toEqual({ replaced: true, version: 3 });
     expect(called.status).toBe(200);
-    expect(await connectionFactsIn(fileName)).not.toContain('connection_broken');
+    expect(await connectionFactsIn(fileName, 'acme')).not.toContain('connection_broken');
   });
 });
 

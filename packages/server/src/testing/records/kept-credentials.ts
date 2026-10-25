@@ -1,4 +1,5 @@
-import { connectionsFold, connectionsStreamOfOrg } from '@on.auto/connections/testing';
+import { connectionsStreamOfOrg } from '@on.auto/connections';
+import { connectionsFold } from '@on.auto/connections/testing';
 import { ledgerLayer, sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { Ledger } from '@on.auto/operations';
 import { localCustodian, sealedSecretStoreOn, type SecretStore } from '@on.auto/secrets';
@@ -21,6 +22,20 @@ export async function secretIdOf(fileName: string, org: string, connection: stri
   );
   await runtime.dispose();
   return state.get(connection)?.secretId;
+}
+
+export async function connectionFactsIn(fileName: string, org: string): Promise<readonly string[]> {
+  const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
+  const collecting = {
+    ...connectionsFold,
+    initialState: [],
+    evolve: (types: readonly string[], { type }: { readonly type: string }) => [...types, type],
+  };
+  const { state } = await runtime.runPromise(
+    Effect.flatMap(Ledger, (ledger) => ledger.load(connectionsStreamOfOrg(org), collecting)),
+  );
+  await runtime.dispose();
+  return state;
 }
 
 export async function ownKeyFactsIn(fileName: string): Promise<readonly OwnKeyEvent[]> {

@@ -1,9 +1,10 @@
-import { CallLineage, NotFound } from '@on.auto/operations';
+import { CallLineage } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import { attemptIsLive, claimOf, stillRunning, type Claim } from '../runs/run-decisions.ts';
-import { answerOf } from '../runs/run-lookup.ts';
+import { answerOf, noRunCalled } from '../runs/run-lookup.ts';
+import type { RunDetail } from '../runs/run.ts';
 import { preparedVersion } from './definition-preparation.ts';
 import { claimedAttempt, loadAttempt, loadStartedRun } from './run-access.ts';
 import { answeredWith, contextOf, type AttemptOfARun, type Called, type Prepared } from './run-contexts.ts';
@@ -14,13 +15,9 @@ interface ResumedAttempt extends AttemptOfARun {
   readonly cancelAsked: boolean;
 }
 
-type AnswerOfARun = Effect.Success<ReturnType<typeof answerOf>>;
-
 export type NextAttempt =
-  | { readonly type: 'answered'; readonly answer: AnswerOfARun }
+  | { readonly type: 'answered'; readonly answer: RunDetail }
   | { readonly type: 'attempt'; readonly attempt: AttemptOfARun };
-
-const noStartedRun = new NotFound({ detail: 'There is no such run in this playbook' });
 
 interface DeadAttempt {
   readonly toRun: Prepared;
@@ -107,7 +104,7 @@ export const nextAttemptOf = Effect.fnUntraced(function* (
 ) {
   const { recorded, run } = yield* loadStartedRun(id);
   if (run === undefined) {
-    return yield* Effect.fail(noStartedRun);
+    return yield* Effect.fail(noRunCalled(id));
   }
   const request = { definition_type: capability.type, name: run.run.name, input: run.input };
   const claim = yield* Effect.fromResult(claimOf(recorded, request, capability.resumes));

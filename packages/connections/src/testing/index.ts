@@ -1,1 +1,1 @@
-export { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+export { connectionsFold } from '../registry/registry-decider.ts';
