@@ -134,7 +134,9 @@ await test('no module an entry of a shipped package reaches, but the server, rea
     [],
   );
   assert.ok(reached.some(({ place }) => place.startsWith('packages/api/src/shipped-files/api-roots.ts:')));
-  assert.ok(reached.some(({ place }) => place.startsWith('capabilities/reasoning/src/adapter/entra-id.ts:')));
+  assert.ok(
+    reached.some(({ place }) => place.startsWith('capabilities/reasoning/src/providers/installed-packages.ts:')),
+  );
 });
 
 await test('an address read as a module loads is told from one read in a function, a function called at once read at load', () => {

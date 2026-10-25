@@ -3,18 +3,14 @@ import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ConsentClient } from '../consent/consent-client.ts';
+import { autoClientsOf, consentClientWith, registeredAt, startAskedAt, studioBase } from '../testing/index.ts';
+import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
-  autoClientsOf,
-  consentClientWith,
-  registeredAt,
   servedThroughAuto,
-  startAskedAt,
-  studioBase,
   type FakeConsentService,
   type ServiceListing,
   type ThroughAuto,
-} from '../testing/index.ts';
-import { serveOnLoopback } from '../testing/loopback-server.ts';
+} from '../testing/served-fakes.ts';
 import { unlistedWords, type ReturnKind } from './auto-clients.ts';
 
 const closing: (() => Promise<void>)[] = [];

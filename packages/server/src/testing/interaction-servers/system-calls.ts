@@ -1,6 +1,6 @@
 import { callDocument, type CallOptions } from '@on.auto/interaction/testing';
 import type { Timing } from '@on.auto/tool-servers';
-import { serveFakeMcp, type FakeHints, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { expect, onTestFinished } from 'vitest';
 
@@ -9,6 +9,8 @@ import { alpha } from '../servers/reasoning-server.ts';
 import type { LedgerOver } from '../servers/served-parts.ts';
 import { chatKey } from './chat-deliveries.ts';
 import { interactionServerOn, type InteractionServer } from './interaction-server.ts';
+
+type FakeHints = NonNullable<FakeMcpOptions['hints']>;
 
 export const threadInput = { channel: 'C0123', thread: '1728379900.000050' };
 

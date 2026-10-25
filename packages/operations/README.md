@@ -138,6 +138,8 @@ A transport runs a call with `settle(call, signal)` and always gets a `Settled` 
 
 The dispatcher needs a `Ledger`, a `PlaybookRegistry`, which answers the status of a playbook, `active`, `retired` or `unknown`, and an `IncidentReporter`. Handlers can see none of them, neither in their types nor at run time. A handler can read any other service present in the runtime's context, so the runtime must expose only these three at its top level, and an adapter must keep its own dependencies, such as a database client, inside its layer.
 
+`CallFetch` is the fetch of one call, for a shell that sends the requests of each call through the invocation that performs it. The shell puts it in the context it makes of a request, `callContext` of `@on.auto/api`, and the tool access and the consent client of `@on.auto/tool-servers` send that call's requests through it, not through the fetch they were made with. The server puts none, so they send through their own.
+
 ## The ledger ports
 
 A `Decider` holds the event-sourced rules of a stream: its initial state, how an event evolves the state, how a command decides on new events or a rejection, the context of the events a command decides, and the schema of its events. An event is a fact named for what happened, `{ type, data }`: the `type`, which the ledger records as the message's type, and the `data`, the fact's own fields and nothing else, which the ledger stores without the type. `factOf(type, schema)` makes the schema of one fact from its name and the schema of its data, and the schema a decider decodes is the union of its facts, so no fact declares its name twice.

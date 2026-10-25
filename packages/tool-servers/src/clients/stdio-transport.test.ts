@@ -2,8 +2,8 @@ import { Redacted, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
-import type { StdioServerSettings } from '../settings/server-settings.ts';
-import { consentClientWith, fakeStdioServerPath, testClientInfo } from '../testing/index.ts';
+import { consentClientWith, testClientInfo } from '../testing/index.ts';
+import { fakeStdioServerPath } from '../testing/served-fakes.ts';
 import { errorsNoLongerReported } from './mcp-client.ts';
 import { observations } from './observed-requests.ts';
 import { failureOf } from './server-failures.ts';
@@ -13,6 +13,8 @@ import { outputNoLongerReported, StdioProcessTransport } from './stdio-transport
 type ServerClient = Awaited<ReturnType<ReturnType<typeof serverLink>['take']>>;
 
 type CallSettled = Awaited<ReturnType<ServerClient['call']>>;
+
+type StdioServerSettings = Extract<Parameters<typeof serverLink>[0], { readonly type: 'stdio' }>;
 
 const coverage = process.env['NODE_V8_COVERAGE'];
 

@@ -54,6 +54,7 @@ describe('the open calls of runs of one tree that start at the same moment', () 
     const database = countsThatMeet(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
     const answered: CallResult[] = [];
     const executor = hostExecutor({
+      now: Date.now,
       database,
       perform: () => Effect.never,
       deliver: (_key, result) =>

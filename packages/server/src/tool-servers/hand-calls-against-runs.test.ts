@@ -1,5 +1,5 @@
 import { answeringFromTheTools, textResult } from '@on.auto/reasoning/testing';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';

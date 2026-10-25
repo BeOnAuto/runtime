@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 
+import { CallFetch } from '@on.auto/operations';
 import { keptTextOf } from '@on.auto/operations/testing';
 import { Effect, Option } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ConsentClient, ConsentServed } from '../consent/consent-client.ts';
-import type { ConsentAuth } from '../settings/server-settings.ts';
+import type { ConsentAuth, ConsentClient, ConsentServed } from '../index.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
 import {
   connectedByConsent,
@@ -19,15 +19,11 @@ import {
   reportingAccess,
   returnAddress,
   rowOf,
-  serveFakeApi,
-  servedForConsent,
   servedOf,
   studioBase,
-  type FakeApiServer,
-  type FakeMcpServer,
   clockAt,
 } from '../testing/index.ts';
-import type { KeptTokens } from './kept-tokens.ts';
+import { serveFakeApi, servedForConsent, type FakeApiServer, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -52,14 +48,20 @@ function accessTo(entry: Readonly<Record<string, unknown>>, served: ConsentServe
   return reporting;
 }
 
+function callOnceOf(
+  access: ReturnType<typeof accessTo>['access'],
+  tool: string,
+  input: Readonly<Record<string, unknown>>,
+) {
+  return access.callOnce({ org: 'acme', playbook: 'alpha', reference: { server: 'files', tool }, input, meta: {} });
+}
+
 function calledWith(
   access: ReturnType<typeof accessTo>['access'],
   tool: string,
   input: Readonly<Record<string, unknown>>,
 ) {
-  return Effect.runPromise(
-    access.callOnce({ org: 'acme', playbook: 'alpha', reference: { server: 'files', tool }, input, meta: {} }),
-  );
+  return Effect.runPromise(callOnceOf(access, tool, input));
 }
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -68,7 +70,7 @@ function digest(text: string): string {
   return createHash('sha256').update(text).digest('hex');
 }
 
-function echoingTokens(tokens: KeptTokens) {
+function echoingTokens(tokens: ConsentServed['held']['tokens']) {
   return (...[address, init]: readonly [unknown, unknown?]): Promise<Response> =>
     String(address).endsWith('/token')
       ? Promise.resolve(
@@ -112,6 +114,23 @@ describe('a call through an MCP connection connected by consent', () => {
     await expect(keptTextOf(content, alpha, digest(keptAnswer))).resolves.toBe(keptAnswer);
     expect(JSON.stringify([echoed, refused, messages()])).not.toContain(tokens.access_token);
     expect(JSON.stringify([echoed, refused, messages()])).not.toContain(String(tokens.refresh_token));
+    expect(JSON.stringify(messages())).toContain('Refused [redacted] for [redacted]');
+  });
+
+  it('asks its tokens again through the fetch the context of the operation gives, not the consent client its own', async () => {
+    const fake = await servedMcp();
+    const connected = await connectedByConsent(fake);
+    const served = servedOf(connected, rowOf(connected, clockAt(0).now));
+    const { access, messages } = accessTo({ url: fake.url }, served, consentClientAt(fake));
+    const ofTheCall = echoingTokens(connected.kept);
+    const calledThroughTheCall = (said: string) =>
+      Effect.runPromise(callOnceOf(access, 'echo', { said }).pipe(Effect.provideService(CallFetch, ofTheCall)));
+
+    const echoed = await calledThroughTheCall('hello');
+    fake.revokeTokens();
+    await calledThroughTheCall('again');
+
+    expect(echoed).toMatchObject({ outcome: 'result' });
     expect(JSON.stringify(messages())).toContain('Refused [redacted] for [redacted]');
   });
 });

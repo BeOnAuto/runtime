@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted } from '../authorization-testing/authorization-requests.ts';
 import type { ConsentClient, ConsentServed } from '../consent/consent-client.ts';
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import {
   clockAt,
   connectedByConsent,
@@ -16,15 +16,14 @@ import {
   rowOf,
   sealedTokens,
   servedAt,
-  servedForConsent,
   servedOf,
-  servedThroughAuto,
   servedTokensOf,
   type ConsentConnected,
   type GatedRequests,
   type ManualClock,
   type SealedTokens,
 } from '../testing/index.ts';
+import { servedForConsent, servedThroughAuto } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 import { renewalWords } from './renewal-words.ts';
 

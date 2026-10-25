@@ -1,8 +1,11 @@
+import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
+import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { ActedOnRunContextSchema, Conflict, factOf, type Context, type Decider } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { decisionLoop, VersionConflict, type DecisionLoop } from './index.ts';
+import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
+import { decisionLoop, streamPortsOf, VersionConflict, type DecisionLoop, type Streams } from './index.ts';
 import { stamped } from './testing/happenings.ts';
 import { outcomeOf } from './testing/open-ledger.ts';
 import { tally, type Amounts } from './testing/tally.ts';
@@ -144,5 +147,51 @@ describe('the context of a decision', () => {
 
     await expect(outcomeOf(loop('notes/1', 'unsigned'))).rejects.toThrow('Missing key');
     expect(appended).toEqual([]);
+  });
+});
+
+async function lentStreams(): Promise<Streams> {
+  const emmett = getSQLiteEventStore({
+    driver: sqlite3EventStoreDriver,
+    fileName: ':memory:',
+    schema: { autoMigration: 'None' },
+  });
+  onTestFinished(() => emmett.close());
+  const store = emmettEventStore(emmett, { data: dataAsWritten, mostEventsInOneAppend: 8 });
+  await store.migrate();
+  return { mostEventsInOneAppend: store.mostEventsInOneAppend, read: store.read, append: store.append };
+}
+
+function aheadOnce(streams: Streams): Streams {
+  const ahead = { written: false };
+  return {
+    ...streams,
+    append: async (stream, events, place) => {
+      if (!ahead.written) {
+        ahead.written = true;
+        await streams.append(stream, [{ type: 'counted', data: { by: 100 } }], { ...place, context: stamped });
+      }
+      await streams.append(stream, events, place);
+    },
+  };
+}
+
+describe('the stream reader and writer over any streams', () => {
+  it('execute a command and load the state it left, as a ledger does, over streams a shell lends', async () => {
+    const { load, execute } = streamPortsOf(await lentStreams());
+
+    const executed = await Effect.runPromise(execute('tally/1', tally, [2, 3]));
+    const loaded = await Effect.runPromise(load('tally/1', tally));
+
+    expect([executed, loaded]).toEqual([
+      { state: 5, version: 2 },
+      { state: 5, version: 2 },
+    ]);
+  });
+
+  it('decide again on the stream another writer appended to meanwhile', async () => {
+    const { execute } = streamPortsOf(aheadOnce(await lentStreams()));
+
+    expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 101, version: 2 });
   });
 });

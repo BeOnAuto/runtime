@@ -3,8 +3,8 @@ import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { Effect, Function } from 'effect';
 
 import type { ServerMessage } from '../access/caller-context.ts';
-import { makeToolAccess, type ToolAccess, type ToolAccessOptions } from '../access/tool-access.ts';
 import type { Timing } from '../bounds/call-bounds.ts';
+import { makeToolAccess } from '../call-fetch/access-of-the-call.ts';
 import { consentClientWith } from '../consent-testing/consent-fakes.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { describedToolServers } from '../openapi/described-servers.ts';
@@ -13,6 +13,10 @@ import {
   type Environment,
   type ToolServerSettingsContext,
 } from '../settings/settings-reading.ts';
+
+type ToolAccessOptions = Parameters<typeof makeToolAccess>[1];
+
+type ToolAccess = ReturnType<typeof makeToolAccess>;
 
 export const testClientInfo: ToolAccessOptions['clientInfo'] = { name: '@on.auto/runtime', version: '0.0.0-test' };
 

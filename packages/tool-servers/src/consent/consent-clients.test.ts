@@ -6,11 +6,10 @@ import {
   consentClientWith,
   memoryRegistrations,
   registeredAt,
-  servedForConsent,
   startAskedAt,
   type ClientRegistration,
-  type FakeMcpServer,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import type { WayClientSource } from './client-sources.ts';
 import type { ClientRegistrations, ConsentClient, RegistrationUnavailable, StartAsked } from './consent-client.ts';
 

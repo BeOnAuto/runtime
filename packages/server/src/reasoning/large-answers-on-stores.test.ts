@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { bucketReady, emptied, keysIn, testObjectStoreOf } from '@on.auto/object-storage/testing';
 import { answers, callingTools, textResult } from '@on.auto/reasoning/testing';
 import { toolBounds } from '@on.auto/tool-servers';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';

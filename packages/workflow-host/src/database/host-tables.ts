@@ -169,10 +169,13 @@ const hostTables: readonly Statement[] = [
     delivered INTEGER NOT NULL DEFAULT 0,
     child TEXT,
     root_id TEXT,
-    started_by BIGINT
+    started_by BIGINT,
+    dispatched_at BIGINT
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_unfinished ON workflow_calls (call_key)
     WHERE state = 'running' OR (state = 'answered' AND delivered = 0)`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_calls_waiting_by_dispatch ON workflow_calls (dispatched_at)
+    WHERE state = 'waiting'`,
   statement`CREATE TABLE IF NOT EXISTS workflow_pending_cancels (
     run_key TEXT NOT NULL PRIMARY KEY,
     cause TEXT NOT NULL,

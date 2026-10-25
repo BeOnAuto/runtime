@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 
-import type { ReportOperatorHint, ReportProviderMessage } from '../adapter/model-access-options.ts';
 import type { ListedModel } from '../listing/listed-model.ts';
 import type { ListedSource, ListingProblem } from '../listing/listing-request.ts';
+import type { ReportOperatorHint, ReportProviderMessage } from '../providers/model-access-options.ts';
 
 export interface ListingReports {
   readonly scrub: (text: string) => string;

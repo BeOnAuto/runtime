@@ -11,11 +11,10 @@ import {
   registeredAfterAnother,
   registeredAt,
   returnAddress,
-  servedForConsent,
   type ClientRegistration,
   type ConsentConnected,
-  type FakeMcpServer,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

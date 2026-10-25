@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { serveFakeKms } from '@on.auto/secrets/testing';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeKms } from '@on.auto/secrets/served-fakes';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';

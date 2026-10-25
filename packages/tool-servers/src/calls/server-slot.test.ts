@@ -5,14 +5,8 @@ import { join } from 'node:path';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  controlledSignals,
-  fakeStdioServerPath,
-  patientTiming,
-  recordingCallJournal,
-  reportingAccess,
-  toolRun,
-} from '../testing/index.ts';
+import { controlledSignals, patientTiming, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import { fakeStdioServerPath } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

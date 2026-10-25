@@ -1,19 +1,10 @@
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { defaultTiming } from '../bounds/call-bounds.ts';
-import { secretsOf } from '../bounds/secrets.ts';
+import { defaultTiming, secretsOf } from '../index.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
-import {
-  consentClientWith,
-  fetchWithDeletion,
-  manualTimer,
-  recordingTimer,
-  serveFakeMcp,
-  testClientInfo,
-  type FakeMcpOptions,
-  type FakeMcpServer,
-} from '../testing/index.ts';
+import { consentClientWith, fetchWithDeletion, manualTimer, recordingTimer, testClientInfo } from '../testing/index.ts';
+import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { errorsNoLongerReported } from './mcp-client.ts';
 import type { CallSettled, ServerClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';

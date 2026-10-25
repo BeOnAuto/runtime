@@ -1,6 +1,6 @@
 import { openRequests } from '@on.auto/interaction';
 import { Ledger, projectedTableOf, type KeyedProjection } from '@on.auto/operations';
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { ManagedRuntime, Schema, type Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

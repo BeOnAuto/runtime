@@ -3,14 +3,8 @@ import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections, type FakeConnections } from '../testing/fake-connections.ts';
-import {
-  describedAccess,
-  patientTiming,
-  serveFakeApi,
-  serveFakeMcp,
-  type FakeApiServer,
-  type FakeMcpServer,
-} from '../testing/index.ts';
+import { describedAccess, patientTiming } from '../testing/index.ts';
+import { serveFakeApi, serveFakeMcp, type FakeApiServer, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const runtime = 'auto-runtime/0.0.0-test';
 

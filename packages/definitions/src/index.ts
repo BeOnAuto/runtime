@@ -129,7 +129,7 @@ export {
   type SettleRun,
   type Settlement,
 } from './runs/run-settler.ts';
-export { answeredFirst } from './runs/run-decisions.ts';
+export { answeredFirst, attemptIsLive } from './runs/run-decisions.ts';
 export { defineGetRun, getRun } from './operations/get-run.ts';
 export { defineGetRunHistory } from './reading/get-run-history.ts';
 export { defineListRuns } from './reading/list-runs.ts';

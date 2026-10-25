@@ -1,36 +1,31 @@
 import type { CallResult } from '@on.auto/operations';
 import {
   DispatchFailed,
-  callKeyText,
   type CallKey,
   type Executor,
   type OutputOrigin,
   type RunContext,
   type StartCall,
-  type StartReceipt,
 } from '@on.auto/workflow-engine';
 import { Effect, Schedule, Semaphore, type Cause, type Context } from 'effect';
 
-import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
+import type { DatabaseFailed } from '../database/host-database.ts';
 import { runSerialiser } from '../dispatch/run-serialiser.ts';
-import { correlationOfRun } from '../runs/run-lineage.ts';
-import { callSpanOf, currentSpanIdentity, type SpanIdentity } from '../runs/run-spans.ts';
+import { callSpanOf } from '../runs/run-spans.ts';
 import { background, type Background } from './background.ts';
 import { cancelledCall, type CancelChild } from './call-cancels.ts';
 import {
   allWaitingCalls,
   answeredRow,
   deliveredRow,
-  existingRowOf,
-  openCallsUnder,
-  refusedRow,
-  startedRow,
+  dispatchedAgainRow,
   unfinishedCalls,
   waitingRow,
-  type CallRow,
+  type CallOfARun,
   type UnfinishedCall,
   type WaitingCall,
 } from './call-rows.ts';
+import { afterAnAttemptDied, started, type CallAttempt, type StartParts, type StartingCalls } from './call-starts.ts';
 
 interface Waiting {
   readonly status: 'waiting';
@@ -39,10 +34,6 @@ interface Waiting {
 
 export type CallAnswer = CallResult | Waiting;
 
-export interface CallAttempt {
-  readonly attemptDied: boolean;
-}
-
 export type Perform = (
   call: StartCall,
   run: RunContext,
@@ -50,47 +41,33 @@ export type Perform = (
   attempt: CallAttempt,
 ) => Effect.Effect<CallAnswer>;
 
-const firstAttempt: CallAttempt = { attemptDied: false };
-
-const afterAnAttemptDied: CallAttempt = { attemptDied: true };
-
 export type Deliver = (key: CallKey, result: CallResult) => Effect.Effect<unknown, unknown>;
 
 export type Trouble = (what: string, cause: Cause.Cause<unknown>) => Effect.Effect<void>;
 
-export interface ExecutorParts {
-  readonly database: HostDatabase;
+export interface ExecutorParts extends StartParts {
   readonly perform: Perform;
   readonly deliver: Deliver;
   readonly trouble: Trouble;
   readonly mostAtOnce: number;
-  readonly mostOpen: number;
-  readonly childOf: (call: StartCall, run: RunContext) => string | null;
   readonly childAnswerOf: (runKey: string, child: string) => Effect.Effect<CallResult | undefined>;
   readonly cancelChild: CancelChild;
+  readonly now: () => number;
   readonly context?: Context.Context<never> | undefined;
 }
 
 export interface HostExecutor {
   readonly executor: Executor;
+  readonly dispatchedAgain: (waiting: CallOfARun, at: number) => Effect.Effect<void, DatabaseFailed>;
   readonly resume: () => Effect.Effect<number>;
   readonly idle: () => Effect.Effect<void>;
   readonly stop: () => Effect.Effect<void>;
 }
 
-interface Starting {
-  readonly call: StartCall;
-  readonly run: RunContext;
-  readonly origin: OutputOrigin;
-}
-
-interface Calls {
-  readonly begin: (key: string, starting: Starting, attempt: CallAttempt, parent?: SpanIdentity) => void;
-  readonly answerAgain: (key: string, callKey: CallKey, result: CallResult) => void;
-  readonly isRunning: (key: string) => boolean;
+interface Calls extends StartingCalls {
   readonly interrupt: (key: string) => Effect.Effect<void>;
   readonly answeredIfEnded: (waiting: WaitingCall) => Effect.Effect<void, DatabaseFailed>;
-  readonly underItsRoot: <A, E>(root: string, work: Effect.Effect<A, E>) => Effect.Effect<A, E>;
+  readonly dispatchedAgain: HostExecutor['dispatchedAgain'];
 }
 
 const answerWrittenAgain = Schedule.min([Schedule.exponential('50 millis'), Schedule.spaced('30 seconds')]);
@@ -116,16 +93,24 @@ function failedTo(output: 'start_call' | 'cancel_call') {
   return ({ detail }: { readonly detail: string }) => new DispatchFailed({ output, detail });
 }
 
-function tooManyOpen(mostOpen: number): CallResult {
-  return {
-    status: 'rejected',
-    reason: 'conflict',
-    detail: `The runs under the run at the top of this tree already wait for ${mostOpen} calls, the most one tree of runs may have open, so this call was not started`,
-  };
+type Settled = (key: string, call: StartCall, result: CallResult) => Effect.Effect<void, DatabaseFailed>;
+
+function dispatchedAgainBy(
+  { database, perform }: ExecutorParts,
+  atOnce: Semaphore.Semaphore,
+  settled: Settled,
+): HostExecutor['dispatchedAgain'] {
+  return ({ key, call, run, origin }, at) =>
+    atOnce.withPermit(perform(call, run, origin, afterAnAttemptDied)).pipe(
+      Effect.flatMap((answer) =>
+        answer.status === 'waiting' ? dispatchedAgainRow(database, key, at) : settled(key, call, answer),
+      ),
+      Effect.withSpan(`call ${call.function}`, callSpanOf(call)),
+    );
 }
 
 function callsOf(parts: ExecutorParts, running: Background): Calls {
-  const { database, perform, deliver, trouble, mostAtOnce } = parts;
+  const { database, perform, deliver, trouble, mostAtOnce, now } = parts;
   const atOnce = Semaphore.makeUnsafe(mostAtOnce);
   const delivered = (key: string, callKey: CallKey, result: CallResult): Effect.Effect<void> =>
     deliver(callKey, result).pipe(
@@ -134,7 +119,7 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
         trouble('An answer of a call could not be given to its run', cause),
       ),
     );
-  const settled = (key: string, call: StartCall, result: CallResult): Effect.Effect<void, DatabaseFailed> =>
+  const settled: Settled = (key, call, result) =>
     Effect.flatMap(writtenUntilItIs(answeredRow(database, key, result), trouble), (written) =>
       written ? delivered(key, call.key, result) : Effect.void,
     );
@@ -143,7 +128,7 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
       ended === undefined ? Effect.void : settled(key, call, ended),
     );
   const waited = (key: string, call: StartCall, child: string): Effect.Effect<void, DatabaseFailed> =>
-    writtenUntilItIs(waitingRow(database, key, child), trouble).pipe(
+    writtenUntilItIs(waitingRow(database, key, { child, at: now() }), trouble).pipe(
       Effect.andThen(answeredIfEnded({ key, call, child })),
     );
   const answered = (key: string, call: StartCall, answer: CallAnswer): Effect.Effect<void, DatabaseFailed> =>
@@ -166,65 +151,9 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
     isRunning: running.has,
     interrupt: running.interrupt,
     answeredIfEnded,
+    dispatchedAgain: dispatchedAgainBy(parts, atOnce, settled),
     underItsRoot: roots.serialise,
   };
-}
-
-function startedOnce(
-  { database, mostOpen, childOf }: ExecutorParts,
-  calls: Calls,
-  { call, run, origin }: Starting,
-): Effect.Effect<boolean, DatabaseFailed> {
-  return Effect.gen(function* () {
-    const key = callKeyText(call.key);
-    const root = correlationOfRun(run.runId, run.attributes);
-    const open = yield* openCallsUnder(database, root);
-    if (open >= mostOpen) {
-      const refusal = tooManyOpen(mostOpen);
-      const refused = yield* refusedRow(database, key, run, refusal);
-      if (refused) {
-        calls.answerAgain(key, call.key, refusal);
-      }
-      return refused;
-    }
-    const inserted = yield* startedRow(database, key, { call, run, origin, child: childOf(call, run), root });
-    if (inserted) {
-      calls.begin(key, { call, run, origin }, firstAttempt, yield* currentSpanIdentity);
-    }
-    return inserted;
-  }).pipe((counted) => calls.underItsRoot(correlationOfRun(run.runId, run.attributes), counted));
-}
-
-function startedAgain(
-  calls: Calls,
-  starting: Starting,
-  { state, result }: CallRow,
-  parent: SpanIdentity | undefined,
-): StartReceipt {
-  const { call } = starting;
-  const key = callKeyText(call.key);
-  if (state === 'cancelled') {
-    return 'refused_after_cancel';
-  }
-  if (state === 'answered' && result !== null) {
-    calls.answerAgain(key, call.key, result);
-    return 'answered_again';
-  }
-  if (state === 'waiting' || calls.isRunning(key)) {
-    return 'running';
-  }
-  calls.begin(key, starting, afterAnAttemptDied, parent);
-  return 'started_again';
-}
-
-function started(parts: ExecutorParts, calls: Calls, starting: Starting): Effect.Effect<StartReceipt, DatabaseFailed> {
-  return Effect.gen(function* () {
-    if (yield* startedOnce(parts, calls, starting)) {
-      return 'started';
-    }
-    const row = yield* existingRowOf(parts.database, callKeyText(starting.call.key));
-    return startedAgain(calls, starting, row, yield* currentSpanIdentity);
-  });
 }
 
 function resumedIn(calls: Calls, { key, call, run, origin, result }: UnfinishedCall): void {
@@ -268,6 +197,7 @@ export function hostExecutor(parts: ExecutorParts): HostExecutor {
           Effect.mapError(failedTo('cancel_call')),
         ),
     },
+    dispatchedAgain: calls.dispatchedAgain,
     resume: () =>
       waitingAnswered.pipe(
         Effect.andThen(Effect.orDie(unfinishedCalls(database))),

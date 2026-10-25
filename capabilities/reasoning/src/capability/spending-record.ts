@@ -4,11 +4,14 @@ import { mostResultBytes, type Finished } from '@on.auto/definitions';
 import { Conflict } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
+import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import type { GenerationSettings, OutputRequest } from '../model/model-request.ts';
 import type { FinishReason, ModelResult, TokenUsage } from '../model/model-result.ts';
+import type { StepsAnswer } from '../steps/steps-answer.ts';
 import type { RenderedPrompt } from '../template/compiled-template.ts';
+import { renderedOf } from './definition-request.ts';
 
-export interface Answered {
+interface Answered {
   readonly prompt: RenderedPrompt;
   readonly settings: GenerationSettings;
   readonly format: OutputRequest['type'];
@@ -102,7 +105,7 @@ function promptWithin({ instructions, message }: RenderedPrompt, bytes: number):
     : { instructions: prefixWithin(instructions, share), message: clippedMessage, truncated: true };
 }
 
-export function finishedWith(output: Schema.Json, answered: Answered): Effect.Effect<Finished, Conflict> {
+function finishedWith(output: Schema.Json, answered: Answered): Effect.Effect<Finished, Conflict> {
   const fields = recordFields(answered);
   const room = mostResultBytes - jsonBytes(output) - jsonBytes({ ...fields }) - keysAndQuotes;
   return room < leastPromptBytes
@@ -114,4 +117,16 @@ export function finishedWith(output: Schema.Json, answered: Answered): Effect.Ef
         }),
       )
     : Effect.succeed({ output, record: { ...fields, prompt: promptWithin(answered.prompt, room) } });
+}
+
+export function finishedOf(
+  definition: ReasoningFunctionDefinitionDocument,
+  answered: StepsAnswer,
+): Effect.Effect<Finished, Conflict> {
+  return finishedWith(answered.output, {
+    prompt: renderedOf(answered.prompt),
+    settings: definition.settings,
+    format: definition.output.type,
+    result: answered.result,
+  });
 }

@@ -1,8 +1,8 @@
 import { reportingAccess, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 
-import type { ModelAccessOptions } from '../adapter/model-access-options.ts';
 import { recordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
+import type { ModelAccessOptions } from '../providers/model-access-options.ts';
 import type { Environment } from '../settings/setting-values.ts';
 import { accessFor } from './adapter-harness.ts';
 import { reasoningAdapter, runContext, type Run } from './reasoning-runs.ts';

@@ -11,7 +11,7 @@ import {
   refusalOf,
 } from '../api-testing/described-documents.ts';
 import { shippedDocumentOf } from '../settings/server-settings.ts';
-import { serveFakeApi, type FakeApiServer } from '../testing/index.ts';
+import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
 
 const notes =
   "openapi: 3.0.3\ninfo: { title: Notes, version: '1' }\nservers:\n  - url: https://notes.example.com/v1\npaths:\n  /notes:\n    get: { operationId: listNotes }\n";

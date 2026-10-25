@@ -1,10 +1,10 @@
 import { Effect, Result, type Exit } from 'effect';
 
-import type { ModelAccessOptions } from '../adapter/model-access-options.ts';
-import { makeModelAccess, type ModelAccess } from '../adapter/model-access.ts';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelResult } from '../model/model-result.ts';
+import type { ModelAccessOptions } from '../providers/model-access-options.ts';
+import { makeModelAccess, type ModelAccess } from '../providers/model-access.ts';
 import { compileAnswerSchema, type AnswerSchema } from '../schema/answer-schema.ts';
 import { readModelSettings } from '../settings/model-settings.ts';
 import type { Environment } from '../settings/setting-values.ts';

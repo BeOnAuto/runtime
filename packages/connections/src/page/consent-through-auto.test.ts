@@ -1,13 +1,8 @@
 import { servedStudio } from '@on.auto/identity/testing';
 import type { Outcome, Succeeded } from '@on.auto/operations';
 import { keptTokensIn, type ConsentClientOptions, type KeptTokens, type ReturnKind } from '@on.auto/tool-servers';
-import {
-  autoClientsOf,
-  handleOf,
-  servedThroughAuto,
-  serviceCallsAt,
-  type ThroughAuto,
-} from '@on.auto/tool-servers/testing';
+import { servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/served-fakes';
+import { autoClientsOf, handleOf, serviceCallsAt } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

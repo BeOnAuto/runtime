@@ -36,7 +36,9 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     },
     ...(options.traceMeta === undefined ? {} : { traceMeta: options.traceMeta }),
   };
-  const fileLinks = new Map(settings.servers.map((server) => [server.name, serverLink(server, linkOptions)]));
+  const made = settings.servers.filter(({ name }) => !options.borrowed.has(name));
+  const madeLinks = new Map(made.map((server) => [server.name, serverLink(server, linkOptions)]));
+  const fileLinks = new Map([...options.borrowed, ...madeLinks]);
   const linking = { options: linkOptions, reportLeftOut: options.reportLeftOut };
   return {
     fileLinks,
@@ -45,7 +47,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     callOnce: (call, server, runCall) => oneCall(call, server, { secrets, keepIn, timing }, runCall),
     listed: (served, link) => listedServer(served, link, { secrets, timing }),
     close: async () => {
-      await Promise.all([...fileLinks.values()].map((link) => link.stop()));
+      await Promise.all([...madeLinks.values()].map((link) => link.stop()));
     },
   };
 }

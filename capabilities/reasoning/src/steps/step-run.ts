@@ -28,15 +28,18 @@ export function stepToolsOf(tools: RunTools | undefined): StepTools {
   return { offered, definitions, argumentsDigest, scrubJson };
 }
 
-export interface StepRun {
+export interface StepRecording {
   readonly model: string;
   readonly base: RequestBase;
   readonly tools: StepTools;
   readonly bounds: StepBounds;
   readonly journal: RunJournal;
   readonly kept: KeptContent | undefined;
-  readonly perform: PerformJob;
   readonly startedAt: number;
+}
+
+export interface StepRun extends StepRecording {
+  readonly perform: PerformJob;
 }
 
 export interface CancelledEnding {
@@ -52,14 +55,14 @@ export class StepCancelled extends Data.TaggedError('step_cancelled')<{
 
 export type StepRefusal = Conflict | StepCancelled;
 
-function recordedAfter(run: StepRun, state: StepState, fact: StepFact): Effect.Effect<number, StepRefusal> {
+function recordedAfter(run: StepRecording, state: StepState, fact: StepFact): Effect.Effect<number, StepRefusal> {
   return Effect.catchTag(run.journal.record(fact), 'cancelled', ({ detail, kind }: Omit<CancelledEnding, 'type'>) =>
     Effect.fail(new StepCancelled({ state, ending: { type: 'cancelled', detail, kind } })),
   );
 }
 
 export function recordedOn(
-  run: StepRun,
+  run: StepRecording,
   state: StepState,
   fact: StepFact,
   content: StepContent,
@@ -72,12 +75,12 @@ export interface Opened {
   readonly number: number;
 }
 
-export function startedOn(run: StepRun, state: StepState, data: CallStarted): Effect.Effect<Opened, StepRefusal> {
+export function startedOn(run: StepRecording, state: StepState, data: CallStarted): Effect.Effect<Opened, StepRefusal> {
   const fact: StepFact = { type: 'tool_call_started', data: { ...data, number: state.facts.numbering.lastCall + 1 } };
   return Effect.map(recordedAfter(run, state, fact), (number) => ({ state: evolve(state, fact, {}), number }));
 }
 
-export function interruptedOn(run: StepRun, state: StepState): Effect.Effect<StepState, StepRefusal> {
+export function interruptedOn(run: StepRecording, state: StepState): Effect.Effect<StepState, StepRefusal> {
   return Effect.reduce(
     interruptedEnds(state.facts, run.model),
     () => state,
@@ -92,21 +95,21 @@ export interface Scrubbed {
   readonly kept: Kept;
 }
 
-export function keptOf({ kept, tools }: StepRun, text: string): Effect.Effect<Scrubbed> {
+export function keptOf({ kept, tools }: StepRecording, text: string): Effect.Effect<Scrubbed> {
   const scrubbed = tools.scrubJson(text);
   const keeping: Effect.Effect<Kept> =
     kept === undefined ? Effect.succeed({ bytes: utf8.encode(scrubbed).byteLength }) : kept.keep(scrubbed);
   return Effect.map(keeping, (measured: Kept) => ({ text: scrubbed, kept: measured }));
 }
 
-export function offeredOf({ tools, kept }: StepRun): Offered {
+export function offeredOf({ tools, kept }: StepRecording): Offered {
   const references = new Map(tools.offered.map(({ name, reference }) => [name, reference]));
   const { argumentsDigest } = tools;
   return kept === undefined || argumentsDigest === undefined ? { references } : { references, argumentsDigest };
 }
 
 export function withinTheBound<A, E>(
-  { bounds, startedAt }: StepRun,
+  { bounds, startedAt }: StepRecording,
   work: Effect.Effect<A, E>,
 ): Effect.Effect<Result.Result<A, StepBounds>, E> {
   return Effect.flatMap(Clock.currentTimeMillis, (now) =>

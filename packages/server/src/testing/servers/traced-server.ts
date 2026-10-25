@@ -1,6 +1,6 @@
 import { makeModelAccess } from '@on.auto/reasoning';
 import { anthropicMessage, anthropicToolCall, jsonResponse, recordingFetch } from '@on.auto/reasoning/testing';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { onTestFinished } from 'vitest';
 
 import { compositionRootWith } from '../../composition/composition-root.ts';

@@ -6,16 +6,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   controlledSignals,
   describedAccess,
-  fakeApiKey,
   patientTiming,
   playbookToolCalls,
   recordingCallJournal,
   reportingAccess,
-  serveFakeApi,
-  serveFakeMcp,
   toolRun,
-  type FakeMcpServer,
 } from '../testing/index.ts';
+import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

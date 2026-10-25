@@ -4,11 +4,11 @@ import { afterEach } from 'vitest';
 
 import type { ToolAccess } from '../access/tool-access.ts';
 import type { Timing } from '../bounds/call-bounds.ts';
-import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
 import type { OneCall, RunCall } from '../one-call/one-call.ts';
 import { patientTiming } from './index.ts';
 import { reportingAccess } from './reporting-access.ts';
+import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from './served-fakes.ts';
 
 export const oneCallKey = 'graph-api-key-4f1d9a7c2b';
 

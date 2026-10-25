@@ -104,6 +104,7 @@ export interface StepsRun {
   readonly content: RecordedContent;
   readonly requests: ScriptedLanguageModel['requests'];
   readonly sends: () => readonly ToolCallJob[];
+  readonly run: SteppedRun;
   readonly stepping: ReturnType<typeof answeredByTheSteps>;
 }
 
@@ -153,6 +154,7 @@ export function stepsOf(options: StepsOptions = {}): StepsRun {
     content: given.content,
     requests: scripted.requests,
     sends,
+    run,
     stepping: answeredByTheSteps(run, given.prompt, given.before),
   };
 }

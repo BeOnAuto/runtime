@@ -1,4 +1,4 @@
-import type { Fetch } from '../adapter/sdk-model.ts';
+import type { Fetch } from '../providers/sdk-model.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import type { ProviderStatus } from '../settings/provider-status.ts';
 import type { Availability } from '../settings/setting-values.ts';

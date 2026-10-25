@@ -1,6 +1,6 @@
 import { authenticatorFor } from '@on.auto/identity';
 import { defineCommand } from '@on.auto/operations';
-import { Effect, Redacted, Schema } from 'effect';
+import { Context, Effect, Redacted, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
@@ -104,7 +104,7 @@ function replaying(keptFor: Readonly<Record<string, string>>) {
   const kept = { tool: 'open_page', caller: 'acme-admin', org: 'acme', ...keptFor, answer };
   return toolCallbackOf(
     serving,
-    { caller, org: 'acme', requestId: 'request', dropped: [] },
+    { caller, org: 'acme', requestId: 'request', dropped: [], context: Context.empty() },
     { ...words, name: 'open_page' },
   )({}, { mcpReq: { id: 1, signal: new AbortController().signal, requestState: () => kept } });
 }

@@ -1,6 +1,7 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { reportingAccess, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { reportingAccess } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Fiber } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';

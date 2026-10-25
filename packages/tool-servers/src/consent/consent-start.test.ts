@@ -9,13 +9,12 @@ import {
   everyHost,
   registeredAt,
   returnAddress,
-  servedForConsent,
   startAskedAt,
   studioBase,
   type ClientRegistration,
-  type FakeMcpServer,
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];

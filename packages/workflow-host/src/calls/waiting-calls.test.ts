@@ -65,6 +65,7 @@ async function executing(
   const answered: CallResult[] = [];
   const cancels: ChildCancel[] = [];
   const executor = hostExecutor({
+    now: Date.now,
     database,
     perform: (call) =>
       Effect.suspend(() => {
@@ -216,6 +217,7 @@ describe('a cancel of a call whose run could not be cancelled', () => {
   it('fails to be dispatched again when the run it waits for could not be cancelled', async () => {
     const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
     const executor = hostExecutor({
+      now: Date.now,
       database,
       perform: () => Effect.succeed({ status: 'waiting', child }),
       deliver: () => Effect.void,

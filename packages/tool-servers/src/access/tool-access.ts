@@ -29,21 +29,42 @@ export interface ToolAccess extends RunWays, ListingWays {
   readonly close: () => Promise<void>;
 }
 
+type Links = LinkedAccess['fileLinks'];
+
+type LinksLent = () => Promise<Links>;
+
 export interface LinkedOptions extends ToolAccessOptions, RecordingParts {
   readonly reportLeftOut: Describing['reportLeftOut'];
+  readonly borrowed: Links;
 }
 
-async function linked(settings: ToolServers, options: LinkedOptions): Promise<LinkedAccess> {
-  const { linkedAccess } = await import('./linked-access.ts');
-  return linkedAccess(settings, options);
+interface LendingAccess extends ToolAccess {
+  readonly linksSendingNoRequest: LinksLent;
 }
 
-export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions): ToolAccess {
+const nothingLent: LinksLent = () => Promise.resolve(new Map());
+
+async function linked(
+  settings: ToolServers,
+  options: Omit<LinkedOptions, 'borrowed'>,
+  lent: LinksLent,
+): Promise<LinkedAccess> {
+  const [{ linkedAccess }, borrowed] = await Promise.all([import('./linked-access.ts'), lent()]);
+  return linkedAccess(settings, { ...options, borrowed });
+}
+
+function sendingNoRequest(links: Links): Links {
+  const local = [...links.values()].filter((link) => link.settings.type === 'stdio');
+  return new Map(local.map((link) => [link.settings.name, link]));
+}
+
+export function toolAccessOf(settings: ToolServers, options: ToolAccessOptions, lent = nothingLent): LendingAccess {
   const loading: { access?: Promise<LinkedAccess> } = {};
   const recording = recordingPartsOf(settings.servers, options.content, options.runtimeSecrets ?? []);
   const source = options.connections ?? noConnections;
   const linkedOnUse = (): Promise<LinkedAccess> => {
-    loading.access ??= linked(settings, { ...options, ...recording, reportLeftOut: options.reportLeftOut ?? ignored });
+    const reportLeftOut = options.reportLeftOut ?? ignored;
+    loading.access ??= linked(settings, { ...options, ...recording, reportLeftOut }, lent);
     return loading.access;
   };
   const access = orgAccessOf(settings, { source, loaded: linkedOnUse, secrets: recording.secrets });
@@ -52,6 +73,7 @@ export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions
     takesConnections: source.takesConnections,
     ...runWaysOf(access, recording, options.timing),
     ...listingWaysOf(access),
+    linksSendingNoRequest: async () => sendingNoRequest((await linkedOnUse()).fileLinks),
     close: async () => {
       await access.close();
       const loaded = await loading.access;

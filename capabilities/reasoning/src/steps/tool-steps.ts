@@ -3,7 +3,7 @@ import type { Conflict } from '@on.auto/operations';
 import { failureReply, type ToolReply } from '@on.auto/tool-servers/policy';
 import { Clock, Deferred, Effect, Ref, Result, Semaphore } from 'effect';
 
-import type { ToolCallAnswer } from '../jobs/jobs.ts';
+import type { ToolCallAnswer, ToolCallJob } from '../jobs/jobs.ts';
 import type { AdmittedCall } from './asked-calls.ts';
 import type { StepFact } from './attempt-facts.ts';
 import { runBoundWords, type ToolCallsNext } from './step-decision.ts';
@@ -14,6 +14,7 @@ import {
   StepCancelled,
   withinTheBound,
   type CancelledEnding,
+  type StepRecording,
   type StepRefusal,
   type StepRun,
 } from './step-run.ts';
@@ -49,6 +50,20 @@ function stoppedEnd({ number, server, began }: Calling, now: number, detail: str
   return { fact: { type: 'tool_call_failed', data }, reply: failureReply(data, server) };
 }
 
+function endingOf(number: number, { ended, reply }: ToolCallAnswer): Ending {
+  return { fact: toolEnded(number, ended), reply };
+}
+
+export function toolCallEnded(
+  run: StepRecording,
+  state: StepState,
+  number: number,
+  answer: ToolCallAnswer,
+): Effect.Effect<StepState, StepRefusal> {
+  const { fact, reply } = endingOf(number, answer);
+  return recordedOn(run, state, fact, { reply });
+}
+
 function endRecorded(run: StepRun, { fold, stopServers }: Step, { fact, reply }: Ending) {
   return fold((state) => Effect.map(recordedOn(run, state, fact, { reply }), (after) => [after, after] as const)).pipe(
     Effect.flatMap((after) => (after.serversEnded === null ? Effect.void : stopServers)),
@@ -65,28 +80,56 @@ function answeredWithin(run: StepRun, step: Step, job: Effect.Effect<ToolCallAns
       onFailure: ({ runBoundMs }) => stoppedEnd(calling, now, runBoundWords(runBoundMs)),
       onSuccess: Result.match({
         onFailure: (detail: string) => stoppedEnd(calling, now, detail),
-        onSuccess: ({ ended, reply }): Ending => ({ fact: toolEnded(calling.number, ended), reply }),
+        onSuccess: (sent: ToolCallAnswer): Ending => endingOf(calling.number, sent),
       }),
     });
     return yield* endRecorded(run, step, ending);
   });
 }
 
+function callStarted({ callId, input, offer }: AdmittedCall) {
+  return Effect.promise(() => offer.start({ callId, input }));
+}
+
+function toolCallJobOf({ callId, tool, input, offer }: AdmittedCall, room: number | undefined): ToolCallJob {
+  return { callId, tool, server: offer.reference.server, input, ...(room === undefined ? {} : { room }) };
+}
+
+export interface BegunToolCall {
+  readonly state: StepState;
+  readonly number: number;
+  readonly job: ToolCallJob;
+}
+
+export function toolCallBegun(
+  run: StepRecording,
+  state: StepState,
+  call: AdmittedCall,
+  room: number | undefined,
+): Effect.Effect<BegunToolCall, StepRefusal> {
+  return Effect.flatMap(callStarted(call), (data) =>
+    Effect.map(startedOn(run, state, data), ({ state: after, number }) => ({
+      state: after,
+      number,
+      job: toolCallJobOf(call, room),
+    })),
+  );
+}
+
 function toolCallMade(
   run: StepRun,
   step: Step,
-  { callId, tool, input, offer }: AdmittedCall,
+  call: AdmittedCall,
   room?: number,
 ): Effect.Effect<CancelledEnding | null, Conflict> {
   const made = Effect.gen(function* () {
-    const data = yield* Effect.promise(() => offer.start({ callId, input }));
+    const data = yield* callStarted(call);
     const number = yield* step.fold((state) =>
       Effect.map(startedOn(run, state, data), ({ state: after, number: opened }) => [after, opened] as const),
     );
-    const { server } = offer.reference;
-    const job = run.perform.toolCall({ callId, tool, server, input, ...(room === undefined ? {} : { room }) });
+    const job = toolCallJobOf(call, room);
     const began = yield* Clock.currentTimeMillis;
-    return yield* answeredWithin(run, step, job, { number, server, began });
+    return yield* answeredWithin(run, step, run.perform.toolCall(job), { number, server: job.server, began });
   });
   return made.pipe(
     Effect.as(null),

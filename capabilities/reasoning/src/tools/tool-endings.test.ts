@@ -1,14 +1,20 @@
-import { reportingAccess, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { reportingAccess } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { ContentRefused, DefinitionInvalid, RequestTooLong, TimedOut, type ModelResult } from '../index.ts';
-import { callingTools } from '../testing/calling-tools.ts';
 import { documentOf } from '../testing/definition-documents.ts';
-import { textResult, toolCallsResult, type ScriptedCall } from '../testing/model-results.ts';
+import {
+  answers,
+  callingTools,
+  textResult,
+  toolCallsResult,
+  type ScriptedCall,
+  type ScriptedReply,
+} from '../testing/index.ts';
 import { reasoningWithTools, type ReasoningRun } from '../testing/reasoning-runs.ts';
-import { answers, type ScriptedReply } from '../testing/scripted-language-model.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

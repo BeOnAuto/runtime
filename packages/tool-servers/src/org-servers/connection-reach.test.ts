@@ -2,9 +2,11 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections, type FakeConnection } from '../testing/fake-connections.ts';
-import { serveFakeApi, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/index.ts';
-import { fakeApiKey, patientTiming } from '../testing/index.ts';
+import { type FakeMcpOptions, type FakeMcpServer } from '../testing/index.ts';
+import { patientTiming } from '../testing/index.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
+import { serveFakeApi, serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 import type { ConnectionServer } from './connection-source.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };

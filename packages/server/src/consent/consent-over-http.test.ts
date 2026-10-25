@@ -1,7 +1,6 @@
-import { Buffer } from 'node:buffer';
-
 import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
-import { consentRegistration, consentSecret, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { consentSecret } from '@on.auto/tool-servers/testing';
 import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -137,7 +136,7 @@ function revokedAt(fake: FakeMcpServer, refreshToken: string): Promise<Response>
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
-      authorization: `Basic ${Buffer.from(`auto-runtime:${consentSecret}`).toString('base64')}`,
+      authorization: `Basic ${btoa(`auto-runtime:${consentSecret}`)}`,
     },
     body: new URLSearchParams({ token: refreshToken }),
   });
@@ -152,7 +151,7 @@ function echoing(served: ReasoningServer) {
 describe('a connection connected by consent over HTTP', () => {
   it('calls a tool with its access token, is renewed once it is due and broken once its grant is revoked', async () => {
     const { port, returnAddress } = await servedStudioReturn();
-    const fake = await serveFakeMcp({ client: consentRegistration({ redirectUris: [returnAddress] }) });
+    const fake = await servedForConsent({ redirectUris: [returnAddress] });
     const ledger = temporaryLedger();
     const clock = movedClock(Date.now());
     const served = await servingReasoning(

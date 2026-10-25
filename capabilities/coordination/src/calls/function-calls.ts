@@ -71,6 +71,7 @@ export function definitionCalls(runDefinition: RunDefinition): Perform {
           depth,
           callDepth: call_depth + 1,
           calledBy: { run_id: workflowRun, reference, run: count },
+          longestMs: call.longestMs,
           ...(attemptDied ? { attemptDied } : {}),
         }).pipe(Effect.map((result) => callAnswerOf(result, runId)));
       },

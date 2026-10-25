@@ -1,14 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Timing } from '../bounds/call-bounds.ts';
-import {
-  deniedText,
-  fakeApiKey,
-  patientTiming,
-  playbookToolCalls,
-  reportingAccess,
-  serveFakeMcp,
-} from '../testing/index.ts';
+import { deniedText, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

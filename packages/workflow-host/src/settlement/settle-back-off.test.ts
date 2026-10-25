@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { HostNote } from '../host/host-reports.ts';
 import { addressOfRun } from '../runs/run-address.ts';
+import { runKey } from '../suite-testing/probe-subjects.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { runKey } from '../testing/probe-subjects.ts';
 import { ledgerRecordStore } from './ledger-record-store.ts';
 import { settleAttemptsBeforeBackingOff, settleBackOffMs } from './settle-attempts.ts';
 

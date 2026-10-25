@@ -1,4 +1,4 @@
-import { serveFakeMcp } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

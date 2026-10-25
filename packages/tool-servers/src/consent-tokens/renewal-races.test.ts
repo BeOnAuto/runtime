@@ -9,12 +9,11 @@ import {
   gatedRequests,
   goneWords,
   rowOf,
-  servedForConsent,
   servedOf,
   servedTokensOf,
-  type FakeMcpServer,
   clockAt,
 } from '../testing/index.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 
 const closing: (() => Promise<void>)[] = [];

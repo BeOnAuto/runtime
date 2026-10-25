@@ -51,7 +51,7 @@ function toolSpanOf(name: string, id: string | number, meta: Readonly<Record<str
 
 export function callbackFor(
   { runCall, reportThrown }: CallServing,
-  { requestId, trace, dropped }: OrgCall,
+  { requestId, trace, dropped, context }: OrgCall,
   { name, dispatch, operationInputOf, ...words }: CalledTool,
 ): (input: unknown, context: ToolContext) => Promise<CallToolResult> {
   return async (input, { mcpReq: { id, signal, _meta: meta } }) => {
@@ -62,7 +62,7 @@ export function callbackFor(
         dropped.find((argument) => argument.id === id),
       );
       operationInput = operationInputOf(restored);
-      const call = settle(dispatch(restored), signal).pipe(
+      const call = settle(dispatch(restored).pipe(Effect.provideContext(context)), signal).pipe(
         Effect.provideService(ServedAsTool, true),
         Effect.annotateLogs({ requestId }),
         toolSpanOf(name, id, meta),

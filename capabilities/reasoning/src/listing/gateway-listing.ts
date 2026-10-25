@@ -1,7 +1,7 @@
 import { Effect, Redacted, Schema } from 'effect';
 
-import { revealed } from '../adapter/direct-providers.ts';
-import type { Fetch } from '../adapter/sdk-model.ts';
+import { revealed } from '../providers/direct-providers.ts';
+import type { Fetch } from '../providers/sdk-model.ts';
 import type { GatewaySettings } from '../settings/gateway-settings.ts';
 import { listedModels, type ListedModel } from './listed-model.ts';
 import { decodedAs, endpointUrl, listingJson, wellFormedEntries, type ProviderListing } from './listing-request.ts';

@@ -49,6 +49,10 @@ export const runTaken = new Conflict({
   kind: 'taken',
 });
 
+export function attemptIsLive(quietMs: number, resumesAfterMs: number): boolean {
+  return quietMs <= resumesAfterMs;
+}
+
 export const stillRunning = new Conflict({
   detail:
     'The run is still running, so this request makes no second attempt of it; read it with get_run, or ask again once it has ended',

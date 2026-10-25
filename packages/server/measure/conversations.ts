@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 
 import type { MeasuredLedger } from './measured-ledgers.ts';
 import { playbook, inTurns, measuredServer, percentile, type MeasuredServer } from './measured-server.ts';

@@ -1,5 +1,5 @@
 import { callDocument } from '@on.auto/interaction/testing';
-import { serveFakeApi } from '@on.auto/tool-servers/testing';
+import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

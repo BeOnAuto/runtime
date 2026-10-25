@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { kmsCustodian, parameterStoreKeeper, type KmsCustodianOptions } from '@on.auto/secrets/aws';
-import { serveFakeKms } from '@on.auto/secrets/testing';
+import { serveFakeKms } from '@on.auto/secrets/served-fakes';
 import { Effect, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 

@@ -1,6 +1,5 @@
 import { Effect, Function, Redacted } from 'effect';
 
-import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { AutoClients, ReturnKind } from '../consent-through-auto/auto-clients.ts';
 import { consentServiceOf, type ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
 import type {
@@ -10,11 +9,12 @@ import type {
   HandleFinishAsked,
   StartAsked,
 } from '../consent/consent-client.ts';
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
-import { consentClientWith, servedForConsent, startAskedAt } from './consent-fakes.ts';
-import { serveFakeConsentService, type FakeConsentService } from './fake-consent-service.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { consentClientWith, startAskedAt } from './consent-fakes.ts';
+import type { FakeConsentService } from './fake-consent-answers.ts';
+import type { FakeConsentServiceOptions } from './fake-consent-store.ts';
 import { consentedAt, tokensKeptBy } from './given-consents.ts';
-import { clockAt, type ConsentConnected, type ManualClock } from './served-consents.ts';
+import type { ConsentConnected, ManualClock } from './served-consents.ts';
 
 export interface ThroughAuto {
   readonly fake: FakeMcpServer;
@@ -23,7 +23,7 @@ export interface ThroughAuto {
   readonly close: () => Promise<void>;
 }
 
-export type ServiceListing = Pick<Parameters<typeof serveFakeConsentService>[0], 'scopes'>;
+export type ServiceListing = Pick<FakeConsentServiceOptions, 'scopes'>;
 
 export const studioSession = Redacted.make('session-of-a-person-signed-in-to-auto');
 
@@ -53,23 +53,6 @@ export async function handedOffAskedOf(
   const handle = await handleOf(service, start.url);
   const { server, way, returnAddress, reaches } = asked;
   return { server, way, returnAddress, reaches, client: start.client, verifier: start.verifier, handle };
-}
-
-export async function servedThroughAuto(
-  changes: Partial<ClientRegistration> = {},
-  listing: ServiceListing = {},
-): Promise<ThroughAuto> {
-  const fake = await servedForConsent(changes);
-  const clock = clockAt(0);
-  const service = await serveFakeConsentService({ vendor: fake, now: clock.now, ...listing });
-  return {
-    fake,
-    service,
-    clock,
-    close: async () => {
-      await Promise.all([service.close(), fake.close()]);
-    },
-  };
 }
 
 export function consentClientThrough(

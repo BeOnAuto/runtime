@@ -12,7 +12,7 @@ import type {
   ConsentServed,
   ConsentWay,
 } from '../consent/consent-client.ts';
-import type { FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import { consentClientWith, registeredAt, startAskedAt } from './consent-fakes.ts';
 import { finishAskedOf, tokensKeptBy } from './given-consents.ts';
 import { manualTimer, memoryTokens, servedAt, type ManualTimer, type MemoryTokens } from './memory-tokens.ts';

@@ -4,6 +4,7 @@ import {
   definitionCalls,
   definitionRunResultOf,
   workflowMachineOptionsOf,
+  type DefinitionRunRequest,
   type RunDefinition,
 } from '@on.auto/coordination';
 import {
@@ -33,11 +34,13 @@ export interface WorkParts {
   readonly names: PlaybookOwnNames;
 }
 
+type RunInProcess = (run: Omit<DefinitionRunRequest, 'longestMs'>) => ReturnType<RunDefinition>;
+
 export function nestedRuns(
   runtime: AppRuntime<DispatcherServices>,
   dispatcher: Dispatcher,
   runDefinition: PlaybookOperation,
-): RunDefinition {
+): RunInProcess {
   return ({ org, playbook, caller, type, name, input, runId, lineage, depth, callDepth, calledBy, attemptDied }) =>
     inRuntime(
       runtime,

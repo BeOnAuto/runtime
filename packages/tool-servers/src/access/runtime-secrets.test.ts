@@ -2,7 +2,8 @@ import { keptTextOf } from '@on.auto/operations/testing';
 import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { reportingAccess, serveFakeMcp } from '../testing/index.ts';
+import { reportingAccess } from '../testing/index.ts';
+import { serveFakeMcp } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 

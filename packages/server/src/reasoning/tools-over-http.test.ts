@@ -6,7 +6,7 @@ import {
   type ScriptedReplies,
   type ScriptedReply,
 } from '@on.auto/reasoning/testing';
-import { fakeStdioServerPath, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { fakeStdioServerPath, serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

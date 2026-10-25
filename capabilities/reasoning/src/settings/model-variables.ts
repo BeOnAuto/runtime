@@ -1,5 +1,5 @@
-import { googleCredentialVariables } from '../adapter/credential-sources.ts';
-import { entraIdVariables } from '../adapter/entra-id.ts';
+import { googleCredentialVariables } from '../providers/credential-sources.ts';
+import { entraIdVariables } from '../providers/entra-id.ts';
 import { modelListVariables } from './model-settings.ts';
 import { providerVariables } from './provider-settings.ts';
 

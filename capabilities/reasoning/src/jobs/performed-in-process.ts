@@ -2,8 +2,8 @@ import type { OfferedTool } from '@on.auto/tool-servers';
 import { failureReply } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 
-import type { ModelTelemetry } from '../adapter/model-access-options.ts';
 import type { LanguageModel } from '../model/language-model.ts';
+import type { ModelTelemetry } from '../providers/model-access-options.ts';
 import { requestCompiler } from './compiled-request.ts';
 import type { PerformJob, ToolCallAnswer, ToolCallJob } from './jobs.ts';
 

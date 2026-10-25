@@ -38,6 +38,7 @@ export type {
   StoredPage,
   StoredPlace,
   StoredRecord,
+  Streams,
 } from './event-store.ts';
 export { sqliteLayout, type LayoutDialect } from './layout/layout-dialects.ts';
 export { LedgerLayoutRefused } from './layout/ledger-layout-refused.ts';
@@ -45,6 +46,7 @@ export type { LedgerServices, OpenedLedger } from './ledger-layer.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {
   decisionLoop,
+  streamPortsOf,
   type Decision,
   type DecidedPlace,
   type DecisionLoop,

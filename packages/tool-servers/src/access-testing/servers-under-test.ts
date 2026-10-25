@@ -1,8 +1,10 @@
 import { Option } from 'effect';
 import { expect } from 'vitest';
 
-import { serveFakeApi, type FakeApiServer } from '../api-testing/fake-api-server.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import { type FakeApiServer } from '../api-testing/fake-api-answers.ts';
+import { serveFakeApi } from '../api-testing/fake-api-server.ts';
+import { type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
 
 export const behaviourKey = 'graph-api-key"4f1d/9a7c~2b+';
 

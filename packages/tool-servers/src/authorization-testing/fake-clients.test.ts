@@ -4,7 +4,8 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { serveFakeMcp, type FakeMcpServer } from '../mcp-testing/fake-mcp-server.ts';
+import { type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
   admitted,

@@ -59,7 +59,7 @@ function dispatched(
 export function handlerFor(
   registration: RouteRegistration,
   { dispatcher, runCall }: OperationRoutesOptions,
-  { reportThrown, resource }: Routes,
+  { reportThrown, resource, callContext }: Routes,
 ): RouteHandler {
   const forbidden = insufficientScope(resource, registration.permissions);
   return async (c) => {
@@ -74,8 +74,12 @@ export function handlerFor(
     }
     const requestId = c.get('requestId');
     const { call, summary } = dispatched(dispatcher, registration, c, { caller, org, ...given.success });
+    const inTheCall = call.pipe(Effect.provideContext(callContext(c.req.raw)));
     const settled = await runCall(
-      underTraceParent(settle(call, c.req.raw.signal).pipe(Effect.annotateLogs({ requestId })), c.get('traceParent')),
+      underTraceParent(
+        settle(inTheCall, c.req.raw.signal).pipe(Effect.annotateLogs({ requestId })),
+        c.get('traceParent'),
+      ),
     );
     return toHttpResponse(settled, {
       status: registration.successStatus,

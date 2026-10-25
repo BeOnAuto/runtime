@@ -4,15 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming, shownWithin, type Timing } from '../bounds/call-bounds.ts';
 import { answerOf, resultText } from '../bounds/tool-results.ts';
-import {
-  brokenPromise,
-  deniedText,
-  fakeApiKey,
-  fakeChannels,
-  inTurn,
-  openFakeToolRun,
-  toolRunId,
-} from '../testing/index.ts';
+import { brokenPromise, deniedText, fakeChannels, inTurn, toolRunId } from '../testing/index.ts';
+import { fakeApiKey, openFakeToolRun } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 

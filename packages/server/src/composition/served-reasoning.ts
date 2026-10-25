@@ -1,19 +1,19 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { ProxySettings } from '@on.auto/outbound';
 import {
   defineListModels,
-  installedPackages,
   makeModelAccess,
   makeReasoningFunctionAdapter,
   offeredModels,
   providerStatus,
   type LanguageModel,
   type ModelAccess,
+  type ModelAccessOptions,
   type ModelCatalog,
   type ModelSettings,
   type ModelTelemetry,
 } from '@on.auto/reasoning';
+import { installedPackages, loadEntraIdentity } from '@on.auto/reasoning/installed-packages';
 import type { ToolAccess } from '@on.auto/tool-servers';
 import { Context, Effect, Layer } from 'effect';
 
@@ -21,6 +21,8 @@ import { logReasoning } from '../logging/logging.ts';
 import { logModelProviders, logOperatorHint, logProviderMessage } from '../logging/provider-logging.ts';
 import type { Settings } from '../settings/settings.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
+
+type ProxySettings = NonNullable<ModelAccessOptions['proxy']>;
 
 export type ModelAccessOf = (
   settings: ModelSettings,
@@ -48,6 +50,7 @@ export const loggedModelAccess: ModelAccessOf = (settings, proxy, telemetry) =>
     reportProviderMessage: logProviderMessage,
     reportOperatorHint: logOperatorHint,
     telemetry,
+    loadEntraIdentity,
   });
 
 export function modelsComposedBy(

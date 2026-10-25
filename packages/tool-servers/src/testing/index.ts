@@ -1,14 +1,21 @@
-import { fileURLToPath } from 'node:url';
-
 import { defaultTiming, type Timing } from '../bounds/call-bounds.ts';
 
 export {
-  serveFakeMcp,
+  fakeMcpAnswers,
+  type FakeMcpAnswers,
   type FakeMcpOptions,
   type FakeMcpServer,
   type SeenRequest,
-} from '../mcp-testing/fake-mcp-server.ts';
-export { serveFakeApi, type FakeApiOptions, type FakeApiServer } from '../api-testing/fake-api-server.ts';
+} from '../mcp-testing/fake-mcp-answers.ts';
+export {
+  fakeApiAnswers,
+  type FakeApiAnswers,
+  type FakeApiOptions,
+  type FakeApiServer,
+  type FakeIssuing,
+  type IssuingAnswers,
+} from '../api-testing/fake-api-answers.ts';
+export type { FailedRequest, FetchHandler, HeardRequest, LoopbackServer } from './fetch-handler.ts';
 export type { SeenApiRequest } from '../api-testing/fake-api-routes.ts';
 export { fakeApiDocument, fakeApiToolNames, type FakeApiVersion } from '../api-testing/fake-api-document.ts';
 export { chatBot, type ChatMessage, type ChatReply, type FakeChat } from '../mcp-testing/fake-chat.ts';
@@ -26,7 +33,6 @@ export {
 } from '../mcp-testing/fake-tools.ts';
 export { brokenPromise, threadReplies } from '../mcp-testing/fake-data-tools.ts';
 export { fetchWithDeletion } from '../mcp-testing/deleting-fetch.ts';
-export { fakeApiKey, openFakeToolRun, type FakeToolRun } from './fake-tool-run.ts';
 export { recordingTimer, type RecordingTimer, type Wait } from './recording-timer.ts';
 export { pendingWords } from './fake-connections.ts';
 export {
@@ -72,15 +78,15 @@ export {
   registeredAfterAnother,
   registeredAt,
   returnAddress,
-  servedForConsent,
   startAskedAt,
   studioBase,
 } from '../consent-testing/consent-fakes.ts';
 export {
-  serveFakeConsentService,
+  fakeConsentServiceAnswers,
   type FakeConsentService,
+  type FakeConsentServiceAnswers,
   type ServiceCall,
-} from '../consent-testing/fake-consent-service.ts';
+} from '../consent-testing/fake-consent-answers.ts';
 export type { FakeConsentServiceOptions, RefusedCall } from '../consent-testing/fake-consent-store.ts';
 export {
   autoClientsOf,
@@ -88,7 +94,6 @@ export {
   consentClientThrough,
   handedOffAskedOf,
   handleOf,
-  servedThroughAuto,
   serviceCallsAt,
   studioSession,
   type ServiceListing,
@@ -123,18 +128,5 @@ export {
   type ManualClock,
   type ServedTokens,
 } from '../consent-testing/served-consents.ts';
-export { toolAccessBehaviour } from '../access-testing/tool-access-behaviour.ts';
-export {
-  behaviourKey,
-  serversUnderTest,
-  type CredentialUnderTest,
-  type ServedUnderTest,
-  type ServerUnderTest,
-} from '../access-testing/servers-under-test.ts';
-export type { SourcedEntry, SourceUnderTest } from '../access-testing/sources-under-test.ts';
-
-export function fakeStdioServerPath(): string {
-  return fileURLToPath(new URL('../mcp-testing/fake-stdio-server.ts', import.meta.url));
-}
 
 export const patientTiming: Timing = { ...defaultTiming, callMs: 20_000, openMs: 20_000 };
