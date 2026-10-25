@@ -62,6 +62,7 @@ export type { StepRecording } from './steps/step-run.ts';
 export type { StepState } from './steps/step-state.ts';
 export { defaultMostInputTokens, type ModelReading } from './capability/definition-request.ts';
 export type { ReasoningFunctionDefinitionDocument } from './definition/reasoning-function-definition.ts';
+export { readReasoningFunctionDefinition } from './definition/definition-reading.ts';
 export { parseModelReference, type ModelReference } from './model/model-reference.ts';
 export { offeredModels, type OfferedModels } from './model/offered-models.ts';
 export type {
