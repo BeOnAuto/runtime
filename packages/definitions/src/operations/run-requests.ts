@@ -117,7 +117,7 @@ export const nextAttemptOf = Effect.fnUntraced(function* (
   if (run === undefined) {
     return yield* Effect.fail(noStartedRun);
   }
-  const request = { definition_type: run.run.type, name: run.run.name, input: run.input };
+  const request = { definition_type: capability.type, name: run.run.name, input: run.input };
   const claim = yield* Effect.fromResult(claimOf(recorded, request, capability.resumes));
   if (claim.type !== 'resume') {
     const answered: NextAttempt = { type: 'answered', answer: yield* answerOf(id, recorded) };

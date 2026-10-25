@@ -1,45 +1,15 @@
-import { defineCommand } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { attemptEnded, nextAttemptOf, type Capability } from '../index.ts';
-import { modelCallAnswered } from '../journal-testing/model-calls.ts';
 import { linksIn } from '../journal-testing/run-links.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { quietMs } from '../testing/capabilities/resumer.ts';
 import { toPlaybook } from '../testing/harness.ts';
 import { acted, momentAfter, startedAndLeft } from '../testing/resumed-runs.ts';
-
-const answered = { type: 'model_call_answered', data: { number: 1, ...modelCallAnswered(0) } } as const;
-
-function drivingAShell(capability: Capability) {
-  return defineCommand('playbook', {
-    name: 'drive_run',
-    title: 'Drive run',
-    description: 'Drives the next attempt of a started run as a shell does, from its facts.',
-    route: { method: 'POST', path: '/drive' },
-    inputSchema: Schema.Struct({ run_id: Schema.String }),
-    outputSchema: Schema.Struct({ next: Schema.String, status: Schema.String }),
-    reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
-    handle: ({ run_id: id }) =>
-      Effect.gen(function* () {
-        const next = yield* nextAttemptOf([capability], capability, id);
-        if (next.type === 'answered') {
-          return { next: next.type, status: next.answer.status };
-        }
-        const { journal } = next.attempt.context;
-        const ended = yield* attemptEnded(
-          next.attempt,
-          Effect.as(Effect.orDie(journal.record(answered)), { output: { driven: true }, record: {} }),
-        );
-        return { next: next.type, status: ended.status };
-      }),
-  });
-}
+import { drivingAShell } from '../testing/shell-drives.ts';
 
 async function aStartedRun() {
   const started = await startedAndLeft();
-  const drive = drivingAShell(started.resuming.capability);
+  const drive = drivingAShell([started.resuming.capability], started.resuming.capability);
   const driven = (at: string, id = acted.runId) =>
     started.call(drive, toPlaybook('acme', 'alpha')(acmeAdmin, { run_id: id }), at);
   return { ...started, driven };
