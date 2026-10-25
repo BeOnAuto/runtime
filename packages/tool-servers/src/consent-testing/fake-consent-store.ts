@@ -21,7 +21,7 @@ export function studioBaseOf({ studioBase: given }: Pick<FakeConsentServiceOptio
 }
 
 export function returnAddressOf(options: Pick<FakeConsentServiceOptions, 'studioBase'>): string {
-  return `${studioBaseOf(options)}connect-return`;
+  return new URL('connect-return', studioBaseOf(options)).href;
 }
 
 export const GivenSchema = Schema.String.check(Schema.isMinLength(1));

@@ -98,7 +98,7 @@ function authorizationUrlOf(
 
 function isServedBase({ kind, base }: Return, store: Store): boolean {
   if (kind === 'hosted') {
-    return base === studioBaseOf(store.options);
+    return base.endsWith('/') && base === studioBaseOf(store.options);
   }
   const url = URL.parse(base);
   return url?.protocol === 'http:' && loopbackHosts.has(url.hostname) && base.endsWith('/');
