@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.1](https://github.com/BeOnAuto/runtime/compare/v0.21.0...v0.21.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **ledger:** the layout number covers the host's tables, pinned over the database the server opens ([#323](https://github.com/BeOnAuto/runtime/issues/323)) ([b53d18b](https://github.com/BeOnAuto/runtime/commit/b53d18b0cb6406690076020af6dc366e01ca9077))
+* **workflow-host:** the host's tables are made whole in their creation statements ([#323](https://github.com/BeOnAuto/runtime/issues/323)) ([b53d18b](https://github.com/BeOnAuto/runtime/commit/b53d18b0cb6406690076020af6dc366e01ca9077))
+
 ## [0.21.0](https://github.com/BeOnAuto/runtime/compare/v0.20.0...v0.21.0) (2026-10-25)
 
 
