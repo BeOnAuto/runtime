@@ -28,7 +28,7 @@ interface KeptAt {
   readonly secretId: string;
 }
 
-export async function consentedAt(url: string): Promise<Consented> {
+export async function consentedAt(url: string, fetch = globalThis.fetch): Promise<Consented> {
   const answer = await fetch(url, { redirect: 'manual' });
   const back = new URL(String(answer.headers.get('location')));
   return {

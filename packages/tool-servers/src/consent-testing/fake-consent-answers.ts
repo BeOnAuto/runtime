@@ -1,7 +1,6 @@
 import { Option, Schema } from 'effect';
 
 import type { FetchHandler } from '../testing/fetch-handler.ts';
-import { returnAddress, studioBase } from './consent-fakes.ts';
 import {
   answer,
   client,
@@ -11,12 +10,14 @@ import {
   isoAt,
   keptOfTheVendor,
   postedToTheVendor,
+  returnAddressOf,
   problem,
   randomText,
   refreshed,
   refusalOfTheVendor,
   refuses,
   ReturnSchema,
+  studioBaseOf,
   revoked,
   signInFirst,
   tenMinutesMs,
@@ -82,7 +83,7 @@ function authorizationUrlOf(
   const parameters = {
     response_type: 'code',
     client_id: client.clientId,
-    redirect_uri: returnAddress,
+    redirect_uri: returnAddressOf(store.options),
     code_challenge: digestOf(start.vendorVerifier),
     code_challenge_method: 'S256',
     state,
@@ -95,9 +96,9 @@ function authorizationUrlOf(
   return url.href;
 }
 
-function isServedBase({ kind, base }: Return): boolean {
+function isServedBase({ kind, base }: Return, store: Store): boolean {
   if (kind === 'hosted') {
-    return base === studioBase;
+    return base === studioBaseOf(store.options);
   }
   const url = URL.parse(base);
   return url?.protocol === 'http:' && loopbackHosts.has(url.hostname) && base.endsWith('/');
@@ -108,7 +109,7 @@ function started({ text }: Asked, store: Store): Response {
   if (asked === undefined || refuses(store, 'start')) {
     return problem(400, 'The consent cannot be started as it is asked');
   }
-  if (asked.issuer !== store.options.vendor.origin || !isServedBase(asked.return)) {
+  if (asked.issuer !== store.options.vendor.origin || !isServedBase(asked.return, store)) {
     return problem(400, 'Auto has no client at this issuer, or does not send people back to this base');
   }
   const state = randomText();
@@ -154,7 +155,7 @@ async function exchangedAtTheVendor(store: Store, code: string, start: Start): P
     grant_type: 'authorization_code',
     code,
     code_verifier: start.vendorVerifier,
-    redirect_uri: returnAddress,
+    redirect_uri: returnAddressOf(store.options),
   });
   return vendor.ok ? keptOfTheVendor(store, await vendor.text()) : refusalOfTheVendor(vendor, 'code_refused');
 }
