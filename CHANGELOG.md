@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2](https://github.com/BeOnAuto/runtime/compare/v0.21.1...v0.21.2) (2026-10-25)
+
+
+### Bug Fixes
+
+* **api:** the org tools are described in fewer words ([#325](https://github.com/BeOnAuto/runtime/issues/325)) ([f3001e8](https://github.com/BeOnAuto/runtime/commit/f3001e8af14e1b4d8275b931f10c00f1d2a860fc))
+
 ## [0.21.1](https://github.com/BeOnAuto/runtime/compare/v0.21.0...v0.21.1) (2026-10-25)
 
 
