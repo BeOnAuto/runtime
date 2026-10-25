@@ -11,7 +11,7 @@ import {
 import { Effect, Equal } from 'effect';
 
 import { cancelledAsAsked, type CancelledRun, type Capability } from '../capability/capability.ts';
-import { changedSinceRead, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
+import { isChangedSinceRead, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
 import { endedWithAnotherResult } from '../runs/run-decisions.ts';
 import { runSettlerAsRead, type RunStreamAddress } from '../runs/run-settler.ts';
 import { startedRunOf, takesSettlement } from '../runs/run-state.ts';
@@ -29,10 +29,6 @@ const readsAgainAtMost = 3;
 
 function endedOtherwise(error: unknown): boolean {
   return Equal.equals(error, endedWithAnotherResult);
-}
-
-function changedMeanwhile(error: unknown): boolean {
-  return Equal.equals(error, changedSinceRead);
 }
 
 function decided(capability: Capability | undefined, run: CancelledRun): Effect.Effect<Settlement> {
@@ -69,5 +65,5 @@ export function deferredCanceller(
       );
     });
   return (run, request, lineage) =>
-    settledAsRead(run, request, lineage).pipe(Effect.retry({ times: readsAgainAtMost, while: changedMeanwhile }));
+    settledAsRead(run, request, lineage).pipe(Effect.retry({ times: readsAgainAtMost, while: isChangedSinceRead }));
 }

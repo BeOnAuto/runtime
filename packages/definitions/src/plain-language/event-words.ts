@@ -11,6 +11,10 @@ export const runFinished = 'A run finished.';
 
 export const runBrokeDown = 'A run broke down because of a problem inside the server.';
 
+export function attemptResumed(attempt: number): string {
+  return `The run went on from its facts in attempt ${plainNumber(attempt)}, after the attempt before it stopped.`;
+}
+
 const cancelsAsked: Readonly<Record<CancelRequestKind, string>> = {
   requested: 'Someone allowed to change the playbook asked for the run to be cancelled.',
   deadline: 'The step that waited for the run ran out of time, so the run is being cancelled.',

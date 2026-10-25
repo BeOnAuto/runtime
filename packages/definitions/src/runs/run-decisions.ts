@@ -8,6 +8,7 @@ import type {
   RunFinish,
   RunOutcome,
   RunRequest,
+  RunResume,
   RunSettlement,
   RunStart,
   InterruptedAttempt,
@@ -48,6 +49,10 @@ export const runTaken = new Conflict({
   detail: 'A run under this id is going or has ended with a result, so this start records nothing',
   kind: 'taken',
 });
+
+export function isTaken(error: unknown): error is Conflict {
+  return error instanceof Conflict && error.kind === runTaken.kind;
+}
 
 export function attemptIsLive(quietMs: number, resumesAfterMs: number): boolean {
   return quietMs <= resumesAfterMs;
@@ -185,8 +190,14 @@ function leftToResume(result: RunOutcome | InterruptedAttempt, { cancel }: Recor
   return result.type === 'run_interrupted' && result.resumes === true && cancel === undefined;
 }
 
-function decideFinish({ result }: RunFinish, state: RunState): Decision {
-  if (state === undefined || leftToResume(result, state)) {
+function decideFinish({ result, attempt }: RunFinish, state: RunState): Decision {
+  if (state === undefined) {
+    return nothingToRecord;
+  }
+  if (attempt !== undefined && attempt !== state.attempt) {
+    return Result.fail(runTaken);
+  }
+  if (leftToResume(result, state)) {
     return nothingToRecord;
   }
   const outcome = outcomeOfAttempt(result, state);
@@ -224,6 +235,12 @@ function decideSettlement(settlement: RunSettlement, state: RunState): Decision 
     : Result.fail(
         new Conflict({ detail: 'The run executes within the call that started it, so it cannot be settled' }),
       );
+}
+
+function decideResume({ attempt }: RunResume, state: RunState): Decision {
+  return state !== undefined && state.resumes && isRunning(state) && attempt === state.attempt + 1
+    ? Result.succeed([{ type: 'attempt_resumed', data: { attempt } }])
+    : Result.fail(stillRunning);
 }
 
 function cancelRequested({ kind, reason }: RunCancel): RunEvent {
@@ -267,6 +284,9 @@ export function decideOnRun(command: RunCommand, state: RunStreamState, admits: 
   }
   if (command.type === 'answer') {
     return decideAnswer(command, run);
+  }
+  if (command.type === 'resume') {
+    return decideResume(command, run);
   }
   return command.type === 'finish' ? decideFinish(command, run) : decideSettlement(command, run);
 }

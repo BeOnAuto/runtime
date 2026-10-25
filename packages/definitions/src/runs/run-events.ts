@@ -35,6 +35,7 @@ const coreFactSchemas = [
     RunContextSchema,
   ),
   factOf('run_deferred', Schema.Struct({ record: Schema.JsonObject }), RunContextSchema),
+  factOf('attempt_resumed', Schema.Struct({ attempt: Schema.Int }), RunContextSchema),
   factOf('run_succeeded', Schema.Struct({ output: Schema.Json, record: Schema.JsonObject }), RunContextSchema),
   factOf(
     'run_rejected',
@@ -61,6 +62,7 @@ type CoreRunFact = (typeof coreFactSchemas)[number]['Type'];
 const coreTypes: Readonly<Record<CoreRunFact['type'], true>> = {
   run_started: true,
   run_deferred: true,
+  attempt_resumed: true,
   run_succeeded: true,
   run_rejected: true,
   run_failed: true,

@@ -1,5 +1,5 @@
 import { Conflict, type Decider } from '@on.auto/operations';
-import { Result } from 'effect';
+import { Equal, Result } from 'effect';
 
 import type { AdmitsFact } from '../run-work/work-decisions.ts';
 import type { RunCommand } from './run-commands.ts';
@@ -29,10 +29,14 @@ export interface RunDeciders {
   readonly asRead: RunDeciderAsRead;
 }
 
-export const changedSinceRead = new Conflict({
+const changedSinceRead = new Conflict({
   detail: 'The run changed since it was read, so it is read again',
   kind: 'concurrent_change',
 });
+
+export function isChangedSinceRead(error: unknown): boolean {
+  return Equal.equals(error, changedSinceRead);
+}
 
 function decidersOver(eventSchema: typeof RunEventSchema, admits: AdmitsFact): RunDeciders {
   const decide = (command: RunCommand, state: RunStreamState) => decideOnRun(command, state, admits);

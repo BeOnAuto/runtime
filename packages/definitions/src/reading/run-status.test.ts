@@ -24,6 +24,7 @@ const ofTheTool = { server: 'chat', tool: 'post_message' };
 const latestOfEveryType: Readonly<Record<string, RunEvent>> = {
   run_started: start,
   run_deferred: { type: 'run_deferred', data: { record: {} } },
+  attempt_resumed: { type: 'attempt_resumed', data: { attempt: 2 } },
   run_succeeded: { type: 'run_succeeded', data: { output: null, record: {} } },
   run_rejected: { type: 'run_rejected', data: { rejection: { reason: 'conflict', detail: 'x' } } },
   run_failed: { type: 'run_failed', data: {} },

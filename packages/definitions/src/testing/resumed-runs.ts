@@ -18,6 +18,8 @@ const aWorkflowsCall: CallLink = { run_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70
 
 export const acted = { runId: testRunId, by: 'acme-admin', at: firstMoment };
 
+export const askedOfTheRun = toAlpha(acmeAdmin, { run_id: testRunId });
+
 export const startOfTheStep = {
   type: 'start',
   definition_type: 'resumer',

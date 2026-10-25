@@ -6,6 +6,7 @@ import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts'
 const reserved = [
   'run_started',
   'run_deferred',
+  'attempt_resumed',
   'run_succeeded',
   'run_rejected',
   'run_failed',

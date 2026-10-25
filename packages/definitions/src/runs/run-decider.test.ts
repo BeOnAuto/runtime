@@ -154,6 +154,7 @@ describe('finishing a run', () => {
 });
 
 const recordedState = {
+  attempt: 1,
   finishesLater: false,
   deferred: false,
   callsTools: false,

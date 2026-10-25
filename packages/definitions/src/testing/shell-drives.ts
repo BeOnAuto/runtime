@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import { attemptEnded, nextAttemptOf, type Capability } from '../index.ts';
 import { modelCallAnswered } from '../journal-testing/model-calls.ts';
 
-const answeredFirstCall = {
+export const answeredFirstCall = {
   type: 'model_call_answered',
   data: { number: 1, ...modelCallAnswered(0) },
 } as const;
@@ -27,7 +27,7 @@ export function drivingAShell(capabilities: readonly Capability[], capability: C
         const { journal } = next.attempt.context;
         const ended = yield* attemptEnded(
           next.attempt,
-          Effect.as(Effect.orDie(journal.record(answeredFirstCall)), { output: { driven: true }, record: {} }),
+          Effect.as(journal.record(answeredFirstCall), { output: { driven: true }, record: {} }),
         );
         return { next: next.type, status: ended.status };
       }),

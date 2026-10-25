@@ -27,6 +27,7 @@ function refusals(event: unknown): readonly string[] {
 const typesOfThePlaybook = [
   'run_started',
   'run_deferred',
+  'attempt_resumed',
   'run_succeeded',
   'run_rejected',
   'run_failed',

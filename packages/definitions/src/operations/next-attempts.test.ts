@@ -25,6 +25,7 @@ describe('the next attempt of a started run, which a shell drives itself', () =>
     expect((await linksIn(started)).map(({ type }) => type)).toEqual([
       'run_started',
       'model_call_started',
+      'attempt_resumed',
       'model_call_answered',
       'run_succeeded',
     ]);
