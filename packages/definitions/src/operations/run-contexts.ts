@@ -1,7 +1,12 @@
 import { PlaybookContext, PlaybookReader, Caller, type GivenLineage } from '@on.auto/operations';
 import { Cause, Effect, Option, type Schema } from 'effect';
 
-import type { Capability, PreparedDefinition } from '../capability/capability.ts';
+import type {
+  Capability,
+  CapabilityAnswer,
+  CapabilityRejection,
+  PreparedDefinition,
+} from '../capability/capability.ts';
 import type { RunAttempt, RunContext, RunLineage } from '../capability/run-context.ts';
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
 import type { InterruptedAttempt, RunOutcome } from '../runs/run-commands.ts';
@@ -84,7 +89,7 @@ export function answeredWith(id: string, context: JournalledRun, outcome: RunOut
   });
 }
 
-export interface Attempting {
+export interface AttemptOfARun {
   readonly id: string;
   readonly run: Prepared;
   readonly input: Schema.Json;
@@ -93,7 +98,7 @@ export interface Attempting {
 
 type Restore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
 
-const interruptedAs = Effect.fnUntraced(function* ({ id, run, context }: Attempting) {
+const interruptedAs = Effect.fnUntraced(function* ({ id, run, context }: AttemptOfARun) {
   const interrupted = interruptedAttempt(run.prepared.resumesAfterMs);
   if ((yield* loadRun(id))?.cancel === undefined) {
     return yield* answeredWith(id, context, interrupted);
@@ -104,10 +109,12 @@ const interruptedAs = Effect.fnUntraced(function* ({ id, run, context }: Attempt
   return yield* answeredWith(id, context, record === undefined ? interrupted : { ...interrupted, record });
 });
 
-export const answeredAttempt = Effect.fnUntraced(function* (attempting: Attempting, restore: Restore) {
-  const { id, run, input, context } = attempting;
-  const running = run.prepared.run(input, context);
-  const outcome = yield* attempt(run.prepared.whenCancelled === 'finish' ? running : restore(running)).pipe(
+export const attemptEnded = Effect.fnUntraced(function* (
+  attempting: AttemptOfARun,
+  ran: Effect.Effect<CapabilityAnswer, CapabilityRejection>,
+) {
+  const { id, context } = attempting;
+  const outcome = yield* attempt(ran).pipe(
     Effect.onError((cause) =>
       Effect.ignore(
         Cause.hasInterruptsOnly(cause) ? interruptedAs(attempting) : answeredWith(id, context, failedAttempt),
@@ -116,3 +123,9 @@ export const answeredAttempt = Effect.fnUntraced(function* (attempting: Attempti
   );
   return isTakenByAnother(outcome) ? yield* answerAfterAnother(id) : yield* answeredWith(id, context, outcome);
 });
+
+export function answeredAttempt(attempting: AttemptOfARun, restore: Restore) {
+  const { run, input, context } = attempting;
+  const running = run.prepared.run(input, context);
+  return attemptEnded(attempting, run.prepared.whenCancelled === 'finish' ? running : restore(running));
+}

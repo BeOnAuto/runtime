@@ -1,4 +1,4 @@
-import { PlaybookContext, CallLineage, Conflict, type GivenLineage } from '@on.auto/operations';
+import { PlaybookContext, CallLineage, Conflict, NotFound, type GivenLineage } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import { attemptKeyOf, LiveAttempts } from '../attempts/live-attempts.ts';
@@ -7,8 +7,15 @@ import type { RunRequest } from '../runs/run-commands.ts';
 import { attemptIsLive, claimOf, runTaken, stillRunning, type Claim } from '../runs/run-decisions.ts';
 import { answerOf } from '../runs/run-lookup.ts';
 import { outputShapeOf, preparedDefinition, preparedVersion } from './definition-preparation.ts';
-import { loadAttempt, loadRun, loadRunStream, newRunId, recordRun } from './run-access.ts';
-import { answeredAttempt, answeredWith, contextOf, type Called, type Prepared } from './run-contexts.ts';
+import { loadAttempt, loadRun, loadRunStream, loadStartedRun, newRunId, recordRun } from './run-access.ts';
+import {
+  answeredAttempt,
+  answeredWith,
+  contextOf,
+  type AttemptOfARun,
+  type Called,
+  type Prepared,
+} from './run-contexts.ts';
 
 export const mostCallDepth = 8;
 
@@ -64,7 +71,64 @@ const runPrepared = Effect.fnUntraced(function* (
   );
 });
 
+interface ResumedAttempt extends AttemptOfARun {
+  readonly cancelAsked: boolean;
+}
+
 type Resuming = Extract<Claim, { readonly type: 'resume' }>;
+
+type AnswerOfARun = Effect.Success<ReturnType<typeof answerOf>>;
+
+export type NextAttempt =
+  | { readonly type: 'answered'; readonly answer: AnswerOfARun }
+  | { readonly type: 'attempt'; readonly attempt: AttemptOfARun };
+
+const noStartedRun = new NotFound({ detail: 'There is no such run in this playbook' });
+
+const resumedAttemptOf = Effect.fnUntraced(function* (
+  capabilities: readonly Capability[],
+  capability: Capability,
+  id: string,
+  run: Resuming['run'],
+) {
+  const toRun = yield* preparedVersion(capability, run.run.name, run.run.definition_version);
+  const given: Called = { ...(yield* CallLineage), capabilities };
+  const { attempt, quietMs, lastMessageId } = yield* loadAttempt(id);
+  const cancelAsked = run.cancel !== undefined;
+  if (!cancelAsked && !given.attemptDied && attemptIsLive(quietMs, toRun.prepared.resumesAfterMs)) {
+    return yield* stillRunning;
+  }
+  const lineage = { startId: lastMessageId, correlationId: given.lineage?.correlationId ?? id };
+  const context = yield* contextOf(id, toRun, given, { lineage, attempt });
+  const resumed: ResumedAttempt = { id, run: toRun, input: run.input, context, cancelAsked };
+  return resumed;
+});
+
+function interruptedByItsCancel({ id, context }: AttemptOfARun) {
+  return answeredWith(id, context, { type: 'run_interrupted' });
+}
+
+export const nextAttemptOf = Effect.fnUntraced(function* (
+  capabilities: readonly Capability[],
+  capability: Capability,
+  id: string,
+) {
+  const { recorded, run } = yield* loadStartedRun(id);
+  if (run === undefined) {
+    return yield* Effect.fail(noStartedRun);
+  }
+  const request = { definition_type: run.run.type, name: run.run.name, input: run.input };
+  const claim = yield* Effect.fromResult(claimOf(recorded, request, capability.resumes));
+  if (claim.type !== 'resume') {
+    const answered: NextAttempt = { type: 'answered', answer: yield* answerOf(id, recorded) };
+    return answered;
+  }
+  const resumed = yield* resumedAttemptOf(capabilities, capability, id, claim.run);
+  const next: NextAttempt = resumed.cancelAsked
+    ? { type: 'answered', answer: yield* interruptedByItsCancel(resumed) }
+    : { type: 'attempt', attempt: resumed };
+  return next;
+});
 
 const resumedRun = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
@@ -72,20 +136,9 @@ const resumedRun = Effect.fnUntraced(function* (
   id: string,
   { run: state }: Resuming,
 ) {
-  const run = yield* preparedVersion(capability, state.run.name, state.run.definition_version);
-  const given: Called = { ...(yield* CallLineage), capabilities };
-  const { attempt, quietMs, lastMessageId } = yield* loadAttempt(id);
-  if (state.cancel === undefined && !given.attemptDied && attemptIsLive(quietMs, run.prepared.resumesAfterMs)) {
-    return yield* stillRunning;
-  }
-  const lineage = { startId: lastMessageId, correlationId: given.lineage?.correlationId ?? id };
+  const resumed = yield* resumedAttemptOf(capabilities, capability, id, state);
   return yield* Effect.uninterruptibleMask((restore) =>
-    Effect.gen(function* () {
-      const context = yield* contextOf(id, run, given, { lineage, attempt });
-      return state.cancel === undefined
-        ? yield* answeredAttempt({ id, run, input: state.input, context }, restore)
-        : yield* answeredWith(id, context, { type: 'run_interrupted' });
-    }),
+    resumed.cancelAsked ? interruptedByItsCancel(resumed) : answeredAttempt(resumed, restore),
   );
 });
 

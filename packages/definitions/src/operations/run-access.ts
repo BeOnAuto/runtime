@@ -30,6 +30,10 @@ export function loadRun(id: string): Effect.Effect<RunState, never, PlaybookRead
   return Effect.map(loadRunStream(id), startedRunOf);
 }
 
+export function loadStartedRun(id: string) {
+  return Effect.map(loadRunStream(id), (recorded) => ({ recorded, run: startedRunOf(recorded) }));
+}
+
 const streamOf = Effect.fnUntraced(function* (id: string) {
   return `${streamPrefixOfPlaybook(yield* PlaybookContext)}${runStreamNameOf(id)}`;
 });
