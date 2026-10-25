@@ -16,9 +16,9 @@ export function defineListConnections({ secrets }: Reading) {
     name: 'list_connections',
     title: 'List connections',
     description: [
-      'Lists the connections of the org, newest first, each with its server and whether it is pending, connected or broken.',
+      'Lists the connections of the org, newest first.',
+      'Each has its server and whether it is pending, connected or broken.',
       'Use it to see which tool servers people added, and whether the person approved one add_connection added.',
-      '`include_removed` adds the removed ones.',
     ].join(' '),
     route: { method: 'GET', path: '/connections' },
     inputSchema: Schema.Struct({

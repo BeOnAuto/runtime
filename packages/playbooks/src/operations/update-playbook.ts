@@ -10,10 +10,9 @@ export const updatePlaybook = defineCommand('org', {
   name: 'update_playbook',
   title: 'Update playbook',
   description: [
-    'Replaces the name and the description of an active playbook and returns the playbook.',
-    'Use it when the person renames a playbook or changes what it is for; a retired playbook cannot change.',
-    '`playbook` is the id of the playbook, `name` its name and `description` what it is for, both given in full even when one of them stays the same,',
-    'and a call that changes nothing records nothing.',
+    'Replaces the name and the description of an active playbook and returns it.',
+    'Use it when the person renames a playbook or changes what it is for.',
+    'Both are given in full, even when one stays the same.',
   ].join(' '),
   repeatable: true,
   route: { method: 'PUT', path: '/playbooks/{playbook}' },

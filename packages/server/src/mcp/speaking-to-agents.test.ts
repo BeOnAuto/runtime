@@ -67,8 +67,8 @@ describe('episode 2: asked to create a playbook for meetings', () => {
     const created = await onMcp((session) => session.callTool('create_playbook', meetingsPlaybook));
 
     expect(sentencesOf(descriptionOf('create_playbook')).filter((sentence) => /\bid\b/u.test(sentence))).toEqual([
-      'list_playbooks shows the playbooks that exist, and an id that is taken or retired is refused.',
-      "`playbook` is the id every tool inside the playbook takes, `name` is what people call it, and `description` says what the playbook is for, in the person's words.",
+      'An id that is taken or retired is refused.',
+      "`playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
     ]);
     expect(descriptionOf('create_playbook')).not.toMatch(/lowercase|never changes|immutable|reused/u);
     expect(plainTextIn(created)).toBe(

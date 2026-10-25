@@ -8,9 +8,8 @@ import { searchAttempted, searchTask, searched } from './search-words.ts';
 
 export const searchSentences = [
   "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute.",
-  'Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first.',
-  'Each server is asked at each call, and one that cannot be asked just now says why in place of its tools.',
-  '`server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole.',
+  'It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first.',
+  'A server that cannot be asked says why.',
 ];
 
 export function noServerNamed(server: string, holder: string): InvalidInput {

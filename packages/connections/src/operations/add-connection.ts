@@ -11,11 +11,10 @@ import { connectionNamed, linkWordsOf } from './connection-words.ts';
 import { additionOf, recordInRegistry } from './registry-access.ts';
 
 const description = [
-  "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page.",
+  "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
   'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
-  'A server given by hand takes name, type, entry and credential instead, none holding a secret.',
-  'The person approves it, and gives its credential, on the page the link opens within ten minutes.',
-  'Nothing is granted by this call and no credential passes through it: the person allows it at the service, or gives its credential, on the page the link opens, or nothing happens.',
+  "It answers pending with a link to Studio's page, where the person approves it within ten minutes.",
+  'Nothing is granted by this call and no credential passes through it.',
 ].join(' ');
 
 export function defineAddConnection({

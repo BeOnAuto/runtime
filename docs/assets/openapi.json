@@ -66,7 +66,7 @@
       "post": {
         "operationId": "create_playbook",
         "summary": "Create playbook",
-        "description": "Start here when the person wants something done in their business that should keep working after this conversation, however they put it, and none of their playbooks covers it. Creates a playbook in the org for one business responsibility, such as reviewing campaign briefs or keeping a team's meeting notes, and returns it, active and empty: its functions and workflows come next. list_playbooks shows the playbooks that exist, and an id that is taken or retired is refused. `playbook` is the id every tool inside the playbook takes, `name` is what people call it, and `description` says what the playbook is for, in the person's words.",
+        "description": "Start here when the person wants something done in their business that should keep working after this conversation, however they put it, and none of their playbooks covers it. Creates a playbook for one business responsibility, such as reviewing campaign briefs, and returns it, active and empty. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
         "tags": [
           "playbooks"
         ],
@@ -221,7 +221,7 @@
       "get": {
         "operationId": "list_playbooks",
         "summary": "List playbooks",
-        "description": "Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id, each with its name, what it is for and whether it is active. Each playbook it lists holds every field of the playbook. `include_retired` adds the retired playbooks, which are left out otherwise.",
+        "description": "Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id. Each holds every field of the playbook, such as its name, what it is for and whether it is active.",
         "tags": [
           "playbooks"
         ],
@@ -498,7 +498,7 @@
       "put": {
         "operationId": "update_playbook",
         "summary": "Update playbook",
-        "description": "Replaces the name and the description of an active playbook and returns the playbook. Use it when the person renames a playbook or changes what it is for; a retired playbook cannot change. `playbook` is the id of the playbook, `name` its name and `description` what it is for, both given in full even when one of them stays the same, and a call that changes nothing records nothing.",
+        "description": "Replaces the name and the description of an active playbook and returns it. Use it when the person renames a playbook or changes what it is for. Both are given in full, even when one stays the same.",
         "tags": [
           "playbooks"
         ],
@@ -660,7 +660,7 @@
       "post": {
         "operationId": "retire_playbook",
         "summary": "Retire playbook",
-        "description": "Retires a playbook of the org for good and returns it: it keeps its history and can still be read, but it can no longer change, and there is no way to restore it or to use its id again. Use it only when the person asks to retire that playbook; update_playbook changes its name or description instead. `playbook` is the id of the playbook, and retiring a playbook already retired changes nothing.",
+        "description": "Retires a playbook for good and returns it, readable with its history but never to change, be restored or have its id used again. Use it only when the person asks to retire that playbook; update_playbook changes its name or description instead. Retiring a retired playbook changes nothing.",
         "tags": [
           "playbooks"
         ],
@@ -806,7 +806,7 @@
       "get": {
         "operationId": "list_models",
         "summary": "List models",
-        "description": "Lists the models this server can call, so a reasoning function names one that runs. Each id is what a reasoning function gives as its model, written provider/model; an id that ends in * stands for any model of that provider and is not itself a model to run, and an alias, marked alias, says in resolved_to where it is sent when it may. Use it before a reasoning function names its model, or when a run says its model is not offered. `provider` keeps the models of one provider or gateway, and catalog_status is partial when a provider could not be asked.",
+        "description": "Lists the models this server can call, by the id a reasoning function gives as its model, written provider/model. An id ending in * stands for any model of its provider and is not one to run. Use it before a reasoning function names its model, or when a run says its model is not offered.",
         "tags": [
           "models"
         ],
@@ -987,7 +987,7 @@
       "get": {
         "operationId": "search_in_org",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first. Each server is asked at each call, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole. Without `playbook` it searches every tool server of the org, with the playbooks each serves. With `terms` naming a service, `providers` lists what a person may connect that no server serves yet, found as tools are, for add_connection by name.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first. A server that cannot be asked says why. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.",
         "tags": [
           "tool-servers"
         ],
@@ -1315,7 +1315,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Starts connecting a person's account at a service, named by a provider that search lists, by its name and placeholders, answered pending with a link to Studio's page. A service a playbook will use is connected here, whatever connector the agent has of its own for it. A server given by hand takes name, type, entry and credential instead, none holding a secret. The person approves it, and gives its credential, on the page the link opens within ten minutes. Nothing is granted by this call and no credential passes through it: the person allows it at the service, or gives its credential, on the page the link opens, or nothing happens.",
+        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. It answers pending with a link to Studio's page, where the person approves it within ten minutes. Nothing is granted by this call and no credential passes through it.",
         "tags": [
           "connections"
         ],
@@ -1830,7 +1830,7 @@
       "get": {
         "operationId": "list_connections",
         "summary": "List connections",
-        "description": "Lists the connections of the org, newest first, each with its server and whether it is pending, connected or broken. Use it to see which tool servers people added, and whether the person approved one add_connection added. `include_removed` adds the removed ones.",
+        "description": "Lists the connections of the org, newest first. Each has its server and whether it is pending, connected or broken. Use it to see which tool servers people added, and whether the person approved one add_connection added.",
         "tags": [
           "connections"
         ],
@@ -2554,7 +2554,7 @@
       "delete": {
         "operationId": "remove_connection",
         "summary": "Remove connection",
-        "description": "Removes a connection of the org for good: no playbook may use it any more, and its credential is forgotten. Use it only when the person asks to remove that connection. `id` is its id, and removing a removed connection changes nothing.",
+        "description": "Removes a connection of the org for good: no playbook may use it any more, and its credential is forgotten. Use it only when the person asks to remove that connection. Removing a removed connection changes nothing.",
         "tags": [
           "connections"
         ],
@@ -10085,7 +10085,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. Without `terms` it lists the servers and, while they offer at most 100 tools together, every tool; with `terms`, the tools whose names, arguments or descriptions hold them, best first. Each server is asked at each call, and one that cannot be asked just now says why in place of its tools. `server` keeps one server, `only` the tools that read or those that may write; introspect describes a tool whole.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first. A server that cannot be asked says why.",
         "tags": [
           "tool-servers"
         ],
