@@ -1,10 +1,10 @@
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added, billing, crm, issuesIn, notes } from '../testing/additions.ts';
 import { ada, grace, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 function giving(h: Harness, input: Readonly<Record<string, string>>, caller = ada, at?: string) {
   return h.call(operationNamed(h.operations, 'give_credential'), caller, input, at);
@@ -259,7 +259,7 @@ async function authSentBy(h: Harness, id: string) {
   const source = makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicyOf({}),
     variables: new Map(),
     modelProviders: ['openai'],
     ...fixtureServing,

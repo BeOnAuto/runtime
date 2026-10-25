@@ -20,6 +20,10 @@ export interface ReasoningServer {
 
 export const alpha = '/v1/orgs/acme/playbooks/alpha';
 
+export function connectionsReachingTheLoopback(rules: Readonly<Record<string, unknown>> = {}): string {
+  return JSON.stringify({ private_hosts: ['127.0.0.1'], ...rules });
+}
+
 export function loopbackSettingsOver(ledger: TemporaryLedger): Readonly<Record<string, string>> {
   return {
     HOST: '127.0.0.1',

@@ -10,15 +10,15 @@ import {
 import { Option, Redacted } from 'effect';
 import { expect } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import type { Credential } from '../registry/credential.ts';
 import { added } from '../testing/additions.ts';
 import { ada, harness, operationNamed, fixtureServing } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
 const variable = 'GRAPH_API_KEY';
 
-const policy = connectionPolicyOf({ variables: [variable] });
+const policy = loopbackPolicyOf({ variables: [variable] });
 
 type SentIn = Exclude<CredentialUnderTest, { readonly in: 'auth' }>;
 

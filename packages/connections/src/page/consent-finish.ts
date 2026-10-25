@@ -1,4 +1,4 @@
-import { allPermissions, defineHttpOperation, Unavailable, type NotFound } from '@on.auto/operations';
+import { defineHttpOperation, Unavailable, type NotFound } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
@@ -135,7 +135,6 @@ export function defineFinishConsent(services: ConsentServices) {
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/consent/code' },
     body: { kind: 'json' },
-    permittedBy: allPermissions,
     inputSchema: FinishingSchema,
     answer: { kind: 'json', outputSchema: ConnectionSchema },
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],

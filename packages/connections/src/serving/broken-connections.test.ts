@@ -3,9 +3,10 @@ import type { ConnectionSource, ConnectionUnready, OrgConnection } from '@on.aut
 import { Effect, Logger, Option, type Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
+import type { ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, crm, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
 
@@ -13,7 +14,7 @@ function sourceOf(h: Harness, changes: Partial<ServingServices> = {}): Connectio
   return makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicyOf({}),
     variables: new Map(),
     modelProviders: ['openai'],
     ...fixtureServing,
@@ -22,7 +23,7 @@ function sourceOf(h: Harness, changes: Partial<ServingServices> = {}): Connectio
 }
 
 function policyOf(fields: ConnectionPolicyFields) {
-  return { policy: connectionPolicyOf(fields) };
+  return { policy: loopbackPolicyOf(fields) };
 }
 
 async function connectedCrm(h: Harness): Promise<string> {

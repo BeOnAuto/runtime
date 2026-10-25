@@ -1,5 +1,5 @@
 import type { Issue } from '@on.auto/operations';
-import { headersTheRuntimeSets } from '@on.auto/tool-servers';
+import { headersOpeningMetadataServices, headersTheRuntimeSets, opensAMetadataService } from '@on.auto/tool-servers';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
@@ -20,6 +20,9 @@ function headerIssuesOf(name: string | undefined, type: ConnectionType, entry: C
   const reserved = headersTheRuntimeSets(type);
   if (among(reserved.names, name)) {
     return issue('/credential/name', `A header ${reserved.setBy} sets itself, so the credential cannot go in it`);
+  }
+  if (among(headersOpeningMetadataServices, name)) {
+    return issue('/credential/name', `${opensAMetadataService}, so the credential cannot go in it`);
   }
   return sentAlready(entry.headers, name)
     ? issue('/credential/name', 'The entry sends this header already, so the credential cannot go in it')

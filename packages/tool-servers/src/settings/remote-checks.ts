@@ -11,7 +11,7 @@ import {
   redactedValuesOf,
   type Checked,
 } from './checked.ts';
-import { headersTheRuntimeSets, type RemoteServerType } from './reserved-headers.ts';
+import { reservedHeaderWordsOf, type RemoteServerType } from './reserved-headers.ts';
 import type { ServerEntryFields } from './server-entries.ts';
 import type { AuthSettings, MintingCredential } from './server-settings.ts';
 
@@ -22,15 +22,13 @@ export function checkedHeaders(
   headers: Readonly<Record<string, string>>,
   type: RemoteServerType,
 ): Checked<ReadonlyMap<string, Redacted.Redacted>> {
-  const reserved = headersTheRuntimeSets(type);
   const problems = problemsOf(
     ...Object.keys(headers).map((header) => {
       if (!headerNamePattern.test(header)) {
         return refused(name, ['headers', header], 'Expected a header name');
       }
-      return reserved.names.has(header.toLowerCase())
-        ? refused(name, ['headers', header], `A header ${reserved.setBy} sets itself`)
-        : accepted(header);
+      const reserved = reservedHeaderWordsOf(type, header);
+      return reserved === undefined ? accepted(header) : refused(name, ['headers', header], reserved);
     }),
   );
   return problems.length === 0 ? accepted(redactedValuesOf(headers)) : rejected(problems);

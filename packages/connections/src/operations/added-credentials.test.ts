@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { adding, billing, crm, issuesIn, statusesOf } from '../testing/additions.ts';
+import { adding, billing, crm, issuesIn, notes, statusesOf } from '../testing/additions.ts';
 import { harness } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 const refusedCredentials = [
   ['a kind of credential there is not', { kind: 'consent' }, '/credential/kind'],
@@ -79,7 +79,7 @@ function withScheme(scheme: string, credential: Readonly<Record<string, string>>
 
 describe('the scheme of a credential sent in a header', () => {
   it('is taken by a secret and a reference, and answered with the credential', async () => {
-    const h = harness({ policy: connectionPolicyOf({ variables: ['CRM_API_KEY'] }) });
+    const h = harness({ policy: loopbackPolicyOf({ variables: ['CRM_API_KEY'] }) });
     const reference = withScheme('Token', { kind: 'reference', variable: 'CRM_API_KEY' });
 
     const answers = [
@@ -192,6 +192,38 @@ describe('a secret in a header', () => {
       [{ pointer: '/credential/name', detail: 'A header the runtime sets itself, so the credential cannot go in it' }],
     ]);
     expect(statuses).toEqual(['succeeded', 'succeeded']);
+  });
+});
+
+describe("a header that opens a cloud's instance metadata service", () => {
+  it("is refused in a header that opens a cloud's instance metadata service, to an mcp server and an HTTP API alike", async () => {
+    const refused = await Promise.all(
+      [
+        { ...crm, credential: inHeader('Metadata-Flavor') },
+        { ...billing, credential: inHeader('x-aws-ec2-metadata-token') },
+      ].map(async (connection: unknown) => issuesIn(await adding(harness(), connection))),
+    );
+
+    expect(refused).toEqual(
+      [0, 1].map(() => [
+        {
+          pointer: '/credential/name',
+          detail:
+            "A header that opens a cloud's instance metadata service, which no tool server is sent, so the credential cannot go in it",
+        },
+      ]),
+    );
+  });
+
+  it("is refused where the entry sends a header that opens a cloud's instance metadata service", async () => {
+    const opening = { ...notes, entry: { ...notes.entry, headers: { 'Metadata-Flavor': 'Google' } } };
+
+    expect(issuesIn(await adding(harness(), opening))).toEqual([
+      {
+        pointer: '/entry/headers/Metadata-Flavor',
+        detail: "A header that opens a cloud's instance metadata service, which no tool server is sent",
+      },
+    ]);
   });
 });
 

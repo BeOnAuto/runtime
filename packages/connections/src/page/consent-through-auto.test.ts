@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, type Added } from '../testing/additions.ts';
 import { consentHarnessAt, startedAt, starting } from '../testing/consents.ts';
-import { acmeViewer, ada, operationNamed, type Harness } from '../testing/harness.ts';
+import { acmeReader, ada, operationNamed, type Harness } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -42,7 +42,7 @@ function finishedWith(h: Harness, { id, token }: Added, returned: Readonly<Recor
 }
 
 function readingOf(h: Harness, { id, token }: Added): Promise<Outcome<Succeeded>> {
-  return h.call(operationNamed(h.operations, 'read_link'), acmeViewer, { id, token });
+  return h.call(operationNamed(h.operations, 'read_link'), acmeReader, { id, token });
 }
 
 async function returnedOf({ serving, h, link }: Connecting) {

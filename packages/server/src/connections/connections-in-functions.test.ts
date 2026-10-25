@@ -6,8 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { chatKey, chatServer, deliveryHistoryOf } from '../testing/interaction-servers/chat-deliveries.ts';
 import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { addedConnection, aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
-import { alpha } from '../testing/servers/reasoning-server.ts';
+import { alpha, connectionsReachingTheLoopback } from '../testing/servers/reasoning-server.ts';
 import { until } from '../testing/waiting/until.ts';
+
+const reachingTheLoopback = { CONNECTIONS: connectionsReachingTheLoopback() };
 
 const decodeStructured = Schema.decodeUnknownSync(Schema.Struct({ structuredContent: Schema.Unknown }));
 
@@ -17,7 +19,7 @@ const pendingWords =
 describe('an interaction function that delivers through a connection', () => {
   it('names it at its start, and records the connection beside the server of each delivery', async () => {
     const chat = await chatServer();
-    const server = await servingInteractions(chatDelivery);
+    const server = await servingInteractions(chatDelivery, reachingTheLoopback);
     const id = await connectedWith(server, aSecretHeader('chat', chat.url), `Bearer ${chatKey}`);
 
     const runId = await server.ask('approve-brief');
@@ -37,7 +39,7 @@ describe('an interaction function that delivers through a connection', () => {
 
   it('is refused at its start while nobody has approved the connection, in its words', async () => {
     const chat = await chatServer();
-    const server = await servingInteractions(chatDelivery);
+    const server = await servingInteractions(chatDelivery, reachingTheLoopback);
     await addedConnection(server, aSecretHeader('chat', chat.url));
 
     const refused = await server.call('POST', `${alpha}/definitions/interaction/approve-brief/run`, {
@@ -55,7 +57,7 @@ describe('an interaction function that delivers through a connection', () => {
 describe('the tools of a connection over MCP', () => {
   it('are searched with the connection named, checked by dry_run and called by execute', async () => {
     const chat = await chatServer();
-    const server = await servingInteractions();
+    const server = await servingInteractions([], reachingTheLoopback);
     const id = await connectedWith(server, aSecretHeader('chat', chat.url), `Bearer ${chatKey}`);
     const onAcme = { url: `${server.origin}/orgs/acme/mcp`, headers: {} };
     const onAlpha = { url: `${server.origin}/orgs/acme/playbooks/alpha/mcp`, headers: {} };

@@ -5,7 +5,12 @@ import { serveFakeMcp } from '@on.auto/tool-servers/testing';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
-import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  servingReasoning,
+  type ReasoningServer,
+  connectionsReachingTheLoopback,
+} from '../testing/servers/reasoning-server.ts';
 
 const keyId = randomUUID();
 
@@ -28,7 +33,7 @@ function kmsOfTheEnvironmentAtTheFake(): void {
 
 async function servedUnderTheKeyInKms(): Promise<ReasoningServer> {
   kmsOfTheEnvironmentAtTheFake();
-  const server = await servingReasoning([], { SECRETS_KEY_KMS: keyArn });
+  const server = await servingReasoning([], { SECRETS_KEY_KMS: keyArn, CONNECTIONS: connectionsReachingTheLoopback() });
   onTestFinished(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return server;

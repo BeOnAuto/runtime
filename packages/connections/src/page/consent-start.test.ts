@@ -11,10 +11,10 @@ import {
 } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, crm } from '../testing/additions.ts';
 import { consentFake, consentHarnessAt, finishing, startedAt, starting, studioReturn } from '../testing/consents.ts';
-import { acmeViewer, grace, harness, operationNamed } from '../testing/harness.ts';
+import { acmeReader, grace, harness, operationNamed } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -105,7 +105,7 @@ describe('the start of a consent, as the link shows it', () => {
     const reading = () =>
       h.call(
         operationNamed(h.operations, 'read_link'),
-        acmeViewer,
+        acmeReader,
         { id: link.id, token: link.token },
         '2026-10-15T14:05:00.000Z',
       );
@@ -243,7 +243,9 @@ describe('a start refused where the server cannot proceed', () => {
 
   it('is refused for a host the rules do not allow among the endpoints of the metadata, before the person is sent anywhere', async () => {
     const fake = await served({ endpointHost: 'localhost' });
-    const h = consentHarnessAt(fake, { policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] }) });
+    const h = consentHarnessAt(fake, {
+      policy: loopbackPolicyOf({ allowed_hosts: ['127.0.0.1'], private_hosts: ['127.0.0.1', 'localhost'] }),
+    });
 
     expect(await starting(h, await added(h, { provider: 'files' }))).toEqual({
       status: 'rejected',

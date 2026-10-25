@@ -24,6 +24,7 @@ import {
 import { registeredClientsOf, RegisteredClientsSchema } from '../registered-clients/registered-clients.ts';
 import { CredentialKindSchema, type CredentialKind } from '../registry/credential.ts';
 import { AddedProvidersSchema, type AddedProviders } from './added-providers.ts';
+import { canonicalPatternOf, HostPatternSchema, PrivateHostPatternSchema } from './host-patterns.ts';
 
 export const connectionsSetting = 'CONNECTIONS';
 
@@ -47,15 +48,6 @@ const writtenAsDefault =
 
 const resolvedToNothing = 'Is empty once its references are substituted; set the variable it refers to';
 
-const hostLabel = '[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?';
-
-const HostPatternSchema = Schema.String.check(
-  heldAsWritten,
-  Schema.isPattern(new RegExp(`^(?:\\*\\.)?${hostLabel}(?:\\.${hostLabel})*$`, 'u'), {
-    message: 'Expected a host, such as crm.example.com, or a host after *. for every host under it',
-  }),
-);
-
 const VariableNameSchema = Schema.String.check(
   heldAsWritten,
   Schema.isPattern(variableNamePattern, { message: 'Expected the name of a variable, such as CRM_API_KEY' }),
@@ -71,6 +63,12 @@ const policyFields = {
     Schema.Array(HostPatternSchema).annotate({
       description:
         'The hosts a connection may reach, each a host or *. and a host for every host under it; every host when left out',
+    }),
+  ),
+  private_hosts: Schema.optionalKey(
+    Schema.Array(PrivateHostPatternSchema).annotate({
+      description:
+        'The hosts inside your network a connection may reach, such as localhost, 10.0.0.5 or *.corp.internal, each as allowed_hosts writes a host; a loopback, private, link-local or reserved address, a name of one label, a name under localhost, local or internal, or a metadata service is refused otherwise. None when left out',
     }),
   ),
   credential_kinds: Schema.optionalKey(
@@ -115,6 +113,7 @@ type Environment = Readonly<Record<string, string | undefined>>;
 export interface ConnectionPolicy {
   readonly peopleMayAdd: boolean;
   readonly allowedHosts: readonly string[] | null;
+  readonly privateHosts: readonly string[];
   readonly credentialKinds: readonly CredentialKind[] | null;
   readonly variables: readonly string[];
 }
@@ -150,10 +149,17 @@ const textOf = Schema.decodeUnknownSync(Schema.String);
 export function connectionPolicyOf({
   people_may_add: peopleMayAdd = true,
   allowed_hosts: allowedHosts,
+  private_hosts: privateHosts = [],
   credential_kinds: credentialKinds,
   variables = [],
 }: ConnectionPolicyFields): ConnectionPolicy {
-  return { peopleMayAdd, allowedHosts: allowedHosts ?? null, credentialKinds: credentialKinds ?? null, variables };
+  return {
+    peopleMayAdd,
+    allowedHosts: allowedHosts ?? null,
+    privateHosts: privateHosts.map((pattern) => canonicalPatternOf(pattern)),
+    credentialKinds: credentialKinds ?? null,
+    variables,
+  };
 }
 
 function ownVariableProblems(

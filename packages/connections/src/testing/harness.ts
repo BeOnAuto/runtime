@@ -17,10 +17,10 @@ import { Array as Arr, DateTime, Effect, Layer, Logger, Option, Redacted } from 
 import { TestClock } from 'effect/testing';
 
 import { makeConnectionOperations, type ConnectionOperations } from '../operations/connection-operations.ts';
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { harnessConsentOf, keptSecrets, type KeptSecrets, type HarnessConsenting } from './harness-services.ts';
+import { loopbackPolicyOf } from './loopback-policy.ts';
 
 const firstMoment = '2026-10-15T14:00:00.000Z';
 
@@ -89,7 +89,7 @@ export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...gi
   );
   const operations = makeConnectionOperations({
     secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicyOf({}),
     fileEntries: ['wiki'],
     modelProviders: ['openai'],
     providers: fixtureProviders,

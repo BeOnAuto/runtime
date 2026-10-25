@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, adding, billing, crm, issuesIn, notes, statusesOf } from '../testing/additions.ts';
 import { acmeReader, ada, harness, operationNamed } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 describe('the answer to adding a connection', () => {
   it('is the connection pending, added by the caller, and the time its link expires, ten minutes on', async () => {
@@ -200,7 +200,7 @@ describe('the permission to add a connection', () => {
 
 describe('the policy of the runtime, of who may add', () => {
   it('refuses every addition where people may not add connections', async () => {
-    const h = harness({ policy: connectionPolicyOf({ people_may_add: false }) });
+    const h = harness({ policy: loopbackPolicyOf({ people_may_add: false }) });
 
     expect(await adding(h, crm)).toEqual({
       status: 'rejected',
@@ -212,7 +212,7 @@ describe('the policy of the runtime, of who may add', () => {
 
 describe('the policy of the runtime, of the hosts', () => {
   it('refuses a host no pattern allows, the hosts of an HTTP API each, and takes a host under a *. pattern', async () => {
-    const h = harness({ policy: connectionPolicyOf({ allowed_hosts: ['*.example.com', 'billing.example.com'] }) });
+    const h = harness({ policy: loopbackPolicyOf({ allowed_hosts: ['*.example.com', 'billing.example.com'] }) });
     const elsewhere = { ...billing, entry: { ...billing.entry, base_url: 'https://api.billing.example.org' } };
     const documentAlone = { ...billing, name: 'billing-document', entry: { document: billing.entry.document } };
     const apex = { ...notes, entry: { url: 'https://example.com/mcp' } };
@@ -232,7 +232,7 @@ describe('the policy of the runtime, of the hosts', () => {
   });
 
   it('refuses the issuer of client credentials where no pattern allows it, since the client secret goes there', async () => {
-    const h = harness({ policy: connectionPolicyOf({ allowed_hosts: ['*.example.com'] }) });
+    const h = harness({ policy: loopbackPolicyOf({ allowed_hosts: ['*.example.com'] }) });
     const issuedElsewhere = { ...billing, credential: { ...billing.credential, issuer: 'https://login.example.org' } };
 
     expect(await adding(h, issuedElsewhere)).toMatchObject({
@@ -242,7 +242,7 @@ describe('the policy of the runtime, of the hosts', () => {
   });
 
   it('says when it allows no host', async () => {
-    const h = harness({ policy: connectionPolicyOf({ allowed_hosts: [] }) });
+    const h = harness({ policy: loopbackPolicyOf({ allowed_hosts: [] }) });
 
     expect(await adding(h, notes)).toMatchObject({
       detail: 'A connection may not reach the host notes.example.com on this runtime, which allows no host',
@@ -256,7 +256,7 @@ function naming(variable: string) {
 
 describe('the policy of the runtime, of the variables a reference names', () => {
   it('takes a reference to a variable it lists, and refuses one it does not, or every one where it lists none', async () => {
-    const listing = harness({ policy: connectionPolicyOf({ variables: ['NOTES_API_KEY', 'WIKI_TOKEN'] }) });
+    const listing = harness({ policy: loopbackPolicyOf({ variables: ['NOTES_API_KEY', 'WIKI_TOKEN'] }) });
 
     expect(await adding(listing, naming('NOTES_API_KEY'))).toMatchObject({ status: 'succeeded' });
     expect(await adding(listing, { ...naming('CRM_API_KEY'), name: 'crm-key' })).toEqual({
@@ -276,8 +276,8 @@ describe('the policy of the runtime, of the variables a reference names', () => 
 
 describe('the policy of the runtime, of the kinds of credential', () => {
   it('refuses a kind it does not list, and says when it lists none', async () => {
-    const kinds = harness({ policy: connectionPolicyOf({ credential_kinds: ['none', 'reference'] }) });
-    const none = harness({ policy: connectionPolicyOf({ credential_kinds: [] }) });
+    const kinds = harness({ policy: loopbackPolicyOf({ credential_kinds: ['none', 'reference'] }) });
+    const none = harness({ policy: loopbackPolicyOf({ credential_kinds: [] }) });
 
     expect(await adding(kinds, crm)).toMatchObject({
       reason: 'forbidden',

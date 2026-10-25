@@ -14,7 +14,11 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
 import { secretsKey } from '../testing/records/kept-credentials.ts';
 import { connectedByConsent, consentStartedBy, servedStudioReturn } from '../testing/servers/consents-over-http.ts';
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  servingReasoning,
+  type ReasoningServer,
+  connectionsReachingTheLoopback,
+} from '../testing/servers/reasoning-server.ts';
 
 const runtimeAddress = 'https://runtime.example.com';
 
@@ -27,7 +31,7 @@ type Environment = Readonly<Record<string, string>>;
 function documentedAt(fake: FakeMcpServer): Environment {
   const way = { kind: 'authorization', issuer: fake.origin, scope: 'files.read', clients: ['metadata_document'] };
   return {
-    CONNECTIONS: JSON.stringify({
+    CONNECTIONS: connectionsReachingTheLoopback({
       providers: [
         {
           name: 'files',
@@ -144,7 +148,7 @@ function audiencesServedBy(api: FakeApiServer): Environment {
     credentials: [{ ...way, issuer }],
   };
   return {
-    CONNECTIONS: JSON.stringify({
+    CONNECTIONS: connectionsReachingTheLoopback({
       registered_clients: [{ issuers: [issuer], client_id: 'auto-runtime', client_secret: '${AUDIENCES_SECRET}' }],
       providers: [provider],
     }),

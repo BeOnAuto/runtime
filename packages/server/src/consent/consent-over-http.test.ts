@@ -9,7 +9,12 @@ import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vites
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { connectedByConsent, linkAddedBy, servedStudioReturn } from '../testing/servers/consents-over-http.ts';
-import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  noNetwork,
+  servingReasoning,
+  type ReasoningServer,
+  connectionsReachingTheLoopback,
+} from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
 
@@ -107,7 +112,7 @@ const KeptTokensSchema = Schema.fromJsonString(
 
 function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> {
   return {
-    CONNECTIONS: JSON.stringify({
+    CONNECTIONS: connectionsReachingTheLoopback({
       registered_clients: [
         { issuers: [fake.origin], client_id: 'auto-runtime', client_secret: '${FILES_CLIENT_SECRET}' },
       ],

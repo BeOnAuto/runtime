@@ -6,7 +6,11 @@ import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { secretsKey } from '../testing/records/kept-credentials.ts';
 import { consentStartedBy } from '../testing/servers/consents-over-http.ts';
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  servingReasoning,
+  type ReasoningServer,
+  connectionsReachingTheLoopback,
+} from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
 
@@ -20,7 +24,7 @@ const ListedSchema = Schema.Struct({
 
 function filesAt({ fake }: Pick<ThroughAuto, 'fake'>): Environment {
   return {
-    CONNECTIONS: JSON.stringify({
+    CONNECTIONS: connectionsReachingTheLoopback({
       providers: [
         {
           name: 'files',

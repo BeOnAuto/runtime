@@ -9,9 +9,10 @@ import { pendingWords } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
+import type { ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, billing, crm, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
 
@@ -21,7 +22,7 @@ function sourceOf(h: Harness, changes: Partial<Omit<ServingServices, 'registry'>
   return makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicyOf({}),
     variables: new Map(),
     modelProviders: ['openai'],
     ...fixtureServing,
@@ -30,7 +31,7 @@ function sourceOf(h: Harness, changes: Partial<Omit<ServingServices, 'registry'>
 }
 
 function policyOf(fields: ConnectionPolicyFields) {
-  return { policy: connectionPolicyOf(fields) };
+  return { policy: loopbackPolicyOf(fields) };
 }
 
 async function connected(h: Harness, input: unknown, given: Readonly<Record<string, string>> = {}): Promise<string> {
@@ -275,5 +276,22 @@ describe('the hosts a connected connection reaches', () => {
       undefined,
       'A connection may not reach the host other.example.org on this runtime, which allows *.example.com',
     ]);
+  });
+
+  it('are never inside the network, however a request or a redirect writes the address, unless private_hosts lists it', async () => {
+    const h = harness();
+    const id = await connected(h, notes);
+    const inside = [
+      'http://169.254.169.254/latest/meta-data/iam/security-credentials/',
+      'http://metadata.google.internal/computeMetadata/v1/',
+      'http://2852039166/',
+      'http://[::ffff:a9fe:a9fe]/',
+      'http://localhost:5555/',
+      'http://192.168.1.1/',
+    ];
+
+    const { reaches } = await connectedOf(sourceOf(h, policyOf({ private_hosts: ['192.168.1.1'] })), id);
+
+    expect(inside.map((url) => reaches(url) === undefined)).toEqual([false, false, false, false, false, true]);
   });
 });

@@ -12,7 +12,7 @@ import type { HadSources } from '@on.auto/tool-servers';
 import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
-import { hostRefusalOf } from '../policy/policy-rules.ts';
+import { hostRefusalOf, type HostRules } from '../policy/policy-rules.ts';
 import { consentUnsetUp, isConsentUnsetUp } from './consent-offered.ts';
 import { listedWayOf, type ListedPlaceholder, type ListedProvider, type ListedWay } from './listed-providers.ts';
 
@@ -45,23 +45,18 @@ function couldBeAllowed(pattern: string, template: string): boolean {
   return lowered.startsWith('*.') ? fixedTailOf(template).endsWith(lowered.slice(1)) : shapeOf(template).test(lowered);
 }
 
-function couldReach(allowedHosts: readonly string[] | null, host: string): boolean {
-  if (allowedHosts === null) {
-    return true;
+function couldReach(rules: HostRules, host: string): boolean {
+  if (placeholdersIn(host).length === 0) {
+    return hostRefusalOf(rules, host.toLowerCase()) === undefined;
   }
-  return placeholdersIn(host).length === 0
-    ? hostRefusalOf(allowedHosts, host.toLowerCase()) === undefined
-    : allowedHosts.some((pattern) => couldBeAllowed(pattern, host));
+  return rules.allowedHosts === null || rules.allowedHosts.some((pattern) => couldBeAllowed(pattern, host));
 }
 
-function isListed(
-  provider: Provider,
-  way: CredentialWay,
-  { allowedHosts, credentialKinds }: ConnectionPolicy,
-): boolean {
+function isListed(provider: Provider, way: CredentialWay, policy: ConnectionPolicy): boolean {
+  const { credentialKinds } = policy;
   return (
     (credentialKinds === null || credentialKinds.includes(way.kind)) &&
-    hostAlternativesOf(provider, way).some((hosts) => hosts.every((host) => couldReach(allowedHosts, host)))
+    hostAlternativesOf(provider, way).some((hosts) => hosts.every((host) => couldReach(policy, host)))
   );
 }
 

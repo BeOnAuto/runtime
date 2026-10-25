@@ -9,7 +9,12 @@ import {
   connectedWith,
   connectionsOfAcme,
 } from '../testing/servers/connected-servers.ts';
-import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  servingReasoning,
+  type ReasoningServer,
+  connectionsReachingTheLoopback,
+} from '../testing/servers/reasoning-server.ts';
 
 const crmKey = 'crm-api-key-6e2b9d41';
 
@@ -39,7 +44,7 @@ function reasoningFunction(tool: string): string {
 }
 
 async function serving(...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
-  const server = await servingReasoning(replies);
+  const server = await servingReasoning(replies, { CONNECTIONS: connectionsReachingTheLoopback() });
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, {

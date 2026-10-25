@@ -37,6 +37,7 @@ function refusalOf(path: string, environment: Readonly<Record<string, string>> =
 const policy = `connections:
   people_may_add: true
   allowed_hosts: ['*.example.com', 'crm.example.com']
+  private_hosts: [localhost, '*.corp.internal']
   credential_kinds: [none, reference, secret, client_credentials]
   variables: [CRM_API_KEY]
 `;
@@ -48,6 +49,7 @@ describe('the connections section of the configuration file', () => {
     expect(readSettingsOf({ CONFIG_FILE: fileOf(policy) }).connections).toEqual({
       peopleMayAdd: true,
       allowedHosts: ['*.example.com', 'crm.example.com'],
+      privateHosts: ['localhost', '*.corp.internal'],
       credentialKinds: ['none', 'reference', 'secret', 'client_credentials'],
       variables: ['CRM_API_KEY'],
     });

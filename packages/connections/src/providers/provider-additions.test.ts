@@ -3,9 +3,9 @@ import { shippedDocumentOf } from '@on.auto/tool-servers';
 import { fakeApiDocument } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, adding, issuesIn } from '../testing/additions.ts';
 import { harness } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 const acmeTracker = { provider: 'tracker', placeholders: { site: 'acme' } };
 
@@ -200,12 +200,12 @@ describe('a provider whose addition the checks refuse', () => {
 describe('the rules a connection added by a provider passes', () => {
   it('are those of a server given by hand: the hosts, the kinds and the names the file and the org hold', async () => {
     const h = harness({
-      policy: connectionPolicyOf({ allowed_hosts: ['*.example.org'], credential_kinds: ['secret'] }),
+      policy: loopbackPolicyOf({ allowed_hosts: ['*.example.org'], credential_kinds: ['secret'] }),
     });
 
     expect([
       await adding(h, acmeTracker),
-      await adding(harness({ policy: connectionPolicyOf({ credential_kinds: ['secret'] }) }), {
+      await adding(harness({ policy: loopbackPolicyOf({ credential_kinds: ['secret'] }) }), {
         ...acmeTracker,
         credential: { kind: 'none' },
       }),
@@ -226,7 +226,7 @@ describe('the rules a connection added by a provider passes', () => {
 
   it('take the document beside the entries of a provider, which is no host, and judge the host its calls go to', async () => {
     const h = harness({
-      policy: connectionPolicyOf({ allowed_hosts: ['*.example.org'] }),
+      policy: loopbackPolicyOf({ allowed_hosts: ['*.example.org'] }),
       providers: { ...providersOf(notesApi), documents: notesShipped },
     });
 
@@ -237,11 +237,9 @@ describe('the rules a connection added by a provider passes', () => {
   });
 
   it('say which provider could not be connected in the words of the refusal', async () => {
-    expect(await adding(harness({ policy: connectionPolicyOf({ people_may_add: false }) }), acmeTracker)).toMatchObject(
-      {
-        reason: 'forbidden',
-        detail: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
-      },
-    );
+    expect(await adding(harness({ policy: loopbackPolicyOf({ people_may_add: false }) }), acmeTracker)).toMatchObject({
+      reason: 'forbidden',
+      detail: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
+    });
   });
 });

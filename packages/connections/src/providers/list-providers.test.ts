@@ -3,7 +3,7 @@ import { providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
+import type { ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import {
   acmeViewer,
   ada,
@@ -12,6 +12,7 @@ import {
   operationNamed,
   type HarnessOptions,
 } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 const acmeKey: CallerIdentity = { ...ada, id: 'acme-key' };
 
@@ -101,7 +102,7 @@ async function addingOf(options: HarnessOptions, caller = ada) {
 }
 
 async function waysListedUnder(policy: ConnectionPolicyFields): Promise<readonly string[]> {
-  const answer = await listing({ policy: connectionPolicyOf(policy), providers: providersOf(tracker, regions) });
+  const answer = await listing({ policy: loopbackPolicyOf(policy), providers: providersOf(tracker, regions) });
   return listedOf(answer).output.providers.map(
     ({ name, credentials }) => `${name}: ${credentials.map(({ kind }) => kind).join(', ')}`,
   );
@@ -183,7 +184,7 @@ describe('whether a caller may add', () => {
       await addingOf({}, acmeKey),
       await addingOf({ access: 'keys' }),
       await addingOf({}, adaReading),
-      await addingOf({ policy: connectionPolicyOf({ people_may_add: false }) }),
+      await addingOf({ policy: loopbackPolicyOf({ people_may_add: false }) }),
       await addingOf({ access: 'local' }, acmeKey),
     ]).toEqual([
       {
@@ -205,7 +206,7 @@ describe('whether a caller may add', () => {
   });
 
   it('is refused for the permission first, then for the adder, then where people may not add, as add_connection is', async () => {
-    const nobodyAdds = connectionPolicyOf({ people_may_add: false });
+    const nobodyAdds = loopbackPolicyOf({ people_may_add: false });
 
     expect([
       await addingOf({ access: 'keys', policy: nobodyAdds }, adaReading),

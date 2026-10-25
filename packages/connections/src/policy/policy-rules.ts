@@ -1,5 +1,5 @@
 import { isSignedInPerson } from '@on.auto/identity';
-import { Forbidden, articled, listed, type CallerIdentity } from '@on.auto/operations';
+import { Forbidden, articled, listed, namesAPrivateHost, type CallerIdentity } from '@on.auto/operations';
 import { wayAddresses } from '@on.auto/providers';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
@@ -32,7 +32,17 @@ function hostsOf({ type, entry, credential }: Addition, documentServer: string |
   });
 }
 
-export function hostRefusalOf(allowedHosts: readonly string[] | null, host: string): Forbidden | undefined {
+export type HostRules = Pick<ConnectionPolicy, 'allowedHosts' | 'privateHosts'>;
+
+function privateHostRefusalOf(privateHosts: readonly string[], host: string): Forbidden | undefined {
+  return !namesAPrivateHost(host) || privateHosts.some((pattern) => matches(pattern, host))
+    ? undefined
+    : new Forbidden({
+        detail: `A connection may not reach the host ${host} on this runtime: it is a loopback, private, link-local or reserved address, a local name or a metadata service, of which the runtime allows ${allowing(privateHosts, 'none')}`,
+      });
+}
+
+function allowedHostRefusalOf(allowedHosts: readonly string[] | null, host: string): Forbidden | undefined {
   return allowedHosts === null || allowedHosts.some((pattern) => matches(pattern, host))
     ? undefined
     : new Forbidden({
@@ -40,17 +50,17 @@ export function hostRefusalOf(allowedHosts: readonly string[] | null, host: stri
       });
 }
 
-export function reachesUnder({ allowedHosts }: ConnectionPolicy): (url: string) => string | undefined {
-  return (url) => hostRefusalOf(allowedHosts, new URL(url).hostname)?.detail;
+export function hostRefusalOf({ allowedHosts, privateHosts }: HostRules, host: string): Forbidden | undefined {
+  return privateHostRefusalOf(privateHosts, host) ?? allowedHostRefusalOf(allowedHosts, host);
 }
 
-function hostRefusal(
-  allowedHosts: readonly string[] | null,
-  addition: Addition,
-  documentServer: string | undefined,
-): Forbidden | undefined {
-  const refused = hostsOf(addition, documentServer).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
-  return refused === undefined ? undefined : hostRefusalOf(allowedHosts, refused);
+export function reachesUnder(rules: HostRules): (url: string) => string | undefined {
+  return (url) => hostRefusalOf(rules, new URL(url).hostname)?.detail;
+}
+
+function hostRefusal(rules: HostRules, addition: Addition, documentServer: string | undefined): Forbidden | undefined {
+  const refused = hostsOf(addition, documentServer).find((host) => hostRefusalOf(rules, host) !== undefined);
+  return refused === undefined ? undefined : hostRefusalOf(rules, refused);
 }
 
 const variablesRule = 'A reference may name only a variable the operator lists in connections.variables';
@@ -100,7 +110,7 @@ function rulesRefusalOf(
   documentServer: string | undefined,
 ): Forbidden | undefined {
   return (
-    hostRefusal(policy.allowedHosts, addition, documentServer) ??
+    hostRefusal(policy, addition, documentServer) ??
     kindRefusal(policy.credentialKinds, addition) ??
     referenceRefusal(policy.variables, addition)
   );

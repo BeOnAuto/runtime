@@ -10,7 +10,6 @@ import { fakeApiDocument } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added, adding, issuesIn, notes } from '../testing/additions.ts';
 import {
@@ -22,6 +21,7 @@ import {
   operationNamed,
   type Harness,
 } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 const acmeLedgers = { provider: 'ledgers', placeholders: { tenant: 'acme', manager: '1234567890' } };
 
@@ -42,7 +42,7 @@ function listedBy(
   const source = makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
-    policy: connectionPolicyOf(allowedHosts === undefined ? {} : { allowed_hosts: allowedHosts }),
+    policy: loopbackPolicyOf(allowedHosts === undefined ? {} : { allowed_hosts: allowedHosts }),
     variables: new Map(),
     modelProviders: ['openai'],
     providers,
@@ -228,7 +228,7 @@ describe('a provider whose document beside the entries names its server', () => 
       'A connection may not reach the host api.notes.example.com on this runtime, which allows *.example.org';
 
     expect([
-      await adding(harness({ providers, policy: connectionPolicyOf({ allowed_hosts: ['*.example.org'] }) }), {
+      await adding(harness({ providers, policy: loopbackPolicyOf({ allowed_hosts: ['*.example.org'] }) }), {
         provider: 'notes-api',
       }),
       await settingsOf(h, id, { providers, allowedHosts: ['*.example.org'] }),

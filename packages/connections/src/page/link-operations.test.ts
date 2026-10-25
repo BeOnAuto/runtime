@@ -1,13 +1,14 @@
+import type { CallerIdentity } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, billing, crm, notes } from '../testing/additions.ts';
-import { acmeViewer, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { acmeReader, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 
 const elevenMinutesLater = '2026-10-15T14:11:00.000Z';
 
 function reading(h: Harness, id: string, token: string, at?: string) {
-  return h.call(operationNamed(h.operations, 'read_link'), acmeViewer, { id, token }, at);
+  return h.call(operationNamed(h.operations, 'read_link'), acmeReader, { id, token }, at);
 }
 
 function approving(h: Harness, id: string, token: string, caller = ada) {
@@ -78,7 +79,7 @@ describe('reading the link of a connection whose credential is not consent', () 
 
 describe('approving a connection', () => {
   it('connects one that takes no credential to give, and uses its link up', async () => {
-    const h = harness({ policy: connectionPolicyOf({ variables: ['NOTES_API_KEY'] }) });
+    const h = harness({ policy: loopbackPolicyOf({ variables: ['NOTES_API_KEY'] }) });
     const { id, token } = await added(h, notes);
     const reference = await added(h, {
       ...notes,
@@ -124,5 +125,46 @@ describe('approving a connection', () => {
       detail: 'The connection notes was added by another person, and only they may approve it',
     });
     expect(await approving(local, here.id, here.token, grace)).toMatchObject({ output: { status: 'connected' } });
+  });
+});
+
+function adaAs(permissions: CallerIdentity['permissions']): CallerIdentity {
+  return { ...ada, permissions };
+}
+
+const adaReading = adaAs(['org:read']);
+
+const adaViewing = adaAs(['playbook:read']);
+
+const adaWritingPlaybooks = adaAs(['playbook:write']);
+
+describe('the permissions the operations of a link take', () => {
+  it('read the link with org:read, and refuse a caller who may only read or write playbooks', async () => {
+    const h = harness();
+    const { id, token } = await added(h, crm);
+
+    const outcomes = await Promise.all(
+      [ada, adaReading, adaViewing, adaWritingPlaybooks].map(
+        async (caller) => (await h.call(operationNamed(h.operations, 'read_link'), caller, { id, token })).status,
+      ),
+    );
+
+    expect(outcomes).toEqual(['succeeded', 'succeeded', 'rejected', 'rejected']);
+  });
+
+  it('approve, give the credential and start or finish a consent with org:write alone, as add_connection takes, even for the person who added it', async () => {
+    const h = harness();
+    const { id, token } = await added(h, notes);
+    const commands = ['approve', 'give_credential', 'start', 'finish'];
+    const callers = [adaReading, adaViewing, adaWritingPlaybooks];
+
+    const outcomes = await Promise.all(
+      commands.flatMap((name) =>
+        callers.map((caller) => h.call(operationNamed(h.operations, name), caller, { id, token })),
+      ),
+    );
+
+    expect(outcomes).toMatchObject(commands.flatMap(() => callers.map(() => ({ reason: 'forbidden' }))));
+    expect(await approving(h, id, token)).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
   });
 });

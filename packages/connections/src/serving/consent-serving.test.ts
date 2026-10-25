@@ -11,7 +11,6 @@ import { clockAt, manualTimer, type FakeMcpServer } from '@on.auto/tool-servers/
 import { Effect, Function, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added } from '../testing/additions.ts';
 import {
   audiencesAt,
@@ -22,6 +21,7 @@ import {
   studioReturn,
 } from '../testing/consents.ts';
 import { harnessPages, type Harness } from '../testing/harness.ts';
+import { loopbackPolicyOf } from '../testing/loopback-policy.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -63,7 +63,7 @@ function sourceOf(h: Harness) {
   return makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicyOf({}),
     pages: harnessPages,
     variables: new Map(),
     modelProviders: [],

@@ -209,6 +209,21 @@ describe('the transport of a server', () => {
     ]);
   });
 
+  it("refuses every header that opens a cloud's instance metadata service, in any case", () => {
+    const headers = {
+      'Metadata-Flavor': 'Google',
+      Metadata: 'true',
+      'X-Google-Metadata-Request': 'True',
+      'X-aws-ec2-metadata-token': '${GRAPH_API_KEY}',
+      'X-AWS-EC2-METADATA-TOKEN-TTL-SECONDS': '${GRAPH_API_KEY}',
+    };
+    const refusal = "A header that opens a cloud's instance metadata service, which no tool server is sent";
+
+    expect(problemsOf({ graph: { url: 'https://graph.example.com/mcp', org: 'acme', headers } })).toEqual(
+      Object.keys(headers).map((header) => `TOOL_SERVERS: /graph/headers/${header}: ${refusal}`),
+    );
+  });
+
   it('refuses a blank command and an environment variable that is not a name', () => {
     expect(problemsOf({ limitless: { ...limitless, command: ' ', env: { '1KEY': 'one', 'A-B': 'two' } } })).toEqual([
       'TOOL_SERVERS: /limitless/command: Expected a command',

@@ -8,7 +8,12 @@ import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 import { secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
-import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  servingReasoning,
+  type ReasoningServer,
+  connectionsReachingTheLoopback,
+} from '../testing/servers/reasoning-server.ts';
 
 const crmKey = 'crm-api-key-6e2b9d41';
 
@@ -29,6 +34,7 @@ async function servedOn(
   const server = await servingReasoning([], {
     LEDGER_FILE: fileName,
     SECRETS_KEY: secretsKey.toString('base64'),
+    CONNECTIONS: connectionsReachingTheLoopback(),
     ...environment,
   });
   const stopping: { done?: Promise<void> } = {};
@@ -124,7 +130,9 @@ describe('a connection whose credential the secret store of a restarted runtime 
 describe('a connection the rules of a restarted runtime no longer allow', () => {
   it('is refused in the sentence of the rule, as adding it would be, and listed unavailable in it', async () => {
     const { fileName } = await connectedBeforeARestart();
-    const restarted = await servedOn(fileName, { CONNECTIONS: JSON.stringify({ credential_kinds: ['none'] }) });
+    const restarted = await servedOn(fileName, {
+      CONNECTIONS: connectionsReachingTheLoopback({ credential_kinds: ['none'] }),
+    });
     const rule = 'A connection may not take a secret credential on this runtime, which allows none';
 
     const refused = await executed(restarted);
