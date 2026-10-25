@@ -1,11 +1,18 @@
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { ActedOnRunContextSchema, Conflict, factOf, type Context, type Decider } from '@on.auto/operations';
-import { Effect, Result, Schema } from 'effect';
+import { Data, Effect, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
-import { decisionLoop, streamPortsOf, VersionConflict, type DecisionLoop, type Streams } from './index.ts';
+import {
+  decisionLoop,
+  isVersionConflict,
+  streamPortsOf,
+  VersionConflict,
+  type DecisionLoop,
+  type Streams,
+} from './index.ts';
 import { stamped } from './testing/happenings.ts';
 import { outcomeOf } from './testing/open-ledger.ts';
 import { tally, type Amounts } from './testing/tally.ts';
@@ -176,14 +183,16 @@ function aheadOnce(streams: Streams): Streams {
   };
 }
 
-function inConflictOnce(streams: Streams): Streams {
+class ConflictOfAnotherCopy extends Data.TaggedError('version_conflict') {}
+
+function inConflictOnce(streams: Streams, conflict: () => Error): Streams {
   const met = { conflict: false };
   return {
     ...streams,
     append: async (stream, events, place) => {
       if (!met.conflict) {
         met.conflict = true;
-        throw new VersionConflict();
+        throw conflict();
       }
       await streams.append(stream, events, place);
     },
@@ -209,11 +218,17 @@ describe('the stream reader and writer over any streams', () => {
     expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 101, version: 2 });
   });
 
-  it("decide again when the streams reject an append with the ledger's VersionConflict, as streams a shell lends across a boundary do", async () => {
-    const lent = await lentStreams();
-    const { execute } = streamPortsOf(inConflictOnce(lent));
+  it.each([
+    ['VersionConflict', () => new VersionConflict()],
+    ['an error of another copy of the class, with its tag', () => new ConflictOfAnotherCopy()],
+  ])(
+    'decide again when the streams reject an append with %s, as streams a shell lends across a boundary do',
+    async (_named, conflict) => {
+      const lent = await lentStreams();
+      const { execute } = streamPortsOf(inConflictOnce(lent, conflict));
 
-    expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1 });
-    expect((await lent.read('tally/1')).version).toBe(1);
-  });
+      expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1 });
+      expect([(await lent.read('tally/1')).version, isVersionConflict(conflict())]).toEqual([1, true]);
+    },
+  );
 });

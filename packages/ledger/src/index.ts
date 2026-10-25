@@ -58,5 +58,5 @@ export { sqliteEventStore, type SQLiteStoreOptions } from './sqlite-event-store.
 export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';
 export { recordedReaderOf } from './recorded/recorded-reader.ts';
 export { sqliteDefinitionStreamsIndexed, sqlitePlanOf } from './recorded/sqlite-plans.ts';
-export { retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
+export { isVersionConflict, retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
 export { streamAppends, streamSignalOf, type StreamAppended, type StreamSignal } from './signal/append-signal.ts';

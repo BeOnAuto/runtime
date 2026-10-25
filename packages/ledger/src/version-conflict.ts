@@ -1,7 +1,13 @@
 import { Conflict } from '@on.auto/operations';
-import { Data, Effect } from 'effect';
+import { Data, Effect, Predicate } from 'effect';
 
-export class VersionConflict extends Data.TaggedError('version_conflict') {}
+const versionConflictTag = 'version_conflict';
+
+export class VersionConflict extends Data.TaggedError(versionConflictTag) {}
+
+export function isVersionConflict(error: unknown): boolean {
+  return Predicate.isTagged(error, versionConflictTag);
+}
 
 const retriesOnVersionConflict = 3;
 

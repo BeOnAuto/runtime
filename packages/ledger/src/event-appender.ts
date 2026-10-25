@@ -3,7 +3,7 @@ import { Effect, type Schema } from 'effect';
 
 import { eventCodecOf } from './event-codec.ts';
 import type { AppendPlace, EncodedEvent, Streams } from './event-store.ts';
-import { VersionConflict } from './version-conflict.ts';
+import { isVersionConflict, VersionConflict } from './version-conflict.ts';
 
 export type EventAppender<Event extends Recorded> = (
   stream: string,
@@ -38,7 +38,7 @@ export function eventAppenderOf<Event extends Recorded>(
           ),
         ),
       ),
-      Effect.catch((error) => (error instanceof VersionConflict ? Effect.fail(error) : Effect.die(error))),
+      Effect.catch((error) => (isVersionConflict(error) ? Effect.fail(new VersionConflict()) : Effect.die(error))),
     );
   };
 }
