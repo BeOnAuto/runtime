@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.21.0](https://github.com/BeOnAuto/runtime/compare/v0.20.0...v0.21.0) (2026-10-25)
+
+
+### Features
+
+* **api:** a call reaches the context a shell makes of its request ([#321](https://github.com/BeOnAuto/runtime/issues/321)) ([8a60a21](https://github.com/BeOnAuto/runtime/commit/8a60a21a57aa2ac3d9af5c465b3e514ee20f298a))
+* **ledger:** the stream reader and writer over any streams are exported ([#321](https://github.com/BeOnAuto/runtime/issues/321)) ([8a60a21](https://github.com/BeOnAuto/runtime/commit/8a60a21a57aa2ac3d9af5c465b3e514ee20f298a))
+* **reasoning:** a shell hands out a run's jobs one at a time, from the facts ([#321](https://github.com/BeOnAuto/runtime/issues/321)) ([8a60a21](https://github.com/BeOnAuto/runtime/commit/8a60a21a57aa2ac3d9af5c465b3e514ee20f298a))
+* **tool-servers:** the tool access and the consent client send a call's requests through its fetch ([#321](https://github.com/BeOnAuto/runtime/issues/321)) ([8a60a21](https://github.com/BeOnAuto/runtime/commit/8a60a21a57aa2ac3d9af5c465b3e514ee20f298a))
+* **workflow-host:** a waiting call is dispatched again before its deadline ends it ([#321](https://github.com/BeOnAuto/runtime/issues/321)) ([8a60a21](https://github.com/BeOnAuto/runtime/commit/8a60a21a57aa2ac3d9af5c465b3e514ee20f298a))
+
 ## [0.20.0](https://github.com/BeOnAuto/runtime/compare/v0.19.0...v0.20.0) (2026-10-24)
 
 
