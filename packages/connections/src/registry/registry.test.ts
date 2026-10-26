@@ -63,6 +63,7 @@ describe('an added connection, as the stream folds it', () => {
         added_at: '2026-10-15T14:00:00.000Z',
         connected_at: null,
         connected_by: null,
+        granted_scope: null,
         broken: null,
       },
       link: { token_sha256: 'a1b2', expires_at: '2026-10-15T14:10:00.000Z' },

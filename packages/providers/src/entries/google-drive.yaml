@@ -1,13 +1,13 @@
 name: google-drive
 title: Google Drive
-description: Search and list recent files in Google Drive, read their metadata, sharing and content, download them, and create and copy files, through Google's Drive MCP server. Of its scopes, Google classifies drive.readonly as restricted.
+description: Search and list the Google Drive files the person opens with Auto or Auto creates, not all of their Drive, read their metadata, sharing and content, download them, and create and copy files, through Google's Drive MCP server.
 website: https://developers.google.com/workspace/drive/api/guides/configure-mcp-server
 type: mcp
 url: https://drivemcp.googleapis.com/mcp/v1
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file
+    scope: https://www.googleapis.com/auth/drive.file
     parameters:
       access_type: offline
       prompt: consent

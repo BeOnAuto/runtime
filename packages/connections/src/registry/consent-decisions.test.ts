@@ -155,3 +155,43 @@ describe('the fold of a consent', () => {
     });
   });
 });
+
+const askingToReadAndWrite: ConnectionEvent = {
+  ...driveAdded,
+  data: {
+    ...driveAdded.data,
+    credential: {
+      kind: 'authorization',
+      issuer: 'https://accounts.drive.example.com',
+      scope: 'files.read files.write',
+    },
+  },
+};
+
+const grantedTheRead: ConnectionEvent = {
+  type: 'connection_connected',
+  data: {
+    connection: 'drive-id',
+    secret_id: 'secret-2',
+    client_id: 'auto-runtime',
+    client_source: 'registered',
+    scope: 'files.read',
+  },
+};
+
+function scopesOf(...events: readonly ConnectionEvent[]) {
+  const connection = fold(...events)?.connection;
+  return { asked: connection?.credential.scope, granted: connection?.granted_scope };
+}
+
+describe('the scopes of a connection of consent, as the stream folds them', () => {
+  it('keep the scope its way asked in the credential and the scope the server granted beside it, so a narrower grant shows', () => {
+    expect([
+      scopesOf(askingToReadAndWrite, linkIssued, started),
+      scopesOf(askingToReadAndWrite, linkIssued, started, grantedTheRead),
+    ]).toEqual([
+      { asked: 'files.read files.write', granted: null },
+      { asked: 'files.read files.write', granted: 'files.read' },
+    ]);
+  });
+});
