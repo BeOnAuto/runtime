@@ -2,6 +2,7 @@ import { Conflict, NotFound, type Context, type DefinitionContext } from '@on.au
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import type { DefinitionCommand } from './definition-commands.ts';
 import type { DefinitionContent, RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionsDecider, definitionTypeStreamOf } from './definitions-decider.ts';
@@ -29,7 +30,8 @@ function ofTheDefinition(name: string, when: Pick<Context, 'by' | 'at'>, version
 }
 
 function created(name: string, content: DefinitionContent): RecordedDefinition {
-  return { type: 'definition_created', data: { content }, context: ofTheDefinition(name, creation, 1) };
+  const data = { content, created_by: recordedAdmin };
+  return { type: 'definition_created', data, context: ofTheDefinition(name, creation, 1) };
 }
 
 const greetCreated = created('greet', hello);
@@ -58,7 +60,9 @@ function contextOf(command: DefinitionCommand, ...history: readonly RecordedDefi
   return echoDefinitions.context(command, registryAfter(...history));
 }
 
-const creatingGreet: DefinitionCommand = { type: 'create', name: 'greet', content: hello, ...creation };
+const asTheAdmin = { ...creation, created_by: recordedAdmin };
+
+const creatingGreet: DefinitionCommand = { type: 'create', name: 'greet', content: hello, ...asTheAdmin };
 
 function updatingGreet(content: DefinitionContent): DefinitionCommand {
   return { type: 'update', name: 'greet', content, ...change };
@@ -69,7 +73,7 @@ const retiringGreet: DefinitionCommand = { type: 'retire', name: 'greet', ...cha
 describe('creating a definition', () => {
   it('records its content, with the definition at version 1, who created it and when as its context', () => {
     expect(decided(creatingGreet)).toStrictEqual(
-      Result.succeed([{ type: 'definition_created', data: { content: hello } }]),
+      Result.succeed([{ type: 'definition_created', data: { content: hello, created_by: recordedAdmin } }]),
     );
     expect(contextOf(creatingGreet)).toStrictEqual(greetCreated.context);
   });
@@ -195,7 +199,7 @@ describe('the definitions of a capability', () => {
         source: '{"greeting": "Howdy"}',
         overview: 'Greets with a howdy.',
         created_at: '2026-10-01T09:00:00.000Z',
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: '2026-10-03T08:00:00.000Z',
         retired_at: '2026-10-03T08:00:00.000Z',
       },
@@ -206,7 +210,7 @@ describe('the definitions of a capability', () => {
         source: '{"greeting": "Howdy"}',
         overview: 'Greets with a howdy.',
         created_at: '2026-10-01T09:00:00.000Z',
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: '2026-10-01T09:00:00.000Z',
       },
     ]);
@@ -266,7 +270,7 @@ describe('the definitions of a playbook that start on their own', () => {
     ]).toEqual([
       Result.fail(beyondTheBound),
       Result.fail(beyondTheBound),
-      Result.succeed([{ type: 'definition_created', data: { content: hello } }]),
+      Result.succeed([{ type: 'definition_created', data: { content: hello, created_by: recordedAdmin } }]),
     ]);
   });
 

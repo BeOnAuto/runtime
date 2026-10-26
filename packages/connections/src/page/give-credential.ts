@@ -3,7 +3,7 @@ import { Effect, Redacted } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
+import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
@@ -48,6 +48,7 @@ export function defineGiveCredential({
       const connected = yield* recordInRegistry({
         type: 'give',
         ...use,
+        connected_by: yield* recordedCaller,
         secret_id: secretId,
         ...algorithm,
         ...client,

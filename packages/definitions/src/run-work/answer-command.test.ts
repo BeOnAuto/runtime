@@ -23,6 +23,8 @@ import {
 } from '../testing/asked-runs.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
 
+const thePlaybook = { id: 'playbook:alpha', name: 'alpha' };
+
 describe('the answer to a request a run waits on', () => {
   it('is one fact on the run, kept by the run with who gave it and when, and the same answer again records nothing', async () => {
     const { record, recorded, state } = await asked();
@@ -32,12 +34,12 @@ describe('the answer to a request a run waits on', () => {
 
     expect(again.id).toBe(answered.id);
     expect((await recorded()).slice(2).map(({ type, data }) => [type, data])).toEqual([
-      ['request_answered', { answer: { choice: 'approve' }, claimed_for: 'ada' }],
+      ['request_answered', { answer: { choice: 'approve' }, claimed_for: 'ada', answered_by: thePlaybook }],
     ]);
     expect((await state())?.answer).toEqual({
       answer: { choice: 'approve' },
       claimedFor: 'ada',
-      by: 'playbook:alpha',
+      by: thePlaybook,
       at: answered.at,
     });
   });
@@ -53,7 +55,7 @@ describe('the answer to a request a run waits on', () => {
     expect((await state())?.answer).toEqual({
       answer: { choice: 'reject' },
       reply,
-      by: 'playbook:alpha',
+      by: thePlaybook,
       at: answered.at,
     });
   });
@@ -143,13 +145,16 @@ describe('the answer a caller gives to a request a run waits on', () => {
     };
     const answer = playbookBoundAnswerer(inAlpha);
 
-    await Effect.runPromise(answer(run.id.toUpperCase(), { answer: { choice: 'approve' } }, 'ada', lineage));
+    const ada = { id: 'person:ada', name: 'Ada Lovelace' };
+    await Effect.runPromise(answer(run.id.toUpperCase(), { answer: { choice: 'approve' } }, ada, lineage));
 
     expect((await recorded()).slice(2).map(({ type, data, context }) => [type, data, context.by])).toEqual([
-      ['request_answered', { answer: { choice: 'approve' } }, 'ada'],
+      ['request_answered', { answer: { choice: 'approve' }, answered_by: ada }, 'person:ada'],
     ]);
-    expect(await attempted(answer(run.id, { answer: { choice: 'reject' } }, 'grace', lineage))).toEqual(
-      Result.fail(answeredAlready),
-    );
+    expect(
+      await attempted(
+        answer(run.id, { answer: { choice: 'reject' } }, { id: 'person:grace', name: 'Grace Hopper' }, lineage),
+      ),
+    ).toEqual(Result.fail(answeredAlready));
   });
 });

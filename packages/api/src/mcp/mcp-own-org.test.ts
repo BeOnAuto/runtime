@@ -93,13 +93,13 @@ describe('the tools of /mcp', () => {
     expect(tools.filter(({ outputSchema }) => outputSchema !== undefined)).toEqual([]);
   });
 
-  it("carry the instructions of the caller's own org", async () => {
+  it("carry the instructions of the caller's own org, opened with the key the connection acts as", async () => {
     const instructions = await asKey(acmeAdmin.key, (session) => Promise.resolve(session.instructions));
 
     expect(instructions).toBe(
-      instructionsFor('own org', { orgTools, playbookTools }, [{ type: 'notes', noun: 'note', guide: 'notebook' }]),
+      `This connection acts as the key acme-admin in the org acme. ${instructionsFor('own org', { orgTools, playbookTools }, [{ type: 'notes', noun: 'note', guide: 'notebook' }])}`,
     );
-    expect(instructions).toContain("This connection acts in the caller's own org.");
+    expect(instructions).toContain("The org is the caller's own.");
   });
 });
 

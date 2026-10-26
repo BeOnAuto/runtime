@@ -43,7 +43,7 @@ describe('update_playbook', () => {
         description: '',
         status: 'active',
         created_at: firstMoment,
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: later,
       },
     });

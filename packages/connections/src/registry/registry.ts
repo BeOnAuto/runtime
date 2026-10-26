@@ -38,7 +38,7 @@ export type Registry = ReadonlyMap<string, KeptConnection>;
 export const initialRegistry: Registry = new Map();
 
 function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
-  const { connection: id, name, server_type: type, provider, placeholders, entry, credential } = data;
+  const { connection: id, name, server_type: type, provider, placeholders, entry, credential, added_by } = data;
   return {
     connection: {
       id,
@@ -49,7 +49,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       entry,
       credential,
       status: 'pending',
-      added_by: context.by,
+      added_by,
       added_at: context.at,
       connected_at: null,
       connected_by: null,
@@ -92,7 +92,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       credential: credentialOf(kept, event),
       status: 'connected',
       connected_at: context.at,
-      connected_by: context.by,
+      connected_by: data.connected_by,
       granted_scope: data.scope ?? null,
       broken: null,
     },

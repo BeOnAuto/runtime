@@ -29,7 +29,7 @@ function listed(name: string) {
     status: 'active',
     media_type: 'text/plain',
     created_at: firstMoment,
-    created_by: 'acme-admin',
+    created_by: { id: 'acme-admin', name: 'acme-admin' },
     updated_at: firstMoment,
   };
 }

@@ -1,4 +1,12 @@
-import { Caller, OrgReader, OrgWriter, randomUUIDv7, type NotFound } from '@on.auto/operations';
+import {
+  Caller,
+  OrgReader,
+  OrgWriter,
+  randomUUIDv7,
+  recordedCallerOf,
+  type NotFound,
+  type RecordedCaller,
+} from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
 import type { GivenAddition } from '../providers/provider-additions.ts';
@@ -16,6 +24,8 @@ export function foundConnection(id: string): Effect.Effect<KeptConnection, NotFo
   return loadRegistry.pipe(Effect.flatMap((registry) => findConnection(registry, id)));
 }
 
+export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerOf);
+
 export const actedNow = Effect.gen(function* () {
   const { id: by } = yield* Caller;
   return { by, at: DateTime.formatIso(yield* DateTime.now) };
@@ -24,6 +34,7 @@ export const actedNow = Effect.gen(function* () {
 export function additionOf(
   { name, type, provider, placeholders, entry, credential }: GivenAddition,
   link: OpenLink,
+  addedBy: RecordedCaller,
 ): ConnectionAddition {
   return {
     type: 'add',
@@ -34,6 +45,7 @@ export function additionOf(
     placeholders,
     entry,
     credential,
+    added_by: addedBy,
     link,
   };
 }

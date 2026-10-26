@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { createPlaybook, retirePlaybook } from '../index.ts';
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
 
 const toAcme = toOrg('acme');
@@ -37,10 +37,18 @@ describe('create_playbook', () => {
         description: 'Answers sales',
         status: 'active',
         created_at: firstMoment,
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: firstMoment,
       },
     });
+  });
+
+  it('names a person who created it by their id and their name', async () => {
+    expect(await harness().call(createPlaybook, toAcme(adaOfAcme, { playbook: 'alpha', name: 'Alpha' }))).toMatchObject(
+      {
+        output: { created_by: { id: 'person:user_2ada', name: 'Ada Lovelace' } },
+      },
+    );
   });
 
   it('records the facts of the org in its playbooks stream', async () => {

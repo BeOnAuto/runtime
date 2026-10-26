@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { definitionChangeOf } from './definition-changes.ts';
 import type { DefinitionContent, DefinitionEvent } from './definition-events.ts';
 
@@ -34,10 +35,10 @@ function unversioned(event: DefinitionEvent) {
 describe('the change a record of a definition makes to what starts on its own', () => {
   it('activates a version with triggers, and deactivates the definition at a version without or at its retirement', () => {
     expect([
-      changeOf({ type: 'definition_created', data: { content: reacting } }),
+      changeOf({ type: 'definition_created', data: { content: reacting, created_by: recordedAdmin } }),
       changeOf({ type: 'definition_updated', data: { content: plain } }, 'close', 2),
       changeOf({ type: 'definition_retired', data: {} }, 'close', 2),
-      changeOf({ type: 'definition_created', data: { content: plain } }, 'plain'),
+      changeOf({ type: 'definition_created', data: { content: plain, created_by: recordedAdmin } }, 'plain'),
     ]).toEqual([
       { kind: 'activated', name: 'close', version: 1, triggers, at: at.at },
       { kind: 'deactivated', name: 'close' },
@@ -49,7 +50,7 @@ describe('the change a record of a definition makes to what starts on its own', 
   it('is unreadable for a record without its data, or without the version it is about', () => {
     expect([
       definitionChangeOf({ type: 'definition_created', context: at }),
-      unversioned({ type: 'definition_created', data: { content: reacting } }),
+      unversioned({ type: 'definition_created', data: { content: reacting, created_by: recordedAdmin } }),
       unversioned({ type: 'definition_retired', data: {} }),
     ]).toEqual([{ kind: 'unreadable' }, { kind: 'unreadable' }, { kind: 'unreadable' }]);
   });
@@ -77,7 +78,7 @@ describe('the triggers a version activates', () => {
       stripped: { expressions: { ' $data.total as number > 1 ': ' $data.total           > 1 ' } },
     };
 
-    expect(changeOf({ type: 'definition_created', data: { content } })).toMatchObject({
+    expect(changeOf({ type: 'definition_created', data: { content, created_by: recordedAdmin } })).toMatchObject({
       kind: 'activated',
       triggers: [
         { kind: 'event', filters: [{ attributes: { type: 'noted', data: '${ $data.total           > 1 }' } }] },

@@ -1,3 +1,4 @@
+import { RecordedCallerSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
@@ -50,7 +51,7 @@ const listedDefinitionFields = {
     }),
   ),
   created_at: Schema.String.annotate({ description: 'When the definition was created, in ISO 8601 UTC' }),
-  created_by: Schema.String.annotate({ description: 'The id of the caller who created the definition' }),
+  created_by: RecordedCallerSchema.annotate({ description: 'The caller who created the definition, by id and name' }),
   updated_at: Schema.String.annotate({ description: 'When the definition last changed, in ISO 8601 UTC' }),
   retired_at: Schema.optionalKey(
     Schema.String.annotate({ description: 'When the definition was retired, in ISO 8601 UTC' }),

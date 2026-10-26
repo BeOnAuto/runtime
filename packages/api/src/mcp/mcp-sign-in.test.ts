@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { issuerOnLoopback, signedInOnLoopback, type OnLoopback } from '../testing/signed-in.ts';
 import { toolNamesIn } from '../testing/tool-listing.ts';
 
-const clients = { 'ada-agent': { secret: 'a-secret-only-ada-holds', claims: { sub: 'ada', org_id: 'acme' } } };
+const clients = {
+  'ada-agent': { secret: 'a-secret-only-ada-holds', claims: { sub: 'ada', name: 'Ada Lovelace', org_id: 'acme' } },
+};
 
 const opened: OnLoopback<unknown>[] = [];
 
@@ -13,7 +15,7 @@ afterEach(async () => {
 });
 
 describe('an agent signing in through the authorization server the metadata names', () => {
-  it('connects with the SDK’s client, is challenged, gets a token of every scope asked for the resource and calls the tools', async () => {
+  it('connects with the SDK’s client, is challenged, gets a token of every scope asked for the resource, is told it acts as the person and calls the tools', async () => {
     const issuer = await issuerOnLoopback(clients);
     const runtime = await signedInOnLoopback(issuer.served);
     opened.push(issuer, runtime);
@@ -25,6 +27,7 @@ describe('an agent signing in through the authorization server the metadata name
     });
 
     await client.connect(new StreamableHTTPClientTransport(new URL(`${runtime.origin}/mcp`), { authProvider }));
+    const instructions = client.getInstructions();
     const tools = await client.listTools();
     await client.callTool({ name: 'add_note', arguments: { playbook: 'alpha', name: 'from-ada', text: 'signed in' } });
     const notes = await client.callTool({ name: 'list_notes', arguments: { playbook: 'alpha' } });
@@ -32,6 +35,7 @@ describe('an agent signing in through the authorization server the metadata name
 
     const [, claims] = String(authProvider.tokens()?.access_token).split('.');
 
+    expect(instructions).toMatch(/^This connection acts as Ada Lovelace \(person:ada\) in the org acme\. /u);
     expect(toolNamesIn(tools)).toContain('add_note');
     expect(notes.structuredContent).toEqual({ notes: [{ name: 'from-ada', text: 'signed in' }] });
     expect(JSON.parse(Buffer.from(String(claims), 'base64url').toString('utf8'))).toMatchObject({

@@ -26,6 +26,7 @@ export function accessTokenOf(issuer: FakeIssuer, audience: string, scope: strin
   return issuer.sign({
     iss: issuer.issuer,
     sub: 'user|ada',
+    name: 'Ada Lovelace',
     aud: audience,
     iat: seconds,
     exp: seconds + 300,

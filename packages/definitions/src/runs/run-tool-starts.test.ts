@@ -2,6 +2,7 @@ import { Conflict } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -17,7 +18,7 @@ const atTheFinish = recordedWith({ ...start, ...ofGreet, at: '2026-10-01T09:00:0
 
 const greeting = { definition_type: 'echo', name: 'greet', input: { who: 'Ada', tags: ['a', 'b'] } };
 
-const started = atTheStart({ type: 'run_started', data: { input: greeting.input } });
+const started = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } });
 
 const succeeded = atTheFinish({ type: 'run_succeeded', data: { output: 'Hello Ada', record: {} } });
 
@@ -41,7 +42,15 @@ function decided(command: RunCommand, ...history: readonly RecordedRunEvent[]) {
 }
 
 function starting(request: object = {}): RunCommand {
-  return { type: 'start', ...greeting, calls_tools: false, ...request, definition_version: 1, ...start };
+  return {
+    type: 'start',
+    ...greeting,
+    started_by: recordedAdmin,
+    calls_tools: false,
+    ...request,
+    definition_version: 1,
+    ...start,
+  };
 }
 
 const startedCallingTools = new Conflict({
@@ -53,7 +62,10 @@ const startedCallingTools = new Conflict({
 describe('starting a run whose definition calls tools', () => {
   const callingTools = starting({ calls_tools: true });
 
-  const startOfTools: RunEvent = { type: 'run_started', data: { input: greeting.input, calls_tools: true } };
+  const startOfTools: RunEvent = {
+    type: 'run_started',
+    data: { started_by: recordedAdmin, input: greeting.input, calls_tools: true },
+  };
 
   const startedWithTools = atTheStart(startOfTools);
 

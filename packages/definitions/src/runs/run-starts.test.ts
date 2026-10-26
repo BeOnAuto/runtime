@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { runStartedOf } from './run-starts.ts';
 
 const context = {
@@ -16,10 +17,18 @@ describe('the start of a run read from its record', () => {
     const { definitionName: _name, ...withoutItsDefinition } = context;
 
     expect([
-      runStartedOf({ type: 'run_started', data: { input: {} }, context: { ...context, depth: 2 } }),
+      runStartedOf({
+        type: 'run_started',
+        data: { started_by: recordedAdmin, input: {} },
+        context: { ...context, depth: 2 },
+      }),
       runStartedOf({ type: 'run_failed', data: {}, context }),
-      runStartedOf({ type: 'run_started', data: { input: {} } }),
-      runStartedOf({ type: 'run_started', data: { input: {} }, context: withoutItsDefinition }),
+      runStartedOf({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }),
+      runStartedOf({
+        type: 'run_started',
+        data: { started_by: recordedAdmin, input: {} },
+        context: withoutItsDefinition,
+      }),
       runStartedOf('not a record'),
     ]).toEqual([{ ...context, depth: 2 }, undefined, undefined, undefined, undefined]);
   });

@@ -1,3 +1,4 @@
+import { localDeveloper } from '@on.auto/identity/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -6,6 +7,8 @@ import { alpha } from '../testing/servers/reasoning-server.ts';
 import { runIdIn } from '../testing/servers/workflow-server.ts';
 
 const answerIdOf = Schema.decodeUnknownSync(Schema.Struct({ answer_id: Schema.String }));
+
+const developer = { id: 'local', name: localDeveloper.name };
 
 describe('an interaction function through the inbox, over HTTP', () => {
   it('leaves its request in the inbox and takes a checked answer as the output, once, which its history shows', async () => {
@@ -29,7 +32,7 @@ describe('an interaction function through the inbox, over HTTP', () => {
     expect(listed).toMatchObject({ status: 200, body: { interactions: [{ run_id: runId, type: 'interaction' }] } });
     expect([invalid.status, answered.status, again.status, another.status]).toEqual([422, 200, 200, 409]);
     expect([answered.body, again.body]).toMatchObject([
-      { run_id: runId, answer: { choice: 'approve' }, claimed_for: 'the campaign team', answered_by: 'local' },
+      { run_id: runId, answer: { choice: 'approve' }, claimed_for: 'the campaign team', answered_by: developer },
       { claimed_for: 'the campaign team' },
     ]);
     expect(invalid.body).toMatchObject({ errors: [{ pointer: '/answer/choice' }] });

@@ -51,7 +51,7 @@ const settle: SettleRun = ({ id }, settlement) =>
           definition_version: 1,
           status: 'succeeded',
           started_at: '2026-10-05T09:00:00.000Z',
-          started_by: 'acme-admin',
+          started_by: { id: 'acme-admin', name: 'acme-admin' },
         } as const;
       });
 

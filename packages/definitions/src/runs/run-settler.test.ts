@@ -13,7 +13,7 @@ const settled = {
   name: 'hand-on',
   definition_version: 1,
   started_at: firstMoment,
-  started_by: 'acme-admin',
+  started_by: { id: 'acme-admin', name: 'acme-admin' },
   finished_at: settledAt,
 };
 

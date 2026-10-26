@@ -3,6 +3,7 @@ import {
   ConflictKindSchema,
   InvalidInputKindSchema,
   IssueSchema,
+  RecordedCallerSchema,
   UnansweredKindSchema,
   RejectionBecauseSchema,
   UnavailableKindSchema,
@@ -105,7 +106,7 @@ export const RunSchema = Schema.Struct({
   ),
   rejection: Schema.optionalKey(RunRejectionSchema),
   started_at: Schema.String.annotate({ description: 'When the run started, in ISO 8601 UTC' }),
-  started_by: Schema.String.annotate({ description: 'The id of the caller who started the run' }),
+  started_by: RecordedCallerSchema.annotate({ description: 'The caller who started the run, by id and name' }),
   finished_at: Schema.optionalKey(Schema.String.annotate({ description: 'When the run finished, in ISO 8601 UTC' })),
 }).annotate({ identifier: 'Run', description: 'One run of a definition with an input, and how it ended' });
 

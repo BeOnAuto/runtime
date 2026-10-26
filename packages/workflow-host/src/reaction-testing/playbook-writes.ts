@@ -100,7 +100,9 @@ export function definitionRecorded(
   return recorded(
     store,
     `${playbookKey}definitions/workflow`,
-    { type: version === 1 ? 'definition_created' : 'definition_updated', data: { content } },
+    version === 1
+      ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+      : { type: 'definition_updated', data: { content } },
     { ...byAdmin, at: when, definitionType: 'workflow', definitionName: name, definitionVersion: version },
   );
 }
@@ -125,7 +127,7 @@ export function definitionRetired(store: LedgerStreams, name: string, version: n
 export function playbookCreated(store: LedgerStreams, playbook: string) {
   return recorded(store, playbooksStreamOfOrg('acme'), {
     type: 'playbook_created',
-    data: { playbook, name: playbook, description: '' },
+    data: { playbook, name: playbook, description: '', created_by: { id: 'acme-admin', name: 'acme-admin' } },
   });
 }
 
@@ -156,7 +158,12 @@ export async function runRecorded(store: LedgerStreams, run: RunOf, ending?: 'ru
     ...(depth === undefined ? {} : { depth }),
   };
   const lineage = { causationId: null, correlationId: correlation };
-  await recordedWith(store, stream, { type: 'run_started', data: { input: {} } }, { context, lineage });
+  await recordedWith(
+    store,
+    stream,
+    { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+    { context, lineage },
+  );
   if (ending !== undefined) {
     await recordedWith(store, stream, { type: ending, data: { output: 'done', record: {} } }, { context, lineage });
   }

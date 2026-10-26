@@ -24,7 +24,7 @@ const requestStream = `${alpha}runs/${runId}`;
 
 const requestId = messageIdOf(requestStream, 1);
 
-const started = { type: 'run_started', data: { input: {} } };
+const started = { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } };
 
 const cancelled = {
   status: 'rejected',

@@ -1,3 +1,5 @@
+import { allPermissions, type CallerIdentity } from '@on.auto/operations';
+
 import type { DefinitionType, McpEndpoint, RecipeCalls, ServedTools } from '../mcp/instructions.ts';
 
 const managingPlaybooks = ['create_playbook', 'list_playbooks', 'update_playbook', 'retire_playbook'];
@@ -52,6 +54,18 @@ export const ownOrg: ServedTools = {
   orgTools: [...managingPlaybooks, ...discovering],
   playbookTools: insideAPlaybook.filter((name) => !discovering.includes(name)),
 };
+
+export const signedInAda: CallerIdentity = {
+  id: 'person:user_2ada',
+  name: 'Ada Lovelace',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
+
+export const buildBot: CallerIdentity = { ...signedInAda, id: 'build-bot', name: 'build-bot' };
+
+export const localDeveloper: CallerIdentity = { ...signedInAda, id: 'local', name: 'ada', org: 'local' };
 
 export const definitionTypes: readonly DefinitionType[] = [
   { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },

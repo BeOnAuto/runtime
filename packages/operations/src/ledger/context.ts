@@ -1,5 +1,7 @@
 import { Schema } from 'effect';
 
+import type { CallerIdentity } from '../caller/caller.ts';
+
 const forbiddenCharacter = /[\p{Cc}\p{Cs}\p{Noncharacter_Code_Point}]/u;
 
 export const forbiddenCharactersInWords = 'control characters, unpaired surrogates or noncharacters';
@@ -45,6 +47,20 @@ const TriggerKindSchema = Schema.Literals(['event', 'cron', 'every']);
 export const StartingTriggerSchema = Schema.Struct({ kind: TriggerKindSchema, reference: ContextReference });
 
 export type StartingTrigger = typeof StartingTriggerSchema.Type;
+
+export const RecordedCallerSchema = Schema.Struct({
+  id: Schema.String.annotate({ description: 'The id of the caller' }),
+  name: Schema.String.annotate({
+    description:
+      "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself",
+  }),
+});
+
+export type RecordedCaller = typeof RecordedCallerSchema.Type;
+
+export function recordedCallerOf({ id, name }: CallerIdentity): RecordedCaller {
+  return { id, name };
+}
 
 const acted = { at: ContextText, by: ContextText };
 

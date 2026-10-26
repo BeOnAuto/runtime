@@ -93,7 +93,7 @@ describe.each(mcpClientKinds)('the %s client connecting to a playbook endpoint',
     expect(connected).toEqual({
       protocolVersion: expectedProtocolVersion[kind],
       serverVersion: { ...testServerInfo, title: 'Auto Runtime' },
-      instructions: instructionsFor('playbook', { orgTools: [], playbookTools }, testDefinitionTypes),
+      instructions: `This connection acts as the key acme-admin in the org acme. ${instructionsFor('playbook', { orgTools: [], playbookTools }, testDefinitionTypes)}`,
     });
   });
 

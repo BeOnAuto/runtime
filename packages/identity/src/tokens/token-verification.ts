@@ -19,6 +19,8 @@ const scopeClaim = 'scope';
 
 const pageClaim = 'azp';
 
+const nameClaim = 'name';
+
 const leewaySeconds = 60;
 
 const accessTokenTypes: ReadonlySet<string> = new Set(['at+jwt', 'application/at+jwt', 'jwt', 'application/jwt']);
@@ -89,7 +91,7 @@ function optionsOf({ issuer, audiences, now }: Expected, form: Form): JWTVerifyO
     ...(form === 'access token' ? { audience: [...audiences] } : {}),
     algorithms: signingAlgorithms,
     clockTolerance: leewaySeconds,
-    requiredClaims: ['exp', 'sub'],
+    requiredClaims: ['exp', 'sub', nameClaim],
     currentDate: new Date(now),
   };
 }
@@ -117,8 +119,17 @@ function pageRefusal({ [pageClaim]: page }: Payload, form: Form, expected: Expec
   return page === expected.requestOrigin ? undefined : presentedByAnotherPage;
 }
 
-function isSubject(sub: unknown): sub is string {
-  return Predicate.isString(sub) && sub !== '' && bytesOfReference(sub) <= mostReferenceBytes;
+function isNamingClaim(claim: unknown): claim is string {
+  return (
+    Predicate.isString(claim) &&
+    claim !== '' &&
+    bytesOfReference(claim) <= mostReferenceBytes &&
+    holdsNoForbiddenCharacter(claim)
+  );
+}
+
+function notNaming(claim: string): string {
+  return `its ${claim} is not a non-empty string of at most ${mostReferenceBytes} bytes without ${forbiddenCharactersInWords}`;
 }
 
 function permissionsGrantedBy({ [scopeClaim]: scope = '' }: Payload, form: Form): string | readonly Permission[] {
@@ -133,20 +144,23 @@ function permissionsGrantedBy({ [scopeClaim]: scope = '' }: Payload, form: Form)
 }
 
 function personIn(payload: Payload, form: Form, now: number): string | VerifiedPerson {
-  const { iat, sub } = payload;
+  const { iat, sub, [nameClaim]: name } = payload;
   const orgClaimPath = orgClaimPathOf(payload, form);
   const org = orgIn(payload, orgClaimPath);
   if (Predicate.isNumber(iat) && iat > now / 1000 + leewaySeconds) {
     return `its iat is more than ${leewaySeconds} seconds ahead`;
   }
-  if (!isSubject(sub) || !holdsNoForbiddenCharacter(sub)) {
-    return `its sub is not a non-empty string of at most ${mostReferenceBytes} bytes without ${forbiddenCharactersInWords}`;
+  if (!isNamingClaim(sub)) {
+    return notNaming('sub');
+  }
+  if (!isNamingClaim(name)) {
+    return notNaming(nameClaim);
   }
   if (!isCredentialOrg(org)) {
     return `its ${orgClaimPath.join('.')} claim is not an org id other than local`;
   }
   const permissions = permissionsGrantedBy(payload, form);
-  return Predicate.isString(permissions) ? permissions : { subject: sub, org, permissions };
+  return Predicate.isString(permissions) ? permissions : { subject: sub, name, org, permissions };
 }
 
 async function verified(token: string, keySet: JWTVerifyGetKey, expected: Expected): Promise<string | VerifiedPerson> {

@@ -1,3 +1,4 @@
+import type { RecordedCaller } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import type { ConnectionEntry, ConnectionType } from './connection-entry.ts';
@@ -13,6 +14,7 @@ export interface ConnectionAddition {
   readonly placeholders: Readonly<Record<string, string>> | null;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
+  readonly added_by: RecordedCaller;
   readonly link: OpenLink;
 }
 
@@ -22,11 +24,15 @@ export interface LinkUse {
   readonly bindsPerson: boolean;
 }
 
-export interface ConnectionApproval extends LinkUse {
+interface Connecting extends LinkUse {
+  readonly connected_by: RecordedCaller;
+}
+
+export interface ConnectionApproval extends Connecting {
   readonly type: 'approve';
 }
 
-export interface CredentialGiving extends LinkUse {
+export interface CredentialGiving extends Connecting {
   readonly type: 'give';
   readonly secret_id: string;
   readonly algorithm?: string;
@@ -42,7 +48,7 @@ export interface ConsentStart extends LinkUse {
   readonly expires_at: string;
 }
 
-export interface ConsentFinish extends LinkUse {
+export interface ConsentFinish extends Connecting {
   readonly type: 'finish';
   readonly state_sha256: string;
   readonly secret_id: string;

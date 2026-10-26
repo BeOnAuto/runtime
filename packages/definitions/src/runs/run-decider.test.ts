@@ -2,6 +2,7 @@ import { Conflict, type Context } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand, RunResult } from './run-commands.ts';
 import { runDecider, runStreamNameOf } from './run-decider.ts';
@@ -16,7 +17,7 @@ const ofGreet = { definitionType: 'echo', definitionName: 'greet', definitionVer
 
 const greeting = { definition_type: 'echo', name: 'greet', input: { who: 'Ada', tags: ['a', 'b'] } };
 
-const started: RunEvent = { type: 'run_started', data: { input: greeting.input } };
+const started: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } };
 
 const succeeded: RunResult = { type: 'run_succeeded', data: { output: 'Hello Ada', record: { model: 'x' } } };
 
@@ -60,7 +61,15 @@ function decided(command: RunCommand, ...history: readonly RecordedRunEvent[]) {
 }
 
 function starting(request: object = {}, version = 1): RunCommand {
-  return { type: 'start', ...greeting, calls_tools: false, ...request, definition_version: version, ...start };
+  return {
+    type: 'start',
+    ...greeting,
+    started_by: recordedAdmin,
+    calls_tools: false,
+    ...request,
+    definition_version: version,
+    ...start,
+  };
 }
 
 function finishing(result: RunResult): RunCommand {
@@ -187,7 +196,7 @@ describe('a run', () => {
         status: 'rejected',
         rejection: { reason: 'unavailable', detail: 'The model is busy' },
         started_at: start.at,
-        started_by: start.by,
+        started_by: recordedAdmin,
         finished_at: finish.at,
       },
       ...recordedState,
@@ -209,7 +218,7 @@ describe('a run started again', () => {
         status: 'succeeded',
         output: 'Hello Ada',
         started_at: start.at,
-        started_by: start.by,
+        started_by: recordedAdmin,
         finished_at: finish.at,
       },
       ...recordedState,
@@ -227,7 +236,7 @@ describe('the attempts of a run', () => {
       definition_version: 1,
       status: 'failed',
       started_at: start.at,
-      started_by: start.by,
+      started_by: recordedAdmin,
       finished_at: finish.at,
     });
   });

@@ -1,8 +1,15 @@
 import { Buffer } from 'node:buffer';
 
-import type { McpEndpoint } from '../mcp/instructions.ts';
+import type { ActingAs, McpEndpoint } from '../mcp/instructions.ts';
 
 export const mostInstructionCharacters = 2000;
+
+const heldOrg = 'o'.repeat(30);
+
+export const callerTheInstructionsHold: ActingAs = {
+  caller: { id: `person:${'u'.repeat(32)}`, name: 'n'.repeat(20), org: heldOrg, permissions: [], playbooks: '*' },
+  org: heldOrg,
+};
 
 export const mostDescriptionCharacters = 800;
 

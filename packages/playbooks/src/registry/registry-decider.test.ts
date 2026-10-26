@@ -8,13 +8,15 @@ import { registryDecider } from './registry-decider.ts';
 
 const recordedPlaybookEvent = recordingOf(registryDecider.eventSchema);
 
-const creation = { by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
+const ada = { id: 'person:user_2ada', name: 'Ada Lovelace' };
+
+const creation = { by: ada.id, at: '2026-10-01T09:00:00.000Z' };
 
 const change = { by: 'acme-editor', at: '2026-10-02T10:30:00.000Z' };
 
 const alphaCreated: PlaybookEvent = {
   type: 'playbook_created',
-  data: { playbook: 'alpha', name: 'Alpha', description: 'Answers sales questions' },
+  data: { playbook: 'alpha', name: 'Alpha', description: 'Answers sales questions', created_by: ada },
 };
 
 const alphaRetired: PlaybookEvent = { type: 'playbook_retired', data: { playbook: 'alpha' } };
@@ -51,10 +53,11 @@ describe('creating a playbook', () => {
     playbook: 'alpha',
     name: 'Alpha',
     description: 'Answers sales questions',
+    created_by: ada,
     ...creation,
   };
 
-  it('records the playbook, with who created it and when as its context', () => {
+  it('records the playbook with the caller who created it, by id and name, and who and when as its context', () => {
     expect(decided(creating)).toStrictEqual(Result.succeed([alphaCreated]));
     expect(registryDecider.context(creating, registryAfter())).toStrictEqual(creation);
   });
@@ -126,7 +129,10 @@ describe("an org's playbook registry", () => {
   it('holds each playbook as its facts left it', () => {
     const registry = registryAfter(
       alphaCreated,
-      recorded({ type: 'playbook_created', data: { playbook: 'beta', name: 'Beta', description: '' } }, creation),
+      recorded(
+        { type: 'playbook_created', data: { playbook: 'beta', name: 'Beta', description: '', created_by: ada } },
+        creation,
+      ),
       { type: 'playbook_updated', data: { playbook: 'alpha', name: 'Alpha Sales' } },
       { type: 'playbook_updated', data: { playbook: 'beta', description: 'Handles support' } },
       recorded(alphaRetired, { ...change, at: '2026-10-03T08:00:00.000Z' }),
@@ -139,7 +145,7 @@ describe("an org's playbook registry", () => {
         description: 'Answers sales questions',
         status: 'retired',
         created_at: '2026-10-01T09:00:00.000Z',
-        created_by: 'acme-admin',
+        created_by: ada,
         updated_at: '2026-10-03T08:00:00.000Z',
         retired_at: '2026-10-03T08:00:00.000Z',
       },
@@ -149,7 +155,7 @@ describe("an org's playbook registry", () => {
         description: 'Handles support',
         status: 'active',
         created_at: '2026-10-01T09:00:00.000Z',
-        created_by: 'acme-admin',
+        created_by: ada,
         updated_at: '2026-10-02T10:30:00.000Z',
       },
     ]);

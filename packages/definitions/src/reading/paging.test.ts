@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { mostInputBytes } from '../runs/recorded-size.ts';
 import { runDecider } from '../runs/run-decider.ts';
-import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
+import { acmeAdmin, globexAdmin, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { relay } from '../testing/capabilities/relay.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
@@ -115,6 +115,7 @@ describe('the bounds of a page of runs', () => {
       const starting = Array.from({ length: mostExaminedInAPage + 1 }, (_, index) =>
         ledger.service.execute(`playbook/acme/alpha/runs/${idOf(index)}`, runDecider, {
           type: 'start',
+          started_by: recordedAdmin,
           definition_type: 'echo',
           name: 'greet',
           definition_version: 1,

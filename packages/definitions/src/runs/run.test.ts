@@ -10,7 +10,7 @@ const functionRun: Run = {
   status: 'succeeded',
   output: 'The brief meets the criteria.',
   started_at: '2026-09-02T00:00:00.000Z',
-  started_by: 'author',
+  started_by: { id: 'author', name: 'author' },
   finished_at: '2026-09-02T00:01:00.000Z',
 };
 

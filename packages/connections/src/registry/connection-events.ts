@@ -1,4 +1,4 @@
-import { ActedContextSchema, factOf, type Decided } from '@on.auto/operations';
+import { ActedContextSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -18,6 +18,7 @@ export const ConnectionEventSchema = Schema.Union([
       placeholders: Schema.NullOr(Schema.Record(Schema.String, Schema.String)),
       entry: ConnectionEntrySchema,
       credential: CredentialSchema,
+      added_by: RecordedCallerSchema,
     }),
     ActedContextSchema,
   ),
@@ -48,6 +49,7 @@ export const ConnectionEventSchema = Schema.Union([
       client_id: Schema.optionalKey(Schema.String),
       client_source: Schema.optionalKey(ClientSourceSchema),
       scope: Schema.optionalKey(Schema.String),
+      connected_by: RecordedCallerSchema,
     }),
     ActedContextSchema,
   ),

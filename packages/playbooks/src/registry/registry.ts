@@ -7,10 +7,9 @@ export type Registry = ReadonlyMap<string, Playbook>;
 
 export const initialRegistry: Registry = new Map();
 
-function createdPlaybook({ data, context }: PlaybookCreated): Playbook {
-  const { playbook, name, description } = data;
-  const { at, by } = context;
-  return { id: playbook, name, description, status: 'active', created_at: at, created_by: by, updated_at: at };
+function createdPlaybook({ data, context: { at } }: PlaybookCreated): Playbook {
+  const { playbook, name, description, created_by } = data;
+  return { id: playbook, name, description, status: 'active', created_at: at, created_by, updated_at: at };
 }
 
 function updatedPlaybook(playbook: Playbook, { data, context }: PlaybookUpdated): Playbook {

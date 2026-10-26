@@ -4,14 +4,16 @@ import {
   OrgIdSchema,
   playbookCallerOf,
   messageIdOf,
+  recordedCallerOf,
   streamPrefixOfPlaybook,
   type Lineage,
+  type RecordedCaller,
   type StreamReader,
   type StreamWriter,
 } from '@on.auto/operations';
 import { DateTime, Effect, Schema } from 'effect';
 
-import type { AnswerFact, CapabilityFact } from '../runs/run-commands.ts';
+import type { CapabilityFact, GivenAnswer, RunAnswer, RunWork } from '../runs/run-commands.ts';
 import { isChangedSinceRead, runDecider, runStreamNameOf, type RunDeciders } from '../runs/run-decider.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import { startedRunOf, type RecordedRunState } from '../runs/run-state.ts';
@@ -23,7 +25,7 @@ export interface RecordedWorkAt {
 
 export type Work =
   | { readonly type: 'work'; readonly fact: CapabilityFact }
-  | { readonly type: 'answer'; readonly answer: AnswerFact };
+  | { readonly type: 'answer'; readonly answer: GivenAnswer };
 
 export type WorkRule = (run: RecordedRunState) => Conflict | undefined;
 
@@ -46,6 +48,14 @@ function admitted(): undefined {
   return undefined;
 }
 
+function answeredBy(answer: GivenAnswer, by: RecordedCaller): RunAnswer {
+  return { type: 'answer', answer: { ...answer, answered_by: by } };
+}
+
+function recordedAs(work: Work, by: RecordedCaller): RunWork | RunAnswer {
+  return work.type === 'answer' ? answeredBy(work.answer, by) : work;
+}
+
 export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunDeciders): RecordWork {
   const recordedAsRead = Effect.fnUntraced(function* (
     run: RunStreamAddress,
@@ -65,7 +75,8 @@ export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunD
       return yield* refusal;
     }
     const at = DateTime.formatIso(yield* DateTime.now);
-    const command = { ...work, runId, by: playbookCallerOf(run).id, at };
+    const thePlaybook = recordedCallerOf(playbookCallerOf(run));
+    const command = { ...recordedAs(work, thePlaybook), runId, by: thePlaybook.id, at };
     const { version } = yield* ledger
       .execute(stream, deciders.asRead, { readAt: read.version, command }, lineage)
       .pipe(Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }));
@@ -75,7 +86,12 @@ export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunD
     recordedAsRead(run, work, lineage, rule).pipe(Effect.retry({ times: readsAgainAtMost, while: isChangedSinceRead }));
 }
 
-export type AnswerRun = (id: string, answer: AnswerFact, by: string, lineage: Lineage) => Effect.Effect<void, Conflict>;
+export type AnswerRun = (
+  id: string,
+  answer: GivenAnswer,
+  by: RecordedCaller,
+  lineage: Lineage,
+) => Effect.Effect<void, Conflict>;
 
 export function playbookBoundAnswerer(writer: StreamWriter): AnswerRun {
   return (id, answer, by, lineage) =>
@@ -83,7 +99,7 @@ export function playbookBoundAnswerer(writer: StreamWriter): AnswerRun {
       const runId = id.toLowerCase();
       const at = DateTime.formatIso(yield* DateTime.now);
       yield* writer
-        .execute(runStreamNameOf(runId), runDecider, { type: 'answer', answer, runId, by, at }, lineage)
+        .execute(runStreamNameOf(runId), runDecider, { ...answeredBy(answer, by), runId, by: by.id, at }, lineage)
         .pipe(Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }));
     });
 }

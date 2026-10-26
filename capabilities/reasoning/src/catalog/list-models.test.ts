@@ -8,9 +8,21 @@ import { jsonResponse } from '../provider-testing/recording-fetch.ts';
 import { catalogFor } from '../testing/catalog-harness.ts';
 import { defineListModels } from './list-models.ts';
 
-const reader: CallerIdentity = { id: 'acme-reader', org: 'acme', permissions: ['org:read'], playbooks: '*' };
+const reader: CallerIdentity = {
+  id: 'acme-reader',
+  name: 'acme-reader',
+  org: 'acme',
+  permissions: ['org:read'],
+  playbooks: '*',
+};
 
-const writerOnly: CallerIdentity = { id: 'acme-writer', org: 'acme', permissions: ['playbook:write'], playbooks: '*' };
+const writerOnly: CallerIdentity = {
+  id: 'acme-writer',
+  name: 'acme-writer',
+  org: 'acme',
+  permissions: ['playbook:write'],
+  playbooks: '*',
+};
 
 const environment = {
   ANTHROPIC_API_KEY: 'sk-ant-key',

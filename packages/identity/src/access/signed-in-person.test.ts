@@ -1,6 +1,7 @@
+import { playbookCallerOf } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { authenticatorFor, createApiKey, isSignedInPerson } from '../index.ts';
+import { authenticatorFor, createApiKey, isKeyHolder, isSignedInPerson } from '../index.ts';
 import { fakeIssuer, principalIn, signedTokens } from '../testing/index.ts';
 
 const admin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: ['org:write'], playbooks: '*' });
@@ -19,5 +20,13 @@ describe('a signed-in person', () => {
 
     expect(ids).toEqual(['person:ada', 'acme-admin', 'local']);
     expect(ids.map((id = '') => isSignedInPerson({ id }))).toEqual([true, false, false]);
+  });
+});
+
+describe('a key holder', () => {
+  it('is the caller of a key, and neither a signed-in person, the local developer nor a playbook acting as itself', () => {
+    const ids = ['acme-admin', 'person:ada', 'local', playbookCallerOf({ org: 'acme', playbook: 'alpha' }).id];
+
+    expect(ids.map((id) => isKeyHolder({ id }))).toEqual([true, false, false, false]);
   });
 });

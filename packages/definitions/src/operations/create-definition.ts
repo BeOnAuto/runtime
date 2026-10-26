@@ -1,4 +1,4 @@
-import { defineCommand } from '@on.auto/operations';
+import { Caller, defineCommand, recordedCallerOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -40,7 +40,12 @@ export function defineCreateDefinition(capabilities: readonly Capability[]) {
         return yield* answeredDefinition(
           capability,
           known.types,
-          yield* recordInRegistry(capability, { type: 'create', name, content }),
+          yield* recordInRegistry(capability, {
+            type: 'create',
+            name,
+            content,
+            created_by: recordedCallerOf(yield* Caller),
+          }),
         );
       }),
       plainLanguage: {

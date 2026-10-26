@@ -1,3 +1,4 @@
+import { localDeveloper } from '@on.auto/identity/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -53,7 +54,10 @@ describe('adding a connection over HTTP in local mode', () => {
 
     const { answer, id, page, token } = await added(served);
 
-    expect(answer).toMatchObject({ status: 201, body: { id, name: 'crm', status: 'pending', added_by: 'local' } });
+    expect(answer).toMatchObject({
+      status: 201,
+      body: { id, name: 'crm', status: 'pending', added_by: { id: 'local', name: localDeveloper.name } },
+    });
     expect(Object.fromEntries(page.searchParams)).toEqual({ connection: id, token });
     expect(`${page.origin}${page.pathname}`).toBe(`${served.origin}/studio/connect`);
   });

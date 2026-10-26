@@ -1,3 +1,4 @@
+import { RecordedCallerSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
@@ -20,11 +21,11 @@ export const ConnectionSchema = Schema.Struct({
   status: ConnectionStatusSchema.annotate({
     description: 'pending until it is approved and its credential given, connected, broken or removed',
   }),
-  added_by: Schema.String.annotate({ description: 'The id of the caller who added it' }),
+  added_by: RecordedCallerSchema.annotate({ description: 'The caller who added it, by id and name' }),
   added_at: Schema.String.annotate({ description: 'When it was added, in ISO 8601 UTC' }),
   connected_at: Schema.NullOr(Schema.String).annotate({ description: 'When it was connected, in ISO 8601 UTC' }),
-  connected_by: Schema.NullOr(Schema.String).annotate({
-    description: 'The id of the caller who connected it, approving it or giving its credential',
+  connected_by: Schema.NullOr(RecordedCallerSchema).annotate({
+    description: 'The caller who connected it, approving it or giving its credential, by id and name',
   }),
   granted_scope: Schema.NullOr(Schema.String).annotate({
     description:

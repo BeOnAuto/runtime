@@ -12,7 +12,9 @@ const closing = workflowSource(
 );
 
 const ListedRuns = Schema.Struct({
-  runs: Schema.Array(Schema.Struct({ status: Schema.String, started_by: Schema.String })),
+  runs: Schema.Array(
+    Schema.Struct({ status: Schema.String, started_by: Schema.Struct({ id: Schema.String, name: Schema.String }) }),
+  ),
 });
 
 const PlaybookEvents = Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) });
@@ -59,7 +61,7 @@ describe('a workflow whose trigger is an event, over MCP', () => {
       return { runs, feed: eventsIn(feed.structuredContent).events.map(({ type }) => type) };
     });
 
-    expect(seen.runs.runs).toEqual([{ status: 'succeeded', started_by: 'playbook:alpha' }]);
+    expect(seen.runs.runs).toEqual([{ status: 'succeeded', started_by: { id: 'playbook:alpha', name: 'alpha' } }]);
     expect(seen.feed).toEqual(expect.arrayContaining(['event_published', 'run_started', 'run_succeeded']));
   });
 });

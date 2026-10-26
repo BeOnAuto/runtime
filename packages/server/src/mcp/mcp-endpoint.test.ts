@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { instructionsFor, type McpEndpoint } from '@on.auto/api';
+import { instructionsActingAs, type McpEndpoint } from '@on.auto/api';
 import {
   danglingReferencesIn,
   guideToolName,
@@ -11,6 +11,7 @@ import {
   type ListedTool,
   type McpSession,
 } from '@on.auto/api/testing';
+import { localDeveloper } from '@on.auto/identity/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -137,6 +138,7 @@ const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
 
 interface Connection {
   readonly path: string;
+  readonly org: string;
   readonly endpoint: McpEndpoint;
   readonly served: { readonly orgTools: readonly string[]; readonly playbookTools: readonly string[] };
   readonly sentence: string;
@@ -146,20 +148,23 @@ interface Connection {
 const connections: readonly Connection[] = [
   {
     path: '/mcp',
+    org: 'local',
     endpoint: 'own org',
     served: { orgTools, playbookTools: insideAPlaybookAlone },
-    sentence: "This connection acts in the caller's own org: list_playbooks shows its playbooks",
+    sentence: "The org is the caller's own: list_playbooks shows its playbooks",
     unnamed: [],
   },
   {
     path: '/orgs/acme/mcp',
+    org: 'acme',
     endpoint: 'org',
     served: { orgTools, playbookTools: [] },
-    sentence: 'This connection manages the playbooks of one org: list_playbooks shows them',
+    sentence: "This connection manages the org's playbooks: list_playbooks shows them",
     unnamed: ['create_definition', 'run_definition', 'get_run', 'dry_run', 'answer_interaction', 'send_run_event'],
   },
   {
     path: '/orgs/acme/playbooks/alpha/mcp',
+    org: 'acme',
     endpoint: 'playbook',
     served: { orgTools: [], playbookTools: definitionTools },
     sentence: 'This connection acts inside one playbook.',
@@ -169,14 +174,16 @@ const connections: readonly Connection[] = [
 
 describe('the instructions an agent receives when it connects', () => {
   it.each(connections)(
-    'on $path say what a playbook, a definition and a run are, and name only the tools the endpoint serves',
-    async ({ path, endpoint, served, sentence, unnamed }) => {
+    'on $path say whom they act as in which org, what a playbook, a definition and a run are, and name only the tools the endpoint serves',
+    async ({ path, org, endpoint, served, sentence, unnamed }) => {
       server = await servingReasoning([]);
       await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
 
       const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
 
-      expect(instructions).toBe(instructionsFor(endpoint, served, definitionTypes));
+      expect(instructions).toBe(
+        instructionsActingAs({ caller: localDeveloper, org }, endpoint, served, definitionTypes),
+      );
       expect(instructions).toContain(sentence);
       expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);
     },
@@ -284,6 +291,8 @@ describe('/mcp in local mode', () => {
     await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
     const listed = await server.call('GET', '/v1/orgs/local/playbooks');
 
-    expect(listed.body).toMatchObject({ playbooks: [{ id: 'alpha', created_by: 'local' }] });
+    expect(listed.body).toMatchObject({
+      playbooks: [{ id: 'alpha', created_by: { id: 'local', name: localDeveloper.name } }],
+    });
   });
 });

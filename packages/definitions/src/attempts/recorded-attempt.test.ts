@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { modelCallAnswered, modelCallSent } from '../journal-testing/model-calls.ts';
 import type { RecordedRunEvent } from '../runs/run-events.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedOnTheRun, recordedWith, testRunId } from '../testing/run-facts.ts';
 import { recordedAttempt } from './recorded-attempt.ts';
 
@@ -14,11 +15,11 @@ const context = {
   definitionVersion: 1,
 };
 
-const started = recordedWith(context)({ type: 'run_started', data: { input: {} } });
+const started = recordedWith(context)({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } });
 
 const startedAgain = recordedWith({ ...context, at: '2026-10-01T09:05:00.000Z' })({
   type: 'run_started',
-  data: { input: {} },
+  data: { started_by: recordedAdmin, input: {} },
 });
 
 const failed = recordedWith(context)({ type: 'run_failed', data: {} });

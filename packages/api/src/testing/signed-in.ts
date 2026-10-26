@@ -49,6 +49,7 @@ export async function signedInServer(): Promise<SignedIn> {
       authorization: `Bearer ${await issuer.sign({
         iss: issuer.issuer,
         sub: 'ada',
+        name: 'Ada Lovelace',
         aud: publicUrl,
         iat: seconds,
         exp: seconds + 300,

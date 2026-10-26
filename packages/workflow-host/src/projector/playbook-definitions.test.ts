@@ -9,7 +9,7 @@ const fold = 'export function fold(view: number): number { return view + 1; }';
 function savedAs(name: string, content: object) {
   return {
     type: 'definition_created',
-    data: { content },
+    data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } },
     context: {
       by: 'acme-admin',
       at: '2026-10-06T09:00:00.000Z',

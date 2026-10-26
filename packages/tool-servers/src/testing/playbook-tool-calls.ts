@@ -25,6 +25,7 @@ import { defineValidate } from '../tool-reads/validate.ts';
 
 export const toolCaller: CallerIdentity = {
   id: 'acme-builder',
+  name: 'acme-builder',
   org: 'acme',
   permissions: ['playbook:read', 'playbook:write'],
   playbooks: '*',

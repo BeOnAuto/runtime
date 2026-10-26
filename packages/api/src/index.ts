@@ -27,7 +27,9 @@ export { guideRoutes } from './guides/guide-routes.ts';
 export { apiCatalogRoutes } from './discovery/api-catalog.ts';
 export { clientMetadataRoutes, type ClientMetadataDocument } from './discovery/client-metadata.ts';
 export {
+  instructionsActingAs,
   instructionsFor,
+  type ActingAs,
   type DefinitionType,
   type McpEndpoint,
   type RecipeCalls,

@@ -28,13 +28,26 @@ const studio = { origin: 'https://studio.on.auto', served: false };
 
 const runtimeOrigin = 'http://localhost:5555';
 
-export const ada: CallerIdentity = { id: 'person:ada', org: 'acme', permissions: allPermissions, playbooks: '*' };
+export const ada: CallerIdentity = {
+  id: 'person:ada',
+  name: 'Ada Lovelace',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
 
-export const grace: CallerIdentity = { ...ada, id: 'person:grace' };
+export const grace: CallerIdentity = { ...ada, id: 'person:grace', name: 'Grace Hopper' };
 
-export const acmeReader: CallerIdentity = { ...ada, id: 'acme-reader', permissions: ['org:read'] };
+export const recordedAs = { ada: { id: ada.id, name: ada.name }, grace: { id: grace.id, name: grace.name } };
 
-export const acmeViewer: CallerIdentity = { ...ada, id: 'acme-viewer', permissions: ['playbook:read'] };
+export const acmeReader: CallerIdentity = { ...ada, id: 'acme-reader', name: 'acme-reader', permissions: ['org:read'] };
+
+export const acmeViewer: CallerIdentity = {
+  ...ada,
+  id: 'acme-viewer',
+  name: 'acme-viewer',
+  permissions: ['playbook:read'],
+};
 
 export const harnessPages = { studio, runtime: () => runtimeOrigin };
 

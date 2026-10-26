@@ -77,7 +77,7 @@ const everyEndingNewestFirst = [
     definition_version: 1,
     status: 'succeeded',
     started_at: '2026-10-01T09:06:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
     finished_at: '2026-10-01T09:06:00.000Z',
   },
   {
@@ -87,7 +87,7 @@ const everyEndingNewestFirst = [
     definition_version: 1,
     status: 'failed',
     started_at: '2026-10-01T09:05:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
     finished_at: '2026-10-01T09:05:00.000Z',
   },
   {
@@ -97,7 +97,7 @@ const everyEndingNewestFirst = [
     definition_version: 1,
     status: 'started',
     started_at: '2026-10-01T09:04:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
   },
   {
     run_id: startedTwice,
@@ -106,7 +106,7 @@ const everyEndingNewestFirst = [
     definition_version: 1,
     status: 'succeeded',
     started_at: '2026-10-01T09:03:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
     finished_at: '2026-10-01T09:07:00.000Z',
   },
   {
@@ -117,7 +117,7 @@ const everyEndingNewestFirst = [
     status: 'rejected',
     rejection: { reason: 'invalid_input' },
     started_at: '2026-10-01T09:02:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
     finished_at: '2026-10-01T09:02:00.000Z',
   },
   {
@@ -127,7 +127,7 @@ const everyEndingNewestFirst = [
     definition_version: 1,
     status: 'succeeded',
     started_at: '2026-10-01T09:01:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
     finished_at: '2026-10-01T09:01:00.000Z',
   },
 ];

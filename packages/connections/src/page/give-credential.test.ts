@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
-import { added, billing, crm, issuesIn, notes } from '../testing/additions.ts';
-import { ada, grace, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
+import { added, billing, crm, issuesIn, lastFact, notes } from '../testing/additions.ts';
+import { ada, grace, harness, operationNamed, recordedAs, type Harness, fixtureServing } from '../testing/harness.ts';
 
 function giving(h: Harness, input: Readonly<Record<string, string>>, caller = ada, at?: string) {
   return h.call(operationNamed(h.operations, 'give_credential'), caller, input, at);
 }
+
+const byAda = { connected_by: recordedAs.ada };
 
 describe('giving the credential of a connection', () => {
   it('keeps exactly its value in the secret store, records its id, approves the connection and uses the link up', async () => {
@@ -23,7 +25,7 @@ describe('giving the credential of a connection', () => {
     const facts = await h.facts();
     expect(facts.slice(2).map(({ type, data }) => [type, data])).toEqual([
       ['connection_approved', { connection: id }],
-      ['connection_connected', { connection: id, secret_id: 'secret-1' }],
+      ['connection_connected', { connection: id, secret_id: 'secret-1', ...byAda }],
     ]);
     expect(JSON.stringify(facts)).not.toContain('crm-0f3c');
     expect(await giving(h, { id, token, value: 'Bearer crm-again' })).toMatchObject({ reason: 'not_found' });
@@ -34,14 +36,10 @@ describe('giving the credential of a connection', () => {
     const { id, token } = await added(h, crm);
 
     expect(await giving(h, { id, token, value: 'Bearer crm-0f3c' }, grace, '2026-10-15T14:04:00.000Z')).toMatchObject({
-      output: {
-        added_by: 'person:ada',
-        connected_at: '2026-10-15T14:04:00.000Z',
-        connected_by: 'person:grace',
-      },
+      output: { added_by: recordedAs.ada, connected_at: '2026-10-15T14:04:00.000Z', connected_by: recordedAs.grace },
     });
     expect(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id })).toMatchObject({
-      output: { connected_by: 'person:grace' },
+      output: { connected_by: recordedAs.grace },
     });
   });
 
@@ -54,7 +52,7 @@ describe('giving the credential of a connection', () => {
     await giving(h, { id: key.id, token: key.token, private_key: '-----BEGIN PRIVATE KEY-----', algorithm: 'ES256' });
 
     expect([...h.secrets.values().values()]).toEqual(['billing-client-secret', '-----BEGIN PRIVATE KEY-----']);
-    expect((await h.facts()).at(-1)?.data).toEqual({ connection: key.id, secret_id: 'secret-2', algorithm: 'ES256' });
+    expect(await lastFact(h)).toEqual({ connection: key.id, secret_id: 'secret-2', algorithm: 'ES256', ...byAda });
   });
 });
 
@@ -170,7 +168,7 @@ describe('client credentials whose client id the connection does not hold', () =
     const given = await giving(h, { id, token, client_id: 'acme', client_secret: 'billing-client-secret' });
 
     expect(given).toMatchObject({ status: 'succeeded', output: { credential: billing.credential } });
-    expect((await h.facts()).at(-1)?.data).toEqual({ connection: id, secret_id: 'secret-1', client_id: 'acme' });
+    expect(await lastFact(h)).toEqual({ connection: id, secret_id: 'secret-1', client_id: 'acme', ...byAda });
     expect(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id })).toMatchObject({
       output: { status: 'connected', credential: billing.credential },
     });
@@ -182,10 +180,11 @@ describe('client credentials whose client id the connection does not hold', () =
 
     await giving(h, { id, token, client_id: 'acme', private_key: '-----BEGIN PRIVATE KEY-----', algorithm: 'ES256' });
 
-    expect((await h.facts()).at(-1)?.data).toEqual({
+    expect(await lastFact(h)).toEqual({
       connection: id,
       secret_id: 'secret-1',
       algorithm: 'ES256',
+      ...byAda,
       client_id: 'acme',
     });
   });

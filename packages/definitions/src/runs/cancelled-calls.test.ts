@@ -3,6 +3,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { modelCallAnswered, modelCallSent } from '../journal-testing/model-calls.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { CallFact, ModelCallFact, RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -23,9 +24,9 @@ function decided(fact: CallFact, ...history: readonly RecordedRunEvent[]) {
 
 const input = { who: 'Ada' };
 
-const startedToResume = atTheStart({ type: 'run_started', data: { input, resumes: true } });
+const startedToResume = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input, resumes: true } });
 
-const startedInItsCall = atTheStart({ type: 'run_started', data: { input } });
+const startedInItsCall = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input } });
 
 const cancelAsked = meanwhile({ type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Not needed' } });
 

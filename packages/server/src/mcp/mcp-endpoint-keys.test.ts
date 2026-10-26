@@ -186,7 +186,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
     expect(outcome.tools).toEqual(['list_playbooks', 'search', ...queriesInsideAPlaybook, 'get_guide']);
     expect(commands.filter((name) => new RegExp(`\\b${name}\\b`, 'u').test(outcome.instructions))).toEqual([]);
     expect(outcome.instructions).toContain(
-      "This connection acts in the caller's own org: list_playbooks shows its playbooks. get_guide holds what these words mean",
+      "The org is the caller's own: list_playbooks shows its playbooks. get_guide explains these words",
     );
     expect(outcome.listed.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });

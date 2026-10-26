@@ -231,7 +231,7 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 - A new version's triggers are compared with those of the version before, by kind and place. A trigger it leaves unchanged goes on as it was, with its times and its running run. From then on it starts the new version. A trigger it changes or adds applies from the new version's saving; a changed schedule counts its times from then. A trigger it removes stops.
 - Saving a version without a schedule, or retiring the workflow, stops every trigger.
 - A run that a trigger starts uses the version that was current when the event was recorded or the time came. Its `run_id` is derived from the workflow, that version, the trigger and the event or due time. So an event or a time starts it once.
-- The playbook itself starts a triggered run, which acts for the playbook. Its `started_by` is `playbook:` and the playbook's id. Each step may read and write that playbook and nothing else. The run never acts for a person, so no key's permissions or revocation affect it.
+- The playbook itself starts a triggered run, which acts for the playbook. Its `started_by` has the `id` `playbook:` and the playbook's id, and the playbook's id as its `name`. Each step may read and write that playbook and nothing else. The run never acts for a person, so no key's permissions or revocation affect it.
 
 ### Trigger limits
 
@@ -300,7 +300,7 @@ A `switch` tests its cases in order and follows the `then` of the first case who
 
 The task's output is that run's output: a reasoning function's text or JSON, an interaction function's answer from its tool or its request, a prediction function's series or its build's outcome, what a recall function returned from its view, the value a computation function's program gave, or the output of the workflow it ran.
 
-Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started.
+Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started, and names that caller, by id and name, as its `started_by`.
 
 Some runs finish within their call, and others later. A task waits for the longest its definition's run may take, plus one minute:
 

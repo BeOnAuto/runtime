@@ -9,7 +9,7 @@ const sales = {
   description: 'Answers questions about the pipeline',
   status: 'active',
   created_at: '2026-10-02T09:00:00.000Z',
-  created_by: 'acme-admin',
+  created_by: { id: 'acme-admin', name: 'acme-admin' },
   updated_at: '2026-10-02T09:00:00.000Z',
 };
 

@@ -93,7 +93,10 @@ export function savedIn(folders: ProjectedFolders, { name, source, document }: M
     [
       {
         type: 'definition_created',
-        data: { content: { source, details: datasetDetailsOf(document) } },
+        data: {
+          content: { source, details: datasetDetailsOf(document) },
+          created_by: { id: 'acme-admin', name: 'acme-admin' },
+        },
       },
     ],
     {

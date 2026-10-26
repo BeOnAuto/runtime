@@ -10,7 +10,13 @@ import { logsToStderr } from '../logging/log-formats.ts';
 import { applicationLayer } from './application-layer.ts';
 import { factsComposedOf } from './composed-facts.ts';
 
-const acmeAdmin: CallerIdentity = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' };
+const acmeAdmin: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
 
 const statusOfAlpha = Effect.gen(function* () {
   const registry = yield* PlaybookRegistry;

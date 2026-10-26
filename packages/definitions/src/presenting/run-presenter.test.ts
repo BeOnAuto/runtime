@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionPresenters } from '../index.ts';
 import type { RunEvent } from '../runs/run-events.ts';
 import { askedRequest, asking } from '../testing/asking.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { testRunId } from '../testing/run-facts.ts';
 
@@ -50,12 +51,12 @@ function presented(event: RunEvent, context: Context = ofGreet) {
 }
 
 describe('the presenter of the events of a run', () => {
-  it('presents a start with its input as its data and the definition that ran, who and when as its metadata', () => {
-    expect(presented({ type: 'run_started', data: { input: { who: 'Ada' } } })).toEqual({
+  it('presents a start with its input and who started it as its data, and the definition that ran, who and when as its metadata', () => {
+    expect(presented({ type: 'run_started', data: { started_by: recordedAdmin, input: { who: 'Ada' } } })).toEqual({
       id: '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3',
       type: 'run_started',
       summary: 'A run of the greeting “greet” started.',
-      data: { input: { who: 'Ada' } },
+      data: { started_by: recordedAdmin, input: { who: 'Ada' } },
       metadata: {
         stream: `playbook/acme/alpha/runs/${testRunId}`,
         position: 1,
@@ -71,7 +72,7 @@ describe('the presenter of the events of a run', () => {
   });
 
   it('presents an input past 2 KiB as its size', () => {
-    const started = presented({ type: 'run_started', data: { input: 'x'.repeat(3000) } });
+    const started = presented({ type: 'run_started', data: { started_by: recordedAdmin, input: 'x'.repeat(3000) } });
 
     expect(started).toMatchObject({ data: { input_bytes: 3002 } });
   });
@@ -79,9 +80,9 @@ describe('the presenter of the events of a run', () => {
   it('fails on a fact of a run recorded without its definition, which a presenter never hides', () => {
     const { by, at } = ofGreet;
 
-    expect(() => presented({ type: 'run_started', data: { input: {} } }, { runId: testRunId, by, at })).toThrow(
-      'definitionType',
-    );
+    expect(() =>
+      presented({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }, { runId: testRunId, by, at }),
+    ).toThrow('definitionType');
   });
 
   it('fails on a record that is not a fact of a run, which the ledger never holds', () => {
@@ -122,18 +123,24 @@ describe('the presenter of work that finishes later', () => {
 });
 
 describe('the presenter of the answer a run took and of the facts its capability declares', () => {
-  it('presents the answer a run took, with whom the caller answered for or the reply that brought it', () => {
+  it('presents the answer a run took, with who answered it, whom they answered for or the reply that brought it', () => {
     const reply = { id: '1699.2', sender: 'ada' };
 
     expect([
-      presented({ type: 'request_answered', data: { answer: { choice: 'approve' } } }),
-      presented({ type: 'request_answered', data: { answer: { choice: 'approve' }, claimed_for: 'ada' } }),
-      presented({ type: 'request_answered', data: { answer: { choice: 'reject' }, reply } }),
+      presented({ type: 'request_answered', data: { answered_by: recordedAdmin, answer: { choice: 'approve' } } }),
+      presented({
+        type: 'request_answered',
+        data: { answered_by: recordedAdmin, answer: { choice: 'approve' }, claimed_for: 'ada' },
+      }),
+      presented({
+        type: 'request_answered',
+        data: { answered_by: recordedAdmin, answer: { choice: 'reject' }, reply },
+      }),
     ]).toMatchObject([
       {
         type: 'request_answered',
         summary: 'The request was answered, and the run takes the answer.',
-        data: { answer: { choice: 'approve' } },
+        data: { answer: { choice: 'approve' }, answered_by: recordedAdmin },
       },
       { data: { answer: { choice: 'approve' }, claimed_for: 'ada' } },
       {

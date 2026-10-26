@@ -7,6 +7,7 @@ import {
   ContextReference,
   DefinitionContextSchema,
   EmittedContextSchema,
+  RecordedCallerSchema,
   RunContextSchema,
   bytesOfReference,
   checkedContext,
@@ -14,6 +15,7 @@ import {
   holdsNoForbiddenCharacter,
   leastCount,
   mostReferenceBytes,
+  recordedCallerOf,
   type Context,
 } from './context.ts';
 import { factOf, recordingOf } from './decider.ts';
@@ -30,6 +32,21 @@ const ofACall: Context = {
   depth: 2,
   trigger: { kind: 'event', reference: '/schedule/on' },
 };
+
+describe('the caller as the data of a fact names who did something', () => {
+  it('is the id and the name of the caller, and nothing it may do, where the context names the id alone', () => {
+    const recorded = recordedCallerOf({
+      id: 'person:user_2ada',
+      name: 'Ada Lovelace',
+      org: 'acme',
+      permissions: ['playbook:read'],
+      playbooks: '*',
+    });
+
+    expect(recorded).toStrictEqual({ id: 'person:user_2ada', name: 'Ada Lovelace' });
+    expect(Schema.decodeUnknownSync(RecordedCallerSchema)(recorded)).toStrictEqual(recorded);
+  });
+});
 
 describe('the context of a recorded message', () => {
   it('is read from its metadata without the store’s own fields', () => {

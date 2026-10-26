@@ -14,7 +14,7 @@ function saved(name: string, details?: Schema.JsonObject, status: 'active' | 're
     status,
     source: '',
     created_at: at,
-    created_by: 'acme-admin',
+    created_by: { id: 'acme-admin', name: 'acme-admin' },
     updated_at: at,
     ...(details === undefined ? {} : { details }),
   };

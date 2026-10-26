@@ -3,7 +3,7 @@ import { configuredApiKeys, type ApiKeySource } from '../keys/api-key-source.ts'
 import { keyPrefix, type ApiKey } from '../keys/api-key.ts';
 import { verifyKey } from '../keys/verify-key.ts';
 import { accessModeOf, type AccessMode, type DeclaredAccessMode } from './access-mode.ts';
-import { localDeveloper, principalOf, unexplained, type Authentication } from './principal.ts';
+import { localDeveloperOf, principalOf, unexplained, type Authentication, type LocalAccount } from './principal.ts';
 import { ReachableWithoutCredentialsError } from './reachable-without-credentials-error.ts';
 
 export interface Authenticator {
@@ -22,6 +22,7 @@ export interface AccessSettings {
   readonly apiKeySource?: ApiKeySource | undefined;
   readonly identityService?: IdentityService | undefined;
   readonly accessMode?: DeclaredAccessMode | undefined;
+  readonly localAccount?: LocalAccount | undefined;
 }
 
 async function keyHolderOf(source: ApiKeySource, presented: string | undefined): Promise<Authentication> {
@@ -36,11 +37,10 @@ function credentialHolderOf(source: ApiKeySource, identityService?: IdentityServ
       : keyHolderOf(source, presented);
 }
 
-const localAccess: Authenticator = {
-  mode: 'local',
-  resource: undefined,
-  authenticate: () => Promise.resolve(localDeveloper),
-};
+function localAccessOf(account: LocalAccount | undefined): Authenticator {
+  const localDeveloper = localDeveloperOf(account);
+  return { mode: 'local', resource: undefined, authenticate: () => Promise.resolve(localDeveloper) };
+}
 
 const closedAccess: Authenticator = {
   mode: 'closed',
@@ -56,9 +56,12 @@ function credentialAccessOf(source: ApiKeySource, identityService: IdentityServi
   };
 }
 
-function accessOf(mode: AccessMode, { apiKeys, apiKeySource, identityService }: AccessSettings): Authenticator {
+function accessOf(
+  mode: AccessMode,
+  { apiKeys, apiKeySource, identityService, localAccount }: AccessSettings,
+): Authenticator {
   if (mode === 'local') {
-    return localAccess;
+    return localAccessOf(localAccount);
   }
   return mode === 'closed'
     ? closedAccess

@@ -4,7 +4,7 @@
   "info": {
     "title": "Auto Runtime",
     "version": "0.23.0",
-    "description": "Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run directly or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
+    "description": "Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run alone or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
     {
@@ -146,8 +146,23 @@
                       "description": "When the playbook was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the playbook"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the playbook, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -290,8 +305,23 @@
                           "description": "When the playbook was created, in ISO 8601 UTC"
                         },
                         "created_by": {
-                          "type": "string",
-                          "description": "The id of the caller who created the playbook"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The caller who created the playbook, by id and name"
                         },
                         "updated_at": {
                           "type": "string",
@@ -426,8 +456,23 @@
                       "description": "When the playbook was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the playbook"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the playbook, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -583,8 +628,23 @@
                       "description": "When the playbook was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the playbook"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the playbook, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -729,8 +789,23 @@
                       "description": "When the playbook was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the playbook"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the playbook, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -1689,8 +1764,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -1710,13 +1800,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -2090,8 +2195,23 @@
                           "description": "pending until it is approved and its credential given, connected, broken or removed"
                         },
                         "added_by": {
-                          "type": "string",
-                          "description": "The id of the caller who added it"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The caller who added it, by id and name"
                         },
                         "added_at": {
                           "type": "string",
@@ -2111,13 +2231,28 @@
                         "connected_by": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "The id of the caller"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "null"
                             }
                           ],
-                          "description": "The id of the caller who connected it, approving it or giving its credential"
+                          "description": "The caller who connected it, approving it or giving its credential, by id and name"
                         },
                         "granted_scope": {
                           "anyOf": [
@@ -2459,8 +2594,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -2480,13 +2630,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -2824,8 +2989,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -2845,13 +3025,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -3205,8 +3400,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -3226,13 +3436,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -3654,8 +3879,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -3675,13 +3915,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -4087,8 +4342,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -4108,13 +4378,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -4704,8 +4989,23 @@
                       "description": "pending until it is approved and its credential given, connected, broken or removed"
                     },
                     "added_by": {
-                      "type": "string",
-                      "description": "The id of the caller who added it"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
                     },
                     "added_at": {
                       "type": "string",
@@ -4725,13 +5025,28 @@
                     "connected_by": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The id of the caller who connected it, approving it or giving its credential"
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -5340,8 +5655,23 @@
                       "description": "When the definition was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the definition"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the definition, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -5749,8 +6079,23 @@
                           "description": "When the definition was created, in ISO 8601 UTC"
                         },
                         "created_by": {
-                          "type": "string",
-                          "description": "The id of the caller who created the definition"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The caller who created the definition, by id and name"
                         },
                         "updated_at": {
                           "type": "string",
@@ -6042,8 +6387,23 @@
                       "description": "When the definition was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the definition"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the definition, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -6463,8 +6823,23 @@
                       "description": "When the definition was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the definition"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the definition, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -6874,8 +7249,23 @@
                       "description": "When the definition was created, in ISO 8601 UTC"
                     },
                     "created_by": {
-                      "type": "string",
-                      "description": "The id of the caller who created the definition"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the definition, by id and name"
                     },
                     "updated_at": {
                       "type": "string",
@@ -7427,8 +7817,23 @@
                       "description": "When the run started, in ISO 8601 UTC"
                     },
                     "started_by": {
-                      "type": "string",
-                      "description": "The id of the caller who started the run"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who started the run, by id and name"
                     },
                     "finished_at": {
                       "type": "string",
@@ -7839,8 +8244,23 @@
                       "description": "When the run started, in ISO 8601 UTC"
                     },
                     "started_by": {
-                      "type": "string",
-                      "description": "The id of the caller who started the run"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who started the run, by id and name"
                     },
                     "finished_at": {
                       "type": "string",
@@ -8266,8 +8686,23 @@
                       "description": "When the run started, in ISO 8601 UTC"
                     },
                     "started_by": {
-                      "type": "string",
-                      "description": "The id of the caller who started the run"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who started the run, by id and name"
                     },
                     "finished_at": {
                       "type": "string",
@@ -8498,8 +8933,23 @@
                           "description": "When the run started, in ISO 8601 UTC"
                         },
                         "started_by": {
-                          "type": "string",
-                          "description": "The id of the caller who started the run"
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The caller who started the run, by id and name"
                         },
                         "finished_at": {
                           "type": "string",
@@ -11257,8 +11707,23 @@
                       "description": "The reply that brought the answer, when a reply did"
                     },
                     "answered_by": {
-                      "type": "string",
-                      "description": "The id of the caller the answer came from"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who answered it, by id and name"
                     },
                     "answered_at": {
                       "type": "string",

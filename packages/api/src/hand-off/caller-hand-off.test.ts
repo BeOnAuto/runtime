@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { authInfoFor, playbookCallOf, orgCallOf } from './caller-hand-off.ts';
 
-const caller: CallerIdentity = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: ['alpha'] };
+const caller: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: ['alpha'],
+};
 
 class Invocation extends Context.Service<Invocation, { readonly id: string }>()('test/Invocation') {}
 

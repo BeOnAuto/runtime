@@ -199,7 +199,11 @@ const delivered: Fact = { type: 'delivery_succeeded', data: { number: 1, ...answ
 
 const taken: Fact = {
   type: 'request_answered',
-  data: { answer: { choice: 'approve' }, reply: { id: '1699.2', sender: 'ada' } },
+  data: {
+    answer: { choice: 'approve' },
+    reply: { id: '1699.2', sender: 'ada' },
+    answered_by: { id: 'playbook:alpha', name: 'alpha' },
+  },
 };
 
 describe('the open request of a run asked to cancel', () => {

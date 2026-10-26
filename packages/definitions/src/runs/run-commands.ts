@@ -1,4 +1,4 @@
-import type { CallLink, StartingTrigger } from '@on.auto/operations';
+import type { CallLink, RecordedCaller, StartingTrigger } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { OutputShapeName } from '../shapes/shape-names.ts';
@@ -21,6 +21,7 @@ export interface RunRequest {
 
 export interface RunStart extends RunRequest {
   readonly type: 'start';
+  readonly started_by: RecordedCaller;
   readonly definition_version: number;
   readonly calls_tools: boolean;
   readonly finishes_later?: boolean;
@@ -53,6 +54,8 @@ export interface CapabilityFact {
 }
 
 export type AnswerFact = RequestAnswered['data'];
+
+export type GivenAnswer = Omit<AnswerFact, 'answered_by'>;
 
 export interface InterruptedAttempt {
   readonly type: 'run_interrupted';

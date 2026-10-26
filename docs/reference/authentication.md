@@ -56,6 +56,7 @@ The runtime accepts a token only when it meets every rule:
 | `exp`             | Present and not past, with 60 seconds of leeway                                                                                                                                                                                                                                                                               |
 | `nbf` and `iat`   | Not ahead, with 60 seconds of leeway                                                                                                                                                                                                                                                                                          |
 | `sub`             | A non-empty string of at most 256 bytes, without control characters, unpaired surrogates or noncharacters. These are the bounds of a name in the facts, since `sub` becomes part of the name recorded for the person. For a token that names no org, an org id other than `local` too, since it is the org the person acts in |
+| `name`            | Present, and a non-empty string of at most 256 bytes, without control characters, unpaired surrogates or noncharacters. It is the person's name as the identity service gives it, which the runtime records beside their id as who did what they did, and names in the instructions of an MCP connection                      |
 | `org_id`          | For an access token that names an org: present, and an org id of 1 to 64 letters, digits, `_` and `-`, other than `local`. It is the id of the organization the person signed in to. The identity service puts it in the token when the person grants `user:org:read`                                                         |
 | `o`               | For a session that names an org: an object whose `id` is an org id under the same rule. Version 2 of the service's session token names the organization in `o`, beside its slug, the person's role, their permissions and a feature-permission map. The runtime reads only the `id`                                           |
 | `scope`           | For an access token that holds it, a string of scopes separated by spaces, as the identity service issues it. The `scope` of a session is not read                                                                                                                                                                            |
@@ -77,17 +78,19 @@ A key set that `IDENTITY_JWKS` gives is read from nowhere: its keys are the ones
 
 A token that fails any rule is refused `401` with `invalid_token`, and so is an opaque token. The problem's `detail` names the rule or the claim the token failed, and never a value it holds:
 
-| Token                                                                                   | Detail                                                                              |
-| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| An expired token                                                                        | `The token was refused: ERR_JWT_EXPIRED on its exp claim`                           |
-| An access token without `org_id` that holds an `o`                                      | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim`        |
-| An access token whose `org_id` is not an org id other than `local`                      | `The token was refused: its org_id claim is not an org id other than local`         |
-| A session without `o` that holds an `org_id`                                            | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim`             |
-| A session whose `o` is no object, or holds no `id` that is an org id other than `local` | `The token was refused: its o.id claim is not an org id other than local`           |
-| A token that names no org, whose `sub` is not an org id other than `local`              | `The token was refused: its sub claim is not an org id other than local`            |
-| An access token for another resource                                                    | Ends `on its aud claim`                                                             |
-| A session given to a page at an origin the runtime does not allow, or naming no origin  | Ends `on its azp claim`                                                             |
-| A session sent without an `Origin` header, or from another origin than its `azp`        | `The token was refused: the session was not presented by the page it was issued to` |
+| Token                                                                                   | Detail                                                                                                                                            |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An expired token                                                                        | `The token was refused: ERR_JWT_EXPIRED on its exp claim`                                                                                         |
+| An access token without `org_id` that holds an `o`                                      | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim`                                                                      |
+| An access token whose `org_id` is not an org id other than `local`                      | `The token was refused: its org_id claim is not an org id other than local`                                                                       |
+| A session without `o` that holds an `org_id`                                            | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim`                                                                           |
+| A session whose `o` is no object, or holds no `id` that is an org id other than `local` | `The token was refused: its o.id claim is not an org id other than local`                                                                         |
+| A token that names no org, whose `sub` is not an org id other than `local`              | `The token was refused: its sub claim is not an org id other than local`                                                                          |
+| A token without `name`                                                                  | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its name claim`                                                                        |
+| A token whose `name` is empty, longer than 256 bytes or holds a control character       | `The token was refused: its name is not a non-empty string of at most 256 bytes without control characters, unpaired surrogates or noncharacters` |
+| An access token for another resource                                                    | Ends `on its aud claim`                                                                                                                           |
+| A session given to a page at an origin the runtime does not allow, or naming no origin  | Ends `on its azp claim`                                                                                                                           |
+| A session sent without an `Origin` header, or from another origin than its `azp`        | `The token was refused: the session was not presented by the page it was issued to`                                                               |
 
 ## The audience of a token
 
@@ -167,10 +170,10 @@ API keys cover what sign-in does not: a machine, a pipeline or a trainer's agent
 
 ## The name recorded for a signed-in person
 
-A signed-in person acts under the name `person:<subject>`, where the subject is the token's `sub`, unchanged. This name lets a reader of the facts tell a person from a key.
+A signed-in person acts under the id `person:<subject>`, where the subject is the token's `sub`, unchanged, and the name the token's `name` claim gives. The id lets a reader of the facts tell a person from a key.
 
-- It is the `by` of every fact the person records, including the activation of a prediction function version they ask for.
-- It is the `created_by`, `started_by`, `answered_by` and `approved_by` of what they create, start, answer and approve.
+- The id is the `by` of every fact the person records, including the activation of a prediction function version they ask for.
+- The id and the name, as `{ id, name }`, are the `created_by` of a playbook and a definition they create, the `added_by` and the `connected_by` of a connection they add and connect, the `started_by` of a run they start, the `answered_by` of a request they answer, and the `trained_by`, `approved_by` and `refused_by` of a version of a prediction function they train, approve or refuse.
 - A run event the person sends without a `source` gets the source `/callers/` followed by that name, percent-encoded as one path segment.
 
 ## What happens when access is revoked

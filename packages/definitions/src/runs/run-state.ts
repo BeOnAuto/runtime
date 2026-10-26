@@ -1,4 +1,4 @@
-import type { CalledBy, RunContext, StartingTrigger } from '@on.auto/operations';
+import type { CalledBy, RecordedCaller, RunContext, StartingTrigger } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
@@ -16,7 +16,7 @@ export interface RecordedAnswer {
   readonly answer: Schema.Json;
   readonly claimedFor?: string;
   readonly reply?: ReplyIdentity;
-  readonly by: string;
+  readonly by: RecordedCaller;
   readonly at: string;
 }
 
@@ -82,8 +82,8 @@ function definitionOf({ definitionType, definitionName, definitionVersion }: Run
 type RecordedFinish = RecordedRunFact<'run_succeeded' | 'run_rejected' | 'run_failed'>;
 
 function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
-  const { input, calls_tools, finishes_later, resumes, output_shape } = data;
-  const { at, by, depth = 0, callDepth = 0, calledBy, trigger } = context;
+  const { input, started_by, calls_tools, finishes_later, resumes, output_shape } = data;
+  const { at, depth = 0, callDepth = 0, calledBy, trigger } = context;
   return {
     attempt: firstAttempt,
     input,
@@ -92,7 +92,7 @@ function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: 
       ...(output_shape === undefined ? {} : { output_shape }),
       status: 'started',
       started_at: at,
-      started_by: by,
+      started_by,
     },
     finishesLater: finishes_later === true,
     deferred: false,
@@ -154,16 +154,16 @@ function finishedRun(state: RecordedRunState, event: RecordedFinish): RecordedRu
 
 export interface RecordedAnswerFact {
   readonly data: RecordedRunFact<'request_answered'>['data'];
-  readonly context: Pick<RunContext, 'by' | 'at'>;
+  readonly context: Pick<RunContext, 'at'>;
 }
 
 export function recordedAnswerOf({ data, context }: RecordedAnswerFact): RecordedAnswer {
-  const { answer, claimed_for: claimedFor, reply } = data;
+  const { answer, claimed_for: claimedFor, reply, answered_by: by } = data;
   return {
     answer,
     ...(claimedFor === undefined ? {} : { claimedFor }),
     ...(reply === undefined ? {} : { reply }),
-    by: context.by,
+    by,
     at: context.at,
   };
 }

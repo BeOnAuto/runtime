@@ -20,6 +20,7 @@ const driveAdded: ConnectionEvent = {
     placeholders: {},
     entry: { url: 'https://mcp.drive.example.com/mcp' },
     credential: { kind: 'authorization', issuer: 'https://accounts.drive.example.com' },
+    added_by: { id: 'person:ada', name: 'Ada Lovelace' },
   },
 };
 
@@ -46,6 +47,7 @@ describe('a credential given to a connection of consent', () => {
       connection: 'drive-id',
       token_sha256: 'a1b2',
       bindsPerson: true,
+      connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
       secret_id: 'secret-1',
       ...acted,
     };
@@ -71,6 +73,7 @@ const finishingDrive: ConnectionCommand = {
   connection: 'drive-id',
   token_sha256: 'a1b2',
   bindsPerson: true,
+  connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
   state_sha256: 'c3d4',
   secret_id: 'secret-2',
   client_id: 'auto-runtime',
@@ -91,6 +94,7 @@ describe('the finish of a consent, as the decider takes it', () => {
             client_id: 'auto-runtime',
             client_source: 'registered',
             scope: 'files.read',
+            connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
           },
         },
       ]),
@@ -129,7 +133,13 @@ describe('the fold of a consent', () => {
     const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'drive-id' } };
     const connectedDrive: ConnectionEvent = {
       type: 'connection_connected',
-      data: { connection: 'drive-id', secret_id: 'secret-2', client_id: 'auto-runtime', client_source: 'registered' },
+      data: {
+        connection: 'drive-id',
+        secret_id: 'secret-2',
+        client_id: 'auto-runtime',
+        client_source: 'registered',
+        connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
+      },
     };
     expect([
       fold(driveAdded, linkIssued, started)?.consent,
@@ -176,6 +186,7 @@ const grantedTheRead: ConnectionEvent = {
     client_id: 'auto-runtime',
     client_source: 'registered',
     scope: 'files.read',
+    connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
   },
 };
 

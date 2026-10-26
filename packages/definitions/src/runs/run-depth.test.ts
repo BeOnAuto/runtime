@@ -1,6 +1,7 @@
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -23,10 +24,18 @@ interface StartOptions {
 }
 
 function starting(options: StartOptions): RunCommand {
-  return { type: 'start', ...greeting, calls_tools: false, definition_version: 1, ...start, ...options };
+  return {
+    type: 'start',
+    ...greeting,
+    started_by: recordedAdmin,
+    calls_tools: false,
+    definition_version: 1,
+    ...start,
+    ...options,
+  };
 }
 
-const started: RunEvent = { type: 'run_started', data: { input: greeting.input } };
+const started: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } };
 
 const startedDeep = recordedWith({ ...start, ...ofGreet, depth: 2 })(started);
 

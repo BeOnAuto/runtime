@@ -71,7 +71,7 @@ function tooMany({ type, mostActive }: RegistryRules, active: number, saving: st
 
 function decideCreation(
   rules: RegistryRules,
-  { name, content }: DefinitionCreation & CommandMetadata,
+  { name, content, created_by }: DefinitionCreation & CommandMetadata,
   registry: DefinitionRegistry,
 ): Decision {
   const existing = registry.get(name);
@@ -83,7 +83,9 @@ function decideCreation(
     return Result.fail(tooMany(rules, active, 'creating another'));
   }
   const beyond = beyondTheReactingBound(rules.type, registry, { name, content });
-  return beyond === undefined ? recording({ type: 'definition_created', data: { content } }) : Result.fail(beyond);
+  return beyond === undefined
+    ? recording({ type: 'definition_created', data: { content, created_by } })
+    : Result.fail(beyond);
 }
 
 function withTheSavedOverview(content: DefinitionContent, { overview }: StoredDefinition): DefinitionContent {

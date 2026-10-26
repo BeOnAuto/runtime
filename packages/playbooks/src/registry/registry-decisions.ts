@@ -31,10 +31,10 @@ function takenBy({ id, status }: Playbook): Conflict {
   });
 }
 
-function decideCreation({ playbook, name, description }: PlaybookCreation, registry: Registry): Decision {
+function decideCreation({ playbook, name, description, created_by }: PlaybookCreation, registry: Registry): Decision {
   const existing = registry.get(playbook);
   return existing === undefined
-    ? recording({ type: 'playbook_created', data: { playbook, name, description } })
+    ? recording({ type: 'playbook_created', data: { playbook, name, description, created_by } })
     : Result.fail(takenBy(existing));
 }
 

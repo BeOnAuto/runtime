@@ -3,6 +3,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { modelCallAnswered, modelCallSent, modelCallTimedOut } from '../journal-testing/model-calls.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { CallFact, CallStartedFact, ModelCallFact, RunCommand, ToolCallFact } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -23,7 +24,7 @@ const meanwhile = recordedWith({ ...during, ...ofGreet });
 
 const greeting = { definition_type: 'echo', name: 'greet', input: { who: 'Ada', tags: ['a', 'b'] } };
 
-const started = atTheStart({ type: 'run_started', data: { input: greeting.input } });
+const started = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } });
 
 const succeeded = atTheFinish({ type: 'run_succeeded', data: { output: 'Hello Ada', record: {} } });
 
@@ -48,7 +49,7 @@ function decided(command: RunCommand, ...history: readonly RecordedRunEvent[]) {
 }
 
 function starting(): RunCommand {
-  return { type: 'start', ...greeting, calls_tools: false, definition_version: 1, ...start };
+  return { type: 'start', ...greeting, started_by: recordedAdmin, calls_tools: false, definition_version: 1, ...start };
 }
 
 const sent = {

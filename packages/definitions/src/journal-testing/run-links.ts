@@ -52,6 +52,7 @@ export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal
       definition_type: 'tool-user',
       name: 'caller',
       input: {},
+      started_by: { id: 'acme-admin', name: 'acme-admin' },
       definition_version: 1,
       calls_tools: true,
       runId: testRunId,

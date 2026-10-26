@@ -1,3 +1,5 @@
+import { userInfo } from 'node:os';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -35,9 +37,11 @@ const anyPath = '/v1/orgs/acme/playbooks';
 
 const unexplained = { because: undefined };
 
-const adaOfAcme = { id: 'person:ada', org: 'acme', permissions: [], playbooks: [] };
+const adaOfAcme = { id: 'person:ada', name: 'Ada Lovelace', org: 'acme', permissions: [], playbooks: [] };
 
 const signedInAda = { own: adaOfAcme, callerIn: () => adaOfAcme };
+
+const adasAccount = { username: 'ada' };
 
 const tokensSeen: string[] = [];
 
@@ -55,16 +59,39 @@ describe('authenticatorFor on a loopback address with neither sign-in nor API ke
   });
 
   it('admits every request in local mode as the local developer of whichever org it names', async () => {
-    const authenticator = authenticatorFor({ host: '127.0.0.1', apiKeys: undefined });
+    const authenticator = authenticatorFor({ host: '127.0.0.1', apiKeys: undefined, localAccount: () => adasAccount });
     const developer = principalIn(await authenticator.authenticate(undefined, anyPath));
 
     expect(developer?.callerIn('globex')).toEqual({
       id: 'local',
+      name: 'ada',
       org: 'globex',
       permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'],
       playbooks: '*',
     });
     expect(authenticator.resource).toBeUndefined();
+  });
+
+  it('names the local developer by the account the server runs as on this computer', async () => {
+    const developer = principalIn(
+      await authenticatorFor({ host: '127.0.0.1', apiKeys: undefined }).authenticate(undefined, anyPath),
+    );
+
+    expect(developer?.own.name).toBe(userInfo().username);
+  });
+
+  it.each([
+    [
+      'names no account',
+      () => {
+        throw new Error('ENOENT: no such file or directory, uv_os_get_passwd');
+      },
+    ],
+    ['names an account without a name', () => ({ username: '' })],
+  ])('names the local developer by its id where the computer %s', async (_case, localAccount) => {
+    const authenticator = authenticatorFor({ host: '127.0.0.1', apiKeys: undefined, localAccount });
+
+    expect(principalIn(await authenticator.authenticate(undefined, anyPath))?.own.name).toBe('local');
   });
 
   it('gives the local developer the org local as its own', async () => {
@@ -126,12 +153,13 @@ describe('authenticatorFor with API keys', () => {
     expect(await authenticator.authenticate(undefined, anyPath)).toEqual(unexplained);
   });
 
-  it('admits a configured key as a caller of its own org, and of no other', async () => {
+  it('admits a configured key as a caller of its own org, named by its id, and of no other', async () => {
     const authenticator = authenticatorFor({ host: '0.0.0.0', apiKeys: keys });
     const holder = principalIn(await authenticator.authenticate(reader.key, anyPath));
 
     expect(holder?.callerIn('acme')).toEqual({
       id: 'acme-reader',
+      name: 'acme-reader',
       org: 'acme',
       permissions: ['playbook:read'],
       playbooks: ['alpha'],

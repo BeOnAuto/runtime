@@ -1,4 +1,5 @@
 import type { RecordedRun } from '@on.auto/definitions';
+import type { RecordedCaller } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
 import { restingUntil, type Performing } from '../build-work/build-performing.ts';
@@ -10,7 +11,12 @@ import { shadowStep } from './shadow-step.ts';
 
 type Because = 'approver_rejected' | 'unanswered' | 'shadow_failed';
 
-function activated(performing: Performing, built: BuiltVersion, rule: 'automatic' | 'approved', by: string | null) {
+function activated(
+  performing: Performing,
+  built: BuiltVersion,
+  rule: 'automatic' | 'approved',
+  by: RecordedCaller | null,
+) {
   return executed(performing, (asked) => ({
     ...asked,
     type: 'activate',
@@ -24,7 +30,7 @@ function activated(performing: Performing, built: BuiltVersion, rule: 'automatic
   }));
 }
 
-function refused(performing: Performing, built: BuiltVersion, because: Because, by: string | null) {
+function refused(performing: Performing, built: BuiltVersion, because: Because, by: RecordedCaller | null) {
   return executed(performing, (asked) => ({
     ...asked,
     type: 'refuse',
@@ -63,7 +69,7 @@ const decodeDecision = Schema.decodeUnknownOption(Schema.Struct({ decision: Sche
 
 interface Decided {
   readonly decision: 'approve' | 'reject' | 'unanswered';
-  readonly by: string | null;
+  readonly by: RecordedCaller | null;
 }
 
 function decidedIn({ run, answer }: RecordedRun): Decided {

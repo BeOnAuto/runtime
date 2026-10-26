@@ -70,7 +70,14 @@ function serviceOf(fake: FakeIssuer, fetch: IssuerFetch, issuerKeys?: IssuerKeyS
 
 function signedBy(fake: FakeIssuer): Promise<string> {
   const seconds = Math.floor(startedAt / 1000);
-  return fake.sign({ iss: fake.issuer, sub: 'ada', aud: testPublicUrl, exp: seconds + 3600, org_id: 'acme' });
+  return fake.sign({
+    iss: fake.issuer,
+    sub: 'ada',
+    name: 'Ada Lovelace',
+    aud: testPublicUrl,
+    exp: seconds + 3600,
+    org_id: 'acme',
+  });
 }
 
 async function callerOf(identityService: IdentityService, token: string): Promise<string | undefined> {

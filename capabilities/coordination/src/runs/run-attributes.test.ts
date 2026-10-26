@@ -10,6 +10,7 @@ const attributes: RunAttributes = {
   definition: { name: 'payment', version: 2 },
   caller: {
     id: 'operator',
+    name: 'operator',
     org: 'acme',
     permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'],
     playbooks: ['accounts'],

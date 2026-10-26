@@ -10,7 +10,14 @@ const issuer = 'https://keys.example';
 
 const seconds = Math.floor(Date.now() / 1000);
 
-const claims = { iss: issuer, sub: 'ada', aud: testPublicUrl, exp: seconds + 300, org_id: 'acme' };
+const claims = {
+  iss: issuer,
+  sub: 'ada',
+  name: 'Ada Lovelace',
+  aud: testPublicUrl,
+  exp: seconds + 300,
+  org_id: 'acme',
+};
 
 const first = generateKeyPairSync('rsa', { modulusLength: 2048 });
 

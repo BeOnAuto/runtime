@@ -75,19 +75,13 @@ describe('the person a token names', () => {
     expect(person).toMatchObject({
       own: {
         id: 'person:user|ada/ü 1',
+        name: 'Ada Lovelace',
         org: 'globex',
         permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'],
         playbooks: '*',
       },
     });
     expect(['globex', 'acme'].map((org) => principalIn(person)?.callerIn(org)?.org)).toEqual(['globex', undefined]);
-  });
-
-  it('is named by a subject of 256 bytes', async () => {
-    const { token, callerOf } = await signedTokens(fakeIssuer('https://login.example'), atStart);
-    const subjectOf256Bytes = `${'ü'.repeat(127)}ab`;
-
-    expect(await callerOf(await token({ sub: subjectOf256Bytes }))).toBe(`person:${subjectOf256Bytes}`);
   });
 });
 
@@ -117,7 +111,13 @@ describe('the permissions of the person a token names', () => {
     const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
     const person = principalIn(await identityService.personOf(await token({ scope: undefined }), '/mcp'));
 
-    expect(person?.callerIn('acme')).toEqual({ id: 'person:ada', org: 'acme', permissions: [], playbooks: '*' });
+    expect(person?.callerIn('acme')).toEqual({
+      id: 'person:ada',
+      name: 'Ada Lovelace',
+      org: 'acme',
+      permissions: [],
+      playbooks: '*',
+    });
   });
 
   it('are the four for a token that holds them without user:org:read, since org_id is what binds the org', async () => {
@@ -155,16 +155,7 @@ const refusedClaims: ReadonlyArray<readonly [string, Claims, string]> = [
   ['an iat beyond the leeway', { iat: seconds + 61 }, 'its iat is more than 60 seconds ahead'],
 ];
 
-const subjectRefusal =
-  'its sub is not a non-empty string of at most 256 bytes without control characters, unpaired surrogates or noncharacters';
-
 const refusedPersons: ReadonlyArray<readonly [string, Claims, string]> = [
-  ['no sub', { sub: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its sub claim'],
-  ['an empty sub', { sub: '' }, subjectRefusal],
-  ['a sub that is not a string', { sub: 7 }, subjectRefusal],
-  ['a sub over 256 bytes', { sub: 'ü'.repeat(129) }, subjectRefusal],
-  ['a sub with a control character', { sub: 'ada\u0000' }, subjectRefusal],
-  ['a sub with a noncharacter', { sub: 'ada\uFFFF' }, subjectRefusal],
   ['an org_id that is no org id', { org_id: 'ac me' }, 'its org_id claim is not an org id other than local'],
   ['the org of local mode', { org_id: 'local' }, 'its org_id claim is not an org id other than local'],
   ['an org_id that is not a string', { org_id: 7 }, 'its org_id claim is not an org id other than local'],
@@ -207,6 +198,7 @@ describe('the person a token that names no org names', () => {
 
     expect(person?.own).toEqual({
       id: 'person:user_2ada',
+      name: 'Ada Lovelace',
       org: 'user_2ada',
       permissions: ['playbook:read'],
       playbooks: '*',

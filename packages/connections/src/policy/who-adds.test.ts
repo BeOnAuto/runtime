@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { adding, notes } from '../testing/additions.ts';
 import { ada, harness } from '../testing/harness.ts';
 
-const acmeBuilder: CallerIdentity = { ...ada, id: 'acme-builder' };
+const acmeBuilder: CallerIdentity = { ...ada, id: 'acme-builder', name: 'acme-builder' };
 
-const localDeveloper: CallerIdentity = { ...ada, id: 'local' };
+const localDeveloper: CallerIdentity = { ...ada, id: 'local', name: 'ada' };
 
 describe('who adds a connection', () => {
   it('is a person on a runtime that signs people in, and never a key', async () => {
@@ -17,7 +17,10 @@ describe('who adds a connection', () => {
       reason: 'forbidden',
       detail: 'A connection is added by a person, through an agent signed in as them, and a key cannot add one',
     });
-    expect(await adding(h, notes)).toMatchObject({ status: 'succeeded', output: { added_by: 'person:ada' } });
+    expect(await adding(h, notes)).toMatchObject({
+      status: 'succeeded',
+      output: { added_by: { id: 'person:ada', name: 'Ada Lovelace' } },
+    });
   });
 
   it('is nobody on a runtime of keys alone, which signs in no person to approve one', async () => {
@@ -37,7 +40,7 @@ describe('who adds a connection', () => {
 
     expect(await adding(h, notes, localDeveloper)).toMatchObject({
       status: 'succeeded',
-      output: { added_by: 'local' },
+      output: { added_by: { id: 'local', name: 'ada' } },
     });
   });
 });

@@ -21,7 +21,7 @@ function tokenRequest(credentials: string, form: Readonly<Record<string, string>
 }
 
 describe('the fake issuer', () => {
-  it('mints a token for a client by its credentials, for the resource and the scopes asked, that the runtime verifies', async () => {
+  it('mints a token for a client by its credentials, named by the client, for the resource and the scopes asked, that the runtime verifies', async () => {
     const fake = fakeIssuer('https://login.example', { clients });
     const identityService = await identityServiceOf(
       { issuer: fake.issuer, publicUrl: 'https://runtime.example', studio: hostedStudio, allowedOrigins: [] },
@@ -39,6 +39,7 @@ describe('the fake issuer', () => {
 
     expect(principalIn(await identityService.personOf(token, '/mcp'))?.callerIn('acme')).toMatchObject({
       id: 'person:ada',
+      name: 'ada-agent',
       permissions: ['org:read'],
     });
   });
@@ -82,7 +83,7 @@ function segmentOf(token: string, index: number): unknown {
 }
 
 describe('the fake issuer giving a page its session', () => {
-  it('issues the session of version 2 the identity service sends, of a minute, to the page as azp, its org as o', async () => {
+  it('issues the session of version 2 the identity service sends, of a minute, to the page as azp, its org as o, naming the person', async () => {
     const session = await fakeIssuer('https://login.example').session('https://studio.example');
     const claims = segmentOf(session, 1);
     const { iat, nbf, exp } = timesOf(claims);
@@ -92,6 +93,7 @@ describe('the fake issuer giving a page its session', () => {
       {
         iss: 'https://login.example',
         sub: 'ada',
+        name: 'Ada Lovelace',
         sid: 'session-1',
         azp: 'https://studio.example',
         iat,

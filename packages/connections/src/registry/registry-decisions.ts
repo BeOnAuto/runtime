@@ -90,7 +90,7 @@ function decideStart(command: ConsentStart & CommandMetadata, registry: Registry
 }
 
 function decideFinish(command: ConsentFinish & CommandMetadata, registry: Registry): Decision {
-  const { connection, secret_id, client_id, client_source, scope } = command;
+  const { connection, secret_id, client_id, client_source, scope, connected_by } = command;
   const granted = scope === undefined ? {} : { scope };
   return Result.flatMap(finishedConnectionOf(registry, command, command), (kept): Decision => {
     if (!isOpenConsent(kept, command.at)) {
@@ -100,7 +100,10 @@ function decideFinish(command: ConsentFinish & CommandMetadata, registry: Regist
     return stateIssue === undefined
       ? Result.succeed([
           { type: 'connection_approved', data: { connection } },
-          { type: 'connection_connected', data: { connection, secret_id, client_id, client_source, ...granted } },
+          {
+            type: 'connection_connected',
+            data: { connection, secret_id, client_id, client_source, ...granted, connected_by },
+          },
         ])
       : Result.fail(stateIssue);
   });
@@ -133,8 +136,9 @@ function addedData({
   placeholders,
   entry,
   credential,
+  added_by: addedBy,
 }: Omit<ConnectionAddition, 'link'>) {
-  return { connection, name, server_type: serverType, provider, placeholders, entry, credential };
+  return { connection, name, server_type: serverType, provider, placeholders, entry, credential, added_by: addedBy };
 }
 
 function decideApproval(command: ConnectionApproval & CommandMetadata, registry: Registry): Decision {
@@ -150,13 +154,16 @@ function decideApproval(command: ConnectionApproval & CommandMetadata, registry:
         )
       : Result.succeed([
           { type: 'connection_approved', data: { connection: command.connection } },
-          { type: 'connection_connected', data: { connection: command.connection } },
+          {
+            type: 'connection_connected',
+            data: { connection: command.connection, connected_by: command.connected_by },
+          },
         ]);
   });
 }
 
 function decideGiving(command: CredentialGiving & CommandMetadata, registry: Registry): Decision {
-  const { connection, secret_id: secretId, algorithm, client_id: clientId } = command;
+  const { connection, secret_id: secretId, algorithm, client_id: clientId, connected_by: connectedBy } = command;
   const signing = algorithm === undefined ? {} : { algorithm };
   const client = clientId === undefined ? {} : { client_id: clientId };
   return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
@@ -166,7 +173,10 @@ function decideGiving(command: CredentialGiving & CommandMetadata, registry: Reg
     return takesAValue(kept)
       ? Result.succeed([
           { type: 'connection_approved', data: { connection } },
-          { type: 'connection_connected', data: { connection, secret_id: secretId, ...signing, ...client } },
+          {
+            type: 'connection_connected',
+            data: { connection, secret_id: secretId, ...signing, ...client, connected_by: connectedBy },
+          },
         ])
       : Result.fail(takesNoCredential(kept.connection.name));
   });

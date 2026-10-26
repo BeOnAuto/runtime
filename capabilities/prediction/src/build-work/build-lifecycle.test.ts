@@ -23,6 +23,8 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const anInstant: unknown = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/u);
 
+const theTrainer = { id: 'acme-admin', name: 'acme-admin' };
+
 describe('a build of a prediction function over an uploaded dataset, answered through the inbox', () => {
   it('waits for its trainer, takes a candidate, scores it, builds and activates its first version, and answers a question', async () => {
     const playbook = buildPlaybook();
@@ -56,7 +58,7 @@ describe('a build of a prediction function over an uploaded dataset, answered th
     });
     expect((await modelFactsOf(playbook))[0]).toMatchObject({
       type: 'version_built',
-      data: { recipe_bytes: 22, limitations_bytes: 16, trained_by: 'acme-admin', rule: 'automatic' },
+      data: { recipe_bytes: 22, limitations_bytes: 16, trained_by: theTrainer, rule: 'automatic' },
     });
     expect(await asked(playbook, { series: 'north', horizon: 1 })).toMatchObject({
       output: {

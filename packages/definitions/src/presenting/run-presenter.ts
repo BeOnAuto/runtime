@@ -97,7 +97,7 @@ function resumedFact({ type, data }: Shown<'attempt_resumed'>): PresentedFact {
 }
 
 function answerFact({ type, data }: Shown<'request_answered'>): PresentedFact {
-  const { answer, claimed_for: claimedFor, reply } = data;
+  const { answer, claimed_for: claimedFor, reply, answered_by: answeredBy } = data;
   return {
     type,
     summary: requestAnswered(reply !== undefined),
@@ -105,6 +105,7 @@ function answerFact({ type, data }: Shown<'request_answered'>): PresentedFact {
       answer,
       ...(claimedFor === undefined ? {} : { claimed_for: named(claimedFor) }),
       ...(reply === undefined ? {} : { reply: { id: named(reply.id), sender: named(reply.sender) } }),
+      answered_by: answeredBy,
     },
   };
 }

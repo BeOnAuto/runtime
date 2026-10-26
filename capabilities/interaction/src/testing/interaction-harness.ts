@@ -30,7 +30,13 @@ import { requestsDue, type DueRequestItem, type RequestsDue } from '../schedule/
 import { noTools, type ToolPorts } from './fake-tools.ts';
 import { dueInBothLanes, firstOpenOf, performedAll, performedEach } from './harness-parts.ts';
 
-export const acmeAdmin: CallerIdentity = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' };
+export const acmeAdmin: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
 
 export const alpha = { org: 'acme', playbook: 'alpha' };
 

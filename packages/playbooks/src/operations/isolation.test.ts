@@ -19,10 +19,10 @@ describe('the playbooks of two orgs', () => {
     await call(retirePlaybook, toGlobex(globexAdmin, { playbook: 'alpha' }));
 
     expect(await call(getPlaybook, toAcme(acmeAdmin, { playbook: 'alpha' }))).toMatchObject({
-      output: { name: 'Renamed', status: 'active', created_by: 'acme-admin' },
+      output: { name: 'Renamed', status: 'active', created_by: { id: 'acme-admin', name: 'acme-admin' } },
     });
     expect(await call(getPlaybook, toGlobex(globexAdmin, { playbook: 'alpha' }))).toMatchObject({
-      output: { name: 'Globex Alpha', status: 'retired', created_by: 'globex-admin' },
+      output: { name: 'Globex Alpha', status: 'retired', created_by: { id: 'globex-admin', name: 'globex-admin' } },
     });
     expect(await call(listPlaybooks, toAcme(acmeAdmin))).toMatchObject({
       output: { playbooks: [{ name: 'Renamed' }] },
@@ -118,11 +118,11 @@ describe('creating a playbook', () => {
     });
     expect(await call(createPlaybook, toAcme(acmeAlphaKeeper, { playbook: 'alpha', name: 'Alpha' }))).toMatchObject({
       status: 'succeeded',
-      output: { id: 'alpha', created_by: 'acme-alpha-keeper' },
+      output: { id: 'alpha', created_by: { id: 'acme-alpha-keeper', name: 'acme-alpha-keeper' } },
     });
     expect(await call(createPlaybook, toAcme(acmeAdmin, { playbook: 'delta', name: 'Delta' }))).toMatchObject({
       status: 'succeeded',
-      output: { id: 'delta', created_by: 'acme-admin' },
+      output: { id: 'delta', created_by: { id: 'acme-admin', name: 'acme-admin' } },
     });
   });
 });

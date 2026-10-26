@@ -74,7 +74,7 @@ const { training_bytes: _training, scoring_bytes: _scoring, ...cardDataset } = a
 const card = {
   version: 1,
   build: 'run-1',
-  trained_by: 'acme-trainer',
+  trained_by: { id: 'acme-trainer', name: 'acme-trainer' },
   dataset: cardDataset,
   file: { sha256, bytes: 600, opset: 13 },
   inputs: [],
@@ -178,7 +178,7 @@ const modelFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
       data_sha256: sha256,
       file_sha256: sha256,
       rule: 'approved',
-      approved_by: 'ada',
+      approved_by: { id: 'ada', name: 'ada' },
       build: 'run-2',
     },
     'Version 2 of the model was activated as its approver approved',

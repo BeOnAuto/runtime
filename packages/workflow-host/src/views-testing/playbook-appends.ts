@@ -53,7 +53,7 @@ function ranBy(append: Append): Ran {
     await append(
       `${streamPrefixOfPlaybook(playbook)}runs/${id}`,
       [
-        { type: 'run_started', data: { input: {} } },
+        { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
         { type: 'run_succeeded', data: { output, record: {} } },
       ],
       { ...ranContext(subject, at), runId: id },
@@ -67,12 +67,15 @@ function savedBy(append: Append, definitions: Map<string, number>): PlaybookAppe
     const key = `${streamPrefixOfPlaybook(playbook)}${name}`;
     const version = (definitions.get(key) ?? 0) + 1;
     definitions.set(key, version);
-    const type = version === 1 ? 'definition_created' : 'definition_updated';
     const content = {
       source: `the ${name} document, version ${version}`,
       ...(details === undefined ? {} : { details }),
     };
-    await append(`${streamPrefixOfPlaybook(playbook)}definitions/recall`, [{ type, data: { content } }], {
+    const saving =
+      version === 1
+        ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+        : { type: 'definition_updated', data: { content } };
+    await append(`${streamPrefixOfPlaybook(playbook)}definitions/recall`, [saving], {
       by: 'acme-admin',
       at: savedAt,
       definitionType: 'recall',

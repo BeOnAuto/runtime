@@ -79,7 +79,7 @@ describe('episode 11: asked to keep the revenue of each month, to ask later for 
     }));
 
     expect(sentenceNaming(instructions, 'wants kept')).toBe(
-      'What the person wants kept goes in a recall function, for anyone or a workflow to ask later, not your notes.',
+      'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
     );
     expect(String(prompt.messages[0]?.content.text)).toContain(
       "3. For what the person tells you, publish it to the playbook with publish_event once they agree, one event for each fact, such as each month's figure:",

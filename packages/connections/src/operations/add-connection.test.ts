@@ -21,7 +21,7 @@ describe('the answer to adding a connection', () => {
         },
         credential: { kind: 'secret', name: 'Authorization', in: 'header' },
         status: 'pending',
-        added_by: 'person:ada',
+        added_by: { id: 'person:ada', name: 'Ada Lovelace' },
         added_at: '2026-10-15T14:00:00.000Z',
         connected_at: null,
         connected_by: null,

@@ -109,6 +109,7 @@ function tokenEndpoint(
     const minted = await signed({
       iss: issuer,
       sub: client,
+      name: client,
       aud: form.get('resource') ?? issuer,
       iat: now,
       exp: now + lifetimeSeconds,
@@ -135,6 +136,7 @@ function sessionsOf(issuer: string, signed: Sign): FakeIssuer['session'] {
       {
         iss: issuer,
         sub: 'ada',
+        name: 'Ada Lovelace',
         sid: `session-${issued}`,
         azp: page,
         iat: now,

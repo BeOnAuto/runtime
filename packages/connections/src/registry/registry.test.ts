@@ -19,6 +19,7 @@ const crm = {
   placeholders: null,
   entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
   credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+  added_by: { id: 'person:ada', name: 'Ada Lovelace' },
 } as const;
 
 const crmAdded: ConnectionEvent = { type: 'connection_added', data: crm };
@@ -35,7 +36,7 @@ const approval: ConnectionEvent = { type: 'connection_approved', data: { connect
 
 const connection: ConnectionEvent = {
   type: 'connection_connected',
-  data: { connection: '0199-crm', secret_id: 'secret-1' },
+  data: { connection: '0199-crm', secret_id: 'secret-1', connected_by: { id: 'person:grace', name: 'Grace Hopper' } },
 };
 
 function evolvedWith(registry: Registry, event: ConnectionEvent, context: ActedContext): Registry {
@@ -48,7 +49,7 @@ function crmAfter(...events: readonly ConnectionEvent[]) {
 }
 
 describe('an added connection, as the stream folds it', () => {
-  it('is pending, added by the caller of the fact, with its link open', () => {
+  it('is pending, added by the caller its fact names, by id and name, with its link open', () => {
     expect(crmAfter()).toEqual({
       connection: {
         id: '0199-crm',
@@ -59,7 +60,7 @@ describe('an added connection, as the stream folds it', () => {
         entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
         credential: { kind: 'secret', name: 'Authorization', in: 'header' },
         status: 'pending',
-        added_by: 'person:ada',
+        added_by: { id: 'person:ada', name: 'Ada Lovelace' },
         added_at: '2026-10-15T14:00:00.000Z',
         connected_at: null,
         connected_by: null,
@@ -78,7 +79,7 @@ describe('an added connection, as the stream folds it', () => {
       connection: {
         status: 'connected',
         connected_at: '2026-10-15T14:05:00.000Z',
-        connected_by: 'person:grace',
+        connected_by: { id: 'person:grace', name: 'Grace Hopper' },
         broken: null,
       },
       link: undefined,
@@ -138,11 +139,17 @@ describe('a connection of client credentials whose client id is given on the pag
         placeholders: null,
         entry: { document: 'https://billing.example.com/openapi.json' },
         credential: { kind: 'client_credentials', issuer },
+        added_by: { id: 'person:ada', name: 'Ada Lovelace' },
       },
     };
     const connectedWithItsClient: ConnectionEvent = {
       type: 'connection_connected',
-      data: { connection: '0199-billing', secret_id: 'secret-2', client_id: 'acme' },
+      data: {
+        connection: '0199-billing',
+        secret_id: 'secret-2',
+        client_id: 'acme',
+        connected_by: { id: 'person:grace', name: 'Grace Hopper' },
+      },
     };
 
     expect([credentialAfter(billing), credentialAfter(billing, connectedWithItsClient)]).toEqual([

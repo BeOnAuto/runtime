@@ -57,8 +57,11 @@ function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'save
       const version = (versions.get(name) ?? 0) + 1;
       versions.set(name, version);
       const content = { source, details: datasetDetailsOf(document) };
-      const type = version === 1 ? 'definition_created' : 'definition_updated';
-      await folders.append(stream, [{ type, data: { content } }], contextOf(name, version));
+      const saving =
+        version === 1
+          ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+          : { type: 'definition_updated', data: { content } };
+      await folders.append(stream, [saving], contextOf(name, version));
       return document;
     },
     retired: async (name) => {

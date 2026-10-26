@@ -17,7 +17,7 @@ const retiredAlpha = {
   description: '',
   status: 'retired',
   created_at: firstMoment,
-  created_by: 'acme-admin',
+  created_by: { id: 'acme-admin', name: 'acme-admin' },
   updated_at: later,
   retired_at: later,
 };

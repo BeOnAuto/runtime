@@ -21,6 +21,7 @@ const crmAdded: ConnectionEvent = {
     placeholders: null,
     entry: { url: 'https://crm.example.com/mcp' },
     credential: { kind: 'none' },
+    added_by: { id: 'person:ada', name: 'Ada Lovelace' },
   },
 };
 
@@ -43,6 +44,7 @@ describe('giving a credential to a connection that takes none', () => {
       connection: 'crm-id',
       token_sha256: 'a1b2',
       bindsPerson: true,
+      connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
       secret_id: 'secret-1',
       ...acted,
     };
@@ -59,7 +61,10 @@ describe('the stream of the connections of an org', () => {
   });
 });
 
-const connected: ConnectionEvent = { type: 'connection_connected', data: { connection: 'crm-id' } };
+const connected: ConnectionEvent = {
+  type: 'connection_connected',
+  data: { connection: 'crm-id', connected_by: { id: 'person:ada', name: 'Ada Lovelace' } },
+};
 
 const breaking: ConnectionCommand = {
   type: 'break',
@@ -101,6 +106,7 @@ function addedAs(index: number): ConnectionEvent {
       placeholders: null,
       entry: { url: 'https://crm.example.com/mcp' },
       credential: { kind: 'none' },
+      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
     },
   };
 }
@@ -117,6 +123,7 @@ describe('adding a connection to an org that holds the most it may', () => {
       placeholders: null,
       entry: { url: 'https://wiki.example.com/mcp' },
       credential: { kind: 'none' },
+      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
       link: { token_sha256: 'c3d4', expires_at: '2026-10-15T14:10:00.000Z' },
       ...acted,
     };

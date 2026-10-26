@@ -8,8 +8,9 @@ export type DefinitionRegistry = ReadonlyMap<string, StoredDefinition>;
 export const initialRegistry: DefinitionRegistry = new Map();
 
 function createdDefinition({ data, context }: DefinitionCreated): StoredDefinition {
-  const { at, by, definitionName: name, definitionVersion: version } = context;
-  return { name, version, status: 'active', ...data.content, created_at: at, created_by: by, updated_at: at };
+  const { at, definitionName: name, definitionVersion: version } = context;
+  const { content, created_by } = data;
+  return { name, version, status: 'active', ...content, created_at: at, created_by, updated_at: at };
 }
 
 function updatedDefinition(
