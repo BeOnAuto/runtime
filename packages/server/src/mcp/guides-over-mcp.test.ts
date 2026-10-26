@@ -140,6 +140,24 @@ describe('the prompts of the server', () => {
   });
 });
 
+describe('the first-playbook prompt of the server', () => {
+  it('answers the recipe get_guide reads, its workflow steps among them, and embeds the reasoning-function guide', async () => {
+    const { prompt, read } = await onMcp(async (session) => ({
+      prompt: Schema.decodeUnknownSync(PromptSchema)(await session.getPrompt('first-playbook')),
+      read: Schema.decodeUnknownSync(TextSchema)(await session.callTool('get_guide', { guide: 'first-playbook' })),
+    }));
+    const [asked, embedded] = prompt.messages;
+    const recipe = read.content.map(({ text }) => text).join('');
+
+    expect(asked.content.text).toBe(`Create my first playbook.\n\n${recipe}`);
+    expect(recipe).toContain(
+      '\n7. Where the work starts on its own, read the workflow guide with get_guide and write the workflow that runs the function,',
+    );
+    expect(recipe).toContain('publish the material they paste with publish_event');
+    expect(embedded.content.resource.uri).toBe('guide://reasoning-function');
+  });
+});
+
 const PromptNamesSchema = Schema.Struct({ prompts: Schema.Array(Schema.Struct({ name: Schema.String })) });
 
 function promptNamesIn(listed: unknown): readonly string[] {

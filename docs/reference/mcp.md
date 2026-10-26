@@ -218,12 +218,12 @@ A connection is a tool server that a person adds to the org through their agent,
 
 The recipes are also prompts, which a client that shows MCP prompts offers in its menu. A connection offers a prompt only when it lists every tool the recipe's steps call, and the description of `get_guide` names the same recipes. So a playbook endpoint offers no `first-playbook`, the org endpoint offers none, and a key that may only read gets none.
 
-| Prompt           | Title                                | Arguments                            | What the recipe does                                                                   |
-| ---------------- | ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| `first-playbook` | Create your first playbook           | None                                 | Creates a playbook with a first reasoning function, and runs it once the person agrees |
-| `remember`       | Make the playbook remember something | `what` to remember                   | Keeps what the playbook's runs returned or its events recorded in a recall function    |
-| `give-tools`     | Give the playbook tools              | Optional `server`, a tool server     | Gives a reasoning function the tools of a tool server the playbook may use             |
-| `schedule`       | Run a workflow on a schedule         | The `workflow`, and `when` to run it | Starts a workflow on a schedule or on an event, and reads how its runs went            |
+| Prompt           | Title                                | Arguments                            | What the recipe does                                                                                                                                           |
+| ---------------- | ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `first-playbook` | Create your first playbook           | None                                 | Creates a playbook with a first reasoning function, runs it once the person agrees, and, where the work should run on its own, saves the workflow that runs it |
+| `remember`       | Make the playbook remember something | `what` to remember                   | Keeps what the playbook's runs returned or its events recorded in a recall function                                                                            |
+| `give-tools`     | Give the playbook tools              | Optional `server`, a tool server     | Gives a reasoning function the tools of a tool server the playbook may use                                                                                     |
+| `schedule`       | Run a workflow on a schedule         | The `workflow`, and `when` to run it | Starts a workflow on a schedule or on an event, and reads how its runs went                                                                                    |
 
 A prompt returns the recipe with the person's words filled in, followed by the format guide it needs.
 

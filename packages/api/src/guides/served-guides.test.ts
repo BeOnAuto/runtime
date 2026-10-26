@@ -48,6 +48,8 @@ const servedWithInteraction = await guideShelfFrom(guideFiles, [...everyType, in
 
 const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoning, workflow]);
 
+const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning]);
+
 function recipeTextsOf({ recipes }: GuideShelf): Readonly<Record<string, string>> {
   return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
 }
@@ -213,7 +215,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      2716, 1898,
+      2716, 3431,
     ]);
   });
 });
@@ -226,23 +228,15 @@ describe('the recipes of a server that serves interaction functions', () => {
       '5. Ask the person what the function should do with the tools, and which of them it needs. When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave. When the playbook should send a person a message through a tool and take their answer, write an interaction function instead: the interaction-function guide says how it names the tool it sends through and the tool it reads replies with, each called the same way.\n',
     );
     expect(texts['first-playbook']).toContain(
-      'give it tools with the give-tools recipe, send someone a message through a tool and take their answer with an interaction function, make the playbook remember its answers',
+      'give it tools with the give-tools recipe, send someone a message through a tool and take their answer with an interaction function, or make the playbook remember its answers',
     );
     expect([
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [1988, 2327, 3277, 1294],
-      [1898, 2327, 2716, 1294],
+      [3521, 2327, 3277, 1294],
+      [3431, 2327, 2716, 1294],
     ]);
-  });
-
-  it('name the same tools as on a server without them', () => {
-    const { recipes } = servedWithInteraction;
-
-    expect(recipes.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
-      recipes.map(({ name, calls }) => [name, calls.toSorted()]),
-    );
   });
 });
 
@@ -259,11 +253,14 @@ function toolsNamedIn(text: string): readonly string[] {
 }
 
 describe('the tools a recipe calls', () => {
-  it('are every tool its steps name, but the guide tool, listed on every connection, list_models and add_connection, called only where they are listed, and the fields of a tool they name', () => {
+  it('are every tool its steps name, on a server with or without workflows and interaction functions, but the guide tool, listed on every connection, list_models and add_connection, called only where they are listed, and the fields of a tool they name', () => {
     const { recipes } = served;
+    const onEveryServer = [served, servedWithInteraction, servedForReasoningAndWorkflows, servedForReasoning].flatMap(
+      (shelf) => shelf.recipes,
+    );
 
-    expect(recipes.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
-      recipes.map(({ name, calls }) => [name, calls.toSorted()]),
+    expect(onEveryServer.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
+      onEveryServer.map(({ name, calls }) => [name, calls.toSorted()]),
     );
     expect(recipes[0]?.text).toContain('list_models where this connection has it');
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toContain(
