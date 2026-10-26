@@ -201,7 +201,7 @@ The playbook now holds a workflow that reviews a brief and asks for an approval,
 Next:
 
 - An interaction function can also send its question through a tool, such as a chat message, and take the person's reply as the answer. [Interaction function format](../reference/interaction-format.md) shows how.
-- [Run a workflow on a schedule or event](../guides/triggers.md) starts a workflow without anyone asking.
+- [Run a workflow on a schedule or event](../guides/triggers.md) starts a workflow without anyone asking. A new playbook can start that way from the beginning: when you ask your agent for one, it asks how the work starts, unless your words already say so, such as "every morning" or "whenever a brief arrives". Where the work should start on its own, it writes the workflow that runs your first function, once you have seen that function answer.
 - [Workflows and runs](../concepts/workflows.md) explains how runs start, wait and end.
 
 </div>

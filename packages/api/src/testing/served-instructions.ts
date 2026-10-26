@@ -65,7 +65,16 @@ export const definitionTypes: readonly DefinitionType[] = [
 export const recipes: readonly RecipeCalls[] = [
   {
     name: 'first-playbook',
-    calls: ['list_playbooks', 'create_playbook', 'create_definition', 'execute', 'run_definition'],
+    calls: [
+      'list_playbooks',
+      'create_playbook',
+      'create_definition',
+      'execute',
+      'run_definition',
+      'publish_event',
+      'list_runs',
+      'get_run',
+    ],
   },
   {
     name: 'remember',

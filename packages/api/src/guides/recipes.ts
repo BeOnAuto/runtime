@@ -70,30 +70,102 @@ interface Insertion {
   readonly words: string;
 }
 
-const interactionGuide = 'interaction-function';
+interface Additions {
+  readonly insertions: readonly Insertion[];
+  readonly calls: readonly string[];
+}
 
-const whereInteractionIsServed: Readonly<Record<string, Insertion>> = {
+type AdditionsByRecipe = Readonly<Record<string, Additions>>;
+
+interface AdditionsOfAGuide {
+  readonly guide: string;
+  readonly byRecipe: AdditionsByRecipe;
+}
+
+const whereInteractionIsServed: AdditionsByRecipe = {
   'give-tools': {
-    after: 'and which of them it needs.',
-    words: [
-      ' When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave.',
-      ' When the playbook should send a person a message through a tool and take their answer, write an interaction function instead: the interaction-function guide says how it names the tool it sends through and the tool it reads replies with, each called the same way.',
-    ].join(''),
+    insertions: [
+      {
+        after: 'and which of them it needs.',
+        words: [
+          ' When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave.',
+          ' When the playbook should send a person a message through a tool and take their answer, write an interaction function instead: the interaction-function guide says how it names the tool it sends through and the tool it reads replies with, each called the same way.',
+        ].join(''),
+      },
+    ],
+    calls: [],
   },
   'first-playbook': {
-    after: 'give it tools with the give-tools recipe',
-    words: ', send someone a message through a tool and take their answer with an interaction function',
+    insertions: [
+      {
+        after: 'give it tools with the give-tools recipe',
+        words: ', send someone a message through a tool and take their answer with an interaction function',
+      },
+    ],
+    calls: [],
   },
 };
 
-async function textOf(
+const whereWorkflowsAreServed: AdditionsByRecipe = {
+  'first-playbook': {
+    insertions: [
+      {
+        after: 'the person sees answer',
+        words: ', and, where the work should run on its own, the workflow that runs it',
+      },
+      {
+        after: 'a budget and a measurable goal.',
+        words:
+          ' Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning", "continuously", "keep reviewing" or "whenever a lead comes in", take that as the answer and say so rather than asking again.',
+      },
+      {
+        after: 'tell the person what it answered, in their words.',
+        words: [
+          "\n7. Where the work starts on its own, read the workflow guide with get_guide and write the workflow that runs the function, with a `schedule` as the guide says. For set times, `cron` in UTC or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.",
+          "\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
+          '\n9. Tell the person when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.',
+        ].join(''),
+      },
+      {
+        after: 'what they can do next:',
+        words: ' change when it runs with the schedule recipe and the workflow guide,',
+      },
+    ],
+    calls: ['publish_event', 'list_runs', 'get_run'],
+  },
+};
+
+const additionsWhereServed: readonly AdditionsOfAGuide[] = [
+  { guide: 'interaction-function', byRecipe: whereInteractionIsServed },
+  { guide: 'workflow', byRecipe: whereWorkflowsAreServed },
+];
+
+function additionsTo(name: string, carried: ReadonlySet<string>): readonly Additions[] {
+  return additionsWhereServed.filter(({ guide }) => carried.has(guide)).flatMap(({ byRecipe }) => byRecipe[name] ?? []);
+}
+
+function withInserted(text: string, insertions: readonly Insertion[]): string {
+  return insertions.reduce(
+    (inserted, { after, words }) => inserted.replace(after, (found) => `${found}${words}`),
+    text,
+  );
+}
+
+async function recipeOf(
   shippedFiles: ShippedFiles,
-  { name }: RecipeOutline,
+  outline: RecipeOutline,
   carried: ReadonlySet<string>,
-): Promise<string> {
-  const text = await shippedFiles.text(shippedFileIn(recipesFolder, `${name}.md`));
-  const insertion = carried.has(interactionGuide) ? whereInteractionIsServed[name] : undefined;
-  return insertion === undefined ? text : text.replace(insertion.after, `${insertion.after}${insertion.words}`);
+): Promise<Recipe> {
+  const text = await shippedFiles.text(shippedFileIn(recipesFolder, `${outline.name}.md`));
+  const additions = additionsTo(outline.name, carried);
+  return {
+    ...outline,
+    text: withInserted(
+      text,
+      additions.flatMap(({ insertions }) => insertions),
+    ),
+    calls: [...outline.calls, ...additions.flatMap(({ calls }) => calls)],
+  };
 }
 
 export function recipesFor(shippedFiles: ShippedFiles, guides: readonly Guide[]): Promise<readonly Recipe[]> {
@@ -101,6 +173,6 @@ export function recipesFor(shippedFiles: ShippedFiles, guides: readonly Guide[])
   return Promise.all(
     outlines
       .filter(({ formatGuide }) => carried.has(formatGuide))
-      .map(async (outline) => Object.assign({ text: await textOf(shippedFiles, outline, carried) }, outline)),
+      .map((outline) => recipeOf(shippedFiles, outline, carried)),
   );
 }
