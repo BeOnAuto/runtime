@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.1](https://github.com/BeOnAuto/runtime/compare/v0.24.0...v0.24.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **api:** the answer after the link says where the connection stands ([#336](https://github.com/BeOnAuto/runtime/issues/336)) ([a68caaa](https://github.com/BeOnAuto/runtime/commit/a68caaa0c0b1f19eb9e9e7e2e5e6e8b5675a03ee))
+
 ## [0.24.0](https://github.com/BeOnAuto/runtime/compare/v0.23.0...v0.24.0) (2026-10-26)
 
 
