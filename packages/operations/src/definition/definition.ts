@@ -7,6 +7,16 @@ import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import type { LinkToOpen, PlainLanguage } from '../plain-language/plain-language.ts';
 import type { MethodOf, PathParameters, Route } from './route.ts';
 
+export interface OfferedLink {
+  readonly id: string;
+  readonly url: string;
+}
+
+export interface AnswerAfterTheLink<Out, R extends DeclarableReason, Services> {
+  readonly idOf: (output: Out) => string;
+  readonly read: (link: OfferedLink) => Effect.Effect<Out, Rejection<R>, Services>;
+}
+
 interface ObjectValue {
   readonly [field: string]: unknown;
 }
@@ -40,6 +50,7 @@ export interface Definition<
   Out extends ObjectSchema,
   R extends DeclarableReason,
   Services,
+  ReadServices = never,
 > {
   readonly name: string;
   readonly title: string;
@@ -56,7 +67,8 @@ export interface Definition<
   readonly reasons: readonly R[];
   readonly handle: (input: In['Type']) => Effect.Effect<Out['Type'], NoInfer<Rejection<R>>, Services>;
   readonly plainLanguage?: PlainLanguage<NoInfer<In['Type']>, NoInfer<Out['Type']>>;
-  readonly linkToOpen?: (output: NoInfer<Out['Type']>) => LinkToOpen;
+  readonly linkToOpen?: (output: NoInfer<Out['Type']>) => LinkToOpen | undefined;
+  readonly answerAfterTheLink?: AnswerAfterTheLink<NoInfer<Out['Type']>, NoInfer<R>, ReadServices>;
 }
 
 export type StreamedBodyKind = 'octet-stream' | 'csv';

@@ -1,7 +1,8 @@
 import type { LinkToOpen, Outcome, RegisteredPlainLanguage, Succeeded } from '@on.auto/operations';
+import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { added, crm, notes, statusesOf } from '../testing/additions.ts';
+import { added, crm, notes, statusesOf, type Added } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 function wordsOf(h: Harness, name: string): RegisteredPlainLanguage {
@@ -21,10 +22,22 @@ async function outcomeWords(h: Harness, name: string, input: Readonly<Record<str
   return wordsOf(h, name).outcome(outputOf(outcome), input);
 }
 
-async function linkOf(h: Harness): Promise<LinkToOpen | undefined> {
+function linkingOf(h: Harness) {
   const { registration } = operationNamed(h.operations, 'add_connection');
-  const outcome = await h.call({ registration }, ada, crm);
-  return 'linkToOpen' in registration ? registration.linkToOpen?.(outputOf(outcome)) : undefined;
+  return Option.getOrThrow(Option.fromNullishOr('link' in registration ? registration.link : undefined));
+}
+
+async function linkOf(h: Harness): Promise<LinkToOpen | undefined> {
+  const outcome = await h.call(operationNamed(h.operations, 'add_connection'), ada, crm);
+  return linkingOf(h).toOpen(outputOf(outcome));
+}
+
+async function outputAfterTheLink(h: Harness, { id, url }: Added, at?: string): Promise<unknown> {
+  return outputOf(await h.call({ registration: linkingOf(h).answerAfter({ id, url }) }, ada, notes, at));
+}
+
+async function wordsAfterTheLink(h: Harness, link: Added, at?: string): Promise<string> {
+  return wordsOf(h, 'add_connection').outcome(await outputAfterTheLink(h, link, at), notes);
 }
 
 describe('the words of adding a connection', () => {
@@ -49,6 +62,43 @@ describe('the words of adding a connection', () => {
       'Open this page to approve the connection “crm”, and give its credential where it takes one, within ten minutes.',
     );
     expect(link?.url).toMatch(/^https:\/\/studio\.on\.auto\/connect\?server=http%3A%2F%2Flocalhost%3A5555&org=acme&/u);
+  });
+});
+
+describe('the words of the answer after the link of a connection', () => {
+  it('say it is connected and nothing is left to open, once the person approved it', async () => {
+    const h = harness();
+    const link = await added(h, notes);
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: link.id, token: link.token });
+
+    expect(await wordsAfterTheLink(h, link)).toBe('Connected the connection “notes”; nothing is left to open.');
+  });
+
+  it('say where the person approves it while its link lasts, and to remove it and add it again once it expired', async () => {
+    const h = harness();
+    const link = await added(h, notes);
+
+    expect(await wordsAfterTheLink(h, link)).toBe(await outcomeWords(harness(), 'add_connection', notes));
+    expect(await wordsAfterTheLink(h, link, link.expiresAt)).toBe(
+      'The connection “notes” is pending, and its link is used up or expired, so nothing is left to open: remove it and add it again.',
+    );
+  });
+
+  it('say the person cancelled it and nothing is connected, once it was removed', async () => {
+    const h = harness();
+    const link = await added(h, notes);
+    await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: link.id });
+
+    expect(await wordsAfterTheLink(h, link)).toBe(
+      'The person cancelled the connection “notes” on the page, so it is removed and nothing is connected.',
+    );
+  });
+
+  it('ask no agent to have the person open a link once there is none', async () => {
+    const h = harness();
+    const link = await added(h, notes);
+
+    expect(linkingOf(h).toOpen(await outputAfterTheLink(h, link, link.expiresAt))).toBeUndefined();
   });
 });
 

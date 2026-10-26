@@ -32,6 +32,10 @@ export function findConnection(registry: Registry, id: string): Effect.Effect<Ke
   return Effect.fromResult(keptConnectionOf(registry, id));
 }
 
+export function openLinkOf({ link }: KeptConnection, at: string): OpenLink | undefined {
+  return link !== undefined && link.expires_at > at ? link : undefined;
+}
+
 function isOfTheToken(kept: KeptConnection, tokenSha256: string): kept is KeptWithLink {
   const { connection, link } = kept;
   return connection.status === 'pending' && link !== undefined && link.token_sha256 === tokenSha256;

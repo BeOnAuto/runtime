@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import {
   type CallerIdentity,
   type OperationScope,
+  type RegisteredLink,
   type RegisteredPlainLanguage,
   type Registration,
   type RouteRegistration,
@@ -16,7 +17,7 @@ import {
   type HandedOff,
   type OrgCall,
 } from '../hand-off/caller-hand-off.ts';
-import { toolCallbackOf, type AnsweringServing } from '../tools/linked-answers.ts';
+import { toolCallbackOf, type AnsweringServing, type ToolLink } from '../tools/linked-answers.ts';
 import { playbookArgumentOf, withoutPlaybook } from '../tools/playbook-argument.ts';
 import type { Arguments, CalledTool, Dispatch } from '../tools/tool-callback.ts';
 import { toolDefinitionOf, toolDefinitionTakingPlaybookOf, type ToolDefinition } from '../tools/tool-definition.ts';
@@ -33,7 +34,12 @@ interface Offered<R extends Registration> {
   readonly plainLanguage: RegisteredPlainLanguage;
 }
 
-interface Tool extends CalledTool {
+interface Dispatching {
+  readonly dispatch: Dispatch;
+  readonly link?: ToolLink;
+}
+
+interface Tool extends CalledTool, Dispatching {
   readonly name: string;
   readonly definition: ToolDefinition;
 }
@@ -101,7 +107,7 @@ function asGiven(input: Arguments): Arguments {
 
 function toolsOf<R extends Registration>(
   offers: readonly Offered<R>[],
-  dispatchOf: (registration: R) => Dispatch,
+  dispatchOf: (registration: R) => Dispatching,
   operationInputOf: (input: Arguments) => Arguments = asGiven,
 ): readonly Tool[] {
   return offers.map(({ registration, definition, plainLanguage }) => ({
@@ -109,10 +115,27 @@ function toolsOf<R extends Registration>(
     definition,
     kind: registration.kind,
     plainLanguage,
-    dispatch: dispatchOf(registration),
     operationInputOf,
-    ...(registration.linkToOpen === undefined ? {} : { linkToOpen: registration.linkToOpen }),
+    ...dispatchOf(registration),
   }));
+}
+
+function dispatchingOf<R>(
+  dispatchTo: (registration: R) => Dispatch,
+  registration: R,
+  link: RegisteredLink<R> | undefined,
+): Dispatching {
+  const dispatch = dispatchTo(registration);
+  return link === undefined
+    ? { dispatch }
+    : {
+        dispatch,
+        link: {
+          toOpen: link.toOpen,
+          idOf: link.idOf,
+          dispatchAfter: (offeredLink) => dispatchTo(link.answerAfter(offeredLink)),
+        },
+      };
 }
 
 interface ConnectedCall {
@@ -138,28 +161,38 @@ function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: r
 function orgDispatchOf(
   dispatcher: Dispatcher,
   { caller, org }: OrgCall,
-): (registration: Registration<'org'>) => Dispatch {
-  return (registration) => (input) => dispatcher.dispatchToOrg(registration, { caller, org, input, encoding: 'json' });
+): (registration: Registration<'org'>) => Dispatching {
+  const dispatchTo =
+    (registration: Registration<'org'>): Dispatch =>
+    (input) =>
+      dispatcher.dispatchToOrg(registration, { caller, org, input, encoding: 'json' });
+  return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
 function playbookDispatchOf(
   dispatcher: Dispatcher,
   { caller, org, playbook }: PlaybookCall,
-): (registration: Registration<'playbook'>) => Dispatch {
-  return (registration) => (input) =>
-    dispatcher.dispatchToPlaybook(registration, { caller, org, playbook, input, encoding: 'json' });
+): (registration: Registration<'playbook'>) => Dispatching {
+  const dispatchTo =
+    (registration: Registration<'playbook'>): Dispatch =>
+    (input) =>
+      dispatcher.dispatchToPlaybook(registration, { caller, org, playbook, input, encoding: 'json' });
+  return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
 function playbookArgumentDispatchOf(
   dispatcher: Dispatcher,
   { caller, org }: OrgCall,
-): (registration: Registration<'playbook'>) => Dispatch {
-  return (registration) => (input) => {
-    const argument = playbookArgumentOf(input);
-    return Result.isFailure(argument)
-      ? Effect.succeed(argument.failure)
-      : dispatcher.dispatchToPlaybook(registration, { caller, org, ...argument.success, encoding: 'json' });
-  };
+): (registration: Registration<'playbook'>) => Dispatching {
+  const dispatchTo =
+    (registration: Registration<'playbook'>): Dispatch =>
+    (input) => {
+      const argument = playbookArgumentOf(input);
+      return Result.isFailure(argument)
+        ? Effect.succeed(argument.failure)
+        : dispatcher.dispatchToPlaybook(registration, { caller, org, ...argument.success, encoding: 'json' });
+    };
+  return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
 export function orgServerFactory(serving: ToolServing): McpServerFactory {

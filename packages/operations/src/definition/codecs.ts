@@ -2,9 +2,11 @@ import { Cause, Effect, Option, Result, Schema, SchemaIssue, type SchemaAST, typ
 
 import { rejected, type Rejected } from '../outcome/outcome.ts';
 import { pointerOf } from '../outcome/pointer.ts';
+import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import type { LinkToOpen, PlainLanguage, RegisteredPlainLanguage } from '../plain-language/plain-language.ts';
-import type { ObjectSchema } from './definition.ts';
+import type { AnswerAfterTheLink, ObjectSchema } from './definition.ts';
 import type { InputEncoding } from './registered-run.ts';
+import type { RegisteredLink } from './registration.ts';
 
 type IssueSegment = PropertyKey | StandardSchema.StandardSchemaV1.PathSegment;
 
@@ -87,15 +89,31 @@ export function plainLanguageFields<In extends ObjectSchema, Out extends ObjectS
   return language === undefined ? {} : { plainLanguage: registeredPlainLanguage(language, inputSchema, outputSchema) };
 }
 
-export function linkToOpenFields<Out extends ObjectSchema>(
-  linkOf: ((output: Out['Type']) => LinkToOpen) | undefined,
+interface Linking<Out, R extends DeclarableReason, Services> {
+  readonly name: string;
+  readonly linkToOpen?: ((output: Out) => LinkToOpen | undefined) | undefined;
+  readonly answerAfterTheLink?: AnswerAfterTheLink<Out, R, Services> | undefined;
+}
+
+export function linkFields<Out extends ObjectSchema, R extends DeclarableReason, Services, Answering>(
+  { name, linkToOpen, answerAfterTheLink }: Linking<Out['Type'], R, Services>,
   outputSchema: Out,
-): { readonly linkToOpen?: (output: unknown) => LinkToOpen } {
-  if (linkOf === undefined) {
+  answeringBy: (read: () => Effect.Effect<Out['Type'], Rejection<R>, Services>) => Answering,
+): { readonly link?: RegisteredLink<Answering> } {
+  if (linkToOpen === undefined && answerAfterTheLink === undefined) {
     return {};
   }
+  if (linkToOpen === undefined || answerAfterTheLink === undefined) {
+    throw new Error(`The operation ${name} gives one of linkToOpen and answerAfterTheLink without the other`);
+  }
   const decodeOutput = Schema.decodeUnknownSync(Schema.toCodecJson(outputSchema));
-  return { linkToOpen: (output) => linkOf(decodeOutput(output)) };
+  return {
+    link: {
+      toOpen: (output) => linkToOpen(decodeOutput(output)),
+      idOf: (output) => answerAfterTheLink.idOf(decodeOutput(output)),
+      answerAfter: (offered) => answeringBy(() => answerAfterTheLink.read(offered)),
+    },
+  };
 }
 
 export function typeValidator<S extends ObjectSchema>(schema: S): (value: S['Type']) => Effect.Effect<S['Type']> {

@@ -170,11 +170,13 @@ export { defineCommand, defineQuery, type Operation } from './definition/operati
 export { defineHttpOperation, type HttpOperation } from './definition/http-operation.ts';
 export { isStreamedBody, mediaTypeOfBody } from './definition/http-body.ts';
 export type {
+  AnswerAfterTheLink,
   AnswerKind,
   BodyKind,
   HttpBody,
   HttpDefinition,
   JsonAnswer,
+  OfferedLink,
   StreamAnswer,
   StreamedBody,
   StreamedBodyKind,
@@ -253,6 +255,7 @@ export type {
   HttpRegistrationOf,
   JsonAnswered,
   RegisteredAnswer,
+  RegisteredLink,
   Registration,
   RegistrationOf,
   RouteRegistration,

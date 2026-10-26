@@ -1872,7 +1872,8 @@
                         "url",
                         "expires_at"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": false,
+                      "description": "The link that approves the connection, while it is pending and the link lasts"
                     }
                   },
                   "required": [
@@ -1890,11 +1891,10 @@
                     "connected_by",
                     "granted_scope",
                     "credential_ends_with",
-                    "broken",
-                    "connect"
+                    "broken"
                   ],
                   "additionalProperties": false,
-                  "description": "The connection, pending, and the link that approves it"
+                  "description": "The connection, and the link that approves it while there is one to open"
                 }
               }
             }

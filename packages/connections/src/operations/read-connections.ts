@@ -7,7 +7,7 @@ import { ConnectionIdField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionsListed } from './connection-words.ts';
 import { foundConnection, loadRegistry } from './registry-access.ts';
-import { shownConnections } from './shown-connections.ts';
+import { shownConnection, shownConnections } from './shown-connections.ts';
 
 type Reading = Pick<ConnectionServices, 'secrets'>;
 
@@ -56,9 +56,6 @@ export function defineGetConnection({ secrets }: Reading) {
     inputSchema: Schema.Struct({ id: ConnectionIdField }),
     answer: { kind: 'json', outputSchema: ConnectionSchema },
     reasons: ['not_found'],
-    handle: Effect.fnUntraced(function* ({ id }) {
-      const [shown] = yield* shownConnections(secrets, [yield* foundConnection(id)]);
-      return yield* Effect.fromNullishOr(shown).pipe(Effect.orDie);
-    }),
+    handle: ({ id }) => Effect.flatMap(foundConnection(id), (kept) => shownConnection(secrets, kept)),
   });
 }

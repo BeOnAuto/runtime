@@ -16,11 +16,18 @@ export const ExpiresAtField = Schema.String.annotate({ description: 'When the li
 
 export const AddedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
-  connect: Schema.Struct({
-    url: Schema.String.annotate({ description: "Studio's page, where the person approves the connection" }),
-    expires_at: ExpiresAtField,
-  }),
-}).annotate({ identifier: 'AddedConnection', description: 'The connection, pending, and the link that approves it' });
+  connect: Schema.optionalKey(
+    Schema.Struct({
+      url: Schema.String.annotate({ description: "Studio's page, where the person approves the connection" }),
+      expires_at: ExpiresAtField,
+    }).annotate({ description: 'The link that approves the connection, while it is pending and the link lasts' }),
+  ),
+}).annotate({
+  identifier: 'AddedConnection',
+  description: 'The connection, and the link that approves it while there is one to open',
+});
+
+export type AddedConnection = typeof AddedSchema.Type;
 
 const { variable, name, in: placement, scheme, issuer, client_id: clientId, scope } = CredentialFieldsSchema.fields;
 

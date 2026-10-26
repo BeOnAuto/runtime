@@ -30,6 +30,7 @@ export interface ToolContext {
     readonly signal: AbortSignal;
     readonly _meta?: Readonly<Record<string, unknown>>;
     readonly envelope?: Readonly<Record<string, unknown>>;
+    readonly inputResponses?: Readonly<Record<string, unknown>>;
     readonly requestState: () => unknown;
   };
 }
