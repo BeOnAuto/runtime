@@ -53,6 +53,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       added_at: context.at,
       connected_at: null,
       connected_by: null,
+      granted_scope: null,
       broken: null,
     },
     link: undefined,
@@ -75,12 +76,11 @@ function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
 }
 
 function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnected): Credential {
-  const { client_id: clientId, client_source: clientSource, scope } = data;
+  const { client_id: clientId, client_source: clientSource } = data;
   return {
     ...connection.credential,
     ...(clientId === undefined ? {} : { client_id: clientId }),
     ...(clientSource === undefined ? {} : { client_source: clientSource }),
-    ...(scope === undefined ? {} : { scope }),
   };
 }
 
@@ -93,6 +93,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       status: 'connected',
       connected_at: context.at,
       connected_by: context.by,
+      granted_scope: data.scope ?? null,
       broken: null,
     },
     link: undefined,

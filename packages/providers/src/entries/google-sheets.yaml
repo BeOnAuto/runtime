@@ -1,13 +1,13 @@
 name: google-sheets
 title: Google Sheets
-description: Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change spreadsheets, through Google's Sheets MCP server. Of its scopes, Google classifies drive.readonly as restricted.
+description: Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change spreadsheets, through Google's Sheets MCP server.
 website: https://developers.google.com/workspace/sheets/api/guides/configure-mcp-server
 type: mcp
 url: https://sheetsmcp.googleapis.com/mcp/v1
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/spreadsheets
+    scope: https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/spreadsheets
     parameters:
       access_type: offline
       prompt: consent

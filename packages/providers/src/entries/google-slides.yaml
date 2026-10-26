@@ -1,13 +1,13 @@
 name: google-slides
 title: Google Slides
-description: Read Google Slides presentations and update them, through Google's Slides MCP server. Of its scopes, Google classifies drive.readonly as restricted.
+description: Read Google Slides presentations and update them, through Google's Slides MCP server.
 website: https://developers.google.com/workspace/slides/api/guides/configure-mcp-server
 type: mcp
 url: https://slidesmcp.googleapis.com/mcp/v1
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/presentations.readonly https://www.googleapis.com/auth/presentations
+    scope: https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/presentations.readonly https://www.googleapis.com/auth/presentations
     parameters:
       access_type: offline
       prompt: consent

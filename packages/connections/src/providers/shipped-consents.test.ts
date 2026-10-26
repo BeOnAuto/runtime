@@ -66,7 +66,8 @@ const connectedOf = Schema.decodeUnknownSync(
   Schema.Struct({
     output: Schema.Struct({
       status: Schema.String,
-      credential: Schema.Struct({ scope: Schema.optionalKey(Schema.String), client_source: Schema.String }),
+      granted_scope: Schema.NullOr(Schema.String),
+      credential: Schema.Struct({ client_source: Schema.String }),
     }),
   }),
 );
@@ -92,7 +93,7 @@ async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, r
     { fake, vendor: theVendor },
   );
   const facts = await h.facts();
-  const { status, credential } = connectedOf(finished).output;
+  const { status, granted_scope: grantedScope, credential } = connectedOf(finished).output;
   return {
     provider: name,
     authorization_endpoint: `${asked.origin}${asked.pathname}`.replace(fake.origin, '<the fake>'),
@@ -103,7 +104,7 @@ async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, r
     client_sources: facts.flatMap((fact) =>
       Option.toArray(Option.map(startedSourceOf(fact), ({ data }) => data.client_source)),
     ),
-    connected: { status, scope: credential.scope, client_source: credential.client_source },
+    connected: { status, granted_scope: grantedScope, client_source: credential.client_source },
   };
 }
 
@@ -117,7 +118,7 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
     code_challenge_method: 'S256',
     parameters,
     client_sources: [source],
-    connected: { status: 'connected', scope: metadata.grantedScope ?? asked, client_source: source },
+    connected: { status: 'connected', granted_scope: metadata.grantedScope ?? asked, client_source: source },
   };
 }
 

@@ -50,6 +50,7 @@ describe('the finish of a consent', () => {
           client_source: 'registered',
           scope: 'files.read',
         },
+        granted_scope: 'files.read',
         credential_ends_with: null,
       },
     });
@@ -73,13 +74,15 @@ describe('the finish of a consent', () => {
 });
 
 describe('the scope of a finish', () => {
-  it('records the scope the server granted where it is narrower than asked', async () => {
+  it('records the scope the server granted beside the scope asked, which the credential keeps, where it is narrower', async () => {
     const fake = await served({ grantedScope: 'files.read' });
     const h = consentHarnessAt(fake, { way: { scope: 'files.read files.write' } });
     const link = await filesOf(h);
 
-    expect(await finishing(h, link, await consentedOf(h, link))).toMatchObject({
-      output: { credential: { scope: 'files.read' } },
+    await finishing(h, link, await consentedOf(h, link));
+
+    expect(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id: link.id })).toMatchObject({
+      output: { credential: { scope: 'files.read files.write' }, granted_scope: 'files.read' },
     });
   });
 
@@ -103,7 +106,7 @@ describe('a scope the server grants', () => {
     const link = await filesOf(h);
 
     expect(await finishing(h, link, await consentedOf(h, link))).toMatchObject({
-      output: { credential: { scope: 'files.read files.list' } },
+      output: { granted_scope: 'files.read files.list' },
     });
     expect(await h.call(operationNamed(h.operations, 'list_connections'), ada)).toMatchObject({ status: 'succeeded' });
   });
@@ -144,7 +147,7 @@ describe('a scope the server grants that is not one, or that answers a way askin
 
     const finished = await finishing(h, link, await consentedOf(h, link));
 
-    expect(finished).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
+    expect(finished).toMatchObject({ status: 'succeeded', output: { status: 'connected', granted_scope: null } });
     expect(finished).not.toHaveProperty('output.credential.scope');
     expect(revocationsAt(fake)).toBe(0);
   });

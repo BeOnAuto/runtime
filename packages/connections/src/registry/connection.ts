@@ -26,6 +26,10 @@ export const ConnectionSchema = Schema.Struct({
   connected_by: Schema.NullOr(Schema.String).annotate({
     description: 'The id of the caller who connected it, approving it or giving its credential',
   }),
+  granted_scope: Schema.NullOr(Schema.String).annotate({
+    description:
+      'For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null',
+  }),
   credential_ends_with: Schema.NullOr(Schema.String).annotate({
     description:
       'The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value',

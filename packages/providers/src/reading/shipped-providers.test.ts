@@ -36,7 +36,7 @@ const google = 'https://accounts.google.com';
 
 const googleScopes = 'https://www.googleapis.com/auth/';
 
-const restrictedByGoogle = ['drive.readonly', 'gmail.modify'];
+const restrictedByGoogle = ['gmail.readonly'];
 
 const googleProviders = [
   'campaign-manager-360',
@@ -219,15 +219,15 @@ describe('the shipped providers of Google', () => {
       ['campaign-manager-360', []],
       ['display-video-360', []],
       ['display-video-360-reports', []],
-      ['gmail', ['gmail.modify']],
+      ['gmail', ['gmail.readonly']],
       ['google-ads', []],
       ['google-analytics', []],
       ['google-analytics-admin', []],
-      ['google-docs', ['drive.readonly']],
-      ['google-drive', ['drive.readonly']],
+      ['google-docs', []],
+      ['google-drive', []],
       ['google-search-console', []],
-      ['google-sheets', ['drive.readonly']],
-      ['google-slides', ['drive.readonly']],
+      ['google-sheets', []],
+      ['google-slides', []],
       ['search-ads-360', []],
     ]);
   });

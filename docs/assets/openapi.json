@@ -1628,7 +1628,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -1718,6 +1718,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -1772,6 +1783,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken",
                     "connect"
@@ -2017,7 +2029,7 @@
                             },
                             "scope": {
                               "type": "string",
-                              "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                              "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                             },
                             "parameters": {
                               "type": "object",
@@ -2107,6 +2119,17 @@
                           ],
                           "description": "The id of the caller who connected it, approving it or giving its credential"
                         },
+                        "granted_scope": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                        },
                         "credential_ends_with": {
                           "anyOf": [
                             {
@@ -2143,6 +2166,7 @@
                         "added_at",
                         "connected_at",
                         "connected_by",
+                        "granted_scope",
                         "credential_ends_with",
                         "broken"
                       ],
@@ -2374,7 +2398,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -2464,6 +2488,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -2500,6 +2535,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -2727,7 +2763,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -2817,6 +2853,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -2853,6 +2900,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -3096,7 +3144,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -3186,6 +3234,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -3264,6 +3323,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken",
                     "link"
@@ -3533,7 +3593,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -3623,6 +3683,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -3659,6 +3730,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -3954,7 +4026,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -4044,6 +4116,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -4080,6 +4163,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -4559,7 +4643,7 @@
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed"
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
                         },
                         "parameters": {
                           "type": "object",
@@ -4649,6 +4733,17 @@
                       ],
                       "description": "The id of the caller who connected it, approving it or giving its credential"
                     },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
                     "credential_ends_with": {
                       "anyOf": [
                         {
@@ -4685,6 +4780,7 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "granted_scope",
                     "credential_ends_with",
                     "broken"
                   ],

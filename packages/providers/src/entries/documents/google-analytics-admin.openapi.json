@@ -366,55 +366,6 @@
             "oauth2": ["https://www.googleapis.com/auth/analytics.readonly"]
           }
         ]
-      },
-      "post": {
-        "operationId": "analyticsadmin.properties.customDimensions.create",
-        "description": "Creates a CustomDimension. Warning: It's not permissible to use this method to collect data on individual users. In particular, sending user IDs in custom dimensions violates the [Google Analytics Terms of Service](https://www.google.com/analytics/terms/).",
-        "parameters": [
-          {
-            "name": "propertiesId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "description": "Selector specifying which fields to include in a partial response.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GoogleAnalyticsAdminV1betaCustomDimension"
-              }
-            }
-          }
-        },
-        "responses": {
-          "2XX": {
-            "description": "GoogleAnalyticsAdminV1betaCustomDimension",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GoogleAnalyticsAdminV1betaCustomDimension"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "oauth2": ["https://www.googleapis.com/auth/analytics.edit"]
-          }
-        ]
       }
     },
     "/v1beta/properties/{propertiesId}/customMetrics": {
@@ -535,55 +486,6 @@
           },
           {
             "oauth2": ["https://www.googleapis.com/auth/analytics.readonly"]
-          }
-        ]
-      },
-      "post": {
-        "operationId": "analyticsadmin.properties.keyEvents.create",
-        "description": "Creates a Key Event.",
-        "parameters": [
-          {
-            "name": "propertiesId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "description": "Selector specifying which fields to include in a partial response.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GoogleAnalyticsAdminV1betaKeyEvent"
-              }
-            }
-          }
-        },
-        "responses": {
-          "2XX": {
-            "description": "GoogleAnalyticsAdminV1betaKeyEvent",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GoogleAnalyticsAdminV1betaKeyEvent"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "oauth2": ["https://www.googleapis.com/auth/analytics.edit"]
           }
         ]
       }

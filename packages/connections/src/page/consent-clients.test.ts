@@ -62,7 +62,7 @@ describe('a connection of an HTTP API whose way gives its endpoints', () => {
 
     const connected = await finishing(h, link, await consentedOf(h, link));
 
-    expect(connected).toMatchObject({ output: { status: 'connected', type: 'openapi' } });
+    expect(connected).toMatchObject({ output: { status: 'connected', type: 'openapi', granted_scope: null } });
     expect(connected).not.toHaveProperty('output.credential.scope');
   });
 });

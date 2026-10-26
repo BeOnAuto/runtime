@@ -154,7 +154,7 @@ export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | und
     return {
       issuer: asked.way.issuer,
       client_id: client.client_id,
-      scope: credential.scope ?? null,
+      scope: connection.granted_scope,
       credential: { kind: 'consent', ...asked, client, held, tokens: tokensOfTheRow(serving, context) },
     };
   });

@@ -62,7 +62,7 @@ export const CredentialFieldsSchema = Schema.Struct({
   scope: Schema.optionalKey(
     wayFields.scope.annotate({
       description:
-        'For client_credentials and authorization, the scopes, separated by spaces, none when left out; for authorization once connected, the scopes allowed',
+        'For client_credentials and authorization, the scopes asked, separated by spaces, none when left out',
     }),
   ),
   parameters: Schema.optionalKey(
