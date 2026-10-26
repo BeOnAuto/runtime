@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/BeOnAuto/runtime/compare/v0.22.0...v0.22.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **providers:** the google providers ask only the scopes auto's clients cover ([#330](https://github.com/BeOnAuto/runtime/issues/330)) ([cf65143](https://github.com/BeOnAuto/runtime/commit/cf65143b7a317d2c2c968806de4fd1b05797249a))
+
 ## [0.22.0](https://github.com/BeOnAuto/runtime/compare/v0.21.2...v0.22.0) (2026-10-25)
 
 
