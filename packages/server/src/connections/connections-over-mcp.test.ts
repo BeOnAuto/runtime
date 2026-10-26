@@ -116,7 +116,7 @@ describe('the retry of add_connection after the page', () => {
     expect(answer.structuredContent).toMatchObject({
       name: 'notes-approved',
       status: 'connected',
-      connected_by: 'local',
+      connected_by: { id: 'local', name: localDeveloper.name },
     });
     expect(answer.structuredContent).not.toHaveProperty('connect');
     expect(plainTextIn(answer)).toBe('Connected the connection “notes-approved”; nothing is left to open.');
