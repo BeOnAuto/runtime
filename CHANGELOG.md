@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/BeOnAuto/runtime/compare/v0.22.1...v0.23.0) (2026-10-26)
+
+
+### Features
+
+* **api:** the first playbook asks whether it runs on its own, and builds the workflow in ([#332](https://github.com/BeOnAuto/runtime/issues/332)) ([359baba](https://github.com/BeOnAuto/runtime/commit/359babaeb15e51bf7e38445896318137b87477c9))
+
 ## [0.22.1](https://github.com/BeOnAuto/runtime/compare/v0.22.0...v0.22.1) (2026-10-26)
 
 
