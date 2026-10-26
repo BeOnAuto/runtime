@@ -169,16 +169,7 @@ export { NotFound } from './outcome/not-found.ts';
 export { defineCommand, defineQuery, type Operation } from './definition/operation.ts';
 export { defineHttpOperation, type HttpOperation } from './definition/http-operation.ts';
 export { isStreamedBody, mediaTypeOfBody } from './definition/http-body.ts';
-export type {
-  AnswerKind,
-  BodyKind,
-  HttpBody,
-  HttpDefinition,
-  JsonAnswer,
-  StreamAnswer,
-  StreamedBody,
-  StreamedBodyKind,
-} from './definition/definition.ts';
+export type { HttpBody, OfferedLink, StreamedBody } from './definition/definition.ts';
 export { OrgReader } from './ledger/org-reader.ts';
 export {
   explanationOf,
@@ -250,11 +241,9 @@ export type { DeclarableReason, Rejection, RejectionKind } from './outcome/rejec
 export type { InputEncoding } from './definition/registered-run.ts';
 export type {
   HttpRegistration,
-  HttpRegistrationOf,
-  JsonAnswered,
   RegisteredAnswer,
+  RegisteredLink,
   Registration,
-  RegistrationOf,
   RouteRegistration,
   Runnable,
 } from './definition/registration.ts';

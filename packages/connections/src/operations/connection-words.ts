@@ -1,8 +1,9 @@
-import { counted, listed, quoted, type Noun } from '@on.auto/operations';
+import { capitalized, counted, listed, quoted, type LinkToOpen, type Noun } from '@on.auto/operations';
 import { providerNamed, type ProviderList } from '@on.auto/providers';
 import { Result } from 'effect';
 
 import type { Connection } from '../registry/connection.ts';
+import type { AddedConnection } from './connection-fields.ts';
 
 const connectionNoun: Noun = { one: 'connection', other: 'connections' };
 
@@ -36,7 +37,33 @@ function approvalLinkNamed(providerTitle: string | undefined): string {
   return quoted(providerTitle === undefined ? 'Approve the connection' : `Approve the ${providerTitle} connection`);
 }
 
-export function linkWordsOf({ provider }: Pick<Connection, 'provider'>, providers: ProviderList): string {
+function linkWordsOf({ provider }: Pick<Connection, 'provider'>, providers: ProviderList): string {
   const linkName = approvalLinkNamed(providerTitleOf(provider, providers));
   return `The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named ${linkName}, never as its address.`;
+}
+
+function standingWordsOf(connection: Connection): string {
+  const named = connectionNamed(connection);
+  if (connection.status === 'connected') {
+    return `Connected ${named}; nothing is left to open.`;
+  }
+  if (connection.status === 'removed') {
+    return `The person cancelled ${named} on the page, so it is removed and nothing is connected.`;
+  }
+  return `${capitalized(named)} is ${connection.status}, and its link is used up or expired, so nothing is left to open: remove it and add it again.`;
+}
+
+export function addedWordsOf({ connect, ...connection }: AddedConnection, providers: ProviderList): string {
+  return connect === undefined
+    ? standingWordsOf(connection)
+    : `Added ${connectionNamed(connection)}. ${linkWordsOf(connection, providers)}`;
+}
+
+export function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {
+  return connect === undefined
+    ? undefined
+    : {
+        message: `Open this page to approve ${connectionNamed(connection)}, and give its credential where it takes one, within ten minutes.`,
+        url: connect.url,
+      };
 }

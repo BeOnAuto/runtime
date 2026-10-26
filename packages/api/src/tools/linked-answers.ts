@@ -2,14 +2,15 @@ import {
   CLIENT_CAPABILITIES_META_KEY,
   createRequestStateCodec,
   inputRequired,
+  inputResponse,
   type CallToolResult,
   type InputRequiredResult,
 } from '@modelcontextprotocol/server';
-import type { LinkToOpen } from '@on.auto/operations';
+import type { LinkToOpen, OfferedLink, RegisteredPlainLanguage } from '@on.auto/operations';
 import { Option, Redacted, Schema } from 'effect';
 
 import { orgCallOf, type OrgCall } from '../hand-off/caller-hand-off.ts';
-import { callbackFor, type CalledTool, type CallServing, type ToolContext } from './tool-callback.ts';
+import { callbackFor, type CalledTool, type CallServing, type Dispatch, type ToolContext } from './tool-callback.ts';
 
 interface StateCodec {
   mint(payload: Readonly<Record<string, unknown>>, context?: ToolContext): Promise<string>;
@@ -24,21 +25,27 @@ export interface AnsweringServing extends CallServing {
   readonly linkedAnswers: LinkedAnswers;
 }
 
-interface LinkingTool extends CalledTool {
-  readonly linkToOpen?: (output: unknown) => LinkToOpen;
+export interface ToolLink {
+  readonly toOpen: (output: unknown) => LinkToOpen | undefined;
+  readonly idOf: (output: unknown) => string;
+  readonly dispatchAfter: (offered: OfferedLink) => Dispatch;
 }
 
-interface AnswerOwner {
+interface LinkingTool extends CalledTool {
+  readonly link?: ToolLink;
+}
+
+interface LinkOwner {
   readonly tool: string;
   readonly caller: string;
   readonly org: string;
 }
 
-type Answering = (input: unknown, context: ToolContext) => Promise<CallToolResult>;
-
 type AskingToOpen = (input: unknown, context: ToolContext) => Promise<CallToolResult | InputRequiredResult>;
 
 const theLink = 'link';
+
+const declinedToOpen = 'The person declined to open the page, and its link is in this answer.';
 
 const OpensLinksSchema = Schema.Struct({
   [CLIENT_CAPABILITIES_META_KEY]: Schema.Struct({
@@ -46,14 +53,12 @@ const OpensLinksSchema = Schema.Struct({
   }),
 });
 
-const KeptAnswerSchema = Schema.Struct({
+const OfferedLinkStateSchema = Schema.Struct({
   tool: Schema.String,
   caller: Schema.String,
   org: Schema.String,
-  answer: Schema.Struct({
-    content: Schema.Array(Schema.Struct({ type: Schema.Literal('text'), text: Schema.String })),
-    structuredContent: Schema.Record(Schema.String, Schema.Unknown),
-  }),
+  id: Schema.String,
+  url: Schema.String,
 });
 
 const BoundContextSchema = Schema.Struct({
@@ -64,7 +69,7 @@ const opensLinks = Schema.is(OpensLinksSchema);
 
 const boundContextOf = Schema.decodeUnknownSync(BoundContextSchema);
 
-const keptAnswerOf = Schema.decodeUnknownOption(KeptAnswerSchema);
+const offeredLinkStateOf = Schema.decodeUnknownOption(OfferedLinkStateSchema);
 
 function callerAndOrgOf(context: unknown): string {
   const { caller, org } = orgCallOf(boundContextOf(context).http);
@@ -94,47 +99,75 @@ export function linkedAnswers({ current, previous }: RetryStateKeys): LinkedAnsw
   return { states: previous === undefined ? signing : eitherOf(signing, codecOf(previous)) };
 }
 
-function keptAnswerFor({ tool, caller, org }: AnswerOwner, state: unknown): CallToolResult | undefined {
+function offeredLinkFor({ tool, caller, org }: LinkOwner, state: unknown): OfferedLink | undefined {
   return Option.getOrUndefined(
-    Option.flatMap(keptAnswerOf(state), (kept) =>
+    Option.flatMap(offeredLinkStateOf(state), (kept) =>
       kept.tool === tool && kept.caller === caller && kept.org === org
-        ? Option.some({
-            content: kept.answer.content.map(({ text }) => ({ type: 'text' as const, text })),
-            structuredContent: { ...kept.answer.structuredContent },
-          })
+        ? Option.some({ id: kept.id, url: kept.url })
         : Option.none(),
     ),
   );
 }
 
-function askingToOpen(
-  { states }: LinkedAnswers,
-  owner: AnswerOwner,
-  linkOf: (output: unknown) => LinkToOpen,
-  answering: Answering,
-): AskingToOpen {
+function declinedToOpenIn({ mcpReq }: ToolContext): boolean {
+  const response = inputResponse(mcpReq.inputResponses, theLink);
+  return response.kind === 'elicit' && response.action !== 'accept';
+}
+
+function wordsAfterTheLink(
+  plainLanguage: RegisteredPlainLanguage,
+  { toOpen }: ToolLink,
+  declined: boolean,
+): RegisteredPlainLanguage {
+  return {
+    ...plainLanguage,
+    outcome: (output, input) => {
+      const words = plainLanguage.outcome(output, input);
+      return toOpen(output) !== undefined && declined ? `${declinedToOpen} ${words}` : words;
+    },
+  };
+}
+
+function answeringAfterTheLink(
+  tool: LinkingTool,
+  link: ToolLink,
+  offered: OfferedLink,
+  context: ToolContext,
+): CalledTool {
+  return {
+    ...tool,
+    dispatch: link.dispatchAfter(offered),
+    plainLanguage: wordsAfterTheLink(tool.plainLanguage, link, declinedToOpenIn(context)),
+  };
+}
+
+function askingToOpen(serving: AnsweringServing, call: OrgCall, tool: LinkingTool, link: ToolLink): AskingToOpen {
+  const owner = { tool: tool.name, caller: call.caller.id, org: call.org };
+  const answering = callbackFor(serving, call, tool);
   return async (input, context) => {
-    const kept = keptAnswerFor(owner, context.mcpReq.requestState());
-    if (kept !== undefined) {
-      return kept;
+    const offered = offeredLinkFor(owner, context.mcpReq.requestState());
+    if (offered !== undefined) {
+      return callbackFor(serving, call, answeringAfterTheLink(tool, link, offered, context))(input, context);
     }
     const answer = await answering(input, context);
     const output = answer.structuredContent;
     if (output === undefined || !opensLinks(context.mcpReq.envelope)) {
       return answer;
     }
-    const { message, url } = linkOf(output);
-    return inputRequired({
-      inputRequests: { [theLink]: inputRequired.elicitUrl({ message, url }) },
-      requestState: await states.mint({ ...owner, answer }, context),
-    });
+    const toOpen = link.toOpen(output);
+    return toOpen === undefined
+      ? answer
+      : inputRequired({
+          inputRequests: { [theLink]: inputRequired.elicitUrl({ message: toOpen.message, url: toOpen.url }) },
+          requestState: await serving.linkedAnswers.states.mint(
+            { ...owner, id: link.idOf(output), url: toOpen.url },
+            context,
+          ),
+        });
   };
 }
 
 export function toolCallbackOf(serving: AnsweringServing, call: OrgCall, tool: LinkingTool): AskingToOpen {
-  const answering = callbackFor(serving, call, tool);
-  const owner = { tool: tool.name, caller: call.caller.id, org: call.org };
-  return tool.linkToOpen === undefined
-    ? answering
-    : askingToOpen(serving.linkedAnswers, owner, tool.linkToOpen, answering);
+  const { link } = tool;
+  return link === undefined ? callbackFor(serving, call, tool) : askingToOpen(serving, call, tool, link);
 }

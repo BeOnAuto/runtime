@@ -5,6 +5,7 @@ import {
   randomUUIDv7,
   recordedCallerOf,
   type NotFound,
+  type OfferedLink,
   type RecordedCaller,
 } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
@@ -12,8 +13,10 @@ import { DateTime, Effect } from 'effect';
 import type { GivenAddition } from '../providers/provider-additions.ts';
 import type { ConnectionAddition, ConnectionCommandData } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
-import { findConnection } from '../registry/registry-lookup.ts';
+import { findConnection, openLinkOf } from '../registry/registry-lookup.ts';
 import type { KeptConnection, OpenLink, Registry } from '../registry/registry.ts';
+import type { SecretKeeping } from './connection-services.ts';
+import { shownConnection } from './shown-connections.ts';
 
 export const loadRegistry: Effect.Effect<Registry, never, OrgReader> = Effect.gen(function* () {
   const { state } = yield* (yield* OrgReader).load(connectionsStream, registryDecider);
@@ -25,6 +28,16 @@ export function foundConnection(id: string): Effect.Effect<KeptConnection, NotFo
 }
 
 export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerOf);
+
+export const standingAfterTheLink = Effect.fnUntraced(function* (
+  secrets: Pick<SecretKeeping, 'endingsOf'>,
+  { id, url }: OfferedLink,
+) {
+  const kept = yield* Effect.orDie(foundConnection(id));
+  const connection = yield* shownConnection(secrets, kept);
+  const link = openLinkOf(kept, DateTime.formatIso(yield* DateTime.now));
+  return link === undefined ? connection : { ...connection, connect: { url, expires_at: link.expires_at } };
+});
 
 export const actedNow = Effect.gen(function* () {
   const { id: by } = yield* Caller;

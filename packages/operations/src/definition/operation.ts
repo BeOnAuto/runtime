@@ -3,7 +3,7 @@ import { Effect, type Schema } from 'effect';
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
 import { succeeded, type Answered, type Rejected } from '../outcome/outcome.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
-import { inputDecoder, linkToOpenFields, outputEncoder, plainLanguageFields, typeValidator } from './codecs.ts';
+import { inputDecoder, linkFields, outputEncoder, plainLanguageFields, typeValidator } from './codecs.ts';
 import type { Definition, InputSchemaFor, ObjectSchema, RelativePath } from './definition.ts';
 import type { HandlerServices } from './handler-services.ts';
 import type { InputEncoding } from './registered-run.ts';
@@ -29,9 +29,10 @@ export function defineQuery<
   Out extends ObjectSchema,
   const R extends DeclarableReason = never,
   Services extends HandlerServices<S, 'query'> = never,
+  ReadServices extends HandlerServices<S, 'query'> = never,
 >(
   scope: S,
-  definition: Definition<'query', P, In, Out, R, Services>,
+  definition: Definition<'query', P, In, Out, R, Services, ReadServices>,
 ): Operation<S, 'query', In['Type'], Out['Type'], R, Services> {
   return defineOperation(scope, 'query', definition);
 }
@@ -43,9 +44,10 @@ export function defineCommand<
   Out extends ObjectSchema,
   const R extends DeclarableReason = never,
   Services extends HandlerServices<S, 'command'> = never,
+  ReadServices extends HandlerServices<S, 'command'> = never,
 >(
   scope: S,
-  definition: Definition<'command', P, In, Out, R, Services>,
+  definition: Definition<'command', P, In, Out, R, Services, ReadServices>,
 ): Operation<S, 'command', In['Type'], Out['Type'], R, Services> {
   return defineOperation(scope, 'command', definition);
 }
@@ -69,10 +71,11 @@ function defineOperation<
   Out extends ObjectSchema,
   R extends DeclarableReason,
   Services extends HandlerServices<S, K>,
+  ReadServices extends HandlerServices<S, K>,
 >(
   scope: S,
   kind: K,
-  definition: Definition<K, string, In, Out, R, Services>,
+  definition: Definition<K, string, In, Out, R, Services, ReadServices>,
 ): Operation<S, K, In['Type'], Out['Type'], R, Services> {
   const { inputSchema, outputSchema, handle } = definition;
   const fields = registeredFieldsOf(scope, kind, definition);
@@ -80,13 +83,18 @@ function defineOperation<
   const encodeOutput = outputEncoder(outputSchema);
   const validateInput = typeValidator(inputSchema);
   const validateOutput = typeValidator(outputSchema);
+  const runOf = (answer: (input: In['Type']) => Effect.Effect<Out['Type'], Rejection<R>, Services | ReadServices>) =>
+    runnerOf(decodeInput, answer, encodeOutput, fields.reasons);
+  const registration = {
+    ...fields,
+    output: registeredOutputOf(outputSchema),
+    ...plainLanguageFields(definition.plainLanguage, inputSchema, outputSchema),
+    run: runOf(handle),
+  };
   return {
     registration: {
-      ...fields,
-      output: registeredOutputOf(outputSchema),
-      ...plainLanguageFields(definition.plainLanguage, inputSchema, outputSchema),
-      ...linkToOpenFields(definition.linkToOpen, outputSchema),
-      run: runnerOf(decodeInput, handle, encodeOutput, fields.reasons),
+      ...registration,
+      ...linkFields(definition, outputSchema, (read) => ({ ...registration, run: runOf(read) })),
     },
     call: (input) => validateInput(input).pipe(Effect.flatMap(handle), Effect.tap(validateOutput)),
   };

@@ -32,9 +32,24 @@ const notes = { type: 'mcp', entry: { url: 'https://notes.example.com/mcp' }, cr
 
 const AddedSchema = Schema.Struct({ connect: Schema.Struct({ url: Schema.String }) });
 
+const PageSchema = Schema.Struct({ connection: Schema.String, token: Schema.String });
+
 function adding(name: string, opening: Partial<LinkOpening> = {}) {
   const connection = { url: `${server.origin}/mcp`, headers: {} };
   return calledOpeningLinks(connection, { name: 'add_connection', arguments: { ...notes, name } }, opening);
+}
+
+function linkOn(url: string) {
+  return Schema.decodeUnknownSync(PageSchema)(Object.fromEntries(new URL(url).searchParams));
+}
+
+function approving(url: string) {
+  const { connection, token } = linkOn(url);
+  return server.call('POST', `/v1/orgs/local/connections/${connection}/approve`, { body: { token } });
+}
+
+function cancelling(url: string) {
+  return server.call('DELETE', `/v1/orgs/local/connections/${linkOn(url).connection}`);
 }
 
 function toolsOn(path: string): Promise<readonly string[]> {
@@ -60,7 +75,7 @@ describe('the tools of connections', () => {
 });
 
 describe('add_connection over MCP', () => {
-  it('asks a client that opens links to open the page of the link, saying what to do, and puts the link in its answer', async () => {
+  it('asks a client that opens links to open the page of the link, saying what to do, and answers the retry after a continue without approving with the link', async () => {
     const { answer, elicited } = await adding('notes-linked');
 
     const { url } = Schema.decodeUnknownSync(AddedSchema)(answer.structuredContent).connect;
@@ -73,6 +88,10 @@ describe('add_connection over MCP', () => {
       },
     ]);
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=[\da-f-]{36}&token=[\w-]{43}$/u);
+    expect(answer.structuredContent).toMatchObject({ name: 'notes-linked', status: 'pending' });
+    expect(plainTextIn(answer)).toBe(
+      'Added the connection “notes-linked”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+    );
   });
 
   it('asks nothing of a client that does not declare it opens links, or speaks 2025-11-25, and answers the link, with words that say to show it by a name', async () => {
@@ -86,6 +105,40 @@ describe('add_connection over MCP', () => {
     expect(urls.filter((url) => /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=/u.test(url))).toHaveLength(2);
     expect(plainTextIn(legacy.answer)).toBe(
       'Added the connection “notes-legacy”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+    );
+  });
+});
+
+describe('the retry of add_connection after the page', () => {
+  it('answers the connection connected after the person approved it on the page, with no link, in words that say nothing is left to open', async () => {
+    const { answer } = await adding('notes-approved', { onThePage: approving });
+
+    expect(answer.structuredContent).toMatchObject({
+      name: 'notes-approved',
+      status: 'connected',
+      connected_by: { id: 'local', name: localDeveloper.name },
+    });
+    expect(answer.structuredContent).not.toHaveProperty('connect');
+    expect(plainTextIn(answer)).toBe('Connected the connection “notes-approved”; nothing is left to open.');
+  });
+
+  it('answers the connection removed after the person cancelled on the page, in words that say nothing is connected', async () => {
+    const { answer } = await adding('notes-cancelled', { onThePage: cancelling });
+
+    expect(answer.structuredContent).toMatchObject({ name: 'notes-cancelled', status: 'removed' });
+    expect(answer.structuredContent).not.toHaveProperty('connect');
+    expect(plainTextIn(answer)).toBe(
+      'The person cancelled the connection “notes-cancelled” on the page, so it is removed and nothing is connected.',
+    );
+  });
+
+  it('answers the connection pending with its link after the person declined to open the page, in words that say they declined', async () => {
+    const { answer } = await adding('notes-declined', { action: 'decline' });
+
+    expect(Schema.decodeUnknownSync(AddedSchema)(answer.structuredContent).connect.url).toMatch(/\/studio\/connect\?/u);
+    expect(answer.structuredContent).toMatchObject({ name: 'notes-declined', status: 'pending' });
+    expect(plainTextIn(answer)).toMatch(
+      /^The person declined to open the page, and its link is in this answer\. Added the connection “notes-declined”\. /u,
     );
   });
 });

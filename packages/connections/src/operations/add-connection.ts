@@ -7,8 +7,8 @@ import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { checkedAdditionOf, refusalOfTheAddition } from '../providers/provider-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
-import { connectionNamed, linkWordsOf } from './connection-words.ts';
-import { additionOf, recordInRegistry, recordedCaller } from './registry-access.ts';
+import { addedWordsOf, linkToOpenOf } from './connection-words.ts';
+import { additionOf, recordInRegistry, recordedCaller, standingAfterTheLink } from './registry-access.ts';
 
 const description = [
   "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
@@ -58,11 +58,9 @@ export function defineAddConnection({
       task: 'add a connection',
       attempt: ({ name, provider }) =>
         name === undefined ? `connect the provider ${quoted(String(provider))}` : `add the connection ${quoted(name)}`,
-      outcome: (added) => `Added ${connectionNamed(added)}. ${linkWordsOf(added, serving.providers)}`,
+      outcome: (added) => addedWordsOf(added, serving.providers),
     },
-    linkToOpen: (added) => ({
-      message: `Open this page to approve ${connectionNamed(added)}, and give its credential where it takes one, within ten minutes.`,
-      url: added.connect.url,
-    }),
+    linkToOpen: linkToOpenOf,
+    answerAfterTheLink: { idOf: ({ id }) => id, read: (offered) => standingAfterTheLink(serving.secrets, offered) },
   });
 }

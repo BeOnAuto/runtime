@@ -17,3 +17,10 @@ export function shownConnections(
     kept.map(({ connection, secretId }) => connectionShown(connection, endingOf(endings, secretId))),
   );
 }
+
+export function shownConnection(
+  secrets: Pick<SecretKeeping, 'endingsOf'>,
+  kept: KeptConnection,
+): Effect.Effect<Connection> {
+  return Effect.flatMap(shownConnections(secrets, [kept]), ([shown]) => Effect.orDie(Effect.fromNullishOr(shown)));
+}
