@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/BeOnAuto/runtime/compare/v0.23.0...v0.24.0) (2026-10-26)
+
+
+### Features
+
+* **api:** a record names who did it, and a connection says whom it acts as ([#334](https://github.com/BeOnAuto/runtime/issues/334)) ([1da3c97](https://github.com/BeOnAuto/runtime/commit/1da3c97e55f6f7e9dac5ac85a3e480024699d157))
+
 ## [0.23.0](https://github.com/BeOnAuto/runtime/compare/v0.22.1...v0.23.0) (2026-10-26)
 
 
