@@ -40,6 +40,7 @@ function tokenOfAnotherPerson(issuer: FakeIssuer): Promise<string> {
   return issuer.sign({
     iss: issuer.issuer,
     sub: 'user|grace',
+    name: 'Grace Hopper',
     aud: publicUrl,
     iat: seconds,
     exp: seconds + 300,
@@ -61,7 +62,7 @@ describe('a connection on a runtime that signs people in', () => {
     const byGrace = await server.call('POST', `${connections}/${id}/approve`, { key: grace, body: { token } });
     const byAda = await server.call('POST', `${connections}/${id}/approve`, { key: ada, body: { token } });
 
-    expect(answer).toMatchObject({ status: 201, body: { added_by: 'person:user|ada' } });
+    expect(answer).toMatchObject({ status: 201, body: { added_by: { id: 'person:user|ada', name: 'Ada Lovelace' } } });
     expect(named).toBe(publicUrl);
     expect(byGrace).toMatchObject({
       status: 403,

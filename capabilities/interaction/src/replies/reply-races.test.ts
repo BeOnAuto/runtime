@@ -78,7 +78,9 @@ describe('a reply to a request answered while the conversation was read', () => 
 
     expect(
       (await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).map(({ type, data }) => [type, data]),
-    ).toEqual([['request_answered', { answer: { choice: 'reject' } }]]);
+    ).toEqual([
+      ['request_answered', { answer: { choice: 'reject' }, answered_by: { id: 'acme-admin', name: 'acme-admin' } }],
+    ]);
     expect(await playbook.runOf(runId)).toMatchObject({ output: { output: { choice: 'reject' } } });
   });
 });

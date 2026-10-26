@@ -20,6 +20,8 @@ const atStart = { now: () => startedAt };
 
 const everyPermissionOverEveryPlaybook = { permissions: allPermissions, playbooks: '*' };
 
+const ada = { id: 'person:ada', name: 'Ada Lovelace' };
+
 const pageRefusal = 'ERR_JWT_CLAIM_VALIDATION_FAILED on its azp claim';
 
 const noOrgClaim = 'ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim';
@@ -43,7 +45,7 @@ describe('a session the identity service gave a page', () => {
         await identityService.personOf(await session(page, { o: { id: 'globex' } }), '', page),
       );
 
-      expect(person?.own).toEqual({ id: 'person:ada', org: 'globex', ...everyPermissionOverEveryPlaybook });
+      expect(person?.own).toEqual({ ...ada, org: 'globex', ...everyPermissionOverEveryPlaybook });
       expect(person?.callerIn('acme')).toBeUndefined();
     },
   );
@@ -80,7 +82,7 @@ describe('a session read for its o claim', () => {
       await identityService.personOf(await session(defaultStudioOrigin, { o }), '', defaultStudioOrigin),
     );
 
-    expect(person?.own).toEqual({ id: 'person:ada', org: 'acme', ...everyPermissionOverEveryPlaybook });
+    expect(person?.own).toEqual({ ...ada, org: 'acme', ...everyPermissionOverEveryPlaybook });
   });
 
   it('is the person of the org its o.id names, never of an org_id it holds', async () => {
@@ -102,7 +104,12 @@ describe('a session that names no org', () => {
       await identityService.personOf(await session(defaultStudioOrigin, claims), '', defaultStudioOrigin),
     );
 
-    expect(person?.own).toEqual({ id: 'person:user_2ada', org: 'user_2ada', ...everyPermissionOverEveryPlaybook });
+    expect(person?.own).toEqual({
+      id: 'person:user_2ada',
+      name: 'Ada Lovelace',
+      org: 'user_2ada',
+      ...everyPermissionOverEveryPlaybook,
+    });
     expect(person?.callerIn('acme')).toBeUndefined();
   });
 
@@ -123,7 +130,7 @@ describe('a session given to the page the runtime serves at its own origin', () 
     const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart, servedStudio);
     const person = principalIn(await identityService.personOf(await session(testPublicUrl), '', testPublicUrl));
 
-    expect(person?.own).toEqual({ id: 'person:ada', org: 'acme', ...everyPermissionOverEveryPlaybook });
+    expect(person?.own).toEqual({ ...ada, org: 'acme', ...everyPermissionOverEveryPlaybook });
   });
 
   it('is refused for its azp where the runtime serves no Studio', async () => {
@@ -173,6 +180,13 @@ const refusedSessions: ReadonlyArray<readonly [string, string, Claims, string]> 
   ['an o whose id is no org id', defaultStudioOrigin, { o: { id: 'ac me' } }, orgRefusal],
   ['an o whose id is not a string', defaultStudioOrigin, { o: { id: 7 } }, orgRefusal],
   ['no sub', defaultStudioOrigin, { sub: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its sub claim'],
+  ['no name', defaultStudioOrigin, { name: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its name claim'],
+  [
+    'an empty name',
+    defaultStudioOrigin,
+    { name: '' },
+    'its name is not a non-empty string of at most 256 bytes without control characters, unpaired surrogates or noncharacters',
+  ],
   [
     'a wrong iss',
     defaultStudioOrigin,

@@ -32,6 +32,8 @@ function ranBy(runId: string) {
   };
 }
 
+const started = { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } };
+
 function succeeded(output: number) {
   return { type: 'run_succeeded', data: { output, record: {} } };
 }
@@ -46,6 +48,7 @@ async function projected() {
         type: 'definition_created',
         data: {
           content: { source: 'runs', details: { counts: 'run_succeeded' } },
+          created_by: { id: 'acme-admin', name: 'acme-admin' },
         },
       },
     ],
@@ -65,11 +68,7 @@ describe('the folders a projector keeps, as a test or a measurement opens them',
   it('fold what is appended to a store of their own tables, once a projector is started, until it is stopped', async () => {
     const folders = await projected();
     const read: string[] = [];
-    await folders.append(
-      `${alphaKey}runs/${firstRun}`,
-      [{ type: 'run_started', data: { input: {} } }, succeeded(1)],
-      ranBy(firstRun),
-    );
+    await folders.append(`${alphaKey}runs/${firstRun}`, [started, succeeded(1)], ranBy(firstRun));
 
     folders.start({
       through: (database) => ({
@@ -81,11 +80,7 @@ describe('the folders a projector keeps, as a test or a measurement opens them',
       }),
     });
     await untilCounted(folders, 1);
-    await folders.append(
-      `${alphaKey}runs/${secondRun}`,
-      [{ type: 'run_started', data: { input: {} } }, succeeded(2)],
-      ranBy(secondRun),
-    );
+    await folders.append(`${alphaKey}runs/${secondRun}`, [started, succeeded(2)], ranBy(secondRun));
     await untilCounted(folders, 2);
     await folders.stop();
 
@@ -98,11 +93,7 @@ describe('the folders a projector keeps, as a test or a measurement opens them',
     folders.start({ sweepEveryMs: 1000, pagesPerWake: 1, playbooksAtOnce: 1 });
     await untilCounted(folders, 0);
     await folders.stop();
-    await folders.append(
-      `${alphaKey}runs/${firstRun}`,
-      [{ type: 'run_started', data: { input: {} } }, succeeded(1)],
-      ranBy(firstRun),
-    );
+    await folders.append(`${alphaKey}runs/${firstRun}`, [started, succeeded(1)], ranBy(firstRun));
     const [row] = await Effect.runPromise(talliesOf(folders.database, alphaKey));
 
     expect(row?.counted).toBe(0);

@@ -20,7 +20,13 @@ import type { ChildStart, ChildStarted } from '../capability/prediction-ports.ts
 
 const alpha = { org: 'acme', playbook: 'alpha' } as const;
 
-const owner: CallerIdentity = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' };
+const owner: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
 
 interface HttpOperation {
   readonly registration: HttpRegistration<'playbook'>;

@@ -97,7 +97,7 @@ describe('approving a connection', () => {
     expect(await approving(h, id, token)).toEqual(noOpenLink);
     expect((await h.facts()).slice(4, 6).map(({ type, data }) => [type, data])).toEqual([
       ['connection_approved', { connection: id }],
-      ['connection_connected', { connection: id }],
+      ['connection_connected', { connection: id, connected_by: { id: 'person:ada', name: 'Ada Lovelace' } }],
     ]);
   });
 
@@ -124,5 +124,16 @@ describe('approving a connection', () => {
       detail: 'The connection notes was added by another person, and only they may approve it',
     });
     expect(await approving(local, here.id, here.token, grace)).toMatchObject({ output: { status: 'connected' } });
+  });
+});
+
+describe('the person who may approve a connection where sign-in is on', () => {
+  it('is the person who added it by their id, whatever name they sign in with now', async () => {
+    const h = harness();
+    const { id, token } = await added(h, notes);
+
+    expect(await approving(h, id, token, { ...ada, name: 'Ada King' })).toMatchObject({
+      output: { status: 'connected', added_by: { id: 'person:ada', name: 'Ada Lovelace' } },
+    });
   });
 });

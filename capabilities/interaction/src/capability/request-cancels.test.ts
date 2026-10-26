@@ -35,7 +35,7 @@ const asked = { run: address, kind: 'requested', reason: 'Not needed any more' }
 
 const cancelledAsAsked = { status: 'rejected', reason: 'cancelled', kind: 'requested', detail: asked.reason };
 
-const taken = { answer: 'yes', reply: takenReply, by: 'playbook:alpha', at };
+const taken = { answer: 'yes', reply: takenReply, by: { id: 'playbook:alpha', name: 'alpha' }, at };
 
 const delivered = {
   type: 'delivery_succeeded',

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RunCommand } from '../runs/run-commands.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import { startOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
@@ -149,6 +149,7 @@ describe('a run that called tools', () => {
     await recordedDirectly(
       {
         type: 'start',
+        started_by: recordedAdmin,
         definition_type: 'tool-user',
         name: 'caller',
         input: {},

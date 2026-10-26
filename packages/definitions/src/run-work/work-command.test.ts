@@ -15,6 +15,7 @@ import {
   question,
 } from '../testing/asked-runs.ts';
 import { askedRequest } from '../testing/asking.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 
 describe('a run of a capability that answers by its input', () => {
   it('records that it finishes later from the input it is given, and finishes in its call for another', async () => {
@@ -26,9 +27,9 @@ describe('a run of a capability that answers by its input', () => {
       { status: 'succeeded', output: { status: 'started' } },
     ]);
     expect([(await now.recorded())[0]?.data, (await later.recorded()).map(({ type, data }) => [type, data])]).toEqual([
-      { input: { now: true } },
+      { input: { now: true }, started_by: recordedAdmin },
       [
-        ['run_started', { input: { campaign: 'Spring' }, finishes_later: true }],
+        ['run_started', { input: { campaign: 'Spring' }, started_by: recordedAdmin, finishes_later: true }],
         ['run_deferred', { record: { ...askedRequest, message: question } }],
       ],
     ]);

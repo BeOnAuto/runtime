@@ -38,6 +38,7 @@ export async function signedTokens(
         {
           iss: fake.issuer,
           sub: 'ada',
+          name: 'Ada Lovelace',
           aud: testPublicUrl,
           iat: seconds,
           exp: seconds + 300,

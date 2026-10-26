@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
@@ -27,7 +27,7 @@ const greeted = {
   status: 'succeeded',
   output: { greeting: 'Hello', input: {} },
   started_at: firstMoment,
-  started_by: 'acme-admin',
+  started_by: { id: 'acme-admin', name: 'acme-admin' },
   finished_at: firstMoment,
 };
 
@@ -77,7 +77,7 @@ describe('run_definition', () => {
         status: 'succeeded',
         output: { greeting: 'Hello', input: { who: 'Ada' } },
         started_at: later,
-        started_by: 'acme-admin',
+        started_by: { id: 'acme-admin', name: 'acme-admin' },
         finished_at: later,
         record: { greeting: 'Hello' },
       },
@@ -90,6 +90,17 @@ describe('run_definition', () => {
 
     expect(ran).toStrictEqual({ status: 'succeeded', output: { ...greeted, record: { greeting: 'Hello' } } });
     expect(await call(getRun, toAlpha(acmeAdmin, { run_id: runId }))).toStrictEqual(ran);
+  });
+});
+
+describe('who started a run', () => {
+  it('is the caller who started it, a person by their id and their name, as get_run reads it', async () => {
+    const { call } = await withGreetAndPlain();
+    await call(runDefinition, toAlpha(adaOfAcme, { type: 'echo', name: 'greet', run_id: runId }));
+
+    expect(await call(getRun, toAlpha(acmeAdmin, { run_id: runId }))).toMatchObject({
+      output: { started_by: { id: 'person:user_2ada', name: 'Ada Lovelace' } },
+    });
   });
 });
 
@@ -163,7 +174,7 @@ describe('run_definition rejected by the capability', () => {
           issues: [{ detail: 'Expected anything but reject', pointer: '/input/reject' }],
         },
         started_at: firstMoment,
-        started_by: 'acme-admin',
+        started_by: { id: 'acme-admin', name: 'acme-admin' },
         finished_at: firstMoment,
       },
     });

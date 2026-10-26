@@ -122,9 +122,15 @@ interface ConnectedCall {
 }
 
 function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: readonly Tool[]): McpServer {
-  return serverOf(connected.connection, served, connected.serving.linkedAnswers.states, (server) => {
+  const { connection, serving, call } = connected;
+  const session = {
+    connection,
+    actingAs: { caller: call.caller, org: call.org },
+    states: serving.linkedAnswers.states,
+  };
+  return serverOf(session, served, (server) => {
     for (const tool of tools) {
-      server.registerTool(tool.name, tool.definition, toolCallbackOf(connected.serving, connected.call, tool));
+      server.registerTool(tool.name, tool.definition, toolCallbackOf(serving, call, tool));
     }
   });
 }

@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { runDecider } from '../runs/run-decider.ts';
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { quietMs, resumer } from '../testing/capabilities/resumer.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
@@ -14,6 +14,7 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 const startOfAnEcho = {
   type: 'start',
+  started_by: recordedAdmin,
   definition_type: 'echo',
   name: 'step',
   input: {},

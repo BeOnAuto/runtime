@@ -11,7 +11,7 @@ const ListedRuns = Schema.Struct({
       run_id: Schema.String,
       name: Schema.String,
       status: Schema.String,
-      started_by: Schema.String,
+      started_by: Schema.Struct({ id: Schema.String, name: Schema.String }),
     }),
   ),
 });
@@ -85,7 +85,7 @@ describe('a workflow whose trigger is an event', () => {
     });
     const { run, settled } = await triggeredRunOf('close-the-month');
 
-    expect(run).toMatchObject({ status: 'succeeded', started_by: 'playbook:alpha' });
+    expect(run).toMatchObject({ status: 'succeeded', started_by: { id: 'playbook:alpha', name: 'alpha' } });
     expect(settled.body).toMatchObject({ status: 'succeeded', output: { month: 'september' } });
   });
 

@@ -48,7 +48,13 @@ const widest = defineCapability({
 
 const { createDefinition, updateDefinition, getDefinition, listDefinitions } = definitionOperationsFor([widest]);
 
-const caller: CallerIdentity = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' };
+const caller: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
 
 const dispatcher = makeDispatcher([]);
 

@@ -29,7 +29,13 @@ const closing = workflowSource(
 const TriggerSchema = Schema.Struct({ kind: Schema.String, reference: Schema.String });
 
 const ListedRuns = Schema.Struct({
-  runs: Schema.Array(Schema.Struct({ run_id: Schema.String, status: Schema.String, started_by: Schema.String })),
+  runs: Schema.Array(
+    Schema.Struct({
+      run_id: Schema.String,
+      status: Schema.String,
+      started_by: Schema.Struct({ id: Schema.String, name: Schema.String }),
+    }),
+  ),
 });
 
 const StartSchema = Schema.Struct({
@@ -131,6 +137,8 @@ afterAll(async () => {
   await server.stop();
 });
 
+const thePlaybook = { id: 'playbook:alpha', name: 'alpha' };
+
 describe('a workflow with an event trigger, a cron schedule and an every schedule', () => {
   it('shows its triggers in the order its document names them, over HTTP and MCP', () => {
     expect(seen.definition.triggers).toEqual([
@@ -143,9 +151,9 @@ describe('a workflow with an event trigger, a cron schedule and an every schedul
 
   it('runs as the playbook once for an event and once at a due time of each schedule', () => {
     expect(seen.runs.runs.map(({ status, started_by: by }) => [status, by])).toEqual([
-      ['succeeded', 'playbook:alpha'],
-      ['succeeded', 'playbook:alpha'],
-      ['succeeded', 'playbook:alpha'],
+      ['succeeded', thePlaybook],
+      ['succeeded', thePlaybook],
+      ['succeeded', thePlaybook],
     ]);
     expect(
       seen.starts.map(({ metadata }) => metadata.trigger.kind).toSorted((first, second) => first.localeCompare(second)),

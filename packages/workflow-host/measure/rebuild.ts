@@ -70,7 +70,7 @@ async function recorded(database: HostDatabase, events: number): Promise<void> {
     [
       {
         type: 'definition_created',
-        data: { content: recallContentOf('reviews', details) },
+        data: { content: recallContentOf('reviews', details), created_by: { id: 'acme-admin', name: 'acme-admin' } },
       },
     ],
     { expectedVersion: 0, context },

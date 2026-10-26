@@ -113,7 +113,12 @@ describe('a delivery of an ending that the run cannot take now', () => {
 describe('the endings of the runs a run waits for, before a timer of that run fires', () => {
   it('are delivered first, so a child that ended while the server was down answers before the deadline', async () => {
     const { database, callStates } = await waitingParent(child);
-    await recorded(database.store, `${alpha}runs/${child}`, { type: 'run_started', data: { input: {} } }, ofTheChild);
+    await recorded(
+      database.store,
+      `${alpha}runs/${child}`,
+      { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+      ofTheChild,
+    );
     const submitted: unknown[] = [];
     const endedChildren = endedChildrenOn({
       database,

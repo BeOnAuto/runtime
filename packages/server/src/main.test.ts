@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 import { withMcpSession } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
+import { localDeveloper } from '@on.auto/identity/testing';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { spawnServer } from './testing/processes/spawned-server.ts';
@@ -244,7 +245,9 @@ describe('main over MCP', () => {
     child.signal('SIGTERM');
 
     expect({ playbook: playbook.structuredContent, exitCode: await child.exited }).toMatchObject({
-      playbook: { playbooks: [{ id: 'support', name: 'Support', created_by: 'local' }] },
+      playbook: {
+        playbooks: [{ id: 'support', name: 'Support', created_by: { id: 'local', name: localDeveloper.name } }],
+      },
       exitCode: 0,
     });
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);

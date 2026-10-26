@@ -38,7 +38,7 @@ No trigger has an input of its own. A run that a schedule starts gets only `{ "s
 - A workflow started by an event takes its data from the event. `input.from` shapes the run's input before the first step.
 - A workflow that your agent also runs tells the two apart in `input.from`, as steps 1 and 6 show.
 
-A run that a trigger starts acts as the playbook itself, not as you. Its `started_by` is `playbook:` followed by the playbook's id, and its steps can read and write that playbook and nothing else. It is kept in the playbook's history like any other run.
+A run that a trigger starts acts as the playbook itself, not as you. Its `started_by` names the playbook: its `id` is `playbook:` followed by the playbook's id, and its `name` the playbook's id, and its steps can read and write that playbook and nothing else. It is kept in the playbook's history like any other run.
 
 ### Overlap and cost
 
@@ -124,7 +124,7 @@ the "<workflow name>" workflow, show who started it, its status and its history.
 
 Check that:
 
-- the run was started by the playbook itself: its `started_by` is `playbook:` followed by your playbook's id;
+- the run was started by the playbook itself: the `id` of its `started_by` is `playbook:` followed by your playbook's id;
 - the first event of its history, `run_started`, reads `A run of the workflow “<name>” was started by its every schedule.`, with the name your workflow is saved under;
 - it ended as the test in step 2 did, with the output you expect.
 
@@ -198,7 +198,7 @@ history.
 Check that:
 
 - the agent reports the event's `id`, `time` and `recorded_at`;
-- a new run appears within a few seconds, started by the playbook itself (`started_by` is `playbook:` followed by your playbook's id);
+- a new run appears within a few seconds, started by the playbook itself (the `id` of its `started_by` is `playbook:` followed by your playbook's id);
 - the first event of its history, `run_started`, reads `A run of the workflow “<name>” was started by its event trigger.`
 
 A filter matches more than published events. It also matches an event another workflow emits, or one of the playbook's own facts, such as `run_succeeded` with the `subject` `reasoning/<name>` when that function's run succeeds. Events recorded before the trigger was saved never start it.

@@ -25,6 +25,7 @@ export const startOfTheStep = {
   definition_type: 'resumer',
   name: 'step',
   input: {},
+  started_by: { id: acmeAdmin.id, name: acmeAdmin.name },
   definition_version: 1,
   calls_tools: true,
   resumes: true,

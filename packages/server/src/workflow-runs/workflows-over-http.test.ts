@@ -1,3 +1,4 @@
+import { localDeveloper } from '@on.auto/identity/testing';
 import { answers, jsonResult, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -116,6 +117,8 @@ async function ran(name: string, input: object): Promise<string> {
   return runIdIn(response.body);
 }
 
+const startedLocally = { started_by: { id: 'local', name: localDeveloper.name } };
+
 describe('a workflow that runs reasoning functions, over HTTP', () => {
   it('branches on the first answer, executes the second definition, and settles succeeded with what it composed', async () => {
     await serving(answers(jsonResult({ approve: true })), answers(textResult('Dinner for six, within policy.')));
@@ -131,7 +134,7 @@ describe('a workflow that runs reasoning functions, over HTTP', () => {
         name: 'expense-review',
         status: 'succeeded',
         output: { approved: true, summary: 'Dinner for six, within policy.' },
-        started_by: 'local',
+        ...startedLocally,
       },
     });
   });
@@ -147,8 +150,8 @@ describe('a workflow that runs reasoning functions, over HTTP', () => {
 
     expect(new Set([runId, ...server.modelRunIds()]).size).toBe(3);
     expect(nested.map(({ body }) => body)).toMatchObject([
-      { type: 'reasoning', name: 'verdict', status: 'succeeded', output: { approve: true }, started_by: 'local' },
-      { type: 'reasoning', name: 'summary', status: 'succeeded', output: 'Within policy.', started_by: 'local' },
+      { type: 'reasoning', name: 'verdict', status: 'succeeded', output: { approve: true }, ...startedLocally },
+      { type: 'reasoning', name: 'summary', status: 'succeeded', output: 'Within policy.', ...startedLocally },
     ]);
   });
 

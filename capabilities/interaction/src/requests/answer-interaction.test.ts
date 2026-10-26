@@ -67,6 +67,8 @@ async function askedApproval(document = approvalDocument()) {
   return { playbook, asked };
 }
 
+const thePlaybook = { id: 'playbook:alpha', name: 'alpha' };
+
 describe('a request asked through the inbox', () => {
   it('waits as a started run, listed among the open requests of the playbook', async () => {
     const { playbook, asked } = await askedApproval();
@@ -115,7 +117,7 @@ describe('an answer to a request', () => {
         answer_id: someText,
         answer: { choice: 'approve' },
         claimed_for: 'ada',
-        answered_by: acmeAdmin.id,
+        answered_by: { id: acmeAdmin.id, name: acmeAdmin.name },
         answered_at: someText,
       },
     });
@@ -153,7 +155,7 @@ describe('an answer to a request a reply answered first', () => {
 
     expect(await playbook.call(answer, { run_id: askedRunId, answer: { choice: 'approve' } })).toMatchObject({
       status: 'succeeded',
-      output: { answer: { choice: 'approve' }, reply: takenReply, answered_by: 'playbook:alpha' },
+      output: { answer: { choice: 'approve' }, reply: takenReply, answered_by: thePlaybook },
     });
   });
 });

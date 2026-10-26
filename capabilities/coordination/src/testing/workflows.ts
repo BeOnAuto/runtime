@@ -24,6 +24,7 @@ export interface InterpretOptions {
 
 export const acmeCaller: CallerIdentity = {
   id: 'acme-admin',
+  name: 'acme-admin',
   org: 'acme',
   permissions: ['playbook:read', 'playbook:write'],
   playbooks: '*',

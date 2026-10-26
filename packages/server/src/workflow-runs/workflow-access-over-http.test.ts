@@ -93,10 +93,19 @@ describe('a workflow that listens for an event, over HTTP', () => {
     expect(sent).toMatchObject({ status: 200, body: { run_id: runId, event: decided } });
     expect(Object.keys(sentEventOf(sent.body).event)).toEqual(['type', 'source', 'data', 'id', 'time']);
     expect(settled).toMatchObject({
-      body: { status: 'succeeded', output: [{ approved: true }], started_by: 'acme-runner' },
+      body: {
+        status: 'succeeded',
+        output: [{ approved: true }],
+        started_by: { id: 'acme-runner', name: 'acme-runner' },
+      },
     });
     expect(await server.call('GET', `${alpha}/runs/${String(nested)}`, { key: admin.key })).toMatchObject({
-      body: { type: 'reasoning', name: 'verdict', status: 'succeeded', started_by: 'acme-runner' },
+      body: {
+        type: 'reasoning',
+        name: 'verdict',
+        status: 'succeeded',
+        started_by: { id: 'acme-runner', name: 'acme-runner' },
+      },
     });
   });
 });

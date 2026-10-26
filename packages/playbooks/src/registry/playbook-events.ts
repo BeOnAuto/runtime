@@ -1,4 +1,4 @@
-import { ActedContextSchema, PlaybookIdSchema, factOf, type Decided } from '@on.auto/operations';
+import { ActedContextSchema, PlaybookIdSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 const ofThePlaybook = { playbook: PlaybookIdSchema };
@@ -6,7 +6,12 @@ const ofThePlaybook = { playbook: PlaybookIdSchema };
 export const PlaybookEventSchema = Schema.Union([
   factOf(
     'playbook_created',
-    Schema.Struct({ ...ofThePlaybook, name: Schema.String, description: Schema.String }),
+    Schema.Struct({
+      ...ofThePlaybook,
+      name: Schema.String,
+      description: Schema.String,
+      created_by: RecordedCallerSchema,
+    }),
     ActedContextSchema,
   ),
   factOf(

@@ -52,7 +52,13 @@ export function failingAfter(text: string): StreamedContent {
   return { stream, bytes: 1000, mediaType: 'text/csv' };
 }
 
-const acmeAdmin = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' } as const;
+const acmeAdmin = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+} as const;
 
 export function uploading(content: RecordedContent = memoryRecordedContent()): Uploading {
   const operation = uploadDataset(content);

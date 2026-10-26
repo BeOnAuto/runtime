@@ -100,7 +100,7 @@ const serving: AnsweringServing = {
 const answer = { content: [{ type: 'text', text: 'Made it.' }], structuredContent: { page } } as const;
 
 function replaying(keptFor: Readonly<Record<string, string>>) {
-  const caller = { id: 'acme-admin', org: 'acme', permissions: [], playbooks: '*' } as const;
+  const caller = { id: 'acme-admin', name: 'acme-admin', org: 'acme', permissions: [], playbooks: '*' } as const;
   const kept = { tool: 'open_page', caller: 'acme-admin', org: 'acme', ...keptFor, answer };
   return toolCallbackOf(
     serving,

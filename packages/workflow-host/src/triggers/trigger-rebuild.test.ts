@@ -74,8 +74,14 @@ describe('the triggers of a playbook made again, past the records of its definit
     const settings = await onSQLite();
     const { store } = await openedOn(settings);
     await playbookCreated(store, 'alpha');
-    await recorded(store, `${alpha}definitions/workflow`, { type: 'definition_created', data: { content: 7 } });
-    await recorded(store, `${alpha}definitions/workflow`, { type: 'definition_created', data: { content: {} } });
+    await recorded(store, `${alpha}definitions/workflow`, {
+      type: 'definition_created',
+      data: { content: 7 },
+    });
+    await recorded(store, `${alpha}definitions/workflow`, {
+      type: 'definition_created',
+      data: { content: {} },
+    });
     await definitionRecorded(store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
 
     const reacting = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });

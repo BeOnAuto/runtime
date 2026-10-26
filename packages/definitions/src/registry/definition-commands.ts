@@ -1,9 +1,12 @@
+import type { RecordedCaller } from '@on.auto/operations';
+
 import type { DefinitionContent } from './definition-events.ts';
 
 export interface DefinitionCreation {
   readonly type: 'create';
   readonly name: string;
   readonly content: DefinitionContent;
+  readonly created_by: RecordedCaller;
 }
 
 export interface DefinitionUpdate {

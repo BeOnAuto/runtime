@@ -45,7 +45,12 @@ function published(context: Context = byAdmin, correlationId: string | null = nu
 function runFact(runId: string, [type, name]: readonly [string, string], correlationId: string | null) {
   const context = { ...byAdmin, runId, definitionType: type, definitionName: name, definitionVersion: 1 };
   return followedEventOf(
-    recordOf(`runs/${runId}`, { type: 'run_started', data: { input: {} } }, context, correlationId),
+    recordOf(
+      `runs/${runId}`,
+      { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+      context,
+      correlationId,
+    ),
     'workflow',
   );
 }
@@ -121,7 +126,10 @@ describe('a fact of a playbook that is none, or cannot be read, as the follower 
   it('is unreadable when its record cannot be read, and no fact at all for a record that is none', () => {
     expect([
       followedEventOf(
-        recordOf('runs/r-1', { type: 'run_started', data: { input: 7, calls_tools: false } }),
+        recordOf('runs/r-1', {
+          type: 'run_started',
+          data: { input: 7, calls_tools: false },
+        }),
         'workflow',
       ),
       followedEventOf(recordOf('runs/r-1', { type: 'call_recorded' }), 'workflow'),

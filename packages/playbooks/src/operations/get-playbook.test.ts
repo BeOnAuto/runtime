@@ -37,7 +37,7 @@ describe('get_playbook', () => {
         description: 'Answers sales',
         status: 'active',
         created_at: firstMoment,
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: firstMoment,
       },
     });

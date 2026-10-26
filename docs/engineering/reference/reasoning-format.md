@@ -234,7 +234,7 @@ curl --request POST http://localhost:5555/v1/orgs/acme/playbooks/sales/definitio
   "status": "succeeded",
   "output": "Globex renewed for two years and expanded to three regions this quarter.",
   "started_at": "2026-10-01T09:30:00.000Z",
-  "started_by": "local",
+  "started_by": { "id": "local", "name": "ada" },
   "finished_at": "2026-10-01T09:30:02.412Z"
 }
 ```

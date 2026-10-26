@@ -365,7 +365,7 @@ Rules of an answer:
 - A caller that may write to the playbook can answer.
 - The answer is checked against the answer schema the request recorded, and takes at most 64 KiB as JSON.
 - It is recorded on the run as one fact, `request_answered`, with the answer and `claimed_for`. `claimed_for` is whom the caller says it answers for: a claim the runtime keeps and never checks. The fact records the caller and the time itself.
-- `answer_interaction` returns that fact: the `run_id`, the `answer_id` of the fact (which `get_event` reads), the `answer`, `claimed_for`, `answered_by` (the caller's id) and `answered_at`.
+- `answer_interaction` returns that fact: the `run_id`, the `answer_id` of the fact (which `get_event` reads), the `answer`, `claimed_for`, `answered_by` (the caller who answered, by `id` and `name`) and `answered_at`.
 - The request leaves the inbox at once. The run takes the answer within about a second (the server checks waiting runs every second by default). It succeeds with the answer as its output, settled as the caller that answered.
 - An answer that does not match is `invalid_input`, with a pointer under `/answer` for each problem, and leaves the request open.
 - The same answer sent again returns the fact the run took. A different answer is `conflict`, since a run takes one answer.

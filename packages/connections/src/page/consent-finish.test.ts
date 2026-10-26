@@ -64,6 +64,7 @@ describe('the finish of a consent', () => {
           client_id: 'auto-runtime',
           client_source: 'registered',
           scope: 'files.read',
+          connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
         },
       ],
     ]);

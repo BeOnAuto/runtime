@@ -47,7 +47,7 @@ describe('the definitions and runs of a playbook', () => {
     await call(runDefinition, toAlpha(acmeAdmin, { ...greet, run_id: runId }));
 
     expect(await call(runDefinition, toGamma(globexAdmin, { ...greet, run_id: runId }))).toMatchObject({
-      output: { output: { greeting: 'Hola' }, started_by: 'globex-admin' },
+      output: { output: { greeting: 'Hola' }, started_by: { id: 'globex-admin', name: 'globex-admin' } },
     });
   });
 
@@ -91,7 +91,7 @@ describe('a caller limited to some playbooks', () => {
     const denied = { status: 'rejected', reason: 'forbidden', detail: 'The caller may not access this playbook' };
 
     expect(await call(createDefinition, toAlpha(acmeAlphaKeeper, hello))).toMatchObject({
-      output: { created_by: 'acme-alpha-keeper' },
+      output: { created_by: { id: 'acme-alpha-keeper', name: 'acme-alpha-keeper' } },
     });
     expect(await call(runDefinition, toAlpha(acmeAlphaKeeper, greet))).toMatchObject({ status: 'succeeded' });
     expect(await call(createDefinition, toBeta(acmeAlphaKeeper, hello))).toEqual(denied);

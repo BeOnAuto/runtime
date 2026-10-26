@@ -10,7 +10,13 @@ import { patientTiming, playbookToolCalls } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
 import { fakeApiKey, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
-const adder: CallerIdentity = { id: 'person:ada', org: 'acme', permissions: ['org:read', 'org:write'], playbooks: '*' };
+const adder: CallerIdentity = {
+  id: 'person:ada',
+  name: 'Ada Lovelace',
+  org: 'acme',
+  permissions: ['org:read', 'org:write'],
+  playbooks: '*',
+};
 
 const reader: CallerIdentity = { ...adder, id: 'acme-reader', permissions: ['org:read'] };
 

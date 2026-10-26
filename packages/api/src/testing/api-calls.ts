@@ -35,8 +35,8 @@ const admitEveryone: Authenticator = {
   resource: undefined,
   authenticate: () =>
     Promise.resolve({
-      own: { id: 'anyone', org: 'acme', permissions: allPermissions, playbooks: '*' },
-      callerIn: (org) => ({ id: 'anyone', org, permissions: allPermissions, playbooks: '*' }),
+      own: { id: 'anyone', name: 'anyone', org: 'acme', permissions: allPermissions, playbooks: '*' },
+      callerIn: (org) => ({ id: 'anyone', name: 'anyone', org, permissions: allPermissions, playbooks: '*' }),
     }),
 };
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { cancelRequestOf, lastEndingOf, runEndingOf } from '../index.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 
 const calledBy = { runId: '0199a3c4-7d2e-7c1a-9b3f-000000000001', reference: '/do/0/check', run: 1 };
 
@@ -14,7 +15,7 @@ const context = {
   calledBy,
 };
 
-const started = { type: 'run_started', data: { input: {} }, context };
+const started = { type: 'run_started', data: { started_by: recordedAdmin, input: {} }, context };
 
 const succeeded = { type: 'run_succeeded', data: { output: 'done', record: {} }, context };
 

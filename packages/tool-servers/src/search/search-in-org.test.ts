@@ -9,12 +9,19 @@ import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
-const orgReader: CallerIdentity = { id: 'acme-reader', org: 'acme', permissions: ['org:read'], playbooks: '*' };
+const orgReader: CallerIdentity = {
+  id: 'acme-reader',
+  name: 'acme-reader',
+  org: 'acme',
+  permissions: ['org:read'],
+  playbooks: '*',
+};
 
 const playbookReader: CallerIdentity = { ...orgReader, id: 'acme-playbooks', permissions: ['playbook:read'] };
 
 const alphaReader: CallerIdentity = {
   id: 'acme-alpha',
+  name: 'acme-alpha',
   org: 'acme',
   permissions: ['org:read', 'playbook:read'],
   playbooks: ['alpha'],

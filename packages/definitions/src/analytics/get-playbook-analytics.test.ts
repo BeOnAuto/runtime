@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { defineGetPlaybookAnalytics } from '../index.ts';
 import { RunEventSchema, type RecordedRunEvent, type RunEvent } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
-import { acmeReader } from '../testing/callers.ts';
+import { acmeReader, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { asQueryString, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
@@ -44,7 +44,10 @@ function ofTheRun(name: string, type: string, at: string) {
 const usage = { input: { total: 1200, cache_read: 1000 }, output: { total: 300 } };
 
 function started(name: string, at: string, type = 'reasoning'): Writing {
-  return { event: { type: 'run_started', data: { input: {} } }, context: ofTheRun(name, type, at) };
+  return {
+    event: { type: 'run_started', data: { started_by: recordedAdmin, input: {} } },
+    context: ofTheRun(name, type, at),
+  };
 }
 
 function succeeded(at: string, record: Schema.JsonObject = {}, name = 'triage', type = 'reasoning'): Writing {

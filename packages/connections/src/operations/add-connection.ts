@@ -8,7 +8,7 @@ import { checkedAdditionOf, refusalOfTheAddition } from '../providers/provider-a
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed, linkWordsOf } from './connection-words.ts';
-import { additionOf, recordInRegistry } from './registry-access.ts';
+import { additionOf, recordInRegistry, recordedCaller } from './registry-access.ts';
 
 const description = [
   "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
@@ -47,7 +47,7 @@ export function defineAddConnection({
         return yield* Effect.fail(refusal);
       }
       const { token, ...link } = yield* issuedLink;
-      const addition = additionOf(given, link);
+      const addition = additionOf(given, link, yield* recordedCaller);
       const kept = yield* recordInRegistry(addition).pipe(
         Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die, invalid_input: Effect.die }),
       );

@@ -95,6 +95,56 @@ describe('the OpenAPI document of the server', () => {
   });
 });
 
+const AnsweredFieldsSchema = Schema.Struct({
+  content: Schema.Struct({
+    'application/json': Schema.Struct({
+      schema: Schema.Struct({ properties: Schema.Record(Schema.String, Schema.Json) }),
+    }),
+  }),
+});
+
+function answeredField(operationId: string, status: string, field: string): unknown {
+  const described = operationsIn(document).find(({ operation }) => operation.operationId === operationId);
+  const { content } = Schema.decodeUnknownSync(AnsweredFieldsSchema)(described?.operation.responses[status]);
+  return content['application/json'].schema.properties[field];
+}
+
+function theCallerWho(did: string) {
+  return {
+    type: 'object',
+    description: `The caller who ${did}, by id and name`,
+    properties: { id: { type: 'string', description: 'The id of the caller' }, name: { type: 'string' } },
+    required: ['id', 'name'],
+  };
+}
+
+describe('who did something, in the document', () => {
+  it('is the caller who did it, by id and name, on a playbook, a definition, a connection, a run and an answer', () => {
+    expect([
+      answeredField('create_playbook', '201', 'created_by'),
+      answeredField('get_definition', '200', 'created_by'),
+      answeredField('add_connection', '201', 'added_by'),
+      answeredField('get_run', '200', 'started_by'),
+      answeredField('answer_interaction', '200', 'answered_by'),
+    ]).toMatchObject([
+      theCallerWho('created the playbook'),
+      theCallerWho('created the definition'),
+      theCallerWho('added it'),
+      theCallerWho('started the run'),
+      theCallerWho('answered it'),
+    ]);
+  });
+
+  it('is the caller who connected a connection, by id and name, or null while nobody has', () => {
+    const { description, ...caller } = theCallerWho('connected it, approving it or giving its credential');
+
+    expect(answeredField('get_connection', '200', 'connected_by')).toMatchObject({
+      anyOf: [caller, { type: 'null' }],
+      description,
+    });
+  });
+});
+
 function shapeOf({ path, method, operation }: DocumentedOperation): readonly string[] {
   return [
     operation.operationId,

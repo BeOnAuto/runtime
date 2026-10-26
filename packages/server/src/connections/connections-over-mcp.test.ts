@@ -7,6 +7,7 @@ import {
   withMcpSession,
   type LinkOpening,
 } from '@on.auto/api/testing';
+import { localDeveloper } from '@on.auto/identity/testing';
 import { sha256Of } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -129,7 +130,11 @@ describe('the retry of add_connection', () => {
     const listed = await next.call('GET', '/v1/orgs/local/connections');
     await next.stop();
 
-    expect(retried.structuredContent).toMatchObject({ name: 'notes-across', status: 'pending', added_by: 'local' });
+    expect(retried.structuredContent).toMatchObject({
+      name: 'notes-across',
+      status: 'pending',
+      added_by: { id: 'local', name: localDeveloper.name },
+    });
     expect(listed.body).toMatchObject({ connections: [{ name: 'notes-across' }] });
     expect(await ownKeyFactsIn(fileName)).toMatchObject([
       { type: 'own_key_kept', data: { purpose: 'retry_state' }, context: { by: 'runtime' } },

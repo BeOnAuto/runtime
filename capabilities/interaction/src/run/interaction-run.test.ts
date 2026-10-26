@@ -21,7 +21,7 @@ const aRun: RunContext = {
   id: runId,
   org: 'acme',
   playbook: 'alpha',
-  caller: { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' },
+  caller: { id: 'acme-admin', name: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' },
   definition: { name: 'approve-brief', version: 1 },
   journal: recordingJournal(),
   lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: runId },

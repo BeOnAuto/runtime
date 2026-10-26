@@ -2,6 +2,7 @@ import { Conflict, NotFound, RunCancelled } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -15,7 +16,10 @@ const greeting = { definition_type: 'probe', name: 'plain', input: {} };
 
 const ofPlain = { definitionType: 'probe', definitionName: 'plain', definitionVersion: 1 };
 
-const started = recordedWith({ ...start, ...ofPlain })({ type: 'run_started', data: { input: {} } });
+const started = recordedWith({ ...start, ...ofPlain })({
+  type: 'run_started',
+  data: { started_by: recordedAdmin, input: {} },
+});
 
 const reason = 'The run that waited for it ended first';
 
@@ -41,7 +45,14 @@ function cancelling(byItsCaller: boolean): RunCommand {
   };
 }
 
-const starting: RunCommand = { type: 'start', ...greeting, definition_version: 1, calls_tools: false, ...start };
+const starting: RunCommand = {
+  type: 'start',
+  ...greeting,
+  started_by: recordedAdmin,
+  definition_version: 1,
+  calls_tools: false,
+  ...start,
+};
 
 const cancelledFirst = new RunCancelled({ detail: reason, kind: 'parent_ended' });
 

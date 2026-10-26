@@ -7,6 +7,7 @@ import { activateVersion } from './activate-version.ts';
 
 const signedInPerson: CallerIdentity = {
   id: 'person:user|ada',
+  name: 'Ada Lovelace',
   org: 'acme',
   permissions: allPermissions,
   playbooks: '*',

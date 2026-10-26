@@ -12,7 +12,7 @@ const acted = { at: '2026-10-12T09:00:00.000Z', by: 'playbook:alpha', name: 'dai
 
 const card = {
   build: 'build-1',
-  trained_by: 'acme-trainer',
+  trained_by: { id: 'acme-trainer', name: 'acme-trainer' },
   dataset: {
     data_sha256: sha256,
     training_sha256: sha256,

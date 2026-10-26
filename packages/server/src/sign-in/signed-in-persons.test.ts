@@ -19,7 +19,7 @@ function signingIn(issuer: string): Readonly<Record<string, string>> {
 }
 
 describe('a signed-in person on the facts', () => {
-  it('is named person:<subject> as who created the playbook and the definition, started the run and answered it', async () => {
+  it('is named person:<subject>, with the name its token gives, as who created the playbook and the definition, started the run and answered it', async () => {
     const issuer = await issuerOverHttps();
     const server = await interactionServerOn(signingIn(issuer.issuer));
     const key = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
@@ -44,10 +44,10 @@ describe('a signed-in person on the facts', () => {
     const run = await server.call('GET', `${alpha}/runs/${runId}`, { key });
 
     expect([playbook.body, definition.body, run.body, answered.body]).toMatchObject([
-      { created_by: 'person:user|ada' },
-      { created_by: 'person:user|ada' },
-      { started_by: 'person:user|ada' },
-      { answered_by: 'person:user|ada' },
+      { created_by: { id: 'person:user|ada', name: 'Ada Lovelace' } },
+      { created_by: { id: 'person:user|ada', name: 'Ada Lovelace' } },
+      { started_by: { id: 'person:user|ada', name: 'Ada Lovelace' } },
+      { answered_by: { id: 'person:user|ada', name: 'Ada Lovelace' } },
     ]);
   });
 });
@@ -142,7 +142,7 @@ describe('a page signed in to Auto, calling a server that signs persons in', () 
     const created = await createdWith(server.origin, session, page);
 
     expect([created.status, created.headers.get('access-control-allow-origin')]).toEqual([201, page]);
-    expect(await created.json()).toMatchObject({ created_by: 'person:user|ada' });
+    expect(await created.json()).toMatchObject({ created_by: { id: 'person:user|ada', name: 'Ada Lovelace' } });
   });
 
   it('refuses the session another page was given, naming its azp claim', async () => {
@@ -187,8 +187,8 @@ describe('a server in local mode', () => {
       body: { playbook: 'beta', name: 'Beta' },
     });
 
-    expect([fromThePage.status, await fromThePage.json()]).toMatchObject([201, { created_by: 'local' }]);
-    expect(withAKey).toMatchObject({ status: 201, body: { created_by: 'local' } });
+    expect([fromThePage.status, await fromThePage.json()]).toMatchObject([201, { created_by: { id: 'local' } }]);
+    expect(withAKey).toMatchObject({ status: 201, body: { created_by: { id: 'local' } } });
   });
 });
 

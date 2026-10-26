@@ -124,11 +124,12 @@ function startedCallingToolsBefore(start: RunStart, state: RunState): boolean {
   return state !== undefined && isRunning(state) && (state.callsTools || start.calls_tools);
 }
 
-function startedEvent({ input, calls_tools, finishes_later, resumes, output_shape }: RunStart): RunEvent {
+function startedEvent({ input, started_by, calls_tools, finishes_later, resumes, output_shape }: RunStart): RunEvent {
   return {
     type: 'run_started',
     data: {
       input,
+      started_by,
       ...(calls_tools ? { calls_tools } : {}),
       ...(finishes_later === true ? { finishes_later } : {}),
       ...(resumes === true ? { resumes } : {}),

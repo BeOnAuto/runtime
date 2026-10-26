@@ -1,4 +1,10 @@
-import { ActedOnRunContextSchema, RunContextSchema, factOf, type Decided } from '@on.auto/operations';
+import {
+  ActedOnRunContextSchema,
+  RecordedCallerSchema,
+  RunContextSchema,
+  factOf,
+  type Decided,
+} from '@on.auto/operations';
 import { CallAnsweredSchema, CallFailedSchema, CallStartedSchema } from '@on.auto/tool-servers';
 import { Schema, SchemaTransformation } from 'effect';
 
@@ -20,6 +26,7 @@ export const RequestAnsweredSchema = Schema.Struct({
   answer: Schema.Json,
   claimed_for: Schema.optionalKey(Schema.String),
   reply: Schema.optionalKey(ReplyIdentitySchema),
+  answered_by: RecordedCallerSchema,
 });
 
 const coreFactSchemas = [
@@ -27,6 +34,7 @@ const coreFactSchemas = [
     'run_started',
     Schema.Struct({
       input: Schema.Json,
+      started_by: RecordedCallerSchema,
       calls_tools: Schema.optionalKey(Schema.Literal(true)),
       finishes_later: Schema.optionalKey(Schema.Literal(true)),
       resumes: Schema.optionalKey(Schema.Literal(true)),

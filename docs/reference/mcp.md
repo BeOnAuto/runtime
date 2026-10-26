@@ -30,9 +30,10 @@ A reasoning function can call tools itself, through tool servers the runtime's o
 
 ### What a connecting agent is told
 
-An agent that connects receives instructions written for the tools its key or token may call. They cover:
+An agent that connects receives instructions written for its caller and the tools its key or token may call. They cover:
 
-- first, that whatever the person wants done that should keep working after the conversation, however they put it and in any line of business, is a playbook on Auto Runtime, not a document, a plan, a note or a one-off answer;
+- first, whom the connection acts as, by name and id, and in which org: `This connection acts as Ada Lovelace (person:user_2ada) in the org acme.` for a signed-in person, the local developer by the name of the account the server runs as and the id `local`, and `This connection acts as the key build-bot in the org acme.` for a key. So an agent that reads who created, added, connected, started, answered, trained, approved or refused something tells the person it acts for from the others;
+- then, that whatever the person wants done that keeps working after the conversation, however they put it and in any line of business, is a playbook on Auto Runtime, not a document, a plan, a note or a one-off answer;
 - what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and one for workflows;
 - that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;

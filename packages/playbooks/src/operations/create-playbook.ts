@@ -1,4 +1,4 @@
-import { defineCommand, quoted } from '@on.auto/operations';
+import { Caller, defineCommand, quoted, recordedCallerOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { playbookNamed, purposeOf } from '../plain-language/playbook-words.ts';
@@ -25,7 +25,9 @@ export const createPlaybook = defineCommand('org', {
   outputSchema: PlaybookSchema,
   reasons: ['conflict'],
   handle: ({ playbook, name, description = '' }) =>
-    recordInRegistry({ type: 'create', playbook, name, description }).pipe(Effect.catchTag('not_found', Effect.die)),
+    Caller.use((caller) =>
+      recordInRegistry({ type: 'create', playbook, name, description, created_by: recordedCallerOf(caller) }),
+    ).pipe(Effect.catchTag('not_found', Effect.die)),
   plainLanguage: {
     task: 'create a playbook',
     attempt: ({ playbook }) => `create the playbook ${quoted(playbook)}`,

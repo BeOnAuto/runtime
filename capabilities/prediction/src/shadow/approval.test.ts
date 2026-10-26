@@ -17,6 +17,7 @@ import { uploadedDailyVisits } from '../testing/daily-documents.ts';
 
 const signedInPerson: CallerIdentity = {
   id: 'person:user|ada',
+  name: 'Ada Lovelace',
   org: 'acme',
   permissions: allPermissions,
   playbooks: '*',
@@ -93,7 +94,7 @@ describe('a version whose activation is approved', () => {
 
     expect((await modelFactsOf(playbook)).at(-1)).toMatchObject({
       type: 'version_activated',
-      data: { version: 1, rule: 'approved', approved_by: 'acme-admin', build },
+      data: { version: 1, rule: 'approved', approved_by: { id: 'acme-admin', name: 'acme-admin' }, build },
     });
     expect(await runOf(playbook, build)).toMatchObject({ output: { status: 'succeeded', output: { version: 1 } } });
   });
@@ -106,7 +107,7 @@ describe('a version whose activation is approved', () => {
 
     expect((await modelFactsOf(playbook)).at(-1)).toMatchObject({
       type: 'activation_refused',
-      data: { version: 1, because: 'approver_rejected', refused_by: 'acme-admin', build },
+      data: { version: 1, because: 'approver_rejected', refused_by: { id: 'acme-admin', name: 'acme-admin' }, build },
     });
     expect(await standingOf(playbook)).toMatchObject({
       output: { standing: { models: { active: null, challenger: null, latest: 1 }, build: null } },
@@ -200,7 +201,7 @@ describe('a version a signed-in person approves', () => {
 
     expect((await modelFactsOf(playbook)).at(-1)).toMatchObject({
       type: 'version_activated',
-      data: { rule: 'approved', approved_by: 'person:user|ada' },
+      data: { rule: 'approved', approved_by: { id: 'person:user|ada', name: 'Ada Lovelace' } },
     });
   });
 });

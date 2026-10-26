@@ -62,7 +62,15 @@ async function verificationsBy(
   }
   const seconds = Math.floor(Date.now() / 1000);
   const token = await fake.sign(
-    { iss: fake.issuer, sub: 'ada', aud: publicUrl, iat: seconds, exp: seconds + 3600, org_id: 'acme' },
+    {
+      iss: fake.issuer,
+      sub: 'ada',
+      name: 'Ada Lovelace',
+      aud: publicUrl,
+      iat: seconds,
+      exp: seconds + 3600,
+      org_id: 'acme',
+    },
     { signer },
   );
   write(

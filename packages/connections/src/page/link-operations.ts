@@ -5,7 +5,7 @@ import { Effect, Schema } from 'effect';
 import { studioBaseFor, type ConnectPages } from '../links/connect-page.ts';
 import { tokenSha256Of } from '../links/link-token.ts';
 import { ClientSourceField, ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
-import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
+import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown, type RecordedConnection } from '../registry/connection.ts';
 import { isOpenConsent, linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { wayOf } from './consent-asking.ts';
@@ -100,12 +100,14 @@ export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }
     inputSchema: LinkSchema,
     answer: answeringTheRecord,
     reasons: ['not_found', 'forbidden', 'conflict'],
-    handle: ({ id, token }) =>
-      Effect.map(
-        recordInRegistry({ type: 'approve', connection: id, token_sha256: tokenSha256Of(token), bindsPerson }).pipe(
-          Effect.catchTag('invalid_input', Effect.die),
-        ),
-        ({ connection }) => connectionShown(connection, null),
-      ),
+    handle: Effect.fnUntraced(function* ({ id, token }) {
+      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
+      const { connection } = yield* recordInRegistry({
+        type: 'approve',
+        ...use,
+        connected_by: yield* recordedCaller,
+      }).pipe(Effect.catchTag('invalid_input', Effect.die));
+      return connectionShown(connection, null);
+    }),
   });
 }

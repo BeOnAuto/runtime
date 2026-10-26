@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import type { DefinitionEvent } from '../registry/definition-events.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 
 const { present } = presentationOf(makeDefinitionPresenters([echo]));
@@ -48,7 +49,7 @@ describe('the presenter of the definitions of a capability', () => {
       warnings: ['one', 'two'],
     };
 
-    expect(presented({ type: 'definition_created', data: { content } }, 1)).toMatchObject({
+    expect(presented({ type: 'definition_created', data: { content, created_by: recordedAdmin } }, 1)).toMatchObject({
       type: 'definition_created',
       summary: 'The greeting “greet” was created.',
       data: {
@@ -89,7 +90,7 @@ describe('the presenter of the changes to a definition', () => {
       presented(
         {
           type: 'definition_created',
-          data: { content: { source: 'Hi', description } },
+          data: { content: { source: 'Hi', description }, created_by: recordedAdmin },
         },
         1,
       ),

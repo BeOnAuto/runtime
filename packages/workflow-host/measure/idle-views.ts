@@ -37,7 +37,12 @@ async function saved(store: WorkflowStore, index: number): Promise<void> {
   };
   await store.database.store.append(
     `${playbook}definitions/recall`,
-    [{ type: 'definition_created', data: { content: recallContentOf(name, details) } }],
+    [
+      {
+        type: 'definition_created',
+        data: { content: recallContentOf(name, details), created_by: { id: 'acme-admin', name: 'acme-admin' } },
+      },
+    ],
     { expectedVersion: index, context },
   );
 }

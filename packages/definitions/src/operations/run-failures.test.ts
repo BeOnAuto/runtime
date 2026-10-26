@@ -35,7 +35,7 @@ const failedRun = {
   definition_version: 1,
   status: 'failed',
   started_at: firstMoment,
-  started_by: 'acme-admin',
+  started_by: { id: 'acme-admin', name: 'acme-admin' },
   finished_at: firstMoment,
 };
 

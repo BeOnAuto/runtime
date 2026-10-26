@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import type { Catalog, Dispatcher } from '@on.auto/operations';
 
 import {
+  callerTheInstructionsHold,
   mostInstructionCharacters,
   mostListingBytes,
   mostToolsOnAConnection,
@@ -14,7 +15,13 @@ import { guideToolDefinitionOf, guideToolName } from '../guides/guide-tool.ts';
 import type { RunCall } from '../operations/operation-handler.ts';
 import type { LinkedAnswers } from '../tools/linked-answers.ts';
 import { listingBytesOf, type ListedTool } from '../tools/tool-listing.ts';
-import { instructionsFor, recipesFollowedWith, type McpEndpoint, type ServedTools } from './instructions.ts';
+import {
+  instructionsActingAs,
+  recipesFollowedWith,
+  type ActingAs,
+  type McpEndpoint,
+  type ServedTools,
+} from './instructions.ts';
 
 export interface ServerInfo {
   readonly name: string;
@@ -39,10 +46,6 @@ const noChangesAnnounced = { listChanged: false };
 
 export const serverTitle = 'Auto Runtime';
 
-function instructionsOf({ endpoint, shelf }: Connection, served: ServedTools): string {
-  return instructionsFor(endpoint, served, shelf.definitionTypes);
-}
-
 export interface EveryTool {
   readonly served: ServedTools;
   readonly listed: readonly ListedTool[];
@@ -65,23 +68,29 @@ export function connectionOf(endpoint: McpEndpoint, serving: McpServing, { serve
   );
   requireTextWithin(
     `The instructions of the ${endpoint} endpoint`,
-    instructionsOf(connection, served),
+    instructionsActingAs(callerTheInstructionsHold, endpoint, served, connection.shelf.definitionTypes),
     mostInstructionCharacters,
   );
   return connection;
 }
 
+export interface ConnectedSession {
+  readonly connection: Connection;
+  readonly actingAs: ActingAs;
+  readonly states: LinkedAnswers['states'];
+}
+
 export function serverOf(
-  connection: Connection,
+  { connection, actingAs, states }: ConnectedSession,
   served: ServedTools,
-  states: LinkedAnswers['states'],
   registerTools: (server: GuideRegistry) => void,
 ): McpServer {
+  const { endpoint, shelf } = connection;
   const server = new McpServer(
     { ...connection.serving.serverInfo, title: serverTitle },
     {
       capabilities: { tools: noChangesAnnounced, resources: noChangesAnnounced, prompts: noChangesAnnounced },
-      instructions: instructionsOf(connection, served),
+      instructions: instructionsActingAs(actingAs, endpoint, served, shelf.definitionTypes),
       requestState: states,
     },
   );

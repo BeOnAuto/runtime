@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import { textToKeep, type PlaybookAddress, type RecordedContent } from '@on.auto/operations';
+import { textToKeep, type PlaybookAddress, type RecordedCaller, type RecordedContent } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import type { BuildState } from '../builds/build-state.ts';
@@ -11,7 +11,7 @@ import { featureNamesOf } from './scoring-inputs.ts';
 
 export interface TrainerAnswer {
   readonly candidates: readonly string[];
-  readonly by: string;
+  readonly by: RecordedCaller;
   readonly recipe?: string;
   readonly limitations?: string;
 }

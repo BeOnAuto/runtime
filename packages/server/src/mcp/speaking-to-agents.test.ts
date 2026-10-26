@@ -51,11 +51,11 @@ const posting = [
 ].join('\n');
 
 describe('episode 1: asked "what is a playbook?"', () => {
-  it('is answered by the first three sentences of the instructions, without any tool or rule', () => {
-    const answer = sentencesOf(surfaces.instructions).slice(0, 3).join(' ');
+  it('is answered by the three sentences after the one that says whom the connection acts as, without any tool or rule', () => {
+    const answer = sentencesOf(surfaces.instructions).slice(1, 4).join(' ');
 
     expect(answer).toBe(
-      'Whatever the person wants done that should keep working after this conversation, however they put it and in any line of business, is a playbook on this server, not a document, a plan, a note or a one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows.',
+      'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows.',
     );
     expect(internalTermsIn(answer)).toEqual([]);
     expect(answer).not.toMatch(/[a-z]+_[a-z_]+|\bid\b/u);

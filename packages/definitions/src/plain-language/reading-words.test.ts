@@ -15,7 +15,7 @@ function run(status: string): Readonly<Record<string, unknown>> {
     definition_version: 1,
     status,
     started_at: '2026-10-01T09:00:00.000Z',
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
   };
 }
 

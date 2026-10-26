@@ -1,4 +1,4 @@
-import { DefinitionContextSchema, factOf, type Decided } from '@on.auto/operations';
+import { DefinitionContextSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { BaselineSchema } from '../document/evaluation-names.ts';
@@ -32,7 +32,7 @@ const RuleSchema = Schema.Literals(['automatic', 'approved']);
 const CardSchema = Schema.Struct({
   version: Schema.Int,
   build: Schema.String,
-  trained_by: Schema.String,
+  trained_by: RecordedCallerSchema,
   dataset: CardDatasetSchema,
   file: Schema.Struct({ sha256: Schema.String, bytes: Schema.Int, opset: Schema.Int }),
   inputs: Schema.Array(TensorSchema),
@@ -92,14 +92,14 @@ const ActivatedSchema = Schema.Struct({
   data_sha256: Schema.String,
   file_sha256: Schema.String,
   rule: ActivationRuleSchema,
-  approved_by: Schema.optionalKey(Schema.String),
+  approved_by: Schema.optionalKey(RecordedCallerSchema),
   build: Schema.optionalKey(Schema.String),
 });
 
 const RefusedSchema = Schema.Struct({
   version: Schema.Int,
   because: Schema.Literals(['approver_rejected', 'unanswered', 'shadow_failed', 'superseded']),
-  refused_by: Schema.optionalKey(Schema.String),
+  refused_by: Schema.optionalKey(RecordedCallerSchema),
   build: Schema.String,
 });
 

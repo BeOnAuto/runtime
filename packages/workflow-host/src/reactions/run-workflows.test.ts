@@ -8,7 +8,7 @@ const playbookKey = 'playbook/acme/alpha/';
 function startedRecord(type: string, name: string) {
   return {
     type: 'run_started',
-    data: { input: {} },
+    data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} },
     context: {
       by: 'acme-admin',
       at: 'now',

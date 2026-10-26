@@ -69,7 +69,7 @@ describe('update_definition', () => {
           required: ['greeting', 'input'],
         },
         created_at: firstMoment,
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: later,
         source: '{"greeting": "Howdy"}',
         overview: greetOverview,

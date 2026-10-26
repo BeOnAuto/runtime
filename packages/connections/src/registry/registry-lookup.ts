@@ -53,7 +53,7 @@ function boundConnectionOf(
       if (!isUsable(kept, tokenSha256)) {
         return Result.fail(noOpenLink);
       }
-      return bindsPerson && kept.connection.added_by !== by
+      return bindsPerson && kept.connection.added_by.id !== by
         ? Result.fail(
             new Forbidden({
               detail: `The connection ${kept.connection.name} was added by another person, and only they may approve it`,

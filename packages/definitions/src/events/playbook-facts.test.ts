@@ -11,6 +11,7 @@ import {
   type RunEvent,
 } from '../index.ts';
 import { runStreamNameOf } from '../runs/run-decider.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 
 const recordId = '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3';
@@ -58,7 +59,7 @@ const aboutTheRun = {
 describe('the facts of a run as events', () => {
   it('are its start and its endings, about the run, its context as attributes and its fact as data', () => {
     const facts = [
-      ofRun({ type: 'run_started', data: { input: { text: 'the quarter' } } }),
+      ofRun({ type: 'run_started', data: { started_by: recordedAdmin, input: { text: 'the quarter' } } }),
       ofRun({ type: 'run_rejected', data: { rejection: { reason: 'unavailable', detail: 'Busy' } } }),
       ofRun({ type: 'run_rejected', data: { rejection: { reason: 'cancelled', kind: 'requested', detail: 'No' } } }),
       ofRun({ type: 'run_failed', data: {} }),
@@ -117,7 +118,7 @@ describe('the records of a run that are no facts', () => {
         ofRun({ type: 'run_deferred', data: { record: { run: 'r-1' } } }),
         ofRun({ type: 'run_cancel_requested', data: { kind: 'requested', reason: 'No' } }),
         ofRun({ type: 'tool_call_failed', data: { number: 1, because: 'timed_out', duration_ms: 1, jsonrpc_id: 1 } }),
-        ofRun({ type: 'request_answered', data: { answer: { choice: 'approve' }, reply } }),
+        ofRun({ type: 'request_answered', data: { answered_by: recordedAdmin, answer: { choice: 'approve' }, reply } }),
         { ...ofRun({ type: 'run_failed', data: {} }), type: 'nudge_sent', data: { number: 1 } },
       ].map((record) => playbookFactOf(record)),
     ).toEqual([undefined, undefined, undefined, undefined, undefined]);
@@ -132,7 +133,10 @@ describe('the facts of a definition as events', () => {
   it('are its creation, its changes and its retirement, about the definition and its version, with no subject and no data', () => {
     const named = { at, by: 'acme-admin', definitionType: 'reasoning', definitionName: 'summary' };
     const facts = [
-      ofDefinitions({ type: 'definition_created', data: { content } }, { ...named, definitionVersion: 1 }),
+      ofDefinitions(
+        { type: 'definition_created', data: { content, created_by: recordedAdmin } },
+        { ...named, definitionVersion: 1 },
+      ),
       ofDefinitions({ type: 'definition_updated', data: { content } }, { ...named, definitionVersion: 2 }),
       ofDefinitions({ type: 'definition_retired', data: {} }, { ...named, definitionVersion: 2 }),
       ofDefinitions({ type: 'definition_retired', data: {} }, named),
@@ -159,8 +163,11 @@ describe('the records that are no facts of the playbook', () => {
   it('are the records it cannot read as what their stream holds, which it answers with none, never a failure', () => {
     const unreadable: readonly RecordedFact[] = [
       { ...ofRun({ type: 'run_failed', data: {} }), data: { incident: 7 } },
-      { ...ofDefinitions({ type: 'definition_created', data: { content } }, ofSummary), data: 'not an event' },
-      { ...ofRun({ type: 'run_started', data: { input: {} } }), data: null },
+      {
+        ...ofDefinitions({ type: 'definition_created', data: { content, created_by: recordedAdmin } }, ofSummary),
+        data: 'not an event',
+      },
+      { ...ofRun({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }), data: null },
     ];
 
     expect(unreadable.map((record) => playbookFactOf(record))).toEqual([undefined, undefined, undefined]);

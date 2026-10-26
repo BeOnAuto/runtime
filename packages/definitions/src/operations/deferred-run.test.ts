@@ -12,7 +12,7 @@ const waiting = {
     definition_version: 1,
     status: 'started',
     started_at: firstMoment,
-    started_by: 'acme-admin',
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
     record: { handed_on: relayedId },
   },
 };

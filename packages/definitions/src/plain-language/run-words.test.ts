@@ -28,7 +28,7 @@ const run = {
   status: 'succeeded',
   output: { greeting: 'Hello' },
   started_at: '2026-10-02T09:00:00.000Z',
-  started_by: 'acme-admin',
+  started_by: { id: 'acme-admin', name: 'acme-admin' },
   finished_at: '2026-10-02T09:00:01.000Z',
 };
 

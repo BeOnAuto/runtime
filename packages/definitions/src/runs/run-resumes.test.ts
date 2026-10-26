@@ -2,6 +2,7 @@ import type { Context } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -14,7 +15,7 @@ const atTheStart: Context = { ...acted, definitionType: 'resumer', definitionNam
 
 const recorded = recordedWith(atTheStart);
 
-const resumable: RunEvent = { type: 'run_started', data: { input: {}, resumes: true } };
+const resumable: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: {}, resumes: true } };
 
 function resumingAs(attempt: number): RunCommand {
   return { type: 'resume', attempt, ...acted };
@@ -43,7 +44,7 @@ describe('the resume of a run by an attempt after the one that died', () => {
     expect([
       decided(resumingAs(2)),
       decided(resumingAs(2), resumable, { type: 'run_succeeded', data: { output: null, record: {} } }),
-      decided(resumingAs(2), { type: 'run_started', data: { input: {} } }),
+      decided(resumingAs(2), { type: 'run_started', data: { started_by: recordedAdmin, input: {} } }),
       decided(resumingAs(2), resumable, { type: 'attempt_resumed', data: { attempt: 2 } }),
     ]).toStrictEqual([
       Result.fail(stillRunning),

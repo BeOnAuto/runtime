@@ -52,7 +52,7 @@ describe('a stream of an org whose name only ends as its registry’s does', () 
     const { store } = await openedOn(settings);
     await recorded(store, 'org/acme/elsewhere/playbooks', {
       type: 'playbook_created',
-      data: { playbook: 'gamma', name: 'gamma', description: '' },
+      data: { playbook: 'gamma', name: 'gamma', description: '', created_by: { id: 'acme-admin', name: 'acme-admin' } },
     });
     await playbookCreated(store, 'alpha');
     await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed] });

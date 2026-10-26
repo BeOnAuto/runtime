@@ -32,7 +32,7 @@ const greet = {
   source: '{"greeting":"Hello"}',
   overview: 'Greets each guest who arrives at the front desk.',
   created_at: '2026-10-02T09:00:00.000Z',
-  created_by: 'acme-admin',
+  created_by: { id: 'acme-admin', name: 'acme-admin' },
   updated_at: '2026-10-02T09:00:00.000Z',
 };
 

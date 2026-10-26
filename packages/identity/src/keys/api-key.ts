@@ -13,9 +13,10 @@ const KeyIdSchema = Schema.String.check(
 const DigestSchema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));
 
 export const KeyGrantSchema = Schema.Struct({
-  ...CallerIdentitySchema.fields,
   id: KeyIdSchema,
   org: CredentialOrgSchema,
+  permissions: CallerIdentitySchema.fields.permissions,
+  playbooks: CallerIdentitySchema.fields.playbooks,
 });
 
 export type KeyGrant = typeof KeyGrantSchema.Type;

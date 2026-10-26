@@ -1,4 +1,4 @@
-import { DefinitionContextSchema, factOf, type Decided } from '@on.auto/operations';
+import { DefinitionContextSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { StrippedFormsSchema } from '../capability/stripped-forms.ts';
@@ -21,7 +21,11 @@ export type DefinitionContent = typeof DefinitionContentSchema.Type;
 const SavedSchema = Schema.Struct({ content: DefinitionContentSchema });
 
 export const DefinitionEventSchema = Schema.Union([
-  factOf('definition_created', SavedSchema, DefinitionContextSchema),
+  factOf(
+    'definition_created',
+    Schema.Struct({ ...SavedSchema.fields, created_by: RecordedCallerSchema }),
+    DefinitionContextSchema,
+  ),
   factOf('definition_updated', SavedSchema, DefinitionContextSchema),
   factOf('definition_retired', Schema.Struct({}), DefinitionContextSchema),
 ]);

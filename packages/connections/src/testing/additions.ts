@@ -54,6 +54,10 @@ const RejectedSchema = Schema.Struct({
   issues: Schema.Array(Schema.Struct({ pointer: Schema.String, detail: Schema.String })),
 });
 
+export async function lastFact(h: Harness): Promise<unknown> {
+  return (await h.facts()).at(-1)?.data;
+}
+
 export function namesIn(outcome: Outcome<Succeeded>): readonly string[] {
   return Schema.decodeUnknownSync(ListedSchema)(outcome).output.connections.map(({ name }) => name);
 }

@@ -13,7 +13,7 @@ A playbook belongs to one org.
 | `description` | 0 to 2000 characters, stored trimmed                                                                                          |
 | `status`      | `active` or `retired`                                                                                                         |
 | `created_at`  | When it was created                                                                                                           |
-| `created_by`  | The id of the caller who created it                                                                                           |
+| `created_by`  | The caller who created it, by `id` and `name`, as the fact that creates it, `playbook_created`, holds it                      |
 | `updated_at`  | When it last changed                                                                                                          |
 | `retired_at`  | When it was retired, on a retired playbook only                                                                               |
 

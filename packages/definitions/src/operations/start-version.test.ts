@@ -53,7 +53,7 @@ describe('a start of one version of a definition, once', () => {
         status: 'succeeded',
         output: { greeting: 'Hello', input: { name: 'Ada' } },
         started_at: firstMoment,
-        started_by: 'playbook:alpha',
+        started_by: { id: 'playbook:alpha', name: 'alpha' },
         finished_at: firstMoment,
         record: { greeting: 'Hello' },
       },
@@ -80,7 +80,10 @@ describe('a start of a version that a trigger asked for', () => {
       ),
     );
 
-    expect(started).toMatchObject({ status: 'succeeded', output: { started_by: 'playbook:alpha' } });
+    expect(started).toMatchObject({
+      status: 'succeeded',
+      output: { started_by: { id: 'playbook:alpha', name: 'alpha' } },
+    });
     expect(records).toMatchObject([
       { type: 'run_started', context: { trigger } },
       { type: 'run_succeeded', context: { trigger } },

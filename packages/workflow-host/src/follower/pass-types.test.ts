@@ -25,7 +25,10 @@ function triggerActivatedAt(position: number): RecordedEvent {
   return {
     ...recordAt('definitions/workflow', position),
     type: 'definition_created',
-    data: { content: { source: 'schedule: {}', triggers: [eventTrigger({ type: 'run_succeeded' })] } },
+    data: {
+      content: { source: 'schedule: {}', triggers: [eventTrigger({ type: 'run_succeeded' })] },
+      created_by: { id: 'acme-admin', name: 'acme-admin' },
+    },
     context: { at, by: 'acme-admin', definitionType: 'workflow', definitionName: 'close', definitionVersion: 1 },
   };
 }

@@ -1,3 +1,4 @@
+import { localDeveloper } from '@on.auto/identity/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
@@ -45,7 +46,13 @@ describe('the playbooks of an org over HTTP in local mode', () => {
 
     expect(created).toMatchObject({
       status: 201,
-      body: { id: 'alpha', name: 'Alpha', description: 'Sales', status: 'active', created_by: 'local' },
+      body: {
+        id: 'alpha',
+        name: 'Alpha',
+        description: 'Sales',
+        status: 'active',
+        created_by: { id: 'local', name: localDeveloper.name },
+      },
     });
     expect(cacheControlOf(created)).toBe('no-store');
   });

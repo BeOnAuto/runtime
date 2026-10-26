@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
-import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
+import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { finishedConnectionOf } from '../registry/registry-decisions.ts';
 import { noOpenConsent, type KeptWithConsent } from '../registry/registry-lookup.ts';
@@ -96,19 +96,24 @@ function redeemedOf(
   });
 }
 
-function recordedWith(finished: FinishedConsent, secretId: string, { use, stateSha256 }: Recording) {
+const recordedWith = Effect.fnUntraced(function* (
+  finished: FinishedConsent,
+  secretId: string,
+  { use, stateSha256 }: Recording,
+) {
   const { client_id: clientId, client_source: clientSource } = finished.client;
   const granted = finished.scope === undefined ? {} : { scope: finished.scope };
-  return recordInRegistry({
+  return yield* recordInRegistry({
     type: 'finish',
     ...use,
+    connected_by: yield* recordedCaller,
     state_sha256: stateSha256,
     secret_id: secretId,
     client_id: clientId,
     client_source: clientSource,
     ...granted,
   });
-}
+});
 
 function connectedWith(finished: FinishedConsent, recording: Recording, { secrets }: ConsentServices) {
   const named = namedOf(recording.kept.connection);

@@ -3,6 +3,7 @@ import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import type { RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionVersionFold, definitionVersionIn } from './definition-versions.ts';
 import { definitionsDecider } from './definitions-decider.ts';
@@ -20,12 +21,12 @@ function about(name: string, version: number): DefinitionContext {
 const history: readonly RecordedDefinitionEvent[] = [
   {
     type: 'definition_created',
-    data: { content: { source: 'one' } },
+    data: { content: { source: 'one' }, created_by: recordedAdmin },
     context: about('greet', 1),
   },
   {
     type: 'definition_created',
-    data: { content: { source: 'else' } },
+    data: { content: { source: 'else' }, created_by: recordedAdmin },
     context: about('other', 1),
   },
   {
@@ -64,6 +65,7 @@ describe('a read of one version of a definition of a playbook', () => {
         type: 'create',
         name: 'greet',
         content: { source: 'one' },
+        created_by: recordedAdmin,
         ...at,
       }),
     );

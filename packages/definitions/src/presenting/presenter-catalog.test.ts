@@ -15,6 +15,7 @@ import { makeDefinitionPresenters } from '../index.ts';
 import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { mostInputBytes, mostResultBytes } from '../runs/recorded-size.ts';
 import { coreRunFactTypes, type RunEvent } from '../runs/run-events.ts';
+import { recordedAdmin } from '../testing/callers.ts';
 import { asking, echo } from '../testing/index.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -95,7 +96,7 @@ const largestAnswer = {
 const largestReply = { id: awkward, sender: awkward };
 
 const largestRunEvents: readonly RunEvent[] = [
-  { type: 'run_started', data: { input: { text: 'x'.repeat(mostInputBytes - 16) } } },
+  { type: 'run_started', data: { started_by: recordedAdmin, input: { text: 'x'.repeat(mostInputBytes - 16) } } },
   { type: 'run_succeeded', data: { output: largestJson, record: largestJson } },
   {
     type: 'run_rejected',
@@ -130,7 +131,7 @@ const largestRunEvents: readonly RunEvent[] = [
   },
   {
     type: 'request_answered',
-    data: { answer: largestJson, claimed_for: awkward, reply: largestReply },
+    data: { answer: largestJson, claimed_for: awkward, reply: largestReply, answered_by: recordedAdmin },
   },
 ];
 
@@ -144,7 +145,7 @@ const largestContent = {
 };
 
 const largestDefinitionEvents: readonly DefinitionEvent[] = [
-  { type: 'definition_created', data: { content: largestContent } },
+  { type: 'definition_created', data: { content: largestContent, created_by: recordedAdmin } },
   { type: 'definition_updated', data: { content: largestContent } },
   { type: 'definition_retired', data: {} },
 ];

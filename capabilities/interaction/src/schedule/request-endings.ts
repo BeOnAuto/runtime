@@ -13,7 +13,7 @@ export function expiredSettlement({ expires_at: expiresAt }: { readonly expires_
 }
 
 export function answeredSettlement({ answer, by }: Pick<RecordedAnswer, 'answer' | 'by'>): Settlement {
-  return { status: 'succeeded', output: answer, record: {}, by };
+  return { status: 'succeeded', output: answer, record: {}, by: by.id };
 }
 
 export function deliveredSettlement(at: string): Settlement {

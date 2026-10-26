@@ -1,4 +1,11 @@
-import { CallLineage, Conflict, type GivenLineage } from '@on.auto/operations';
+import {
+  CallLineage,
+  Caller,
+  Conflict,
+  recordedCallerOf,
+  type GivenLineage,
+  type RecordedCaller,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -18,12 +25,18 @@ function tooDeep(callDepth: number): Conflict {
   });
 }
 
-function startOf(request: RunRequest, { definition, prepared, createOnly }: Prepared, given: GivenLineage) {
+function startOf(
+  request: RunRequest,
+  { definition, prepared, createOnly }: Prepared,
+  given: GivenLineage,
+  startedBy: RecordedCaller,
+) {
   const { depth, callDepth, calledBy, trigger } = given;
   const shape = outputShapeOf(prepared, request.input);
   return {
     type: 'start' as const,
     ...request,
+    started_by: startedBy,
     definition_version: definition.version,
     calls_tools: prepared.callsTools,
     finishes_later: prepared.finishesLaterFor(request.input),
@@ -50,7 +63,8 @@ const runPrepared = Effect.fnUntraced(function* (
   const correlationId = given.lineage?.correlationId ?? id;
   return yield* Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
-      const { messageId, startedAt, modelCallsBefore } = yield* recordRun(id, startOf(request, run, given), {
+      const startedBy = recordedCallerOf(yield* Caller);
+      const { messageId, startedAt, modelCallsBefore } = yield* recordRun(id, startOf(request, run, given, startedBy), {
         causationId: given.lineage?.causationId ?? null,
         correlationId,
       });

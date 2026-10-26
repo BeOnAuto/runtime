@@ -1,13 +1,13 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
-const { createDefinition, retireDefinition } = definitionOperationsFor([echo, probe().capability]);
+const { createDefinition, retireDefinition, updateDefinition } = definitionOperationsFor([echo, probe().capability]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -60,12 +60,32 @@ describe('create_definition', () => {
           required: ['greeting', 'input'],
         },
         created_at: firstMoment,
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: firstMoment,
         source: hello,
         overview: greetOverview,
       },
     });
+  });
+});
+
+describe('who created a definition', () => {
+  it('is the caller who created it, a person by their id and their name', async () => {
+    const created = await harness().call(
+      createDefinition,
+      toAlpha(adaOfAcme, { type: 'probe', name: 'plain', source: 'text' }),
+    );
+
+    expect(created).toMatchObject({ output: { created_by: { id: 'person:user_2ada', name: 'Ada Lovelace' } } });
+  });
+
+  it('stays the caller who created it when another updates it', async () => {
+    const definitions = harness();
+    await definitions.call(createDefinition, toAlpha(adaOfAcme, { type: 'probe', name: 'plain', source: 'text' }));
+
+    expect(
+      await definitions.call(updateDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'plain', source: 'more' })),
+    ).toMatchObject({ output: { version: 2, created_by: { id: 'person:user_2ada', name: 'Ada Lovelace' } } });
   });
 });
 
@@ -97,7 +117,7 @@ describe('the definition create_definition records', () => {
         status: 'active',
         media_type: 'text/plain',
         created_at: firstMoment,
-        created_by: 'acme-admin',
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: firstMoment,
         source: 'just text',
       },

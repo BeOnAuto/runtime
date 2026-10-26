@@ -20,7 +20,13 @@ export interface CancelsInACall {
   readonly cancelled: () => readonly Outcome[];
 }
 
-const caller = { id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' } as const;
+const caller = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+} as const;
 
 function isAFinish(command: unknown): boolean {
   return Predicate.hasProperty(command, 'type') && command.type === 'finish';

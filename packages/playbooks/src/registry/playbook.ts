@@ -1,4 +1,4 @@
-import { PlaybookIdSchema } from '@on.auto/operations';
+import { PlaybookIdSchema, RecordedCallerSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 export const PlaybookSchema = Schema.Struct({
@@ -7,7 +7,7 @@ export const PlaybookSchema = Schema.Struct({
   description: Schema.String.annotate({ description: 'What the playbook is for, or empty' }),
   status: Schema.Literals(['active', 'retired']).annotate({ description: 'active, or retired for good' }),
   created_at: Schema.String.annotate({ description: 'When the playbook was created, in ISO 8601 UTC' }),
-  created_by: Schema.String.annotate({ description: 'The id of the caller who created the playbook' }),
+  created_by: RecordedCallerSchema.annotate({ description: 'The caller who created the playbook, by id and name' }),
   updated_at: Schema.String.annotate({ description: 'When the playbook last changed, in ISO 8601 UTC' }),
   retired_at: Schema.optionalKey(
     Schema.String.annotate({ description: 'When the playbook was retired, in ISO 8601 UTC' }),

@@ -46,6 +46,7 @@ describe('a start of a workflow its trigger matched', () => {
       {
         caller: {
           id: 'playbook:alpha',
+          name: 'alpha',
           org: 'acme',
           permissions: ['playbook:read', 'playbook:write'],
           playbooks: ['alpha'],

@@ -17,7 +17,13 @@ const run = {
     playbook: 'alpha',
     run_id: workflowRun,
     definition: { name: 'triage', version: 2 },
-    caller: { id: 'acme-admin', org: 'acme', permissions: ['playbook:read', 'playbook:write'], playbooks: '*' },
+    caller: {
+      id: 'acme-admin',
+      name: 'acme-admin',
+      org: 'acme',
+      permissions: ['playbook:read', 'playbook:write'],
+      playbooks: '*',
+    },
     call_depth: 3,
   },
 };

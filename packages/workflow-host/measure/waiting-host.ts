@@ -42,7 +42,7 @@ function settlingAt(settledAt: Map<string, number>): SettleRun {
         definition_version: 1,
         status: 'succeeded',
         started_at: '2026-10-07T09:00:00.000Z',
-        started_by: 'acme-admin',
+        started_by: { id: 'acme-admin', name: 'acme-admin' },
       };
     });
 }

@@ -29,7 +29,10 @@ export async function startedThenCancelled(database: HostDatabase): Promise<void
   await recorded(
     database.store,
     lostStream,
-    { type: 'run_started', data: { input: {}, finishes_later: true } },
+    {
+      type: 'run_started',
+      data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {}, finishes_later: true },
+    },
     ofTheRun,
   );
   await recorded(

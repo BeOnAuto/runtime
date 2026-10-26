@@ -44,12 +44,15 @@ function about(name: string, version: number, at: string) {
 
 function saved({ id, name, version, triggers, at = first }: Saved): DefinitionRecord {
   const content = triggers.length === 0 ? { source: 'do: []' } : { source: 'schedule: {}', triggers };
-  return {
-    id,
-    type: version === 1 ? 'definition_created' : 'definition_updated',
-    data: { content },
-    context: about(name, version, new Date(at).toISOString()),
-  };
+  const context = about(name, version, new Date(at).toISOString());
+  return version === 1
+    ? {
+        id,
+        type: 'definition_created',
+        data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } },
+        context,
+      }
+    : { id, type: 'definition_updated', data: { content }, context };
 }
 
 function retired(id: string, name: string): DefinitionRecord {
@@ -269,7 +272,7 @@ describe('the records of the definitions read back from their stream', () => {
         messages: [
           {
             type: 'definition_created',
-            data: { content: { source: 'do: []' } },
+            data: { content: { source: 'do: []' }, created_by: { id: 'acme-admin', name: 'acme-admin' } },
             context,
             lineage: { id: 'm1', causationId: null, correlationId: null },
           },
@@ -285,7 +288,7 @@ describe('the records of the definitions read back from their stream', () => {
       {
         id: 'm1',
         type: 'definition_created',
-        data: { content: { source: 'do: []' } },
+        data: { content: { source: 'do: []' }, created_by: { id: 'acme-admin', name: 'acme-admin' } },
         context,
       },
       { id: 'm2', type: 'definition_retired', data: {}, context },

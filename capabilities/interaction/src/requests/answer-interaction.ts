@@ -16,7 +16,9 @@ import {
   Conflict,
   InvalidInput,
   NotFound,
+  RecordedCallerSchema,
   defineCommand,
+  recordedCallerOf,
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
@@ -54,7 +56,7 @@ const AnsweredRequestSchema = Schema.Struct({
       description: 'The reply that brought the answer, when a reply did',
     }),
   ),
-  answered_by: Schema.String.annotate({ description: 'The id of the caller the answer came from' }),
+  answered_by: RecordedCallerSchema.annotate({ description: 'The caller who answered it, by id and name' }),
   answered_at: Schema.String.annotate({ description: 'When the answer was recorded, in ISO 8601 UTC' }),
 }).annotate({ identifier: 'AnsweredRequest', description: 'The answer a request took, as its run recorded it' });
 
@@ -115,7 +117,7 @@ function shownOf(id: string, { id: answerId, answer, claimedFor, reply, by, at }
 }
 
 const answered = Effect.fnUntraced(function* (checks: AnswerChecks, { id, answer, claimedFor }: Answering) {
-  const { id: answeredBy } = yield* Caller;
+  const answeredBy = recordedCallerOf(yield* Caller);
   const row = yield* openRequestRowIn(id);
   const run = yield* recordedRunInPlaybook(yield* PlaybookReader, id);
   if (run === undefined) {
