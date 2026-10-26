@@ -1082,7 +1082,7 @@ jobs:
             "$playbook/events")" = 200
           ended_runs closing 2 150
           test "$(jq --compact-output '[.runs[] | [.status, .started_by]]' runs.json)" = \
-            '[["succeeded","playbook:smoke"],["succeeded","playbook:smoke"]]'
+            '[["succeeded",{"id":"playbook:smoke","name":"smoke"}],["succeeded",{"id":"playbook:smoke","name":"smoke"}]]'
           for run in $(jq --raw-output '.runs[].run_id' runs.json); do
             test "$(call "history-$run.json" "$playbook/runs/$run/history")" = 200
             test "$(call "run-$run.json" "$playbook/runs/$run")" = 200
