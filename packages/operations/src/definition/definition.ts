@@ -73,7 +73,7 @@ export interface Definition<
 
 export type StreamedBodyKind = 'octet-stream' | 'csv';
 
-export type BodyKind = 'json' | 'none' | StreamedBodyKind;
+type BodyKind = 'json' | 'none' | StreamedBodyKind;
 
 export interface StreamedBody {
   readonly kind: StreamedBodyKind;

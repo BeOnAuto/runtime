@@ -50,7 +50,7 @@ export interface RegistrationOf<S extends OperationScope, K extends OperationKin
   readonly link?: RegisteredLink<RegistrationOf<S, K>>;
 }
 
-export interface JsonAnswered {
+interface JsonAnswered {
   readonly kind: 'json';
   readonly output: JsonSchemaDocument;
 }
