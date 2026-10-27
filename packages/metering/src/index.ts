@@ -16,6 +16,8 @@ export {
   type ExecutionIdentity,
 } from './executions/identity.ts';
 export { maximumSpend, type SpendingBound, type WorkBound } from './quotes/work-bounds.ts';
+export { reserveFromLots } from './funding/reservations.ts';
+export type { AvailableLot, CreditSource, FundingCategory, FundingRequest, LotReservation } from './funding/lots.ts';
 export {
   assertQuoteMatches,
   executionQuote,
