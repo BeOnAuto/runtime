@@ -15,6 +15,7 @@
   "dependencies": {
     "@on.auto/ledger": "workspace:*",
     "@on.auto/metering": "workspace:*",
+    "@on.auto/outbound": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:"

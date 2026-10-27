@@ -29,6 +29,11 @@ export {
   type ExpectedAllocation,
 } from './offline/allocations.ts';
 export { licenseClaims, readLicenseClaims } from './licenses/claims.ts';
+export {
+  installationRequestIdentity,
+  licenseEntitlementSerial,
+  type InstallationIntent,
+} from './licenses/exchange-identities.ts';
 export { licenseVerifier } from './licenses/verification.ts';
 export {
   installationKeyFingerprint,

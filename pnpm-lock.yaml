@@ -751,6 +751,9 @@ importers:
       '@on.auto/metering':
         specifier: workspace:*
         version: link:../metering
+      '@on.auto/outbound':
+        specifier: workspace:*
+        version: link:../outbound
       '@on.auto/secrets':
         specifier: workspace:*
         version: link:../secrets
