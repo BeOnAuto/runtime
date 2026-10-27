@@ -18,7 +18,7 @@ Tell your agent:
 
 ```text
 Add Auto as an MCP server named auto-runtime that runs this command:
-npx -y @on.auto/runtime@0.25.0 mcp
+npx -y @on.auto/runtime@0.26.0 mcp
 Then reload your MCP servers.
 ```
 
@@ -27,19 +27,19 @@ Or add it yourself:
 ::: code-group
 
 ```bash [Claude Code]
-claude mcp add -s user auto-runtime -- npx -y @on.auto/runtime@0.25.0 mcp
+claude mcp add -s user auto-runtime -- npx -y @on.auto/runtime@0.26.0 mcp
 ```
 
 ```bash [Codex]
-codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.25.0 mcp
+codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.26.0 mcp
 ```
 
 ```bash [Gemini CLI]
-gemini mcp add -s user auto-runtime npx -y @on.auto/runtime@0.25.0 mcp
+gemini mcp add -s user auto-runtime npx -y @on.auto/runtime@0.26.0 mcp
 ```
 
 ```bash [Grok]
-grok mcp add -s user auto-runtime npx -- -y @on.auto/runtime@0.25.0 mcp
+grok mcp add -s user auto-runtime npx -- -y @on.auto/runtime@0.26.0 mcp
 ```
 
 ```json [Cursor, Claude Desktop]
@@ -47,7 +47,7 @@ grok mcp add -s user auto-runtime npx -- -y @on.auto/runtime@0.25.0 mcp
   "mcpServers": {
     "auto-runtime": {
       "command": "npx",
-      "args": ["-y", "@on.auto/runtime@0.25.0", "mcp"]
+      "args": ["-y", "@on.auto/runtime@0.26.0", "mcp"]
     }
   }
 }
