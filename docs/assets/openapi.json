@@ -4523,7 +4523,7 @@
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection whose provider a person connects by signing in to it and allowing Auto, through the connection's open link, and answers the page of the provider's authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. On a runtime that signs people in, only the person who added the connection may start it.",
         "tags": [
           "connections"
         ],
@@ -4581,7 +4581,7 @@
                       "properties": {
                         "url": {
                           "type": "string",
-                          "description": "The page of the provider's authorization server, where the person signs in and allows Auto"
+                          "description": "The page of the authorization server, where the person signs in and allows Auto"
                         },
                         "expires_at": {
                           "type": "string",
@@ -4610,7 +4610,7 @@
                     "client_source"
                   ],
                   "additionalProperties": false,
-                  "description": "Where the person signs in to the provider and allows Auto"
+                  "description": "Where the person signs in at the authorization server and allows Auto"
                 }
               }
             }

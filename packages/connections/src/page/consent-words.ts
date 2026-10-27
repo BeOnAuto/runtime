@@ -27,6 +27,8 @@ type ConflictingRefusal = Extract<
       | 'another_resource'
       | 'no_metadata'
       | 'no_challenge'
+      | 'unpinned_endpoint'
+      | 'authorization_server_unnamed'
       | 'no_client'
       | 'client_gone'
       | 'studio_elsewhere'
@@ -36,7 +38,10 @@ type ConflictingRefusal = Extract<
   }
 >;
 
-type Unnamed = Exclude<ConflictingRefusal['refused'], 'another_issuer' | 'another_resource'>;
+type Unnamed = Exclude<
+  ConflictingRefusal['refused'],
+  'another_issuer' | 'another_resource' | 'unpinned_endpoint' | 'authorization_server_unnamed'
+>;
 
 const notAsAdded = 'so it cannot be connected as it was added';
 
@@ -44,7 +49,7 @@ const notByConsent = 'so this runtime cannot connect it by consent';
 
 const takesNoChallenge = 'does not take the authorization code with an S256 challenge, which Auto asks for';
 
-const answersNot = 'did not answer as an authorization server does; try again in a moment';
+const didNotAnswerAsAnAuthorizationServer = 'did not answer as an authorization server does; try again in a moment';
 
 const notAScope = 'written with characters a scope does not hold';
 
@@ -54,6 +59,14 @@ function namesAsItsResource(other: string): string {
 
 function namesAsItsIssuer(other: string): string {
   return `names ${other} as its issuer in its own metadata`;
+}
+
+function namesAsAnEndpoint(endpoint: string): string {
+  return `names ${endpoint} as an endpoint, which is neither https nor on a loopback address`;
+}
+
+function noLongerNamedAt(url: string): string {
+  return `The server at ${url} no longer names its authorization server, so the consent cannot go on; remove the connection and add it again`;
 }
 
 export const unavailableWords = {
@@ -111,8 +124,14 @@ function detailOf(named: ConsentNamed, refusal: ConflictingRefusal): string {
   if (refusal.refused === 'another_issuer') {
     return issuerNamedBy[refusal.by](named, refusal.named);
   }
-  return refusal.refused === 'another_resource'
-    ? `The server of the connection ${named.name} ${namesAsItsResource(refusal.named)}, ${notAsAdded}`
+  if (refusal.refused === 'another_resource') {
+    return `The server of the connection ${named.name} ${namesAsItsResource(refusal.named)}, ${notAsAdded}`;
+  }
+  if (refusal.refused === 'unpinned_endpoint') {
+    return `The authorization server of the connection ${named.name} ${namesAsAnEndpoint(refusal.endpoint)}, ${notAsAdded}`;
+  }
+  return refusal.refused === 'authorization_server_unnamed'
+    ? noLongerNamedAt(refusal.url)
     : conflictsOf[refusal.refused](named);
 }
 
@@ -126,7 +145,7 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
   }
   if (refusal.refused === 'unanswered') {
     return new Unavailable({
-      detail: `The authorization server of the connection ${named.name} ${answersNot}`,
+      detail: `The authorization server of the connection ${named.name} ${didNotAnswerAsAnAuthorizationServer}`,
     });
   }
   if (refusal.refused === 'registration_unavailable') {
@@ -151,12 +170,13 @@ type RefusedAtTheIssuer = Extract<WayRefusal, { readonly refused: 'at_the_issuer
 
 export type WayRefused = Forbidden | InvalidInput | Unavailable;
 
-const offeredByTheIssuer: Readonly<Record<Exclude<IssuerRefusal['refused'], 'another_issuer' | 'unanswered'>, string>> =
-  {
-    no_metadata: `publishes no metadata this runtime can read, ${notByConsent}`,
-    no_challenge: `${takesNoChallenge}, ${notByConsent}`,
-    no_client: `registers no clients, ${notByConsent}: it takes a client registered dynamically or named by a metadata document, and offers neither`,
-  };
+const refusedByTheIssuer: Readonly<
+  Record<Exclude<IssuerRefusal['refused'], 'another_issuer' | 'unpinned_endpoint' | 'unanswered'>, string>
+> = {
+  no_metadata: `publishes no metadata that can be read, ${notByConsent}`,
+  no_challenge: `${takesNoChallenge}, ${notByConsent}`,
+  no_client: `registers no clients, ${notByConsent}: it takes a client registered dynamically or named by a metadata document, and offers neither`,
+};
 
 function refusedKindOf(detail: string): InvalidInput {
   return invalidAddition([{ pointer: '/credential/kind', detail }]);
@@ -172,15 +192,18 @@ function serverWordsOf(url: string, refusal: RefusedAtTheServer): string {
 }
 
 function issuerWordsOf(refusal: Exclude<IssuerRefusal, { readonly refused: 'unanswered' }>): string {
-  return refusal.refused === 'another_issuer'
-    ? `${namesAsItsIssuer(refusal.named)}, ${notByConsent}`
-    : offeredByTheIssuer[refusal.refused];
+  if (refusal.refused === 'another_issuer') {
+    return `${namesAsItsIssuer(refusal.named)}, ${notByConsent}`;
+  }
+  return refusal.refused === 'unpinned_endpoint'
+    ? `${namesAsAnEndpoint(refusal.endpoint)}, ${notByConsent}`
+    : refusedByTheIssuer[refusal.refused];
 }
 
 function issuerRefusalOf(url: string, { issuer, refusal }: RefusedAtTheIssuer): InvalidInput | Unavailable {
   const named = `The authorization server ${issuer} of the server at ${url}`;
   return refusal.refused === 'unanswered'
-    ? new Unavailable({ detail: `${named} ${answersNot}` })
+    ? new Unavailable({ detail: `${named} ${didNotAnswerAsAnAuthorizationServer}` })
     : refusedKindOf(`${named} ${issuerWordsOf(refusal)}`);
 }
 

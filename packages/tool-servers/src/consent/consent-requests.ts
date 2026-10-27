@@ -17,7 +17,7 @@ import { exchangeRefusalOf } from './consent-failures.ts';
 import { namedWayOf } from './named-ways.ts';
 import { revocationOf } from './revocation.ts';
 import { grantedScopeOf } from './scopes.ts';
-import { libraryMetadataOf, scopeAskedOf, serverMetadataOf } from './server-metadata.ts';
+import { handGivenUrlOf, libraryMetadataOf, scopeAskedOf, serverMetadataOf } from './server-metadata.ts';
 
 export interface ServerConsents {
   readonly namedWay: (asked: WayAsked) => Effect.Effect<NamedWay, WayRefusal>;
@@ -41,6 +41,12 @@ function consentOf(
   });
 }
 
+const promptingForConsent = { prompt: 'consent' };
+
+function parametersOf({ server, way }: StartAsked): Readonly<Record<string, string>> {
+  return { ...way.parameters, ...(handGivenUrlOf(server) === undefined ? {} : promptingForConsent) };
+}
+
 function started(
   asked: StartAsked,
   { clients, fetchFor }: Requests,
@@ -61,7 +67,7 @@ function started(
         ...(resource === undefined ? {} : { resource }),
       }),
     );
-    for (const [name, value] of Object.entries(asked.way.parameters ?? {})) {
+    for (const [name, value] of Object.entries(parametersOf(asked))) {
       authorizationUrl.searchParams.set(name, value);
     }
     const verifier = Redacted.make(codeVerifier);

@@ -1,3 +1,4 @@
+import { required } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { readProviders, type Placeholder, type ProviderEntry, providersShippedRoots } from '@on.auto/providers';
 import { Option, Result, Schema } from 'effect';
@@ -15,10 +16,6 @@ const closing: (() => Promise<void>)[] = [];
 afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function examplesOf({ placeholders = {} }: ProviderEntry): Readonly<Record<string, string>> {
   return Object.fromEntries(

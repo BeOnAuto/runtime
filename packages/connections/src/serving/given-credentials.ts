@@ -1,3 +1,4 @@
+import { required } from '@on.auto/operations';
 import {
   keptTokensIn,
   type ConnectionTokens,
@@ -24,10 +25,6 @@ const endedWords: Readonly<Record<TokensEnded, (name: string) => string>> = {
   client_gone: servingWords.clientGone,
   key_unknown: servingWords.keyUnknown,
 };
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 export function notAllowed(detail: string): ConnectionUnready {
   return { because: 'connection_not_allowed', detail };

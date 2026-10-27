@@ -1,10 +1,19 @@
-import type { FetchLike } from '@modelcontextprotocol/client';
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { consentClientWith, everyHost, type ClientRegistration } from '../testing/index.ts';
+import {
+  brokenAtTheChallenge,
+  challengedWith,
+  consentClientWith,
+  everyHost,
+  failingAt,
+  pingAnsweredWith,
+  recordedFetch,
+  type ClientRegistration,
+  type RecordedFetch,
+} from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
-import { serveFakeMcp, servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClientOptions, WayAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -45,38 +54,8 @@ function refusingEveryHost(): string {
   return rule;
 }
 
-interface Fetched {
-  readonly fetch: FetchLike;
-  readonly asked: () => readonly string[];
-}
-
-function recordedFetch(answeredHere: (address: string) => Response | undefined = Function.constUndefined): Fetched {
-  const asked: string[] = [];
-  return {
-    fetch: (...[address, init]: readonly [unknown, unknown?]) => {
-      asked.push(String(address));
-      const here = answeredHere(String(address));
-      return here === undefined ? globalThis.fetch(String(address), Object.assign({}, init)) : Promise.resolve(here);
-    },
-    asked: () => [...asked],
-  };
-}
-
-function challengedWith(server: string, challenge: string): Fetched {
-  return recordedFetch((address) =>
-    address === server ? new Response(null, { status: 401, headers: { 'www-authenticate': challenge } }) : undefined,
-  );
-}
-
-function offTheLoopbackOf(fetched: Fetched): readonly string[] {
+function offTheLoopbackOf(fetched: RecordedFetch): readonly string[] {
   return fetched.asked().filter((address) => new URL(address).origin === new URL(unpinned).origin);
-}
-
-function failingAt(path: string): FetchLike {
-  return (...[address, init]: readonly [unknown, unknown?]) =>
-    new URL(String(address)).pathname === path
-      ? Promise.resolve(new Response('failing', { status: 500 }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
 }
 
 describe('the way of consent a server given by hand names', () => {
@@ -91,15 +70,19 @@ describe('the way of consent a server given by hand names', () => {
     expect(fake.heard().map(({ path }) => path)).not.toContain('/register');
   });
 
-  it('takes the metadata document first where the issuer advertises it and the public address is https, and dynamic registration alone otherwise', async () => {
+  it('takes a client registered there dynamically, and the metadata document only where the issuer registers no clients and the public address is https', async () => {
     const both = await served({ clientMetadataDocuments: true, dynamicRegistration: true });
     const documenting = await served({ clientMetadataDocuments: true });
 
     expect([
       (await named(askedAt(both), { publicUrl })).clients,
-      (await named(askedAt(both))).clients,
       (await named(askedAt(documenting), { publicUrl })).clients,
-    ]).toEqual([['metadata_document', 'dynamic'], ['dynamic'], ['metadata_document']]);
+      await refused(askedAt(documenting)),
+    ]).toEqual([
+      ['dynamic'],
+      ['metadata_document'],
+      { refused: 'at_the_issuer', issuer: documenting.origin, refusal: { refused: 'no_client' } },
+    ]);
   });
 
   it('asks the scopes its protected resource metadata lists where its challenge names none, and none where neither does', async () => {
@@ -148,32 +131,68 @@ describe('the protected resource metadata of a server given by hand', () => {
     expect(offTheLoopbackOf(offHttps)).toEqual([]);
   });
 
-  it('is read at the address its challenge names alone, and at the well-known paths where that address publishes none', async () => {
+  it('is read at the address its challenge names alone, and at the well-known paths where that address publishes none or answers an error', async () => {
     const hidden = await served({ dynamicRegistration: true, resourceMetadataPath: '/metadata/files' });
     const issuing = await served({ dynamicRegistration: true });
     const silent = await served({ publishesMetadata: false });
+    const pointedAtAnError = brokenAtTheChallenge(issuing);
     const pointedAtNothing = challengedWith(
       issuing.url,
       `Bearer resource_metadata="${silent.origin}/.well-known/oauth-protected-resource/mcp"`,
     );
 
-    expect([await named(askedAt(hidden)), await named(askedAt(issuing), { fetch: pointedAtNothing.fetch })]).toEqual([
+    expect([
+      await named(askedAt(hidden)),
+      await named(askedAt(issuing), { fetch: pointedAtNothing.fetch }),
+      await named(askedAt(issuing), { fetch: pointedAtAnError.fetch }),
+    ]).toEqual([
       { issuer: hidden.origin, clients: ['dynamic'], scope: undefined },
+      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined },
       { issuer: issuing.origin, clients: ['dynamic'], scope: undefined },
     ]);
   });
 });
 
 describe('a server given by hand that names no authorization server', () => {
-  it('is one that answers without asking for a token, publishes no metadata, or names no authorization server in it', async () => {
-    const open = await serveFakeMcp();
-    closing.push(open.close);
+  it('is one that answers the ping with a 2xx, publishes no metadata, or names no authorization server in it', async () => {
+    const open = await served({ dynamicRegistration: true });
     const silent = await served({ publishesMetadata: false });
     const nameless = await served({ authorizationServers: [] });
+    const answeredOpenly = pingAnsweredWith(open.url, 200);
 
-    expect([await refused(askedAt(open)), await refused(askedAt(silent)), await refused(askedAt(nameless))]).toEqual(
-      Array.from({ length: 3 }, () => ({ refused: 'no_authorization_server' })),
-    );
+    expect([
+      await refused(askedAt(open), { fetch: answeredOpenly.fetch }),
+      await refused(askedAt(silent)),
+      await refused(askedAt(nameless)),
+    ]).toEqual(Array.from({ length: 3 }, () => ({ refused: 'no_authorization_server' })));
+  });
+});
+
+describe('a server given by hand whose ping is answered otherwise than with a 2xx', () => {
+  it('is read at the well-known paths, whatever it answered, a 405 or a 403 among them', async () => {
+    const fake = await served({ dynamicRegistration: true });
+    const unallowed = pingAnsweredWith(fake.url, 405);
+    const forbidden = pingAnsweredWith(fake.url, 403);
+
+    expect([
+      await named(askedAt(fake), { fetch: unallowed.fetch }),
+      await named(askedAt(fake), { fetch: forbidden.fetch }),
+    ]).toEqual(Array.from({ length: 2 }, () => ({ issuer: fake.origin, clients: ['dynamic'], scope: undefined })));
+  });
+});
+
+describe('the authorization servers a server given by hand names', () => {
+  it('are read up to the first five, and refused for the first where none of them is read', async () => {
+    const issuing = await served({ dynamicRegistration: true });
+    const offHttps = ['one', 'two', 'three', 'four', 'five'].map((name) => `http://${name}.example.com`);
+    const naming = await served({ authorizationServers: [...offHttps, issuing.origin] });
+
+    expect(await refused(askedAt(naming))).toEqual({
+      refused: 'at_the_issuer',
+      issuer: 'http://one.example.com',
+      refusal: { refused: 'no_metadata' },
+    });
+    expect(issuing.heard()).toEqual([]);
   });
 });
 
@@ -195,17 +214,19 @@ describe('a way of consent refused for what its server says', () => {
 });
 
 describe('a way of consent refused for what its authorization server says', () => {
-  it('names the issuer whose metadata cannot be read, names another issuer, lacks S256 or takes no client of the runtime’s own', async () => {
+  it('names the issuer whose metadata cannot be read, names another issuer, lacks S256, names an endpoint neither https nor on the loopback, or takes no client of the runtime’s own', async () => {
     const offHttps = await served({ authorizationServers: [unpinned] });
     const fetched = recordedFetch();
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
     const plain = await served({ dynamicRegistration: true, challengeMethods: ['plain'] });
+    const plaintext = await served({ dynamicRegistration: true, endpointHost: 'endpoints.example.com' });
     const closed = await served();
 
     expect([
       await refused(askedAt(offHttps), { fetch: fetched.fetch }),
       await refused(askedAt(echoing)),
       await refused(askedAt(plain)),
+      await refused(askedAt(plaintext)),
       await refused(askedAt(closed)),
     ]).toEqual([
       { refused: 'at_the_issuer', issuer: unpinned, refusal: { refused: 'no_metadata' } },
@@ -215,6 +236,14 @@ describe('a way of consent refused for what its authorization server says', () =
         refusal: { refused: 'another_issuer', named: 'https://elsewhere.example.com', by: 'authorization_server' },
       },
       { refused: 'at_the_issuer', issuer: plain.origin, refusal: { refused: 'no_challenge' } },
+      {
+        refused: 'at_the_issuer',
+        issuer: plaintext.origin,
+        refusal: {
+          refused: 'unpinned_endpoint',
+          endpoint: `http://endpoints.example.com:${new URL(plaintext.origin).port}/authorize`,
+        },
+      },
       { refused: 'at_the_issuer', issuer: closed.origin, refusal: { refused: 'no_client' } },
     ]);
     expect(offTheLoopbackOf(fetched)).toEqual([]);

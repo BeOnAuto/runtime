@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   consentClientWith,
   everyHost,
+  failingAt,
   registeredAt,
   returnAddress,
   startAskedAt,
@@ -39,13 +39,6 @@ function refused(client: ConsentClient, asked: StartAsked) {
 
 function challengeOf(verifier: Redacted.Redacted): string {
   return createHash('sha256').update(Redacted.value(verifier)).digest('base64url');
-}
-
-function failingAt(path: string): FetchLike {
-  return (...[address, init]: readonly [unknown, unknown?]) =>
-    String(address).includes(path)
-      ? Promise.resolve(new Response('failing', { status: 500 }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
 }
 
 function readsNothing(): Promise<Response> {
@@ -235,8 +228,14 @@ describe('a start that cannot ask the server', () => {
 
     expect([
       await refused(consentClientWith(), startAskedAt(gone)),
-      await refused(consentClientWith({ fetch: failingAt('oauth-protected-resource') }), startAskedAt(failing)),
-      await refused(consentClientWith({ fetch: failingAt('oauth-authorization-server') }), startAskedAt(failing)),
+      await refused(
+        consentClientWith({ fetch: failingAt('/.well-known/oauth-protected-resource/mcp') }),
+        startAskedAt(failing),
+      ),
+      await refused(
+        consentClientWith({ fetch: failingAt('/.well-known/oauth-authorization-server') }),
+        startAskedAt(failing),
+      ),
     ]).toEqual([{ refused: 'unanswered' }, { refused: 'unanswered' }, { refused: 'unanswered' }]);
   });
 

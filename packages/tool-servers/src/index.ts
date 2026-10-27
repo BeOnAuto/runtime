@@ -103,6 +103,7 @@ export {
   type KeptRow,
   type KeptRegistration,
   type NamedWay,
+  type RegistrationPlace,
   type RegistrationUnavailable,
   type RevocationFailure,
   type RevokeAsked,

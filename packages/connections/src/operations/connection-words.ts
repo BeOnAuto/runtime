@@ -1,6 +1,6 @@
-import { capitalized, counted, listed, quoted, type LinkToOpen, type Noun } from '@on.auto/operations';
+import { required, capitalized, counted, listed, quoted, type LinkToOpen, type Noun } from '@on.auto/operations';
 import { providerNamed, type ProviderList } from '@on.auto/providers';
-import { Option, Result } from 'effect';
+import { Result } from 'effect';
 
 import type { Connection } from '../registry/connection.ts';
 import type { AddedConnection } from './connection-fields.ts';
@@ -48,10 +48,6 @@ const givingTheCredential: Doing = {
   theyDo: 'gives its credential where it takes one',
   youDo: 'give its credential where it takes one',
 };
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function doingOf({ provider, credential }: Linked): Doing {
   if (provider !== null || credential.kind !== 'authorization') {

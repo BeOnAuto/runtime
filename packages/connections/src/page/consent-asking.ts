@@ -1,3 +1,4 @@
+import { required } from '@on.auto/operations';
 import { keptTokensIn, type ConsentServer, type StartAsked } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 
@@ -23,16 +24,12 @@ export type ConsentServices = Pick<ConnectionServices, 'consent' | 'policy' | 'p
 
 export type FinishedConsent = Effect.Success<ReturnType<ConsentServices['consent']['finish']>>;
 
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
-
 export function namedOf({ name, provider, credential }: RecordedConnection): ConsentNamed {
   return { name, issuer: required(credential.issuer), provider };
 }
 
-function serverOf({ type, entry }: RecordedConnection): ConsentServer {
-  return type === 'mcp' ? { type, url: required(entry.url) } : { type };
+function serverOf({ type, entry, provider }: RecordedConnection): ConsentServer {
+  return type === 'mcp' ? { type, url: required(entry.url), givenByHand: provider === null } : { type };
 }
 
 export function wayOf({ credential }: RecordedConnection): ConsentAsked['way'] {

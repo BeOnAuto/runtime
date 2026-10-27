@@ -1,10 +1,10 @@
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import type { ClientRegistration } from '@on.auto/tool-servers/testing';
+import { failingAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { adding, issuesIn } from '../testing/additions.ts';
-import { byHandAt, failingAt, harnessByHand, refusedKind } from '../testing/by-hand.ts';
+import { byHandAt, harnessByHand, refusedKind } from '../testing/by-hand.ts';
 import { consentFake } from '../testing/consents.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -121,6 +121,7 @@ describe('a server given by hand whose way of consent the runtime cannot take fo
     const offHttps = await served({ authorizationServers: ['http://auth.example.com'] });
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
     const plain = await served({ dynamicRegistration: true, challengeMethods: ['plain'] });
+    const plaintext = await served({ dynamicRegistration: true, endpointHost: 'endpoints.example.com' });
     const closed = await served();
     const h = harnessByHand();
 
@@ -128,12 +129,13 @@ describe('a server given by hand whose way of consent the runtime cannot take fo
       issuesIn(await adding(h, byHandAt(offHttps))),
       issuesIn(await adding(h, byHandAt(echoing))),
       issuesIn(await adding(h, byHandAt(plain))),
+      issuesIn(await adding(h, byHandAt(plaintext))),
       issuesIn(await adding(h, byHandAt(closed))),
     ]).toEqual([
       atTheIssuer(
         offHttps,
         'http://auth.example.com',
-        'publishes no metadata this runtime can read, so this runtime cannot connect it by consent',
+        'publishes no metadata that can be read, so this runtime cannot connect it by consent',
       ),
       atTheIssuer(
         echoing,
@@ -144,6 +146,11 @@ describe('a server given by hand whose way of consent the runtime cannot take fo
         plain,
         plain.origin,
         'does not take the authorization code with an S256 challenge, which Auto asks for, so this runtime cannot connect it by consent',
+      ),
+      atTheIssuer(
+        plaintext,
+        plaintext.origin,
+        `names http://endpoints.example.com:${new URL(plaintext.origin).port}/authorize as an endpoint, which is neither https nor on a loopback address, so this runtime cannot connect it by consent`,
       ),
       atTheIssuer(
         closed,

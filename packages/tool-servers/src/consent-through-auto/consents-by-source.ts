@@ -1,4 +1,4 @@
-import { Effect, Option } from 'effect';
+import { Effect } from 'effect';
 
 import { requestBoundsOf } from '../bounds/call-bounds.ts';
 import { tokenRequestsOf, type TokenRequests } from '../consent-tokens/token-requests.ts';
@@ -36,10 +36,6 @@ const studioElsewhere: ConsentRefusal = { refused: 'studio_elsewhere' };
 
 const noServiceClients: readonly ServiceClient[] = [];
 
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
-
 function takenThroughAutoAlone(asked: StartAsked, options: LoadedOptions): Effect.Effect<boolean> {
   return Effect.map(
     options.serviceClients,
@@ -53,9 +49,9 @@ function started(asked: StartAsked, { options, requests, server }: Consenting) {
     const kind = servedKindOf(auto, asked.studioBase);
     const listed = kind === undefined ? noServiceClients : yield* options.serviceClients;
     const had = { ...options, serviceClients: listed };
-    if (sourceTakenOf(asked.way, had) === 'auto' && auto.enabled && kind !== undefined) {
-      const { client_id: clientId } = required(serviceClientFor(listed, asked.way));
-      return yield* startedThroughAuto(asked, requests.fetchFor, { auto, clientId, kind });
+    const listedClient = serviceClientFor(listed, asked.way);
+    if (sourceTakenOf(asked.way, had) === 'auto' && auto.enabled && kind !== undefined && listedClient !== undefined) {
+      return yield* startedThroughAuto(asked, requests.fetchFor, { auto, clientId: listedClient.client_id, kind });
     }
     const sources = sourcesHad(asked.way, had);
     if (sources.length === 0 && kind === undefined && (yield* takenThroughAutoAlone(asked, options))) {

@@ -6,6 +6,7 @@ import type {
   ClientRegistrations,
   ConsentRefusal,
   KeptRegistration,
+  RegistrationPlace,
   RegistrationUnavailable,
 } from './consent-client.ts';
 import { refusalOf, unanswered } from './consent-failures.ts';
@@ -32,14 +33,14 @@ const millisOfASecond = 1000;
 const neverEnds = 0;
 
 export type Registering = (
-  issuer: string,
+  place: RegistrationPlace,
   register: Effect.Effect<KeptRegistration, ConsentRefusal>,
 ) => Effect.Effect<KeptRegistration, ConsentRefusal>;
 
 export interface UnkeptRegistrations {
-  readonly heldAt: (issuer: string) => KeptRegistration | undefined;
-  readonly hold: (issuer: string, kept: KeptRegistration) => void;
-  readonly release: (issuer: string) => void;
+  readonly heldAt: (place: RegistrationPlace) => KeptRegistration | undefined;
+  readonly hold: (place: RegistrationPlace, kept: KeptRegistration) => void;
+  readonly release: (place: RegistrationPlace) => void;
 }
 
 export interface RegistrationKeeping {
@@ -49,7 +50,7 @@ export interface RegistrationKeeping {
 }
 
 export interface Registration {
-  readonly issuer: string;
+  readonly place: RegistrationPlace;
   readonly endpoint: string;
   readonly returnAddress: string;
   readonly fetch: FetchLike;
@@ -70,7 +71,12 @@ function isLasting(kept: KeptRegistration, nowMillis: number): boolean {
   return endsAt === undefined || endsAt === neverEnds || endsAt * millisOfASecond > nowMillis;
 }
 
+function keyOf({ issuer, server }: RegistrationPlace): string {
+  return JSON.stringify([issuer, server]);
+}
+
 function answeredRegistration({
+  place,
   endpoint,
   returnAddress,
   fetch,
@@ -80,7 +86,7 @@ function answeredRegistration({
       const answer = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify(clientMetadataOf(returnAddress)),
+        body: JSON.stringify(clientMetadataOf(returnAddress, place.server)),
       });
       return answer.ok ? answeredFieldsOf(await answer.json()) : Option.none();
     },
@@ -98,16 +104,17 @@ function answeredRegistration({
 
 export function singleFlight(): Registering {
   const registering = new Map<string, Deferred.Deferred<KeptRegistration, ConsentRefusal>>();
-  return (issuer, register) =>
+  return (place, register) =>
     Effect.suspend(() => {
-      const flying = registering.get(issuer);
+      const key = keyOf(place);
+      const flying = registering.get(key);
       if (flying !== undefined) {
         return Deferred.await(flying);
       }
       const registered = Deferred.makeUnsafe<KeptRegistration, ConsentRefusal>();
-      registering.set(issuer, registered);
+      registering.set(key, registered);
       return Deferred.into(register, registered).pipe(
-        Effect.ensuring(Effect.sync(() => registering.delete(issuer))),
+        Effect.ensuring(Effect.sync(() => registering.delete(key))),
         Effect.andThen(Deferred.await(registered)),
       );
     });
@@ -116,12 +123,12 @@ export function singleFlight(): Registering {
 export function unkeptRegistrations(): UnkeptRegistrations {
   const held = new Map<string, KeptRegistration>();
   return {
-    heldAt: (issuer) => held.get(issuer),
-    hold: (issuer, kept) => {
-      held.set(issuer, kept);
+    heldAt: (place) => held.get(keyOf(place)),
+    hold: (place, kept) => {
+      held.set(keyOf(place), kept);
     },
-    release: (issuer) => {
-      held.delete(issuer);
+    release: (place) => {
+      held.delete(keyOf(place));
     },
   };
 }
@@ -131,21 +138,21 @@ export function registrationUnavailable({ detail }: RegistrationUnavailable): Co
 }
 
 function heldUntilKept(
-  issuer: string,
+  place: RegistrationPlace,
   kept: KeptRegistration,
   unkept: UnkeptRegistrations,
   failure: RegistrationUnavailable,
 ): Effect.Effect<never, ConsentRefusal> {
   return Effect.sync(() => {
-    unkept.hold(issuer, kept);
+    unkept.hold(place, kept);
   }).pipe(
-    Effect.andThen(Effect.logWarning(unkeptWords(issuer, kept.clientId, failure.detail))),
+    Effect.andThen(Effect.logWarning(unkeptWords(place.issuer, kept.clientId, failure.detail))),
     Effect.andThen(Effect.fail(registrationUnavailable(failure))),
   );
 }
 
 function leftUnkept(
-  issuer: string,
+  { issuer }: RegistrationPlace,
   kept: KeptRegistration,
   { detail }: RegistrationUnavailable,
 ): Effect.Effect<never, ConsentRefusal> {
@@ -158,17 +165,17 @@ function isRefused({ _tag }: RegistrationUnavailable): boolean {
 }
 
 function keptAt(
-  issuer: string,
+  place: RegistrationPlace,
   kept: KeptRegistration,
   { registrations, unkept }: RegistrationKeeping,
 ): Effect.Effect<KeptRegistration, ConsentRefusal> {
-  return registrations.keep(issuer, kept).pipe(
+  return registrations.keep(place, kept).pipe(
     Effect.matchEffect({
       onFailure: (failure) =>
-        isRefused(failure) ? leftUnkept(issuer, kept, failure) : heldUntilKept(issuer, kept, unkept, failure),
+        isRefused(failure) ? leftUnkept(place, kept, failure) : heldUntilKept(place, kept, unkept, failure),
       onSuccess: () =>
         Effect.sync(() => {
-          unkept.release(issuer);
+          unkept.release(place);
           return kept;
         }),
     }),
@@ -179,20 +186,20 @@ export function registrationFor(
   registration: Registration,
   keeping: RegistrationKeeping,
 ): Effect.Effect<KeptRegistration, ConsentRefusal> {
-  const { issuer } = registration;
+  const { place } = registration;
   return keeping.registeredOnce(
-    issuer,
+    place,
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
-      const waiting = keeping.unkept.heldAt(issuer);
+      const waiting = keeping.unkept.heldAt(place);
       if (waiting !== undefined && isLasting(waiting, now)) {
-        return yield* keptAt(issuer, waiting, keeping);
+        return yield* keptAt(place, waiting, keeping);
       }
-      const latest = yield* Effect.mapError(keeping.registrations.latestAt(issuer), registrationUnavailable);
+      const latest = yield* Effect.mapError(keeping.registrations.latestAt(place), registrationUnavailable);
       if (latest !== undefined && isLasting(latest, now)) {
         return latest;
       }
-      return yield* keptAt(issuer, yield* answeredRegistration(registration), keeping);
+      return yield* keptAt(place, yield* answeredRegistration(registration), keeping);
     }),
   );
 }

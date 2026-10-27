@@ -1,4 +1,5 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
+import { required } from '@on.auto/operations';
 import type { Provider } from '@on.auto/providers';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
@@ -11,7 +12,6 @@ import {
   connectedWith,
   connectionsOfAcme,
   offeredByTheServer,
-  required,
   shippedProviders,
 } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';

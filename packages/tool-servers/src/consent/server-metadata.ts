@@ -61,6 +61,11 @@ export interface Challenge {
   readonly scope: string | undefined;
 }
 
+export interface Pinged {
+  readonly takesNoToken: boolean;
+  readonly challenge: Challenge;
+}
+
 export interface ServerMetadata {
   readonly server: AuthorizationServer;
   readonly resource: string | undefined;
@@ -81,17 +86,19 @@ const challengeMethod = 'S256';
 
 const notFound = 404;
 
-const unauthorized = 401;
-
 const pingOpeningNoSession = {
   method: 'POST',
   headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
   body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
 };
 
-export const noMetadata: Refused<'no_metadata'> = { refused: 'no_metadata' };
+const noMetadata: Refused<'no_metadata'> = { refused: 'no_metadata' };
 
 const noChallenge: Refused<'no_challenge'> = { refused: 'no_challenge' };
+
+export function handGivenUrlOf(server: ConsentServer): string | undefined {
+  return server.type === 'mcp' && server.givenByHand === true ? server.url : undefined;
+}
 
 function isResourceOf(url: string, resource: string): boolean {
   return checkResourceAllowed({ requestedResource: resourceUrlFromServerUrl(url), configuredResource: resource });
@@ -99,26 +106,20 @@ function isResourceOf(url: string, resource: string): boolean {
 
 type ResourceRefusal = Refused<'another_resource' | 'host' | 'unanswered'>;
 
-async function challengeIn(answer: Readonly<Response>): Promise<Challenge | undefined> {
+async function pingedBy(answer: Readonly<Response>): Promise<Pinged> {
   await answer.body?.cancel();
-  if (answer.status !== unauthorized) {
-    return undefined;
-  }
   const { resourceMetadataUrl, scope } = extractWWWAuthenticateParams(answer);
-  return { resourceMetadata: resourceMetadataUrl?.href, scope };
+  return { takesNoToken: answer.ok, challenge: { resourceMetadata: resourceMetadataUrl?.href, scope } };
 }
 
-export function challengeOf(
-  url: string,
-  fetch: FetchLike,
-): Effect.Effect<Challenge | undefined, Refused<'host' | 'unanswered'>> {
+export function pingedAt(url: string, fetch: FetchLike): Effect.Effect<Pinged, Refused<'host' | 'unanswered'>> {
   return Effect.tryPromise({
-    try: async () => challengeIn(await fetch(url, pingOpeningNoSession)),
+    try: async () => pingedBy(await fetch(url, pingOpeningNoSession)),
     catch: refusalOf,
   });
 }
 
-function readAt(
+function resourceReadAt(
   url: string,
   fetch: FetchLike,
   resourceMetadataUrl?: string,
@@ -148,20 +149,24 @@ function readAt(
   });
 }
 
-function followedMetadataOf(challenge: Challenge | undefined): string | undefined {
-  const named = challenge?.resourceMetadata;
-  return named !== undefined && isPinnableUrl(named) ? named : undefined;
+function followedMetadataOf({ resourceMetadata }: Challenge): string | undefined {
+  return resourceMetadata !== undefined && isPinnableUrl(resourceMetadata) ? resourceMetadata : undefined;
 }
 
 export function protectedResourceOf(
   url: string,
   fetch: FetchLike,
-  challenge: Challenge | undefined,
+  challenge: Challenge,
 ): Effect.Effect<ProtectedResource | undefined, ResourceRefusal> {
   const followed = followedMetadataOf(challenge);
-  const atTheChallenge = followed === undefined ? Effect.undefined : readAt(url, fetch, followed);
+  const atTheChallenge =
+    followed === undefined
+      ? Effect.undefined
+      : resourceReadAt(url, fetch, followed).pipe(
+          Effect.catch((refusal) => (refusal.refused === 'another_resource' ? Effect.fail(refusal) : Effect.undefined)),
+        );
   return Effect.flatMap(atTheChallenge, (resource) =>
-    resource === undefined ? readAt(url, fetch) : Effect.succeed(resource),
+    resource === undefined ? resourceReadAt(url, fetch) : Effect.succeed(resource),
   );
 }
 
@@ -171,7 +176,7 @@ function discoveredResourceOf(
 ): Effect.Effect<ProtectedResource | undefined, ResourceRefusal> {
   return server.type === 'openapi'
     ? Effect.undefined
-    : Effect.flatMap(challengeOf(server.url, fetch), (challenge) => protectedResourceOf(server.url, fetch, challenge));
+    : Effect.flatMap(pingedAt(server.url, fetch), ({ challenge }) => protectedResourceOf(server.url, fetch, challenge));
 }
 
 function builtServerOf({
@@ -196,6 +201,9 @@ export function discoveredServerOf(
   issuer: string,
   fetch: FetchLike,
 ): Effect.Effect<AuthorizationServer, Refused<'another_issuer' | 'no_metadata' | 'host' | 'unanswered'>> {
+  if (!isPinnableUrl(issuer)) {
+    return Effect.fail(noMetadata);
+  }
   return Effect.tryPromise({
     try: () => discoverAuthorizationServerMetadata(issuer, { fetchFn: fetch }),
     catch: discoveryRefusalOf,
@@ -212,24 +220,32 @@ function takesTheCodeWithItsChallenge(server: AuthorizationServer): boolean {
   );
 }
 
-function refusedHostOf(server: AuthorizationServer, reaches: Reaches): string | undefined {
+function endpointsOf(server: AuthorizationServer): readonly string[] {
   const endpoints = [
     server.authorization_endpoint,
     server.token_endpoint,
     server.revocation_endpoint,
     server.registration_endpoint,
   ];
-  return endpoints
-    .flatMap((endpoint) => (endpoint === undefined ? [] : [reaches(endpoint)]))
+  return endpoints.filter((endpoint) => endpoint !== undefined);
+}
+
+function refusedHostOf(server: AuthorizationServer, reaches: Reaches): string | undefined {
+  return endpointsOf(server)
+    .map((endpoint) => reaches(endpoint))
     .find((rule) => rule !== undefined);
 }
 
 export function checkedServer(
   server: AuthorizationServer,
   reaches: Reaches,
-): Effect.Effect<AuthorizationServer, Refused<'no_challenge' | 'host'>> {
+): Effect.Effect<AuthorizationServer, Refused<'no_challenge' | 'unpinned_endpoint' | 'host'>> {
   if (!takesTheCodeWithItsChallenge(server)) {
     return Effect.fail(noChallenge);
+  }
+  const unpinned = endpointsOf(server).find((endpoint) => !isPinnableUrl(endpoint));
+  if (unpinned !== undefined) {
+    return Effect.fail({ refused: 'unpinned_endpoint', endpoint: unpinned });
   }
   const rule = refusedHostOf(server, reaches);
   return rule === undefined ? Effect.succeed(server) : Effect.fail({ refused: 'host', rule });
@@ -241,6 +257,10 @@ export function serverMetadataOf(
 ): Effect.Effect<ServerMetadata, ConsentRefusal> {
   return Effect.gen(function* () {
     const protectedResource = yield* discoveredResourceOf(server, fetch);
+    const handGiven = handGivenUrlOf(server);
+    if (protectedResource === undefined && handGiven !== undefined) {
+      return yield* Effect.fail<ConsentRefusal>({ refused: 'authorization_server_unnamed', url: handGiven });
+    }
     const named = protectedResource?.authorization_servers ?? [way.issuer];
     if (!named.some((issuer) => isSameIssuer(issuer, way.issuer))) {
       return yield* Effect.fail<ConsentRefusal>({ refused: 'another_issuer', named: named.join(', '), by: 'server' });

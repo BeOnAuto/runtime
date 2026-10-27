@@ -131,9 +131,13 @@ export function metadataDocumentOf(publicUrl: string | undefined): string | unde
   return publicUrl?.startsWith('https://') === true ? new URL(metadataDocumentPath, publicUrl).href : undefined;
 }
 
-export function clientMetadataOf(returnAddress: string): ClientMetadata {
+function clientNameFor(server: string | null): string {
+  return server === null ? clientName : `${clientName} for ${new URL(server).host}`;
+}
+
+export function clientMetadataOf(returnAddress: string, server: string | null = null): ClientMetadata {
   return {
-    client_name: clientName,
+    client_name: clientNameFor(server),
     redirect_uris: [returnAddress],
     grant_types: ['authorization_code', 'refresh_token'],
     response_types: ['code'],

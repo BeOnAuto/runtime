@@ -1,9 +1,10 @@
 import { calledOpeningLinks } from '@on.auto/api/testing';
+import { required } from '@on.auto/operations';
 import { hostAlternativesOf, operatorVariablesIn, type Provider } from '@on.auto/providers';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { required, shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
+import { shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';

@@ -1,5 +1,11 @@
 import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, consentedAt, registeredAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import {
+  autoClientsOf,
+  consentedAt,
+  metadataWithdrawnFrom,
+  registeredAt,
+  type ClientRegistration,
+} from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -61,7 +67,12 @@ describe('the consent of an MCP server given by hand', () => {
     closing.push(close);
 
     expect(read).toMatchObject({ output: { client_source: 'dynamic' } });
-    expect(askedOf(url)).toMatchObject({ client_id: 'registered-1', scope: 'files.read', resource: fake.url });
+    expect(askedOf(url)).toMatchObject({
+      client_id: 'registered-1',
+      scope: 'files.read',
+      resource: fake.url,
+      prompt: 'consent',
+    });
     expect(finished).toMatchObject({
       output: {
         status: 'connected',
@@ -77,15 +88,18 @@ describe('the consent of an MCP server given by hand', () => {
 });
 
 describe('an MCP server given by hand whose issuer takes a client named by a metadata document', () => {
-  it('takes the document first where the runtime names its client by one, on its link and at its start', async () => {
-    const fake = await served({ clientMetadataDocuments: true, dynamicRegistration: true });
+  it('takes a client registered there dynamically where the issuer offers it, and the document only where it registers none', async () => {
+    const both = await served({ clientMetadataDocuments: true, dynamicRegistration: true });
+    const documenting = await served({ clientMetadataDocuments: true });
     const h = harnessByHand({ consenting: { publicUrl: 'https://runtime.example.com' } });
 
-    const outcome = await adding(h, byHandAt(fake));
-    const link = await added(h, { ...byHandAt(fake), name: 'files-again' });
+    const outcome = await adding(h, byHandAt(both));
+    const link = await added(h, { ...byHandAt(documenting), name: 'files-documented' });
 
-    expect(outcome).toMatchObject({ output: { credential: { clients: ['metadata_document', 'dynamic'] } } });
-    expect(await readingTheLink(h, link)).toMatchObject({ output: { client_source: 'metadata_document' } });
+    expect(outcome).toMatchObject({ output: { credential: { clients: ['dynamic'] } } });
+    expect(await readingTheLink(h, link)).toMatchObject({
+      output: { credential: { clients: ['metadata_document'] }, client_source: 'metadata_document' },
+    });
     expect(await starting(h, link)).toMatchObject({ output: { client_source: 'metadata_document' } });
   });
 });
@@ -155,6 +169,21 @@ describe('the start and the finish of a server given by hand that no longer name
     });
   });
 
+  it('say at the start that the authorization server names an endpoint neither https nor on the loopback', async () => {
+    const { fake, answers, h, link } = await movedLater();
+
+    answers.rewrite(
+      `"authorization_endpoint":"${fake.origin}/authorize"`,
+      '"authorization_endpoint":"http://login.example.com/authorize"',
+    );
+
+    expect(await starting(h, link)).toMatchObject({
+      reason: 'conflict',
+      detail:
+        'The authorization server of the connection files names http://login.example.com/authorize as an endpoint, which is neither https nor on a loopback address, so it cannot be connected as it was added',
+    });
+  });
+
   it('say at the finish that the authorization server names another issuer, where the server named the issuer', async () => {
     const { fake, answers, h, link } = await movedLater();
     const consented = await consentedAt((await startedAt(h, link)).url);
@@ -165,5 +194,37 @@ describe('the start and the finish of a server given by hand that no longer name
       reason: 'conflict',
       detail: `The authorization server of the connection files names ${elsewhere} as its issuer in its own metadata, where it named ${fake.origin} when the connection was added, so it cannot be connected as it was added`,
     });
+  });
+});
+
+async function withdrawnLater() {
+  const fake = await served(signingIn);
+  const withdrawn = metadataWithdrawnFrom(fake.url);
+  const h = harnessByHand({ consenting: { fetch: withdrawn.fetch } });
+  return { fake, withdrawn, h, link: await added(h, byHandAt(fake)) };
+}
+
+function noLongerNamedAt({ url }: FakeMcpServer): string {
+  return `The server at ${url} no longer names its authorization server, so the consent cannot go on; remove the connection and add it again`;
+}
+
+describe('the start and the finish of a server given by hand that no longer publishes its metadata', () => {
+  it('refuse the start where the server answers its ping with a 2xx and its well-known paths with 404s, sending the person nowhere', async () => {
+    const { fake, withdrawn, h, link } = await withdrawnLater();
+
+    withdrawn.withdraw();
+
+    expect(await starting(h, link)).toMatchObject({ reason: 'conflict', detail: noLongerNamedAt(fake) });
+    expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_consent_started');
+  });
+
+  it('refuse the finish, redeeming no code, so no token is asked without the resource', async () => {
+    const { fake, withdrawn, h, link } = await withdrawnLater();
+    const consented = await consentedAt((await startedAt(h, link)).url);
+
+    withdrawn.withdraw();
+
+    expect(await finishing(h, link, consented)).toMatchObject({ reason: 'conflict', detail: noLongerNamedAt(fake) });
+    expect(fake.tokenRequests()).toBe(0);
   });
 });

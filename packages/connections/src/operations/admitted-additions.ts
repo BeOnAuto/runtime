@@ -1,6 +1,7 @@
+import { required } from '@on.auto/operations';
 import type { Conflict, Forbidden, InvalidInput } from '@on.auto/operations';
 import type { NamedWay } from '@on.auto/tool-servers';
-import { Effect, Option } from 'effect';
+import { Effect } from 'effect';
 
 import { wayRefusalOf, type WayRefused } from '../page/consent-words.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
@@ -18,10 +19,6 @@ type Admitting = Pick<
 };
 
 type WayNaming = Pick<ConnectionServices, 'policy' | 'consent'>;
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function takesTheWayItNames({ provider, credential }: GivenAddition): boolean {
   return provider === null && credential.kind === 'authorization';
