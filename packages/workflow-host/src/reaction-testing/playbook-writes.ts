@@ -83,8 +83,8 @@ export function eventTrigger(...filters: readonly TriggerFilter[]): Trigger {
   };
 }
 
-export function cronTrigger(expression: string): Trigger {
-  return { kind: 'cron', reference: '/schedule/cron', expression };
+export function cronTrigger(expression: string, zone: { readonly time_zone?: string } = {}): Trigger {
+  return { kind: 'cron', reference: '/schedule/cron', expression, ...zone };
 }
 
 export function everyTrigger(milliseconds: number): Trigger {

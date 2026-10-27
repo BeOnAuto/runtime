@@ -5611,7 +5611,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -6035,7 +6039,11 @@
                                   },
                                   "expression": {
                                     "type": "string",
-                                    "description": "The five fields of its times, read in UTC"
+                                    "description": "The five fields of its times, read in its time zone"
+                                  },
+                                  "time_zone": {
+                                    "type": "string",
+                                    "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                                   }
                                 },
                                 "required": [
@@ -6343,7 +6351,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -6779,7 +6791,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -7205,7 +7221,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [

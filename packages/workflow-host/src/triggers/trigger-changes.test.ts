@@ -11,6 +11,16 @@ describe('the changes a version makes to the triggers of the version before', ()
     expect(triggerChangesOf([before], [after])).toEqual([{ change: 'kept', trigger: after }]);
   });
 
+  it('activate a cron schedule whose time zone changed, and keep one whose time zone did not', () => {
+    const inLondon = cronTrigger('0 9 * * *', { time_zone: 'Europe/London' });
+    const inNewYork = cronTrigger('0 9 * * *', { time_zone: 'America/New_York' });
+
+    expect([triggerChangesOf([inLondon], [inNewYork]), triggerChangesOf([inLondon], [inLondon])]).toEqual([
+      [{ change: 'activated', trigger: inNewYork }],
+      [{ change: 'kept', trigger: inLondon }],
+    ]);
+  });
+
   it('activate a changed or added trigger, and remove a trigger the version leaves out', () => {
     const cron = cronTrigger('0 9 * * *');
 

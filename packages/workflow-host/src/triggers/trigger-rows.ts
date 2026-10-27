@@ -1,9 +1,10 @@
 import { EventTriggerSchema, TriggerSchema, type Trigger, type TriggerFilter } from '@on.auto/definitions';
 import { statement } from '@on.auto/ledger';
-import { Effect, Schema } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { nextAfter } from '../schedules/schedule-times.ts';
+import { firstDueOf } from '../schedules/schedule-times.ts';
+import type { InZone } from '../schedules/zone-clock.ts';
 import { triggerChangesOf, type TriggerChange } from './trigger-changes.ts';
 
 export interface Activation {
@@ -12,6 +13,13 @@ export interface Activation {
   readonly triggers: readonly Trigger[];
   readonly activatedBy: string;
   readonly activatedAt: number;
+}
+
+interface Activating {
+  readonly database: HostDatabase;
+  readonly playbookKey: string;
+  readonly activation: Activation;
+  readonly inZone: InZone;
 }
 
 export interface EventPage {
@@ -58,8 +66,10 @@ function typesOf(triggers: readonly Trigger[]): readonly string[] {
   return triggers.flatMap((trigger) => (trigger.kind === 'event' ? trigger.filters.map(({ type }) => type) : []));
 }
 
-function firstDueOf(trigger: Trigger, activatedAt: number): number | null {
-  return trigger.kind === 'event' ? null : nextAfter(trigger, activatedAt, activatedAt);
+function firstDueAt(trigger: Trigger, activatedAt: number, inZone: InZone): number | null {
+  return trigger.kind === 'event'
+    ? null
+    : Result.getOrElse(firstDueOf(trigger, activatedAt, inZone), () => activatedAt);
 }
 
 function keptTriggersOf(
@@ -77,23 +87,24 @@ function keptTriggersOf(
   ).pipe(Effect.map((rows) => rows.map(({ rule }) => rule)));
 }
 
-function activatedRow(database: HostDatabase, playbookKey: string, activation: Activation, trigger: Trigger) {
+function activatedRow({ database, playbookKey, activation, inZone }: Activating, trigger: Trigger) {
   const { workflow, version, activatedBy, activatedAt } = activation;
   return database.write(
     statement`INSERT INTO workflow_subscriptions
         (playbook_key, workflow, reference, version, kind, rule, activated_by, activated_at, next_due, running)
       VALUES (${playbookKey}, ${workflow}, ${trigger.reference}, ${version}, ${trigger.kind}, ${JSON.stringify(trigger)},
-        ${activatedBy}, ${activatedAt}, ${firstDueOf(trigger, activatedAt)}, NULL)
+        ${activatedBy}, ${activatedAt}, ${firstDueAt(trigger, activatedAt, inZone)}, NULL)
       ON CONFLICT (playbook_key, workflow, reference) DO UPDATE SET version = excluded.version, kind = excluded.kind,
         rule = excluded.rule, activated_by = excluded.activated_by, activated_at = excluded.activated_at,
         next_due = excluded.next_due`,
   );
 }
 
-function rowWritten(database: HostDatabase, playbookKey: string, activation: Activation, change: TriggerChange) {
+function rowWritten(activating: Activating, change: TriggerChange) {
+  const { database, playbookKey, activation } = activating;
   const { workflow, version } = activation;
   if (change.change === 'activated') {
-    return activatedRow(database, playbookKey, activation, change.trigger);
+    return activatedRow(activating, change.trigger);
   }
   return change.change === 'kept'
     ? database.write(
@@ -106,13 +117,13 @@ function rowWritten(database: HostDatabase, playbookKey: string, activation: Act
       );
 }
 
-export function triggersActivated(database: HostDatabase, playbookKey: string, activation: Activation) {
+export function triggersActivated(database: HostDatabase, playbookKey: string, activation: Activation, inZone: InZone) {
   return Effect.gen(function* () {
     const kept = yield* keptTriggersOf(database, playbookKey, activation.workflow);
     yield* Effect.orDie(
       Effect.forEach(
         triggerChangesOf(kept, activation.triggers),
-        (change) => rowWritten(database, playbookKey, activation, change),
+        (change) => rowWritten({ database, playbookKey, activation, inZone }, change),
         { discard: true },
       ),
     );

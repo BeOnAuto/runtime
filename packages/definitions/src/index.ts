@@ -192,6 +192,8 @@ export {
   EventTriggerSchema,
   ScheduleTriggerSchema,
   TriggerSchema,
+  timeZoneOf,
+  type CronTrigger,
   type EventTrigger,
   type ScheduleTrigger,
   type Trigger,
@@ -199,7 +201,7 @@ export {
 } from './registry/definition-triggers.ts';
 export { runStartedOf } from './runs/run-starts.ts';
 export { inWords, nameInWords, outputInWords } from './plain-language/in-words.ts';
-export { triggerNamed } from './plain-language/event-words.ts';
+export { scheduleNamed, triggerNamed } from './plain-language/event-words.ts';
 export { mostInputBytes, mostInputDepth, mostResultBytes } from './runs/recorded-size.ts';
 export {
   ListedDefinitionSchema,

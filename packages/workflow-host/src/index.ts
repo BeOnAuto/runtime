@@ -78,6 +78,7 @@ export {
 } from './reactions/reaction-options.ts';
 export { StartRejected } from './reactions/start-rejected.ts';
 export { cronRejectionOf } from './schedules/schedule-times.ts';
+export { isKnownTimeZone } from './schedules/zone-clock.ts';
 export { mostListenersInAPlaybook } from './listeners/sql-listeners.ts';
 export { mostReactionDepth } from './reactions/subscription-starts.ts';
 export { mostDeferredStarts, mostStartsAMinute } from './reactions/start-rates.ts';

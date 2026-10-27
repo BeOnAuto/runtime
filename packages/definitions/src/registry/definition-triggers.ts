@@ -23,10 +23,17 @@ export const EventTriggerSchema = Schema.Struct({
   }),
 });
 
+const universalTime = 'UTC';
+
 const CronTriggerSchema = Schema.Struct({
   kind: Schema.Literal('cron'),
   reference: TriggerReferenceField,
-  expression: Schema.String.annotate({ description: 'The five fields of its times, read in UTC' }),
+  expression: Schema.String.annotate({ description: 'The five fields of its times, read in its time zone' }),
+  time_zone: Schema.optionalKey(
+    Schema.String.annotate({
+      description: `Its time zone, an IANA time zone name such as America/New_York; left out, ${universalTime}`,
+    }),
+  ),
 });
 
 const EveryTriggerSchema = Schema.Struct({
@@ -47,7 +54,13 @@ export type EventTrigger = Extract<Trigger, { readonly kind: 'event' }>;
 
 export type ScheduleTrigger = Exclude<Trigger, EventTrigger>;
 
+export type CronTrigger = Extract<Trigger, { readonly kind: 'cron' }>;
+
 export type TriggerFilter = EventTrigger['filters'][number];
+
+export function timeZoneOf({ time_zone: timeZone = universalTime }: CronTrigger): string {
+  return timeZone;
+}
 
 export function hasTriggers({ triggers }: { readonly triggers?: readonly Trigger[] }): boolean {
   return triggers !== undefined && triggers.length > 0;

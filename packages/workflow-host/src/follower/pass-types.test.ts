@@ -3,8 +3,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { filterStops } from '../filtering/filter-matching.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
+import { definitionRecordsKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts';
 import {
   deliveringEach,
   finishedAt,
@@ -16,7 +16,6 @@ import {
   recordAt,
 } from '../reaction-testing/playbook-passes.ts';
 import { eventTrigger } from '../reaction-testing/playbook-writes.ts';
-import { definitionRecordsOn } from '../triggers/definition-records.ts';
 import type { PassParts } from './playbook-pass.ts';
 
 const at = '2026-10-01T09:00:00.000Z';
@@ -91,7 +90,7 @@ describe('a pass that meets a definition activating a trigger of a type it reads
       ],
       calls: [finishesRead()],
       passedEarly: () => Effect.void,
-      applyDefinitionRecord: definitionRecordsOn(database, filterStops()),
+      applyDefinitionRecord: definitionRecordsKeepingTheirOwnStops(database),
     }));
     await Effect.runPromise(playbooks.follow(playbookKey, null));
 
