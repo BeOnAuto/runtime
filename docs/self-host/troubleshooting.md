@@ -108,7 +108,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 - Activate a current key of this installation, from Studio's Licenses page; the refusal links the installation's page. A key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there.
 - A key for another installation is refused before the runtime asks Auto: register this runtime's installation, which the refusal names, rather than reuse another's key.
 - An offline installation's allocation has seven days of grace from its last refresh; past them every run is refused until the runtime refreshes it with Auto or takes the allocation an operator signs again.
-- An entitlement lasts seven days and is renewed every day. One that expired because the runtime could not reach `accounts.on.auto` for a week renews as soon as it can; check the runtime's egress.
+- An entitlement lasts seven days and is renewed every day. One that expired because the runtime could not reach `billing.on.auto` for a week renews as soon as it can; check the runtime's egress.
 
 ## A run is refused as `credits_exhausted` {#credits-exhausted}
 

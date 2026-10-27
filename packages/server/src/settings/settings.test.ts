@@ -80,7 +80,7 @@ describe('readSettings', () => {
       providerValues: new Map(),
       telemetry: undefined,
       usagePing: { distribution: 'source' },
-      license: { key: undefined, allocation: undefined, accounts: 'https://accounts.on.auto' },
+      license: { key: undefined, allocation: undefined, accounts: 'https://billing.on.auto' },
       distribution: 'source',
       configFile: undefined,
     });

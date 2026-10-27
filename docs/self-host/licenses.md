@@ -40,9 +40,9 @@ Give the runtime its key in one of four ways. A key in the environment or the co
 
 A key activated by the command or through the API is kept in the runtime's secret store, as the credentials of connections are, so it stands after a restart.
 
-The runtime activates a key by asking Auto's account service at `https://accounts.on.auto`, which answers an entitlement Auto signs. The runtime ships Auto's public key and checks every answer against it; no setting adds or replaces a key. The entitlement lasts seven days, and the runtime renews it as it starts and every day after. Every hour, and as it stops, the runtime counts its ledger again from the first event and reports its count of actions to the account, which compares it with what it charged.
+The runtime activates a key by asking Auto's account service at `https://billing.on.auto`, which answers an entitlement Auto signs. The runtime ships Auto's public key and checks every answer against it; no setting adds or replaces a key. The entitlement lasts seven days, and the runtime renews it as it starts and every day after. Every hour, and as it stops, the runtime counts its ledger again from the first event and reports its count of actions to the account, which compares it with what it charged.
 
-The runtime reaches `accounts.on.auto` over HTTPS; allow it in your egress rules beside `studio.on.auto`.
+The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules beside `studio.on.auto`.
 
 ## When a run is refused
 
@@ -54,7 +54,7 @@ Each refusal is a problem document with the status `409`, the reason `conflict` 
 | `license_invalid`   | The key was rotated away or revoked, is for another installation, or its entitlement expired or is not Auto's | Activate a current key of this installation; its words link the installation's page in Studio                             |
 | `credits_exhausted` | The org's account has no credit left for the action, or an offline installation has spent its allocation      | An owner adds credit in Studio, under Billing, or asks Auto for another allocation; the run starts when it is asked again |
 | `metering_fault`    | The runtime found its ledger changed under its count                                                          | [Ask Auto for a repair](#faults-and-repairs)                                                                              |
-| `meter_unavailable` | The runtime could not read its ledger, or reach the account service, to admit the run                         | Ask again shortly; check that the runtime reaches `accounts.on.auto`                                                      |
+| `meter_unavailable` | The runtime could not read its ledger, or reach the account service, to admit the run                         | Ask again shortly; check that the runtime reaches `billing.on.auto`                                                       |
 
 A run asked again under the run id of one that already started is never refused, and counts nothing more. Reading runs and events, editing definitions and exporting go on whatever the license says.
 

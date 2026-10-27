@@ -44,7 +44,7 @@ describe('the license settings', () => {
     expect(readSettingsOf({}).license).toEqual({
       key: undefined,
       allocation: undefined,
-      accounts: 'https://accounts.on.auto',
+      accounts: 'https://billing.on.auto',
     });
   });
 
