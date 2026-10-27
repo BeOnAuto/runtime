@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.0](https://github.com/BeOnAuto/runtime/compare/v0.30.0...v0.31.0) (2026-10-27)
+
+
+### Features
+
+* **providers:** hubspot, notion, atlassian, linear and posthog through their servers ([#352](https://github.com/BeOnAuto/runtime/issues/352)) ([d07a9ea](https://github.com/BeOnAuto/runtime/commit/d07a9eac28eb6c2a6e5711dbe6c092d46bc2c1f9))
+
 ## [0.30.0](https://github.com/BeOnAuto/runtime/compare/v0.29.0...v0.30.0) (2026-10-27)
 
 
