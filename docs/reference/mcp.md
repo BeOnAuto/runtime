@@ -90,8 +90,8 @@ Each tool's annotations tell a client how careful to be:
 | ----------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `readOnlyHint`    | The tool only reads                                            | Every tool that reads, including `dry_run`, although its HTTP route uses `POST`                                                                                                                      |
 | `destructiveHint` | What it does cannot be undone, or may change something outside | `retire_playbook`, `remove_connection`, `retire_definition`, `cancel_run` and `answer_interaction`; `run_definition` and `execute` while any tool server is configured or people may add connections |
-| `idempotentHint`  | Calling it again with the same input changes nothing           | Every tool that reads, and `update_playbook`, `retire_playbook`, `remove_connection`, `update_definition`, `retire_definition`, `cancel_run` and `answer_interaction`                                |
-| `openWorldHint`   | It reaches outside the runtime                                 | `list_models` and `run_definition`, which reach model providers; `search`, `introspect`, `dry_run` and `execute`, which reach tool servers                                                           |
+| `idempotentHint`  | Calling it again with the same input changes nothing           | Every tool that reads, and `update_playbook`, `retire_playbook`, `remove_connection`, `activate_license`, `update_definition`, `retire_definition`, `cancel_run` and `answer_interaction`            |
+| `openWorldHint`   | It reaches outside the runtime                                 | `list_models` and `run_definition`, which reach model providers; `search`, `introspect`, `dry_run` and `execute`, which reach tool servers; `activate_license`, which reaches Auto's account service |
 
 `run_definition` is marked destructive while a tool server is configured or people may add connections, as they may by default, because a function's tools may then change something. An agent can ask the person before it runs a function.
 
@@ -206,6 +206,10 @@ A connection is a tool server that a person adds to the org through their agent,
 - `add_connection` and `remove_connection` need `org:write`, and `list_connections` needs `org:read`. `get_connection`, which reads one connection by its id, is served over HTTP alone; `list_connections` shows whether the person approved a connection, in the `status` of each.
 
 [Connections](http.md#connections) gives the fields, limits and refusals, and [Let people add connections](../self-host/connections.md) the flow and the rules the operator sets.
+
+### License
+
+`activate_license` activates the license of the whole runtime with the key Studio gives, `alk.<org>.<installation>.<secret>`, the HTTP operation `POST /license`. It is listed on `/mcp` and the org endpoint to a caller who may change the org, and answers the installation, the org at Auto, its plan and when its entitlement expires. A key Auto does not know, or one for another installation, is refused as `license_invalid`. [License](http.md#license) gives the rest, and [Register and license a runtime](../self-host/licenses.md) the other ways to give a runtime its key.
 
 ## Guides and prompts
 

@@ -158,6 +158,10 @@
             "link": "/self-host/telemetry"
           },
           {
+            "text": "Register and license a runtime",
+            "link": "/self-host/licenses"
+          },
+          {
             "text": "Troubleshooting",
             "link": "/self-host/troubleshooting"
           }
