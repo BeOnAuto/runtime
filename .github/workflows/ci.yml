@@ -90,6 +90,7 @@ jobs:
               - identity
               - interaction
               - json-schema
+              - metering
               - operations
               - outbound
               - playbooks
