@@ -1,12 +1,12 @@
 import { onTestFinished } from 'vitest';
 
-import type { MeterOptions } from '../admission/ledger-meter.ts';
-import { tamperingOn, type LedgerAt } from './ledgers.ts';
-import { meteredOn, runOf, type Metered } from './metered.ts';
+import { tamperingOn, type LedgerAt } from '../testing/ledgers.ts';
+import { meteredOn, type Metered, type MeteredOptions } from '../testing/metered.ts';
+import { runOf } from '../testing/runs.ts';
 
 export type LedgerOf = () => Promise<LedgerAt>;
 
-export async function opened(ledgerOf: LedgerOf, options: Partial<MeterOptions> = {}) {
+export async function opened(ledgerOf: LedgerOf, options: MeteredOptions = {}) {
   const at = await ledgerOf();
   onTestFinished(() => at.remove());
   const metered = await meteredOn(at, options);
@@ -14,13 +14,13 @@ export async function opened(ledgerOf: LedgerOf, options: Partial<MeterOptions> 
   return { at, metered, tampering: tamperingOn(at) };
 }
 
-export async function replicaOf(at: LedgerAt, options: Partial<MeterOptions> = {}): Promise<Metered> {
+export async function replicaOf(at: LedgerAt, options: MeteredOptions = {}): Promise<Metered> {
   const replica = await meteredOn(at, options);
   onTestFinished(() => replica.dispose());
   return replica;
 }
 
-export async function restartedOf(metered: Metered, options: Partial<MeterOptions> = {}): Promise<Metered> {
+export async function restartedOf(metered: Metered, options: MeteredOptions = {}): Promise<Metered> {
   const restarted = await metered.restarted(options);
   onTestFinished(() => restarted.dispose());
   return restarted;

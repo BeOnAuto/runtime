@@ -1,7 +1,7 @@
 import type { LoggedEvent, LogPorts } from '@on.auto/ledger';
 import { describe, expect, it } from 'vitest';
 
-import { pickOf, seeded } from '../testing/random-ledgers.ts';
+import { pickOf, seeded } from '../meter-testing/random-ledgers.ts';
 import { countedAfter, countedFromTheStart } from './run-starts.ts';
 
 const streams = [

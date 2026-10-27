@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { runOf, runStreamOf } from './metered.ts';
+import { runOf, runStreamOf } from '../testing/runs.ts';
 import { actionsOf, opened, replicaOf, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
 function runsNamed(prefix: string, count: number): readonly string[] {

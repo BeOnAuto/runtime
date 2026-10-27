@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { runOf, runStreamOf } from './metered.ts';
+import { runOf, runStreamOf } from '../testing/runs.ts';
 import { opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
 export function rebuildingBehaviour(ledgerOf: LedgerOf): void {

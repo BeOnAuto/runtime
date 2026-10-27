@@ -2,15 +2,19 @@ import { RunMeter } from '@on.auto/definitions';
 import { Effect, Layer, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { accountServiceLayer } from '../accounts/fetched-account-service.ts';
+import { ledgerMeter } from '../licensing/self-hosted-meter.ts';
+import { meterBehaviour } from '../meter-testing/meter-behaviour.ts';
+import { opened, startedOnceAdmitted } from '../meter-testing/opened.ts';
 import { postgresqlLedger, sqliteLedger } from '../testing/ledgers.ts';
-import { meterBehaviour } from '../testing/meter-behaviour.ts';
-import { runOf } from '../testing/metered.ts';
-import { opened, startedOnceAdmitted } from '../testing/opened.ts';
-import { ledgerMeter, meterDefaults } from './ledger-meter.ts';
+import { runOf } from '../testing/runs.ts';
+import { meterDefaults } from './metering.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
 const onSQLite = () => Promise.resolve(sqliteLedger());
+
+const noNetwork = () => Promise.reject(new TypeError('fetch failed: the tests reach no network'));
 
 meterBehaviour('SQLite', onSQLite);
 
@@ -28,10 +32,11 @@ describe('the meter of every runtime', () => {
     });
   });
 
-  it('is the run meter of a layer over the ledger', async () => {
+  it('is the run meter of a layer over the ledger and the account service', async () => {
     const at = sqliteLedger();
     onTestFinished(() => at.remove());
-    const runtime = ManagedRuntime.make(ledgerMeter().pipe(Layer.provide(at.layer())));
+    const account = accountServiceLayer({ origin: 'https://accounts.example.com', fetch: noNetwork });
+    const runtime = ManagedRuntime.make(ledgerMeter().pipe(Layer.provide(at.layer()), Layer.provide(account)));
     onTestFinished(() => runtime.dispose());
     const admitted = Effect.flatMap(Effect.service(RunMeter), (meter) => meter.admit(runOf('run-1')));
 

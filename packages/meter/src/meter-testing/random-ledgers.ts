@@ -1,4 +1,5 @@
-import { runOf, type Metered } from './metered.ts';
+import type { Metered } from '../testing/metered.ts';
+import { runOf } from '../testing/runs.ts';
 
 type Step =
   | { readonly kind: 'started'; readonly run: string; readonly playbook: string }

@@ -4,7 +4,17 @@ import { allowanceBehaviour, concurrencyBehaviour } from './allowance-behaviour.
 import { checkpointBehaviour, verificationBehaviour } from './checkpoint-behaviour.ts';
 import { countingBehaviour, recountingBehaviour } from './counting-behaviour.ts';
 import { faultBehaviour, rebuildingBehaviour } from './fault-behaviour.ts';
+import {
+  activationBehaviour,
+  invalidLicenseBehaviour,
+  keyBehaviour,
+  licensedAdmissionBehaviour,
+  refreshBehaviour,
+  revocationBehaviour,
+} from './license-behaviour.ts';
 import type { LedgerOf } from './opened.ts';
+import { repairBehaviour } from './repair-behaviour.ts';
+import { reportBehaviour, reportVerificationBehaviour } from './report-behaviour.ts';
 
 export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
   describe(`the meter on ${name}`, () => {
@@ -21,10 +31,23 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
     });
     describe('faults', () => {
       faultBehaviour(ledgerOf);
+      repairBehaviour(ledgerOf);
     });
     describe('allowances', () => {
       allowanceBehaviour(ledgerOf);
       concurrencyBehaviour(ledgerOf);
+    });
+    describe('licenses', () => {
+      activationBehaviour(ledgerOf);
+      keyBehaviour(ledgerOf);
+      refreshBehaviour(ledgerOf);
+      invalidLicenseBehaviour(ledgerOf);
+      revocationBehaviour(ledgerOf);
+      licensedAdmissionBehaviour(ledgerOf);
+    });
+    describe('reports', () => {
+      reportBehaviour(ledgerOf);
+      reportVerificationBehaviour(ledgerOf);
     });
   });
 }

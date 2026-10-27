@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { inTurn, runOf, runStreamOf } from './metered.ts';
+import { inTurn, runOf, runStreamOf } from '../testing/runs.ts';
 import { actionsOf, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 import { distinctRunsIn, played, randomSteps, seeded } from './random-ledgers.ts';
 

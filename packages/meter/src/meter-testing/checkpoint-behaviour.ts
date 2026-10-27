@@ -1,8 +1,9 @@
 import { expect, it } from 'vitest';
 
 import { digestOf } from '../counting/checkpoint-digest.ts';
-import type { Tampering } from './ledgers.ts';
-import { inTurn, runOf, runStreamOf, type Metered } from './metered.ts';
+import type { Tampering } from '../testing/ledgers.ts';
+import type { Metered } from '../testing/metered.ts';
+import { inTurn, runOf, runStreamOf } from '../testing/runs.ts';
 import { actionsOf, checkpointOf, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
 async function forgedTo(actions: number, metered: Metered, tampering: Tampering): Promise<void> {
