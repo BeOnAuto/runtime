@@ -1,7 +1,14 @@
+import { licenseIdentifier } from '../licenses/claim-values.ts';
 import type { InstallationBinding, LicenseRing } from '../licenses/entitlements.ts';
+import type { RunIdentity } from '../runs/identity.ts';
 
 export const OFFLINE_REPORT_TYPE = 'auto-offline-report+jws';
 export const MOST_REPORT_TOKEN_CHARACTERS = 131_072;
+
+export function assertOfflineRunIdentity(run: Pick<RunIdentity, 'playbookId' | 'runId'>): void {
+  licenseIdentifier(run.playbookId);
+  licenseIdentifier(run.runId);
+}
 
 export interface ReportCounter {
   readonly lotId: string;

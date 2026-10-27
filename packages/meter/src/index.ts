@@ -13,6 +13,16 @@ export type {
 export { openLicenseState } from './license-state/license-state.ts';
 export { openLicenseClient } from './license-client/license-client.ts';
 export { openOfflineCapacity } from './offline-capacity/offline-capacity.ts';
+export { openOfflineMeter } from './offline-reservations/offline-meter.ts';
+export type { OfflineReceipt, OfflineResult } from './offline-ledger/records.ts';
+export type {
+  OfflineMeter,
+  OfflineReserveRequest,
+  OfflineDispatchRequest,
+  OfflineReleaseRequest,
+  OfflineReservation,
+  OfflineReservationPart,
+} from './offline-reservations/records.ts';
 export type {
   CapacityOptions,
   CapacityReceipt,

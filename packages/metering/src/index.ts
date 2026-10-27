@@ -14,6 +14,7 @@ export { allocationVerifier } from './offline/allocation-verification.ts';
 export { offlineCheckpoint, readUsageReportClaims, usageReportPayload } from './offline/report-claims.ts';
 export { verifyUsageReport } from './offline/report-verification.ts';
 export {
+  assertOfflineRunIdentity,
   OFFLINE_REPORT_TYPE,
   MOST_REPORT_TOKEN_CHARACTERS,
   type ReportCounter,

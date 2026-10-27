@@ -18,7 +18,8 @@ export function capacitySchema(dialect: Dialect): readonly Statement[] {
     statement`CREATE TABLE IF NOT EXISTS meter_capacity_state (
       id TEXT PRIMARY KEY REFERENCES meter_capacity_history(id),
       revision BIGINT NOT NULL CHECK (revision BETWEEN 0 AND 9007199254740991),
-      state TEXT NOT NULL CHECK (state IN ('open', 'closing', 'closed', 'quarantined')), checkpoint TEXT NOT NULL
+      state TEXT NOT NULL CHECK (state IN ('open', 'closing', 'closed', 'quarantined')), checkpoint TEXT NOT NULL,
+      attempt_id TEXT
     )`,
     statement`CREATE TABLE IF NOT EXISTS meter_capacity_sources (
       allocation_id TEXT NOT NULL REFERENCES meter_capacity_history(id), lot_id TEXT NOT NULL,
