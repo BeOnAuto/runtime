@@ -1,0 +1,12 @@
+name: atlassian
+title: Atlassian
+description: Search and read Jira work items and Confluence pages, and create, update and comment on them, through Atlassian's MCP server, as the person who connects and with their permissions.
+website: https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/
+type: mcp
+url: https://mcp.atlassian.com/v2/mcp?tools=all
+credentials:
+  - kind: authorization
+    issuer: https://auth.atlassian.com/VCeDsk8ZHncYF1g234fKtc4lNipbBhu3
+    scope: read:me read:account email offline_access read:jira:agent-interface search:jira:agent-interface read:confluence:agent-interface search:confluence:agent-interface write:jira:agent-interface write:confluence:agent-interface
+    clients: [registered, metadata_document, dynamic]
+    description: Sign in to Atlassian, choose a site and allow Jira and Confluence.

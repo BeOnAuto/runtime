@@ -132,49 +132,70 @@ function waysExpected(
   return names.map((name) => [name, required(known[name])]);
 }
 
+const waysWithoutAClient = {
+  'adobe-analytics': ['client_credentials offered', 'authorization set up first'],
+  'adobe-analytics-mcp': ['authorization offered'],
+  'amazon-ads': ['authorization set up first'],
+  'amazon-ads-mcp': ['authorization set up first'],
+  atlassian: ['authorization offered'],
+  github: ['authorization set up first', 'secret offered'],
+  hubspot: ['authorization set up first'],
+  linear: ['authorization offered'],
+  'microsoft-advertising': ['authorization set up first'],
+  notion: ['authorization offered'],
+  outlook: ['authorization set up first'],
+  posthog: ['authorization offered'],
+  profound: ['authorization offered', 'secret offered'],
+  slack: ['authorization set up first'],
+  'slack-api': ['secret offered'],
+  stripe: ['authorization offered'],
+  zoom: ['authorization set up first'],
+};
+
+const searchedWithoutAClient = [
+  'adobe-analytics',
+  'adobe-analytics-mcp',
+  'atlassian',
+  'github',
+  'linear',
+  'notion',
+  'posthog',
+  'profound',
+  'slack-api',
+  'stripe',
+];
+
+const waysWithAClient = {
+  'adobe-analytics': ['client_credentials offered', 'authorization offered'],
+  'adobe-analytics-mcp': ['authorization offered'],
+  'amazon-ads': ['authorization offered'],
+  'amazon-ads-mcp': ['authorization offered'],
+  atlassian: ['authorization offered'],
+  github: ['authorization offered', 'secret offered'],
+  hubspot: ['authorization offered'],
+  linear: ['authorization offered'],
+  'microsoft-advertising': ['authorization offered'],
+  notion: ['authorization offered'],
+  outlook: ['authorization offered'],
+  posthog: ['authorization offered'],
+  profound: ['authorization offered', 'secret offered'],
+  slack: ['authorization offered'],
+  'slack-api': ['secret offered'],
+  stripe: ['authorization offered'],
+  zoom: ['authorization offered'],
+};
+
 describe('the ways of the providers a server lists', () => {
   it('offer consent where whoever runs it registered a client at the issuer or the server registers one itself, and search offers a provider with a way offered', async () => {
     const withClients = await servingReasoning([], { CONNECTIONS: registeredAtTheIssuers });
     onTestFinished(() => withClients.stop());
 
     expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
-      waysExpected(
-        {
-          'adobe-analytics': ['client_credentials offered', 'authorization set up first'],
-          'adobe-analytics-mcp': ['authorization offered'],
-          'amazon-ads': ['authorization set up first'],
-          'amazon-ads-mcp': ['authorization set up first'],
-          github: ['authorization set up first', 'secret offered'],
-          'microsoft-advertising': ['authorization set up first'],
-          outlook: ['authorization set up first'],
-          profound: ['authorization offered', 'secret offered'],
-          slack: ['authorization set up first'],
-          'slack-api': ['secret offered'],
-          stripe: ['authorization offered'],
-          zoom: ['authorization set up first'],
-        },
-        ['authorization set up first'],
-      ),
-      ['adobe-analytics', 'adobe-analytics-mcp', 'github', 'profound', 'slack-api', 'stripe'],
+      waysExpected(waysWithoutAClient, ['authorization set up first']),
+      searchedWithoutAClient,
     ]);
     expect([await waysListedBy(withClients), await namesSearchedBy(withClients)]).toEqual([
-      waysExpected(
-        {
-          'adobe-analytics': ['client_credentials offered', 'authorization offered'],
-          'adobe-analytics-mcp': ['authorization offered'],
-          'amazon-ads': ['authorization offered'],
-          'amazon-ads-mcp': ['authorization offered'],
-          github: ['authorization offered', 'secret offered'],
-          'microsoft-advertising': ['authorization offered'],
-          outlook: ['authorization offered'],
-          profound: ['authorization offered', 'secret offered'],
-          slack: ['authorization offered'],
-          'slack-api': ['secret offered'],
-          stripe: ['authorization offered'],
-          zoom: ['authorization offered'],
-        },
-        ['authorization offered'],
-      ),
+      waysExpected(waysWithAClient, ['authorization offered']),
       names,
     ]);
     expect(atGoogle).toHaveLength(16);

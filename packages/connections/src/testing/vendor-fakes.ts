@@ -14,10 +14,17 @@ interface EndpointsAt {
 
 export interface Vendor {
   readonly metadata: Partial<ClientRegistration>;
+  readonly challengedAt?: string;
   readonly protectedResourceAt?: string;
   readonly authorizationServerAt?: string;
   readonly openIdConfigurationAt?: string;
   readonly endpointsAt?: EndpointsAt;
+}
+
+export interface VendorOfTheWay extends Vendor {
+  readonly resource: string | null;
+  readonly asked?: string;
+  readonly parameters?: Readonly<Record<string, string>>;
 }
 
 export interface TheVendor {
@@ -44,6 +51,8 @@ type AnsweredAt = readonly [string, string];
 
 const unpublished = 404;
 
+const unauthorized = 401;
+
 function pathsAtTheFakeOf({
   protectedResourceAt,
   authorizationServerAt,
@@ -62,12 +71,30 @@ function pathsAtTheFakeOf({
   );
 }
 
+function challengesOf({ challengedAt, protectedResourceAt }: Vendor): ReadonlyMap<string, string> {
+  return challengedAt === undefined || protectedResourceAt === undefined
+    ? new Map()
+    : new Map([[challengedAt, protectedResourceAt]]);
+}
+
+function challengeNaming(resourceMetadata: string): Response {
+  return new Response(null, {
+    status: unauthorized,
+    headers: { 'WWW-Authenticate': `Bearer resource_metadata="${resourceMetadata}"` },
+  });
+}
+
 function answeredAsTheVendor(fake: FakeMcpServer, vendor: Vendor): ConsentClientOptions['fetch'] {
   const pathsAtTheFake = pathsAtTheFakeOf(vendor);
+  const challenges = challengesOf(vendor);
   return (...[address, init]: readonly [unknown, unknown?]) => {
     const asked = new URL(String(address));
     if (asked.origin === fake.origin) {
       return globalThis.fetch(asked, Object.assign({}, init));
+    }
+    const challenged = challenges.get(asked.href);
+    if (challenged !== undefined) {
+      return Promise.resolve(challengeNaming(challenged));
     }
     const path = pathsAtTheFake.get(asked.href);
     return path === undefined

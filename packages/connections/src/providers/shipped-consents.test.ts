@@ -4,8 +4,13 @@ import { readProviders, type Placeholder, type ProviderEntry, providersShippedRo
 import { Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { vendorsOfTheShippedWays, type VendorOfTheWay } from '../testing/shipped-vendors.ts';
-import { consentedAtTheVendor, harnessAtTheVendor, servedAsTheVendor } from '../testing/vendor-fakes.ts';
+import { vendorsOfTheShippedWays } from '../testing/shipped-vendors.ts';
+import {
+  consentedAtTheVendor,
+  harnessAtTheVendor,
+  servedAsTheVendor,
+  type VendorOfTheWay,
+} from '../testing/vendor-fakes.ts';
 
 const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
@@ -119,40 +124,47 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
   };
 }
 
+const providersTakingConsent = [
+  'adobe-analytics',
+  'adobe-analytics-mcp',
+  'amazon-ads',
+  'amazon-ads-mcp',
+  'atlassian',
+  'campaign-manager-360',
+  'display-video-360',
+  'display-video-360-reports',
+  'github',
+  'gmail',
+  'google-ads',
+  'google-analytics',
+  'google-analytics-admin',
+  'google-docs',
+  'google-drive',
+  'google-search-console',
+  'google-sheets',
+  'google-slides',
+  'hubspot',
+  'linear',
+  'microsoft-advertising',
+  'notion',
+  'outlook',
+  'posthog',
+  'profound',
+  'search-ads-360',
+  'slack',
+  'stripe',
+  'youtube',
+  'youtube-analytics',
+  'youtube-management',
+  'zoom',
+];
+
 describe('every way of consent of a shipped provider, against the fake authorization server at its vendor’s addresses', () => {
   it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, and finishes connected with that scope', async () => {
     const consents = await Promise.all(waysOfConsent.map((consenting) => consentOf(consenting, true)));
 
     expect(consents).toEqual(waysOfConsent.map((consenting) => consentExpectedOf(consenting, 'registered')));
-    expect(waysOfConsent.map(({ name }) => name)).toEqual([
-      'adobe-analytics',
-      'adobe-analytics-mcp',
-      'amazon-ads',
-      'amazon-ads-mcp',
-      'campaign-manager-360',
-      'display-video-360',
-      'display-video-360-reports',
-      'github',
-      'gmail',
-      'google-ads',
-      'google-analytics',
-      'google-analytics-admin',
-      'google-docs',
-      'google-drive',
-      'google-search-console',
-      'google-sheets',
-      'google-slides',
-      'microsoft-advertising',
-      'outlook',
-      'profound',
-      'search-ads-360',
-      'slack',
-      'stripe',
-      'youtube',
-      'youtube-analytics',
-      'youtube-management',
-      'zoom',
-    ]);
+    expect(waysOfConsent.map(({ name }) => name)).toEqual(providersTakingConsent);
   });
 
   it('starts and finishes without a registered client where its client sources take one the runtime registers itself', async () => {
@@ -161,6 +173,14 @@ describe('every way of consent of a shipped provider, against the fake authoriza
     const consents = await Promise.all(registering.map((consenting) => consentOf(consenting, false)));
 
     expect(consents).toEqual(registering.map((consenting) => consentExpectedOf(consenting, 'dynamic')));
-    expect(registering.map(({ name }) => name)).toEqual(['adobe-analytics-mcp', 'profound', 'stripe']);
+    expect(registering.map(({ name }) => name)).toEqual([
+      'adobe-analytics-mcp',
+      'atlassian',
+      'linear',
+      'notion',
+      'posthog',
+      'profound',
+      'stripe',
+    ]);
   });
 });
