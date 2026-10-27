@@ -163,10 +163,10 @@ function noteRecipeSaying(text: string): Recipe {
 }
 
 describe('the guides a server carries', () => {
-  it('start the server with one guide a type it runs and the terminology, and refuse to start it with one more', () => {
-    expect(starting({ guides: guidesNumbering(5), definitionTypes: typesNumbering(4) })).not.toThrow();
-    expect(starting({ guides: guidesNumbering(6), definitionTypes: typesNumbering(4) })).toThrow(
-      'The guides of the server: 6 guides, more than the 5 allowed',
+  it('start the server with one guide a type it runs, the terminology and the templates, and refuse to start it with one more', () => {
+    expect(starting({ guides: guidesNumbering(6), definitionTypes: typesNumbering(4) })).not.toThrow();
+    expect(starting({ guides: guidesNumbering(7), definitionTypes: typesNumbering(4) })).toThrow(
+      'The guides of the server: 7 guides, more than the 6 allowed',
     );
   });
 

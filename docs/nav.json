@@ -219,6 +219,10 @@
       {
         "text": "Output shapes",
         "link": "/reference/output-shapes"
+      },
+      {
+        "text": "Templates",
+        "link": "/reference/template"
       }
     ]
   },

@@ -60,7 +60,7 @@ COPY --from=dependencies /app ./
 COPY LICENSE ./
 COPY packages/server/container.vex.json packages/server/
 COPY docs/concepts/terminology.md docs/concepts/
-COPY docs/reference/*-format.md docs/reference/
+COPY docs/reference/*-format.md docs/reference/template.md docs/reference/
 COPY packages/api/src packages/api/src
 COPY packages/playbooks/src packages/playbooks/src
 COPY packages/config/src packages/config/src

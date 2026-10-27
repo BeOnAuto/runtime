@@ -232,6 +232,8 @@ A function that reads replies needs a reply rule: the one `reply` writes, or one
 
 `to`, `from` and the message are Liquid templates that read `input`, `today` and `now` and nothing else. A rendered value is text and is never read again as a template.
 
+A template may use the filters listed in [Templates](template.md#filters), the `templates` guide, the same in every template.
+
 Every template is checked when the document is saved, against the names its place reads:
 
 | Place                                  | Names it reads                                                                                                     |
@@ -424,7 +426,7 @@ How replies are taken:
 | `succeeded`                                    | The request was answered, and the answer is the output                                                                                                                                                |
 | `succeeded`                                    | A notification was delivered, with the output `{}`. One without `deliver` succeeds at once                                                                                                            |
 | `succeeded`                                    | A function with `call`: the tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                     |
-| `invalid_input`                                | The input does not match the input schema, or a template names a value the input lacks                                                                                                                |
+| `invalid_input`                                | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads, as `money` refuses text: `The message cannot be rendered with this input`  |
 | `conflict`, kind `unworkable`                  | `to` or `from` rendered empty, as something that is not text, with a control character, or longer than 256 bytes                                                                                      |
 | `conflict`, kind `unworkable`                  | The message is longer than 8 KiB, or the arguments of `deliver` pass 16 KiB or one renders no text                                                                                                    |
 | `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass 16 KiB                                                                                                      |

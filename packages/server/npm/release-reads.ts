@@ -25,6 +25,7 @@ const pages = [...shelf.guides, ...shelf.recipes].map(({ name, text }) => [name,
 deepStrictEqual(pages, [
   ['terminology', true],
   ['workflow', true],
+  ['templates', true],
   ['schedule', true],
 ]);
 

@@ -1,0 +1,94 @@
+[
+  {
+    "body": "{{ input.value | money }}",
+    "rendering": {
+      "rendered": "$364,028"
+    }
+  },
+  {
+    "body": "{{ input.value | money }}",
+    "rendering": {
+      "rendered": "-$1,250,000"
+    }
+  },
+  {
+    "body": "{{ input.value | money }}",
+    "rendering": {
+      "rendered": "$1,234.50"
+    }
+  },
+  {
+    "body": "{{ input.value | money }}",
+    "rendering": {
+      "rendered": "$19.99"
+    }
+  },
+  {
+    "body": "{{ input.value | money }}",
+    "rendering": {
+      "failure": {
+        "reason": "failed",
+        "detail": "money takes a number, or text that is a decimal number",
+        "line": 1
+      }
+    }
+  },
+  {
+    "body": "{{ input.value | clip }}",
+    "rendering": {
+      "rendered": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    }
+  },
+  {
+    "body": "{{ input.value | clip: 5 }}",
+    "rendering": {
+      "rendered": "Hello…"
+    }
+  },
+  {
+    "body": "{{ input.value | clip: 2 }}",
+    "rendering": {
+      "rendered": "😀😀…"
+    }
+  },
+  {
+    "body": "{{ input.value | clip: 3 }}",
+    "rendering": {
+      "rendered": "123…"
+    }
+  },
+  {
+    "body": "{{ input.value | clip: 3 }}",
+    "rendering": {
+      "rendered": ""
+    }
+  },
+  {
+    "body": "{{ input.value | clip: -1 }}",
+    "rendering": {
+      "failure": {
+        "reason": "failed",
+        "detail": "clip takes a length in characters, a whole number of 0 or more",
+        "line": 1
+      }
+    }
+  },
+  {
+    "body": "{{ input.value | words }}",
+    "rendering": {
+      "rendered": "4"
+    }
+  },
+  {
+    "body": "{{ input.value | words }}",
+    "rendering": {
+      "rendered": "0"
+    }
+  },
+  {
+    "body": "{% assign n = input.value | words %}{% if n > 2 %}long{% else %}short{% endif %}",
+    "rendering": {
+      "rendered": "long"
+    }
+  }
+]

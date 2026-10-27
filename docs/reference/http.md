@@ -53,7 +53,7 @@ A client library can be generated from the document, and a gateway that accepts 
 
 ### The guides
 
-`GET /v1/guides/{guide}` returns one of the guides that the MCP endpoints serve as `guide://{guide}`, with the same text. The guides say what the words mean, give the format of each definition type, and hold the recipes for common tasks. The OpenAPI document lists their names. Each guide has its own path. So the server treats an unknown guide name like any other path it does not serve: without a key, the response is `401`.
+`GET /v1/guides/{guide}` returns one of the guides that the MCP endpoints serve as `guide://{guide}`, with the same text. The guides say what the words mean, give the format of each definition type and the filters of every template, and hold the recipes for common tasks. The OpenAPI document lists their names. Each guide has its own path. So the server treats an unknown guide name like any other path it does not serve: without a key, the response is `401`.
 
 ### The API catalog
 

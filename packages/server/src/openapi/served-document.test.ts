@@ -198,7 +198,7 @@ describe('the guides over HTTP', () => {
       ),
     );
 
-    expect(resources).toHaveLength(11);
+    expect(resources).toHaveLength(12);
     expect(overHttp).toEqual(resources);
   });
 });
