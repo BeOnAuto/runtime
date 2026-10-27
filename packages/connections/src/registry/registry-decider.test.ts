@@ -69,6 +69,7 @@ const connected: ConnectionEvent = {
 const breaking: ConnectionCommand = {
   type: 'break',
   connection: 'crm-id',
+  connected_at: acted.at,
   reason: 'The credential of the connection crm cannot be read',
   ...acted,
 };
@@ -92,6 +93,12 @@ describe('breaking a connection whose credential cannot be read', () => {
       Result.succeed([]),
       Result.succeed([]),
     ]);
+  });
+
+  it('records nothing for a connection connected again since the use that found it broken', () => {
+    const foundAnHourBefore: ConnectionCommand = { ...breaking, connected_at: '2026-10-15T13:00:00.000Z' };
+
+    expect(decided(foundAnHourBefore, crmAdded, connected)).toEqual(Result.succeed([]));
   });
 });
 

@@ -70,7 +70,7 @@ const unavailableFields = {
   unavailable: Schema.String.annotate({ description: 'Why the server could not be asked for its tools, in words' }),
   because: UnavailableBecauseSchema.annotate({
     description:
-      'key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, so it is removed and added again, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work',
+      'key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work',
   }),
 };
 

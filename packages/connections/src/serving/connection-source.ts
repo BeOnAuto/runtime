@@ -14,7 +14,14 @@ import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst, type KeptConnection } from '../registry/registry.ts';
-import { consentAuthOf, givenOf, loggedCauses, notAllowed } from './given-credentials.ts';
+import {
+  connectedAtOf,
+  consentAuthOf,
+  credentialRefusedOf,
+  givenOf,
+  loggedCauses,
+  notAllowed,
+} from './given-credentials.ts';
 import type { Serving, ServingServices } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
@@ -51,7 +58,11 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
       return yield* Effect.fail(unchecked(connection.name, read.failure));
     }
     const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionServerSettings));
-    return { settings: auth === undefined ? settings : { ...settings, auth }, reaches: reachesUnder(policy) };
+    return {
+      settings: auth === undefined ? settings : { ...settings, auth },
+      reaches: reachesUnder(policy),
+      refused: credentialRefusedOf(serving, yield* Effect.context()),
+    };
   });
 }
 
@@ -73,7 +84,10 @@ function orgConnectionOf(serving: Serving): OrgConnection {
           unready: { because: 'connection_broken', detail: Option.getOrThrow(Option.fromNullishOr(connection.broken)) },
         },
       }
-    : { ...serves, state: { status: 'connected', server: preparedServer(serving) } };
+    : {
+        ...serves,
+        state: { status: 'connected', connectedAt: connectedAtOf(connection), server: preparedServer(serving) },
+      };
 }
 
 export function makeConnectionSource(services: ServingServices): ConnectionSource {

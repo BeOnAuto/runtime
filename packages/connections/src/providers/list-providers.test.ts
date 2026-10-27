@@ -188,7 +188,8 @@ describe('whether a caller may add', () => {
     ]).toEqual([
       {
         may_add: false,
-        refusal: 'A connection is added by a person, through an agent signed in as them, and a key cannot add one',
+        refusal:
+          'A connection is added by a person, through an agent signed in as them, and a key cannot add or reconnect one',
       },
       {
         may_add: false,

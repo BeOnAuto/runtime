@@ -137,3 +137,42 @@ describe('an answer of an HTTP API that fails its call', () => {
     expect(settled).toHaveProperty('error');
   });
 });
+
+describe('an answer of an HTTP API that refuses the scope of its credential', () => {
+  it('of 403 whose challenge or body names insufficient_scope is a failure of the call naming the scope the challenge names', async () => {
+    const statuses = [
+      new Response('no', {
+        status: 403,
+        headers: { 'www-authenticate': 'Bearer error="insufficient_scope", scope="notes.write"' },
+      }),
+      new Response('{"error":"insufficient_scope"}', { status: 403 }),
+    ];
+
+    const settled = await Promise.all(statuses.map((response) => settledOf(response, answering)));
+
+    expect(settled.map((each) => failingOf(each))).toEqual([
+      [
+        {
+          kind: 'scope_lacking',
+          message:
+            'The tool server answered HTTP 403: the credential lacks the scope notes.write this request needs; a credential granted that scope would allow it',
+        },
+        null,
+      ],
+      [
+        {
+          kind: 'scope_lacking',
+          message:
+            'The tool server answered HTTP 403: the credential lacks a scope this request needs; a credential granted that scope would allow it',
+        },
+        null,
+      ],
+    ]);
+  });
+
+  it('of 403 for another reason is an error result carrying its body', async () => {
+    expect(await resultsOf(new Response('{"error":"forbidden"}', { status: 403 }))).toEqual([
+      { content: [{ type: 'text', text: '{"error":"forbidden"}' }], isError: true },
+    ]);
+  });
+});

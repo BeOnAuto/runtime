@@ -1242,12 +1242,13 @@
                                   "rate_limited",
                                   "unreachable",
                                   "key_refused",
+                                  "scope_lacking",
                                   "connection_pending",
                                   "connection_broken",
                                   "connection_not_allowed",
                                   "connection_unavailable"
                                 ],
-                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, so it is removed and added again, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
+                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
                               }
                             },
                             "required": [
@@ -1877,7 +1878,14 @@
                         "expires_at"
                       ],
                       "additionalProperties": false,
-                      "description": "The link that approves the connection, while it is pending and the link lasts"
+                      "description": "The link that approves the connection, while it lasts and is not used up"
+                    },
+                    "link_ran_out": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ],
+                      "description": "Answered after the link: the link offered ran out unused, so the connection stands as it was"
                     }
                   },
                   "required": [
@@ -3155,11 +3163,451 @@
         ]
       }
     },
+    "/orgs/{org}/connections/{id}/link": {
+      "post": {
+        "operationId": "reconnect_connection",
+        "summary": "Reconnect connection",
+        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, rather than removing it and adding it again. It answers the connection with the link, which the person who added it opens within ten minutes, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/reconnect_connection/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/reconnect_connection/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name a function gives the connection in server/tool"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mcp",
+                        "openapi"
+                      ],
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL of the MCP server"
+                        },
+                        "document": {
+                          "type": "string",
+                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                        },
+                        "base_url": {
+                          "type": "string",
+                          "description": "The https URL the API's calls go to, in place of its document's"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Headers sent with each request, never a secret or a reference"
+                        },
+                        "query_params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Query parameters sent with each call, never a secret or a reference"
+                        },
+                        "allowed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The tools a function may name; every tool when left out"
+                        },
+                        "playbooks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The playbooks that may use it, by id; every one when left out"
+                        },
+                        "record_content": {
+                          "type": "boolean",
+                          "description": "Whether calls are kept whole in the playbook's history; true when left out"
+                        },
+                        "request_id": {
+                          "type": "string",
+                          "description": "The header or result metadata key of the server's id of a call"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The tool server, without its credential"
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "reference",
+                            "secret",
+                            "client_credentials",
+                            "authorization"
+                          ]
+                        },
+                        "variable": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For secret and reference, the header, query parameter or security scheme the value is sent as"
+                        },
+                        "in": {
+                          "type": "string",
+                          "enum": [
+                            "header",
+                            "query",
+                            "security"
+                          ],
+                          "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
+                        },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                        },
+                        "client_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "auto",
+                            "metadata_document",
+                            "dynamic"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "connected",
+                        "broken",
+                        "removed"
+                      ],
+                      "description": "pending until it is approved and its credential given, connected, broken or removed"
+                    },
+                    "added_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
+                    },
+                    "added_at": {
+                      "type": "string",
+                      "description": "When it was added, in ISO 8601 UTC"
+                    },
+                    "connected_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was connected, in ISO 8601 UTC"
+                    },
+                    "connected_by": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
+                    },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "credential_ends_with": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value"
+                    },
+                    "broken": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why it is broken, while it is"
+                    },
+                    "connect": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "Studio's page, where the person approves the connection"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "description": "When the link expires, in ISO 8601 UTC"
+                        }
+                      },
+                      "required": [
+                        "url",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The link that approves the connection, while it lasts and is not used up"
+                    },
+                    "link_ran_out": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ],
+                      "description": "Answered after the link: the link offered ran out unused, so the connection stands as it was"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "provider",
+                    "placeholders",
+                    "entry",
+                    "credential",
+                    "status",
+                    "added_by",
+                    "added_at",
+                    "connected_at",
+                    "connected_by",
+                    "granted_scope",
+                    "credential_ends_with",
+                    "broken"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The connection, and the link that approves it while there is one to open"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/connections/{id}/link/{token}": {
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for ten minutes from when add_connection gave it, until the connection is approved. A token that is unknown, used up or expired is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for ten minutes from when add_connection or reconnect_connection gave it, until the connection is approved. A token that is unknown, used up or expired is answered as not found.",
         "tags": [
           "connections"
         ],
@@ -3185,7 +3633,7 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "description": "The token of the link add_connection gave"
+              "description": "The token of the link add_connection or reconnect_connection gave"
             }
           }
         ],
@@ -3658,7 +4106,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128,
-                    "description": "The token of the link add_connection gave"
+                    "description": "The token of the link add_connection or reconnect_connection gave"
                   }
                 },
                 "required": [
@@ -4097,7 +4545,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128,
-                    "description": "The token of the link add_connection gave"
+                    "description": "The token of the link add_connection or reconnect_connection gave"
                   },
                   "value": {
                     "type": "string",
@@ -4560,7 +5008,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128,
-                    "description": "The token of the link add_connection gave"
+                    "description": "The token of the link add_connection or reconnect_connection gave"
                   }
                 },
                 "required": [
@@ -4721,7 +5169,7 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 128,
-                        "description": "The token of the link add_connection gave"
+                        "description": "The token of the link add_connection or reconnect_connection gave"
                       },
                       "state": {
                         "type": "string",
@@ -4754,7 +5202,7 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 128,
-                        "description": "The token of the link add_connection gave"
+                        "description": "The token of the link add_connection or reconnect_connection gave"
                       },
                       "state": {
                         "type": "string",
@@ -8104,6 +8552,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -8119,7 +8568,7 @@
                                 "not_in_order",
                                 "baseline_check"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             }
                           },
                           "required": [
@@ -8184,6 +8633,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -8536,6 +8986,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -8551,7 +9002,7 @@
                                 "not_in_order",
                                 "baseline_check"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             }
                           },
                           "required": [
@@ -8616,6 +9067,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -8983,6 +9435,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -8998,7 +9451,7 @@
                                 "not_in_order",
                                 "baseline_check"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable or key_refused. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             }
                           },
                           "required": [
@@ -9063,6 +9516,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -9496,6 +9950,7 @@
                                 "rate_limited",
                                 "unreachable",
                                 "key_refused",
+                                "scope_lacking",
                                 "server_failed",
                                 "tool_error",
                                 "model_unavailable",
@@ -11258,12 +11713,13 @@
                                   "rate_limited",
                                   "unreachable",
                                   "key_refused",
+                                  "scope_lacking",
                                   "connection_pending",
                                   "connection_broken",
                                   "connection_not_allowed",
                                   "connection_unavailable"
                                 ],
-                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, so it is removed and added again, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
+                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
                               }
                             },
                             "required": [
@@ -11831,12 +12287,13 @@
                             "rate_limited",
                             "unreachable",
                             "key_refused",
+                            "scope_lacking",
                             "connection_pending",
                             "connection_broken",
                             "connection_not_allowed",
                             "connection_unavailable"
                           ],
-                          "description": "Why it could not be asked: key_refused when it did not accept the key this server gives it, which only whoever runs this server can put right; failing, rate_limited or unreachable when asking again later may work; connection_not_allowed when a rule of whoever runs this server no longer allows the connection; connection_unavailable when the credential of the connection cannot be read just now, so asking again later may work"
+                          "description": "Why it could not be asked: key_refused when it did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, so asking again will not help until a credential is granted that scope; failing, rate_limited or unreachable when asking again later may work; connection_not_allowed when a rule of whoever runs this server no longer allows the connection; connection_unavailable when the credential of the connection cannot be read just now, so asking again later may work"
                         }
                       },
                       "required": [
@@ -13602,6 +14059,7 @@
               "rate_limited",
               "unreachable",
               "key_refused",
+              "scope_lacking",
               "server_failed",
               "tool_error",
               "model_unavailable",

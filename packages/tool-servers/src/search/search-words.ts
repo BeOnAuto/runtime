@@ -67,7 +67,7 @@ function noServerInOrg(adding: Adding, offered: Offered): string {
 }
 
 function unavailableInWords(server: Extract<SearchedServer, { readonly unavailable: string }>, named: string): string {
-  if (isUnready(server.because)) {
+  if (isUnready(server.because) || server.because === 'scope_lacking') {
     return `${named} cannot be used: ${server.unavailable}.`;
   }
   return server.because === 'key_refused'

@@ -15,7 +15,7 @@ export function studioBaseFor({ studio, runtime }: ConnectPages): string {
   return studioBaseOf(studio, runtime());
 }
 
-export function connectPageOf({ studio, runtime }: ConnectPages, { org, connection, token }: PageOfALink): string {
+function connectPageOf({ studio, runtime }: ConnectPages, { org, connection, token }: PageOfALink): string {
   const server = runtime();
   const page = new URL('connect', studioBaseOf(studio, server));
   if (!studio.served) {
@@ -25,6 +25,15 @@ export function connectPageOf({ studio, runtime }: ConnectPages, { org, connecti
   page.searchParams.set('connection', connection);
   page.searchParams.set('token', token);
   return page.href;
+}
+
+export interface Connect {
+  readonly url: string;
+  readonly expires_at: string;
+}
+
+export function connectOf(pages: ConnectPages, page: PageOfALink, expiresAt: string): Connect {
+  return { url: connectPageOf(pages, page), expires_at: expiresAt };
 }
 
 export function returnAddressOf(pages: ConnectPages): string {

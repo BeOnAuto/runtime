@@ -49,7 +49,7 @@ describe('the client a connection is connected with', () => {
     expect(await finishing(h, link, consented)).toMatchObject({
       reason: 'conflict',
       detail:
-        'The client the connection files was made with is no longer registered, so the person who added it removes it and adds it again',
+        'The client the connection files was made with is no longer registered, so the person starts the consent again',
     });
   });
 });

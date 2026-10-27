@@ -92,11 +92,13 @@ describe('the plain words of dry_run', () => {
       dryRunWords?.outcome({ ...refused, caller_may: false }, asked),
       dryRunWords?.outcome({ ...refused, playbook_retired: true }, asked),
       dryRunWords?.outcome({ ...refused, allowed: false, server: { reachable: 'no', because: 'key_refused' } }, asked),
+      dryRunWords?.outcome({ ...refused, server: { reachable: 'no', because: 'scope_lacking' } }, asked),
       dryRunWords?.outcome({ ...refused, server: { reachable: 'no', because: 'unreachable' } }, asked),
     ]).toEqual([
       'A call of the search tool of graph would not be made now: the caller may not change this playbook, which a call needs.',
       'A call of the search tool of graph would not be made now: the playbook is retired and can no longer change.',
       'A call of the search tool of graph would not be made now: whoever runs this server does not allow the tool; its tool server did not accept the key this server gives it.',
+      'A call of the search tool of graph would not be made now: its tool server asks for a scope its credential lacks.',
       'A call of the search tool of graph would not be made now: its tool server could not be asked just now.',
     ]);
   });

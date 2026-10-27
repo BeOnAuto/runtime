@@ -24,6 +24,7 @@ type Keeping = Pick<Secrets, 'keep' | 'scrub'>;
 
 interface Connected {
   readonly id: string;
+  readonly connecting: string;
   readonly settings: Served;
   readonly state: ConnectedState;
 }
@@ -31,6 +32,10 @@ interface Connected {
 type Run = <A>(effect: Effect.Effect<A>) => Promise<A>;
 
 type ConnectedState = Extract<OrgConnection['state'], { readonly status: 'connected' }>;
+
+function connectingOf(id: string, { connectedAt }: ConnectedState): string {
+  return `${id} ${connectedAt}`;
+}
 
 interface HeldInAnOrg {
   readonly servers: Map<string, Promise<Prepared>>;
@@ -97,9 +102,9 @@ function isLinkedOrRefused(linking: Linking): boolean {
   return !('unread' in linking);
 }
 
-function preparedIn(holding: Holding, { id, settings, state }: Connected): Promise<Prepared> {
+function preparedIn(holding: Holding, { connecting, settings, state }: Connected): Promise<Prepared> {
   const { held, secrets, run } = holding;
-  const preparing = held.servers.get(id);
+  const preparing = held.servers.get(connecting);
   if (preparing !== undefined) {
     return preparing;
   }
@@ -113,7 +118,7 @@ function preparedIn(holding: Holding, { id, settings, state }: Connected): Promi
       onFailure: (unready): Prepared => ({ unready }),
     }),
   ).catch((error: unknown): Prepared => ({ failed: failed(error) }));
-  return keptWhile(held.servers, id, prepared, isKeptForTheProcess);
+  return keptWhile(held.servers, connecting, prepared, isKeptForTheProcess);
 }
 
 async function linkedOnce(
@@ -136,18 +141,25 @@ function linkedOf(linking: Linking): Linked {
 
 async function linkedIn(holding: Holding, connected: Connected, prepared: Promise<Prepared>): Promise<Linked> {
   const { links } = holding.held;
-  const { id } = connected;
-  const linking = links.get(id) ?? keptWhile(links, id, linkedOnce(holding, connected, prepared), isLinkedOrRefused);
+  const { connecting } = connected;
+  const linking =
+    links.get(connecting) ?? keptWhile(links, connecting, linkedOnce(holding, connected, prepared), isLinkedOrRefused);
   return linkedOf(await linking);
 }
 
+function connectingsOf({ id, state }: OrgConnection): readonly string[] {
+  return state.status === 'connected' ? [connectingOf(id, state)] : [];
+}
+
 function prunedTo(held: HeldInAnOrg, connections: readonly OrgConnection[]) {
-  const connected = new Set(connections.filter(({ state }) => state.status === 'connected').map(({ id }) => id));
-  const gone = [...new Set([...held.servers.keys(), ...held.links.keys()])].filter((id) => !connected.has(id));
-  const stopping = gone.flatMap((id) => {
-    const link = held.links.get(id);
-    held.servers.delete(id);
-    held.links.delete(id);
+  const connected = new Set(connections.flatMap((connection) => connectingsOf(connection)));
+  const gone = [...new Set([...held.servers.keys(), ...held.links.keys()])].filter(
+    (connecting) => !connected.has(connecting),
+  );
+  const stopping = gone.flatMap((connecting) => {
+    const link = held.links.get(connecting);
+    held.servers.delete(connecting);
+    held.links.delete(connecting);
     return link === undefined ? [] : [link];
   });
   return stoppedEach(stopping);
@@ -162,7 +174,7 @@ function serverOf(holding: Holding, { id, serving, state }: OrgConnection): OrgS
   if (state.status === 'unready') {
     return unreadyServer(settings, state.unready);
   }
-  const connected: Connected = { id, settings, state };
+  const connected: Connected = { id, connecting: connectingOf(id, state), settings, state };
   let preparing: Promise<Prepared> | undefined;
   const prepared = (): Promise<Prepared> => {
     preparing ??= preparedIn(holding, connected);

@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fakeConnections } from '../testing/fake-connections.ts';
+import { fakeConnections, refusedWords, type FakeConnection } from '../testing/fake-connections.ts';
 import { patientTiming } from '../testing/index.ts';
 import { describedAccess, reportingAccess } from '../testing/reporting-access.ts';
 import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
@@ -20,14 +20,18 @@ async function fakeServer(): Promise<FakeMcpServer> {
   return fake;
 }
 
-function connectedTo(fake: FakeMcpServer, org = 'acme') {
-  const connections = fakeConnections();
-  connections.connect(org, {
+function graphAt(fake: FakeMcpServer): FakeConnection {
+  return {
     id: 'graph-id',
     name: 'graph',
     entry: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' } },
     environment: { GRAPH_API_KEY: fakeApiKey },
-  });
+  };
+}
+
+function connectedTo(fake: FakeMcpServer, org = 'acme') {
+  const connections = fakeConnections();
+  connections.connect(org, graphAt(fake));
   const { access } = reportingAccess({}, { timing: patientTiming, connections });
   closing.push(access.close);
   return { access, connections };
@@ -203,6 +207,60 @@ describe('a connection whose credential cannot be read, and whose break could no
     expect(first).toMatchObject([{ name: 'graph', because: 'connection_broken', unavailable: unforeseen }]);
     expect(called).toMatchObject({ kind: 'unopened', refused: 'tool_not_offered', because: 'connection_broken' });
     expect([connections.credentialReads(), fake.seen()]).toEqual([2, []]);
+  });
+});
+
+async function listedAfter(rpc: string, status: number, headers?: Readonly<Record<string, string>>) {
+  const fake = await fakeServer();
+  const { access, connections } = connectedTo(fake);
+  fake.answerNextOf(rpc, status, 1, headers);
+  return { listed: await Effect.runPromise(access.listServers(alpha)), told: connections.refusalsTold() };
+}
+
+describe('a connection whose server refuses its credential as its tools are listed', () => {
+  it('tells its source, as the session opens or as the tools are asked, and is listed broken in the words the source recorded', async () => {
+    const refused = [await listedAfter('initialize', 401), await listedAfter('tools/list', 401)];
+
+    expect(refused).toMatchObject(
+      Array.from({ length: 2 }, () => ({
+        listed: [{ name: 'graph', because: 'connection_broken', unavailable: refusedWords('graph') }],
+        told: ['graph-id'],
+      })),
+    );
+  });
+
+  it('tells nothing of a scope the credential lacks, as the session opens or as the tools are asked, and is listed as lacking it in words that name it', async () => {
+    const challenge = { 'www-authenticate': 'Bearer error="insufficient_scope", scope="graph.read"' };
+
+    const lacking = [await listedAfter('initialize', 403, challenge), await listedAfter('tools/list', 403, challenge)];
+
+    expect(lacking).toEqual(
+      Array.from({ length: 2 }, () => ({
+        listed: [
+          expect.objectContaining({
+            name: 'graph',
+            because: 'scope_lacking',
+            unavailable:
+              'The tool server answered HTTP 403: the credential lacks the scope graph.read this request needs; a credential granted that scope would allow it',
+          }),
+        ],
+        told: [],
+      })),
+    );
+  });
+});
+
+describe('a connection connected again', () => {
+  it('is linked again at its next use, with its credential read again', async () => {
+    const fake = await fakeServer();
+    const { access, connections } = connectedTo(fake);
+    await Effect.runPromise(access.callOnce(searchOf('graph')));
+
+    connections.connect('acme', graphAt(fake));
+    const called = await Effect.runPromise(access.callOnce(searchOf('graph')));
+
+    expect(called).toMatchObject({ kind: 'answered', outcome: 'result' });
+    expect(connections.credentialReads()).toBe(2);
   });
 });
 

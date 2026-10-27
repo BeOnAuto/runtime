@@ -2,6 +2,9 @@ import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import { ignored } from './ignored.ts';
 import { openerOf, type LinkOptions } from './link-openers.ts';
 import type { ServerClient } from './server-client.ts';
+import { ConnectionBroken, isCredentialRefused } from './server-failures.ts';
+
+export type CredentialRefused = () => Promise<string>;
 
 export interface ServerLink {
   readonly settings: LinkedServerSettings;
@@ -51,8 +54,41 @@ async function usedOrForgotten(held: HeldClient): Promise<ServerClient> {
   }
 }
 
-export function serverLink(settings: LinkedServerSettings, options: LinkOptions): ServerLink {
-  const held = heldClient(openerOf(settings, options));
+async function brokenOrAsIs(refused: CredentialRefused, error: unknown): Promise<unknown> {
+  return isCredentialRefused(error) ? new ConnectionBroken(await refused()) : error;
+}
+
+async function failedOnceTold(refused: CredentialRefused, error: unknown): Promise<never> {
+  throw await brokenOrAsIs(refused, error);
+}
+
+function tellingRefusals(client: ServerClient, refused: CredentialRefused): ServerClient {
+  return {
+    ...client,
+    call: async (calling) => {
+      const settled = await client.call(calling);
+      return 'error' in settled ? { ...settled, error: await brokenOrAsIs(refused, settled.error) } : settled;
+    },
+    listTools: (timeoutMs) => client.listTools(timeoutMs).catch((error: unknown) => failedOnceTold(refused, error)),
+  };
+}
+
+function refusalsTold(open: () => Promise<ServerClient>, refused?: CredentialRefused): () => Promise<ServerClient> {
+  return refused === undefined
+    ? open
+    : () =>
+        open().then(
+          (client) => tellingRefusals(client, refused),
+          (error: unknown) => failedOnceTold(refused, error),
+        );
+}
+
+export function serverLink(
+  settings: LinkedServerSettings,
+  options: LinkOptions,
+  credentialRefused?: CredentialRefused,
+): ServerLink {
+  const held = heldClient(refusalsTold(openerOf(settings, options), credentialRefused));
   let holders = 0;
   return {
     settings,

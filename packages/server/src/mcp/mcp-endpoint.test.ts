@@ -42,7 +42,7 @@ const definitionTools = [
   'send_run_event',
 ];
 
-const connectionTools = ['add_connection', 'list_connections', 'remove_connection'];
+const connectionTools = ['add_connection', 'list_connections', 'reconnect_connection', 'remove_connection'];
 
 const orgTools = [...playbookTools, 'list_models', 'search', ...connectionTools, 'activate_license'];
 

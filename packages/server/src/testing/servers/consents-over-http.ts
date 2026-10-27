@@ -1,3 +1,5 @@
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { consentSecret } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 
 import { aPortNothingListensOn } from '../processes/free-port.ts';
@@ -66,4 +68,26 @@ export async function connectedByConsent(served: ReasoningServer, consenting: Co
     body: { token, code, state, iss },
   });
   return id;
+}
+
+export function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> {
+  return {
+    CONNECTIONS: JSON.stringify({
+      registered_clients: [
+        { issuers: [fake.origin], client_id: 'auto-runtime', client_secret: '${FILES_CLIENT_SECRET}' },
+      ],
+      providers: [
+        {
+          name: 'files',
+          title: 'Files',
+          description: 'Read the files of an account.',
+          website: 'https://developer.files.example.com',
+          type: 'mcp',
+          url: fake.url,
+          credentials: [{ kind: 'authorization', issuer: fake.origin, scope: 'files.read' }],
+        },
+      ],
+    }),
+    FILES_CLIENT_SECRET: consentSecret,
+  };
 }

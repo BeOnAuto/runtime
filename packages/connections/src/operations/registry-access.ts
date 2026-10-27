@@ -10,10 +10,11 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
+import { isTheLinkOf } from '../links/link-token.ts';
 import type { GivenAddition } from '../providers/provider-additions.ts';
 import type { ConnectionAddition, ConnectionCommandData } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
-import { findConnection, openLinkOf } from '../registry/registry-lookup.ts';
+import { findConnection } from '../registry/registry-lookup.ts';
 import type { KeptConnection, OpenLink, Registry } from '../registry/registry.ts';
 import type { SecretKeeping } from './connection-services.ts';
 import { shownConnection } from './shown-connections.ts';
@@ -29,14 +30,25 @@ export function foundConnection(id: string): Effect.Effect<KeptConnection, NotFo
 
 export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerOf);
 
+interface OfferStanding {
+  readonly connect?: { readonly url: string; readonly expires_at: string };
+  readonly link_ran_out?: true;
+}
+
+function standingOfTheOffer({ link }: KeptConnection, url: string, at: string): OfferStanding {
+  if (link === undefined || !isTheLinkOf(link, url)) {
+    return {};
+  }
+  return link.expires_at > at ? { connect: { url, expires_at: link.expires_at } } : { link_ran_out: true };
+}
+
 export const standingAfterTheLink = Effect.fnUntraced(function* (
   secrets: Pick<SecretKeeping, 'endingsOf'>,
   { id, url }: OfferedLink,
 ) {
   const kept = yield* Effect.orDie(foundConnection(id));
   const connection = yield* shownConnection(secrets, kept);
-  const link = openLinkOf(kept, DateTime.formatIso(yield* DateTime.now));
-  return link === undefined ? connection : { ...connection, connect: { url, expires_at: link.expires_at } };
+  return { ...connection, ...standingOfTheOffer(kept, url, DateTime.formatIso(yield* DateTime.now)) };
 });
 
 export const actedNow = Effect.gen(function* () {

@@ -30,7 +30,7 @@ You connect as yourself. The connection reaches your own meetings, recordings an
 4. Zoom asks you to sign in and to allow access. Sign in with your Zoom account and allow it.
 5. Zoom sends you back to Studio, which finishes the connection and shows Zoom as connected. Your agent sees it connected too.
 
-If the link runs out before Zoom is connected, ask your agent to remove the connection and add it again, for a new link.
+If the link runs out before Zoom is connected, ask your agent to reconnect it, for a new link.
 
 ### What you see when you allow access
 
@@ -76,7 +76,7 @@ Auto then asks Zoom to revoke the connection's tokens and forgets them, and no p
 
 ### At Zoom
 
-Sign in to the [Zoom App Marketplace](https://marketplace.zoom.us), open Manage, then Added Apps, and remove the app you allowed. Zoom then refuses the connection's tokens, and the next time Auto uses them the connection breaks: Studio shows it as broken. Remove it there, or ask your agent to. A broken connection cannot be mended, so to use Zoom again, add it again.
+Sign in to the [Zoom App Marketplace](https://marketplace.zoom.us), open Manage, then Added Apps, and remove the app you allowed. Zoom then refuses the connection's tokens, and the next time Auto uses them the connection breaks: Studio shows it as needing attention, with why. To use Zoom again, reconnect it there, or ask your agent to, and sign in to Zoom and allow access again; otherwise remove it.
 
 ### What remains
 

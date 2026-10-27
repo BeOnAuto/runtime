@@ -161,7 +161,7 @@ When they confirm, start again at [Find the tools](#find-the-tools).
 ## If something goes wrong
 
 - **`search` lists no server.** No tool server serves your playbook yet. [Connect a provider](#connect-a-provider) it lists, or send the request in [Ask for a tool server](#ask-for-a-tool-server).
-- **`search` shows a server as unavailable.** Its `because` says why. `unreachable`, `failing` or `rate_limited` may pass, so try again later. `key_refused` means the server did not accept Auto's key. If it does not pass, send the `because` to whoever runs Auto; [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the fixes.
+- **`search` shows a server as unavailable.** Its `because` says why. `unreachable`, `failing` or `rate_limited` may pass, so try again later. `key_refused` means the server did not accept Auto's key, and `scope_lacking` that its credential lacks a scope the words name. If it does not pass, send the `because` to whoever runs Auto; [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the fixes.
 - **A tool is missing.** The server's entry does not allow it, or the server does not list it. Ask whoever runs Auto to add it to the entry's `allowed`.
 - **A call returns an error.** The model reads it as a tool error and may recover. Check the arguments with `dry_run`, or call the tool once with `execute`. With the filesystem server, `ENOENT` means no such file: give the file name alone, as `list_directory` shows it. A name that starts with `briefs/` points to a folder inside `briefs`.
 - **A run ends `unavailable` before the model is called.** The function names a tool that the playbook's servers do not offer, or the server cannot be used. Compare `tools` with what `search` shows.

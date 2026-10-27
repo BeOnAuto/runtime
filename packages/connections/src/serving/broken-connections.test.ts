@@ -1,25 +1,12 @@
 import { Conflict } from '@on.auto/operations';
 import type { ConnectionSource, ConnectionUnready, OrgConnection } from '@on.auto/tool-servers';
-import { Effect, Logger, Option, type Layer } from 'effect';
+import { Effect, Logger, Redacted, type Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
-import { added, crm, notes } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
-import { makeConnectionSource } from './connection-source.ts';
-import type { ServingServices } from './serving-services.ts';
-
-function sourceOf(h: Harness, changes: Partial<ServingServices> = {}): ConnectionSource {
-  return makeConnectionSource({
-    registry: h.ledger.service,
-    secrets: h.secrets,
-    policy: connectionPolicyOf({}),
-    variables: new Map(),
-    modelProviders: ['openai'],
-    ...fixtureServing,
-    ...changes,
-  });
-}
+import { added, billing, crm, notes, reconnected } from '../testing/additions.ts';
+import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { preparedOf, servedAs as connectionOf, sourceOver as sourceOf } from '../testing/served-connections.ts';
 
 function policyOf(fields: ConnectionPolicyFields) {
   return { policy: connectionPolicyOf(fields) };
@@ -29,12 +16,6 @@ async function connectedCrm(h: Harness): Promise<string> {
   const { id, token } = await added(h, crm);
   await h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value: 'Bearer crm-key-0f3c9a71' });
   return id;
-}
-
-async function connectionOf(source: ConnectionSource, id: string): Promise<OrgConnection> {
-  return Option.getOrThrow(
-    Option.fromNullishOr((await Effect.runPromise(source.connectionsOf('acme'))).find((each) => each.id === id)),
-  );
 }
 
 function refusalIn(
@@ -82,7 +63,7 @@ function goneCounted(h: Harness) {
 }
 
 const brokenReason =
-  'The credential of the connection crm is no longer in the secret store, so the person who added it removes it and adds it again';
+  'The credential of the connection crm is no longer in the secret store, so the person who added it reconnects it';
 
 describe('a connection whose credential the secret store no longer holds', () => {
   it('is broken by the runtime with the sentence of why, and answered broken from then on', async () => {
@@ -187,6 +168,107 @@ describe('a break the registry does not take', () => {
     const refused = await refusalIn(listed, logging);
 
     expect([refused.because, lines]).toEqual(['connection_broken', []]);
+  });
+});
+
+const keyRefused =
+  'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
+
+const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
+
+async function breaksOf(h: Harness) {
+  return (await h.facts()).filter(({ type }) => type === 'connection_broken');
+}
+
+describe('a connection whose server refuses the credential it holds', () => {
+  it('is broken by the runtime in words that say to reconnect it, once, and answered broken from then on', async () => {
+    const h = harness();
+    const id = await connectedCrm(h);
+    const server = await preparedOf(sourceOf(h), id);
+
+    const answered = [await Effect.runPromise(server.refused), await Effect.runPromise(server.refused)];
+
+    expect(answered).toEqual([keyRefused, keyRefused]);
+    expect(await breaksOf(h)).toMatchObject([
+      { data: { connection: id, reason: keyRefused }, context: { by: 'runtime' } },
+    ]);
+    expect((await connectionOf(sourceOf(h), id)).state).toEqual({
+      status: 'unready',
+      unready: { because: 'connection_broken', detail: keyRefused },
+    });
+  });
+
+  it('is left connected where the refusal came from a use made before the person connected it again', async () => {
+    const h = harness();
+    const id = await connectedCrm(h);
+    const before = await preparedOf(sourceOf(h), id);
+    const { token } = await reconnected(h, id, fiveMinutesLater);
+    await h.call(
+      operationNamed(h.operations, 'give_credential'),
+      ada,
+      { id, token, value: 'Bearer crm-key-7d2e4b19' },
+      fiveMinutesLater,
+    );
+
+    await Effect.runPromise(before.refused);
+
+    expect(await breaksOf(h)).toEqual([]);
+    expect((await connectionOf(sourceOf(h), id)).state.status).toBe('connected');
+  });
+});
+
+describe('a connection of client credentials whose server refuses them', () => {
+  it('is broken in the words of a refused credential, which say to reconnect it', async () => {
+    const h = harness();
+    const { id, token } = await added(h, billing);
+    await h.call(operationNamed(h.operations, 'give_credential'), ada, {
+      id,
+      token,
+      client_secret: 'billing-secret-4e1a',
+    });
+
+    expect(await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused)).toBe(keyRefused);
+  });
+});
+
+describe('a connection whose server asks for a credential it does not hold', () => {
+  it('is broken in words that say to remove it and add it again with one', async () => {
+    const h = harness();
+    const { id, token } = await added(h, notes);
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
+
+    await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused);
+
+    expect(await breaksOf(h)).toMatchObject([
+      {
+        data: {
+          reason:
+            'The tool server answered HTTP 401: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one',
+        },
+      },
+    ]);
+  });
+});
+
+describe('a connection of a reference whose server refuses the value of its variable', () => {
+  it('is broken in words that name the variable, for whoever runs the runtime to set right and the person to reconnect', async () => {
+    const listing = policyOf({ variables: ['NOTES_API_KEY'] });
+    const h = harness(listing);
+    const credential = { kind: 'reference', variable: 'NOTES_API_KEY', name: 'X-Api-Key', in: 'header' };
+    const { id, token } = await added(h, { ...notes, credential });
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
+    const variables = new Map([['NOTES_API_KEY', Redacted.make('notes-key-5b2e9d')]]);
+
+    await Effect.runPromise((await preparedOf(sourceOf(h, { ...listing, variables }), id)).refused);
+
+    expect(await breaksOf(h)).toMatchObject([
+      {
+        data: {
+          reason:
+            'The tool server answered HTTP 401: it refused the value of the variable NOTES_API_KEY, so whoever runs the runtime sets it right and starts it again, and the person who added the connection reconnects it',
+        },
+      },
+    ]);
   });
 });
 

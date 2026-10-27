@@ -1,7 +1,16 @@
-import { INVALID_PARAMS, ProtocolError, SdkError, SdkErrorCode, SdkHttpError } from '@modelcontextprotocol/client';
+import {
+  INVALID_PARAMS,
+  InsufficientScopeError,
+  ProtocolError,
+  SdkError,
+  SdkErrorCode,
+  SdkHttpError,
+} from '@modelcontextprotocol/client';
 import { describe, expect, it } from 'vitest';
 
-import { failureOf, untrustedCertificate } from './server-failures.ts';
+import { AnsweredStatus } from '../openapi/answered-status.ts';
+import { ScopeLacking } from '../openapi/scope-lacking.ts';
+import { ConnectionBroken, failureOf, isCredentialRefused, untrustedCertificate } from './server-failures.ts';
 
 const answered = (status: number) =>
   new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, `Error POSTing to endpoint: ${status}`, { status });
@@ -58,5 +67,61 @@ describe('what a server failure is', () => {
     });
     expect(failureOf(caused('EPROTO'))).toEqual({ kind: 'failing', message: 'fetch failed' });
     expect(failureOf('a string thrown')).toEqual({ kind: 'failing', message: 'a string thrown' });
+  });
+});
+
+describe('what a refusal of the credential is', () => {
+  it('is a 401 alone, whether the MCP client or an HTTP API answered it', () => {
+    expect(
+      [answered(401), new AnsweredStatus(401), answered(403), answered(429), answered(500)].map((error: unknown) =>
+        isCredentialRefused(error),
+      ),
+    ).toEqual([true, true, false, false, false]);
+  });
+
+  it('is said, once a connection is broken by it, in the words its source recorded', () => {
+    expect(failureOf(new ConnectionBroken('The credential of the connection crm was refused'))).toEqual({
+      kind: 'broken',
+      message: 'The credential of the connection crm was refused',
+    });
+  });
+});
+
+describe('what a scope the credential lacks is', () => {
+  it('is a failure of its own kind that names the scope where the challenge names one, and that a credential granted it would be let through', () => {
+    const scopeInTheBody = new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, 'Error POSTing to endpoint', {
+      status: 403,
+      text: '{"error":"insufficient_scope"}',
+    });
+    const named =
+      'The tool server answered HTTP 403: the credential lacks the scope files.write this request needs; a credential granted that scope would allow it';
+    const unnamed =
+      'The tool server answered HTTP 403: the credential lacks a scope this request needs; a credential granted that scope would allow it';
+
+    expect(
+      [
+        new InsufficientScopeError({ requiredScope: 'files.write' }),
+        new InsufficientScopeError({}),
+        scopeInTheBody,
+        new ScopeLacking(named),
+      ].map((error: unknown) => failureOf(error)),
+    ).toEqual([
+      { kind: 'scope_lacking', message: named },
+      { kind: 'scope_lacking', message: unnamed },
+      { kind: 'scope_lacking', message: unnamed },
+      { kind: 'scope_lacking', message: named },
+    ]);
+  });
+
+  it('is not a 403 that names another error', () => {
+    const refusedForAnotherReason = new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, 'Error', {
+      status: 403,
+      text: '{"error":"forbidden"}',
+    });
+
+    expect(failureOf(refusedForAnotherReason)).toEqual({
+      kind: 'failing',
+      message: 'The tool server answered HTTP 403',
+    });
   });
 });

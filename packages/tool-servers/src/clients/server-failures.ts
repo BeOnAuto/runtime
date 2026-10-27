@@ -1,8 +1,16 @@
-import { INVALID_PARAMS, ProtocolError, SdkError, SdkErrorCode, SdkHttpError } from '@modelcontextprotocol/client';
+import {
+  INVALID_PARAMS,
+  InsufficientScopeError,
+  ProtocolError,
+  SdkError,
+  SdkErrorCode,
+  SdkHttpError,
+} from '@modelcontextprotocol/client';
 import { causesOf, codesOf, HostRefused, isUntrustedCertificate } from '@on.auto/outbound';
 
 import { AnsweredStatus } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
+import { ScopeLacking, scopeLackingIn, scopeLackingWords } from '../openapi/scope-lacking.ts';
 
 export type FailureKind =
   | 'unreachable'
@@ -13,6 +21,8 @@ export type FailureKind =
   | 'timed_out'
   | 'refused'
   | 'key_refused'
+  | 'scope_lacking'
+  | 'broken'
   | 'too_large'
   | 'not_allowed';
 
@@ -87,12 +97,38 @@ function networkFailure(error: unknown): ServerFailure {
     : { kind: 'failing', message: error instanceof Error ? error.message : String(error) };
 }
 
-function knownFailureOf(error: unknown): ServerFailure {
-  if (error instanceof SdkHttpError || error instanceof AnsweredStatus) {
+export class ConnectionBroken extends Error {}
+
+function sdkHttpFailure(status: number, body: unknown): ServerFailure {
+  const lacking = scopeLackingIn({ status, body });
+  return lacking === undefined ? httpFailure(status) : { kind: 'scope_lacking', message: lacking };
+}
+
+function answeredFailureOf(error: unknown): ServerFailure | undefined {
+  if (error instanceof AnsweredStatus) {
     return httpFailure(error.status);
+  }
+  if (error instanceof SdkHttpError) {
+    return sdkHttpFailure(error.status, error.data['text']);
+  }
+  if (error instanceof ScopeLacking) {
+    return { kind: 'scope_lacking', message: error.message };
+  }
+  return error instanceof InsufficientScopeError
+    ? { kind: 'scope_lacking', message: scopeLackingWords(error.requiredScope) }
+    : undefined;
+}
+
+function knownFailureOf(error: unknown): ServerFailure {
+  const answered = answeredFailureOf(error);
+  if (answered !== undefined) {
+    return answered;
   }
   if (error instanceof ArgumentsRefused) {
     return { kind: 'refused', message: error.message };
+  }
+  if (error instanceof ConnectionBroken) {
+    return { kind: 'broken', message: error.message };
   }
   if (error instanceof SdkError) {
     return sdkFailure(error.code, error.message);
@@ -103,4 +139,8 @@ function knownFailureOf(error: unknown): ServerFailure {
 export function failureOf(error: unknown): ServerFailure {
   const rule = refusedRuleIn(error);
   return rule === undefined ? knownFailureOf(error) : { kind: 'not_allowed', message: rule };
+}
+
+export function isCredentialRefused(error: unknown): boolean {
+  return failureOf(error).kind === 'key_refused';
 }

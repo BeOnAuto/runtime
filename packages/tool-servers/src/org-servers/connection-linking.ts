@@ -1,6 +1,6 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { fetchWithin } from '@on.auto/outbound';
-import { Predicate, Result } from 'effect';
+import { Effect, Predicate, Result } from 'effect';
 
 import type { LinkOptions } from '../clients/link-openers.ts';
 import { serverLink } from '../clients/server-links.ts';
@@ -51,5 +51,8 @@ export async function connectionLinkOf(
   const fetch = fetchWithin(linking.options.fetch, server.reaches);
   const settings: ConnectionServerSettings = { ...server.settings, connection: id };
   const described = await describedConnection(settings, { server, fetch, linking });
-  return 'settings' in described ? { link: serverLink(described.settings, { ...linking.options, fetch }) } : described;
+  const refused = () => Effect.runPromise(server.refused);
+  return 'settings' in described
+    ? { link: serverLink(described.settings, { ...linking.options, fetch }, refused) }
+    : described;
 }

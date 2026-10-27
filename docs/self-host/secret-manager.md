@@ -84,7 +84,7 @@ Each parameter under the prefix is a secret the runtime keeps, named by its id, 
 
 - Read a value there when you need to; the runtime is not told.
 - Do not write a value there. The runtime reads the version the secret's row names, so a version you write is never read, and its next write of the secret goes past it. To change a connection's credential, add the connection again.
-- Deleting a parameter there loses the secret for good. The connection whose secret it held breaks at its next use, `connection_broken`, and asks to be added again, as it would if its row were gone from the ledger. Deleting the parameter of the key the runtime keeps for itself, `<prefix>/<own_key_id>`, stops every later start.
+- Deleting a parameter there loses the secret for good. The connection whose secret it held breaks at its next use, `connection_broken`, and asks to be reconnected, as it would if its row were gone from the ledger. Deleting the parameter of the key the runtime keeps for itself, `<prefix>/<own_key_id>`, stops every later start.
 - Delete a parameter there only when the server's warning names it, `A value no secret names any more is left where it was kept, until it is deleted there: AWS Parameter Store could not delete the parameter <name>: …`, as a removed connection whose delete failed leaves one, or when it is a probe left behind, `<prefix>/probe-<id>`, which a start interrupted between its write and its delete leaves.
 
 ## Limits

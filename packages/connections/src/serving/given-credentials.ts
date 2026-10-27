@@ -1,6 +1,7 @@
 import { required } from '@on.auto/operations';
 import {
   keptTokensIn,
+  type ConnectionServer,
   type ConnectionTokens,
   type ConnectionUnready,
   type ConsentAuth,
@@ -12,8 +13,9 @@ import {
 import { DateTime, Effect, Option, type Context } from 'effect';
 
 import { consentAskedOf } from '../page/consent-asking.ts';
-import { placesNoValue } from '../registry/credential.ts';
+import { placesNoValue, type Credential } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
+import type { KeptConnection } from '../registry/registry.ts';
 import type { GivenValue } from './placed-credentials.ts';
 import type { LoggedCauses, Serving } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
@@ -30,17 +32,45 @@ export function notAllowed(detail: string): ConnectionUnready {
   return { because: 'connection_not_allowed', detail };
 }
 
-function brokenWith({ org, kept, services }: Serving, reason: string): Effect.Effect<never, ConnectionUnready> {
+export function connectedAtOf({ connected_at: connectedAt }: KeptConnection['connection']): string {
+  return Option.getOrThrow(Option.fromNullishOr(connectedAt));
+}
+
+function recordedBreak({ org, kept, services }: Serving, reason: string): Effect.Effect<void> {
+  const { id, name } = kept.connection;
+  const connectedAt = connectedAtOf(kept.connection);
   return Effect.gen(function* () {
     const at = DateTime.formatIso(yield* DateTime.now);
-    const breaking = { type: 'break', connection: kept.connection.id, reason, by: byTheRuntime, at } as const;
+    const breaking = {
+      type: 'break',
+      connection: id,
+      connected_at: connectedAt,
+      reason,
+      by: byTheRuntime,
+      at,
+    } as const;
     yield* services.registry.execute(connectionsStreamOfOrg(org), registryDecider, breaking).pipe(
       Effect.orDie,
-      Effect.catchCause((cause) => Effect.logError(servingWords.unrecorded(kept.connection.name), cause)),
+      Effect.catchCause((cause) => Effect.logError(servingWords.unrecorded(name), cause)),
     );
-    const unready: ConnectionUnready = { because: 'connection_broken', detail: reason };
-    return yield* Effect.fail(unready);
   });
+}
+
+function brokenWith(serving: Serving, reason: string): Effect.Effect<never, ConnectionUnready> {
+  const unready: ConnectionUnready = { because: 'connection_broken', detail: reason };
+  return Effect.andThen(recordedBreak(serving, reason), Effect.fail(unready));
+}
+
+function refusedWordsOf({ kind, variable }: Credential): string {
+  if (kind === 'none') {
+    return servingWords.noneRefused;
+  }
+  return kind === 'reference' ? servingWords.referenceRefused(required(variable)) : servingWords.keyRefused;
+}
+
+export function credentialRefusedOf(serving: Serving, context: Context.Context<never>): ConnectionServer['refused'] {
+  const reason = refusedWordsOf(serving.kept.connection.credential);
+  return Effect.provideContext(Effect.as(recordedBreak(serving, reason), reason), context);
 }
 
 export function loggedCauses(): LoggedCauses {

@@ -67,6 +67,7 @@ function connectionServicesOf(settings: ServingSettings, { secrets, consent, pag
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
+    variables: settings.connectionVariables,
     pages,
     access: accessOf(settings),
   };

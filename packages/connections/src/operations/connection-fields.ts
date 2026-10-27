@@ -20,7 +20,12 @@ export const AddedSchema = Schema.Struct({
     Schema.Struct({
       url: Schema.String.annotate({ description: "Studio's page, where the person approves the connection" }),
       expires_at: ExpiresAtField,
-    }).annotate({ description: 'The link that approves the connection, while it is pending and the link lasts' }),
+    }).annotate({ description: 'The link that approves the connection, while it lasts and is not used up' }),
+  ),
+  link_ran_out: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description: 'Answered after the link: the link offered ran out unused, so the connection stands as it was',
+    }),
   ),
 }).annotate({
   identifier: 'AddedConnection',
@@ -148,5 +153,5 @@ export const ConnectionIdField = Schema.String.check(Schema.isMinLength(1)).anno
 });
 
 export const TokenField = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128)).annotate({
-  description: 'The token of the link add_connection gave',
+  description: 'The token of the link add_connection or reconnect_connection gave',
 });

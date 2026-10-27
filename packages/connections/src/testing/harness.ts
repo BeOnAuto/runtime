@@ -70,6 +70,7 @@ export interface Harness {
   readonly logged: () => readonly string[];
   readonly secrets: KeptSecrets;
   readonly operations: ConnectionOperations;
+  readonly operationsWith: (changes: Partial<ConnectionServices>) => ConnectionOperations;
   readonly call: (
     operation: { readonly registration: Runnable<'org'> },
     caller: CallerIdentity,
@@ -86,6 +87,25 @@ function loggingInto(log: (line: string) => void) {
   return Logger.layer([Logger.map(Logger.formatJson, log)]);
 }
 
+function composedOf(
+  given: Partial<ConnectionServices>,
+  { secrets, consent }: Pick<ConnectionServices, 'secrets' | 'consent'>,
+): ConnectionServices {
+  return {
+    secrets,
+    policy: connectionPolicyOf({}),
+    fileEntries: ['wiki'],
+    modelProviders: ['openai'],
+    providers: fixtureProviders,
+    providerValues: new Map(),
+    variables: new Map(),
+    pages: harnessPages,
+    access: 'people',
+    consent,
+    ...given,
+  };
+}
+
 export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...given }: HarnessOptions = {}): Harness {
   const ledger = memoryLedger();
   const secrets = keptSecrets({ beforeKeeping, mostSecretCharacters });
@@ -100,18 +120,8 @@ export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...gi
       logged.push(line);
     }),
   );
-  const operations = makeConnectionOperations({
-    secrets,
-    policy: connectionPolicyOf({}),
-    fileEntries: ['wiki'],
-    modelProviders: ['openai'],
-    providers: fixtureProviders,
-    providerValues: new Map(),
-    pages: harnessPages,
-    access: 'people',
-    consent,
-    ...given,
-  });
+  const composed = composedOf(given, { secrets, consent });
+  const operations = makeConnectionOperations(composed);
   const dispatcher = makeDispatcher([]);
   const collecting = {
     initialState: [],
@@ -125,6 +135,7 @@ export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...gi
     logged: () => [...logged],
     secrets,
     operations,
+    operationsWith: (changes) => makeConnectionOperations({ ...composed, ...changes }),
     call: (operation, caller, input = {}, at = firstMoment) =>
       Effect.runPromise(
         TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(at))).pipe(

@@ -1,14 +1,14 @@
 import { Caller, OrgContext, defineCommand, quoted } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { connectPageOf, studioBaseFor } from '../links/connect-page.ts';
+import { connectOf, studioBaseFor } from '../links/connect-page.ts';
 import { issuedLink } from '../links/link-token.ts';
 import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { admittedAdditionOf } from './admitted-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
-import { addedWordsOf, linkToOpenOf } from './connection-words.ts';
-import { additionOf, recordInRegistry, recordedCaller, standingAfterTheLink } from './registry-access.ts';
+import { addedWordsOf, linkOffering } from './connection-words.ts';
+import { additionOf, recordInRegistry, recordedCaller } from './registry-access.ts';
 
 const description = [
   "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
@@ -55,8 +55,8 @@ export function defineAddConnection({
       const kept = yield* recordInRegistry(addition).pipe(
         Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die, invalid_input: Effect.die }),
       );
-      const url = connectPageOf(pages, { org, connection: addition.connection, token });
-      return { ...kept.connection, credential_ends_with: null, connect: { url, expires_at: link.expires_at } };
+      const connect = connectOf(pages, { org, connection: addition.connection, token }, link.expires_at);
+      return { ...kept.connection, credential_ends_with: null, connect };
     }),
     plainLanguage: {
       task: 'add a connection',
@@ -64,7 +64,6 @@ export function defineAddConnection({
         name === undefined ? `connect the provider ${quoted(String(provider))}` : `add the connection ${quoted(name)}`,
       outcome: (added) => addedWordsOf(added, serving.providers),
     },
-    linkToOpen: linkToOpenOf,
-    answerAfterTheLink: { idOf: ({ id }) => id, read: (offered) => standingAfterTheLink(serving.secrets, offered) },
+    ...linkOffering(serving.secrets),
   });
 }

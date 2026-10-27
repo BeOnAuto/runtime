@@ -9,7 +9,6 @@ import type {
 } from '@on.auto/tool-servers';
 
 import { invalidAddition } from '../entries/entry-checks.ts';
-import { servingWords } from '../serving/serving-words.ts';
 
 export interface ConsentNamed {
   readonly name: string;
@@ -91,7 +90,8 @@ const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = 
     `The authorization server of the connection ${name} ${takesNoChallenge}, which Auto asks for`,
   no_client: ({ name }) =>
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
-  client_gone: ({ name }) => servingWords.clientGone(name),
+  client_gone: ({ name }) =>
+    `The client the connection ${name} was made with is no longer registered, so the person starts the consent again`,
   start_refused: ({ name }) =>
     `Auto's consent service did not start the consent of the connection ${name}: Auto has no client at its authorization server, or the service does not send people back to the Studio its link opens, so whoever runs this runtime registers a client`,
   studio_elsewhere: ({ name }) =>

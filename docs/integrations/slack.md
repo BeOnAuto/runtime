@@ -32,7 +32,7 @@ Acting as a Slack app's bot instead is the `slack-api` provider, connected with 
 4. Slack asks you to sign in, if you are not signed in already, and shows the workspace you are connecting; you can switch to another there. Check that it is the workspace you mean, and allow access.
 5. Slack sends you back to Studio, which finishes the connection and shows Slack as connected. Your agent sees it connected too.
 
-If the link runs out before Slack is connected, ask your agent to remove the connection and add it again, for a new link.
+If the link runs out before Slack is connected, ask your agent to reconnect it, for a new link.
 
 ### What you see when you allow access
 

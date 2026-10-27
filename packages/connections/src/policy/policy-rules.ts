@@ -85,7 +85,8 @@ export function adderRefusalOf(access: RuntimeAccess, caller: CallerIdentity): F
   }
   return access === 'people' && !isSignedInPerson(caller)
     ? new Forbidden({
-        detail: 'A connection is added by a person, through an agent signed in as them, and a key cannot add one',
+        detail:
+          'A connection is added by a person, through an agent signed in as them, and a key cannot add or reconnect one',
       })
     : undefined;
 }

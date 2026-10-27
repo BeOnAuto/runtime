@@ -43,11 +43,14 @@ export function aSecretHeader(name: string, url: string) {
   };
 }
 
-export async function addedConnection(server: Pick<ReasoningServer, 'call'>, body: unknown): Promise<AddedConnection> {
-  const answer = await server.call('POST', connectionsOfAcme, { body });
-  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
+export function linkIn(answered: unknown): AddedConnection {
+  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answered);
   const { token } = Schema.decodeUnknownSync(LinkSchema)(Object.fromEntries(new URL(connect.url).searchParams));
   return { id, token };
+}
+
+export async function addedConnection(server: Pick<ReasoningServer, 'call'>, body: unknown): Promise<AddedConnection> {
+  return linkIn((await server.call('POST', connectionsOfAcme, { body })).body);
 }
 
 export async function connectedWith(

@@ -15,7 +15,8 @@ describe('who adds a connection', () => {
     expect(await adding(h, notes, acmeBuilder)).toEqual({
       status: 'rejected',
       reason: 'forbidden',
-      detail: 'A connection is added by a person, through an agent signed in as them, and a key cannot add one',
+      detail:
+        'A connection is added by a person, through an agent signed in as them, and a key cannot add or reconnect one',
     });
     expect(await adding(h, notes)).toMatchObject({
       status: 'succeeded',

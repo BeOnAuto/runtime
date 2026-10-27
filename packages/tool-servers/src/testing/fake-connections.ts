@@ -35,6 +35,7 @@ interface Kept {
   readonly org: string;
   readonly connection: FakeConnection;
   readonly settings: ConnectionServerSettings;
+  readonly connectedAt: string;
 }
 
 export interface FakeConnections extends ConnectionSource {
@@ -49,16 +50,26 @@ export interface FakeConnections extends ConnectionSource {
   readonly remove: (id: string) => void;
   readonly credentialReads: () => number;
   readonly orgReads: () => number;
+  readonly refusalsTold: () => readonly string[];
 }
 
 interface Held {
   readonly kept: Map<string, Kept>;
   readonly standings: Map<string, Standing>;
   readonly credentialRead: () => void;
+  readonly refusalTold: (id: string) => void;
+}
+
+const firstConnecting = Date.parse('2026-10-15T14:00:00.000Z');
+
+const oneSecond = 1000;
+
+export function refusedWords(name: string): string {
+  return `The server of the connection ${name} refused its credential`;
 }
 
 export function pendingWords(name: string): string {
-  return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or removes it and adds it again for a new link`;
+  return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or reconnects it for a new link`;
 }
 
 function settingsOf(org: string, { name, entry, environment = {}, auth }: FakeConnection): ConnectionServerSettings {
@@ -110,8 +121,21 @@ function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<C
     }
     const refusal = refusalAtUseOf(standing);
     return refusal === undefined
-      ? Effect.succeed({ settings, reaches: connection.reaches ?? everyAddress })
+      ? Effect.succeed({
+          settings,
+          reaches: connection.reaches ?? everyAddress,
+          refused: brokenByItsServer(held, connection),
+        })
       : Effect.fail(refusal);
+  });
+}
+
+function brokenByItsServer(held: Held, { id, name }: FakeConnection): Effect.Effect<string> {
+  return Effect.sync(() => {
+    const reason = refusedWords(name);
+    held.refusalTold(id);
+    held.standings.set(id, { status: 'broken', reason });
+    return reason;
   });
 }
 
@@ -121,7 +145,7 @@ function listedOf(held: Held, kept: Kept): OrgConnection {
   const serving = { name, type, provider, orgs, playbooks, allowed, record_content, request_id };
   const unready = unreadyOf(name, standingOf(held, id));
   return unready === undefined
-    ? { id, serving, state: { status: 'connected', server: preparedOf(held, kept) } }
+    ? { id, serving, state: { status: 'connected', connectedAt: kept.connectedAt, server: preparedOf(held, kept) } }
     : { id, serving, state: { status: 'unready', unready } };
 }
 
@@ -161,15 +185,22 @@ function standingsSetIn({ standings }: Held): StandingsSet {
 export function fakeConnections(): FakeConnections {
   let credentialReads = 0;
   let orgReads = 0;
+  let keeps = 0;
+  const refusals: string[] = [];
   const held: Held = {
     kept: new Map(),
     standings: new Map(),
     credentialRead: () => {
       credentialReads += 1;
     },
+    refusalTold: (id) => {
+      refusals.push(id);
+    },
   };
   const keep = (org: string, connection: FakeConnection, standing: Standing): void => {
-    held.kept.set(connection.id, { org, connection, settings: settingsOf(org, connection) });
+    keeps += 1;
+    const connectedAt = new Date(firstConnecting + keeps * oneSecond).toISOString();
+    held.kept.set(connection.id, { org, connection, settings: settingsOf(org, connection), connectedAt });
     held.standings.set(connection.id, standing);
   };
   return {
@@ -191,5 +222,6 @@ export function fakeConnections(): FakeConnections {
     },
     credentialReads: () => credentialReads,
     orgReads: () => orgReads,
+    refusalsTold: () => [...refusals],
   };
 }
