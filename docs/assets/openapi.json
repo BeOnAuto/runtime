@@ -4048,22 +4048,7 @@
           },
           {
             "openIdConnect": [
-              "org:read"
-            ]
-          },
-          {
-            "openIdConnect": [
               "org:write"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
             ]
           }
         ]
@@ -4487,22 +4472,7 @@
           },
           {
             "openIdConnect": [
-              "org:read"
-            ]
-          },
-          {
-            "openIdConnect": [
               "org:write"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
             ]
           }
         ]
@@ -4950,22 +4920,7 @@
           },
           {
             "openIdConnect": [
-              "org:read"
-            ]
-          },
-          {
-            "openIdConnect": [
               "org:write"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
             ]
           }
         ]
@@ -5107,22 +5062,7 @@
           },
           {
             "openIdConnect": [
-              "org:read"
-            ]
-          },
-          {
-            "openIdConnect": [
               "org:write"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
             ]
           }
         ]
@@ -5597,22 +5537,7 @@
           },
           {
             "openIdConnect": [
-              "org:read"
-            ]
-          },
-          {
-            "openIdConnect": [
               "org:write"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
             ]
           }
         ]

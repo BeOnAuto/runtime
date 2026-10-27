@@ -8,7 +8,7 @@ import { Option, Schema } from 'effect';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import type { Added } from './additions.ts';
-import { acmeViewer, harness, harnessPages, operationNamed, type Harness, type HarnessOptions } from './harness.ts';
+import { acmeWriter, harness, harnessPages, operationNamed, type Harness, type HarnessOptions } from './harness.ts';
 
 export interface Called {
   readonly called: Settled<Succeeded>;
@@ -26,7 +26,7 @@ export function harnessByHand(options: HarnessOptions = {}): Harness {
 }
 
 export function readingTheLink(h: Harness, { id, token }: Added): Promise<Outcome<Succeeded>> {
-  return h.call(operationNamed(h.operations, 'read_link'), acmeViewer, { id, token });
+  return h.call(operationNamed(h.operations, 'read_link'), acmeWriter, { id, token });
 }
 
 export function askedOf(authorization: string): Readonly<Record<string, string>> {

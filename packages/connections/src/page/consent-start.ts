@@ -1,4 +1,4 @@
-import { allPermissions, defineHttpOperation, Unavailable } from '@on.auto/operations';
+import { defineHttpOperation, Unavailable } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
@@ -41,7 +41,6 @@ export function defineStartConsent(services: ConsentServices) {
     route: { method: 'POST', path: '/connections/{id}/consent' },
     body: { kind: 'json' },
     successStatus: 201,
-    permittedBy: allPermissions,
     inputSchema: LinkSchema,
     answer: { kind: 'json', outputSchema: StartedSchema },
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],

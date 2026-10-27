@@ -1,4 +1,4 @@
-import { allPermissions, defineHttpOperation, OrgContext } from '@on.auto/operations';
+import { defineHttpOperation, OrgContext } from '@on.auto/operations';
 import { Effect, Redacted } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
@@ -30,7 +30,6 @@ export function defineGiveCredential(services: GivingServices) {
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/credential' },
     body: { kind: 'json' },
-    permittedBy: allPermissions,
     inputSchema: GivingSchema,
     answer: { kind: 'json', outputSchema: ConnectionSchema },
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],

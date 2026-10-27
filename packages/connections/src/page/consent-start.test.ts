@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, crm } from '../testing/additions.ts';
 import { consentFake, consentHarnessAt, finishing, startedAt, starting, studioReturn } from '../testing/consents.ts';
-import { acmeViewer, grace, harness, operationNamed } from '../testing/harness.ts';
+import { acmeWriter, grace, harness, operationNamed } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -100,7 +100,7 @@ describe('the start of a consent, as the link shows it', () => {
     const reading = () =>
       h.call(
         operationNamed(h.operations, 'read_link'),
-        acmeViewer,
+        acmeWriter,
         { id: link.id, token: link.token },
         '2026-10-15T14:05:00.000Z',
       );
