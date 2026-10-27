@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.0](https://github.com/BeOnAuto/runtime/compare/v0.31.0...v0.32.0) (2026-10-27)
+
+
+### Features
+
+* **providers:** outlook, teams and files over microsoft graph ([#355](https://github.com/BeOnAuto/runtime/issues/355)) ([027f40a](https://github.com/BeOnAuto/runtime/commit/027f40a1bbbb2abd8b03f426ee60baa62a749081))
+
 ## [0.31.0](https://github.com/BeOnAuto/runtime/compare/v0.30.0...v0.31.0) (2026-10-27)
 
 
