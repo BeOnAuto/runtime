@@ -35,12 +35,15 @@ function billedCost({ category, payer, baseUsd, totalUsd }: ResourceCost): Fract
   return multipliedFraction(total, 100n * MICROCREDITS_PER_CREDIT, 3n);
 }
 
-export function resourceCreditUnits(costs: readonly ResourceCost[], rounding: Rounding = 'nearest'): bigint {
-  const total = costs.reduce<Fraction>((sum, cost) => addedFractions(sum, billedCost(cost)), {
+export function resourceCreditFraction(costs: readonly ResourceCost[]): Fraction {
+  return costs.reduce<Fraction>((sum, cost) => addedFractions(sum, billedCost(cost)), {
     numerator: 0n,
     denominator: 1n,
   });
-  return checkedCreditUnits(roundedFraction(total, rounding));
+}
+
+export function resourceCreditUnits(costs: readonly ResourceCost[], rounding: Rounding = 'nearest'): bigint {
+  return checkedCreditUnits(roundedFraction(resourceCreditFraction(costs), rounding));
 }
 
 export function platformCreditUnits(executions: bigint): bigint {
