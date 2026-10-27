@@ -18,6 +18,10 @@ interface SettlementWrite {
 
 function claimSettlement(write: SettlementWrite, attempt: string): Statement {
   const { reservation, clock, state, license } = write;
+  const before =
+    license === undefined
+      ? Number.MAX_SAFE_INTEGER
+      : Math.min(reservation.dispatchBefore, license.license.expiresAt, license.license.offlineDeadline);
   return statement`UPDATE meter_capacity_state SET revision = revision + 1, attempt_id = ${attempt}
     WHERE id = ${reservation.allocationId} AND revision = ${reservation.allocationRevision} AND revision < 9007199254740991
     AND (state IN ('open', 'closing') OR (${state === 'settled' ? 1 : 0} = 1 AND state = 'quarantined'))
@@ -25,7 +29,7 @@ function claimSettlement(write: SettlementWrite, attempt: string): Statement {
     AND (${license === undefined ? 1 : 0} = 1 OR EXISTS (SELECT 1 FROM meter_license_head l WHERE l.id = 1 AND l.state = 'active'
       AND l.revision = ${license?.revision ?? -1} AND l.serial = ${license?.license.serial ?? ''}))
     AND (${state === 'settled' ? 1 : 0} = 1 OR EXISTS (SELECT 1 FROM meter_clock c WHERE c.id = 1 AND c.needs_online = 0
-      AND c.revision = ${clock.revision} AND c.high_water = ${clock.highWater}))`;
+      AND c.trust_epoch = ${clock.epoch} AND c.high_water >= ${clock.highWater} AND c.high_water < ${before}))`;
 }
 
 function partWrites(write: SettlementWrite, part: ReservationChange, attempt: string): Statement {

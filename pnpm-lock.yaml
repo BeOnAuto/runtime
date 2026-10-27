@@ -745,12 +745,18 @@ importers:
 
   packages/meter:
     dependencies:
+      '@on.auto/definitions':
+        specifier: workspace:*
+        version: link:../definitions
       '@on.auto/ledger':
         specifier: workspace:*
         version: link:../ledger
       '@on.auto/metering':
         specifier: workspace:*
         version: link:../metering
+      '@on.auto/operations':
+        specifier: workspace:*
+        version: link:../operations
       '@on.auto/outbound':
         specifier: workspace:*
         version: link:../outbound
@@ -764,6 +770,12 @@ importers:
         specifier: 'catalog:'
         version: 6.2.12
     devDependencies:
+      '@on.auto/computation':
+        specifier: workspace:*
+        version: link:../../capabilities/computation
+      '@on.auto/workflow-engine':
+        specifier: workspace:*
+        version: link:../workflow-engine
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1

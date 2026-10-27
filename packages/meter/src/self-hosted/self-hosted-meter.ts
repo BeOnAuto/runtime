@@ -33,6 +33,7 @@ export async function openSelfHostedMeter(options: LicenseClientOptions): Promis
   });
   const report = reportMaintenance(services.connection, reporting, captured.clock.monotonicTime);
   return {
+    time: services.clock.read,
     installation: { clusterId, installationKeyDigest, publicKey: { ...publicKey } },
     license,
     capacity: capacity.snapshot,

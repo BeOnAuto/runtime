@@ -108,7 +108,7 @@ describe('signed capacity and funding consistency', () => {
     const license = await f.licenses.current(await f.clock.read());
     const request = await reserveRequest();
     const verified = {
-      authority: { license, now: 5000, clockRevision: 0 },
+      authority: { license, now: 5000, clockRevision: 0, clockEpoch: 0 },
       capacity: {
         allocation: f.allocation,
         revision: 0,

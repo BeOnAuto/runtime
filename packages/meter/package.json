@@ -13,14 +13,18 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "@on.auto/definitions": "workspace:*",
     "@on.auto/ledger": "workspace:*",
     "@on.auto/metering": "workspace:*",
+    "@on.auto/operations": "workspace:*",
     "@on.auto/outbound": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:"
   },
   "devDependencies": {
+    "@on.auto/computation": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "catalog:",
     "pg": "8.23.1",

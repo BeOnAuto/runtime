@@ -47,7 +47,7 @@ export async function reservationAuthority(
   const license = await options.licenses.current(await options.clock.read());
   const clock = await readClock(options.connection);
   if (clock.onlineRequired) throw new Error('license_clock_untrusted');
-  const authority = { license, now: clock.highWater, clockRevision: clock.revision };
+  const authority = { license, now: clock.highWater, clockRevision: clock.revision, clockEpoch: clock.epoch };
   await trustedAllocation(options, capacity, authority);
   const { run } = request.context;
   if (run.accountId !== license.license.accountId || run.deploymentId !== license.license.installationId)

@@ -1,4 +1,9 @@
-import { STANDARD_OFFLINE_MILLISECONDS, type OfflineAllocation, type OfflineUsageReport } from '@on.auto/metering';
+import {
+  STANDARD_OFFLINE_MILLISECONDS,
+  type LicenseCapability,
+  type OfflineAllocation,
+  type OfflineUsageReport,
+} from '@on.auto/metering';
 
 import { openSelfHostedMeter, type LicenseFetch } from '../index.ts';
 import { reportAuthority } from '../offline-testing/report-authority.ts';
@@ -39,12 +44,15 @@ function initialAllocation(signing: Signing): OfflineAllocation {
   };
 }
 
-export async function selfHostedFixture(open = sqliteDatabase) {
+export async function selfHostedFixture(
+  open = sqliteDatabase,
+  capabilities: readonly LicenseCapability[] = ['reasoning', 'prediction'],
+) {
   const signing = await licenseFixture(open);
   const time = testClock();
   const allocation = initialAllocation(signing);
   const state: { allocations: readonly OfflineAllocation[] } = { allocations: [allocation] };
-  const authority = allocatingAuthority(signing, state, time.pass);
+  const authority = allocatingAuthority(signing, state, time.pass, capabilities);
   const received: OfflineUsageReport[] = [];
   const report = reportAuthority({
     connection: signing.database.connection,
@@ -79,6 +87,7 @@ function allocatingAuthority(
   signing: Signing,
   state: Readonly<{ allocations: readonly OfflineAllocation[] }>,
   pass: (elapsed: number) => void,
+  capabilities: readonly LicenseCapability[],
 ) {
   return licenseAuthority(
     {
@@ -88,6 +97,7 @@ function allocatingAuthority(
           challenge,
           {
             ...changes,
+            capabilities,
             allocationIds: state.allocations.map((value) => value.id),
             grantIds: [...new Set(state.allocations.flatMap((value) => value.sources.map((source) => source.lotId)))],
           },

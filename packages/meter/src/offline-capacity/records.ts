@@ -49,6 +49,7 @@ export interface CapacityAuthority {
   readonly license: CurrentLicense;
   readonly now: number;
   readonly clockRevision: number;
+  readonly clockEpoch: number;
 }
 
 export interface CapacityInstallation {

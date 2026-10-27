@@ -16,6 +16,14 @@ export { openOfflineCapacity } from './offline-capacity/offline-capacity.ts';
 export { openOfflineMeter } from './offline-reservations/offline-meter.ts';
 export { openOfflineReporter } from './offline-reports/offline-reporter.ts';
 export { openSelfHostedMeter } from './self-hosted/self-hosted-meter.ts';
+export { selfHostedRuns } from './runtime-runs/runtime-runs.ts';
+export type {
+  RuntimeRuns,
+  RuntimeRunOptions,
+  SingleRunLimits,
+  ReconciledRuns,
+  ReconcileRunsRequest,
+} from './runtime-runs/records.ts';
 export type { SelfHostedMeter, SelfHostedMaintenance } from './self-hosted/records.ts';
 export type { ReportPollResult } from './maintenance/reporting.ts';
 export type {

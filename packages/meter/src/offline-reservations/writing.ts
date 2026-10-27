@@ -14,15 +14,16 @@ interface ReservationWrite {
   readonly parts: readonly LotReservation[];
 }
 
-function claimReservation(verified: ReservationAuthority, attempt: string): Statement {
+function claimReservation({ verified, request, parts }: ReservationWrite, attempt: string): Statement {
   const { capacity, authority } = verified;
+  const before = firstDispatchDeadline(verified, request, parts);
   return statement`UPDATE meter_capacity_state SET revision = revision + 1, attempt_id = ${attempt}
     WHERE id = ${capacity.allocation.id} AND revision = ${capacity.revision} AND revision < 9007199254740991 AND state = 'open'
     AND EXISTS (SELECT 1 FROM meter_capacity_head h WHERE h.id = 1 AND h.current_id = ${capacity.allocation.id})
     AND EXISTS (SELECT 1 FROM meter_license_head l WHERE l.id = 1 AND l.state = 'active'
       AND l.revision = ${authority.license.revision} AND l.serial = ${authority.license.license.serial})
     AND EXISTS (SELECT 1 FROM meter_clock c WHERE c.id = 1 AND c.needs_online = 0
-      AND c.revision = ${authority.clockRevision} AND c.high_water = ${authority.now})`;
+      AND c.trust_epoch = ${authority.clockEpoch} AND c.high_water >= ${authority.now} AND c.high_water < ${before})`;
 }
 
 function sourceWrites(
@@ -72,7 +73,7 @@ export function reserveMutation(
     now: verified.authority.now,
     units: request.quote.maximum.platformUnits,
     movements: parts.map((part) => ({ lotId: part.lotId, reservedDelta: part.units, committedDelta: 0n })),
-    claim: (attempt) => claimReservation(verified, attempt),
+    claim: (attempt) => claimReservation(write, attempt),
     writes: (attempt) => reservationWrites(write, attempt),
   };
 }

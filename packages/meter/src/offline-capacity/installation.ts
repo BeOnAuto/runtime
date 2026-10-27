@@ -18,7 +18,7 @@ async function authorityFor(options: CapacityOptions): Promise<CapacityAuthority
   const license = await options.licenses.current(await options.clock.read());
   const clock = await readClock(options.connection);
   if (clock.onlineRequired) throw new Error('license_clock_untrusted');
-  return { license, clockRevision: clock.revision, now: clock.highWater };
+  return { license, clockRevision: clock.revision, clockEpoch: clock.epoch, now: clock.highWater };
 }
 
 async function installAttempt(
