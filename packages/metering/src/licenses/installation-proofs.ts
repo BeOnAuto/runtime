@@ -85,7 +85,7 @@ export async function verifyInstallationProof(
   if (
     protectedHeader.typ !== INSTALLATION_PROOF_TYPE ||
     protectedHeader.kid !== fingerprint ||
-    new TextDecoder('utf-8', { fatal: true }).decode(payload) !== expectedPayload
+    new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(payload) !== expectedPayload
   ) {
     throw new RangeError('The installation proof does not match its type, key or challenge');
   }

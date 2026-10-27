@@ -96,6 +96,14 @@ describe('installation proof limits and type', () => {
     );
   });
 
+  it('does not discard a byte-order mark from the signed challenge payload', async () => {
+    const fixture = await proofFixture();
+    const proof = await fixture.sign(`\uFEFF${installationProofPayload(fixture.challenge)}`);
+    await expect(verifyInstallationProof(proof, fixture.challenge, fixture.publicKey, 2000)).rejects.toThrow(
+      'does not match',
+    );
+  });
+
   it('refuses a different proof type, a missing fingerprint or a different signed payload', async () => {
     const fixture = await proofFixture();
     const payload = installationProofPayload(fixture.challenge);
