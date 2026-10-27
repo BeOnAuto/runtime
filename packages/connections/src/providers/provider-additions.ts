@@ -1,3 +1,4 @@
+import { required } from '@on.auto/operations';
 import type { Conflict, Forbidden, InvalidInput, Issue } from '@on.auto/operations';
 import {
   additionOfProvider,
@@ -6,7 +7,7 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
-import { Effect, Option, Result, type Redacted } from 'effect';
+import { Effect, Result, type Redacted } from 'effect';
 
 import {
   additionIssuesOf,
@@ -33,10 +34,6 @@ const theProvider = '/provider';
 const whereProvidersAreListed = 'search lists the providers a person may connect';
 
 const writtenByTheCaller: readonly string[] = ['/entry/playbooks', '/entry/allowed', '/entry/record_content'];
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function givenByHand(given: AdditionGiven): GivenAddition {
   return {

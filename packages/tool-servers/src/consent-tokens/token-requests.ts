@@ -6,7 +6,12 @@ import { libraryClientOf, type ActingClient, type Requests } from '../consent/ac
 import type { ConsentRefusal, ConsentServed, RevocationFailure, RevokeAsked } from '../consent/consent-client.ts';
 import { revocationOf } from '../consent/revocation.ts';
 import { scopeRenewedOf } from '../consent/scopes.ts';
-import { libraryMetadataOf, serverMetadataOf, type ServerMetadata } from '../consent/server-metadata.ts';
+import {
+  libraryMetadataOf,
+  revocationMetadataOf,
+  serverMetadataOf,
+  type ServerMetadata,
+} from '../consent/server-metadata.ts';
 import { answeredTokensOf, keptOf, type AnsweredTokens, type KeptTokens } from './kept-tokens.ts';
 import { renewedTokens, type Refreshing, type Sourced } from './renewed-tokens.ts';
 
@@ -84,7 +89,7 @@ function refreshingOf(
 function revocationAsked(asked: RevokeAsked, { clients, fetchFor }: Requests): Effect.Effect<void, RevocationFailure> {
   return Effect.gen(function* () {
     const fetch = fetchFor(asked.reaches);
-    const { server } = yield* serverMetadataOf(asked, fetch);
+    const { server } = yield* revocationMetadataOf(asked, fetch);
     const client = yield* clients.recordedFor(asked);
     yield* revocationOf({ server, client, tokens: revokedTokensOf(asked.tokens), fetch });
   });

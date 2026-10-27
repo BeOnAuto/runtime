@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { connectPageOf, studioBaseFor } from '../links/connect-page.ts';
 import { issuedLink } from '../links/link-token.ts';
 import { adderRefusalOf } from '../policy/policy-rules.ts';
-import { checkedAdditionOf, refusalOfTheAddition } from '../providers/provider-additions.ts';
+import { admittedAdditionOf } from './admitted-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { addedWordsOf, linkToOpenOf } from './connection-words.ts';
@@ -13,6 +13,7 @@ import { additionOf, recordInRegistry, recordedCaller, standingAfterTheLink } fr
 const description = [
   "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
   'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
+  'An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server.',
   "It answers pending with a link to Studio's page, where the person approves it within ten minutes.",
   'Nothing is granted by this call and no credential passes through it.',
 ].join(' ');
@@ -33,7 +34,7 @@ export function defineAddConnection({
     successStatus: 201,
     inputSchema: AdditionSchema,
     outputSchema: AddedSchema,
-    reasons: ['invalid_input', 'forbidden', 'conflict'],
+    reasons: ['invalid_input', 'forbidden', 'conflict', 'unavailable'],
     handle: Effect.fnUntraced(function* (input) {
       const adderRefusal = adderRefusalOf(access, yield* Caller);
       if (adderRefusal !== undefined) {
@@ -41,11 +42,14 @@ export function defineAddConnection({
       }
       const { org } = yield* OrgContext;
       const studioBase = studioBaseFor(pages);
-      const given = yield* checkedAdditionOf(input, { org, modelProviders }, { ...serving, policy, studioBase });
-      const refusal = refusalOfTheAddition(given, policy, fileEntries, serving);
-      if (refusal !== undefined) {
-        return yield* Effect.fail(refusal);
-      }
+      const given = yield* admittedAdditionOf(input, {
+        ...serving,
+        org,
+        modelProviders,
+        policy,
+        fileEntries,
+        studioBase,
+      });
       const { token, ...link } = yield* issuedLink;
       const addition = additionOf(given, link, yield* recordedCaller);
       const kept = yield* recordInRegistry(addition).pipe(

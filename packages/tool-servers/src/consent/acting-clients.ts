@@ -4,17 +4,20 @@ import {
   type FetchLike,
   type OAuthClientInformationFull,
 } from '@modelcontextprotocol/client';
+import { required } from '@on.auto/operations';
 import { fetchWithin, type Reaches } from '@on.auto/outbound';
-import { Effect, Option, Redacted } from 'effect';
+import { Effect, Redacted } from 'effect';
 
 import {
   clientMetadataDocumentOf,
+  metadataDocumentOf,
   registeredClientFor,
   registeredClientNamed,
   type ClientMetadataDocument,
   type ClientSource,
   type ClientsHad,
   type RegisteredClient,
+  type WayClientSource,
 } from './client-sources.ts';
 import type {
   ChosenClient,
@@ -23,6 +26,7 @@ import type {
   ConsentRefusal,
   FinishAsked,
   KeptRegistration,
+  Refused,
 } from './consent-client.ts';
 import {
   registrationFieldsOf,
@@ -30,7 +34,7 @@ import {
   registrationUnavailable,
   type RegistrationKeeping,
 } from './dynamic-registration.ts';
-import type { AuthorizationServer } from './server-metadata.ts';
+import { handGivenUrlOf, type AuthorizationServer } from './server-metadata.ts';
 
 export interface ClientIdentity {
   readonly client_id: string;
@@ -51,6 +55,8 @@ interface ClientChoosing extends Omit<ClientsHad, 'serviceClients'>, Registratio
 
 export type ServerSource = Exclude<ClientSource, 'auto'>;
 
+export type OwnSource = Exclude<WayClientSource, 'registered'>;
+
 interface Taking {
   readonly asked: ConsentAsked;
   readonly server: AuthorizationServer;
@@ -65,13 +71,9 @@ interface ClientChoice {
   readonly recordedFor: (recorded: RecordedClient) => Effect.Effect<ActingClient, ConsentRefusal>;
 }
 
-const noClient: ConsentRefusal = { refused: 'no_client' };
+export const noClient: Refused<'no_client'> = { refused: 'no_client' };
 
 const clientGone: ConsentRefusal = { refused: 'client_gone' };
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 export function libraryClientOf({
   redirect_uris: redirectUris,
@@ -119,17 +121,38 @@ function dynamicActing(kept: KeptRegistration, returnAddress: string): ActingCli
   };
 }
 
+export function takesOwnSource(server: AuthorizationServer, source: OwnSource, publicUrl: string | undefined): boolean {
+  return source === 'dynamic'
+    ? server.registration_endpoint !== undefined
+    : server.client_id_metadata_document_supported === true && metadataDocumentOf(publicUrl) !== undefined;
+}
+
+function originOf(url: string | undefined): string | null {
+  return url === undefined ? null : new URL(url).origin;
+}
+
 function dynamicallyRegistered(
   { asked, server, fetch }: Taking,
   choosing: ClientChoosing,
+): Effect.Effect<ActingClient, ConsentRefusal> {
+  const { returnAddress } = asked;
+  const place = { issuer: asked.way.issuer, server: originOf(handGivenUrlOf(asked.server)) };
+  const registration = { place, endpoint: required(server.registration_endpoint), returnAddress, fetch };
+  return Effect.map(registrationFor(registration, choosing), (kept) => dynamicActing(kept, returnAddress));
+}
+
+function ownTakenFrom(
+  source: OwnSource,
+  taking: Taking,
+  choosing: ClientChoosing,
 ): Effect.Effect<ActingClient | undefined, ConsentRefusal> {
-  const endpoint = server.registration_endpoint;
-  if (endpoint === undefined) {
+  const { asked, server } = taking;
+  if (!takesOwnSource(server, source, choosing.publicUrl)) {
     return Effect.undefined;
   }
-  const { returnAddress } = asked;
-  const registration = { issuer: asked.way.issuer, endpoint, returnAddress, fetch };
-  return Effect.map(registrationFor(registration, choosing), (kept) => dynamicActing(kept, returnAddress));
+  return source === 'dynamic'
+    ? dynamicallyRegistered(taking, choosing)
+    : Effect.succeed(documentedActing(required(clientMetadataDocumentOf(choosing.publicUrl, asked.returnAddress))));
 }
 
 function takenFrom(
@@ -137,20 +160,12 @@ function takenFrom(
   taking: Taking,
   choosing: ClientChoosing,
 ): Effect.Effect<ActingClient | undefined, ConsentRefusal> {
-  const { asked, server } = taking;
-  if (source === 'registered') {
-    return Effect.succeed(
-      registeredActing(required(registeredClientFor(choosing.registeredClients, asked.way)), asked.returnAddress),
-    );
-  }
-  if (source === 'metadata_document') {
-    return Effect.succeed(
-      server.client_id_metadata_document_supported === true
-        ? documentedActing(required(clientMetadataDocumentOf(choosing.publicUrl, asked.returnAddress)))
-        : undefined,
-    );
-  }
-  return dynamicallyRegistered(taking, choosing);
+  const { asked } = taking;
+  return source === 'registered'
+    ? Effect.succeed(
+        registeredActing(required(registeredClientFor(choosing.registeredClients, asked.way)), asked.returnAddress),
+      )
+    : ownTakenFrom(source, taking, choosing);
 }
 
 function chosenAt(taking: Taking, choosing: ClientChoosing): Effect.Effect<ActingClient, ConsentRefusal> {

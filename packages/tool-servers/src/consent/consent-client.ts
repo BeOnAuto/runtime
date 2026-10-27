@@ -7,7 +7,14 @@ import type { ConsentTokenSources } from '../clients/token-source.ts';
 import type { AutoClients, ThroughAuto } from '../consent-through-auto/auto-clients.ts';
 import type { KeptTokens, TokenHolding } from '../consent-tokens/kept-tokens.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
-import type { ClientSource, ClientsHad, HadSources, ServiceClient, WayOfClients } from './client-sources.ts';
+import type {
+  ClientSource,
+  ClientsHad,
+  HadSources,
+  ServiceClient,
+  WayClientSource,
+  WayOfClients,
+} from './client-sources.ts';
 import type { RegistrationKeeping } from './dynamic-registration.ts';
 
 export interface ConsentWay extends WayOfClients {
@@ -17,7 +24,9 @@ export interface ConsentWay extends WayOfClients {
   readonly revocation_endpoint?: string | undefined;
 }
 
-export type ConsentServer = { readonly type: 'mcp'; readonly url: string } | { readonly type: 'openapi' };
+export type ConsentServer =
+  | { readonly type: 'mcp'; readonly url: string; readonly givenByHand?: boolean }
+  | { readonly type: 'openapi' };
 
 export interface ConsentAsked {
   readonly server: ConsentServer;
@@ -71,6 +80,8 @@ export type ConsentRefusal =
   | { readonly refused: 'another_resource'; readonly named: string }
   | { readonly refused: 'no_metadata' }
   | { readonly refused: 'no_challenge' }
+  | { readonly refused: 'unpinned_endpoint'; readonly endpoint: string }
+  | { readonly refused: 'authorization_server_unnamed'; readonly url: string }
   | { readonly refused: 'no_client' }
   | { readonly refused: 'client_gone' }
   | { readonly refused: 'host'; readonly rule: string }
@@ -83,6 +94,28 @@ export type ConsentRefusal =
   | { readonly refused: 'malformed_scope' }
   | { readonly refused: 'registration_unavailable'; readonly detail: string }
   | { readonly refused: 'registration_refused'; readonly detail: string };
+
+export type Refused<Refusal extends ConsentRefusal['refused']> = Extract<ConsentRefusal, { readonly refused: Refusal }>;
+
+export interface WayAsked {
+  readonly url: string;
+  readonly reaches: Reaches;
+}
+
+export interface NamedWay {
+  readonly issuer: string;
+  readonly clients: readonly WayClientSource[];
+  readonly scope: string | undefined;
+}
+
+export type IssuerRefusal = Refused<
+  'another_issuer' | 'no_metadata' | 'no_challenge' | 'unpinned_endpoint' | 'no_client' | 'unanswered'
+>;
+
+export type WayRefusal =
+  | { readonly refused: 'no_authorization_server' }
+  | Refused<'another_resource' | 'malformed_scope' | 'host' | 'unanswered'>
+  | { readonly refused: 'at_the_issuer'; readonly issuer: string; readonly refusal: IssuerRefusal };
 
 export interface KeptRow {
   readonly value: Redacted.Redacted;
@@ -151,13 +184,18 @@ export interface KeptRegistration {
   readonly registration: Redacted.Redacted;
 }
 
+export interface RegistrationPlace {
+  readonly issuer: string;
+  readonly server: string | null;
+}
+
 export interface ClientRegistrations {
-  readonly latestAt: (issuer: string) => Effect.Effect<KeptRegistration | undefined, RegistrationUnavailable>;
+  readonly latestAt: (place: RegistrationPlace) => Effect.Effect<KeptRegistration | undefined, RegistrationUnavailable>;
   readonly named: (
     issuer: string,
     clientId: string,
   ) => Effect.Effect<KeptRegistration | undefined, RegistrationUnavailable>;
-  readonly keep: (issuer: string, kept: KeptRegistration) => Effect.Effect<void, RegistrationUnavailable>;
+  readonly keep: (place: RegistrationPlace, kept: KeptRegistration) => Effect.Effect<void, RegistrationUnavailable>;
 }
 
 export interface ConsentClientOptions extends Omit<ClientsHad, 'serviceClients'> {
@@ -171,6 +209,7 @@ export interface ConsentClientOptions extends Omit<ClientsHad, 'serviceClients'>
 
 export interface ConsentClient extends ConsentTokenSources {
   readonly hadSources: (studioBase: string) => Effect.Effect<HadSources>;
+  readonly namedWay: (asked: WayAsked) => Effect.Effect<NamedWay, WayRefusal>;
   readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
   readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;

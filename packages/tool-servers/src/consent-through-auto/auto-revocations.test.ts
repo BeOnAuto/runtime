@@ -1,4 +1,5 @@
-import { Effect, Option } from 'effect';
+import { required } from '@on.auto/operations';
+import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted } from '../authorization-testing/authorization-requests.ts';
@@ -49,10 +50,6 @@ function revokedBy(consent: ConsentClient, asked: RevokeAsked) {
 
 function heardAt({ service }: Pick<ThroughAuto, 'service'>, path: string) {
   return service.calls().filter((call) => call.path === path);
-}
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
 describe('the revocation through Auto’s consent service a removal asks for', () => {

@@ -1,9 +1,16 @@
 import type { LinkToOpen, Outcome, RegisteredPlainLanguage, Succeeded } from '@on.auto/operations';
 import { Option } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes, statusesOf, type Added } from '../testing/additions.ts';
+import { consentFake } from '../testing/consents.ts';
 import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+
+const closing: (() => Promise<void>)[] = [];
+
+afterEach(async () => {
+  await Promise.all(closing.splice(0).map((close) => close()));
+});
 
 function wordsOf(h: Harness, name: string): RegisteredPlainLanguage {
   const { registration } = operationNamed(h.operations, name);
@@ -62,6 +69,24 @@ describe('the words of adding a connection', () => {
       'Open this page to approve the connection “crm”, and give its credential where it takes one, within ten minutes.',
     );
     expect(link?.url).toMatch(/^https:\/\/studio\.on\.auto\/connect\?server=http%3A%2F%2Flocalhost%3A5555&org=acme&/u);
+  });
+});
+
+describe('the words of adding an MCP server given by hand that signs people in itself', () => {
+  it('say the person signs in at the host of its issuer on the page, and ask an agent to have them open it to do so', async () => {
+    const fake = await consentFake({ dynamicRegistration: true });
+    closing.push(fake.close);
+    const h = harness();
+    const byHand = { name: 'files', type: 'mcp', entry: { url: fake.url }, credential: { kind: 'authorization' } };
+    const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, byHand));
+    const { host } = new URL(fake.origin);
+
+    expect(wordsOf(h, 'add_connection').outcome(output, byHand)).toBe(
+      `Added the connection “files”. The person who added it approves it, and signs in at ${host}, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.`,
+    );
+    expect(linkingOf(h).toOpen(output)?.message).toBe(
+      `Open this page to approve the connection “files”, and sign in at ${host}, within ten minutes.`,
+    );
   });
 });
 

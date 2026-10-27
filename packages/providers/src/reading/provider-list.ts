@@ -1,6 +1,7 @@
+import { required } from '@on.auto/operations';
 import type { Issue } from '@on.auto/operations';
 import type { ShippedDocument } from '@on.auto/tool-servers';
-import { Option, Order, Result } from 'effect';
+import { Order, Result } from 'effect';
 
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress } from '../entry/templates.ts';
@@ -13,10 +14,6 @@ export interface Provider {
 export interface ProviderList {
   readonly providers: readonly Provider[];
   readonly documents: ReadonlyMap<string, ShippedDocument>;
-}
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
 export function addressOf(entry: ProviderEntry, documentServer?: string): string {

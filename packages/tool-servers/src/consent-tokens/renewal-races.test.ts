@@ -187,8 +187,8 @@ describe('the lease a renewal claims its row for', () => {
     const fortyFive = await cutOffAt(45_000);
 
     expect([thirty, fortyFive]).toMatchObject([
-      { cuts: [30_000, 30_000, 30_000], claims: [45_000], failed: { name: 'AbortError' } },
-      { cuts: [45_000, 45_000, 45_000], claims: [60_000], failed: { name: 'AbortError' } },
+      { cuts: [30_000, 30_000, 30_000, 30_000], claims: [45_000], failed: { name: 'AbortError' } },
+      { cuts: [45_000, 45_000, 45_000, 45_000], claims: [60_000], failed: { name: 'AbortError' } },
     ]);
     expect([thirty.claimedFor, fortyFive.claimedFor]).toEqual([15_000, 15_000]);
   });

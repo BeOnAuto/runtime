@@ -1,3 +1,4 @@
+import { required } from '@on.auto/operations';
 import {
   custodianProbed,
   keeperProbed,
@@ -7,7 +8,7 @@ import {
   type Keepers,
   type SecretStore,
 } from '@on.auto/secrets';
-import { Effect, Option } from 'effect';
+import { Effect } from 'effect';
 
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
@@ -36,10 +37,6 @@ interface Worded {
 
 function invalid(setting: string, detail: string): InvalidSettingsError {
   return new InvalidSettingsError({ message: `The secrets settings are invalid. ${setting}: ${detail}` });
-}
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
 function custodianProbedAtStart(

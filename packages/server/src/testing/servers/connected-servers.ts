@@ -1,6 +1,6 @@
 import type { CredentialWay } from '@on.auto/providers';
 import type { OfferedProvider } from '@on.auto/tool-servers';
-import { Option, Schema } from 'effect';
+import { Schema } from 'effect';
 
 import { shippedSettings } from '../settings/shipped-settings.ts';
 import type { ReasoningServer } from './reasoning-server.ts';
@@ -10,10 +10,6 @@ export const connectionsOfAcme = '/v1/orgs/acme/connections';
 export const shippedList = shippedSettings.providers;
 
 export const shippedProviders = shippedList.providers;
-
-export function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function isOfferedWithoutAClient({ kind, clients = [] }: CredentialWay): boolean {
   return kind !== 'authorization' || clients.includes('dynamic');

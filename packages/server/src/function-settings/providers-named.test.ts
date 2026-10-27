@@ -3,11 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { clientIdWrittenOut } from '@on.auto/config';
+import { required } from '@on.auto/operations';
 import type { ServerSettings } from '@on.auto/tool-servers';
 import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { required, shippedProviders } from '../testing/servers/connected-servers.ts';
+import { shippedProviders } from '../testing/servers/connected-servers.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
 const githubToken = 'github-token-0f3c9a71e2';

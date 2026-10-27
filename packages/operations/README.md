@@ -208,6 +208,10 @@ The digest is Node's, behind the one module of the repository for it: the digest
 
 `loopbackNames` (`src/addresses/loopback-names.ts`) are the names by which a URL or a `Host` header names this computer, `localhost`, `127.0.0.1` and `[::1]`, as a URL writes its host, and `namesTheLoopback(hostname)` says whether a host is one of them. It is the one rule of an http URL on a loopback address, which an issuer, a server or a document of a tool server may be (`isPinnableUrl` of `@on.auto/tool-servers`) and `PUBLIC_URL` may be, and of the `Host` header local mode takes (`@on.auto/api`), there with a port and in any case. The rule of the address the local-mode listener takes is the [identity README](../identity/README.md)'s.
 
+## A value that must be there
+
+`required(value)` (`src/values/required.ts`) answers a value its caller knows is there, such as a field a schema's check has already made present, and dies where it is not, through `Option.getOrThrow`, so a broken invariant is a defect rather than a quiet `undefined`. The packages of the runtime take it from here rather than each writing its own.
+
 ## The folder of a cache
 
 `cacheFolderProblem(directory, owner?)` (`src/folders/cache-folder.ts`) is the one rule of a folder the server keeps files of its own in, which it later trusts: it makes the folder when it is not there, with `cacheFolderMode`, `0700`, and answers what is wrong with it, that it could not be made, is not a folder, belongs to another user than the server's, or may be written by other users, or nothing. The model cache of prediction functions and the Studio the server serves read it, so no other user can make or change the files either serves from.

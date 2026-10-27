@@ -194,28 +194,6 @@ describe('a provider whose way is consent where whoever runs Auto registered no 
   });
 });
 
-describe('a connection of consent given by hand', () => {
-  it('is refused at the kind of its credential, in words that say consent is a provider’s way and how to name one', async () => {
-    const byHand = {
-      name: 'files',
-      type: 'mcp',
-      entry: { url: 'https://files.example.com/mcp' },
-      credential: { kind: 'authorization', issuer: 'https://accounts.files.example.com' },
-    };
-
-    expect(await adding(harness(), byHand)).toMatchObject({
-      reason: 'invalid_input',
-      issues: [
-        {
-          pointer: '/credential/kind',
-          detail:
-            'Expected another kind: consent is offered through a provider alone, so name the provider, as search lists it, in provider',
-        },
-      ],
-    });
-  });
-});
-
 function offeredWith(consenting: Partial<ConsentClientOptions>) {
   return Effect.runPromise(
     makeProviderOffering({

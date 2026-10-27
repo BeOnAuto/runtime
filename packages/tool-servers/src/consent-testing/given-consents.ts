@@ -8,6 +8,7 @@ import type {
   ConsentClient,
   FinishAsked,
   FinishedConsent,
+  RegistrationPlace,
   StartAsked,
 } from '../consent/consent-client.ts';
 
@@ -22,8 +23,7 @@ export interface MemoryRegistrations extends ClientRegistrations {
   readonly custodian: RecordingCustodian;
 }
 
-interface KeptAt {
-  readonly issuer: string;
+interface KeptAt extends RegistrationPlace {
   readonly clientId: string;
   readonly secretId: string;
 }
@@ -62,11 +62,12 @@ export function memoryRegistrations(custodian: RecordingCustodian = recordingCus
         }));
   const at = (issuer: string): readonly KeptAt[] => kept.filter((each) => each.issuer === issuer);
   return {
-    latestAt: (issuer) => Effect.suspend(() => readOf(at(issuer).at(-1))),
+    latestAt: ({ issuer, server }) =>
+      Effect.suspend(() => readOf(at(issuer).findLast((each) => each.server === server))),
     named: (issuer, clientId) => Effect.suspend(() => readOf(at(issuer).find((each) => each.clientId === clientId))),
-    keep: (issuer, { clientId, registration }) =>
+    keep: ({ issuer, server }, { clientId, registration }) =>
       Effect.map(store.keep(registration), (secretId) => {
-        kept.push({ issuer, clientId, secretId });
+        kept.push({ issuer, server, clientId, secretId });
       }),
     kept: () => kept.map(({ issuer, clientId }): readonly [string, string] => [issuer, clientId]),
     custodian,

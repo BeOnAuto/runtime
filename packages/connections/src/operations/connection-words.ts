@@ -1,4 +1,4 @@
-import { capitalized, counted, listed, quoted, type LinkToOpen, type Noun } from '@on.auto/operations';
+import { required, capitalized, counted, listed, quoted, type LinkToOpen, type Noun } from '@on.auto/operations';
 import { providerNamed, type ProviderList } from '@on.auto/providers';
 import { Result } from 'effect';
 
@@ -37,9 +37,29 @@ function approvalLinkNamed(providerTitle: string | undefined): string {
   return quoted(providerTitle === undefined ? 'Approve the connection' : `Approve the ${providerTitle} connection`);
 }
 
-function linkWordsOf({ provider }: Pick<Connection, 'provider'>, providers: ProviderList): string {
-  const linkName = approvalLinkNamed(providerTitleOf(provider, providers));
-  return `The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named ${linkName}, never as its address.`;
+type Linked = Pick<Connection, 'provider' | 'credential'>;
+
+interface Doing {
+  readonly theyDo: string;
+  readonly youDo: string;
+}
+
+const givingTheCredential: Doing = {
+  theyDo: 'gives its credential where it takes one',
+  youDo: 'give its credential where it takes one',
+};
+
+function doingOf({ provider, credential }: Linked): Doing {
+  if (provider !== null || credential.kind !== 'authorization') {
+    return givingTheCredential;
+  }
+  const { host } = new URL(required(credential.issuer));
+  return { theyDo: `signs in at ${host}`, youDo: `sign in at ${host}` };
+}
+
+function linkWordsOf(connection: Linked, providers: ProviderList): string {
+  const linkName = approvalLinkNamed(providerTitleOf(connection.provider, providers));
+  return `The person who added it approves it, and ${doingOf(connection).theyDo}, on the page its link opens, within ten minutes; shown to them as a link named ${linkName}, never as its address.`;
 }
 
 function standingWordsOf(connection: Connection): string {
@@ -63,7 +83,7 @@ export function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkT
   return connect === undefined
     ? undefined
     : {
-        message: `Open this page to approve ${connectionNamed(connection)}, and give its credential where it takes one, within ten minutes.`,
+        message: `Open this page to approve ${connectionNamed(connection)}, and ${doingOf(connection).youDo}, within ten minutes.`,
         url: connect.url,
       };
 }

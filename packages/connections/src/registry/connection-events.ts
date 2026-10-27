@@ -3,9 +3,32 @@ import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
-import { CredentialSchema } from './credential.ts';
+import { CredentialSchema, type Credential } from './credential.ts';
 
 const ofTheConnection = { connection: Schema.String };
+
+const clientsOfTheRuntimesOwn: ReadonlySet<string> = new Set(['metadata_document', 'dynamic']);
+
+interface Credentialled {
+  readonly provider: string | null;
+  readonly credential: Credential;
+}
+
+function holdsClientsOfItsOwn({ clients }: Credential): boolean {
+  return clients !== undefined && clients.length > 0 && clients.every((source) => clientsOfTheRuntimesOwn.has(source));
+}
+
+function clientIssuesOf({ provider, credential }: Credentialled): readonly Schema.FilterIssue[] {
+  return provider !== null || credential.kind !== 'authorization' || holdsClientsOfItsOwn(credential)
+    ? []
+    : [
+        {
+          path: ['credential', 'clients'],
+          issue:
+            'Expected clients, which a credential of consent given by hand holds, each a client the runtime makes for itself: metadata_document or dynamic',
+        },
+      ];
+}
 
 export const ConnectionEventSchema = Schema.Union([
   factOf(
@@ -19,7 +42,7 @@ export const ConnectionEventSchema = Schema.Union([
       entry: ConnectionEntrySchema,
       credential: CredentialSchema,
       added_by: RecordedCallerSchema,
-    }),
+    }).check(Schema.makeFilter(clientIssuesOf)),
     ActedContextSchema,
   ),
   factOf(
