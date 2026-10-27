@@ -22,7 +22,7 @@ export const studioAndLicenseVariables: readonly string[] = [
   accountsOriginVariable,
 ];
 
-export const defaultAccountsOrigin = 'https://accounts.on.auto';
+export const defaultAccountsOrigin = 'https://billing.on.auto';
 
 export interface LicenseSettings {
   readonly key: string | undefined;
