@@ -1,6 +1,6 @@
-import { createLocalJWKSet, jwtVerify } from 'jose';
+import { jwtVerify } from 'jose';
 
-import { ed25519PublicX, licenseIdentifier, licenseInteger, licenseIssuer, licenseRing } from './claim-values.ts';
+import { licenseInteger } from './claim-values.ts';
 import { readLicenseClaims } from './claims.ts';
 import {
   LICENSE_AUDIENCE,
@@ -10,28 +10,7 @@ import {
   type LicenseEntitlement,
   type LicenseTrust,
 } from './entitlements.ts';
-
-function trustedKeys(trust: LicenseTrust): ReturnType<typeof createLocalJWKSet> {
-  licenseIssuer(trust.issuer);
-  licenseRing(trust.ring);
-  if (
-    trust.keys.length === 0 ||
-    trust.keys.length > 8 ||
-    new Set(trust.keys.map((key) => key.keyId)).size !== trust.keys.length
-  ) {
-    throw new RangeError('License trust requires distinct, bounded public keys');
-  }
-  return createLocalJWKSet({
-    keys: trust.keys.map((key) => ({
-      kty: 'OKP',
-      crv: 'Ed25519',
-      alg: 'EdDSA',
-      use: 'sig',
-      kid: licenseIdentifier(key.keyId),
-      x: ed25519PublicX(key.x),
-    })),
-  });
-}
+import { trustedKeys } from './trust.ts';
 
 function assertBinding(entitlement: LicenseEntitlement, expected: ExpectedLicense, ring: string): void {
   const binding = expected.binding;

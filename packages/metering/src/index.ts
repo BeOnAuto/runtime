@@ -9,6 +9,25 @@ export {
   MOST_CREDIT_UNITS,
 } from './quantities/credits.ts';
 export type { Rounding } from './quantities/fraction.ts';
+export { allocationPayload, readAllocationClaims } from './offline/allocation-claims.ts';
+export { allocationVerifier } from './offline/allocation-verification.ts';
+export { offlineCheckpoint, readUsageReportClaims, usageReportPayload } from './offline/report-claims.ts';
+export { verifyUsageReport } from './offline/report-verification.ts';
+export {
+  OFFLINE_REPORT_TYPE,
+  MOST_REPORT_TOKEN_CHARACTERS,
+  type ReportCounter,
+  type OfflineChargePart,
+  type OfflineRunCharge,
+  type OfflineUsageReport,
+} from './offline/reports.ts';
+export {
+  OFFLINE_ALLOCATION_TYPE,
+  MOST_ALLOCATION_TOKEN_CHARACTERS,
+  type AllocatedSource,
+  type OfflineAllocation,
+  type ExpectedAllocation,
+} from './offline/allocations.ts';
 export { licenseClaims, readLicenseClaims } from './licenses/claims.ts';
 export { licenseVerifier } from './licenses/verification.ts';
 export {
