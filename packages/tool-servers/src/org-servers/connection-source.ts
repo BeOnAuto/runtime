@@ -34,10 +34,15 @@ export interface ConnectionUnready {
 export interface ConnectionServer {
   readonly settings: ConnectionServerSettings;
   readonly reaches: (url: string) => string | undefined;
+  readonly refused: Effect.Effect<string>;
 }
 
 export type ConnectionState =
-  | { readonly status: 'connected'; readonly server: Effect.Effect<ConnectionServer, ConnectionUnready> }
+  | {
+      readonly status: 'connected';
+      readonly connectedAt: string;
+      readonly server: Effect.Effect<ConnectionServer, ConnectionUnready>;
+    }
   | { readonly status: 'unready'; readonly unready: ConnectionUnready };
 
 export interface OrgConnection {

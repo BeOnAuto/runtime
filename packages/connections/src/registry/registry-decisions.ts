@@ -1,4 +1,4 @@
-import { Conflict, type Context, type Rejection } from '@on.auto/operations';
+import { Conflict, required, type Context, type Rejection } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import type {
@@ -7,6 +7,7 @@ import type {
   ConnectionApproval,
   ConnectionBreaking,
   ConnectionCommand,
+  ConnectionReconnection,
   ConnectionRemoval,
   ConsentFinish,
   ConsentStart,
@@ -15,11 +16,13 @@ import type {
 } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import {
+  bindingRefusalOf,
   finishableConnectionOf,
   isOpenConsent,
   keptConnectionOf,
   linkedConnectionOf,
   noOpenConsent,
+  openLinkOf,
   stateIssueOf,
   type KeptWithLink,
 } from './registry-lookup.ts';
@@ -190,12 +193,70 @@ function decideRemoval({ connection }: ConnectionRemoval, registry: Registry): D
   );
 }
 
-function decideBreaking({ connection, reason }: ConnectionBreaking, registry: Registry): Decision {
+function isConnectedAt({ connection }: KeptConnection, connectedAt: string): boolean {
+  return connection.status === 'connected' && connection.connected_at === connectedAt;
+}
+
+function decideBreaking({ connection, connected_at, reason }: ConnectionBreaking, registry: Registry): Decision {
   return Result.flatMap(keptConnectionOf(registry, connection), (kept) =>
-    kept.connection.status === 'connected'
+    isConnectedAt(kept, connected_at)
       ? Result.succeed([{ type: 'connection_broken', data: { connection, reason } }])
       : nothingToRecord,
   );
+}
+
+export function variableUnset(name: string, variable: string): string {
+  return `The variable ${variable} that the connection ${name} sends is not set on this runtime; whoever runs it sets the variable and starts it again`;
+}
+
+function isMendedInPlace({ connection }: KeptConnection): boolean {
+  return connection.credential.kind === 'reference' && connection.status === 'broken';
+}
+
+function unsetVariableOf(kept: KeptConnection, variablesSet: ReadonlySet<string>): Conflict | undefined {
+  if (!isMendedInPlace(kept)) {
+    return undefined;
+  }
+  const { name, credential } = kept.connection;
+  const variable = required(credential.variable);
+  return variablesSet.has(variable) ? undefined : new Conflict({ detail: variableUnset(name, variable) });
+}
+
+function reconnectionRefusalOf(
+  kept: KeptConnection,
+  { bindsPerson, variablesSet, by, at }: ConnectionReconnection & CommandMetadata,
+): Rejection<RegistryRefusal> | undefined {
+  const { name, status } = kept.connection;
+  const binding = bindingRefusalOf(kept, bindsPerson, by);
+  if (binding !== undefined) {
+    return binding;
+  }
+  if (status === 'removed') {
+    return new Conflict({ detail: `The connection ${name} is removed, so it is added again rather than reconnected` });
+  }
+  const open = openLinkOf(kept, at);
+  return open === undefined
+    ? unsetVariableOf(kept, variablesSet)
+    : new Conflict({
+        detail: `The connection ${name} waits for its approval through a link that lasts until ${open.expires_at}, so it takes no new link before then`,
+      });
+}
+
+function reconnectedOf(kept: KeptConnection, { connection, link, connected_by }: ConnectionReconnection): Decision {
+  const events: readonly ConnectionEvent[] = isMendedInPlace(kept)
+    ? [
+        { type: 'connection_approved', data: { connection } },
+        { type: 'connection_connected', data: { connection, connected_by } },
+      ]
+    : [{ type: 'connection_link_issued', data: { connection, ...link } }];
+  return Result.succeed(events);
+}
+
+function decideReconnection(command: ConnectionReconnection & CommandMetadata, registry: Registry): Decision {
+  return Result.flatMap(keptConnectionOf(registry, command.connection), (kept): Decision => {
+    const refusal = reconnectionRefusalOf(kept, command);
+    return refusal === undefined ? reconnectedOf(kept, command) : Result.fail(refusal);
+  });
 }
 
 export function registryContextOf({ by, at }: CommandMetadata): Context {
@@ -217,6 +278,9 @@ export function decideOnRegistry(command: ConnectionCommand, registry: Registry)
   }
   if (command.type === 'finish') {
     return decideFinish(command, registry);
+  }
+  if (command.type === 'reconnect') {
+    return decideReconnection(command, registry);
   }
   return command.type === 'break' ? decideBreaking(command, registry) : decideRemoval(command, registry);
 }

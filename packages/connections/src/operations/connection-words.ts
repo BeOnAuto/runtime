@@ -1,9 +1,20 @@
-import { required, capitalized, counted, listed, quoted, type LinkToOpen, type Noun } from '@on.auto/operations';
+import {
+  required,
+  capitalized,
+  counted,
+  listed,
+  quoted,
+  type LinkToOpen,
+  type Noun,
+  type OfferedLink,
+} from '@on.auto/operations';
 import { providerNamed, type ProviderList } from '@on.auto/providers';
 import { Result } from 'effect';
 
 import type { Connection } from '../registry/connection.ts';
 import type { AddedConnection } from './connection-fields.ts';
+import type { SecretKeeping } from './connection-services.ts';
+import { standingAfterTheLink } from './registry-access.ts';
 
 const connectionNoun: Noun = { one: 'connection', other: 'connections' };
 
@@ -62,28 +73,52 @@ function linkWordsOf(connection: Linked, providers: ProviderList): string {
   return `The person who added it approves it, and ${doingOf(connection).theyDo}, on the page its link opens, within ten minutes; shown to them as a link named ${linkName}, never as its address.`;
 }
 
-function standingWordsOf(connection: Connection): string {
+function connectedWordsOf(named: string, linkRanOut: boolean): string {
+  return linkRanOut
+    ? `The link of ${named} ran out unused, so the connection stands as it was, connected.`
+    : `Connected ${named}; nothing is left to open.`;
+}
+
+function standingWordsOf(connection: Omit<AddedConnection, 'connect'>): string {
   const named = connectionNamed(connection);
   if (connection.status === 'connected') {
-    return `Connected ${named}; nothing is left to open.`;
+    return connectedWordsOf(named, connection.link_ran_out === true);
   }
   if (connection.status === 'removed') {
     return `The person cancelled ${named} on the page, so it is removed and nothing is connected.`;
   }
-  return `${capitalized(named)} is ${connection.status}, and its link is used up or expired, so nothing is left to open: remove it and add it again.`;
+  return `${capitalized(named)} is ${connection.status}, and its link is used up or expired, so nothing is left to open: reconnect it for a new link.`;
 }
 
-export function addedWordsOf({ connect, ...connection }: AddedConnection, providers: ProviderList): string {
+function linkedWordsOf(done: string, { connect, ...connection }: AddedConnection, providers: ProviderList): string {
   return connect === undefined
     ? standingWordsOf(connection)
-    : `Added ${connectionNamed(connection)}. ${linkWordsOf(connection, providers)}`;
+    : `${done} ${connectionNamed(connection)}. ${linkWordsOf(connection, providers)}`;
 }
 
-export function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {
+export function addedWordsOf(added: AddedConnection, providers: ProviderList): string {
+  return linkedWordsOf('Added', added, providers);
+}
+
+export function reconnectedWordsOf(reconnected: AddedConnection, providers: ProviderList): string {
+  return linkedWordsOf('Gave a new link to', reconnected, providers);
+}
+
+function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {
   return connect === undefined
     ? undefined
     : {
         message: `Open this page to approve ${connectionNamed(connection)}, and ${doingOf(connection).youDo}, within ten minutes.`,
         url: connect.url,
       };
+}
+
+export function linkOffering(secrets: Pick<SecretKeeping, 'endingsOf'>) {
+  return {
+    linkToOpen: linkToOpenOf,
+    answerAfterTheLink: {
+      idOf: ({ id }: AddedConnection) => id,
+      read: (offered: OfferedLink) => standingAfterTheLink(secrets, offered),
+    },
+  };
 }

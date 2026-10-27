@@ -11,6 +11,7 @@ import {
   consentAskedOf,
   namedOf,
   openConsentOf,
+  replacedCredentialOf,
   type ConsentServices,
   type FinishedConsent,
 } from './consent-asking.ts';
@@ -157,6 +158,7 @@ export function defineFinishConsent(services: ConsentServices) {
       }
       const finished = yield* redeemedOf(kept, finishing, services);
       const connected = yield* connectedWith(finished, { use, stateSha256, kept }, services);
+      yield* replacedCredentialOf(kept, connected.connection, services);
       return connectionShown(connected.connection, null);
     }),
   });

@@ -81,7 +81,7 @@ function postInitialize(path: string, headers: Readonly<Record<string, string>>)
 }
 
 describe('the org endpoint of the server', () => {
-  it('names the release under the title Auto Runtime and lists the four playbook tools, list_models, search and the three of connections', async () => {
+  it('names the release under the title Auto Runtime and lists the four playbook tools, list_models, search and the four of connections', async () => {
     const connected = await withMcpSession(
       'current revision',
       endpoint('/orgs/acme/mcp', acmeAdmin.key),
@@ -99,6 +99,7 @@ describe('the org endpoint of the server', () => {
         'search',
         'add_connection',
         'list_connections',
+        'reconnect_connection',
         'remove_connection',
         'activate_license',
         'get_guide',

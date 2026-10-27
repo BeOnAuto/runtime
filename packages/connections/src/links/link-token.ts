@@ -17,6 +17,10 @@ export function tokenSha256Of(token: string): string {
   return sha256Of(token);
 }
 
+export function isTheLinkOf({ token_sha256: tokenSha256 }: OpenLink, page: string): boolean {
+  return tokenSha256 === tokenSha256Of(String(new URL(page).searchParams.get('token')));
+}
+
 export const tenMinutesOn: Effect.Effect<string> = Effect.gen(function* () {
   return DateTime.formatIso(DateTime.addDuration(yield* DateTime.now, tenMinutes));
 });

@@ -16,7 +16,7 @@ export const connectionExplanations: Readonly<Record<Extract<ConflictKind, 'conn
 
 export const connectionBecauses: Readonly<Record<ConnectionBecause, string>> = {
   connection_pending: 'because nobody has approved the connection it names yet',
-  connection_broken: 'because the credential of the connection it names can no longer be read',
+  connection_broken: 'because the connection it names is broken, for the reason the details give',
   connection_not_allowed:
     'because the connection it names cannot be used on this server, for the reason the details give',
   connection_unavailable: 'because the credential of the connection it names cannot be read just now',
@@ -24,9 +24,9 @@ export const connectionBecauses: Readonly<Record<ConnectionBecause, string>> = {
 
 export const connectionRemedies: Remedies = {
   connection_pending:
-    'The person who added the connection approves it on the page its link opens, or removes it and adds it again for a new link; then it can be tried again.',
+    'The person who added the connection approves it on the page its link opens, or reconnects it for a new link; then it can be tried again.',
   connection_broken:
-    'Trying again will not help: the person removes the connection and adds it again, with its credential.',
+    'Trying again will not help until what the details say is done, most often that the person who added the connection reconnects it.',
   connection_not_allowed:
     'Trying again will not help until what the details say is put right, or it names another tool server, which search shows.',
   connection_unavailable:

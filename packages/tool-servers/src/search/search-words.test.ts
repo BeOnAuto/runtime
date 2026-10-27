@@ -102,6 +102,19 @@ describe('the plain words of search', () => {
   });
 });
 
+const scopeLacking =
+  'The tool server answered HTTP 403: the credential lacks the scope files.read this request needs; a credential granted that scope would allow it';
+
+describe('the plain words of search for a server whose credential lacks a scope', () => {
+  it('say it cannot be used, in the words that name the scope', () => {
+    const lacking = { ...unavailable('drive', 'scope_lacking'), unavailable: scopeLacking };
+
+    expect(words?.outcome({ servers: [lacking], tools: [], scopes: ['drive'] }, {})).toBe(
+      `This playbook's functions may use 1 tool server. “drive” cannot be used: ${scopeLacking}.`,
+    );
+  });
+});
+
 describe('the plain words of search over many tools, and with terms', () => {
   it('say that the servers offer too many tools to list, and to search them by terms', () => {
     const many = [available('graph', 150), unavailable('wiki', 'unreachable')];

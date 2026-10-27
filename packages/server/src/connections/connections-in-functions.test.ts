@@ -12,7 +12,7 @@ import { until } from '../testing/waiting/until.ts';
 const decodeStructured = Schema.decodeUnknownSync(Schema.Struct({ structuredContent: Schema.Unknown }));
 
 const pendingWords =
-  'Nobody has approved the connection chat yet; the person who added it opens its link, or removes it and adds it again for a new link';
+  'Nobody has approved the connection chat yet; the person who added it opens its link, or reconnects it for a new link';
 
 describe('an interaction function that delivers through a connection', () => {
   it('names it at its start, and records the connection beside the server of each delivery', async () => {

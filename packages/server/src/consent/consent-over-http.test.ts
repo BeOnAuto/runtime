@@ -7,7 +7,12 @@ import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vites
 
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { connectedByConsent, linkAddedBy, servedStudioReturn } from '../testing/servers/consents-over-http.ts';
+import {
+  connectedByConsent,
+  filesProvidedBy,
+  linkAddedBy,
+  servedStudioReturn,
+} from '../testing/servers/consents-over-http.ts';
 import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
@@ -97,33 +102,11 @@ describe('a connection of consent given by hand', () => {
 const anHour = 3_600_000;
 
 const consentEnded =
-  'The consent of the connection files was revoked or has ended, so the person who added it removes it and adds it again';
+  'The consent of the connection files was revoked or has ended, so the person who added it reconnects it';
 
 const KeptTokensSchema = Schema.fromJsonString(
   Schema.Struct({ access_token: Schema.String, refresh_token: Schema.String }),
 );
-
-function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> {
-  return {
-    CONNECTIONS: JSON.stringify({
-      registered_clients: [
-        { issuers: [fake.origin], client_id: 'auto-runtime', client_secret: '${FILES_CLIENT_SECRET}' },
-      ],
-      providers: [
-        {
-          name: 'files',
-          title: 'Files',
-          description: 'Read the files of an account.',
-          website: 'https://developer.files.example.com',
-          type: 'mcp',
-          url: fake.url,
-          credentials: [{ kind: 'authorization', issuer: fake.origin, scope: 'files.read' }],
-        },
-      ],
-    }),
-    FILES_CLIENT_SECRET: consentSecret,
-  };
-}
 
 async function tokensKeptFor(fileName: string, id: string) {
   const secretId = String(await secretIdOf(fileName, 'local', id));

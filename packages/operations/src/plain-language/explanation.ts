@@ -3,6 +3,7 @@ import type { Cancelled, Failed, Rejected, RejectionReason } from '../outcome/ou
 import type { RejectionBecause } from '../outcome/rejection-because.ts';
 import type { RejectionKind } from '../outcome/rejection.ts';
 import { connectionBecauses, connectionExplanations, connectionRemedies } from './connection-explanations.ts';
+import { credentialBecauses, credentialRemedies } from './credential-explanations.ts';
 import { creditExplanations } from './credit-explanations.ts';
 import type { Explanation, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
@@ -156,7 +157,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   failing: 'because the tool server kept failing',
   rate_limited: 'because the tool server asked it to slow down for longer than a run waits',
   unreachable: 'because the tool server could not be reached in time',
-  key_refused: 'because the tool server did not accept the key this server gives it',
+  ...credentialBecauses,
   server_failed: 'because a tool server failed',
   tool_error: 'because the tool answered an error, which the details below give',
   model_unavailable: 'because the model stopped answering',
@@ -176,7 +177,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
 };
 
 const remedyByBecause: Remedies = {
-  key_refused: 'Trying again will not help until whoever runs the server checks the key it gives that tool server.',
+  ...credentialRemedies,
   ...connectionRemedies,
 };
 

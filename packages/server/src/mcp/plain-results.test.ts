@@ -243,7 +243,7 @@ describe('the plain words that lead each result over MCP', () => {
         ...(await reasonFunctionsCalled(session)),
         ...(await workflowsCalled(session)),
         ...(await interactionsCalled(session, inSales)),
-        ...(await toolServerToolsCalled(session, inSales)),
+        ...(await toolServerToolsCalled(session, inSales, server)),
       ],
       errors: await errorsCalled(session),
     }));

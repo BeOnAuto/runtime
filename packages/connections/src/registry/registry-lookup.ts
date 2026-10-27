@@ -37,12 +37,23 @@ export function openLinkOf({ link }: KeptConnection, at: string): OpenLink | und
 }
 
 function isOfTheToken(kept: KeptConnection, tokenSha256: string): kept is KeptWithLink {
-  const { connection, link } = kept;
-  return connection.status === 'pending' && link !== undefined && link.token_sha256 === tokenSha256;
+  return kept.link !== undefined && kept.link.token_sha256 === tokenSha256;
 }
 
 function isOpen(kept: KeptConnection, tokenSha256: string, at: string): kept is KeptWithLink {
   return isOfTheToken(kept, tokenSha256) && kept.link.expires_at > at;
+}
+
+export function bindingRefusalOf(
+  { connection }: KeptConnection,
+  bindsPerson: boolean,
+  by: string,
+): Forbidden | undefined {
+  return bindsPerson && connection.added_by.id !== by
+    ? new Forbidden({
+        detail: `The connection ${connection.name} was added by another person, and only they may approve it`,
+      })
+    : undefined;
 }
 
 function boundConnectionOf(
@@ -57,13 +68,8 @@ function boundConnectionOf(
       if (!isUsable(kept, tokenSha256)) {
         return Result.fail(noOpenLink);
       }
-      return bindsPerson && kept.connection.added_by.id !== by
-        ? Result.fail(
-            new Forbidden({
-              detail: `The connection ${kept.connection.name} was added by another person, and only they may approve it`,
-            }),
-          )
-        : Result.succeed(kept);
+      const refusal = bindingRefusalOf(kept, bindsPerson, by);
+      return refusal === undefined ? Result.succeed(kept) : Result.fail(refusal);
     },
   );
 }

@@ -76,6 +76,12 @@ const toolEndings: ReadonlyArray<readonly [string, ExplainedRejection, string, s
     'Trying again will not help until whoever runs the server checks the key it gives that tool server.',
   ],
   [
+    'a tool server that asks for a scope its credential lacks',
+    { reason: 'unavailable', kind: 'tool_server_failed', because: 'scope_lacking' },
+    'a tool server it needs could not be used, because the tool server asks for a scope its credential lacks, which the details name',
+    'Trying again will not help until its credential is granted the scope the details name.',
+  ],
+  [
     'a tool server out of reach',
     { reason: 'unavailable', kind: 'tool_server_failed', because: 'unreachable' },
     'a tool server it needs could not be used, because the tool server could not be reached in time',

@@ -72,10 +72,9 @@ export function openConsentOf(
   return stateIssue === undefined ? Effect.succeed<KeptWithConsent>(kept) : Effect.fail(stateIssue);
 }
 
-export function tokensRevokedOf(
-  { connection, secretId }: KeptConnection,
-  services: Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages'>,
-): Effect.Effect<void> {
+type Forgetting = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages'>;
+
+function tokensRevokedOf({ connection, secretId }: KeptConnection, services: Forgetting): Effect.Effect<void> {
   const { credential } = connection;
   if (credential.kind !== 'authorization' || secretId === undefined) {
     return Effect.void;
@@ -95,4 +94,30 @@ export function tokensRevokedOf(
     ),
     Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.tokensUnread(named.name, detail))),
   );
+}
+
+function secretForgottenOf(
+  { secretId }: KeptConnection,
+  { secrets }: Pick<Forgetting, 'secrets'>,
+): Effect.Effect<void> {
+  return secretId === undefined ? Effect.void : secrets.forget(secretId);
+}
+
+export function forgottenCredentialOf(kept: KeptConnection, services: Forgetting): Effect.Effect<void> {
+  return Effect.andThen(tokensRevokedOf(kept, services), secretForgottenOf(kept, services));
+}
+
+function isTheSameClient(before: RecordedConnection, after: RecordedConnection): boolean {
+  const [was, is] = [before.credential, after.credential];
+  return was.issuer === is.issuer && was.client_id === is.client_id && was.client_source === is.client_source;
+}
+
+export function replacedCredentialOf(
+  before: KeptConnection,
+  after: RecordedConnection,
+  services: Forgetting,
+): Effect.Effect<void> {
+  return isTheSameClient(before.connection, after)
+    ? secretForgottenOf(before, services)
+    : forgottenCredentialOf(before, services);
 }

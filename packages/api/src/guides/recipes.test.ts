@@ -67,6 +67,16 @@ describe('the first-playbook recipe where the interaction-function guide is carr
   });
 });
 
+describe('the give-tools recipe', () => {
+  it('sends an agent to reconnect_connection where search says a connection is broken and its words say to reconnect it', async () => {
+    const recipes = await recipesFor(recipeFiles, guidesNamed(['reasoning-function']));
+
+    expect(recipes.find(({ name }) => name === 'give-tools')?.text).toContain(
+      "Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again.",
+    );
+  });
+});
+
 describe('the first-playbook recipe where the workflow guide is not carried', () => {
   it('ends at the run of the function and what comes next, as its file has it, and calls only the tools of the function', () => {
     expect([withoutWorkflows?.text, withoutWorkflows?.calls]).toEqual([firstPlaybookFile, callsOfTheFunction]);

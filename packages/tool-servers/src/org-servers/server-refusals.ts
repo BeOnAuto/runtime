@@ -20,18 +20,27 @@ const failedBecause: Readonly<Record<FailureKind, UnavailableBecause>> = {
   forgotten: 'failing',
   refused: 'failing',
   key_refused: 'key_refused',
+  scope_lacking: 'scope_lacking',
+  broken: 'connection_broken',
   too_large: 'failing',
   not_allowed: 'connection_not_allowed',
 };
 
+const saidAsTheyAre: ReadonlySet<FailureKind> = new Set(['not_allowed', 'broken']);
+
+function detailOf(name: string, { kind, message }: ServerFailure, scrub: Secrets['scrub']): string {
+  if (saidAsTheyAre.has(kind)) {
+    return message;
+  }
+  return kind === 'scope_lacking' ? scrub(message) : `The tool server ${name} could not be used: ${scrub(message)}`;
+}
+
 export function serverFailed(
   { settings }: { readonly settings: Pick<ServerSettings, 'name'> },
-  { kind, message }: ServerFailure,
+  failure: ServerFailure,
   { scrub }: Pick<Secrets, 'scrub'>,
 ): Unusable {
-  const detail =
-    kind === 'not_allowed' ? message : `The tool server ${settings.name} could not be used: ${scrub(message)}`;
-  return { because: failedBecause[kind], detail };
+  return { because: failedBecause[failure.kind], detail: detailOf(settings.name, failure, scrub) };
 }
 
 export function refusalOf({ because, detail }: Unusable): ToolNotOffered | ToolServerFailed {

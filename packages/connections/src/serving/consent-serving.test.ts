@@ -31,19 +31,19 @@ afterEach(async () => {
 });
 
 const consentEnded =
-  'The consent of the connection files was revoked or has ended, so the person who added it removes it and adds it again';
+  'The consent of the connection files was revoked or has ended, so the person who added it reconnects it';
 
 const clientGone =
-  'The client the connection files was made with is no longer registered, so the person who added it removes it and adds it again';
+  'The client the connection files was made with is no longer registered, so the person who added it reconnects it';
 
 const keyUnknown =
-  "Auto's consent service does not know the key of the connection files, so its tokens cannot be renewed, and the person who added it removes it and adds it again";
+  "Auto's consent service does not know the key of the connection files, so its tokens cannot be renewed, and the person who added it reconnects it";
 
 const notTokens =
-  'The credential of the connection files is not the tokens of a consent the runtime keeps, so the person who added it removes it and adds it again';
+  'The credential of the connection files is not the tokens of a consent the runtime keeps, so the person who added it reconnects it';
 
 const gone =
-  'The credential of the connection files is no longer in the secret store, so the person who added it removes it and adds it again';
+  'The credential of the connection files is no longer in the secret store, so the person who added it reconnects it';
 
 async function served(): Promise<FakeMcpServer> {
   const fake = await consentFake();
@@ -129,6 +129,23 @@ describe('a connection connected by consent', () => {
     const { settings } = await Effect.runPromise(await preparedIn(h));
 
     expect(settings.auth?.scope).toBeNull();
+  });
+});
+
+describe('a connection connected by consent whose server refuses its tokens', () => {
+  it('is broken in the words of a refused credential, which say to reconnect it', async () => {
+    const { h, id } = await connectedByConsent();
+    const server = await Effect.runPromise(await preparedIn(h));
+
+    const refused = await Effect.runPromise(server.refused);
+
+    expect(refused).toBe(
+      'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it',
+    );
+    expect((await h.facts()).at(-1)).toMatchObject({
+      type: 'connection_broken',
+      data: { connection: id, reason: refused },
+    });
   });
 });
 

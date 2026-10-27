@@ -1,7 +1,7 @@
 import { defineCommand, quoted } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { tokensRevokedOf } from '../page/consent-asking.ts';
+import { forgottenCredentialOf } from '../page/consent-asking.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { ConnectionIdField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
@@ -30,10 +30,7 @@ export function defineRemoveConnection(services: RemovalServices) {
       const kept = yield* recordInRegistry({ type: 'remove', connection: id }).pipe(
         Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
       );
-      yield* tokensRevokedOf(kept, services);
-      if (kept.secretId !== undefined) {
-        yield* secrets.forget(kept.secretId);
-      }
+      yield* forgottenCredentialOf(kept, services);
       if (kept.consent !== undefined) {
         yield* secrets.forget(kept.consent.verifier_secret_id);
       }

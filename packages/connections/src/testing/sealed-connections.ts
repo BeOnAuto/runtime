@@ -42,6 +42,7 @@ export function operationsOver(
     policy: connectionPolicyOf({}),
     fileEntries: [],
     modelProviders: [],
+    variables: new Map(),
     access: 'people',
     consent: h.consent,
     ...services,
@@ -57,7 +58,7 @@ export async function givenThrough(h: Harness, secrets: SecretStore, input: unkn
 function servedLoggingInto(connection: OrgConnection, logging: Layer.Layer<never>): OrgConnection {
   const { state } = connection;
   return state.status === 'connected'
-    ? { ...connection, state: { status: 'connected', server: Effect.provide(state.server, logging) } }
+    ? { ...connection, state: { ...state, server: Effect.provide(state.server, logging) } }
     : connection;
 }
 

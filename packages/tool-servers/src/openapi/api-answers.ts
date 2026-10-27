@@ -1,3 +1,4 @@
+import { extractWWWAuthenticateParams } from '@modelcontextprotocol/client';
 import { boundedAnswerOf } from '@on.auto/outbound';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
@@ -5,6 +6,7 @@ import { decodeToolResult } from '../bounds/tool-results.ts';
 import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { AnsweredStatus } from './answered-status.ts';
+import { ScopeLacking, scopeLackingIn } from './scope-lacking.ts';
 
 export interface Answering {
   readonly requestIdHeader: string | null;
@@ -100,6 +102,19 @@ function leftUnread(status: number, mediaType: string | undefined, hasBody: bool
   return failed(status) || redirected(status) || (status < 300 && !isShown(mediaType) && hasBody);
 }
 
+function shownOrRefused(
+  response: Readonly<Response>,
+  mediaType: string | undefined,
+  text: string,
+  observed: Observed,
+): CallSettled {
+  const { error, scope } = extractWWWAuthenticateParams(response);
+  const lacking = scopeLackingIn({ status: response.status, body: text, error, scope });
+  return lacking === undefined
+    ? settled(shownAnswer(response.status, mediaType, text), observed)
+    : { error: new ScopeLacking(lacking), observed };
+}
+
 export async function settledOf(response: Readonly<Response>, answering: Answering): Promise<CallSettled> {
   const mediaType = mediaTypeOf(response);
   if (leftUnread(response.status, mediaType, response.body !== null)) {
@@ -114,7 +129,7 @@ export async function settledOf(response: Readonly<Response>, answering: Answeri
     const text = await boundedAnswerOf(response, toolBounds.httpAnswerBytes, () => {
       tooLarge = true;
     }).text();
-    return settled(shownAnswer(response.status, mediaType, text), observedOf(response, answering, false));
+    return shownOrRefused(response, mediaType, text, observedOf(response, answering, false));
   } catch (error) {
     return { error, observed: observedOf(response, answering, tooLarge) };
   }

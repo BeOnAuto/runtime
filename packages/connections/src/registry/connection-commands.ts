@@ -65,7 +65,17 @@ export interface ConnectionRemoval {
 export interface ConnectionBreaking {
   readonly type: 'break';
   readonly connection: string;
+  readonly connected_at: string;
   readonly reason: string;
+}
+
+export interface ConnectionReconnection {
+  readonly type: 'reconnect';
+  readonly connection: string;
+  readonly bindsPerson: boolean;
+  readonly link: OpenLink;
+  readonly connected_by: RecordedCaller;
+  readonly variablesSet: ReadonlySet<string>;
 }
 
 export type ConnectionCommandData =
@@ -75,7 +85,8 @@ export type ConnectionCommandData =
   | ConsentStart
   | ConsentFinish
   | ConnectionRemoval
-  | ConnectionBreaking;
+  | ConnectionBreaking
+  | ConnectionReconnection;
 
 export interface CommandMetadata {
   readonly by: string;

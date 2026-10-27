@@ -99,13 +99,13 @@ describe('the words of the answer after the link of a connection', () => {
     expect(await wordsAfterTheLink(h, link)).toBe('Connected the connection “notes”; nothing is left to open.');
   });
 
-  it('say where the person approves it while its link lasts, and to remove it and add it again once it expired', async () => {
+  it('say where the person approves it while its link lasts, and to reconnect it for a new link once it expired', async () => {
     const h = harness();
     const link = await added(h, notes);
 
     expect(await wordsAfterTheLink(h, link)).toBe(await outcomeWords(harness(), 'add_connection', notes));
     expect(await wordsAfterTheLink(h, link, link.expiresAt)).toBe(
-      'The connection “notes” is pending, and its link is used up or expired, so nothing is left to open: remove it and add it again.',
+      'The connection “notes” is pending, and its link is used up or expired, so nothing is left to open: reconnect it for a new link.',
     );
   });
 
@@ -156,6 +156,17 @@ describe('the words of removing a connection', () => {
   });
 });
 
+describe('the words of reconnecting a connection', () => {
+  it('say a new link was given to it, and where the person approves it, as the words of adding it say', async () => {
+    const h = harness();
+    const { id } = await added(h, notes, { at: '2026-10-15T13:00:00.000Z' });
+
+    expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
+      'Gave a new link to the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+    );
+  });
+});
+
 describe('the words of a tool that could not do what it was asked', () => {
   it('name what it tried to do', () => {
     const h = harness();
@@ -164,11 +175,13 @@ describe('the words of a tool that could not do what it was asked', () => {
       wordsOf(h, 'add_connection').attempt(notes),
       wordsOf(h, 'add_connection').attempt({ provider: 'tracker' }),
       wordsOf(h, 'list_connections').attempt({}),
+      wordsOf(h, 'reconnect_connection').attempt({ id: 'crm-id' }),
       wordsOf(h, 'remove_connection').attempt({ id: 'crm-id' }),
     ]).toEqual([
       'add the connection “notes”',
       'connect the provider “tracker”',
       'list the connections',
+      'reconnect the connection “crm-id”',
       'remove the connection “crm-id”',
     ]);
     expect(() => wordsOf(h, 'get_connection')).toThrow('The operation get_connection has no words');

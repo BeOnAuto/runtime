@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { ToolAccess } from '../access/tool-access.ts';
-import { fakeConnections, pendingWords, type FakeConnections } from '../testing/fake-connections.ts';
+import { fakeConnections, pendingWords, refusedWords, type FakeConnections } from '../testing/fake-connections.ts';
 import { describedAccess, type ReportingAccess } from '../testing/reporting-access.ts';
 import { controlledSignals, recordingCallJournal, toolRun } from '../testing/tool-runs.ts';
 import { until } from '../testing/until.ts';
@@ -204,6 +204,38 @@ function shadowing(underTest: ServerUnderTest): void {
   });
 }
 
+const lackingScope = { 'www-authenticate': 'Bearer error="insufficient_scope", scope="notes.write"' };
+
+async function failedOnceWith(connected: Connected, status: number, headers?: Readonly<Record<string, string>>) {
+  connected.fake.failNextCall(status, headers);
+  const { reply } = await echoedThrough(connected.access, connected.fake.echoed({}));
+  return reply?.text;
+}
+
+const scopeLacking =
+  'The tool server graph failed: The tool server answered HTTP 403: the credential lacks the scope notes.write this request needs; a credential granted that scope would allow it';
+
+function refusingTheCredential(underTest: ServerUnderTest): void {
+  it('tells its source of a call its server answered 401 alone, and the call fails in the words the source recorded', async () => {
+    const connected = await connectedTo(underTest);
+
+    const otherwise = [
+      await failedOnceWith(connected, 500),
+      await failedOnceWith(connected, 429),
+      await failedOnceWith(connected, 403, lackingScope),
+    ];
+    const told = connected.connections.refusalsTold();
+    const refused = await failedOnceWith(connected, 401);
+
+    expect([otherwise[2], told]).toEqual([scopeLacking, []]);
+    expect(refused).toBe(`The tool server graph failed: ${refusedWords('graph')}`);
+    expect(connected.connections.refusalsTold()).toEqual([behaviourConnection]);
+    expect(await listed(connected.access)).toMatchObject([
+      { because: 'connection_broken', unavailable: refusedWords('graph') },
+    ]);
+  });
+}
+
 function breaking(underTest: ServerUnderTest): void {
   it('refuses a connection whose credential cannot be read once its link is made, and lists it broken from then on', async () => {
     const { access, connections } = await connectedTo(underTest);
@@ -222,6 +254,7 @@ export function connectionBehaviour(underTest: ServerUnderTest): void {
     recording(underTest);
     removal(underTest);
     shadowing(underTest);
+    refusingTheCredential(underTest);
     breaking(underTest);
   });
 }

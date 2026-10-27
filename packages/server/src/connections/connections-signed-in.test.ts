@@ -82,7 +82,8 @@ describe('a connection on a runtime that signs people in', () => {
     expect(await server.call('POST', connections, { key: builder.key, body: notes })).toMatchObject({
       status: 403,
       body: {
-        detail: 'A connection is added by a person, through an agent signed in as them, and a key cannot add one',
+        detail:
+          'A connection is added by a person, through an agent signed in as them, and a key cannot add or reconnect one',
       },
     });
   });

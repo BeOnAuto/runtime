@@ -3,6 +3,7 @@ import { accountFake, accountServerOver, testSigners } from '@on.auto/meter/test
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 
+import { linkIn } from './connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from './reasoning-server.ts';
 
 const toolServerKey = 'graph-api-key-4f1d9a7c2b';
@@ -46,15 +47,18 @@ export async function licenseActivated(
 export async function toolServerToolsCalled(
   session: McpSession,
   inPlaybook: InPlaybook,
+  server: Pick<ReasoningServer, 'call'>,
 ): Promise<readonly (readonly [string, ToolResult])[]> {
   const asked = { server: 'graph', tool: 'search' };
   const searchedFor = { ...asked, arguments: { query: 'acme' } };
   const crm = { name: 'crm', type: 'mcp', entry: { url: 'https://crm.example.com/mcp' }, credential: { kind: 'none' } };
   const added = await session.callTool('add_connection', crm);
-  const id = String(added.structuredContent?.['id']);
+  const { id, token } = linkIn(added.structuredContent);
+  await server.call('POST', `/v1/orgs/local/connections/${id}/approve`, { body: { token } });
   return [
     ['add_connection', added],
     ['list_connections', await session.callTool('list_connections', {})],
+    ['reconnect_connection', await session.callTool('reconnect_connection', { id })],
     ['remove_connection', await session.callTool('remove_connection', { id })],
     ['search', await session.callTool('search', inPlaybook({ terms: 'rows' }))],
     ['introspect', await session.callTool('introspect', inPlaybook(asked))],

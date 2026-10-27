@@ -219,7 +219,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      2940, 3472,
+      3192, 3472,
     ]);
   });
 });
@@ -238,13 +238,15 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [3562, 2327, 3501, 1741],
-      [3472, 2327, 2940, 1741],
+      [3562, 2327, 3753, 1741],
+      [3472, 2327, 3192, 1741],
     ]);
   });
 });
 
-const calledWhereListed: ReadonlySet<string> = new Set(['get_guide', 'list_models', 'add_connection']);
+const connectionTools = ['add_connection', 'reconnect_connection'];
+
+const calledWhereListed: ReadonlySet<string> = new Set(['get_guide', 'list_models', ...connectionTools]);
 
 const fieldsNamed: ReadonlySet<string> = new Set(['input_schema']);
 
@@ -257,7 +259,7 @@ function toolsNamedIn(text: string): readonly string[] {
 }
 
 describe('the tools a recipe calls', () => {
-  it('are every tool its steps name, on a server with or without workflows and interaction functions, but the guide tool, listed on every connection, list_models and add_connection, called only where they are listed, and the fields of a tool they name', () => {
+  it('are every tool its steps name, on a server with or without workflows and interaction functions, but the guide tool, listed on every connection, list_models, add_connection and reconnect_connection, called only where they are listed, and the fields of a tool they name', () => {
     const { recipes } = served;
     const onEveryServer = [served, servedWithInteraction, servedForReasoningAndWorkflows, servedForReasoning].flatMap(
       (shelf) => shelf.recipes,

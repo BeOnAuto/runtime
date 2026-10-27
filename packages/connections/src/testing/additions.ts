@@ -79,12 +79,7 @@ export function statusesOf(h: Harness, inputs: readonly unknown[]): Promise<read
   );
 }
 
-export async function added(
-  h: Harness,
-  input: unknown = crm,
-  { caller = ada, at }: { readonly caller?: CallerIdentity; readonly at?: string } = {},
-): Promise<Added> {
-  const outcome = await h.call(operationNamed(h.operations, 'add_connection'), caller, input, at);
+function linkedIn(outcome: Outcome<Succeeded>): Added {
   const { output } = Schema.decodeUnknownSync(AddedSchema)(outcome);
   const { token } = Schema.decodeUnknownSync(LinkSchema)(Object.fromEntries(new URL(output.connect.url).searchParams));
   return {
@@ -93,4 +88,21 @@ export async function added(
     url: output.connect.url,
     expiresAt: output.connect.expires_at,
   };
+}
+
+interface Acting {
+  readonly caller?: CallerIdentity;
+  readonly at?: string;
+}
+
+export async function added(h: Harness, input: unknown = crm, { caller = ada, at }: Acting = {}): Promise<Added> {
+  return linkedIn(await h.call(operationNamed(h.operations, 'add_connection'), caller, input, at));
+}
+
+export function reconnecting(h: Harness, id: string, at?: string): Promise<Outcome<Succeeded>> {
+  return h.call(operationNamed(h.operations, 'reconnect_connection'), ada, { id }, at);
+}
+
+export async function reconnected(h: Harness, id: string, at?: string): Promise<Added> {
+  return linkedIn(await reconnecting(h, id, at));
 }

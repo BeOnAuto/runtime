@@ -33,6 +33,7 @@ export interface ConnectionServices {
   readonly modelProviders: readonly string[];
   readonly providers: ProviderList;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
+  readonly variables: ReadonlyMap<string, Redacted.Redacted>;
   readonly pages: ConnectPages;
   readonly access: RuntimeAccess;
   readonly consent: ConsentClient;

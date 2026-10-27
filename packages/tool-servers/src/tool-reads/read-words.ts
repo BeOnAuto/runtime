@@ -53,6 +53,9 @@ function unreachedOf({ because }: DryRun['server']): string {
   if (because === 'key_refused') {
     return 'its tool server did not accept the key this server gives it';
   }
+  if (because === 'scope_lacking') {
+    return 'its tool server asks for a scope its credential lacks';
+  }
   return because === 'connection_not_allowed'
     ? 'the rules whoever runs this server sets for connections do not allow its tool server'
     : 'its tool server could not be asked just now';

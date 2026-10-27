@@ -7,17 +7,18 @@ import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../ope
 import { providingOf } from '../providers/provider-additions.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
+import { forgottenCredentialOf } from './consent-asking.ts';
 import { GivingSchema, givenOf, unkeptRefusalOf } from './given-fields.ts';
 
-export function defineGiveCredential({
-  secrets,
-  modelProviders,
-  providers,
-  providerValues,
-  bindsPerson,
-}: Pick<ConnectionServices, 'secrets' | 'modelProviders' | 'providers' | 'providerValues'> & {
+type GivingServices = Pick<
+  ConnectionServices,
+  'secrets' | 'modelProviders' | 'providers' | 'providerValues' | 'consent' | 'policy' | 'pages'
+> & {
   readonly bindsPerson: boolean;
-}) {
+};
+
+export function defineGiveCredential(services: GivingServices) {
+  const { secrets, modelProviders, providers, providerValues, bindsPerson } = services;
   return defineHttpOperation('org', 'command', {
     name: 'give_credential',
     title: 'Give credential',
@@ -53,6 +54,7 @@ export function defineGiveCredential({
         ...algorithm,
         ...client,
       }).pipe(Effect.tapError(() => secrets.forget(secretId)));
+      yield* forgottenCredentialOf(kept, services);
       return connectionShown(connected.connection, given.endsWith ?? null);
     }),
   });
