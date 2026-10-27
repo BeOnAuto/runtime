@@ -82,11 +82,11 @@ export function methodsOf(resource: DiscoveryResource): readonly DiscoveryMethod
   ];
 }
 
-function isJsonObject(value: Json | undefined): value is JsonObject {
+export function isJsonObject(value: Json | undefined): value is JsonObject {
   return Predicate.isObject(value) && !Array.isArray(value);
 }
 
-function isJsonList(value: Json): value is readonly Json[] {
+export function isJsonList(value: Json | undefined): value is readonly Json[] {
   return Array.isArray(value);
 }
 

@@ -1,96 +1,16 @@
 import { listed } from '@on.auto/operations';
-import { JsonPointer, Option, Predicate, Schema } from 'effect';
+import { JsonPointer, Option, Schema } from 'effect';
 
+import { isJsonList, isJsonObject } from './discovery-document.ts';
 import { requirementsOf } from './oauth2-scheme.ts';
 import type { HeldComponents, Reaching } from './openapi-components.ts';
+import type { OpenApiScheme, OpenApiTranslation, ScopedScheme } from './openapi-translation.ts';
 
 type Json = Schema.Json;
 
 export type JsonFields = Readonly<Record<string, Json>>;
 
 type Keyword = readonly [string, Json];
-
-const NamedSchema = Schema.String.check(Schema.isMinLength(1));
-
-const NamesSchema = Schema.Array(NamedSchema).check(Schema.isMinLength(1));
-
-const ReasonSchema = NamedSchema.annotate({ description: 'Why the translation does so, in words' });
-
-const OperationIdSchema = NamedSchema.annotate({ description: 'The id of an operation the document keeps' });
-
-const PathValueSchema = Schema.Struct({
-  parameter: NamedSchema.annotate({
-    description: 'The path parameter written as its value in every path, and so no parameter of any operation',
-  }),
-  value: NamedSchema.annotate({ description: 'The value written in its place' }),
-  because: ReasonSchema,
-});
-
-const LeftOutParametersSchema = Schema.Struct({
-  operation: OperationIdSchema,
-  parameters: NamesSchema.annotate({ description: 'The names of the parameters of the operation it leaves out' }),
-  because: ReasonSchema,
-});
-
-const SingleStringSchema = Schema.Struct({
-  operation: OperationIdSchema,
-  at: Schema.String.check(Schema.isPattern(/^(?:\/[^/]+)+$/u)).annotate({
-    description:
-      'A JSON pointer, under the schema of the JSON body of the request, to the schema written as one string with its description',
-  }),
-  because: ReasonSchema,
-});
-
-const schemeFields = {
-  name: NamedSchema.annotate({
-    description: 'The name of the oauth2 scheme every operation requires, in place of the schemes of its document',
-  }),
-  leaving_out: Schema.Array(NamedSchema).annotate({
-    description: 'The endings of the scopes an operation lists that its requirements leave out',
-  }),
-  because: ReasonSchema,
-};
-
-const ScopesAtSchema = NamesSchema.annotate({
-  description: 'The keys, each inside the one before, under which an operation lists its scopes',
-});
-
-const ScopesFromSchemeSchema = NamedSchema.annotate({
-  description: "The scheme of the vendor's document whose requirement in an operation lists the scopes it needs",
-});
-
-const OpenApiSchemeSchema = Schema.Union([
-  Schema.Struct({
-    ...schemeFields,
-    scopes_at: ScopesAtSchema,
-    scopes_from_scheme: Schema.optionalKey(Schema.Never),
-  }),
-  Schema.Struct({
-    ...schemeFields,
-    scopes_from_scheme: ScopesFromSchemeSchema,
-    scopes_at: Schema.optionalKey(Schema.Never),
-  }),
-]);
-
-type OpenApiScheme = typeof OpenApiSchemeSchema.Type;
-
-export const OpenApiTranslationSchema = Schema.Struct({
-  info: Schema.Struct({ title: NamedSchema, version: NamedSchema, description: NamedSchema }).annotate({
-    description: 'The info of the document made',
-  }),
-  operations: NamesSchema.annotate({
-    description: 'The ids of the operations the document keeps, each copied whole from the document that holds it',
-  }),
-  path_values: Schema.optionalKey(Schema.Array(PathValueSchema)),
-  left_out_parameters: Schema.optionalKey(Schema.Array(LeftOutParametersSchema)),
-  single_strings: Schema.optionalKey(Schema.Array(SingleStringSchema)),
-  scheme: OpenApiSchemeSchema,
-  keeps_responses: Schema.Boolean.annotate({
-    description: 'Whether the operations keep the answers their documents describe, or say only that they answer',
-  }),
-});
-
-export type OpenApiTranslation = typeof OpenApiTranslationSchema.Type;
 
 export interface Found {
   readonly path: string;
@@ -116,21 +36,17 @@ const decodeRequirements = Schema.decodeUnknownOption(RequirementsSchema);
 
 const decodeParameter = Schema.decodeUnknownOption(Schema.Struct({ name: Schema.String }));
 
+const decodePlacedParameter = Schema.decodeUnknownOption(Schema.Struct({ name: Schema.String, in: Schema.String }));
+
 const vendorExtension = 'x-';
 
 const bodySchema: readonly string[] = ['requestBody', 'content', 'application/json', 'schema'];
 
+const descriptionKeywords: ReadonlySet<string> = new Set(['summary', 'description', 'externalDocs']);
+
 const describedAnswers: JsonFields = { default: { description: 'An answer this document does not describe' } };
 
 export const madeFrom = 'The documents the translation is made from';
-
-export function isJsonFields(value: Json | undefined): value is JsonFields {
-  return Predicate.isObject(value) && !Array.isArray(value);
-}
-
-export function isJsonList(value: Json | undefined): value is readonly Json[] {
-  return Array.isArray(value);
-}
 
 export function keptOperation(found: readonly Found[], id: string): Kept {
   const [holding, ...others] = found.filter(({ operation }) => operation['operationId'] === id);
@@ -149,7 +65,7 @@ function valueAt(value: Json | undefined, keys: readonly string[]): Json | undef
   if (key === undefined) {
     return value;
   }
-  return isJsonFields(value) ? valueAt(value[key], inner) : undefined;
+  return isJsonObject(value) ? valueAt(value[key], inner) : undefined;
 }
 
 function replacedAt(
@@ -162,14 +78,36 @@ function replacedAt(
     return replace(value);
   }
   const held = value[key];
-  const replaced = isJsonFields(held) ? replacedAt(held, inner, replace) : undefined;
+  const replaced = isJsonObject(held) ? replacedAt(held, inner, replace) : undefined;
   return replaced === undefined ? undefined : { ...value, [key]: replaced };
 }
 
+export function parametersIn(declaring: JsonFields): readonly Json[] {
+  const parameters = declaring['parameters'];
+  return isJsonList(parameters) ? parameters : [];
+}
+
 function parameterNamesOf({ operation }: Found): ReadonlySet<string> {
-  const parameters = operation['parameters'];
-  const declared = isJsonList(parameters) ? parameters : [];
-  return new Set(declared.flatMap((parameter) => Option.toArray(decodeParameter(parameter)).map(({ name }) => name)));
+  return new Set(
+    parametersIn(operation).flatMap((parameter) => Option.toArray(decodeParameter(parameter)).map(({ name }) => name)),
+  );
+}
+
+function placeOf(parameter: Json): string | undefined {
+  return Option.getOrUndefined(Option.map(decodePlacedParameter(parameter), (placed) => `${placed.in} ${placed.name}`));
+}
+
+export function withParametersOfItsPath(operation: JsonFields, ofItsPath: readonly Json[]): JsonFields {
+  if (ofItsPath.length === 0) {
+    return operation;
+  }
+  const own = parametersIn(operation);
+  const declared = new Set(own.map((parameter) => placeOf(parameter)));
+  const inherited = ofItsPath.filter((parameter) => {
+    const place = placeOf(parameter);
+    return place === undefined || !declared.has(place);
+  });
+  return { ...operation, parameters: [...inherited, ...own] };
 }
 
 function isNamedIn(parameter: Json, names: ReadonlySet<string>): boolean {
@@ -210,8 +148,23 @@ function pathValuesCheckedIn(kept: readonly Kept[], { path_values: pathValues = 
   }
 }
 
+function descriptionsCheckedIn(
+  kept: readonly Kept[],
+  { left_out_descriptions: leftOut = [] }: OpenApiTranslation,
+): void {
+  for (const id of leftOut.flatMap(({ operations }) => operations)) {
+    const { operation } = keptNamed(kept, id, 'leaves out the description of');
+    if (!Object.keys(operation).some((keyword) => descriptionKeywords.has(keyword))) {
+      throw new Error(
+        `The operation ${id} has no summary, description or externalDocs, which the translation leaves out`,
+      );
+    }
+  }
+}
+
 export function changesCheckedIn(kept: readonly Kept[], translation: OpenApiTranslation): void {
   leftOutCheckedIn(kept, translation);
+  descriptionsCheckedIn(kept, translation);
   singleStringsCheckedIn(kept, translation);
   pathValuesCheckedIn(kept, translation);
 }
@@ -221,19 +174,22 @@ function scopesRequiredBy(operation: JsonFields, vendorScheme: string): readonly
   return requirements.flatMap((requirement) => requirement[vendorScheme] ?? []);
 }
 
-function listedScopesOf(operation: JsonFields, scheme: OpenApiScheme): readonly string[] {
+function listedScopesOf(operation: JsonFields, scheme: ScopedScheme): readonly string[] {
   return scheme.scopes_at === undefined
     ? scopesRequiredBy(operation, scheme.scopes_from_scheme)
     : Option.getOrElse(decodeScopes(valueAt(operation, scheme.scopes_at)), (): readonly string[] => []);
 }
 
-function whereListed(scheme: OpenApiScheme): string {
+function whereListed(scheme: ScopedScheme): string {
   return scheme.scopes_at === undefined
     ? `in its requirement of the scheme ${scheme.scopes_from_scheme}`
     : `under ${scheme.scopes_at.join(' ')}`;
 }
 
 export function scopesOf({ id, operation }: Kept, scheme: OpenApiScheme): readonly string[] {
+  if (scheme.lists_no_scopes !== undefined) {
+    return [];
+  }
   const kept = listedScopesOf(operation, scheme).filter(
     (scope) => !scheme.leaving_out.some((ending) => scope.endsWith(ending)),
   );
@@ -270,7 +226,7 @@ function withSingleStrings(operation: JsonFields, { id }: Kept, translation: Ope
     .filter((each) => each.operation === id)
     .reduce((written, { at }) => {
       const replaced = replacedAt(written, [...bodySchema, ...tokensOf(at)], singleStringOf);
-      if (!isJsonFields(replaced)) {
+      if (!isJsonObject(replaced)) {
         throw new Error(`The operation ${id} has no ${at} under the JSON schema of its request body`);
       }
       return replaced;
@@ -284,13 +240,26 @@ function writtenKeyword([keyword, value]: Keyword, leftOut: ReadonlySet<string>,
   return [keyword, keyword === 'responses' && !keepsResponses ? describedAnswers : value];
 }
 
+function leavesOutTheDescriptionOf({ id }: Kept, { left_out_descriptions: leftOut = [] }: OpenApiTranslation): boolean {
+  return leftOut.some(({ operations }) => operations.includes(id));
+}
+
+function isCopied(keyword: string, leavesOutTheDescription: boolean): boolean {
+  return (
+    !keyword.startsWith(vendorExtension) &&
+    keyword !== 'security' &&
+    !(leavesOutTheDescription && descriptionKeywords.has(keyword))
+  );
+}
+
 export function translatedOperation({ kept, scopes }: Required, translation: OpenApiTranslation): JsonFields {
   const leftOut = leftOutNamesOf(kept, translation);
+  const leavesOutTheDescription = leavesOutTheDescriptionOf(kept, translation);
   const copied: JsonFields = Object.fromEntries(
     Object.entries(kept.operation)
-      .filter(([keyword]: Keyword) => !keyword.startsWith(vendorExtension) && keyword !== 'security')
+      .filter(([keyword]: Keyword) => isCopied(keyword, leavesOutTheDescription))
       .map((each: Keyword) => writtenKeyword(each, leftOut, translation.keeps_responses)),
   );
-  const security = requirementsOf(translation.scheme.name, scopes);
-  return { ...withSingleStrings(copied, kept, translation), security };
+  const security = scopes.length === 0 ? {} : { security: requirementsOf(translation.scheme.name, scopes) };
+  return { ...withSingleStrings(copied, kept, translation), ...security };
 }

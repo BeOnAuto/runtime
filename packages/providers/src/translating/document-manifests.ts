@@ -1,9 +1,10 @@
 import { listed, shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
-import { Schema } from 'effect';
+import { documentInText } from '@on.auto/tool-servers';
+import { Result, Schema } from 'effect';
 
 import { shippedEntries } from '../reading/shipped-providers.ts';
 import { CutSchema } from './discovery-cuts.ts';
-import { OpenApiTranslationSchema } from './openapi-operations.ts';
+import { OpenApiTranslationSchema } from './openapi-translation.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
 import { curatedOpenApiOf } from './translate-openapi.ts';
@@ -35,7 +36,7 @@ const OpenApiManifestSchema = Schema.Struct({
   type: Schema.Literal('openapi').annotate({ description: 'A document translated from OpenAPI documents' }),
   sources: Schema.Array(Schema.String)
     .check(Schema.isMinLength(1))
-    .annotate({ description: 'The addresses of the OpenAPI documents in JSON the document is made from' }),
+    .annotate({ description: 'The addresses of the OpenAPI documents in JSON or YAML the document is made from' }),
   authorization_server: AuthorizationServerAddressSchema,
   ...OpenApiTranslationSchema.fields,
 });
@@ -76,6 +77,12 @@ export interface Written {
   readonly text: string;
 }
 
+type Reading = (address: string) => Promise<unknown>;
+
+interface Run extends Translating {
+  readonly reading: Reading;
+}
+
 interface Asked {
   readonly name: string;
   readonly given: string | undefined;
@@ -109,13 +116,25 @@ function askedOf(commandArgument: string, names: readonly string[]): Asked {
   return { name, given };
 }
 
-async function fetchedJson(address: string, fetching: Fetching): Promise<unknown> {
+async function fetchedDocument(address: string, fetching: Fetching): Promise<unknown> {
   const answer = await fetching(address);
   if (!answer.ok) {
     throw new Error(`${address} answered ${String(answer.status)}, so nothing is translated from it`);
   }
-  const read: unknown = await answer.json();
-  return read;
+  return Result.getOrThrowWith(
+    documentInText(await answer.text()),
+    (located) =>
+      new Error(`${address} answered no document in JSON or YAML, so nothing is translated from it: ${located}`),
+  );
+}
+
+function readingEachOnce(fetching: Fetching): Reading {
+  const read = new Map<string, Promise<unknown>>();
+  return (address) => {
+    const reading = read.get(address) ?? fetchedDocument(address, fetching);
+    read.set(address, reading);
+    return reading;
+  };
 }
 
 async function givenJson(path: string, { readGiven }: Translating): Promise<unknown> {
@@ -130,11 +149,11 @@ function jsonText(value: unknown): string {
 async function discoveryTranslated(
   { name, given }: Asked,
   manifest: DiscoveryManifest,
-  translating: Translating,
+  run: Run,
 ): Promise<readonly Written[]> {
-  const { folder, fetching } = translating;
-  const read = await (given === undefined ? fetchedJson(manifest.discovery, fetching) : givenJson(given, translating));
-  const metadata = await fetchedJson(manifest.authorization_server, fetching);
+  const { folder, reading } = run;
+  const read = await (given === undefined ? reading(manifest.discovery) : givenJson(given, run));
+  const metadata = await reading(manifest.authorization_server);
   const { document, revision } = translatedDiscoveryOf(read, metadata, manifest);
   const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
   const remade = { type, discovery: address, revision, authorization_server: authorizationServer, methods };
@@ -150,50 +169,40 @@ async function discoveryTranslated(
 function fetchedAt(
   { name, given }: Asked,
   addresses: readonly string[],
-  { fetching }: Translating,
+  { reading }: Run,
 ): Promise<readonly unknown[]> {
   if (given !== undefined) {
     throw new Error(
       `The manifest ${name} is of OpenAPI documents, which the command fetches at the addresses it names, so no file is given in place of one. ${usage}`,
     );
   }
-  return Promise.all(addresses.map((address) => fetchedJson(address, fetching)));
+  return Promise.all(addresses.map((address) => reading(address)));
 }
 
-async function openApiTranslated(
-  asked: Asked,
-  manifest: OpenApiManifest,
-  translating: Translating,
-): Promise<readonly Written[]> {
-  const documents = await fetchedAt(asked, manifest.sources, translating);
-  const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
+async function openApiTranslated(asked: Asked, manifest: OpenApiManifest, run: Run): Promise<readonly Written[]> {
+  const documents = await fetchedAt(asked, manifest.sources, run);
+  const metadata = await run.reading(manifest.authorization_server);
   const document = curatedOpenApiOf(documents, manifest, metadata);
-  return [{ file: shippedFileIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
+  return [{ file: shippedFileIn(run.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
 }
 
-async function swaggerConverted(
-  asked: Asked,
-  manifest: SwaggerManifest,
-  translating: Translating,
-): Promise<readonly Written[]> {
+async function swaggerConverted(asked: Asked, manifest: SwaggerManifest, run: Run): Promise<readonly Written[]> {
   const documents = await fetchedAt(
     asked,
     manifest.sources.map(({ address }) => address),
-    translating,
+    run,
   );
-  const metadata = await fetchedJson(manifest.authorization_server, translating.fetching);
+  const metadata = await run.reading(manifest.authorization_server);
   const document = convertedDocumentOf(documents, manifest, metadata);
-  return [{ file: shippedFileIn(translating.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
+  return [{ file: shippedFileIn(run.folder, `${asked.name}${documentSuffix}`), text: jsonText(document) }];
 }
 
-async function translatedOne(asked: Asked, translating: Translating): Promise<readonly Written[]> {
-  const manifest = await manifestIn(translating.shippedFiles, translating.folder, asked.name);
+async function translatedOne(asked: Asked, run: Run): Promise<readonly Written[]> {
+  const manifest = await manifestIn(run.shippedFiles, run.folder, asked.name);
   if (manifest.type === 'discovery') {
-    return discoveryTranslated(asked, manifest, translating);
+    return discoveryTranslated(asked, manifest, run);
   }
-  return manifest.type === 'openapi'
-    ? openApiTranslated(asked, manifest, translating)
-    : swaggerConverted(asked, manifest, translating);
+  return manifest.type === 'openapi' ? openApiTranslated(asked, manifest, run) : swaggerConverted(asked, manifest, run);
 }
 
 export async function translatedDocuments(
@@ -205,6 +214,7 @@ export async function translatedDocuments(
     commandArguments.length === 0
       ? names.map((name): Asked => ({ name, given: undefined }))
       : commandArguments.map((each) => askedOf(each, names));
-  const translated = await Promise.all(asked.map((each) => translatedOne(each, translating)));
+  const run: Run = { ...translating, reading: readingEachOnce(translating.fetching) };
+  const translated = await Promise.all(asked.map((each) => translatedOne(each, run)));
   return translated.flat();
 }

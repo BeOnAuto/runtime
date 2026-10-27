@@ -54,14 +54,17 @@ const hostsOfTheWays = [
   [[['mcp.hubspot.com', 'mcp.hubspot.com']]],
   [[['mcp.linear.app', 'mcp.linear.app']]],
   [[['partner.api.bingads.microsoft.com', microsoft, microsoft, microsoft]]],
+  [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['mcp.notion.com', 'mcp.notion.com']]],
-  [[['workiq.svc.cloud.microsoft', microsoft, microsoft, microsoft]]],
+  [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
+  [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['mcp.posthog.com', 'oauth.posthog.com']]],
   [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
   [[['searchads360.googleapis.com', google]]],
   [[['mcp.slack.com', 'mcp.slack.com']]],
   [[['slack.com']]],
   [[['mcp.stripe.com', 'access.stripe.com']]],
+  [[['workiq.svc.cloud.microsoft', microsoft, microsoft, microsoft]]],
   [[['youtube.googleapis.com', google]]],
   [[['youtubeanalytics.googleapis.com', google]]],
   [[['youtube.googleapis.com', google]]],
@@ -74,10 +77,23 @@ const microsoftAmazonAndAdobe: ReadonlySet<string> = new Set([
   'amazon-ads',
   'amazon-ads-mcp',
   'microsoft-advertising',
+  'microsoft-teams',
+  'onedrive',
   'outlook',
+  'work-iq',
 ]);
 
 const adobe = 'openid AdobeID read_organizations additional_info.projectedProductContext';
+
+function forWorkAccounts(scopes: string) {
+  return {
+    issuer: 'https://login.microsoftonline.com/organizations/v2.0',
+    authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
+    token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
+    scope: `${scopes} offline_access`,
+    clients: ['registered'],
+  };
+}
 
 const consentWays = [
   [
@@ -121,15 +137,12 @@ const consentWays = [
     },
   ],
   [
-    'outlook',
-    {
-      issuer: 'https://login.microsoftonline.com/organizations/v2.0',
-      authorization_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
-      token_endpoint: 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
-      scope: 'fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask offline_access',
-      clients: ['registered'],
-    },
+    'microsoft-teams',
+    forWorkAccounts('Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send Chat.Read ChatMessage.Send'),
   ],
+  ['onedrive', forWorkAccounts('Files.ReadWrite.All Sites.Read.All')],
+  ['outlook', forWorkAccounts('Mail.ReadWrite Mail.Send Calendars.ReadWrite User.Read')],
+  ['work-iq', forWorkAccounts('fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask')],
 ];
 
 const kindAndProse: ReadonlySet<string> = new Set(['kind', 'description']);

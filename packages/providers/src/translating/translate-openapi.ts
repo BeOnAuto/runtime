@@ -1,22 +1,24 @@
 import { alternatives } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { isJsonObject } from './discovery-document.ts';
 import { authorizationServerOf, rootRequirementOf, securitySchemesOf } from './oauth2-scheme.ts';
-import { componentsReachedBy, heldComponentsOf, type Reaching } from './openapi-components.ts';
+import { componentsReachedBy, heldComponentsOf, withMappingsHeld, type Reaching } from './openapi-components.ts';
 import {
   changesCheckedIn,
-  isJsonFields,
   keptOperation,
   madeFrom,
+  parametersIn,
   scopesOf,
   translatedOperation,
+  withParametersOfItsPath,
   writtenPathOf,
   type Found,
   type JsonFields,
   type Kept,
-  type OpenApiTranslation,
   type Required,
 } from './openapi-operations.ts';
+import type { OpenApiTranslation } from './openapi-translation.ts';
 
 type Json = Schema.Json;
 
@@ -44,11 +46,14 @@ const methods: ReadonlySet<string> = new Set(['get', 'put', 'post', 'delete', 'o
 
 function operationsIn({ paths, components = {} }: Source): readonly Found[] {
   const held = heldComponentsOf(components);
-  return Object.entries(paths).flatMap(([path, item]: readonly [string, JsonFields]) =>
-    Object.entries(item).flatMap(([method, operation]: Keyword): readonly Found[] =>
-      methods.has(method) && isJsonFields(operation) ? [{ path, method, operation, held }] : [],
-    ),
-  );
+  return Object.entries(paths).flatMap(([path, item]: readonly [string, JsonFields]) => {
+    const ofItsPath = parametersIn(item);
+    return Object.entries(item).flatMap(([method, operation]: Keyword): readonly Found[] =>
+      methods.has(method) && isJsonObject(operation)
+        ? [{ path, method, operation: withParametersOfItsPath(operation, ofItsPath), held }]
+        : [],
+    );
+  });
 }
 
 function agreedOf<A>(first: A, others: readonly A[], what: string, writtenOf: (value: A) => string): A {
@@ -121,6 +126,12 @@ export function curatedOpenApiOf(
     operation: translatedOperation(each, translation),
   }));
   const reaching = translated.map(({ kept: { id, held }, operation }): Reaching => ({ id, held, operation }));
+  const components = componentsReachedBy(reaching);
+  const holding = heldComponentsOf(components);
+  const written = translated.map(({ kept: each, operation }): Translated => ({
+    kept: each,
+    operation: withMappingsHeld(operation, holding),
+  }));
   const servers: JsonFields = serversOf(sources);
   const { name } = translation.scheme;
   return {
@@ -128,10 +139,7 @@ export function curatedOpenApiOf(
     info: translation.info,
     ...servers,
     security: rootRequirementOf(name),
-    paths: pathsOf(translated, translation),
-    components: {
-      ...componentsReachedBy(reaching),
-      securitySchemes: securitySchemesOf(name, server, scopesNamedIn(required)),
-    },
+    paths: pathsOf(written, translation),
+    components: { ...components, securitySchemes: securitySchemesOf(name, server, scopesNamedIn(required)) },
   };
 }

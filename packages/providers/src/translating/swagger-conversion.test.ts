@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { trackerAuthorizationServer } from '../testing/discovery-documents.ts';
 import { foldersOpenApi, notesConversion, notesSwagger } from '../testing/swagger-documents.ts';
-import { isJsonFields, type JsonFields } from './openapi-operations.ts';
+import { isJsonObject } from './discovery-document.ts';
+import type { JsonFields } from './openapi-operations.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 
 const decodeConversion = Schema.decodeUnknownSync(SwaggerConversionSchema);
@@ -26,9 +27,9 @@ function convertedWith(changes: Readonly<Record<string, unknown>>, sources: read
 }
 
 function methodsOf({ paths }: JsonFields): readonly (readonly [string, readonly string[]])[] {
-  return Object.entries(isJsonFields(paths) ? paths : {}).map(([path, item]: readonly [string, Schema.Json]) => [
+  return Object.entries(isJsonObject(paths) ? paths : {}).map(([path, item]: readonly [string, Schema.Json]) => [
     path,
-    Object.keys(isJsonFields(item) ? item : {}),
+    Object.keys(isJsonObject(item) ? item : {}),
   ]);
 }
 

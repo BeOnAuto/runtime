@@ -1,14 +1,15 @@
 name: outlook
 title: Outlook
-description: Read and search Outlook mail and calendar events and the rest of the person's Microsoft 365 data through Microsoft's Work IQ MCP server, as the person who connects, and send, move and change them where the tenant's Work IQ policy allows, which by default it does not.
-website: https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/mcp/overview
-type: mcp
-url: https://workiq.svc.cloud.microsoft/mcp
+description: List, search and read Outlook mail and mail folders, send mail, reply and make drafts, and read the calendar between two dates and read, create, update and cancel events, as the person who connects, through Microsoft Graph.
+website: https://learn.microsoft.com/en-us/graph/auth-v2-user
+type: openapi
+document: documents/outlook.openapi.json
+request_id: request-id
 credentials:
   - kind: authorization
     issuer: https://login.microsoftonline.com/organizations/v2.0
     authorization_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/token
-    scope: fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask offline_access
+    scope: Mail.ReadWrite Mail.Send Calendars.ReadWrite User.Read offline_access
     clients: [registered]
-    description: Sign in with your work account and allow Work IQ.
+    description: Sign in with your work account and allow access to your mail and calendar. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for mail and calendar.

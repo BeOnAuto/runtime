@@ -2,6 +2,7 @@ import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { trackerAuthorizationServer } from '../testing/discovery-documents.ts';
+import { calendarManifest, calendarSource, calendarTranslated } from '../testing/graph-shaped-documents.ts';
 import {
   aboutManifest,
   aboutSource,
@@ -11,7 +12,7 @@ import {
   trackerOpenApiManifest,
   trackerOpenApiTranslated,
 } from '../testing/openapi-documents.ts';
-import { OpenApiTranslationSchema, type OpenApiTranslation } from './openapi-operations.ts';
+import { OpenApiTranslationSchema, type OpenApiTranslation } from './openapi-translation.ts';
 import { curatedOpenApiOf } from './translate-openapi.ts';
 
 const decodeTranslation = Schema.decodeUnknownSync(OpenApiTranslationSchema);
@@ -42,6 +43,10 @@ function leavingOut(operation: string, parameters: readonly string[]) {
   return translatedWith({ left_out_parameters: [{ operation, parameters, because: 'It is not wanted' }] });
 }
 
+function leavingOutTheDescriptionOf(operations: readonly string[]) {
+  return translatedWith({ left_out_descriptions: [{ operations, because: 'It describes another operation' }] });
+}
+
 function writingAsOneString(operation: string, at: string) {
   return translatedWith({ single_strings: [{ operation, at, because: 'It is one string' }] });
 }
@@ -57,6 +62,10 @@ describe('a curated document translated from the OpenAPI documents a vendor publ
 
   it('says only that an operation answers where it keeps no answer, and names no server or component where its documents name none', () => {
     expect(curatedOpenApiOf([aboutSource], decodeTranslation(aboutManifest), server)).toEqual(aboutTranslated);
+  });
+
+  it('gives each operation the parameters its path declares that it does not, leaves out the descriptions it names, trims from the mapping of a discriminator, in a component or an operation, each entry whose schema is missing, touching no property or example of that name, and requires the scheme at its root alone where its documents list no scope', () => {
+    expect(curatedOpenApiOf([calendarSource], decodeTranslation(calendarManifest), server)).toEqual(calendarTranslated);
   });
 });
 
@@ -166,6 +175,17 @@ describe('a translation of parameters and schemas refused', () => {
   });
 });
 
+describe('a translation of descriptions refused', () => {
+  it('leaves out the description of an operation that has none, or of an operation the document does not keep', () => {
+    expect(leavingOutTheDescriptionOf(['person', 'issues'])).toThrow(
+      'The operation issues has no summary, description or externalDocs, which the translation leaves out',
+    );
+    expect(leavingOutTheDescriptionOf(['issueDelete'])).toThrow(
+      'The translation leaves out the description of the operation issueDelete, which the document does not keep',
+    );
+  });
+});
+
 const answeredWithAll = { 200: { description: 'The campaigns' } };
 
 const campaignsSource = {
@@ -219,11 +239,14 @@ describe('the scopes of a translation read from the requirement of a scheme of t
     });
   });
 
-  it('are refused for an operation that requires no scope of that scheme, and where the scheme names both places or neither', () => {
+  it('are refused for an operation that requires no scope of that scheme, and where the scheme names both places or neither, or says the operations list no scope beside the endings it leaves out', () => {
     expect(campaignsTranslatedWith(fromTheVendorsScheme, ['uncampaign'])).toThrow(
       'The operation uncampaign lists no scope in its requirement of the scheme OAuth2 that the translation keeps',
     );
     expect(campaignsTranslatedWith({ ...fromTheVendorsScheme, scopes_at: ['x-scopes'] })).toThrow('Expected never');
     expect(campaignsTranslatedWith(schemeOfTheCampaigns)).toThrow('Missing key');
+    expect(campaignsTranslatedWith({ ...schemeOfTheCampaigns, lists_no_scopes: 'It lists none' })).toThrow(
+      'Expected never',
+    );
   });
 });

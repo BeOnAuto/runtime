@@ -115,6 +115,7 @@ const allowances: readonly Allowance[] = [
     in: [googleAdsDocument],
   })),
   { text: 'A primitive filter', in: [analyticsDocument, `${providerDocuments}/google-analytics-admin.openapi.json`] },
+  { text: 'inferenceClassification', in: [`${providerDocuments}/outlook.openapi.json`] },
   ...['CohortSpec', 'cohortSpec'].map((vendorText) => ({ text: vendorText, in: [analyticsDocument] })),
   { text: 'execution-denied', in: ['capabilities/reasoning/src/tools/final-step.test.ts'] },
   ...['primitives?', 'executions?', 'inference', 'orchestration', 'recollection'].map((term) => ({

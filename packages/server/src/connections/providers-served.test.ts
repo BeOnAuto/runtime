@@ -120,15 +120,24 @@ async function namesSearchedBy(served: ReasoningServer): Promise<readonly string
   return Schema.decodeUnknownSync(SearchedSchema)(body).providers.map(({ name }) => name);
 }
 
-const atGoogle = shippedProviders
-  .filter(({ entry }) => entry.credentials.some(({ issuer }) => issuer === 'https://accounts.google.com'))
-  .map(({ entry }) => entry.name);
+function signingInAt(issuers: string): readonly string[] {
+  return shippedProviders
+    .filter(({ entry }) => entry.credentials.some(({ issuer = '' }) => issuer.startsWith(issuers)))
+    .map(({ entry }) => entry.name);
+}
+
+const atGoogle = signingInAt('https://accounts.google.com');
+
+const atMicrosoft = signingInAt('https://login.microsoftonline.com/');
 
 function waysExpected(
   ofTheOthers: Readonly<Record<string, readonly string[]>>,
-  atGoogleWays: readonly string[],
+  atGoogleAndMicrosoft: readonly string[],
 ): readonly (readonly [string, readonly string[]])[] {
-  const known = { ...Object.fromEntries(atGoogle.map((name) => [name, atGoogleWays])), ...ofTheOthers };
+  const known = {
+    ...Object.fromEntries([...atGoogle, ...atMicrosoft].map((name) => [name, atGoogleAndMicrosoft])),
+    ...ofTheOthers,
+  };
   return names.map((name) => [name, required(known[name])]);
 }
 
@@ -141,9 +150,7 @@ const waysWithoutAClient = {
   github: ['authorization set up first', 'secret offered'],
   hubspot: ['authorization set up first'],
   linear: ['authorization offered'],
-  'microsoft-advertising': ['authorization set up first'],
   notion: ['authorization offered'],
-  outlook: ['authorization set up first'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: ['authorization set up first'],
@@ -174,9 +181,7 @@ const waysWithAClient = {
   github: ['authorization offered', 'secret offered'],
   hubspot: ['authorization offered'],
   linear: ['authorization offered'],
-  'microsoft-advertising': ['authorization offered'],
   notion: ['authorization offered'],
-  outlook: ['authorization offered'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: ['authorization offered'],
@@ -198,7 +203,7 @@ describe('the ways of the providers a server lists', () => {
       waysExpected(waysWithAClient, ['authorization offered']),
       names,
     ]);
-    expect(atGoogle).toHaveLength(16);
+    expect([atGoogle.length, atMicrosoft.length]).toEqual([16, 5]);
   });
 });
 
