@@ -52,6 +52,9 @@ const googleProviders = [
   'google-sheets',
   'google-slides',
   'search-ads-360',
+  'youtube',
+  'youtube-analytics',
+  'youtube-management',
 ];
 
 const microsoftAmazonAndAdobe = [
@@ -94,9 +97,18 @@ describe('the shipped providers', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
     expect(names).toEqual(
-      [...googleProviders, ...microsoftAmazonAndAdobe, 'github', 'profound', 'slack', 'slack-api', 'zoom'].toSorted(),
+      [
+        ...googleProviders,
+        ...microsoftAmazonAndAdobe,
+        'github',
+        'profound',
+        'slack',
+        'slack-api',
+        'stripe',
+        'zoom',
+      ].toSorted(),
     );
-    expect(names).toHaveLength(24);
+    expect(names).toHaveLength(28);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -145,6 +157,10 @@ describe('the ways of the shipped providers', () => {
       ['search-ads-360', ['authorization'], []],
       ['slack', ['authorization'], []],
       ['slack-api', ['secret'], []],
+      ['stripe', ['authorization'], []],
+      ['youtube', ['authorization'], []],
+      ['youtube-analytics', ['authorization'], []],
+      ['youtube-management', ['authorization'], []],
       ['zoom', ['authorization'], []],
     ]);
   });
@@ -176,6 +192,10 @@ describe('the servers of the shipped providers', () => {
       ['search-ads-360', 'https://searchads360.googleapis.com'],
       ['slack', 'https://mcp.slack.com/mcp'],
       ['slack-api', 'https://slack.com/api'],
+      ['stripe', 'https://mcp.stripe.com'],
+      ['youtube', 'https://youtube.googleapis.com'],
+      ['youtube-analytics', 'https://youtubeanalytics.googleapis.com'],
+      ['youtube-management', 'https://youtube.googleapis.com'],
       ['zoom', 'https://api.zoom.us/v2'],
     ]);
     expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual(
@@ -229,6 +249,9 @@ describe('the shipped providers of Google', () => {
       ['google-sheets', []],
       ['google-slides', []],
       ['search-ads-360', []],
+      ['youtube', []],
+      ['youtube-analytics', []],
+      ['youtube-management', []],
     ]);
   });
 });

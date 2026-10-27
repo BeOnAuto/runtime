@@ -1,0 +1,15 @@
+name: youtube
+title: YouTube
+description: Read a YouTube channel's details, its videos and their statistics, and its playlists and their items.
+website: https://developers.google.com/youtube/v3
+type: openapi
+document: documents/youtube.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/youtube.readonly
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow YouTube to be read.

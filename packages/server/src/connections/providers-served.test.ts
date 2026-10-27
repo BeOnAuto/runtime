@@ -150,11 +150,12 @@ describe('the ways of the providers a server lists', () => {
           profound: ['authorization offered', 'secret offered'],
           slack: ['authorization set up first'],
           'slack-api': ['secret offered'],
+          stripe: ['authorization offered'],
           zoom: ['authorization set up first'],
         },
         ['authorization set up first'],
       ),
-      ['adobe-analytics', 'adobe-analytics-mcp', 'github', 'profound', 'slack-api'],
+      ['adobe-analytics', 'adobe-analytics-mcp', 'github', 'profound', 'slack-api', 'stripe'],
     ]);
     expect([await waysListedBy(withClients), await namesSearchedBy(withClients)]).toEqual([
       waysExpected(
@@ -169,13 +170,14 @@ describe('the ways of the providers a server lists', () => {
           profound: ['authorization offered', 'secret offered'],
           slack: ['authorization offered'],
           'slack-api': ['secret offered'],
+          stripe: ['authorization offered'],
           zoom: ['authorization offered'],
         },
         ['authorization offered'],
       ),
       names,
     ]);
-    expect(atGoogle).toHaveLength(13);
+    expect(atGoogle).toHaveLength(16);
   });
 });
 

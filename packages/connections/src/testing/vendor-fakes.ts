@@ -1,5 +1,5 @@
 import type { Outcome, Succeeded } from '@on.auto/operations';
-import type { ConsentClientOptions } from '@on.auto/tool-servers';
+import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
 import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
 import { added } from './additions.ts';
@@ -80,6 +80,12 @@ export function servedAsTheVendor(vendor: Vendor): Promise<FakeMcpServer> {
   return consentFake(vendor.metadata);
 }
 
+function registeredAtTheVendor(issuer: string, { metadata }: Vendor): RegisteredClient {
+  return metadata.takesPublicClientsAlone === true
+    ? registeredAt(issuer, { credential: { kind: 'public' } })
+    : registeredAt(issuer);
+}
+
 export function harnessAtTheVendor(
   fake: FakeMcpServer,
   vendor: Vendor,
@@ -89,7 +95,7 @@ export function harnessAtTheVendor(
     providers,
     consenting: {
       fetch: answeredAsTheVendor(fake, vendor),
-      registeredClients: registeredIssuer === undefined ? [] : [registeredAt(registeredIssuer)],
+      registeredClients: registeredIssuer === undefined ? [] : [registeredAtTheVendor(registeredIssuer, vendor)],
     },
   });
 }

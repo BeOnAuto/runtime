@@ -1,7 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { fakeMcpAnswers } from '../mcp-testing/fake-mcp-answers.ts';
-import { asTheClient, clientSecret, redirectUri } from './authorization-requests.ts';
+import { fakeMcpAnswers, type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
+import {
+  asTheClient,
+  basic,
+  clientSecret,
+  codeOf,
+  metadataOf,
+  redeemed,
+  redirectUri,
+} from './authorization-requests.ts';
+import type { ClientRegistration } from './fake-clients.ts';
 
 const origin = 'https://vendor.example.com';
 
@@ -35,5 +45,47 @@ describe('the token and revocation endpoints of the fake authorization server', 
       { status: 400, body: JSON.stringify({ error: 'invalid_grant' }) },
       200,
     ]);
+  });
+});
+
+const closing: (() => Promise<void>)[] = [];
+
+afterEach(async () => {
+  await Promise.all(closing.splice(0).map((close) => close()));
+});
+
+async function servedTakingPublicClientsAlone(changes: Partial<ClientRegistration>): Promise<FakeMcpServer> {
+  const fake = await serveFakeMcp({
+    client: {
+      clientId: 'auto-runtime',
+      expiresInSeconds: 3600,
+      redirectUris: [redirectUri],
+      takesPublicClientsAlone: true,
+      ...changes,
+    },
+  });
+  closing.push(fake.close);
+  return fake;
+}
+
+describe('a fake whose token endpoint takes public clients alone', () => {
+  it('lists none alone, takes a public client by its id, and refuses a client with a secret however it sends it, and one it does not know', async () => {
+    const open = await servedTakingPublicClientsAlone({});
+    const confidential = await servedTakingPublicClientsAlone({ clientSecret });
+
+    const statuses = [
+      await redeemed(open, await codeOf(open), {}, { client_id: 'auto-runtime' }),
+      await redeemed(open, await codeOf(open), {}, { client_id: 'another-client' }),
+      await redeemed(confidential, await codeOf(confidential), basic('auto-runtime', clientSecret)),
+      await redeemed(
+        confidential,
+        await codeOf(confidential),
+        {},
+        { client_id: 'auto-runtime', client_secret: clientSecret },
+      ),
+    ].map(({ status }) => status);
+
+    expect(statuses).toEqual([200, 401, 401, 401]);
+    expect((await metadataOf(open))['token_endpoint_auth_methods_supported']).toEqual(['none']);
   });
 });

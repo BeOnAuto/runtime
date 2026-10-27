@@ -1,0 +1,15 @@
+name: youtube-management
+title: YouTube management
+description: Read the comments on a YouTube channel's videos and their replies, and update a video's title, description, tags, category, language, privacy, publish time, licence, embedding, audience, synthetic media label, recording date and translations, clearing what a call leaves out of a part it sends.
+website: https://developers.google.com/youtube/v3
+type: openapi
+document: documents/youtube-management.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/youtube.force-ssl
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow YouTube management.

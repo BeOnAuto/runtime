@@ -190,6 +190,15 @@ describe('the other clients a finish redeems the code with', () => {
     expect(await refused(consentClientWith(), asked)).toEqual({ refused: 'client_gone' });
   });
 
+  it('is a public registration where the token endpoint takes public clients alone, whose code it redeems by its id alone', async () => {
+    const fake = await served({ dynamicRegistration: true, takesPublicClientsAlone: true });
+    const client = consentClientWith({ registrations: memoryRegistrations() });
+
+    const done = await finishedAt(client, startAskedAt(fake, { clients: ['dynamic'] }));
+
+    expect(await admitted(fake, tokensKeptBy(done).access_token)).toBe(true);
+  });
+
   it('is the metadata document while the public address is the one the start named it at', async () => {
     const fake = await served({ clientMetadataDocuments: true });
     const publicUrl = 'https://runtime.example.com';

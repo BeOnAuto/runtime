@@ -19,7 +19,9 @@ interface Asking {
   readonly requested: number;
 }
 
-const methodsOfAuthentication = ['client_secret_basic', 'client_secret_post', 'private_key_jwt', 'none'];
+const publicMethod = 'none';
+
+const methodsOfAuthentication = ['client_secret_basic', 'client_secret_post', 'private_key_jwt', publicMethod];
 
 function openIdFields(origin: string) {
   return {
@@ -38,7 +40,10 @@ function endpointsOriginOf(origin: string, { endpointHost }: ClientRegistration)
   return moved.origin;
 }
 
-function methodsOf({ takesBasicSecrets }: ClientRegistration): readonly string[] {
+function methodsOf({ takesBasicSecrets, takesPublicClientsAlone }: ClientRegistration): readonly string[] {
+  if (takesPublicClientsAlone === true) {
+    return [publicMethod];
+  }
   return takesBasicSecrets === false
     ? methodsOfAuthentication.filter((method) => method !== 'client_secret_basic')
     : methodsOfAuthentication;
