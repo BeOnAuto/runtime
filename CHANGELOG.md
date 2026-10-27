@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/BeOnAuto/runtime/compare/v0.29.0...v0.30.0) (2026-10-27)
+
+
+### Features
+
+* **providers:** youtube, youtube management and stripe ([#351](https://github.com/BeOnAuto/runtime/issues/351)) ([55940c0](https://github.com/BeOnAuto/runtime/commit/55940c0c4bd049b10e57849ef4d317a14686b6bb))
+
 ## [0.29.0](https://github.com/BeOnAuto/runtime/compare/v0.28.0...v0.29.0) (2026-10-27)
 
 
