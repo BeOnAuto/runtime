@@ -1,3 +1,5 @@
+import { errors } from 'jose';
+
 import type { CurrentLicense, LicenseHead } from '../license-state/records.ts';
 import { authorizationRefused, finishLicenseExchange, repairLicenseTime } from './completion.ts';
 import { keepPendingExchange, readPendingExchange } from './pending.ts';
@@ -68,4 +70,3 @@ export async function refreshLicense(services: ClientServices): Promise<CurrentL
   await repairLicenseTime(services);
   return startExchange(services, { installationId: before.installationId }, before);
 }
-import { errors } from 'jose';

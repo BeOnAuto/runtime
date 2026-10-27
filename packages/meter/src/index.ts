@@ -12,6 +12,15 @@ export type {
 } from './licensing/records.ts';
 export { openLicenseState } from './license-state/license-state.ts';
 export { openLicenseClient } from './license-client/license-client.ts';
+export { openOfflineCapacity } from './offline-capacity/offline-capacity.ts';
+export type {
+  CapacityOptions,
+  CapacityReceipt,
+  CapacitySnapshot,
+  CapacityState,
+  CapacityCounter,
+  OfflineCapacity,
+} from './offline-capacity/records.ts';
 export type { LicenseClient, LicenseClientOptions, LicensePollResult } from './license-client/records.ts';
 export type {
   CurrentLicense,

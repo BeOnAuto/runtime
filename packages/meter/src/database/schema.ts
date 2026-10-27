@@ -1,6 +1,7 @@
 import { statement, type ConnectionPorts } from '@on.auto/ledger';
 
 import { licenseStateSchema } from '../license-state/schema.ts';
+import { capacitySchema } from '../offline-capacity/schema.ts';
 import { clockReceiptGuards } from './clock-receipt-guards.ts';
 
 export async function prepareMeter(connection: ConnectionPorts): Promise<void> {
@@ -31,6 +32,7 @@ export async function prepareMeter(connection: ConnectionPorts): Promise<void> {
     )`,
     ...clockReceiptGuards(connection.dialect),
     ...licenseStateSchema(connection.dialect),
+    ...capacitySchema(connection.dialect),
     statement`CREATE TABLE IF NOT EXISTS meter_pending_license (
       id INTEGER PRIMARY KEY CHECK (id = 1), challenge_id TEXT NOT NULL UNIQUE,
       expected_revision BIGINT NOT NULL CHECK (expected_revision BETWEEN 0 AND 9007199254740991),

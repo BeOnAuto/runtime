@@ -2,15 +2,18 @@ import {
   INSTALLATION_CHALLENGE_MILLISECONDS,
   LICENSE_TOKEN_TYPE,
   LICENSE_TIME_TYPE,
+  OFFLINE_ALLOCATION_TYPE,
   STANDARD_OFFLINE_MILLISECONDS,
   installationRequestIdentity,
   licenseClaims,
   licenseEntitlementSerial,
   licenseTimePayload,
+  allocationPayload,
   readInstallationPublicKey,
   type InstallationChallenge,
   type LicenseEntitlement,
   type LicenseTrust,
+  type OfflineAllocation,
 } from '@on.auto/metering';
 import { CompactSign, exportJWK, generateKeyPair, SignJWT } from 'jose';
 
@@ -108,10 +111,13 @@ export async function licenseFixture(open = sqliteDatabase) {
     installation,
     trust,
     protocol,
-    timeToken: (requestId: string, serverTime: number) =>
-      new CompactSign(new TextEncoder().encode(licenseTimePayload({ ...trust, requestId, serverTime })))
-        .setProtectedHeader({ alg: 'EdDSA', typ: LICENSE_TIME_TYPE, kid: 'authority-key' })
-        .sign(keys.privateKey),
+    ...signedTokens(
+      (payload, type) =>
+        new CompactSign(new TextEncoder().encode(payload))
+          .setProtectedHeader({ alg: 'EdDSA', typ: type, kid: 'authority-key' })
+          .sign(keys.privateKey),
+      trust,
+    ),
     requests,
     challenge: challengesFor(trust, installation),
     bundle: bundlesFor((license) =>
@@ -122,5 +128,13 @@ export async function licenseFixture(open = sqliteDatabase) {
     respond: (value: unknown) => {
       state.answer = value;
     },
+  };
+}
+
+function signedTokens(sign: (payload: string, type: string) => Promise<string>, trust: LicenseTrust) {
+  return {
+    timeToken: (requestId: string, serverTime: number) =>
+      sign(licenseTimePayload({ ...trust, requestId, serverTime }), LICENSE_TIME_TYPE),
+    allocationToken: (allocation: OfflineAllocation) => sign(allocationPayload(allocation), OFFLINE_ALLOCATION_TYPE),
   };
 }
