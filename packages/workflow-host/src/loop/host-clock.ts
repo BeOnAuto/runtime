@@ -1,8 +1,11 @@
 import { Effect } from 'effect';
 
+import type { InZone } from '../schedules/zone-clock.ts';
+
 export interface HostClock {
   readonly now: () => number;
   readonly sleep: (milliseconds: number) => Effect.Effect<void>;
+  readonly inZone?: InZone;
 }
 
 export const systemClock: HostClock = {

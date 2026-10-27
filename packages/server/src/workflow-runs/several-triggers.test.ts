@@ -16,6 +16,7 @@ const closing = workflowSource(
     'schedule:',
     '  on: { one: { with: { type: com.acme.ledger.closed } } }',
     "  cron: '* * * * *'",
+    '  time_zone: America/New_York',
     '  every: PT1M',
     'input:',
     '  schema:',
@@ -26,7 +27,11 @@ const closing = workflowSource(
   ].join('\n'),
 );
 
-const TriggerSchema = Schema.Struct({ kind: Schema.String, reference: Schema.String });
+const TriggerSchema = Schema.Struct({
+  kind: Schema.String,
+  reference: Schema.String,
+  time_zone: Schema.optionalKey(Schema.String),
+});
 
 const ListedRuns = Schema.Struct({
   runs: Schema.Array(
@@ -139,11 +144,11 @@ afterAll(async () => {
 
 const thePlaybook = { id: 'playbook:alpha', name: 'alpha' };
 
-describe('a workflow with an event trigger, a cron schedule and an every schedule', () => {
-  it('shows its triggers in the order its document names them, over HTTP and MCP', () => {
+describe('a workflow with an event trigger, a cron schedule in a time zone and an every schedule', () => {
+  it('shows its triggers in the order its document names them, the cron with its time zone, over HTTP and MCP', () => {
     expect(seen.definition.triggers).toEqual([
       { kind: 'event', reference: '/schedule/on' },
-      { kind: 'cron', reference: '/schedule/cron' },
+      { kind: 'cron', reference: '/schedule/cron', time_zone: 'America/New_York' },
       { kind: 'every', reference: '/schedule/every' },
     ]);
     expect(seen.listedOverMcp.definitions).toEqual([{ triggers: seen.definition.triggers }]);

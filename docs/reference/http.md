@@ -359,6 +359,7 @@ The `source` is a [workflow document](workflow-format.md). Names, document size,
 | `reference`    | `/schedule/on`, `/schedule/cron` or `/schedule/every`                                 |
 | `filters`      | For an event trigger: its filters, each with its `reference`, `type` and `attributes` |
 | `expression`   | For a cron trigger: its expression                                                    |
+| `time_zone`    | For a cron trigger whose schedule names one: its time zone; without it, UTC           |
 | `milliseconds` | For an every trigger: its period                                                      |
 
 `get_definition` of an active workflow with triggers adds `triggers_since`: the id of the record that saved its current version. From that record on, every run its triggers start is a run of this version. `triggers_since` is one id for the whole workflow. A trigger that a later version left unchanged continues from the record that first saved it in that form, which `triggers_since` does not show.

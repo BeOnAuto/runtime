@@ -158,4 +158,25 @@ describe('the notes of the reactions of the workflow host', () => {
       '"annotations":{"org":"acme","playbook":"alpha","record_id":"r-1","type":"event_published"}',
     );
   });
+
+  it('warn of a schedule whose times cannot be computed, naming its workflow, version and trigger', async () => {
+    const [line] = await linesLoggedBy(
+      logHostNote({
+        kind: 'schedule_stopped',
+        org: 'acme',
+        playbook: 'alpha',
+        workflow: 'morning',
+        version: 3,
+        reference: '/schedule/cron',
+        detail: 'Invalid time zone specified: America/New_York',
+      }),
+    );
+
+    expect(line).toContain(
+      '"message":"The times of a schedule of a workflow cannot be computed, so it starts no more runs; a version of the workflow that changes the schedule starts it again","level":"WARN"',
+    );
+    expect(line).toContain(
+      '"annotations":{"org":"acme","playbook":"alpha","workflow":"morning","version":3,"trigger":"/schedule/cron","error":"Invalid time zone specified: America/New_York"}',
+    );
+  });
 });

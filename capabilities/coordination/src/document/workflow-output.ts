@@ -1,12 +1,10 @@
 import { declaredShape, outputShapeNamed, shapeMismatchOf, type OutputShape } from '@on.auto/definitions';
 import {
-  entriesOf,
   field,
   objectField,
   rejection,
   textField,
   type Json,
-  type JsonEntry,
   type JsonObject,
   type Rejection,
 } from '@on.auto/workflow-engine';
@@ -40,12 +38,4 @@ export function outputRefusalOf(document: JsonObject, output: Json): string | un
   return mismatch === undefined
     ? undefined
     : `The output of the workflow does not match the shape ${shape.name}: ${mismatch}`;
-}
-
-export function withoutOutputShape(document: JsonObject): JsonObject {
-  const output = objectField(document, 'output');
-  if (output === undefined || field(output, 'shape') === undefined) {
-    return document;
-  }
-  return { ...document, output: Object.fromEntries(entriesOf(output).filter(([key]: JsonEntry) => key !== 'shape')) };
 }

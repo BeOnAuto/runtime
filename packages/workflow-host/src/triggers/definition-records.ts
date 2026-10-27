@@ -5,6 +5,7 @@ import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { FilterStops } from '../filtering/filter-matching.ts';
+import type { InZone } from '../schedules/zone-clock.ts';
 import { triggersActivated, triggersRemoved } from './trigger-rows.ts';
 
 export type DefinitionRecord = Pick<RecordedEvent, 'id' | 'type' | 'data' | 'context'>;
@@ -13,7 +14,7 @@ type DefinitionApplied = 'applied' | 'unreadable';
 
 export type ApplyDefinitionRecord = (playbookKey: string, record: DefinitionRecord) => Effect.Effect<DefinitionApplied>;
 
-export function definitionRecordsOn(database: HostDatabase, stops: FilterStops): ApplyDefinitionRecord {
+export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, inZone: InZone): ApplyDefinitionRecord {
   return (playbookKey, record) => {
     const { id } = record;
     const change = definitionChangeOf(record);
@@ -21,7 +22,7 @@ export function definitionRecordsOn(database: HostDatabase, stops: FilterStops):
       const { name: workflow, version, triggers, at } = change;
       const activation = { workflow, version, triggers, activatedBy: id, activatedAt: Date.parse(at) };
       stops.activated(playbookKey, workflow, version);
-      return Effect.as(triggersActivated(database, playbookKey, activation), 'applied');
+      return Effect.as(triggersActivated(database, playbookKey, activation, inZone), 'applied');
     }
     if (change.kind === 'deactivated') {
       stops.retired(playbookKey, change.name);

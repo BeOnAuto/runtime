@@ -20,14 +20,16 @@ A trigger is part of the workflow's document, under `schedule`. There are three 
 
 | Trigger | Starts a run                                           | Use it for                                                  |
 | ------- | ------------------------------------------------------ | ----------------------------------------------------------- |
-| `cron`  | At the times its five fields name, in UTC              | Fixed times, such as 09:00 every Monday                     |
+| `cron`  | At the times its five fields name, in its time zone    | Fixed times, such as 09:00 every Monday                     |
 | `every` | Once every period, counted from when it was saved      | A steady pace, such as every 15 minutes                     |
 | `on`    | For each event of the playbook that its filter matches | Work that follows an event, such as a brief being submitted |
 
 A workflow may have one trigger of each kind, and each starts its own runs. Your agent can still run the workflow itself.
 
 - `cron` reads five fields: minute, hour, day of month, month and day of week. `'0 9 * * 1'` is minute 0 of hour 9 on Mondays. When both day of month and day of week are restricted, a day that matches either is due.
-- `cron` times are in UTC and do not move with daylight saving. 09:00 in New York is 13:00 UTC in summer and 14:00 UTC in winter, so convert your own time first. Your agent can do that for you.
+- `time_zone` beside `cron` names the time zone its times are in, by its IANA name, such as `America/New_York` or `Europe/London`. The times then follow the clocks there through daylight saving: `cron: '0 9 * * 1'` with `time_zone: America/New_York` is 09:00 in New York every Monday, summer and winter. Without `time_zone`, the times are in UTC.
+- When the clocks go forward, a time they skip runs once, at the first moment after the skip. When they go back, a time they show twice runs once, the first time.
+- `time_zone` goes with `cron` only. `every` counts a period, which has no time zone.
 - `every` takes a duration of at least a minute, such as `PT15M` (15 minutes) or `PT1H` (one hour). Its times are counted from when the trigger was saved.
 
 ### What a triggered run gets
@@ -137,11 +139,12 @@ Ask:
 ```text
 Update the "<workflow name>" workflow: replace its one-minute schedule with a
 cron schedule that starts it at <the time and days, such as 09:00 every Monday,
-New York time>. Convert the time to UTC, and raise its version number. Show me
-the document before saving it, then the saved version and its triggers.
+New York time>. Name the time zone with time_zone, and raise its version
+number. Show me the document before saving it, then the saved version and its
+triggers.
 ```
 
-Check that the saved workflow shows one trigger, with the kind `cron`, the place `/schedule/cron` and an expression for your time in UTC. [Schedule or event](#schedule-or-event) explains the five fields. The `every` trigger is gone, so it starts no more runs. Auto does not list the times ahead, so the agent works out the next one from the expression.
+Check that the saved workflow shows one trigger, with the kind `cron`, the place `/schedule/cron`, an expression for your time and your time zone as `time_zone`. [Schedule or event](#schedule-or-event) explains the five fields. The `every` trigger is gone, so it starts no more runs. Auto does not list the times ahead, so the agent works out the next one from the expression.
 
 Then cancel the test runs that still wait:
 
@@ -221,7 +224,7 @@ Other systems publish events over HTTP with `POST /v1/orgs/{org}/playbooks/{play
 
 To stop a trigger, save a new version of the workflow without it:
 
-- Remove `schedule.on`, `schedule.cron` or `schedule.every` to stop that one trigger. A trigger the new version leaves unchanged goes on as it was.
+- Remove `schedule.on`, `schedule.cron` or `schedule.every` to stop that one trigger, and `schedule.time_zone` with `schedule.cron`. A trigger the new version leaves unchanged goes on as it was.
 - Remove `schedule` altogether, or retire the workflow, to stop every trigger.
 
 For example, ask:
@@ -297,9 +300,10 @@ document:
   namespace: marketing
   name: weekly-brief-check
   version: '1.0.0'
-  summary: Every Monday at 09:00 UTC, runs the review of the always-on campaign's brief.
+  summary: Every Monday at 09:00 London time, runs the review of the always-on campaign's brief.
 schedule:
   cron: '0 9 * * 1'
+  time_zone: Europe/London
 do:
   - review:
       call: run_definition
@@ -316,7 +320,7 @@ do:
             Success measure: 100 trial registrations
 ```
 
-- `cron: '0 9 * * 1'` starts a run at 09:00 UTC every Monday. To test it, save it first without `schedule` and run it with a schedule's input, as in step 2. Then put `every: PT1M` in place of the `cron` line, as in step 3.
+- `cron: '0 9 * * 1'` with `time_zone: Europe/London` starts a run at 09:00 London time every Monday, in summer and in winter. To test it, save it first without `schedule` and run it with a schedule's input, as in step 2. Then put `every: PT1M` in place of the `cron` and `time_zone` lines, as in step 3.
 - The run's input is the due time, which the step does not read. `type: workflow` runs the other workflow, and the `|` keeps the brief's lines as written.
 - The run's output is the review. The run of "Review submitted brief" that it starts acts as the playbook too.
 
@@ -324,7 +328,7 @@ do:
 
 ## If something goes wrong
 
-- **No run at the time you expected.** Check that you wrote the time in UTC and that Auto was running then. A time that falls due while the trigger's previous run still runs is skipped. After Auto was stopped, only the latest of the times it missed runs.
+- **No run at the time you expected.** Check that the schedule names your `time_zone`, since without one its times are in UTC, and that Auto was running then. A time that falls due while the trigger's previous run still runs is skipped. After Auto was stopped, only the latest of the times it missed runs.
 - **No run after you published an event.** The filter's `type` must match the event's type exactly, and events recorded before the trigger was saved never start it. Ask the agent to list the playbook's events of the type `reaction_refused` with `list_playbook_events`. They say what a trigger did not start and why, such as "the run its every schedule started before still runs".
 - **A run started and was rejected.** Ask the agent for the run's rejection. A rejection for its input means the steps did not get what they expect. A scheduled run gets only its due time, and a run an event started gets a list holding the event. Give it its input as in step 1, or shape it with `input.from` as in step 6.
 - **A workflow does not start for its own events.** That is by design. A workflow does not start for its own runs, for runs they started, or for events its runs emit.

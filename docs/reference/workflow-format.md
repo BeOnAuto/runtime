@@ -163,7 +163,7 @@ A workflow whose document has a `schedule` starts on its own, as well as when a 
 | Trigger          | Starts a run                                                        | Input of the run                    |
 | ---------------- | ------------------------------------------------------------------- | ----------------------------------- |
 | `schedule.on`    | For each event of the playbook that one of its filters matches      | A list holding the event            |
-| `schedule.cron`  | At each time its five fields name, in UTC                           | `{ "schedule": { "due": <time> } }` |
+| `schedule.cron`  | At each time its five fields name, in its time zone                 | `{ "schedule": { "due": <time> } }` |
 | `schedule.every` | At each multiple of its period after the trigger was saved as it is | `{ "schedule": { "due": <time> } }` |
 
 This schedule starts a run for each high-priority brief submitted. It also starts one at 09:00 UTC on working days, and one every fifteen minutes:
@@ -178,7 +178,6 @@ schedule:
 ```
 
 - A trigger is identified by its kind, `event`, `cron` or `every`, and its place in the document, `/schedule/on`, `/schedule/cron` or `/schedule/every`.
-- `get_definition` and `list_definitions` show a saved workflow's `triggers`. Each has its `kind` and its place as `reference`, with `filters` for an event trigger, `expression` for `cron` and `milliseconds` for `every`.
 - `get_definition` of an active workflow with triggers also shows `triggers_since`, the id of the record that saved its current version. From that record on, what its triggers start is a run of that version.
 - A run that a trigger started names its trigger on its `run_started` event, whose words say which kind started it, such as "was started by its cron schedule".
 - No trigger has an input of its own. A run's input is the list holding the event, or the due time, so a workflow with both kinds tells them apart with `input.from` or a `switch`:
@@ -221,8 +220,10 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 
 ### Schedules
 
-- `cron` has the five fields minute, hour, day of month, month and day of week, read in UTC, and must name a time. When both day of month and day of week are restricted, a day that matches either is due.
+- `cron` has the five fields minute, hour, day of month, month and day of week, read in its time zone, and must name a time. When both day of month and day of week are restricted, a day that matches either is due.
+- `time_zone`, the runtime's own beside the DSL's keys, names the time zone of `cron` by its IANA name, such as `America/New_York`; without it, `cron` is read in UTC. The five fields are matched against the time the clocks show there, through daylight saving, so `cron: '0 9 * * *'` with `time_zone: Europe/London` is due at 09:00 in London each day, 09:00 UTC in winter and 08:00 UTC in summer. A time the clocks skip when they go forward is due once, at the first instant after the skip; a time they show twice when they go back is due once, at the first.
 - `every` is a [duration](#durations) of at least a minute, counted from when the trigger was saved as it is.
+- The due time a run gets, `schedule.due`, is an ISO 8601 instant in UTC, whatever the time zone of its schedule.
 
 ### When a trigger applies
 
@@ -575,7 +576,7 @@ These are refused when a document is saved, each for the reason given:
 - A trigger filter without a written `type`: a trigger is matched before any run exists.
 - A trigger or `listen` filter whose expression names anything but `$data`: the playbook matches it without the run.
 - A trigger filter written twice in `any`, or more than 64 filters in one trigger; see [Event filters](#event-filters).
-- `schedule.every` shorter than a minute, or a `cron` that is not five fields or names no time; see [Schedules](#schedules).
+- `schedule.every` shorter than a minute, a `cron` that is not five fields or names no time, or a `time_zone` that is not an IANA time zone name the runtime knows or has no `cron` beside it; see [Schedules](#schedules).
 - An `emit` without `type` or `source`, with an `id`, or with a type or source the playbook keeps; see [Emitting an event](#emitting-an-event).
 - `use.catalogs`, `use.extensions`, `use.functions`, `use.secrets` and `use.authentications`, which are not supported.
 - `listen` with `until`, `foreach` or `correlate`, which are not supported.
