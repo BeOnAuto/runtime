@@ -78,7 +78,7 @@ jobs:
           - packages: [server]
             shard: { index: 4, count: 4 }
             services: true
-          - packages: [ledger, workflow-host, prediction, object-storage, workflow-engine]
+          - packages: [ledger, meter, workflow-host, prediction, object-storage, workflow-engine]
             services: true
           - packages:
               - api

@@ -72,6 +72,8 @@ The package carries each of the runtime's packages as a subpath, so a program ca
 
 `@on.auto/runtime/metering` provides the shared exact credit arithmetic, tariff, run identities, bounded quote contracts and source-lot reservation selection. The Studio account service uses the same contracts for its wallet. These pure calculations require an account authority to authorize and atomically record a reservation before work starts.
 
+`@on.auto/runtime/meter` keeps one durable self-hosted installation signing identity in the runtime's SQLite or PostgreSQL ledger, with its private key in the configured encrypted secret store. Replicas share that identity and reuse it after a restart. Creating this identity does not grant a license or authorize paid work.
+
 The subpaths are the `.ts` sources the server runs, and they import one another by the packages' own names, such as `@on.auto/operations`. Where your bundler must resolve those names, alias each of them, with its subpaths, to the same subpath of `@on.auto/runtime`:
 
 <!-- npm/pack.ts writes the alias here -->

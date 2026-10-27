@@ -194,7 +194,7 @@ function undeclaredImports(known: ReadonlySet<string>): readonly string[] {
 }
 
 const root = manifestIn(repository);
-const shippedNames = [...closureOf(['@on.auto/server', '@on.auto/metering'], new Set())].toSorted();
+const shippedNames = [...closureOf(['@on.auto/server', '@on.auto/meter'], new Set())].toSorted();
 const shippedPackages = shippedNames.map((name) => packageNamed(name));
 
 rmSync(output, { recursive: true, force: true });
