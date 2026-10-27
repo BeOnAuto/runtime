@@ -1,0 +1,12 @@
+name: posthog
+title: PostHog
+description: Query PostHog's product and web analytics, session replays, error tracking, logs and data warehouse, and create and change insights, dashboards, feature flags, experiments and surveys, in the projects the person who connects reaches, as that person, through PostHog's MCP server.
+website: https://posthog.com/docs/model-context-protocol
+type: mcp
+url: https://mcp.posthog.com/mcp?mode=tools
+credentials:
+  - kind: authorization
+    issuer: https://oauth.posthog.com
+    scope: organization:read project:read user:read query:read action:read event_definition:read property_definition:read person:read activity_log:read web_analytics:read heatmap:read session_recording:read session_recording_playlist:read error_tracking:read logs:read warehouse_table:read warehouse_view:read external_data_source:read dashboard_template:read insight:write dashboard:write feature_flag:write experiment:write experiment_holdout:write experiment_saved_metric:write survey:write
+    clients: [registered, metadata_document, dynamic]
+    description: Sign in to PostHog and allow access to your organizations and projects.

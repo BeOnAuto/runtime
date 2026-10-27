@@ -1,0 +1,12 @@
+name: linear
+title: Linear
+description: Find, create and update Linear issues, projects and comments, in the workspace the person who connects chooses, as that person, through Linear's MCP server.
+website: https://linear.app/docs/mcp
+type: mcp
+url: https://mcp.linear.app/mcp
+credentials:
+  - kind: authorization
+    issuer: https://mcp.linear.app
+    scope: read write
+    clients: [registered, metadata_document, dynamic]
+    description: Sign in to Linear, choose a workspace and allow access.

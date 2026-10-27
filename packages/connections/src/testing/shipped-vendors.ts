@@ -1,51 +1,5 @@
-import type { Vendor } from './vendor-fakes.ts';
-
-export interface VendorOfTheWay extends Vendor {
-  readonly resource: string | null;
-  readonly asked?: string;
-  readonly parameters?: Readonly<Record<string, string>>;
-}
-
-const google = 'https://accounts.google.com';
-
-const googleScope = 'https://www.googleapis.com/auth/';
-
-const googleChallenges = ['plain', 'S256'];
-
-const offlineWithConsent = { access_type: 'offline', prompt: 'consent' };
-
-function inFull(scope: string): string {
-  return scope.startsWith('https://') ? scope : `${googleScope}${scope}`;
-}
-
-function workspaceServerAt(host: string, scopes: readonly string[]): VendorOfTheWay {
-  const resource = `https://${host}/mcp/v1`;
-  return {
-    metadata: {
-      issuer: google,
-      authorizationServers: [`${google}/`],
-      protectedResource: resource,
-      protectedScopes: scopes.map((scope) => inFull(scope)),
-      challengeMethods: googleChallenges,
-    },
-    protectedResourceAt: `https://${host}/.well-known/oauth-protected-resource/mcp/v1`,
-    authorizationServerAt: `${google}/.well-known/oauth-authorization-server`,
-    resource,
-    parameters: offlineWithConsent,
-  };
-}
-
-const googleApi: VendorOfTheWay = {
-  metadata: {
-    issuer: google,
-    openIdConnect: true,
-    scopesSupported: ['openid', 'email', 'profile'],
-    challengeMethods: googleChallenges,
-  },
-  openIdConfigurationAt: `${google}/.well-known/openid-configuration`,
-  resource: null,
-  parameters: offlineWithConsent,
-};
+import { googleApi, workspaceServerAt } from './google-vendors.ts';
+import type { VendorOfTheWay } from './vendor-fakes.ts';
 
 const zoomScopes = [
   'user:read:user',
@@ -78,6 +32,34 @@ const amazonAdsMcp = 'https://advertising-ai.amazon.com';
 const stripeMcp = 'https://mcp.stripe.com';
 
 const stripeAccess = 'https://access.stripe.com/mcp';
+
+const atlassianMcp = 'https://mcp.atlassian.com';
+
+const atlassianAuth = 'https://auth.atlassian.com';
+
+const atlassianMcpServerPath = 'VCeDsk8ZHncYF1g234fKtc4lNipbBhu3';
+
+const atlassianIssuer = `${atlassianAuth}/${atlassianMcpServerPath}`;
+
+const hubspotMcp = 'https://mcp.hubspot.com';
+
+function registeringServerAt(server: string, issuer: string): VendorOfTheWay {
+  const { origin, pathname } = new URL(server);
+  const resource = `${origin}${pathname}`;
+  return {
+    metadata: {
+      issuer,
+      authorizationServers: [issuer],
+      protectedResource: resource,
+      dynamicRegistration: true,
+      clientMetadataDocuments: true,
+    },
+    challengedAt: server,
+    protectedResourceAt: `${origin}/.well-known/oauth-protected-resource${pathname}`,
+    authorizationServerAt: `${issuer}/.well-known/oauth-authorization-server`,
+    resource,
+  };
+}
 
 const microsoft = 'https://login.microsoftonline.com';
 
@@ -129,6 +111,19 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     protectedResourceAt: `${amazonAdsMcp}/.well-known/oauth-protected-resource`,
     authorizationServerAt: `${loginWithAmazon}/.well-known/oauth-authorization-server`,
     resource: amazonAdsMcp,
+  },
+  atlassian: {
+    metadata: {
+      issuer: atlassianIssuer,
+      authorizationServers: [atlassianIssuer],
+      protectedResource: `${atlassianMcp}/v2/mcp`,
+      dynamicRegistration: true,
+      clientMetadataDocuments: true,
+    },
+    challengedAt: `${atlassianMcp}/v2/mcp?tools=all`,
+    protectedResourceAt: `${atlassianMcp}/.well-known/oauth-protected-resource/v2/mcp`,
+    authorizationServerAt: `${atlassianAuth}/.well-known/oauth-authorization-server/${atlassianMcpServerPath}`,
+    resource: `${atlassianMcp}/v2/mcp`,
   },
   'campaign-manager-360': googleApi,
   'display-video-360': googleApi,
@@ -182,11 +177,24 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     'drive.file',
     'presentations',
   ]),
+  hubspot: {
+    metadata: {
+      issuer: hubspotMcp,
+      authorizationServers: [hubspotMcp],
+      protectedResource: hubspotMcp,
+      takesBasicSecrets: false,
+    },
+    protectedResourceAt: `${hubspotMcp}/.well-known/oauth-protected-resource`,
+    authorizationServerAt: `${hubspotMcp}/.well-known/oauth-authorization-server`,
+    resource: hubspotMcp,
+  },
+  linear: registeringServerAt('https://mcp.linear.app/mcp', 'https://mcp.linear.app'),
   'microsoft-advertising': {
     metadata: { issuer: `${microsoft}/common/v2.0` },
     endpointsAt: microsoftEndpointsAt('common'),
     resource: null,
   },
+  notion: registeringServerAt('https://mcp.notion.com/mcp', 'https://mcp.notion.com'),
   outlook: {
     metadata: {
       issuer: `${microsoft}/organizations/v2.0`,
@@ -198,6 +206,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     endpointsAt: microsoftEndpointsAt('organizations'),
     resource: `${workIq}/mcp`,
   },
+  posthog: registeringServerAt('https://mcp.posthog.com/mcp?mode=tools', 'https://oauth.posthog.com'),
   profound: {
     metadata: {
       issuer: 'https://auth.tryprofound.com',

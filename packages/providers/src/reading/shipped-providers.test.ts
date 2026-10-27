@@ -92,6 +92,42 @@ function restrictedNamedBy({ entry }: Provider): readonly string[] {
   return restrictedByGoogle.filter((scope) => entry.description.includes(scope));
 }
 
+const addressesOfTheShipped = [
+  ['adobe-analytics', 'https://analytics.adobe.io/api/{global_company_id}'],
+  ['adobe-analytics-mcp', 'https://aa-mcp.adobe.io/mcp'],
+  ['amazon-ads', 'https://{api_host}'],
+  ['amazon-ads-mcp', 'https://{mcp_host}/mcp'],
+  ['atlassian', 'https://mcp.atlassian.com/v2/mcp?tools=all'],
+  ['campaign-manager-360', 'https://dfareporting.googleapis.com/dfareporting/v5'],
+  ['display-video-360', 'https://displayvideo.googleapis.com'],
+  ['display-video-360-reports', 'https://doubleclickbidmanager.googleapis.com/v2'],
+  ['github', 'https://api.githubcopilot.com/mcp/'],
+  ['gmail', 'https://gmailmcp.googleapis.com/mcp/v1'],
+  ['google-ads', 'https://googleads.googleapis.com'],
+  ['google-analytics', 'https://analyticsdata.googleapis.com'],
+  ['google-analytics-admin', 'https://analyticsadmin.googleapis.com'],
+  ['google-docs', 'https://docsmcp.googleapis.com/mcp/v1'],
+  ['google-drive', 'https://drivemcp.googleapis.com/mcp/v1'],
+  ['google-search-console', 'https://searchconsole.googleapis.com'],
+  ['google-sheets', 'https://sheetsmcp.googleapis.com/mcp/v1'],
+  ['google-slides', 'https://slidesmcp.googleapis.com/mcp/v1'],
+  ['hubspot', 'https://mcp.hubspot.com'],
+  ['linear', 'https://mcp.linear.app/mcp'],
+  ['microsoft-advertising', 'https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta'],
+  ['notion', 'https://mcp.notion.com/mcp'],
+  ['outlook', 'https://workiq.svc.cloud.microsoft/mcp'],
+  ['posthog', 'https://mcp.posthog.com/mcp?mode=tools'],
+  ['profound', 'https://mcp.tryprofound.com/mcp'],
+  ['search-ads-360', 'https://searchads360.googleapis.com'],
+  ['slack', 'https://mcp.slack.com/mcp'],
+  ['slack-api', 'https://slack.com/api'],
+  ['stripe', 'https://mcp.stripe.com'],
+  ['youtube', 'https://youtube.googleapis.com'],
+  ['youtube-analytics', 'https://youtubeanalytics.googleapis.com'],
+  ['youtube-management', 'https://youtube.googleapis.com'],
+  ['zoom', 'https://api.zoom.us/v2'],
+];
+
 describe('the shipped providers', () => {
   it('are the entries of the folder, each named as its file, sorted by name and so each named once', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
@@ -100,7 +136,12 @@ describe('the shipped providers', () => {
       [
         ...googleProviders,
         ...microsoftAmazonAndAdobe,
+        'atlassian',
         'github',
+        'hubspot',
+        'linear',
+        'notion',
+        'posthog',
         'profound',
         'slack',
         'slack-api',
@@ -108,7 +149,7 @@ describe('the shipped providers', () => {
         'zoom',
       ].toSorted(),
     );
-    expect(names).toHaveLength(28);
+    expect(names).toHaveLength(33);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -138,6 +179,7 @@ describe('the ways of the shipped providers', () => {
       ['adobe-analytics-mcp', ['authorization'], []],
       ['amazon-ads', ['authorization'], []],
       ['amazon-ads-mcp', ['authorization'], []],
+      ['atlassian', ['authorization'], []],
       ['campaign-manager-360', ['authorization'], []],
       ['display-video-360', ['authorization'], []],
       ['display-video-360-reports', ['authorization'], []],
@@ -151,8 +193,12 @@ describe('the ways of the shipped providers', () => {
       ['google-search-console', ['authorization'], []],
       ['google-sheets', ['authorization'], []],
       ['google-slides', ['authorization'], []],
+      ['hubspot', ['authorization'], []],
+      ['linear', ['authorization'], []],
       ['microsoft-advertising', ['authorization'], []],
+      ['notion', ['authorization'], []],
       ['outlook', ['authorization'], []],
+      ['posthog', ['authorization'], []],
       ['profound', ['authorization', 'secret'], []],
       ['search-ads-360', ['authorization'], []],
       ['slack', ['authorization'], []],
@@ -168,36 +214,7 @@ describe('the ways of the shipped providers', () => {
 
 describe('the servers of the shipped providers', () => {
   it('read the server an HTTP API calls from the document beside the entries, where the entry gives no base_url', () => {
-    expect(shipped.providers.map(({ entry, address }) => [entry.name, address])).toEqual([
-      ['adobe-analytics', 'https://analytics.adobe.io/api/{global_company_id}'],
-      ['adobe-analytics-mcp', 'https://aa-mcp.adobe.io/mcp'],
-      ['amazon-ads', 'https://{api_host}'],
-      ['amazon-ads-mcp', 'https://{mcp_host}/mcp'],
-      ['campaign-manager-360', 'https://dfareporting.googleapis.com/dfareporting/v5'],
-      ['display-video-360', 'https://displayvideo.googleapis.com'],
-      ['display-video-360-reports', 'https://doubleclickbidmanager.googleapis.com/v2'],
-      ['github', 'https://api.githubcopilot.com/mcp/'],
-      ['gmail', 'https://gmailmcp.googleapis.com/mcp/v1'],
-      ['google-ads', 'https://googleads.googleapis.com'],
-      ['google-analytics', 'https://analyticsdata.googleapis.com'],
-      ['google-analytics-admin', 'https://analyticsadmin.googleapis.com'],
-      ['google-docs', 'https://docsmcp.googleapis.com/mcp/v1'],
-      ['google-drive', 'https://drivemcp.googleapis.com/mcp/v1'],
-      ['google-search-console', 'https://searchconsole.googleapis.com'],
-      ['google-sheets', 'https://sheetsmcp.googleapis.com/mcp/v1'],
-      ['google-slides', 'https://slidesmcp.googleapis.com/mcp/v1'],
-      ['microsoft-advertising', 'https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta'],
-      ['outlook', 'https://workiq.svc.cloud.microsoft/mcp'],
-      ['profound', 'https://mcp.tryprofound.com/mcp'],
-      ['search-ads-360', 'https://searchads360.googleapis.com'],
-      ['slack', 'https://mcp.slack.com/mcp'],
-      ['slack-api', 'https://slack.com/api'],
-      ['stripe', 'https://mcp.stripe.com'],
-      ['youtube', 'https://youtube.googleapis.com'],
-      ['youtube-analytics', 'https://youtubeanalytics.googleapis.com'],
-      ['youtube-management', 'https://youtube.googleapis.com'],
-      ['zoom', 'https://api.zoom.us/v2'],
-    ]);
+    expect(shipped.providers.map(({ entry, address }) => [entry.name, address])).toEqual(addressesOfTheShipped);
     expect(shipped.providers.map((provider) => documentServerOf(provider))).toEqual(
       shipped.providers.map((provider) => documentServerExpectedOf(provider)),
     );
