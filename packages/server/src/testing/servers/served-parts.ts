@@ -5,12 +5,14 @@ import type { HostClock } from '@on.auto/workflow-host';
 import { Context, Layer } from 'effect';
 
 import type { ProgramPoolOf } from '../../composition/served-computation.ts';
+import type { RuntimeMeterOptions } from '../../metering/runtime-meter.ts';
 import type { ComposedServerOptions } from '../../server-options/composed-options.ts';
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 
 export type LedgerOver = (ledger: Ledger['Service']) => Ledger['Service'];
 
 export interface ServedParts {
+  readonly metering?: RuntimeMeterOptions;
   readonly programPoolOf?: ProgramPoolOf;
   readonly clock?: HostClock;
   readonly toolTiming?: Timing;

@@ -17,7 +17,11 @@ export interface ServedPrediction {
 
 export async function predictionServedBy(
   runtime: AppRuntime<DispatcherServices>,
-  { prediction, interaction }: Pick<Settings, 'prediction' | 'interaction'>,
+  {
+    prediction,
+    interaction,
+    cloudDevelopmentOnly,
+  }: Pick<Settings, 'prediction' | 'interaction'> & { readonly cloudDevelopmentOnly: boolean },
   store: WorkflowStore,
 ): Promise<ServedPrediction> {
   const { mostFunctions, processes, processMemoryMebibytes, buildsAtOnce, buildsPerDay, cacheDirectory } = prediction;
@@ -27,8 +31,8 @@ export async function predictionServedBy(
       mostFunctions,
       processes,
       memoryMebibytes: processMemoryMebibytes,
-      buildsAtOnce,
-      buildsPerDay,
+      buildsAtOnce: cloudDevelopmentOnly ? 0 : buildsAtOnce,
+      buildsPerDay: cloudDevelopmentOnly ? 0 : buildsPerDay,
       cacheDirectory,
       limiter: pool.limiter,
     }),

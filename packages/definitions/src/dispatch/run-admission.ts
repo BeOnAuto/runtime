@@ -27,6 +27,7 @@ export type BeforeRunDispatch = () => Effect.Effect<void, Conflict | Unavailable
 export class RunAdmission extends Context.Service<
   RunAdmission,
   {
+    readonly check?: (run: RunDispatch) => Effect.Effect<void, Conflict | Unavailable>;
     readonly dispatch: (run: RunDispatch) => Effect.Effect<void, Conflict | Unavailable>;
   }
 >()('@on.auto/definitions/RunAdmission') {}
@@ -52,7 +53,10 @@ export const dispatchFor = Effect.fnUntraced(function* (
     calledBy,
     trigger,
   });
-  return Option.isNone(admission)
-    ? () => Effect.void
-    : () => Effect.suspend(() => admission.value.dispatch(structuredClone(run)));
+  if (Option.isNone(admission)) return { beforeRun: () => Effect.void, beforeDispatch: () => Effect.void };
+  const { check, dispatch } = admission.value;
+  return {
+    beforeRun: () => Effect.suspend(() => check?.(structuredClone(run)) ?? Effect.void),
+    beforeDispatch: () => Effect.suspend(() => dispatch(structuredClone(run))),
+  };
 });

@@ -60,6 +60,9 @@ export const attemptEnded = Effect.fnUntraced(function* (
 
 export function answeredAttempt(attempting: AttemptOfARun, restore: Restore) {
   const { run, input, context } = attempting;
-  const running = run.prepared.run(input, context);
+  const running = Effect.andThen(
+    context.beforeRun(),
+    Effect.suspend(() => run.prepared.run(input, context)),
+  );
   return attemptEnded(attempting, run.prepared.whenCancelled === 'finish' ? running : restore(running));
 }

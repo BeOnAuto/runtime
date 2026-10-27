@@ -48,6 +48,13 @@ export function playbookAddress(identity: string): ReturnType<typeof place> | un
 }
 
 export function capabilityOf(run: RunDispatch): 'computation' | 'recall' {
+  if (
+    run.definition.type === 'prediction' &&
+    run.input !== null &&
+    typeof run.input === 'object' &&
+    'build' in run.input
+  )
+    throw new Error('runtime_training_cloud_only');
   if (run.calledBy !== null || !['computation', 'recall'].includes(run.definition.type))
     throw new Error('runtime_quote_unbounded');
   return Schema.decodeUnknownSync(Schema.Literals(['computation', 'recall']))(run.definition.type);

@@ -75,6 +75,39 @@ describe('the recorded funding lineage on a resumed run', () => {
 });
 
 describe('admission and input or permission refusals', () => {
+  it('checks the run before the adapter and records a refused check as a terminal journal outcome', async () => {
+    const { seen, service } = recordedAdmission();
+    const f = await admittedRuns({
+      ...service,
+      check: () => Effect.fail(new Conflict({ detail: 'This capability needs complete bounds' })),
+    });
+    expect(await f.running()).toMatchObject({ status: 'rejected', detail: 'This capability needs complete bounds' });
+    expect(await f.definitions.call(f.operations.getRun, toAlpha(acmeAdmin, { run_id: runId }))).toMatchObject({
+      output: { status: 'rejected' },
+    });
+    expect(seen).toEqual([]);
+  });
+
+  it('keeps each preflight copy separate from dispatch and does not check a completed replay again', async () => {
+    const { seen, service } = recordedAdmission();
+    const checked: RunDispatch[] = [];
+    const f = await admittedRuns({
+      ...service,
+      check: (run) =>
+        Effect.sync(() => {
+          checked.push(structuredClone(run));
+          Object.assign(run, { input: 'altered' });
+          Object.assign(run.definition, { source: 'altered' });
+        }),
+    });
+    expect(await f.running()).toMatchObject({ status: 'succeeded' });
+    expect(await f.running()).toMatchObject({ status: 'succeeded' });
+    expect(checked).toHaveLength(1);
+    expect(seen).toEqual(checked);
+  });
+});
+
+describe('permission and input checks before dispatch', () => {
   it('does not request dispatch for invalid input or a caller without run permission', async () => {
     const { seen, service } = recordedAdmission();
     const f = await admittedRuns(service);

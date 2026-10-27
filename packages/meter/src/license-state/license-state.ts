@@ -55,6 +55,7 @@ async function recordedLicense(
   if (previous !== undefined) return previous;
   try {
     const before = await readLicenseHead(options.connection);
+    if (before.revision !== request.expectedRevision) return (await existing()) ?? { status: 'conflict' };
     const license = await verify(request.entitlementToken, {
       binding: {
         ...options.installation,

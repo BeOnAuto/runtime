@@ -27,7 +27,7 @@ interface PlaybookRoute {
 export interface ServedPredictionFunctions extends ServedPrediction {
   readonly capability: Capability;
   readonly routes: readonly PlaybookRoute[];
-  readonly dueWorkFor: (capabilities: readonly Capability[]) => DueWork;
+  readonly dueWorkFor: (capabilities: readonly Capability[]) => readonly DueWork[];
 }
 
 export function datasetsFolderOf(pool: ProgramPool): SomeFolder {
@@ -38,7 +38,7 @@ export function datasetsFolderOf(pool: ProgramPool): SomeFolder {
 
 export async function predictionFunctionsServedBy(
   runtime: AppRuntime<DispatcherServices>,
-  settings: Pick<Settings, 'prediction' | 'interaction'>,
+  settings: Pick<Settings, 'prediction' | 'interaction'> & { readonly cloudDevelopmentOnly: boolean },
   pool: ProgramPool,
   store: WorkflowStore,
 ): Promise<ServedPredictionFunctions> {
@@ -56,10 +56,12 @@ export async function predictionFunctionsServedBy(
       uploadDataset(ports.ledger.content),
       readBuildBrief,
       readBuildRows,
-      uploadCandidate(ports),
+      ...(settings.cloudDevelopmentOnly ? [] : [uploadCandidate(ports)]),
       activateVersion,
     ],
     dueWorkFor: (capabilities) =>
-      buildsDue({ ports, runs: nestedRuns(runtime, makeDispatcher([]), defineRunDefinition(capabilities)) }),
+      settings.cloudDevelopmentOnly
+        ? []
+        : [buildsDue({ ports, runs: nestedRuns(runtime, makeDispatcher([]), defineRunDefinition(capabilities)) })],
   };
 }

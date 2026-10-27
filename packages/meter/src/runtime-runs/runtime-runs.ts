@@ -3,12 +3,14 @@ import { offlineCheckpoint } from '@on.auto/metering';
 import { Conflict, Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { capturedOptions } from './binding.ts';
+import { capabilityOf, capturedOptions } from './binding.ts';
 import type { RuntimeRunOptions, RuntimeRuns } from './records.ts';
 import { admittedReservation } from './reservation.ts';
 import { reconcileRuns } from './settlement.ts';
 
 const refusals: Readonly<Record<string, string>> = {
+  runtime_training_cloud_only:
+    'Model training and development run only in Auto Cloud. Request an authorized Cloud build from Studio.',
   runtime_quote_unbounded: 'This run needs an approved bound covering all of its work before it can start.',
   runtime_quote_mismatch: 'This run ID already has a different approved definition, input or limits; use a new run ID.',
   license_required: 'Activate this Runtime installation with its license key before running a function.',
@@ -46,7 +48,11 @@ export function selfHostedRuns(options: RuntimeRunOptions): RuntimeRuns {
   const captured = capturedOptions(options);
   return {
     admission: {
-      dispatch: (run) => Effect.tryPromise({ try: () => dispatch(captured, structuredClone(run)), catch: refused }),
+      check: (run) => Effect.asVoid(Effect.try({ try: () => capabilityOf(run), catch: refused })),
+      dispatch: (run) =>
+        Effect.uninterruptible(
+          Effect.tryPromise({ try: () => dispatch(captured, structuredClone(run)), catch: refused }),
+        ),
     },
     reconcile: (request) => reconcileRuns(captured, request),
   };

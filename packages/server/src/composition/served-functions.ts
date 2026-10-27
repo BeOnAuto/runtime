@@ -21,23 +21,24 @@ export interface ServedFunctions {
   readonly closing: ServedPredictionFunctions['withProcessesClosed'];
 }
 
+interface ServingFunctions extends FunctionWiring, ToolUsersWiring {
+  readonly shippedFiles: ShippedFiles;
+  readonly cloudDevelopmentOnly: boolean;
+}
+
 export async function functionsServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
   database: ProjectedDatabase,
-  {
-    programPoolOf,
-    projections: wiring,
-    shippedFiles,
-    ...tools
-  }: FunctionWiring & ToolUsersWiring & { readonly shippedFiles: ShippedFiles },
+  { programPoolOf, projections: wiring, shippedFiles, cloudDevelopmentOnly, ...tools }: ServingFunctions,
 ): Promise<ServedFunctions> {
   const { reasoning, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
   const computation = await computationServedBy(settings.computation, programPoolOf, shippedFiles);
   const projections = await wiring.served({ recall: settings.recall, database }, computation.pool, [
     datasetsFolderOf(computation.pool),
   ]);
-  const prediction = await predictionFunctionsServedBy(runtime, settings, computation.pool, projections.store);
+  const configured = { ...settings, cloudDevelopmentOnly };
+  const prediction = await predictionFunctionsServedBy(runtime, configured, computation.pool, projections.store);
   const capabilities = [
     reasoning.capability,
     interaction.capability,
@@ -57,7 +58,7 @@ export async function functionsServedBy(
         ...interaction.operationsFor(capabilities),
         ...prediction.routes,
       ],
-      dueWork: [...interaction.dueWorkOf(record), prediction.dueWorkFor(capabilities)],
+      dueWork: [...interaction.dueWorkOf(record), ...prediction.dueWorkFor(capabilities)],
       store: projections.store,
       projector: projections.projector,
       evaluations: computation.pool.evaluations,

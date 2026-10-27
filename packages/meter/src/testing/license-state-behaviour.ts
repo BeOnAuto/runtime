@@ -50,6 +50,16 @@ function retainedLicenseBehaviour(open: () => Promise<MeterDatabase>): void {
 }
 
 function newerLicenseBehaviour(open: () => Promise<MeterDatabase>): void {
+  it('classifies a distinct older response as a revision conflict after a newer generation wins', async () => {
+    const f = await licenseStateFixture(open);
+    const delayed = await f.next(0, 0);
+    await f.state.record(f.request);
+    await f.state.record(await f.next());
+    expect(await f.state.record(delayed)).toEqual({ status: 'conflict' });
+    expect((await f.state.current(now)).license.generation).toBe(2);
+    expect(await f.database.connection.read(statement`SELECT serial FROM meter_license_history`)).toHaveLength(2);
+  });
+
   it('keeps a newer generation when old responses are replayed and refuses a second token for the same exchange', async () => {
     const f = await licenseStateFixture(open);
     await f.state.record(f.request);

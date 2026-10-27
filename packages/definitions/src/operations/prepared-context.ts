@@ -3,7 +3,7 @@ import { Effect, Option } from 'effect';
 
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import type { RunAttempt, RunContext, RunLineage } from '../capability/run-context.ts';
-import { dispatchFor } from '../dispatch/run-admission.ts';
+import { dispatchFor, type BeforeRunDispatch } from '../dispatch/run-admission.ts';
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
 import type { RunRequest } from '../runs/run-commands.ts';
 import { preparedDefinition, type VersionToRun } from './definition-preparation.ts';
@@ -20,6 +20,7 @@ export interface Prepared {
 
 export interface JournalledRun extends RunContext {
   readonly journal: LedgerJournal;
+  readonly beforeRun: BeforeRunDispatch;
 }
 
 export interface StartedAttempt {
@@ -64,7 +65,7 @@ export const contextOf = Effect.fnUntraced(function* (
   const journal = yield* runJournal(id, lineage, before);
   const called = yield* calledDefinitionsIn(given.capabilities);
   const context: JournalledRun = {
-    beforeDispatch: yield* dispatchFor(id, definition, request, dispatchLineage),
+    ...(yield* dispatchFor(id, definition, request, dispatchLineage)),
     id,
     org,
     playbook,

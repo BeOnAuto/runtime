@@ -87,6 +87,21 @@ describe('approval stays bound to the work', () => {
 });
 
 describe('finite Runtime limits and scope', () => {
+  it.each([
+    [null, 'approved bound'],
+    ['question', 'approved bound'],
+    [{}, 'approved bound'],
+    [{ build: {} }, 'only in Auto Cloud'],
+  ] as const)('checks prediction scope before an adapter can start local training: %#', async (input, detail) => {
+    const f = await runtimeFixture();
+    const run = dispatchRequest({ input, definition: { ...dispatchRequest().definition, type: 'prediction' } });
+    const check = f.runs.admission.check;
+    ok(check !== undefined);
+    expect((await Effect.runPromise(Effect.flip(check(run)))).detail).toContain(detail);
+    expect((await Effect.runPromise(Effect.flip(f.runs.admission.dispatch(run)))).detail).toContain(detail);
+    expect(await f.options.connection.read(statement`SELECT id FROM meter_reservations`)).toEqual([]);
+  });
+
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
     'refuses an invalid run bound %s before reserving',
     async (budget) => {
