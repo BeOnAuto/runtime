@@ -33,6 +33,8 @@ export interface Tampering {
   readonly renamed: (id: string, to: string) => Promise<void>;
   readonly streamDeleted: (stream: string) => Promise<void>;
   readonly garbled: (id: string) => Promise<void>;
+  readonly lastPosition: () => Promise<number>;
+  readonly restoredTo: (position: number) => Promise<void>;
 }
 
 export function tamperingOn(at: LedgerAt): Tampering {
@@ -57,6 +59,17 @@ export function tamperingOn(at: LedgerAt): Tampering {
     },
     garbled: async (id) => {
       await at.rows("UPDATE emt_messages SET message_data = '{not json' WHERE message_id = ?", [id]);
+    },
+    lastPosition: async () => {
+      const [row] = await at.rows('SELECT MAX(global_position) AS last FROM emt_messages');
+      return Number(row?.['last']);
+    },
+    restoredTo: async (position) => {
+      await at.rows('DELETE FROM emt_messages WHERE global_position > ?', [position]);
+      await at.rows(
+        'UPDATE emt_streams SET stream_position = (SELECT COALESCE(MAX(m.stream_position), 0) FROM emt_messages m WHERE m.stream_id = emt_streams.stream_id)',
+      );
+      await at.rows('DELETE FROM emt_streams WHERE stream_position = 0');
     },
     streamDeleted: async (stream) => {
       await at.rows('DELETE FROM emt_messages WHERE stream_id = ?', [stream]);

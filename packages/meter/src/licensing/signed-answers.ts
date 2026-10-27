@@ -37,7 +37,19 @@ const RepairSchema = Schema.Struct({
   issued_at: Schema.String,
 });
 
+const AllocationSchema = Schema.Struct({
+  v: Schema.Literal(1),
+  kind: Schema.Literal('allocation'),
+  installation: Schema.String,
+  id: Schema.String,
+  credits: Schema.Int.check(Schema.isGreaterThan(0)),
+  issued_at: Schema.String,
+  refresh_by: Schema.String,
+});
+
 export type Entitlement = typeof EntitlementSchema.Type;
+
+export type AllocationPayload = typeof AllocationSchema.Type;
 
 export type Repair = typeof RepairSchema.Type;
 
@@ -63,3 +75,5 @@ export const entitlementIn = payloadOf(EntitlementSchema);
 export const admissionIn = payloadOf(AdmissionSchema);
 
 export const repairIn = payloadOf(RepairSchema);
+
+export const allocationIn = payloadOf(AllocationSchema);

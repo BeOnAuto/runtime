@@ -46,6 +46,23 @@ const runIn = Schema.decodeUnknownOption(
   ),
 );
 
+const refreshIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ allocation: Schema.String })));
+
+const allocationReportIn = Schema.decodeUnknownOption(
+  Schema.fromJsonString(
+    Schema.Struct({
+      report: Schema.Struct({
+        allocation: Schema.String,
+        installation: Schema.String,
+        sequence: Schema.Number,
+        spent: Schema.Number,
+        at: Schema.String,
+      }),
+      signature: Schema.String,
+    }),
+  ),
+);
+
 interface Answer {
   readonly status: number;
   readonly body: object | undefined;
@@ -75,6 +92,24 @@ function answered<A>(work: Effect.Effect<A, AccountFailure>, body: (answer: A) =
   );
 }
 
+function allocationAnswerTo(fake: AccountFake, path: string, key: string, text: string): Promise<Answer | 'dropped'> {
+  const { ports } = fake;
+  if (path === '/v1/installations/allocations/refresh') {
+    return Option.match(refreshIn(text), {
+      onNone: () => Promise.resolve(unread),
+      onSome: ({ allocation }) =>
+        answered(ports.refreshAllocation(key, allocation), (signed) => ({ allocation: signed })),
+    });
+  }
+  if (path === '/v1/installations/allocations/report') {
+    return Option.match(allocationReportIn(text), {
+      onNone: () => Promise.resolve(unread),
+      onSome: (report) => answered(ports.reportAllocation(key, report), (taken) => ({ taken })),
+    });
+  }
+  return Promise.resolve({ status: 404, body: undefined });
+}
+
 function answerTo(fake: AccountFake, path: string, key: string, text: string): Promise<Answer | 'dropped'> {
   const { ports } = fake;
   if (path === '/v1/installations/activate') {
@@ -95,7 +130,7 @@ function answerTo(fake: AccountFake, path: string, key: string, text: string): P
       onSome: (usage) => answered(ports.report(key, usage), () => ({ taken: true })),
     });
   }
-  return Promise.resolve({ status: 404, body: undefined });
+  return allocationAnswerTo(fake, path, key, text);
 }
 
 async function respond(

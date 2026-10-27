@@ -2,6 +2,7 @@ import type { Decided } from '@on.auto/operations';
 
 import type { Counting } from '../counting/run-starts.ts';
 import type { Signed } from '../licensing/signed-answers.ts';
+import type { AllocationRecord } from './allocation-events.ts';
 import type { Fault, LicenseRecord, MeterEvent, Report } from './meter-events.ts';
 
 export interface Admitting {
@@ -12,6 +13,7 @@ export interface Admitting {
   readonly at: string;
   readonly until: string;
   readonly installation: string;
+  readonly kind: 'license_required' | 'credits_exhausted';
   readonly refusal: (installation: string) => string;
 }
 
@@ -56,6 +58,43 @@ export interface Repairing {
   readonly at: string;
 }
 
-export type MeterCommand = Admitting | Checkpointing | Faulting | Licensing | Invalidating | Reporting | Repairing;
+export interface Allocating {
+  readonly type: 'allocate';
+  readonly allocation: AllocationRecord;
+  readonly at: string;
+}
+
+export interface AllocationRefreshing {
+  readonly type: 'refresh_allocation';
+  readonly id: string;
+  readonly refresh_by: string;
+  readonly allocation: AllocationRecord['allocation'];
+  readonly at: string;
+}
+
+export interface AllocationWithdrawing {
+  readonly type: 'withdraw_allocation';
+  readonly id: string;
+  readonly detail: string;
+  readonly at: string;
+}
+
+export interface AllocationReporting {
+  readonly type: 'report_allocation';
+  readonly spent: number;
+  readonly at: string;
+}
+
+export type AllocationCommand = Allocating | AllocationRefreshing | AllocationWithdrawing | AllocationReporting;
+
+export type MeterCommand =
+  | Admitting
+  | Checkpointing
+  | Faulting
+  | Licensing
+  | Invalidating
+  | Reporting
+  | Repairing
+  | AllocationCommand;
 
 export type DecidedEvent = Decided<MeterEvent>;

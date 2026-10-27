@@ -20,10 +20,18 @@ export async function replicaOf(at: LedgerAt, options: MeteredOptions = {}): Pro
   return replica;
 }
 
-export async function restartedOf(metered: Metered, options: MeteredOptions = {}): Promise<Metered> {
-  const restarted = await metered.restarted(options);
+export async function restartedAfter(
+  metered: Metered,
+  meanwhile: () => Promise<void>,
+  options: MeteredOptions = {},
+): Promise<Metered> {
+  const restarted = await metered.restarted(options, meanwhile);
   onTestFinished(() => restarted.dispose());
   return restarted;
+}
+
+export function restartedOf(metered: Metered, options: MeteredOptions = {}): Promise<Metered> {
+  return restartedAfter(metered, () => Promise.resolve(), options);
 }
 
 export async function startedOnceAdmitted(metered: Metered, run: string, playbook = 'alpha', org = 'acme') {

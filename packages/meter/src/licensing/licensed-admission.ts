@@ -3,7 +3,6 @@ import { Conflict, type Unavailable } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import type { AccountRefusal } from '../accounts/account-failure.ts';
-import { admittedByTheAllowance } from '../admission/allowance.ts';
 import { actionOf, checkpointed, meterStateOf } from '../admission/metering.ts';
 import type { Counting } from '../counting/run-starts.ts';
 import { standingFor } from './activation.ts';
@@ -35,7 +34,7 @@ function refused(
   };
 }
 
-function admittedByTheAccount(
+export function admittedByTheAccount(
   licensing: Licensing,
   { key, run, counting }: Asking,
 ): Effect.Effect<void, Conflict | Unavailable> {
@@ -52,16 +51,4 @@ function admittedByTheAccount(
     if (Option.isNone(admitted)) return yield* accountUnavailable;
     return yield* checkpointed(licensing, counting);
   });
-}
-
-export function admittedSelfHosted(
-  licensing: Licensing,
-  run: MeteredRun,
-  counting: Counting,
-): Effect.Effect<void, Conflict | Unavailable> {
-  return Effect.flatMap(licensing.keyInHand, (key) =>
-    key === undefined
-      ? admittedByTheAllowance(licensing, run, counting)
-      : admittedByTheAccount(licensing, { key, run, counting }),
-  );
 }
