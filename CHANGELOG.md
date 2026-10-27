@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/BeOnAuto/runtime/compare/v0.24.1...v0.25.0) (2026-10-27)
+
+
+### Features
+
+* **connections:** a server given by hand connects by consent at the issuer it names ([beeb7dd](https://github.com/BeOnAuto/runtime/commit/beeb7ddaff5bdd8913fbc9f0cf846e00cb3431ed))
+
 ## [0.24.1](https://github.com/BeOnAuto/runtime/compare/v0.24.0...v0.24.1) (2026-10-26)
 
 
