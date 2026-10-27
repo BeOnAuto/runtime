@@ -48,7 +48,7 @@ export function postgresqlStoreOn(
     ...store,
     ...postgresqlRecordedStoreOn(query, pool),
     ...projections.readerOn({ query: formattedFor(query), command: formattedFor(query) }),
-    ...postgresqlReadsOn(kept, query, () => pool),
+    ...postgresqlReadsOn(kept, query),
     close: async () => {
       await store.close();
       await pool.end();
