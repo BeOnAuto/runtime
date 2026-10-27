@@ -1,6 +1,7 @@
 import { capitalized, explanationOf, plainNumber, quoted, type StartingTrigger } from '@on.auto/operations';
 import { answeredInWords, failedInWords, toolInWords, type CallFailedBecause } from '@on.auto/tool-servers';
 
+import { timeZoneOf, type ScheduleTrigger } from '../registry/definition-triggers.ts';
 import type { ModelCallFailedBecause } from '../run-work/model-call-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
@@ -39,6 +40,12 @@ const triggerNames: Readonly<Record<StartingTrigger['kind'], string>> = {
 
 export function triggerNamed(kind: StartingTrigger['kind']): string {
   return triggerNames[kind];
+}
+
+export function scheduleNamed(schedule: ScheduleTrigger): string {
+  return schedule.kind === 'cron'
+    ? `${triggerNamed(schedule.kind)} in ${timeZoneOf(schedule)}`
+    : triggerNamed(schedule.kind);
 }
 
 export function runStarted(words: DefinitionWords, type: string, name: string, trigger?: StartingTrigger): string {

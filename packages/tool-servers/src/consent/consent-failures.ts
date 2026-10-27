@@ -1,9 +1,9 @@
 import { IssuerMismatchError, OAuthError, OAuthErrorCode } from '@modelcontextprotocol/client';
 
 import { failureOf } from '../clients/server-failures.ts';
-import type { ConsentRefusal } from './consent-client.ts';
+import type { ConsentRefusal, Refused } from './consent-client.ts';
 
-type RequestRefusal = Extract<ConsentRefusal, { readonly refused: 'host' | 'unanswered' }>;
+type RequestRefusal = Refused<'host' | 'unanswered'>;
 
 export const unanswered: RequestRefusal = { refused: 'unanswered' };
 
@@ -14,7 +14,7 @@ export function refusalOf(error: unknown): RequestRefusal {
   return failure.kind === 'not_allowed' ? { refused: 'host', rule: failure.message } : unanswered;
 }
 
-export function discoveryRefusalOf(error: unknown): ConsentRefusal {
+export function discoveryRefusalOf(error: unknown): Refused<'another_issuer' | 'host' | 'unanswered'> {
   return error instanceof IssuerMismatchError
     ? { refused: 'another_issuer', named: String(error.received), by: 'authorization_server' }
     : refusalOf(error);

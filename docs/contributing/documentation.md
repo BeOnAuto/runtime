@@ -31,7 +31,7 @@ A guide can offer the choices its task needs, such as which Apollo connection pr
 - Use [Playbook terminology](../concepts/terminology.md) for resources, capabilities and domain names. A reasoning function has a prompt; workflows coordinate functions; a run carries out a definition once.
 - Use sentence-case headings, and no em dashes.
 
-The runtime serves [Terminology](../concepts/terminology.md) and every format reference to agents through `get_guide`, so an agent reads each of those pages alone. Keep each one complete on its own, and keep a format page under 64 KiB, the most a guide may hold.
+The runtime serves [Terminology](../concepts/terminology.md), every format reference and [Templates](../reference/template.md) to agents through `get_guide`, so an agent reads each of those pages alone. Keep each one complete on its own, or name the guide that holds what it leaves out, and keep each page under 64 KiB, the most a guide may hold.
 
 ## What belongs here
 

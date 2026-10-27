@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   consentClientWith,
   everyHost,
+  failingAt,
   registeredAt,
   returnAddress,
   startAskedAt,
@@ -39,13 +39,6 @@ function refused(client: ConsentClient, asked: StartAsked) {
 
 function challengeOf(verifier: Redacted.Redacted): string {
   return createHash('sha256').update(Redacted.value(verifier)).digest('base64url');
-}
-
-function failingAt(path: string): FetchLike {
-  return (...[address, init]: readonly [unknown, unknown?]) =>
-    String(address).includes(path)
-      ? Promise.resolve(new Response('failing', { status: 500 }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
 }
 
 function readsNothing(): Promise<Response> {
@@ -125,6 +118,17 @@ describe('the start of a consent at an MCP server', () => {
   });
 });
 
+describe('the start of a consent at an MCP server that publishes its metadata only where its challenge names it', () => {
+  it('reads the metadata there and sends its resource', async () => {
+    const fake = await served({ resourceMetadataPath: '/metadata/files' });
+    const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
+
+    const { searchParams } = new URL((await started(client, startAskedAt(fake))).url);
+
+    expect(searchParams.get('resource')).toBe(fake.url);
+  });
+});
+
 describe('the start of a consent at an MCP server whose way gives its endpoints', () => {
   it('reads no metadata at the issuer, so metadata that names another issuer is not read', async () => {
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
@@ -147,7 +151,7 @@ describe('the start of a consent at an MCP server whose way gives its endpoints'
 
 describe('a start refused for what its server says', () => {
   it('is refused before a client is chosen where the server names another authorization server, or its metadata another issuer', async () => {
-    const another = await served({ authorizationServer: 'https://elsewhere.example.com' });
+    const another = await served({ authorizationServers: ['https://elsewhere.example.com'] });
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
     const client = consentClientWith();
 
@@ -224,8 +228,14 @@ describe('a start that cannot ask the server', () => {
 
     expect([
       await refused(consentClientWith(), startAskedAt(gone)),
-      await refused(consentClientWith({ fetch: failingAt('oauth-protected-resource') }), startAskedAt(failing)),
-      await refused(consentClientWith({ fetch: failingAt('oauth-authorization-server') }), startAskedAt(failing)),
+      await refused(
+        consentClientWith({ fetch: failingAt('/.well-known/oauth-protected-resource/mcp') }),
+        startAskedAt(failing),
+      ),
+      await refused(
+        consentClientWith({ fetch: failingAt('/.well-known/oauth-authorization-server') }),
+        startAskedAt(failing),
+      ),
     ]).toEqual([{ refused: 'unanswered' }, { refused: 'unanswered' }, { refused: 'unanswered' }]);
   });
 

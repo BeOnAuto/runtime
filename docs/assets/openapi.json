@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "Auto Runtime",
-    "version": "0.24.1",
+    "version": "0.26.0",
     "description": "Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run alone or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
@@ -1394,7 +1394,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. It answers pending with a link to Studio's page, where the person approves it within ten minutes. Nothing is granted by this call and no credential passes through it.",
+        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server. It answers pending with a link to Studio's page, where the person approves it within ten minutes. Nothing is granted by this call and no credential passes through it.",
         "tags": [
           "connections"
         ],
@@ -1546,7 +1546,7 @@
                       "kind"
                     ],
                     "additionalProperties": false,
-                    "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    "description": "How the server is credentialled, never its value, which the person gives on the page; an MCP server given by hand that signs people in itself takes kind authorization alone, the runtime finding its authorization server"
                   }
                 }
               }
@@ -4527,7 +4527,7 @@
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection whose provider a person connects by signing in to it and allowing Auto, through the connection's open link, and answers the page of the provider's authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. On a runtime that signs people in, only the person who added the connection may start it.",
         "tags": [
           "connections"
         ],
@@ -4585,7 +4585,7 @@
                       "properties": {
                         "url": {
                           "type": "string",
-                          "description": "The page of the provider's authorization server, where the person signs in and allows Auto"
+                          "description": "The page of the authorization server, where the person signs in and allows Auto"
                         },
                         "expires_at": {
                           "type": "string",
@@ -4614,7 +4614,7 @@
                     "client_source"
                   ],
                   "additionalProperties": false,
-                  "description": "Where the person signs in to the provider and allows Auto"
+                  "description": "Where the person signs in at the authorization server and allows Auto"
                 }
               }
             }
@@ -5730,7 +5730,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -6154,7 +6158,11 @@
                                   },
                                   "expression": {
                                     "type": "string",
-                                    "description": "The five fields of its times, read in UTC"
+                                    "description": "The five fields of its times, read in its time zone"
+                                  },
+                                  "time_zone": {
+                                    "type": "string",
+                                    "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                                   }
                                 },
                                 "required": [
@@ -6462,7 +6470,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -6898,7 +6910,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -7324,7 +7340,11 @@
                               },
                               "expression": {
                                 "type": "string",
-                                "description": "The five fields of its times, read in UTC"
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
                               }
                             },
                             "required": [
@@ -12989,7 +13009,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: the terminology, the format of a definition type, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: the terminology, the format of a definition type, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -13000,6 +13020,7 @@
                 "recall-function",
                 "prediction-function",
                 "workflow",
+                "templates",
                 "first-playbook",
                 "remember",
                 "give-tools",

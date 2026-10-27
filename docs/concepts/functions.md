@@ -29,7 +29,6 @@ These are planned and not available yet:
 - Dream, an optional process that would revisit a playbook's history and suggest ideas worth testing. It would not be a function type.
 - Skill references in a reasoning function, and a separately managed tool library.
 - Recall over documents and other sources beyond the playbook's own history.
-- Time zones for schedule triggers, which read their times in UTC today.
 - Starting one workflow run from several events that belong together.
 
 ## Reasoning

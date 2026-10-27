@@ -156,24 +156,16 @@ Not available: `include`, `render`, `layout` and `block` load other templates, a
 
 ### Filters
 
-The plain data and string filters of Liquid: `abs`, `append`, `array_to_sentence_string`, `at_least`, `at_most`, `base64_decode`, `base64_encode`, `capitalize`, `ceil`, `compact`, `concat`, `default`, `divided_by`, `downcase`, `escape`, `escape_once`, `find`, `find_index`, `first`, `floor`, `group_by`, `has`, `join`, `json`, `last`, `lstrip`, `map`, `minus`, `modulo`, `newline_to_br`, `normalize_whitespace`, `number_of_words`, `plus`, `pop`, `prepend`, `push`, `raw`, `reject`, `remove`, `remove_first`, `remove_last`, `replace`, `replace_first`, `replace_last`, `reverse`, `round`, `rstrip`, `shift`, `size`, `slice`, `slugify`, `sort`, `sort_natural`, `split`, `squish`, `strip`, `strip_newlines`, `sum`, `times`, `to_integer`, `truncate`, `truncatewords`, `uniq`, `unshift`, `upcase`, `where` and `xml_escape`.
-
-Three more:
-
-| Filter  | What it does                                                                                                                                                           | Example                                                        |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `money` | A number, or text that is a decimal number, as US dollars with thousands separators: no cents when it is whole, two decimals otherwise. Anything else stops the render | `{{ 364028 \| money }}` is `$364,028`; `1234.5` is `$1,234.50` |
-| `clip`  | Text cut to a number of characters, 400 by default, with an ellipsis (`…`) appended when it is cut. Characters are counted as Unicode code points                      | `{{ input.notes \| clip: 200 }}`                               |
-| `words` | The number of words in a text: runs of characters between whitespace                                                                                                   | `{% assign n = input.notes \| words %}`                        |
+A template may use the filters listed in [Templates](../../reference/template.md#filters), the same in every template.
 
 Left out, and why:
 
 - `where_exp`, `reject_exp`, `group_by_exp`, `has_exp`, `find_exp` and `find_index_exp` evaluate an expression given as text, which the check of the variables a template reads cannot see;
-- `date`, `date_to_xmlschema`, `date_to_rfc822`, `date_to_string` and `date_to_long_string` read the server's clock, time zone and locale, so the same definition would render differently from one server to the next; `today` and `now` give the date and the time;
+- `date`, `date_to_xmlschema`, `date_to_rfc822`, `date_to_string` and `date_to_long_string` read the server's clock, time zone and locale, so the same definition would render differently from one server to the next; `today` and `now` give the date and the time to the templates that read them;
 - `sample` is random;
-- `sha256` and `hmac_sha256` compute digests, which a prompt has no use for, and `hmac_sha256` would put a key in a definition;
-- `strip_html` is a hand-written HTML parser that had three advisories in 2026 (a regular expression that backtracks, an infinite loop, and a bypass); they are fixed in this version, and a prompt has no HTML to strip;
-- `url_encode`, `cgi_escape`, `uri_escape` and `url_decode`: the encoders grow their output without charging the memory limit (nine `url_encode` in a row turn 65,536 characters into 1,245,184 without charging anything), and a prompt has no URL to encode;
+- `sha256` and `hmac_sha256` compute digests, which a template has no use for, and `hmac_sha256` would put a key in a definition;
+- `strip_html` is a hand-written HTML parser that had three advisories in 2026 (a regular expression that backtracks, an infinite loop, and a bypass); they are fixed in this version, and a template has no HTML to strip;
+- `url_encode`, `cgi_escape`, `uri_escape` and `url_decode`: the encoders grow their output without charging the memory limit (nine `url_encode` in a row turn 65,536 characters into 1,245,184 without charging anything), and a template has no URL to encode;
 - `inspect` and `jsonify` do what `json` does.
 
 As of October 2026, no published advisory affects liquidjs 10.27.2 or later; earlier versions have several, including running code from a crafted template. 10.30.0 is the newest release the workspace's minimum release age allows.

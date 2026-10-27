@@ -23,7 +23,7 @@ function workspaceServerAt(host: string, scopes: readonly string[]): VendorOfThe
   return {
     metadata: {
       issuer: google,
-      authorizationServer: `${google}/`,
+      authorizationServers: [`${google}/`],
       protectedResource: resource,
       protectedScopes: scopes.map((scope) => inFull(scope)),
       challengeMethods: googleChallenges,
@@ -99,7 +99,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   'adobe-analytics-mcp': {
     metadata: {
       issuer: adobeMcp,
-      authorizationServer: adobeMcp,
+      authorizationServers: [adobeMcp],
       protectedResource: `${adobeMcp}/mcp`,
       protectedScopes: adobeMcpScopes,
       scopesSupported: adobeMcpScopes,
@@ -117,7 +117,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   'amazon-ads-mcp': {
     metadata: {
       issuer: loginWithAmazon,
-      authorizationServer: loginWithAmazon,
+      authorizationServers: [loginWithAmazon],
       protectedResource: amazonAdsMcp,
       protectedScopes: ['advertising::campaign_management'],
       scopesSupported: ['profile'],
@@ -132,7 +132,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   github: {
     metadata: {
       issuer: 'https://github.com/login/oauth',
-      authorizationServer: 'https://github.com/login/oauth',
+      authorizationServers: ['https://github.com/login/oauth'],
       protectedResource: 'https://api.githubcopilot.com/mcp',
       scopesSupported: ['offline_access'],
     },
@@ -186,7 +186,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   outlook: {
     metadata: {
       issuer: `${microsoft}/organizations/v2.0`,
-      authorizationServer: `${microsoft}/organizations/v2.0`,
+      authorizationServers: [`${microsoft}/organizations/v2.0`],
       protectedResource: `${workIq}/mcp`,
       protectedScopes: ['fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask'],
     },
@@ -197,7 +197,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   profound: {
     metadata: {
       issuer: 'https://auth.tryprofound.com',
-      authorizationServer: 'https://auth.tryprofound.com/',
+      authorizationServers: ['https://auth.tryprofound.com/'],
       protectedResource: 'https://mcp.tryprofound.com/mcp',
       scopesSupported: ['email', 'offline_access', 'openid', 'profile'],
       dynamicRegistration: true,
@@ -211,7 +211,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   slack: {
     metadata: {
       issuer: 'https://mcp.slack.com',
-      authorizationServer: 'https://mcp.slack.com',
+      authorizationServers: ['https://mcp.slack.com'],
       protectedResource: 'https://mcp.slack.com',
       takesBasicSecrets: false,
     },

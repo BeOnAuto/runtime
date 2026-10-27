@@ -17,6 +17,10 @@ function parsed(source: string) {
   return Effect.runPromise(Effect.result(parseWorkflowDocument(source, testWorkflowPolicy)));
 }
 
+function scheduled(timeZone: string): string {
+  return `${header}schedule:\n  cron: '0 6 * * *'\n  time_zone: ${timeZone}\ndo:\n  - greet: { set: { a: 1 } }\n`;
+}
+
 function rejected(detail: string, issues: readonly string[]) {
   return {
     _tag: 'Failure',
@@ -46,6 +50,15 @@ describe('a document that breaks the DSL', () => {
         'Line 8, column 12: at /do/0/loop/for: It needs in',
       ]),
     );
+  });
+
+  it('is read without the time zone of its cron schedule, which the runtime checks at its line', async () => {
+    expect([await parsed(scheduled('America/New_York')), await parsed(scheduled('Mars/Olympus'))]).toMatchObject([
+      { _tag: 'Success', success: { schedule: { cron: '0 6 * * *', time_zone: 'America/New_York' } } },
+      rejected('The workflow document is not a workflow this runtime runs', [
+        'Line 8, column 14: at /schedule/time_zone: time_zone expects an IANA time zone name such as Europe/London, not "Mars/Olympus"',
+      ]),
+    ]);
   });
 
   it('is rejected for steps that do not connect', async () => {

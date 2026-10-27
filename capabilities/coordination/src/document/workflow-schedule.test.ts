@@ -28,7 +28,7 @@ describe('the schedule of a workflow, which names its triggers', () => {
       ['/schedule: A schedule names at least one trigger: on, cron or every, each at most once'],
       [],
       [],
-      ['/schedule/at: schedule takes on, cron and every, not at'],
+      ['/schedule/at: schedule takes on, cron, every and time_zone, not at'],
       [
         '/schedule/after: A workflow is not started again after its run ends: give it a trigger with on, cron or every instead',
       ],
@@ -67,6 +67,26 @@ describe('the schedule triggers of a workflow', () => {
       [],
       ['/schedule/cron: cron is text of five fields, minute, hour, day of month, month and day of week'],
       ['/schedule/cron: The cron expression 61 2 * * * cannot be read: CronPattern: Invalid value for minute: 61'],
+    ]);
+  });
+
+  it('cron is read in the IANA time zone time_zone names, which goes with cron alone', () => {
+    expect([
+      refused({ cron: '0 6 * * *', time_zone: 'America/New_York' }),
+      refused({ cron: '0 6 * * *', every: 'PT1H', time_zone: 'Europe/London' }),
+      refused({ cron: '0 6 * * *', time_zone: 'Mars/Olympus' }),
+      refused({ cron: '0 6 * * *', time_zone: '+05:00' }),
+      refused({ cron: '0 6 * * *', time_zone: 5 }),
+      refused({ every: 'PT1H', time_zone: 'Europe/London' }),
+    ]).toEqual([
+      [],
+      [],
+      ['/schedule/time_zone: time_zone expects an IANA time zone name such as Europe/London, not "Mars/Olympus"'],
+      ['/schedule/time_zone: time_zone expects an IANA time zone name such as Europe/London, not "+05:00"'],
+      ['/schedule/time_zone: time_zone expects an IANA time zone name such as Europe/London, not 5'],
+      [
+        '/schedule/time_zone: time_zone is the time zone of cron, so a schedule without cron takes none; every counts a period, which has no time zone',
+      ],
     ]);
   });
 });
@@ -151,6 +171,15 @@ describe('the triggers of a saved workflow', () => {
         ],
       },
       { kind: 'every', reference: '/schedule/every', milliseconds: 300_000 },
+    ]);
+  });
+
+  it('give cron the time zone its schedule names, and every none', () => {
+    expect(
+      triggersOfDocument({ schedule: { every: 'PT5M', cron: '0 6 * * *', time_zone: 'America/New_York' } }),
+    ).toEqual([
+      { kind: 'every', reference: '/schedule/every', milliseconds: 300_000 },
+      { kind: 'cron', reference: '/schedule/cron', expression: '0 6 * * *', time_zone: 'America/New_York' },
     ]);
   });
 

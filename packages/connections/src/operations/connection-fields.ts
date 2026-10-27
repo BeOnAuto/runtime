@@ -96,20 +96,36 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
   ];
 }
 
-const consentByHand =
-  'Expected another kind: consent is offered through a provider alone, so name the provider, as search lists it, in provider';
+const consentOfAnApiByHand =
+  'Expected another kind: an HTTP API given by hand takes no consent, since its document names no authorization server; name a provider, as search lists it, in provider';
 
-function credentialIssuesOf(credential: AdditionGiven['credential']): readonly ModeIssue[] {
+const givenBesideTheKind = [...placementFields, 'client_id'] as const;
+
+type AddedCredential = NonNullable<AdditionGiven['credential']>;
+
+function consentByHandIssuesOf(credential: AddedCredential, type: AdditionGiven['type']): readonly ModeIssue[] {
+  if (type === 'openapi') {
+    return [{ path: ['credential', 'kind'], issue: consentOfAnApiByHand }];
+  }
+  return givenBesideTheKind
+    .filter((field) => credential[field] !== undefined)
+    .map((field) => ({
+      path: ['credential', field],
+      issue: `Expected no ${field}: the server names its authorization server itself`,
+    }));
+}
+
+function credentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeIssue[] {
   if (credential === undefined) {
     return [];
   }
   return credential.kind === 'authorization'
-    ? [{ path: ['credential', 'kind'], issue: consentByHand }]
+    ? consentByHandIssuesOf(credential, type)
     : credentialFieldIssuesOf(credential).map(({ path, issue }) => ({ path: ['credential', ...path], issue }));
 }
 
 function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
-  const { placeholders, credential } = given;
+  const { placeholders } = given;
   return [
     ...givenByHand
       .filter((field) => given[field] === undefined)
@@ -117,7 +133,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...(placeholders === undefined
       ? []
       : [{ path: ['placeholders'], issue: 'Expected no placeholders without provider' }]),
-    ...credentialIssuesOf(credential),
+    ...credentialIssuesOf(given),
   ];
 }
 

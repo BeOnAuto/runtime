@@ -50,6 +50,13 @@ function datasetStalled({ playbook, dataSha256, record, detail }: NoteOf<'datase
   ).pipe(Effect.annotateLogs({ playbook, data_sha256: dataSha256, record, detail }));
 }
 
+function scheduleStopped(note: NoteOf<'schedule_stopped'>): Effect.Effect<void> {
+  const { org, playbook, workflow, version, reference, detail } = note;
+  return Effect.logWarning(
+    'The times of a schedule of a workflow cannot be computed, so it starts no more runs; a version of the workflow that changes the schedule starts it again',
+  ).pipe(Effect.annotateLogs({ org, playbook, workflow, version, trigger: reference, error: detail }));
+}
+
 function offerDeclined({ run, detail }: NoteOf<'offer_declined'>): Effect.Effect<void> {
   return Effect.logWarning(
     'A run waiting for an event of its playbook did not take one, since its filter failed on the event',
@@ -76,6 +83,7 @@ const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Ef
   record_passed_over: passedOver,
   view_stalled: viewStalled,
   dataset_stalled: datasetStalled,
+  schedule_stopped: scheduleStopped,
   offer_declined: offerDeclined,
   record_unreadable: recordUnreadable,
   run_record_passed: runRecordPassed,

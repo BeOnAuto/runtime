@@ -37,6 +37,15 @@ export type HostNote =
       readonly by: string;
       readonly detail: string;
     }
+  | {
+      readonly kind: 'schedule_stopped';
+      readonly org: string;
+      readonly playbook: string;
+      readonly workflow: string;
+      readonly version: number;
+      readonly reference: string;
+      readonly detail: string;
+    }
   | { readonly kind: 'view_stalled'; readonly playbook: string; readonly name: string; readonly version: number }
   | {
       readonly kind: 'dataset_stalled';

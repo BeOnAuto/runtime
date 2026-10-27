@@ -236,7 +236,7 @@ describe('an authorization server that refuses', () => {
       clientId: 'playbook',
       clientSecret,
       expiresInSeconds: 3600,
-      authorizationServer: elsewhere.origin,
+      authorizationServers: [elsewhere.origin],
     });
     const { source } = sourceOf(fake, secretAuth(fake));
 

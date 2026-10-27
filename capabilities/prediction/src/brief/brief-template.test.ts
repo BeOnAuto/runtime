@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { problemsOf } from '../testing/document-problems.ts';
 import { weeklyOrdersWith } from '../testing/weekly-orders.ts';
-import { briefRenderIssues, renderedBrief } from './brief-template.ts';
+import { briefRenderIssues, compiledBrief, renderedBrief } from './brief-template.ts';
 
 const firstLine =
   'Fit a model of the weekly {{ function.target }} of each of {{ dataset.series }} regions, in {{ function.unit }},';
@@ -53,5 +53,23 @@ describe('the brief rendered for a trainer', () => {
     expect(problemsOf(weeklyOrdersWith([firstLine, '{{ dataset.nothing.more }}']))).toEqual([
       'Line 28: dataset.nothing is not a part of dataset; the brief reads dataset (rows, series, periods, window, holdout, features, horizons, accumulates) and function (name, target, unit, rules)',
     ]);
+  });
+});
+
+describe('a brief that formats the facts it reads', () => {
+  it('writes an amount as money, clips a text and counts its words, as every template may', () => {
+    const parsed = Result.getOrThrow(
+      compiledBrief({
+        frontMatter: '',
+        frontMatterLine: 1,
+        body: '{{ dataset.rows | money }} for {{ function.name | clip: 6 }}, in {{ function.target | words }} words',
+        bodyLine: 1,
+      }),
+    );
+    const facts = { dataset: { rows: 1234.5 }, function: { name: 'weekly-orders', target: 'orders placed each week' } };
+
+    expect(renderedBrief(parsed, facts, standingRenderClock)).toEqual(
+      Result.succeed('$1,234.50 for weekly…, in 4 words'),
+    );
   });
 });

@@ -1,12 +1,13 @@
-import { Option, Redacted } from 'effect';
+import { required } from '@on.auto/operations';
+import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { admitted, postedTo } from '../authorization-testing/authorization-requests.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import { keptValueOf, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
 import { renewalWords } from '../consent-tokens/renewal-words.ts';
 import type { ConsentClient } from '../consent/consent-client.ts';
 import {
+  admitted,
   autoClientsOf,
   brokenWords,
   connectedThroughAuto,
@@ -14,6 +15,7 @@ import {
   consentClientWith,
   cuttingTimeouts,
   memoryTokens,
+  postedTo,
   rowOf,
   servedOf,
   servedTokensOf,
@@ -56,10 +58,6 @@ function renewed({ clock }: Connected, source: ReturnType<typeof sourceOf>): Pro
 
 function heardAt({ service }: Connected, path: string) {
   return service.calls().filter((call) => call.path === path);
-}
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
 function unauthorizedAt({ fake }: Pick<Connected, 'fake'>) {

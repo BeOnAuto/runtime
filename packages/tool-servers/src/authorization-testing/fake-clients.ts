@@ -11,8 +11,9 @@ export interface ClientRegistration {
   readonly publicKey?: string;
   readonly expiresInSeconds: number | null;
   readonly issuer?: string;
-  readonly authorizationServer?: string;
+  readonly authorizationServers?: readonly string[];
   readonly protectedResource?: string;
+  readonly resourceMetadataPath?: string;
   readonly openIdConnect?: boolean;
   readonly redirectUris?: readonly string[];
   readonly rotatesRefreshTokens?: boolean;
@@ -27,6 +28,7 @@ export interface ClientRegistration {
   readonly listsRevocationMethods?: boolean;
   readonly scopesSupported?: readonly string[];
   readonly protectedScopes?: readonly string[];
+  readonly requiredScopes?: readonly string[];
   readonly refusesRegistration?: boolean;
   readonly registeredClientId?: string;
   readonly registrationSecretSeconds?: number;

@@ -1,24 +1,24 @@
-import { triggerNamed } from '@on.auto/definitions';
+import { scheduleNamed } from '@on.auto/definitions';
 import { statement } from '@on.auto/ledger';
-import { Effect, Schema } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
+import type { FollowerHost } from '../follower/follower-host.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import type { ReactionStart, StartReaction } from '../reactions/reaction-options.ts';
 import type { Refusals } from '../reactions/refusals.ts';
 import { dueSchedules, nextScheduleDue, scheduleMovedOn, type Schedule } from './schedule-rows.ts';
-import { latestDue, nextAfter } from './schedule-times.ts';
+import { dueTimesOf } from './schedule-times.ts';
 
 export interface ScheduleFiring {
   readonly fireDue: () => Effect.Effect<number>;
   readonly nextDueAt: () => Effect.Effect<number | null>;
 }
 
-interface FiringParts {
-  readonly database: HostDatabase;
+export interface FiringParts extends Pick<FollowerHost, 'database' | 'reports'> {
+  readonly clock: Required<Pick<FollowerHost['clock'], 'now' | 'inZone'>>;
   readonly start: StartReaction;
   readonly refusals: Refusals;
-  readonly now: () => number;
 }
 
 interface Firing {
@@ -41,7 +41,7 @@ function dueAtOf({ latest }: Firing): string {
 }
 
 function namedOf({ subscription }: Firing): string {
-  return triggerNamed(subscription.trigger.kind);
+  return scheduleNamed(subscription.trigger);
 }
 
 function stillRuns(database: HostDatabase, playbookKey: string, running: string | null): Effect.Effect<boolean> {
@@ -118,30 +118,48 @@ function ran(parts: FiringParts, firing: Firing) {
   );
 }
 
-function fired(parts: FiringParts, subscription: Schedule) {
-  const at = parts.now();
-  const { trigger, activatedAt, nextDue } = subscription;
-  const firing: Firing = {
-    subscription,
-    next: nextAfter(trigger, activatedAt, at),
-    latest: latestDue(trigger, activatedAt, nextDue, at),
-  };
-  return Effect.flatMap(stillRuns(parts.database, subscription.playbookKey, subscription.running), (runs) =>
-    runs ? skipped(parts, firing) : ran(parts, firing),
+function stopped(parts: FiringParts, subscription: Schedule, detail: string) {
+  const { playbookKey, workflow, version, trigger, running } = subscription;
+  return Effect.andThen(
+    Effect.andThen(
+      parts.refusals.refuse(
+        playbookKey,
+        subscription,
+        `The times of its ${scheduleNamed(trigger)} cannot be computed, so it starts no more runs: ${detail}`,
+      ),
+      parts.reports.note({
+        kind: 'schedule_stopped',
+        ...playbookOf(playbookKey),
+        workflow,
+        version,
+        reference: trigger.reference,
+        detail,
+      }),
+    ),
+    scheduleMovedOn(parts.database, subscription, null, running),
   );
 }
 
-export function scheduleFiringOn(
-  database: HostDatabase,
-  start: StartReaction,
-  refusals: Refusals,
-  now: () => number,
-): ScheduleFiring {
-  const parts: FiringParts = { database, start, refusals, now };
+function fired(parts: FiringParts, subscription: Schedule) {
+  const { trigger, activatedAt, nextDue } = subscription;
+  const moments = { anchor: activatedAt, due: nextDue, now: parts.clock.now() };
+  return Result.match(dueTimesOf(trigger, moments, parts.clock.inZone), {
+    onFailure: (detail) => stopped(parts, subscription, detail),
+    onSuccess: ({ next, latest }) => {
+      const firing: Firing = { subscription, next, latest };
+      return Effect.flatMap(stillRuns(parts.database, subscription.playbookKey, subscription.running), (runs) =>
+        runs ? skipped(parts, firing) : ran(parts, firing),
+      );
+    },
+  });
+}
+
+export function scheduleFiringOn(parts: FiringParts): ScheduleFiring {
+  const { database, clock } = parts;
   return {
     fireDue: () =>
       Effect.gen(function* () {
-        const due = yield* dueSchedules(database, now(), schedulesInOneFiring);
+        const due = yield* dueSchedules(database, clock.now(), schedulesInOneFiring);
         yield* Effect.forEach(due, (subscription) => fired(parts, subscription), { discard: true });
         return due.length;
       }),

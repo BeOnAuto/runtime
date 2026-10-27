@@ -165,7 +165,7 @@ describe('a start refused by its link', () => {
 
 describe('a start refused for its authorization server', () => {
   it('is refused where the server names another authorization server, or where the metadata of its authorization server names another issuer', async () => {
-    const another = await served({ authorizationServer: 'https://elsewhere.example.com' });
+    const another = await served({ authorizationServers: ['https://elsewhere.example.com'] });
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
 
     expect([await startedThrough(another), await startedThrough(echoing)]).toMatchObject([

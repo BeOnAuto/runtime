@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.26.0](https://github.com/BeOnAuto/runtime/compare/v0.25.0...v0.26.0) (2026-10-27)
+
+
+### Features
+
+* **definitions:** a cron schedule names its time zone ([#342](https://github.com/BeOnAuto/runtime/issues/342)) ([6b0ed98](https://github.com/BeOnAuto/runtime/commit/6b0ed98b00f28437268fab7ea56c45c0a7f9fdbb))
+* **definitions:** every template has the same filters ([#344](https://github.com/BeOnAuto/runtime/issues/344)) ([994a283](https://github.com/BeOnAuto/runtime/commit/994a28311423320d4616bf39902e58d524202ed4))
+
+## [0.25.0](https://github.com/BeOnAuto/runtime/compare/v0.24.1...v0.25.0) (2026-10-27)
+
+
+### Features
+
+* **connections:** a server given by hand connects by consent at the issuer it names ([beeb7dd](https://github.com/BeOnAuto/runtime/commit/beeb7ddaff5bdd8913fbc9f0cf846e00cb3431ed))
+
 ## [0.24.1](https://github.com/BeOnAuto/runtime/compare/v0.24.0...v0.24.1) (2026-10-26)
 
 

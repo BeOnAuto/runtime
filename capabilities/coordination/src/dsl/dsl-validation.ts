@@ -18,7 +18,6 @@ import specificationPackage from '@openworkflowspec/sdk/package.json' with { typ
 import { Predicate, Schema } from 'effect';
 import satisfies from 'semver/functions/satisfies.js';
 
-import { withoutOutputShape } from '../document/workflow-output.ts';
 import { specificationSdk, type SpecificationSdk } from './dsl-libraries.ts';
 import { problemsOf, type Problem } from './schema-problems.ts';
 import { schemaChecksOf } from './specification-schema.ts';
@@ -55,9 +54,25 @@ function firstFound(checks: readonly (() => readonly Problem[])[]): readonly Pro
   return checks.reduce<readonly Problem[]>((found, check) => (found.length > 0 ? found : check()), []);
 }
 
+const runtimeKeys: readonly (readonly [string, string])[] = [
+  ['output', 'shape'],
+  ['schedule', 'time_zone'],
+];
+
+function withoutKeyIn(document: JsonObject, [part, key]: readonly [string, string]): JsonObject {
+  const holder = objectField(document, part);
+  return holder === undefined || field(holder, key) === undefined
+    ? document
+    : { ...document, [part]: Object.fromEntries(entriesOf(holder).filter(([name]: JsonEntry) => name !== key)) };
+}
+
+function withoutRuntimeKeys(document: JsonObject): JsonObject {
+  return runtimeKeys.reduce((kept, place) => withoutKeyIn(kept, place), document);
+}
+
 function read(document: JsonObject): Reading {
   try {
-    const text = JSON.stringify(withoutOutputShape(document), standardErrors);
+    const text = JSON.stringify(withoutRuntimeKeys(document), standardErrors);
     return { text, document: standardOf(text) };
   } catch (error) {
     return { problems: [{ pointer: '', detail: messageOf(error) }] };

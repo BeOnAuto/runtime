@@ -13,7 +13,7 @@ import { LinkSchema } from './link-operations.ts';
 const StartedSchema = Schema.Struct({
   authorize: Schema.Struct({
     url: Schema.String.annotate({
-      description: "The page of the provider's authorization server, where the person signs in and allows Auto",
+      description: 'The page of the authorization server, where the person signs in and allows Auto',
     }),
     expires_at: ExpiresAtField.annotate({
       description: 'When the consent must be finished by, ten minutes on, in ISO 8601 UTC',
@@ -23,7 +23,10 @@ const StartedSchema = Schema.Struct({
     description:
       "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code",
   }),
-}).annotate({ identifier: 'StartedConsent', description: 'Where the person signs in to the provider and allows Auto' });
+}).annotate({
+  identifier: 'StartedConsent',
+  description: 'Where the person signs in at the authorization server and allows Auto',
+});
 
 export function defineStartConsent(services: ConsentServices) {
   const { consent, secrets, bindsPerson } = services;
@@ -31,7 +34,7 @@ export function defineStartConsent(services: ConsentServices) {
     name: 'start',
     title: 'Start consent',
     description: [
-      "Starts the consent of a connection whose provider a person connects by signing in to it and allowing Auto, through the connection's open link, and answers the page of the provider's authorization server to send the person to.",
+      "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
       'The consent is finished within ten minutes, and a second start replaces the first.',
       'On a runtime that signs people in, only the person who added the connection may start it.',
     ].join(' '),

@@ -85,6 +85,7 @@ export function makeConsentClient(given: ConsentClientOptions): ConsentClient {
   return {
     hadSources: (studioBase) =>
       Effect.flatMap(consenting.ofTheCall, ({ options }) => hadSourcesOf(options, studioBase)),
+    namedWay: (asked) => requested((requests) => requests.namedWay(asked)),
     start: (asked) => requested((requests) => requests.start(asked)),
     finish: (asked) => requested((requests) => requests.finish(asked)),
     tokenSource: (served, serving) =>

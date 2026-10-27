@@ -179,11 +179,12 @@ describe('the name of a connection', () => {
 });
 
 describe('the description of adding a connection', () => {
-  it("opens with a person's account at a service, by a provider search lists or a server given by hand, claims a service a playbook will use whatever connector the agent has, keeps the page the person finishes on, and ends with what the call does not grant", () => {
+  it("opens with a person's account at a service, by a provider search lists or a server given by hand, claims a service a playbook will use whatever connector the agent has, says an MCP server that signs people in takes the kind of consent alone, keeps the page the person finishes on, and ends with what the call does not grant", () => {
     expect(operationNamed(harness().operations, 'add_connection').registration.description).toBe(
       [
         "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
         'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
+        'An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server.',
         "It answers pending with a link to Studio's page, where the person approves it within ten minutes.",
         'Nothing is granted by this call and no credential passes through it.',
       ].join(' '),

@@ -1,3 +1,4 @@
+import { required } from '@on.auto/operations';
 import { clientIdPlaceholder } from '@on.auto/providers';
 import {
   readEntry,
@@ -6,7 +7,7 @@ import {
   type ShippedDocument,
   type ToolServerSettingsContext,
 } from '@on.auto/tool-servers';
-import { JsonPointer, Option, Redacted, Result, Schema } from 'effect';
+import { JsonPointer, Redacted, Result, Schema } from 'effect';
 
 import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
@@ -49,10 +50,6 @@ interface Credentialled {
 
 function referenceTo(variable: string): string {
   return `\${${variable}}`;
-}
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
 const asJson = Schema.decodeUnknownSync(Schema.Json);

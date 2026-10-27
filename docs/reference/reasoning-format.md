@@ -119,23 +119,7 @@ Not available: `include`, `render`, `layout` and `block`, since a function is a 
 
 ### Filters
 
-Liquid's standard data and string filters are available: `abs`, `append`, `array_to_sentence_string`, `at_least`, `at_most`, `base64_decode`, `base64_encode`, `capitalize`, `ceil`, `compact`, `concat`, `default`, `divided_by`, `downcase`, `escape`, `escape_once`, `find`, `find_index`, `first`, `floor`, `group_by`, `has`, `join`, `json`, `last`, `lstrip`, `map`, `minus`, `modulo`, `newline_to_br`, `normalize_whitespace`, `number_of_words`, `plus`, `pop`, `prepend`, `push`, `raw`, `reject`, `remove`, `remove_first`, `remove_last`, `replace`, `replace_first`, `replace_last`, `reverse`, `round`, `rstrip`, `shift`, `size`, `slice`, `slugify`, `sort`, `sort_natural`, `split`, `squish`, `strip`, `strip_newlines`, `sum`, `times`, `to_integer`, `truncate`, `truncatewords`, `uniq`, `unshift`, `upcase`, `where` and `xml_escape`.
-
-The runtime adds three filters:
-
-| Filter  | What it does                                                                                                                                                                           | Example                                                        |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `money` | Formats a number, or a string holding a decimal number, as US dollars with thousands separators: no cents for a whole amount, two decimals otherwise. Any other value stops the render | `{{ 364028 \| money }}` is `$364,028`; `1234.5` is `$1,234.50` |
-| `clip`  | Cuts text to a number of characters, 400 by default, and appends an ellipsis (`…`) when it cuts. Characters are counted as Unicode code points                                         | `{{ input.notes \| clip: 200 }}`                               |
-| `words` | Counts the words in a string, where a word is a run of characters between whitespace                                                                                                   | `{% assign n = input.notes \| words %}`                        |
-
-Not available:
-
-- The date filters. They read the server's clock and time zone, so the same function would render differently on another server. Use `today` and `now` instead.
-- `sample`, which is random.
-- The digest filters, `strip_html` and the URL encoders.
-- The filters that evaluate an expression given as text, such as `where_exp`.
-- `inspect` and `jsonify`, which duplicate `json`.
+A template may use the filters listed in [Templates](template.md#filters), the `templates` guide, the same in every template.
 
 ### Limits
 
@@ -440,6 +424,6 @@ Saving does not know which gateways are configured, so these checks happen when 
 - A field outside the list rejects the run as `conflict` with the kind `unworkable`, naming the field and saying the gateway does not allow it. The gateway is not called.
 - A namespace shaped like a gateway's name that no configured provider or gateway reads rejects the run the same way, before any provider is called.
 
-The repository's [engineering reference](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/reference/reasoning-format.md#provider-options) explains, for contributors, why each option and each left-out filter is withheld.
+The repository's [engineering reference](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/reference/reasoning-format.md#provider-options) explains, for contributors, why each option is withheld.
 
 </div>

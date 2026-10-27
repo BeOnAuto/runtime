@@ -1,7 +1,11 @@
 import { OAuthError, OAuthErrorCode, requireBearerAuth } from '@modelcontextprotocol/server';
 import { Option, Schema } from 'effect';
 
-import { fakeAuthorization, type FakeAuthorization } from '../authorization-testing/fake-authorization.ts';
+import {
+  fakeAuthorization,
+  resourceMetadataPathOf,
+  type FakeAuthorization,
+} from '../authorization-testing/fake-authorization.ts';
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
@@ -194,17 +198,19 @@ function mcpEndpoint({ sessions, see, next, requestIdHeader }: Endpoint): FetchH
 function bearerChecked(
   endpoint: FetchHandler,
   origin: string,
-  bearer: string | undefined,
+  { bearer, client }: FakeMcpOptions,
   authorization: FakeAuthorization | undefined,
 ): FetchHandler {
+  const requiredScopes = [...(client?.requiredScopes ?? [])];
   const gate = requireBearerAuth({
     verifier: {
       verifyAccessToken: (token) =>
         token === bearer || authorization?.accepts(token) === true
-          ? Promise.resolve({ token, clientId: 'playbook', scopes: [], expiresAt: farFuture })
+          ? Promise.resolve({ token, clientId: 'playbook', scopes: requiredScopes, expiresAt: farFuture })
           : Promise.reject(new OAuthError(OAuthErrorCode.InvalidToken, 'The token is not valid')),
     },
-    resourceMetadataUrl: `${origin}/.well-known/oauth-protected-resource/mcp`,
+    requiredScopes,
+    resourceMetadataUrl: `${origin}${resourceMetadataPathOf(client)}`,
   });
   return async (request) => {
     const passed = await gate(request);
@@ -225,7 +231,7 @@ function guarded(
   const checked =
     options.bearer === undefined && authorization === undefined
       ? endpoint
-      : bearerChecked(endpoint, origin, options.bearer, authorization);
+      : bearerChecked(endpoint, origin, options, authorization);
   return (request) => authorization?.answer(request) ?? checked(request);
 }
 

@@ -20,7 +20,7 @@ export type { SeenApiRequest } from '../api-testing/fake-api-routes.ts';
 export { fakeApiDocument, fakeApiToolNames, type FakeApiVersion } from '../api-testing/fake-api-document.ts';
 export { chatBot, type ChatMessage, type ChatReply, type FakeChat } from '../mcp-testing/fake-chat.ts';
 export type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
-export { admitted } from '../authorization-testing/authorization-requests.ts';
+export { admitted, postedTo } from '../authorization-testing/authorization-requests.ts';
 export {
   deniedText,
   fakeChannels,
@@ -110,11 +110,19 @@ export {
 } from '../consent-testing/memory-tokens.ts';
 export { sealedTokens, type SealedTokens } from '../consent-testing/sealed-tokens.ts';
 export {
+  brokenAtTheChallenge,
+  challengedWith,
   cuttingTimeouts,
+  failingAt,
   gatedRequests,
   hostRefusedAt,
+  metadataWithdrawnFrom,
+  pingAnsweredWith,
+  recordedFetch,
   type CuttingTimeouts,
   type GatedRequests,
+  type RecordedFetch,
+  type WithdrawnMetadata,
 } from '../consent-testing/gated-requests.ts';
 export {
   clockAt,

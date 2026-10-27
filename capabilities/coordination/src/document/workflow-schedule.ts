@@ -10,13 +10,22 @@ import {
   readDuration,
   type Rejection,
   rejection,
+  textField,
 } from '@on.auto/workflow-engine';
-import { cronRejectionOf } from '@on.auto/workflow-host';
+import { cronRejectionOf, isKnownTimeZone } from '@on.auto/workflow-host';
 import { Schema } from 'effect';
 
 type Kind = 'on' | 'cron' | 'every';
 
+interface CronZone {
+  readonly time_zone?: string;
+}
+
 const kinds: readonly Kind[] = ['on', 'cron', 'every'];
+
+const timeZoneKey = 'time_zone';
+
+const scheduleKeys: ReadonlySet<string> = new Set([...kinds, 'after', timeZoneKey]);
 
 export const mostTriggerFilters = 64;
 
@@ -37,6 +46,11 @@ const untilRefused = 'A trigger matches every event of its playbook while its ve
 const onTakes = 'on takes one, a filter of the events that start the workflow, or any, a list of at least one';
 
 const tooManyFilters = `A trigger takes at most ${mostTriggerFilters} filters, since each is matched against every event of a type it names for as long as its version is active`;
+
+const timeZoneTakes = 'time_zone expects an IANA time zone name such as Europe/London';
+
+const timeZoneWithoutCron =
+  'time_zone is the time zone of cron, so a schedule without cron takes none; every counts a period, which has no time zone';
 
 const sameAttributes = Schema.toEquivalence(Schema.JsonObject);
 
@@ -137,6 +151,20 @@ function isKindEntry(entry: readonly [string, Json]): entry is readonly [Kind, J
   return isKind(entry[0]);
 }
 
+function timeZoneRejections(schedule: JsonObject, pointer: string): readonly Rejection[] {
+  const timeZone = field(schedule, timeZoneKey);
+  if (timeZone === undefined) {
+    return [];
+  }
+  const place = pointerTo(pointer, timeZoneKey);
+  if (field(schedule, 'cron') === undefined) {
+    return [rejection(place, timeZoneWithoutCron)];
+  }
+  return typeof timeZone === 'string' && isKnownTimeZone(timeZone)
+    ? []
+    : [rejection(place, `${timeZoneTakes}, not ${JSON.stringify(timeZone)}`)];
+}
+
 export function scheduleRejections(schedule: Json, pointer: string): readonly Rejection[] {
   if (!isObject(schedule)) {
     return [rejection(pointer, scheduleTakes)];
@@ -145,25 +173,26 @@ export function scheduleRejections(schedule: Json, pointer: string): readonly Re
   const named = entries.filter((entry: readonly [string, Json]) => isKindEntry(entry));
   const after = field(schedule, 'after') === undefined ? [] : [forbidden(`${pointer}/after`, afterRefused)];
   const unknown = entries
-    .filter(([key]: readonly [string, Json]) => !isKind(key) && key !== 'after')
+    .filter(([key]: readonly [string, Json]) => !scheduleKeys.has(key))
     .map(([key]: readonly [string, Json]) =>
-      rejection(pointerTo(pointer, key), `schedule takes on, cron and every, not ${key}`),
+      rejection(pointerTo(pointer, key), `schedule takes on, cron, every and time_zone, not ${key}`),
     );
   const none = named.length > 0 || after.length > 0 ? [] : [rejection(pointer, noTrigger)];
   return after.concat(
     unknown,
     none,
     named.flatMap(([kind, value]: readonly [Kind, Json]) => kindRejections[kind](value, pointerTo(pointer, kind))),
+    timeZoneRejections(schedule, pointer),
   );
 }
 
-function triggerOf([key, value]: readonly [string, Json]): readonly Trigger[] {
+function triggerOf([key, value]: readonly [string, Json], zone: CronZone): readonly Trigger[] {
   const reference = pointerTo('/schedule', key);
   if (key === 'on' && isObject(value)) {
     return [{ kind: 'event', reference, filters: triggerFiltersOf(value, reference) }];
   }
   if (key === 'cron' && typeof value === 'string') {
-    return [{ kind: 'cron', reference, expression: value }];
+    return [{ kind: 'cron', reference, expression: value, ...zone }];
   }
   if (key !== 'every') {
     return [];
@@ -172,9 +201,16 @@ function triggerOf([key, value]: readonly [string, Json]): readonly Trigger[] {
   return 'milliseconds' in every ? [{ kind: 'every', reference, milliseconds: every.milliseconds }] : [];
 }
 
+function cronZoneOf(schedule: JsonObject): CronZone {
+  const timeZone = textField(schedule, timeZoneKey);
+  return timeZone === undefined ? {} : { time_zone: timeZone };
+}
+
 export function triggersOfDocument(document: JsonObject): readonly Trigger[] {
   const schedule = field(document, 'schedule');
-  return isObject(schedule)
-    ? Object.entries(schedule).flatMap((entry: readonly [string, Json]) => triggerOf(entry))
-    : [];
+  if (!isObject(schedule)) {
+    return [];
+  }
+  const zone = cronZoneOf(schedule);
+  return Object.entries(schedule).flatMap((entry: readonly [string, Json]) => triggerOf(entry, zone));
 }

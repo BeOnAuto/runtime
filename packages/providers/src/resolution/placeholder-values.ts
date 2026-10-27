@@ -1,6 +1,6 @@
 import { credentialProblems, placeholdersReplaced } from '@on.auto/config';
-import { alternatives, listed, type Issue } from '@on.auto/operations';
-import { JsonPointer, Option, Result } from 'effect';
+import { required, alternatives, listed, type Issue } from '@on.auto/operations';
+import { JsonPointer, Result } from 'effect';
 
 import { isRequired, patternOf, type Choice, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
@@ -26,10 +26,6 @@ const heldDollar =
 const hostnameCharacters = /^[A-Za-z0-9-]+$/u;
 
 const addressMovers = /[/?#]/u;
-
-function required<A>(value: A | undefined): A {
-  return Option.getOrThrow(Option.fromNullishOr(value));
-}
 
 function pointerOf(name: string): string {
   return `/placeholders/${JsonPointer.escapeToken(name)}`;

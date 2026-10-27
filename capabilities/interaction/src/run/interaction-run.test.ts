@@ -34,6 +34,10 @@ function openDocument(to: string, message: string): string {
   return ['---', `to: '${to}'`, 'expires: P1D', 'output:', '  schema: { type: object }', '---', message].join('\n');
 }
 
+function notifying(message: string): string {
+  return ['---', "to: 'ada'", 'expires: PT1H', '---', message].join('\n');
+}
+
 async function askedWith(source: string, input: unknown) {
   const playbook = interactionHarness();
   await playbook.define('ask', source);
@@ -53,6 +57,21 @@ describe('a notification to the inbox', () => {
       output: { record: { to: 'ada', message: 'The brief for Spring is out.', requested_at: anyText } },
     });
     expect(await playbook.call(listInteractions, {})).toMatchObject({ output: { interactions: [] } });
+  });
+});
+
+describe('a message that formats its input', () => {
+  it('writes an amount as money, clips a text and counts its words, as every template may', async () => {
+    const playbook = interactionHarness();
+    await playbook.define(
+      'tell',
+      notifying('{{ input.amount | money }} for {{ input.note | clip: 5 }}, in {{ input.note | words }} words'),
+    );
+    await playbook.ask('tell', { amount: 1234.5, note: 'Hello, world' }, runId);
+
+    expect(await playbook.runOf(runId)).toMatchObject({
+      output: { record: { message: '$1,234.50 for Hello…, in 2 words' } },
+    });
   });
 });
 

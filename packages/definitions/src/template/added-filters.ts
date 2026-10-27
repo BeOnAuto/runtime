@@ -1,4 +1,4 @@
-import { outputText } from '@on.auto/definitions/template';
+import { outputText } from './output-text.ts';
 
 const defaultClipLength = 400;
 
@@ -25,7 +25,7 @@ function amountOf(value: unknown): number {
   return amount;
 }
 
-export function money(value: unknown): string {
+function money(value: unknown): string {
   const amount = amountOf(value);
   return Number.isInteger(amount) ? wholeDollars.format(amount) : dollarsAndCents.format(amount);
 }
@@ -42,8 +42,10 @@ export function clip(value: unknown, length: unknown = defaultClipLength): strin
   return characters.length <= length ? text : `${characters.slice(0, length).join('')}${ellipsis}`;
 }
 
-export function words(value: unknown): number {
+function words(value: unknown): number {
   return outputText(value)
     .split(whitespace)
     .filter((word) => word !== '').length;
 }
+
+export const addedFilters = { money, clip, words };

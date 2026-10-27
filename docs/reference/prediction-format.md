@@ -298,11 +298,13 @@ The body of the document is the brief, a Liquid template that a build renders fo
 | `function.rules`                                    | The rules, as a list of text                                                                        |
 
 - Lists have `first`, `last` and `size`.
+- A template may use the filters listed in [Templates](template.md#filters), the `templates` guide, the same in every template.
 - The brief is compiled when the function is saved. It is also rendered then, over the largest dataset the bounds admit: 200,000 rows over 1,000 series.
 - It is refused at its line when it does not compile, or when it:
   - reads a name not in `dataset` or `function`;
   - writes a list or a mapping where text goes;
   - renders past 64 KiB;
+  - stops at a filter that refuses its value, such as `money` over text: `The brief does not render: money takes a number, or text that is a decimal number`;
   - takes longer than the 200 ms a template renders in.
 
 Write what the trainer needs to know that the rows do not say: what the target means, why a feature matters, what a good model must not do.
