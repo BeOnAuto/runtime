@@ -8,6 +8,10 @@ export interface TrustedTime {
   readonly serverTime: number;
 }
 
+export interface ObservedTime extends TrustedTime {
+  readonly monotonic: number;
+}
+
 export interface LicenseTime {
   readonly now: number;
   readonly onlineRequired: boolean;

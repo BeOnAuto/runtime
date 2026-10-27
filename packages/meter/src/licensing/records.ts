@@ -1,15 +1,21 @@
 import type { InstallationChallenge, LicenseEntitlement, LicenseTrust } from '@on.auto/metering';
 
+import type { TrustedTime } from '../clock/records.ts';
 import type { InstallationSigner } from '../installation/records.ts';
 
 export type LicenseFetch = (request: Readonly<Request>) => Promise<Readonly<Response>>;
-type LicensePath = '/licenses/activation-challenge' | '/licenses/refresh-challenge' | '/licenses/complete';
+type LicensePath =
+  | '/licenses/activation-challenge'
+  | '/licenses/refresh-challenge'
+  | '/licenses/complete'
+  | '/licenses/time';
 export type LicenseTransport = (path: LicensePath, value: unknown) => Promise<unknown>;
 
 export interface LicenseProtocolOptions {
   readonly trust: LicenseTrust;
   readonly installation: InstallationSigner;
   readonly fetch: LicenseFetch;
+  readonly monotonicTime: () => number;
 }
 
 export interface VerifiedLicenseBundle {
@@ -19,6 +25,7 @@ export interface VerifiedLicenseBundle {
 }
 
 export interface LicenseProtocol {
+  readonly freshTime: () => Promise<TrustedTime>;
   readonly activationChallenge: (requestId: string, activationKey: string) => Promise<InstallationChallenge>;
   readonly refreshChallenge: (requestId: string, installationId: string) => Promise<InstallationChallenge>;
   readonly complete: (challenge: InstallationChallenge, now: number) => Promise<VerifiedLicenseBundle>;

@@ -1,7 +1,8 @@
 import { statement, type ConnectionPorts } from '@on.auto/ledger';
 import { Schema } from 'effect';
 
-import type { ClockEstimate, ClockRow, ClockSample, TrustedTime } from './records.ts';
+import type { ClockEstimate, ClockRow, ClockSample, ObservedTime, TrustedTime } from './records.ts';
+import { clockMilliseconds } from './time-samples.ts';
 
 const storedNumber = Schema.Union([Schema.Number, Schema.FiniteFromString]);
 const readRow = Schema.decodeUnknownSync(
@@ -60,13 +61,15 @@ export async function alreadyTrusted(connection: ConnectionPorts, fresh: Trusted
 export async function trustClock(
   connection: ConnectionPorts,
   before: ClockRow,
-  fresh: TrustedTime,
+  fresh: ObservedTime,
   sample: ClockSample,
 ): Promise<boolean> {
+  if (sample.monotonic < fresh.monotonic) throw new Error('license_clock_invalid');
+  const serverTime = clockMilliseconds(fresh.serverTime + sample.monotonic - fresh.monotonic);
   const rows = await connection.transaction([
     statement`UPDATE meter_clock SET revision = revision + 1, trust_epoch = trust_epoch + 1,
-      trust_id = ${fresh.id}, server_anchor = ${fresh.serverTime}, wall_anchor = ${sample.wall},
-      high_water = ${fresh.serverTime}, wall_seen = ${sample.wall}, needs_online = 0
+      trust_id = ${fresh.id}, server_anchor = ${serverTime}, wall_anchor = ${sample.wall},
+      high_water = ${serverTime}, wall_seen = ${sample.wall}, needs_online = 0
       WHERE id = 1 AND revision = ${before.revision} AND revision < 9007199254740991
       AND trust_epoch < 9007199254740991`,
     statement`INSERT INTO meter_clock_refreshes (id, trusted_at)

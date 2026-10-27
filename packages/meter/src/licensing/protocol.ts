@@ -3,6 +3,7 @@ import { licenseVerifier, type InstallationChallenge } from '@on.auto/metering';
 import { assertEntitlementResponse, readLicenseBundle } from './bundle.ts';
 import { assertChallengeAuthority, challengeForRequest } from './challenge.ts';
 import type { LicenseProtocol, LicenseProtocolOptions } from './records.ts';
+import { freshLicenseTime } from './time.ts';
 import { licenseTransport } from './transport.ts';
 
 export function licenseProtocol(options: LicenseProtocolOptions): LicenseProtocol {
@@ -16,6 +17,7 @@ export function licenseProtocol(options: LicenseProtocolOptions): LicenseProtoco
     return challenge;
   };
   return {
+    freshTime: freshLicenseTime(trust, send, options.monotonicTime),
     activationChallenge: async (requestId, activationKey) =>
       challengeRead(
         await send('/licenses/activation-challenge', {

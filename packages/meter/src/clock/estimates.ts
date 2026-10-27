@@ -1,11 +1,24 @@
-import type { ClockEstimate, ClockRow, ClockSample } from './records.ts';
+import type { ClockEstimate, ClockRow, ClockSample, ObservedTime } from './records.ts';
 import { clockMilliseconds } from './time-samples.ts';
 
 const rollbackTolerance = 5000;
 
+function refreshedAnchor(row: ClockRow, sample: ClockSample, observed: ObservedTime | undefined) {
+  const fresh = observed?.id === row.trustId ? observed : undefined;
+  return {
+    epoch: row.epoch,
+    now: fresh?.serverTime ?? row.highWater,
+    monotonic: fresh?.monotonic ?? sample.monotonic,
+    lastMonotonic: sample.monotonic,
+    first: false,
+    suspect: false,
+  };
+}
+
 export function clockEstimator(
   initial: ClockRow,
   monotonic: number,
+  observed: () => ObservedTime | undefined,
 ): (row: ClockRow, sample: ClockSample) => ClockEstimate {
   const anchor = {
     epoch: initial.epoch,
@@ -17,14 +30,7 @@ export function clockEstimator(
   };
   return (row, sample) => {
     if (anchor.epoch !== row.epoch) {
-      Object.assign(anchor, {
-        epoch: row.epoch,
-        now: row.highWater,
-        monotonic: sample.monotonic,
-        lastMonotonic: sample.monotonic,
-        first: false,
-        suspect: false,
-      });
+      Object.assign(anchor, refreshedAnchor(row, sample, observed()));
     }
     anchor.suspect ||=
       (anchor.first && row.trustId !== '' && sample.wall <= row.wallSeen) ||

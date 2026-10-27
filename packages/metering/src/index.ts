@@ -35,6 +35,13 @@ export {
   type InstallationIntent,
 } from './licenses/exchange-identities.ts';
 export { licenseVerifier } from './licenses/verification.ts';
+export { licenseTimeVerifier } from './time/verification.ts';
+export {
+  LICENSE_TIME_TYPE,
+  MOST_TIME_TOKEN_CHARACTERS,
+  licenseTimePayload,
+  type LicenseTimeAttestation,
+} from './time/attestations.ts';
 export {
   installationKeyFingerprint,
   readInstallationPublicKey,

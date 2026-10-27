@@ -1,5 +1,7 @@
 # @on.auto/metering
 
+`licenseTimePayload` and `licenseTimeVerifier` authenticate the authority's millisecond clock with a dedicated Ed25519 signature bound to a request identity. The protected client must generate an unpredictable fresh identity for every observation, reject any other response, account for the measured round trip, and persist the observation before using it. A valid signature on an old request is not fresh time. Time attestations contain no credit or license authority and never extend signed deadlines.
+
 The credit arithmetic and admission contracts shared by Cloud and customer-hosted Auto Runtime. A credit is one million integer microcredits. Provider amounts retain decimal precision until the approved tariff converts them; reservations round upward and settlements round once to the nearest microcredit, with ties to even.
 
 This package owns run identities and accounting rules. Customer accounts, payments, private signing keys, and credit issuance belong to the Studio account service. Customer-funded model and compute resources do not incur an Auto resource surcharge.

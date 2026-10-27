@@ -1,5 +1,7 @@
 # Durable meter
 
+`licenseProtocol.freshTime` requests a separately signed time observation with a new random identity on every call. It verifies protected public trust, protocol type, authority, deployment ring, canonical bytes and the exact request. It includes the measured round trip conservatively and refuses regressed, invalid or excessively delayed observations. The controller passes that result immediately to `openLicenseClock.synchronize`; time repair neither changes a license deadline nor grants capacity. Clock persistence counts time spent waiting for storage, including a lost acknowledgement, while preserving the original immutable receipt for retries.
+
 `@on.auto/meter` stores the self-hosted installation identity beside Runtime's ledger. It builds on the pure credit, tariff, license and offline-report contracts in `@on.auto/metering`.
 
 `openInstallation` receives the existing `LedgerConnection` and encrypted `SecretStore`. The database holds one cluster identity and a secret reference; the Ed25519 private key remains in the configured secret keeper. Replicas using the same PostgreSQL database and secret custody share the identity. SQLite retains it across process restarts. A missing or mismatched private key refuses signing instead of silently issuing another identity.

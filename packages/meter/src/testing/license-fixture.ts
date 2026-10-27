@@ -1,16 +1,18 @@
 import {
   INSTALLATION_CHALLENGE_MILLISECONDS,
   LICENSE_TOKEN_TYPE,
+  LICENSE_TIME_TYPE,
   STANDARD_OFFLINE_MILLISECONDS,
   installationRequestIdentity,
   licenseClaims,
   licenseEntitlementSerial,
+  licenseTimePayload,
   readInstallationPublicKey,
   type InstallationChallenge,
   type LicenseEntitlement,
   type LicenseTrust,
 } from '@on.auto/metering';
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { CompactSign, exportJWK, generateKeyPair, SignJWT } from 'jose';
 
 import { licenseProtocol, openInstallation, type InstallationIdentity } from '../index.ts';
 import { sqliteDatabase } from './sqlite-database.ts';
@@ -94,6 +96,7 @@ export async function licenseFixture(open = sqliteDatabase) {
   const protocol = licenseProtocol({
     trust,
     installation,
+    monotonicTime: () => 0,
     fetch: (request) => {
       requests.push(request);
       return Promise.resolve(Response.json(state.answer));
@@ -104,6 +107,10 @@ export async function licenseFixture(open = sqliteDatabase) {
     installation,
     trust,
     protocol,
+    timeToken: (requestId: string, serverTime: number) =>
+      new CompactSign(new TextEncoder().encode(licenseTimePayload({ ...trust, requestId, serverTime })))
+        .setProtectedHeader({ alg: 'EdDSA', typ: LICENSE_TIME_TYPE, kid: 'authority-key' })
+        .sign(keys.privateKey),
     requests,
     challenge: challengesFor(trust, installation),
     bundle: bundlesFor((license) =>
