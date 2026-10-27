@@ -743,6 +743,34 @@ importers:
         specifier: 'catalog:'
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
 
+  packages/meter:
+    dependencies:
+      '@on.auto/definitions':
+        specifier: workspace:*
+        version: link:../definitions
+      '@on.auto/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@on.auto/operations':
+        specifier: workspace:*
+        version: link:../operations
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
+    devDependencies:
+      '@types/pg':
+        specifier: 8.23.1
+        version: 8.23.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
+
   packages/object-storage:
     dependencies:
       '@aws-sdk/client-s3':
@@ -922,6 +950,9 @@ importers:
       '@on.auto/ledger':
         specifier: workspace:*
         version: link:../ledger
+      '@on.auto/meter':
+        specifier: workspace:*
+        version: link:../meter
       '@on.auto/object-storage':
         specifier: workspace:*
         version: link:../object-storage
