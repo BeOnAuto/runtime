@@ -140,6 +140,21 @@ describe('the commands of auto-runtime for the runtime on this computer', () => 
     expect(asked).toEqual(['http://127.0.0.1:5555/runtime']);
     expect(logged[0]).toBe('Auto Runtime 0.9.1 is running at http://localhost:5555');
   });
+
+  it('asks the runtime on this computer to activate its license with license activate and a key', async () => {
+    const { host, asked } = recordedHost();
+
+    await runCommandLine(['license', 'activate', 'alk.acme.one.secret'], host);
+
+    expect(asked).toEqual(['http://127.0.0.1:5555/runtime', 'http://127.0.0.1:5555/v1/orgs/local/license']);
+  });
+
+  it('has no command license without activate and a key', async () => {
+    const { host, errors } = recordedHost();
+
+    await expect(runCommandLine(['license', 'show', 'alk.acme.one.secret'], host)).resolves.toBe(1);
+    expect(errors[0]).toBe('auto-runtime has no command "license show alk.acme.one.secret"');
+  });
 });
 
 describe('the other commands of auto-runtime', () => {

@@ -33,6 +33,10 @@
       "description": "The providers a person may connect to the org by name, and whether the caller may add a connection"
     },
     {
+      "name": "license",
+      "description": "The license of the runtime, activated with the key Studio gives, by which each new action is admitted against the account of an org at Auto"
+    },
+    {
       "name": "definitions",
       "description": "A playbook's function and workflow definitions, and the runs they start"
     },
@@ -5405,6 +5409,121 @@
           {
             "openIdConnect": [
               "org:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/license": {
+      "post": {
+        "operationId": "activate_license",
+        "summary": "Activate license",
+        "description": "Activates the license of this runtime with the key Studio gave as an owner of the org registered its installation, alk.<org>.<installation>.<secret>. The license covers the whole runtime, every org of it: from then on each new action is admitted against the credit of the account of the org at Auto, and the 100 actions a runtime runs before it is registered no longer count. It answers the installation, the org at Auto, its plan and when the entitlement Auto signed expires; the runtime refreshes it every day, and keeps the key in its secret store so it stands after a restart. A key Auto does not know, or one for another installation, is refused as a conflict of the kind license_invalid.",
+        "tags": [
+          "license"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/activate_license/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key Studio gave as an owner of the org registered this installation, alk.<org>.<installation>.<secret>"
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/activate_license/output",
+                  "type": "object",
+                  "properties": {
+                    "installation": {
+                      "type": "string"
+                    },
+                    "org": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "expires_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "installation",
+                    "org",
+                    "plan",
+                    "expires_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
             ]
           }
         ]

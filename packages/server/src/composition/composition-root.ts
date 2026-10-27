@@ -9,11 +9,66 @@ import { ledgerLayerFor } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
 
+export interface CompositionParts {
+  readonly programPoolOf?: FunctionWiring['programPoolOf'];
+  readonly clock?: WorkflowParts['clock'];
+  readonly toolTiming?: FunctionWiring['toolTiming'];
+  readonly signers?: NonNullable<Parameters<typeof applicationLayer>[1]>['signers'];
+}
+
+type Composing = Parameters<ComposedServerOptions['composed']>;
+
+interface Serving {
+  readonly modelAccessOf: ModelAccessOf;
+  readonly wiring: FunctionWiring;
+  readonly clock: WorkflowParts['clock'];
+  readonly settings: Composing[0];
+  readonly telemetry: Composing[1];
+  readonly shippedFiles: Composing[2];
+  readonly database: Awaited<ReturnType<typeof ledgerDatabaseOf>>;
+  readonly capabilities: ReturnType<typeof capabilityRegistryHeld>;
+}
+
+function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
+  const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, capabilities } = serving;
+  return async (runtime, ownOrigin) => {
+    const { ledger, workflows, identityIssuer } = settings;
+    const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata, license } =
+      await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
+    const registry = await capabilities.openedIn(runtime, settings, {
+      ...wiring,
+      modelAccessOf,
+      telemetry,
+      consent,
+      connections: source,
+    });
+    const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
+      ...wiring,
+      registry,
+      connections: source,
+      offering,
+      shippedFiles,
+    });
+    const parts = {
+      ledger,
+      workflows,
+      identityIssuer,
+      retryStateKeys,
+      shippedFiles,
+      ...functions.parts,
+      orgOperations: [...functions.parts.orgOperations, ...connections, license.operation],
+      dueWork: [...functions.parts.dueWork, ...license.dueWork],
+      ...(clock === undefined ? {} : { clock }),
+    };
+    const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
+    const closing = license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] });
+    return withLiveAttemptsClosedFirst(runtime, closing);
+  };
+}
+
 export function compositionRootWith(
   modelAccessOf: ModelAccessOf,
-  programPoolOf?: FunctionWiring['programPoolOf'],
-  clock?: WorkflowParts['clock'],
-  toolTiming?: FunctionWiring['toolTiming'],
+  { programPoolOf, clock, toolTiming, signers }: CompositionParts = {},
 ): ComposedServerOptions {
   const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
@@ -23,39 +78,14 @@ export function compositionRootWith(
       ledgerLayerFor(settings, database, wiring.projections.appends),
       settings,
     );
+    const meter = {
+      studio: settings.studio.origin,
+      ...settings.license,
+      ...(signers === undefined ? {} : { signers }),
+    };
     return {
-      services: capabilities.closedFirstOf(applicationLayer(ledgerLayer, settings.studio.origin)),
-      serve: async (runtime, ownOrigin) => {
-        const { ledger, workflows, identityIssuer } = settings;
-        const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata } =
-          await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
-        const registry = await capabilities.openedIn(runtime, settings, {
-          ...wiring,
-          modelAccessOf,
-          telemetry,
-          consent,
-          connections: source,
-        });
-        const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
-          ...wiring,
-          registry,
-          connections: source,
-          offering,
-          shippedFiles,
-        });
-        const parts = {
-          ledger,
-          workflows,
-          identityIssuer,
-          retryStateKeys,
-          shippedFiles,
-          ...functions.parts,
-          orgOperations: [...functions.parts.orgOperations, ...connections],
-          ...(clock === undefined ? {} : { clock }),
-        };
-        const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
-        return withLiveAttemptsClosedFirst(runtime, { ...served, routes: [...served.routes, clientMetadata] });
-      },
+      services: capabilities.closedFirstOf(applicationLayer(ledgerLayer, meter)),
+      serve: servedWith({ modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, capabilities }),
     };
   });
 }

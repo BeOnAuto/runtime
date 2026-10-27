@@ -162,3 +162,11 @@ allowed_origins:
 # DO_NOT_TRACK=1 in the environment turns it off as well. See
 # https://on.auto/docs/self-host/configuration#usage-ping
 # usage_ping: false
+
+# The license of this runtime, which it needs past the 100 actions it runs
+# before it is registered: the key Studio gives as an owner of the org registers
+# its installation, written as a reference to the variable that holds it, since
+# this file never holds a secret. AUTO_RUNTIME_LICENSE_KEY wins over it. See
+# https://on.auto/docs/self-host/licenses
+# license:
+#   key: ${ACME_LICENSE_KEY}

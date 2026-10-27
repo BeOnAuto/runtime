@@ -15,11 +15,13 @@ import {
   type AutoClientsSettings,
 } from '../consent/consent-settings.ts';
 import { readFunctionSettings, type FunctionSettings } from '../function-settings/function-settings.ts';
+import { readLicenseSettings, type LicenseSettings } from '../licensing/license-settings.ts';
 import { readWorkflowSettings, type WorkflowSettings } from './workflow-settings.ts';
 
 export interface ServedSettings extends FunctionSettings, ConnectionSettings {
   readonly workflows: WorkflowSettings;
   readonly autoClients: AutoClientsSettings;
+  readonly license: LicenseSettings;
 }
 
 export interface ShippedSettings {
@@ -44,5 +46,6 @@ export function readServedSettings(
     ...connectionSettings,
     workflows: Effect.runSync(readWorkflowSettings(environment)),
     autoClients: readAutoClientsSettings(environment, { ...access, written: connectionSettings.autoClientsWritten }),
+    license: readLicenseSettings(environment),
   };
 }

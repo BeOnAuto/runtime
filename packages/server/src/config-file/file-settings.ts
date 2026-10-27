@@ -6,6 +6,7 @@ import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGat
 import { ToolServersSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { licenseFileSetting } from '../licensing/license-settings.ts';
 import { Origin, StudioOrigin } from '../settings/origin.ts';
 
 function asJson(value: unknown): string {
@@ -99,4 +100,5 @@ export const fileSettings: readonly FileSetting[] = [
     }),
     String,
   ),
+  licenseFileSetting,
 ];

@@ -100,6 +100,7 @@ describe('the org endpoint of the server', () => {
         'add_connection',
         'list_connections',
         'remove_connection',
+        'activate_license',
         'get_guide',
       ],
     });

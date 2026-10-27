@@ -13,7 +13,7 @@ function configFileJsonSchema(): Readonly<Record<string, unknown>> {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     title: 'Auto Runtime configuration file',
     description:
-      'The settings of Auto Runtime that are lists or maps, where Studio comes from, a declared local mode and the usage ping, read from the file that CONFIG_FILE names. Each key stands for the environment variable of the same name in upper case, which wins over it. Secrets are written as references such as ${GATEWAY_API_KEY}.',
+      'The settings of Auto Runtime that are lists or maps, where Studio comes from, a declared local mode, the usage ping and the license, read from the file that CONFIG_FILE names. Each key stands for the environment variable of the same name in upper case, which wins over it, and license.key for AUTO_RUNTIME_LICENSE_KEY. Secrets are written as references such as ${GATEWAY_API_KEY}.',
     ...schema,
     $defs: definitions,
   };

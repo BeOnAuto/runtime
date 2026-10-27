@@ -73,13 +73,13 @@ async function welcomedAfterReply(session: McpSession): Promise<ToolResult> {
 }
 
 describe('/mcp with workflows', () => {
-  it('lists twenty-eight tools, and the description of run_definition says how to see whether a workflow run ended', async () => {
+  it('lists twenty-nine tools, and the description of run_definition says how to see whether a workflow run ended', async () => {
     server = await servingWorkflows([]);
 
     const listing = await onMcp((session) => session.listTools());
     const tools = toolNamesIn(listing);
 
-    expect(tools).toHaveLength(28);
+    expect(tools).toHaveLength(29);
     expect(tools.slice(-2)).toEqual(['send_run_event', 'get_guide']);
     expect(listedTools(listing).find(({ name }) => name === 'run_definition')?.description).toContain(
       'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
