@@ -48,15 +48,42 @@ The runtime reaches `accounts.on.auto` over HTTPS; allow it in your egress rules
 
 Each refusal is a problem document with the status `409`, the reason `conflict` and one of these kinds, or with `503` and the kind `meter_unavailable`:
 
-| Kind                | Means                                                                                                         | What to do                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `license_required`  | The runtime has run its 100 actions and holds no license                                                      | [Register the installation](#register-the-installation-in-studio) and [activate the key](#activate-the-key) |
-| `license_invalid`   | The key was rotated away or revoked, is for another installation, or its entitlement expired or is not Auto's | Activate a current key of this installation; its words link the installation's page in Studio               |
-| `credits_exhausted` | The org's account has no credit left for the action                                                           | An owner adds credit in Studio, under Billing; the run starts when it is asked again                        |
-| `metering_fault`    | The runtime found its ledger changed under its count                                                          | [Ask Auto for a repair](#faults-and-repairs)                                                                |
-| `meter_unavailable` | The runtime could not read its ledger, or reach the account service, to admit the run                         | Ask again shortly; check that the runtime reaches `accounts.on.auto`                                        |
+| Kind                | Means                                                                                                         | What to do                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `license_required`  | The runtime has run its 100 actions and holds no license                                                      | [Register the installation](#register-the-installation-in-studio) and [activate the key](#activate-the-key)               |
+| `license_invalid`   | The key was rotated away or revoked, is for another installation, or its entitlement expired or is not Auto's | Activate a current key of this installation; its words link the installation's page in Studio                             |
+| `credits_exhausted` | The org's account has no credit left for the action, or an offline installation has spent its allocation      | An owner adds credit in Studio, under Billing, or asks Auto for another allocation; the run starts when it is asked again |
+| `metering_fault`    | The runtime found its ledger changed under its count                                                          | [Ask Auto for a repair](#faults-and-repairs)                                                                              |
+| `meter_unavailable` | The runtime could not read its ledger, or reach the account service, to admit the run                         | Ask again shortly; check that the runtime reaches `accounts.on.auto`                                                      |
 
 A run asked again under the run id of one that already started is never refused, and counts nothing more. Reading runs and events, editing definitions and exporting go on whatever the license says.
+
+## Offline installations
+
+An installation that never reaches Auto, behind an air gap or a network that lets nothing out, cannot ask its account to admit each action. For it, an operator of Auto issues an allocation: credits moved out of the org's account for that installation alone, which the runtime spends itself, signed by Auto like every answer the runtime takes. Ask for one through [Studio's support page](https://studio.on.auto/support), naming the installation.
+
+Give the runtime its allocation, and the key of its installation, which signs its reports, in any of these ways. None of them needs Auto: the runtime checks the allocation against Auto's public key, which it ships, and keeps it in its ledger.
+
+- **The environment.** Set `AUTO_RUNTIME_ALLOCATION` to the allocation's JSON, `{"payload":"…","signature":"…","kid":"…"}`, and `AUTO_RUNTIME_LICENSE_KEY` to the key.
+- **The configuration file.** Write references to the variables that hold them:
+
+  ```yaml
+  license:
+    key: ${ACME_LICENSE_KEY}
+    allocation: ${ACME_ALLOCATION}
+  ```
+
+- **The command.** With Auto Runtime running on your computer, `npx -y @on.auto/runtime license allocation '<the allocation's JSON>'`.
+- **The API.** `POST /v1/orgs/{org}/license/allocation` with `{ "allocation": { "payload": "…", "signature": "…", "kid": "…" } }`.
+
+While an allocation stands, the runtime admits each new action against it and asks Auto nothing. It counts what it spent from its ledger, as it counts every action, and admits while fewer actions than the allocation's credits were counted since it took it; replicas of one ledger admit exactly that many between them. The allocation has seven days of grace from when it was last refreshed. Past that day the runtime refuses new runs as `license_invalid`, and once its credits are spent as `credits_exhausted`.
+
+A runtime that does reach Auto now and then refreshes its allocation every day, which gives it seven more days of grace, and sends Auto a report of what it spent every hour. One that never does needs an owner to carry its reports to Studio:
+
+1. Make the next report on the runtime: `npx -y @on.auto/runtime license report`, or `POST /v1/orgs/{org}/license/allocation/report`. It prints `{"report":{"allocation":…,"installation":…,"sequence":…,"spent":…,"at":…},"signature":…}`: all the runtime spent under the allocation so far, under the next number, signed with the key of its installation.
+2. Upload it in Studio, on the installation's page under Licenses.
+
+Each report counts everything spent, so a later report replaces an earlier one, and a lost report costs nothing. Auto freezes an allocation whose report counts fewer actions than one before it, or comes under a number it already took, as a ledger restored from an older copy does; reach Auto through support to have it looked at. When Auto closes the allocation, the runtime gives it up at its next refresh and asks its account to admit each action from then on.
 
 ## Faults and repairs
 

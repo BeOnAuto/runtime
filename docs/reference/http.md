@@ -43,7 +43,7 @@ These four need no key. Where sign-in is on, the [protected resource metadata](a
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five prediction routes, the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics` and `validate`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five prediction routes, the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body. The two uploads take a CSV dataset or a candidate's bytes as the body, and the document gives their maximum size.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -1183,13 +1183,17 @@ A connected connection is a tool server of its org: `search` lists it with `conn
 
 ## License
 
-A runtime runs 100 actions before it is registered, and after them each new action is admitted by the account of an org at Auto, by the license that a key Studio gives activates. [Register and license a runtime](../self-host/licenses.md) sets out how a key is had and the other ways to activate it. This route is relative to `/v1/orgs/{org}`; the license covers the whole runtime, whatever org the route names.
+A runtime runs 100 actions before it is registered, and after them each new action is admitted by the account of an org at Auto, by the license that a key Studio gives activates. [Register and license a runtime](../self-host/licenses.md) sets out how a key is had and the other ways to activate it. These routes are relative to `/v1/orgs/{org}`; the license covers the whole runtime, whatever org the route names.
 
-| Operation          | Method and route | Permission  | Input                                                           |
-| ------------------ | ---------------- | ----------- | --------------------------------------------------------------- |
-| `activate_license` | `POST /license`  | `org:write` | `key`, the key Studio gave, `alk.<org>.<installation>.<secret>` |
+| Operation             | Method and route                  | Permission  | Input                                                                                     |
+| --------------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------------------------- |
+| `activate_license`    | `POST /license`                   | `org:write` | `key`, the key Studio gave, `alk.<org>.<installation>.<secret>`                           |
+| `activate_allocation` | `POST /license/allocation`        | `org:write` | `allocation`, the allocation an operator of Auto signed: `payload`, `signature` and `kid` |
+| `report_allocation`   | `POST /license/allocation/report` | `org:write` | Optional `allocation`, the id of the allocation the report is of                          |
 
 It answers `200` with `installation`, `org`, the org's id at Auto, `plan` and `expires_at`, when the entitlement Auto signed expires; the runtime renews it every day. The runtime keeps the key in its secret store, so it stands after a restart, unless `AUTO_RUNTIME_LICENSE_KEY` or the configuration file gives another, which wins at each start. A key that is not one of Studio is refused as `invalid_input`; one Auto does not know, rotated away, revoked or for another installation, and an entitlement not signed by Auto, as `license_invalid`; and an account service that cannot be reached as `unavailable` of the kind `meter_unavailable`. Activating the same key again changes nothing but the entitlement.
+
+`activate_allocation` and `report_allocation` serve an [offline installation](../self-host/licenses.md#offline-installations), and are served over HTTP alone. `activate_allocation` answers `200` with `allocation`, its id, `installation`, `credits`, `spent`, what the runtime admitted under it, and `refresh_by`, when its grace ends; an allocation not signed by Auto, for another installation or past its grace is refused as `license_invalid`, and one that is not an allocation's JSON as `invalid_input`. Giving the same allocation again changes nothing but a later `refresh_by`. `report_allocation` answers `200` with `report`, `{ allocation, installation, sequence, spent, at }`, the next number and all spent so far, and `signature`, its HMAC-SHA256 under the key of the installation, the JSON an owner uploads in Studio; a runtime with no allocation, with no key to sign with, or holding another allocation than the one named, is refused as `conflict`.
 
 ## Responses and errors
 

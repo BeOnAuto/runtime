@@ -107,15 +107,16 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 - Activate a current key of this installation, from Studio's Licenses page; the refusal links the installation's page. A key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there.
 - A key for another installation is refused before the runtime asks Auto: register this runtime's installation, which the refusal names, rather than reuse another's key.
+- An offline installation's allocation has seven days of grace from its last refresh; past them every run is refused until the runtime refreshes it with Auto or takes the allocation an operator signs again.
 - An entitlement lasts seven days and is renewed every day. One that expired because the runtime could not reach `accounts.on.auto` for a week renews as soon as it can; check the runtime's egress.
 
 ## A run is refused as `credits_exhausted` {#credits-exhausted}
 
 **Symptom.** A run is answered `409` with the kind `credits_exhausted`, in the words of the org's account.
 
-**Cause.** The org's account at Auto has no credit left for the action. A run asked again under the id of a run that already started is not charged again, and is not refused.
+**Cause.** The org's account at Auto has no credit left for the action, or an [offline installation](licenses.md#offline-installations) has spent the credits of its allocation. A run asked again under the id of a run that already started is not charged again, and is not refused.
 
-**Fix.** An owner of the org adds credit in Studio, under Billing, with a plan or a top-up. Ask for the run again once it is added.
+**Fix.** An owner of the org adds credit in Studio, under Billing, with a plan or a top-up, or, for an offline installation, asks Auto for another allocation. Ask for the run again once it is added.
 
 ## Every run is refused as `metering_fault` {#metering-fault}
 
