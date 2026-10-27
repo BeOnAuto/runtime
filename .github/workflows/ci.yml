@@ -658,7 +658,7 @@ jobs:
           test "$(answered read.json --header "authorization: Bearer $key" http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke)" = 200
           grep --quiet '"id":"smoke","name":"Smoke test"' read.json
           call_mcp /mcp '{"jsonrpc":"2.0","id":4,"method":"tools/list"}' all-tools.txt
-          test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 28
+          test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 29
           for tool in list_models list_runs get_event list_playbook_events publish_event search introspect dry_run execute list_interactions answer_interaction send_run_event cancel_run get_guide; do
             grep --quiet "\"name\":\"$tool\"" all-tools.txt
           done
