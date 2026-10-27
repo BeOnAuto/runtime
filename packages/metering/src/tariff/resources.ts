@@ -46,6 +46,6 @@ export function resourceCreditUnits(costs: readonly ResourceCost[], rounding: Ro
   return checkedCreditUnits(roundedFraction(resourceCreditFraction(costs), rounding));
 }
 
-export function platformCreditUnits(executions: bigint): bigint {
-  return checkedCreditUnits(executions * MICROCREDITS_PER_CREDIT);
+export function platformCreditUnits(runs: bigint): bigint {
+  return checkedCreditUnits(runs * MICROCREDITS_PER_CREDIT);
 }

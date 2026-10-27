@@ -1,4 +1,4 @@
-export interface ExecutionIdentity {
+export interface RunIdentity {
   readonly accountId: string;
   readonly deploymentId: string;
   readonly playbookId: string;
@@ -16,9 +16,9 @@ export async function accountingDigest(parts: readonly string[]): Promise<string
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export async function executionChargeId(identity: ExecutionIdentity, kind: ChargeKind): Promise<string> {
+export async function runChargeId(identity: RunIdentity, kind: ChargeKind): Promise<string> {
   const { accountId, deploymentId, playbookId, runId } = identity;
-  return `charge_${await accountingDigest(['auto.execution.v1', accountId, deploymentId, playbookId, runId, kind])}`;
+  return `charge_${await accountingDigest(['auto.run.v1', accountId, deploymentId, playbookId, runId, kind])}`;
 }
 
 export async function resourceReceiptId(accountId: string, providerId: string, requestId: string): Promise<string> {

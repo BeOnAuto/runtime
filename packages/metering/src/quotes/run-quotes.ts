@@ -1,16 +1,16 @@
-import { accountingDigest, type ExecutionIdentity } from '../executions/identity.ts';
+import { accountingDigest, type RunIdentity } from '../runs/identity.ts';
 import { TARIFF_VERSION } from '../tariff/resources.ts';
 import { maximumSpend, type SpendingBound, type WorkBound } from './work-bounds.ts';
 
 export interface QuoteContext {
-  readonly execution: ExecutionIdentity;
+  readonly run: RunIdentity;
   readonly definitionVersion: string;
   readonly inputDigest: string;
   readonly limitsDigest: string;
   readonly expiresAt: number;
 }
 
-export interface ExecutionQuote {
+export interface RunQuote {
   readonly id: string;
   readonly bindingDigest: string;
   readonly tariffVersion: string;
@@ -19,16 +19,16 @@ export interface ExecutionQuote {
 }
 
 function bindingDigest(context: QuoteContext): Promise<string> {
-  const { execution, definitionVersion, inputDigest, limitsDigest } = context;
+  const { run, definitionVersion, inputDigest, limitsDigest } = context;
   if (!/^[a-f0-9]{64}$/u.test(inputDigest) || !/^[a-f0-9]{64}$/u.test(limitsDigest)) {
     throw new RangeError('A quote requires input and enforced-limit SHA-256 digests');
   }
   return accountingDigest([
     'auto.quote-binding.v1',
-    execution.accountId,
-    execution.deploymentId,
-    execution.playbookId,
-    execution.runId,
+    run.accountId,
+    run.deploymentId,
+    run.playbookId,
+    run.runId,
     definitionVersion,
     inputDigest,
     limitsDigest,
@@ -41,7 +41,7 @@ function validDeadline(expiresAt: number, now: number): void {
   }
 }
 
-async function quoteId(quote: Omit<ExecutionQuote, 'id'>): Promise<string> {
+async function quoteId(quote: Omit<RunQuote, 'id'>): Promise<string> {
   const { maximum } = quote;
   return `quote_${await accountingDigest([
     'auto.quote.v1',
@@ -55,7 +55,7 @@ async function quoteId(quote: Omit<ExecutionQuote, 'id'>): Promise<string> {
   ])}`;
 }
 
-export async function executionQuote(context: QuoteContext, plan: WorkBound, now: number): Promise<ExecutionQuote> {
+export async function runQuote(context: QuoteContext, plan: WorkBound, now: number): Promise<RunQuote> {
   validDeadline(context.expiresAt, now);
   const quote = {
     bindingDigest: await bindingDigest(context),
@@ -67,13 +67,13 @@ export async function executionQuote(context: QuoteContext, plan: WorkBound, now
 }
 
 export async function assertQuoteMatches(
-  quote: ExecutionQuote,
+  quote: RunQuote,
   context: QuoteContext,
   plan: WorkBound,
   now: number,
 ): Promise<void> {
-  const expected = await executionQuote(context, plan, now);
+  const expected = await runQuote(context, plan, now);
   if (quote.id !== expected.id || (await quoteId(quote)) !== expected.id) {
-    throw new RangeError('The approved quote does not match this execution, its limits or its tariff');
+    throw new RangeError('The approved quote does not match this run, its limits or its tariff');
   }
 }

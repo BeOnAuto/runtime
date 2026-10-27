@@ -74,7 +74,7 @@ describe('resource rounding and bounds', () => {
 });
 
 describe('platform and combined charges', () => {
-  it('charges one platform credit per logical execution', () => {
+  it('charges one platform credit per logical run', () => {
     expect(platformCreditUnits(0n)).toBe(0n);
     expect(platformCreditUnits(6n)).toBe(creditUnits('6'));
     expect(() => platformCreditUnits(-1n)).toThrow('safe accounting range');

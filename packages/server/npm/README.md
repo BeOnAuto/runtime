@@ -70,7 +70,7 @@ The same release is the image `docker.on.auto/onauto/runtime`, from Docker Hub. 
 
 The package carries each of the runtime's packages as a subpath, so a program can compose the core itself rather than run the server. `@on.auto/runtime/ledger` is the ledger, `@on.auto/runtime/ledger/sqlite3` one of the subpaths the ledger names, and `@on.auto/runtime/ledger/testing` its testing entry. A testing entry is for your tests as it is for the runtime's: `recordedContentBehaviour` of `@on.auto/runtime/operations/testing`, the behaviour suite of the content port, runs against a store of your own. The test tools a testing entry imports are your tests' to provide.
 
-`@on.auto/runtime/metering` provides the shared exact credit arithmetic, tariff, execution identities, bounded quote contracts and source-lot reservation selection. The Studio account service uses the same contracts for its wallet. These pure calculations require an account authority to authorize and atomically record a reservation before work starts.
+`@on.auto/runtime/metering` provides the shared exact credit arithmetic, tariff, run identities, bounded quote contracts and source-lot reservation selection. The Studio account service uses the same contracts for its wallet. These pure calculations require an account authority to authorize and atomically record a reservation before work starts.
 
 The subpaths are the `.ts` sources the server runs, and they import one another by the packages' own names, such as `@on.auto/operations`. Where your bundler must resolve those names, alias each of them, with its subpaths, to the same subpath of `@on.auto/runtime`:
 

@@ -4,7 +4,7 @@ import { resourceCreditFraction, type ResourceCost } from '../tariff/resources.t
 
 export type WorkBound =
   | {
-      readonly type: 'execution';
+      readonly type: 'run';
       readonly resources: readonly ResourceCost[] | undefined;
       readonly developmentUnits: bigint;
     }
@@ -55,7 +55,7 @@ function repeated(bound: ExactBound, iterations: bigint | undefined): ExactBound
   };
 }
 
-function executionBound(bound: Extract<WorkBound, { readonly type: 'execution' }>): ExactBound {
+function runBound(bound: Extract<WorkBound, { readonly type: 'run' }>): ExactBound {
   if (bound.resources === undefined)
     throw new RangeError('A quote needs known resource rates and enforced resource limits');
   return {
@@ -71,7 +71,7 @@ function exactBound(plan: WorkBound): ExactBound {
     visited += 1;
     if (visited > 4_096 || depth > 32) throw new RangeError('The quote exceeds the plan size or nesting limit');
     const next = (child: WorkBound): ExactBound => inspect(child, depth + 1);
-    if (node.type === 'execution') return executionBound(node);
+    if (node.type === 'run') return runBound(node);
     if (node.type === 'repeat') return repeated(next(node.body), node.iterations);
     if (node.type === 'branch') {
       if (node.paths.length === 0) throw new RangeError('A quote needs at least one possible branch');
