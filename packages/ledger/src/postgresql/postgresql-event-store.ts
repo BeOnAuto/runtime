@@ -7,7 +7,7 @@ import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgres
 import { dataAsJsonText } from './json-text.ts';
 import type { PostgreSQLOptions, PostgreSQLPools } from './postgresql-options.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
-import { postgresqlRunOutcomesOf } from './postgresql-run-outcomes.ts';
+import { postgresqlReadsOn } from './postgresql-reads.ts';
 import { beforeTheSchemaOf } from './postgresql-schema.ts';
 
 export interface PostgreSQLStoreOptions extends PostgreSQLOptions {
@@ -48,7 +48,7 @@ export function postgresqlStoreOn(
     ...store,
     ...postgresqlRecordedStoreOn(query, pool),
     ...projections.readerOn({ query: formattedFor(query), command: formattedFor(query) }),
-    readRunOutcomes: postgresqlRunOutcomesOf(kept.runOutcomes, query),
+    ...postgresqlReadsOn(kept, query, () => pool),
     close: async () => {
       await store.close();
       await pool.end();

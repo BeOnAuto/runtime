@@ -5,7 +5,7 @@ import { executorOn } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
-import { keptSecretsBehaviour, ledgerBehaviour, type LedgerEntry } from '../testing/index.ts';
+import { keptSecretsBehaviour, ledgerBehaviour, logBehaviour, type LedgerEntry } from '../testing/index.ts';
 import {
   plainPoolsOn,
   postgresqlEventStore,
@@ -129,6 +129,7 @@ const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL o
 
 describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   ledgerBehaviour(onPostgreSQL);
+  logBehaviour(onPostgreSQL);
   keptSecretsBehaviour({
     ...onPostgreSQL,
     secretRowsOn: (database) => postgresqlSecretRows({ pools: plainPoolsOn(database) }),

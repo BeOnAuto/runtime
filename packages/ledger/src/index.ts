@@ -20,6 +20,8 @@ export {
   type StatementValue,
 } from './connection/statement.ts';
 export { LedgerChores, type ChorePorts } from './content/content-sweep.ts';
+export { LedgerLog, samePoint, type LoggedEvent, type LogPage, type LogPorts } from './log/ledger-log.ts';
+export { UnreadableEvent } from './log/unreadable-event.ts';
 export { eventAppenderOf, type EventAppender } from './event-appender.ts';
 export { eventCodecOf, type EventCodec } from './event-codec.ts';
 export type {

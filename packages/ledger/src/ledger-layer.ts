@@ -6,6 +6,7 @@ import { LedgerConnection, type ConnectionPorts } from './connection/ledger-conn
 import { LedgerChores, orphansSweptOf } from './content/content-sweep.ts';
 import type { AppendListeners, LedgerStore } from './event-store.ts';
 import { makeLedger } from './ledger-service.ts';
+import { LedgerLog } from './log/ledger-log.ts';
 
 export interface OpenedWith {
   readonly appends?: AppendSignal | undefined;
@@ -22,7 +23,7 @@ export interface OpenedLedger {
   readonly connection: ConnectionPorts;
 }
 
-export type LedgerServices = Ledger | LedgerConnection | LedgerChores;
+export type LedgerServices = Ledger | LedgerConnection | LedgerChores | LedgerLog;
 
 export function ledgerLayerOver(
   open: () => OpenedLedger,
@@ -41,6 +42,7 @@ export function ledgerLayerOver(
       const ledger = makeLedger({ ...store, content: kept.content, sweepContent: kept.sweepContent });
       return Context.make(Ledger, ledger).pipe(
         Context.add(LedgerConnection, opened.connection),
+        Context.add(LedgerLog, store.log),
         Context.add(LedgerChores, { sweepOrphans: (now: number) => sweeping.withPermit(orphansSwept(now)) }),
       );
     }),

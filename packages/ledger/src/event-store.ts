@@ -13,6 +13,7 @@ import type {
 } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
+import type { LogPorts } from './log/ledger-log.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
 
 export interface EncodedEvent {
@@ -148,7 +149,9 @@ export interface RunOutcomesStore {
   ) => Promise<readonly RunOutcomeGroup[]>;
 }
 
-export interface LedgerStore extends EventStore, RunOutcomesStore, ProjectionReader, ProjectionAdvancer, ContentStore {}
+export interface LedgerStore extends EventStore, RunOutcomesStore, ProjectionReader, ProjectionAdvancer, ContentStore {
+  readonly log: LogPorts;
+}
 
 export interface StatementExecutor {
   readonly query: (sql: SQL) => Promise<{ readonly rows: readonly unknown[] }>;
