@@ -16,9 +16,9 @@ describe('binding a signed license to the completed exchange', () => {
     const challenge = await f.challenge();
     const issued = await f.bundle(challenge, changed);
     f.respond(issued);
-    await expect(f.protocol.complete(challenge, Math.max(5000, issued.license.issuedAt))).rejects.toThrow(
-      'license_response_mismatch',
-    );
+    await expect(
+      f.protocol.complete(challenge, () => Promise.resolve(Math.max(5000, issued.license.issuedAt))),
+    ).rejects.toThrow('license_response_mismatch');
   });
 
   it.each([
@@ -32,13 +32,17 @@ describe('binding a signed license to the completed exchange', () => {
       const f = await licenseFixture();
       const challenge = await f.challenge();
       f.respond(await f.bundle(challenge, {}, tokens));
-      await expect(f.protocol.complete(challenge, 5000)).rejects.toThrow('license_bundle_invalid');
+      await expect(f.protocol.complete(challenge, () => Promise.resolve(5000))).rejects.toThrow(
+        'license_bundle_invalid',
+      );
     },
   );
 
   it('refuses a response without the required bundle fields', async () => {
     const f = await licenseFixture();
     f.respond({ status: 'issued' });
-    await expect(f.protocol.complete(await f.challenge(), 5000)).rejects.toThrow(/Missing|Expected/u);
+    await expect(f.protocol.complete(await f.challenge(), () => Promise.resolve(5000))).rejects.toThrow(
+      /Missing|Expected/u,
+    );
   });
 });

@@ -20,6 +20,7 @@ export function freshLicenseTime(
     const attestation = await verify(timeToken, requestId);
     const elapsed = clockMilliseconds(Math.ceil(monotonicTime()) - started);
     if (elapsed > 30_000) throw new Error('license_time_delayed');
-    return { id: `time_${requestId}`, serverTime: clockMilliseconds(attestation.serverTime + elapsed) };
+    clockMilliseconds(attestation.serverTime + elapsed);
+    return { id: `time_${requestId}`, serverTime: attestation.serverTime, elapsedMilliseconds: elapsed };
   };
 }

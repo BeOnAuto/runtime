@@ -38,13 +38,13 @@ export function licenseProtocol(options: LicenseProtocolOptions): LicenseProtoco
       if (challenge.installationId !== installationId) throw new Error('license_challenge_mismatch');
       return challenge;
     },
-    complete: async (challenge, now) => {
+    complete: async (challenge, currentTime) => {
       assertChallengeAuthority(challenge, trust, installation);
       const proof = await installation.proveChallenge(challenge);
       const bundle = readLicenseBundle(await send('/licenses/complete', { challengeId: challenge.id, proof }));
       const license = await verify(bundle.entitlementToken, {
         binding: challenge,
-        now,
+        now: await currentTime(),
         minimumGeneration: challenge.generation + 1,
       });
       await assertEntitlementResponse(license, challenge, bundle.allocationTokens);

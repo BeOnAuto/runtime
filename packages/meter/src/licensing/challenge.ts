@@ -8,7 +8,7 @@ import { Schema } from 'effect';
 
 import type { InstallationIdentity } from '../installation/records.ts';
 
-const challengeBody = Schema.decodeUnknownSync(
+export const readInstallationChallenge = Schema.decodeUnknownSync(
   Schema.Struct({
     id: Schema.String,
     issuer: Schema.String,
@@ -46,7 +46,7 @@ export async function challengeForRequest(
   value: unknown,
   request: Readonly<{ requestId: string; purpose: InstallationChallenge['purpose'] }>,
 ): Promise<InstallationChallenge> {
-  const challenge = challengeBody(value);
+  const challenge = readInstallationChallenge(value);
   const expected = await installationRequestIdentity({ ...challenge, requestId: request.requestId });
   if (
     challenge.purpose !== request.purpose ||

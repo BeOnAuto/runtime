@@ -37,8 +37,8 @@ describe('fresh signed license time', () => {
     const f = await fixture();
     const first = await f.protocol.freshTime();
     const second = await f.protocol.freshTime();
-    expect(first.serverTime).toBe(5011);
-    expect(second.serverTime).toBe(5011);
+    expect(first).toMatchObject({ serverTime: 5000, elapsedMilliseconds: 11 });
+    expect(second).toMatchObject({ serverTime: 5000, elapsedMilliseconds: 11 });
     expect(first.id).not.toBe(second.id);
     expect(first.id).toMatch(/^time_[a-f0-9-]{36}$/u);
     expect(f.requests.map((request) => new URL(request.url).pathname)).toEqual(['/licenses/time', '/licenses/time']);

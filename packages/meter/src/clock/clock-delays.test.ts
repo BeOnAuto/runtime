@@ -80,3 +80,27 @@ describe('a broken clock during synchronization', () => {
     expect((await f.clock.read()).onlineRequired).toBe(true);
   });
 });
+
+describe('server time and network delay', () => {
+  it('accepts a fresh faster response after a slower observation without rebasing an old receipt', async () => {
+    const f = await clockFixture(sqliteDatabase);
+    expect((await f.clock.synchronize({ id: 'slow', serverTime: 200_000, elapsedMilliseconds: 1000 })).now).toBe(
+      201_000,
+    );
+    f.time.pass(100);
+    expect((await f.clock.synchronize({ id: 'fast', serverTime: 200_100, elapsedMilliseconds: 10 })).now).toBe(200_110);
+    expect((await f.clock.synchronize({ id: 'slow', serverTime: 200_000, elapsedMilliseconds: 1000 })).now).toBe(
+      200_110,
+    );
+    f.time.pass(1000);
+    expect((await f.clock.read()).now).toBe(201_110);
+  });
+
+  it.each([-1, 0.5, 30_001])('refuses an invalid observation interval %s', async (elapsedMilliseconds) => {
+    const f = await clockFixture(sqliteDatabase);
+    await expect(f.clock.synchronize({ id: 'time-1', serverTime: 200_000, elapsedMilliseconds })).rejects.toThrow(
+      'license_clock_invalid',
+    );
+    expect((await f.clock.read()).onlineRequired).toBe(true);
+  });
+});

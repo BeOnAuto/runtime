@@ -16,7 +16,7 @@ function refreshedClock(
   return retryChange(async () => {
     if (await alreadyTrusted(connection, fresh)) return false;
     const before = await readClock(connection);
-    if (fresh.serverTime < before.serverAnchor) {
+    if (fresh.serverTime < before.serverObservation) {
       if (await alreadyTrusted(connection, fresh)) return false;
       throw new Error('license_clock_trust_regressed');
     }

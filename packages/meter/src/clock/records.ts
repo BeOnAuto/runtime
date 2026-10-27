@@ -6,6 +6,7 @@ export interface ClockSamples {
 export interface TrustedTime {
   readonly id: string;
   readonly serverTime: number;
+  readonly elapsedMilliseconds?: number;
 }
 
 export interface ObservedTime extends TrustedTime {
@@ -27,6 +28,7 @@ export interface ClockRow {
   readonly epoch: number;
   readonly trustId: string;
   readonly serverAnchor: number;
+  readonly serverObservation: number;
   readonly wallAnchor: number;
   readonly highWater: number;
   readonly wallSeen: number;

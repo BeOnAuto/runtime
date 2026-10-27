@@ -12,6 +12,7 @@ const readRow = Schema.decodeUnknownSync(
       trust_epoch: storedNumber,
       trust_id: Schema.String,
       server_anchor: storedNumber,
+      server_observation: storedNumber,
       wall_anchor: storedNumber,
       high_water: storedNumber,
       wall_seen: storedNumber,
@@ -23,7 +24,7 @@ const readRefresh = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ truste
 
 export async function readClock(connection: ConnectionPorts): Promise<ClockRow> {
   const [row] = readRow(
-    await connection.read(statement`SELECT revision, trust_epoch, trust_id, server_anchor,
+    await connection.read(statement`SELECT revision, trust_epoch, trust_id, server_anchor, server_observation,
     wall_anchor, high_water, wall_seen, needs_online FROM meter_clock WHERE id = 1`),
   );
   return {
@@ -31,6 +32,7 @@ export async function readClock(connection: ConnectionPorts): Promise<ClockRow> 
     epoch: row.trust_epoch,
     trustId: row.trust_id,
     serverAnchor: row.server_anchor,
+    serverObservation: row.server_observation,
     wallAnchor: row.wall_anchor,
     highWater: row.high_water,
     wallSeen: row.wall_seen,
@@ -65,10 +67,12 @@ export async function trustClock(
   sample: ClockSample,
 ): Promise<boolean> {
   if (sample.monotonic < fresh.monotonic) throw new Error('license_clock_invalid');
-  const serverTime = clockMilliseconds(fresh.serverTime + sample.monotonic - fresh.monotonic);
+  const serverTime = clockMilliseconds(
+    fresh.serverTime + (fresh.elapsedMilliseconds ?? 0) + sample.monotonic - fresh.monotonic,
+  );
   const rows = await connection.transaction([
     statement`UPDATE meter_clock SET revision = revision + 1, trust_epoch = trust_epoch + 1,
-      trust_id = ${fresh.id}, server_anchor = ${serverTime}, wall_anchor = ${sample.wall},
+      trust_id = ${fresh.id}, server_anchor = ${serverTime}, server_observation = ${fresh.serverTime}, wall_anchor = ${sample.wall},
       high_water = ${serverTime}, wall_seen = ${sample.wall}, needs_online = 0
       WHERE id = 1 AND revision = ${before.revision} AND revision < 9007199254740991
       AND trust_epoch < 9007199254740991`,

@@ -45,9 +45,9 @@ describe('a stored challenge submitted for completion', () => {
     { installationKeyDigest: 'b'.repeat(64) },
   ])('refuses a changed stored challenge before signing or sending it: %j', async (changed) => {
     const f = await licenseFixture();
-    await expect(f.protocol.complete({ ...(await f.challenge()), ...changed }, 5000)).rejects.toThrow(
-      'license_challenge_mismatch',
-    );
+    await expect(
+      f.protocol.complete({ ...(await f.challenge()), ...changed }, () => Promise.resolve(5000)),
+    ).rejects.toThrow('license_challenge_mismatch');
     expect(f.requests).toHaveLength(0);
   });
 
@@ -55,11 +55,11 @@ describe('a stored challenge submitted for completion', () => {
     const f = await licenseFixture();
     f.respond({ id: 'incomplete' });
     await expect(f.protocol.activationChallenge('request-1', 'activation-secret')).rejects.toThrow(/Missing|Expected/u);
-    await expect(f.protocol.complete({ ...(await f.challenge()), nonce: 'not-a-nonce' }, 5000)).rejects.toThrow(
-      'nonce',
-    );
-    await expect(f.protocol.complete({ ...(await f.challenge()), expiresAt: 400_000 }, 5000)).rejects.toThrow(
-      'five minutes',
-    );
+    await expect(
+      f.protocol.complete({ ...(await f.challenge()), nonce: 'not-a-nonce' }, () => Promise.resolve(5000)),
+    ).rejects.toThrow('nonce');
+    await expect(
+      f.protocol.complete({ ...(await f.challenge()), expiresAt: 400_000 }, () => Promise.resolve(5000)),
+    ).rejects.toThrow('five minutes');
   });
 });

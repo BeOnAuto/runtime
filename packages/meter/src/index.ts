@@ -11,6 +11,8 @@ export type {
   VerifiedLicenseBundle,
 } from './licensing/records.ts';
 export { openLicenseState } from './license-state/license-state.ts';
+export { openLicenseClient } from './license-client/license-client.ts';
+export type { LicenseClient, LicenseClientOptions, LicensePollResult } from './license-client/records.ts';
 export type {
   CurrentLicense,
   LicenseHead,

@@ -21,6 +21,7 @@ function challengesFor(trust: LicenseTrust, installation: InstallationIdentity) 
   return async function challenge(
     purpose: InstallationChallenge['purpose'] = 'activate',
     requestId = 'request-1',
+    licenseId = 'license-1',
   ): Promise<InstallationChallenge> {
     const intent = {
       issuer: trust.issuer,
@@ -29,7 +30,7 @@ function challengesFor(trust: LicenseTrust, installation: InstallationIdentity) 
       requestId,
       accountId: 'account-1',
       installationId: 'installation-1',
-      licenseId: 'license-1',
+      licenseId,
       clusterId: installation.clusterId,
       installationKeyDigest: installation.installationKeyDigest,
     };

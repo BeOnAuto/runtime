@@ -28,5 +28,8 @@ export interface LicenseProtocol {
   readonly freshTime: () => Promise<TrustedTime>;
   readonly activationChallenge: (requestId: string, activationKey: string) => Promise<InstallationChallenge>;
   readonly refreshChallenge: (requestId: string, installationId: string) => Promise<InstallationChallenge>;
-  readonly complete: (challenge: InstallationChallenge, now: number) => Promise<VerifiedLicenseBundle>;
+  readonly complete: (
+    challenge: InstallationChallenge,
+    currentTime: () => Promise<number>,
+  ) => Promise<VerifiedLicenseBundle>;
 }

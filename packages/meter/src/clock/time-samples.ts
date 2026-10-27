@@ -11,6 +11,7 @@ export function clockMilliseconds(value: number): number {
 export function assertTrustedTime(value: TrustedTime): void {
   if (!/^[A-Za-z0-9_.:-]{1,256}$/u.test(value.id)) throw new Error('license_clock_proof_invalid');
   clockMilliseconds(value.serverTime);
+  if (clockMilliseconds(value.elapsedMilliseconds ?? 0) > 30_000) throw new Error('license_clock_invalid');
 }
 
 export function clockSamplesOn(connection: ConnectionPorts, samples: ClockSamples): () => Promise<ClockSample> {

@@ -7,7 +7,7 @@ function refreshedAnchor(row: ClockRow, sample: ClockSample, observed: ObservedT
   const fresh = observed?.id === row.trustId ? observed : undefined;
   return {
     epoch: row.epoch,
-    now: fresh?.serverTime ?? row.highWater,
+    now: fresh === undefined ? row.highWater : fresh.serverTime + (fresh.elapsedMilliseconds ?? 0),
     monotonic: fresh?.monotonic ?? sample.monotonic,
     lastMonotonic: sample.monotonic,
     first: false,
