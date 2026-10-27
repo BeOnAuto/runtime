@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.1](https://github.com/BeOnAuto/runtime/compare/v0.32.0...v0.32.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **server:** a runtime asks Auto's account service at billing.on.auto ([#358](https://github.com/BeOnAuto/runtime/issues/358)) ([614ded1](https://github.com/BeOnAuto/runtime/commit/614ded11ad6be32af27684723f792d2574217a62))
+
 ## [0.32.0](https://github.com/BeOnAuto/runtime/compare/v0.31.0...v0.32.0) (2026-10-27)
 
 
