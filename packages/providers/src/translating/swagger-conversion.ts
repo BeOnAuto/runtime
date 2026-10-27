@@ -1,7 +1,8 @@
 import { Schema } from 'effect';
 
+import { isJsonList, isJsonObject } from './discovery-document.ts';
 import { authorizationServerOf, rootRequirementOf, securitySchemesOf } from './oauth2-scheme.ts';
-import { isJsonFields, isJsonList, keptOperation, type JsonFields } from './openapi-operations.ts';
+import { keptOperation, type JsonFields } from './openapi-operations.ts';
 import {
   convertedSchema,
   fieldsAt,
@@ -26,7 +27,7 @@ const ReasonSchema = NamedSchema.annotate({ description: 'Why the conversion doe
 
 const ConvertedSourceSchema = Schema.Struct({
   address: NamedSchema.annotate({
-    description: "The address of the vendor's description in JSON, a Swagger 2.0 or an OpenAPI 3 document",
+    description: "The address of the vendor's description in JSON or YAML, a Swagger 2.0 or an OpenAPI 3 document",
   }),
   operations: NamesSchema.annotate({ description: 'The ids of the operations the document keeps from it' }),
 });
@@ -132,7 +133,7 @@ function scalarSchemaOf(written: JsonFields): JsonFields {
 
 function queryParameterOf(name: string, parameter: JsonFields): JsonFields {
   const schema = parameter['schema'];
-  const written = isJsonFields(schema) ? schema : parameter;
+  const written = isJsonObject(schema) ? schema : parameter;
   const isList = written['type'] === 'array';
   return {
     name,
@@ -189,7 +190,7 @@ function requestBodyOf(operation: JsonFields, parameters: readonly JsonFields[],
     return { requestBody: bodyOf(body, body['schema'], references) };
   }
   const written = operation['requestBody'];
-  return isJsonFields(written)
+  return isJsonObject(written)
     ? { requestBody: bodyOf(written, fieldsAt(written['content'], jsonMedia)['schema'], references) }
     : {};
 }

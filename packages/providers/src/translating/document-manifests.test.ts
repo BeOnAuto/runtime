@@ -4,6 +4,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { trackerTranslated } from '../testing/curated-documents.ts';
 import { trackerAuthorizationServer, trackerDiscovery, trackerManifest } from '../testing/discovery-documents.ts';
+import { aboutYaml } from '../testing/graph-shaped-documents.ts';
 import {
   aboutAddress,
   aboutManifest,
@@ -41,7 +42,10 @@ function fetchingFrom(answered: ReadonlyMap<string, unknown>): Fetching {
   return (address) => {
     fetched.push(address);
     const answer = answered.get(address);
-    return Promise.resolve(answer === undefined ? new Response('Not Found', { status: 404 }) : Response.json(answer));
+    if (answer === undefined) {
+      return Promise.resolve(new Response('Not Found', { status: 404 }));
+    }
+    return Promise.resolve(typeof answer === 'string' ? new Response(answer) : Response.json(answer));
   };
 }
 
@@ -207,7 +211,7 @@ describe('a cut a manifest does not take', () => {
 });
 
 describe('the documents translated from the manifests of OpenAPI and Swagger documents', () => {
-  it('are each the document of the operations its manifest keeps, from the documents it names, fetched, with no manifest written', async () => {
+  it('are each the document of the operations its manifest keeps, from the documents it names, each address fetched once, with no manifest written', async () => {
     const shipped = shippedWith({
       'tracker.manifest.json': trackerOpenApiManifest,
       'about.manifest.json': aboutManifest,
@@ -230,7 +234,7 @@ describe('the documents translated from the manifests of OpenAPI and Swagger doc
         issuesAddress,
         notesAddress,
         foldersAddress,
-        ...Array.from({ length: 3 }, () => trackerManifest.authorization_server),
+        trackerManifest.authorization_server,
       ].toSorted(),
     );
   });
@@ -246,5 +250,27 @@ describe('the documents translated from the manifests of OpenAPI and Swagger doc
       'The manifest tracker is of OpenAPI documents, which the command fetches at the addresses it names, so no file is given in place of one. Usage: pnpm --filter @on.auto/providers documents:translate',
     );
     await expect(translatedIn(unanswered)).rejects.toThrow(`${gone} answered 404, so nothing is translated from it`);
+  });
+});
+
+describe('the documents translated from sources a vendor publishes in YAML', () => {
+  it('read a document a vendor publishes in YAML as the document it describes', async () => {
+    const shipped = shippedWith({ 'about.manifest.json': aboutManifest });
+
+    const written = await translatedIn(shipped, [], new Map([...answers, [aboutAddress, aboutYaml]]));
+
+    expect(written.map(({ text }) => parsed(text))).toEqual([aboutTranslated]);
+  });
+
+  it('are refused where an address answers no document in JSON or YAML, or one that is no mapping', async () => {
+    const shipped = shippedWith({ 'about.manifest.json': aboutManifest });
+    const answeredWith = (text: string) => translatedIn(shipped, [], new Map([...answers, [aboutAddress, text]]));
+
+    await expect(answeredWith('openapi: [3.1.0')).rejects.toThrow(
+      `${aboutAddress} answered no document in JSON or YAML, so nothing is translated from it: line 1`,
+    );
+    await expect(answeredWith('- openapi')).rejects.toThrow(
+      `${aboutAddress} answered no document in JSON or YAML, so nothing is translated from it: line 1, column 1: An OpenAPI document is a mapping of its fields`,
+    );
   });
 });

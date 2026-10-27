@@ -58,7 +58,7 @@ function unreadAnswer(status: number): string {
     : `The document could not be read: its URL answered HTTP ${status}`;
 }
 
-function parsedText(text: string, entry: string): Read {
+export function documentInText(text: string): Result.Result<unknown, string> {
   try {
     const parsed: unknown = JSON.parse(text);
     return Result.succeed(parsed);
@@ -70,8 +70,14 @@ function parsedText(text: string, entry: string): Read {
     const located = reading.problems
       .slice(0, mostProblemsNamed)
       .map(({ position, detail }) => `line ${position.line}, column ${position.column}: ${detail}`);
-    return Result.fail(unread(entry, `The document is neither JSON nor YAML: ${located.join('; ')}`));
+    return Result.fail(located.join('; '));
   }
+}
+
+function parsedText(text: string, entry: string): Read {
+  return Result.mapError(documentInText(text), (located) =>
+    unread(entry, `The document is neither JSON nor YAML: ${located}`),
+  );
 }
 
 function boundedParse(text: string, entry: string): Read {

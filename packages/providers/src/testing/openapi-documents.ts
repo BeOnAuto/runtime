@@ -6,9 +6,9 @@ export const issuesAddress = 'https://developers.tracker.example.com/api/issues/
 
 export const aboutAddress = 'https://developers.tracker.example.com/api/about/';
 
-const trackerMetadataAddress = 'https://auth.tracker.example.com/.well-known/oauth-authorization-server';
+export const trackerMetadataAddress = 'https://auth.tracker.example.com/.well-known/oauth-authorization-server';
 
-const servers = [{ url: 'https://api.tracker.example.com/v2' }];
+export const servers = [{ url: 'https://api.tracker.example.com/v2' }];
 
 const bearer = [{ vendor_bearer: [] }];
 
@@ -152,7 +152,7 @@ const scheme = {
   because: 'A person grants the user-level scopes alone',
 };
 
-const info = {
+export const info = {
   title: 'Tracker people and issues',
   version: '2',
   description: 'Four operations translated from the people and issues documents.',
@@ -184,7 +184,7 @@ function required(...scopes: readonly string[]) {
   return scopes.map((scope) => ({ tracker_oauth: [scope] }));
 }
 
-function trackerSchemesOf(scopes: Readonly<Record<string, string>>) {
+export function trackerSchemesOf(scopes: Readonly<Record<string, string>>) {
   return {
     tracker_oauth: {
       type: 'oauth2',
@@ -254,6 +254,8 @@ export const trackerOpenApiTranslated = {
   },
 };
 
+export const answeredUndescribed = { default: { description: 'An answer this document does not describe' } };
+
 export const aboutSource = {
   openapi: '3.1.0',
   paths: {
@@ -285,7 +287,7 @@ export const aboutTranslated = {
     '/about': {
       get: {
         operationId: 'about',
-        responses: { default: { description: 'An answer this document does not describe' } },
+        responses: answeredUndescribed,
         security: required('about:read'),
       },
     },

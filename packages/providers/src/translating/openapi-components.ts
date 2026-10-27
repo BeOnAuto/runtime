@@ -1,6 +1,7 @@
+import { mappedSchema, type SchemaObject } from '@on.auto/tool-servers';
 import { JsonPointer, type Schema } from 'effect';
 
-import { byName, referencesIn } from './discovery-document.ts';
+import { byName, isJsonList, isJsonObject, referencesIn, type JsonObject } from './discovery-document.ts';
 
 type Json = Schema.Json;
 
@@ -21,6 +22,10 @@ export interface Reaching {
   readonly operation: JsonFields;
   readonly held: HeldComponents;
 }
+
+const holdersOfSchemas: ReadonlySet<string> = new Set(['parameters', 'requestBodies', 'responses', 'headers']);
+
+const holdingNoSchema: ReadonlySet<string> = new Set(['example', 'examples', 'links']);
 
 function referenceOf(kind: string, name: string): string {
   return `#/components/${JsonPointer.escapeToken(kind)}/${JsonPointer.escapeToken(name)}`;
@@ -54,6 +59,65 @@ function reachedFrom({ id, operation, held }: Reaching, reached: Map<string, Com
   }
 }
 
+function referenceNamedBy(mapped: string): string {
+  return mapped.startsWith('#') ? mapped : referenceOf('schemas', mapped);
+}
+
+function isMissingFrom(held: HeldComponents, mapped: Json): boolean {
+  return typeof mapped === 'string' && !held.has(referenceNamedBy(mapped));
+}
+
+function discriminatorHeld(discriminator: JsonFields, mapping: JsonFields, held: HeldComponents): JsonFields {
+  return {
+    ...discriminator,
+    mapping: Object.fromEntries(
+      Object.entries(mapping).filter(([, mapped]: readonly [string, Json]) => !isMissingFrom(held, mapped)),
+    ),
+  };
+}
+
+function withItsMappingHeld(schema: SchemaObject, held: HeldComponents): SchemaObject {
+  const discriminator = schema['discriminator'];
+  const mapping = isJsonObject(discriminator) ? discriminator['mapping'] : undefined;
+  return isJsonObject(discriminator) && isJsonObject(mapping)
+    ? { ...schema, discriminator: discriminatorHeld(discriminator, mapping, held) }
+    : schema;
+}
+
+function schemaHeld(schema: Json, held: HeldComponents): Json {
+  return mappedSchema(schema, (each) => withItsMappingHeld(each, held));
+}
+
+function fieldsHeld(fields: JsonObject, held: HeldComponents): JsonObject {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]: readonly [string, Json]): readonly [string, Json] => [
+      key,
+      key === 'schema' ? schemaHeld(value, held) : valueHeld(key, value, held),
+    ]),
+  );
+}
+
+function valueHeld(key: string, value: Json, held: HeldComponents): Json {
+  if (holdingNoSchema.has(key)) {
+    return value;
+  }
+  if (isJsonList(value)) {
+    return value.map((each) => valueHeld(key, each, held));
+  }
+  return isJsonObject(value) ? fieldsHeld(value, held) : value;
+}
+
+export function withMappingsHeld(operation: JsonObject, held: HeldComponents): JsonObject {
+  return fieldsHeld(operation, held);
+}
+
+function componentHeld({ kind, value }: Component, held: HeldComponents): Json {
+  if (kind === 'schemas') {
+    return schemaHeld(value, held);
+  }
+  return holdersOfSchemas.has(kind) && isJsonObject(value) ? fieldsHeld(value, held) : value;
+}
+
 export function componentsReachedBy(kept: readonly Reaching[]): Components {
   const reached = new Map<string, Component>();
   for (const each of kept) {
@@ -67,7 +131,7 @@ export function componentsReachedBy(kept: readonly Reaching[]): Components {
       Object.fromEntries(
         components
           .filter((component) => component.kind === kind)
-          .map(({ name, value }): readonly [string, Json] => [name, value])
+          .map((component): readonly [string, Json] => [component.name, componentHeld(component, reached)])
           .toSorted(byName),
       ),
     ]),

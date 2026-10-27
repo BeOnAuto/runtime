@@ -34,6 +34,8 @@ function addressesOf({ entry, address }: Provider): readonly string[] {
 
 const google = 'https://accounts.google.com';
 
+const microsoftGraph = 'https://graph.microsoft.com/v1.0';
+
 const googleScopes = 'https://www.googleapis.com/auth/';
 
 const restrictedByGoogle = ['gmail.readonly'];
@@ -63,7 +65,10 @@ const microsoftAmazonAndAdobe = [
   'amazon-ads',
   'amazon-ads-mcp',
   'microsoft-advertising',
+  'microsoft-teams',
+  'onedrive',
   'outlook',
+  'work-iq',
 ];
 
 function signsInAtGoogle({ entry }: Provider): boolean {
@@ -114,14 +119,17 @@ const addressesOfTheShipped = [
   ['hubspot', 'https://mcp.hubspot.com'],
   ['linear', 'https://mcp.linear.app/mcp'],
   ['microsoft-advertising', 'https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta'],
+  ['microsoft-teams', microsoftGraph],
   ['notion', 'https://mcp.notion.com/mcp'],
-  ['outlook', 'https://workiq.svc.cloud.microsoft/mcp'],
+  ['onedrive', microsoftGraph],
+  ['outlook', microsoftGraph],
   ['posthog', 'https://mcp.posthog.com/mcp?mode=tools'],
   ['profound', 'https://mcp.tryprofound.com/mcp'],
   ['search-ads-360', 'https://searchads360.googleapis.com'],
   ['slack', 'https://mcp.slack.com/mcp'],
   ['slack-api', 'https://slack.com/api'],
   ['stripe', 'https://mcp.stripe.com'],
+  ['work-iq', 'https://workiq.svc.cloud.microsoft/mcp'],
   ['youtube', 'https://youtube.googleapis.com'],
   ['youtube-analytics', 'https://youtubeanalytics.googleapis.com'],
   ['youtube-management', 'https://youtube.googleapis.com'],
@@ -149,7 +157,7 @@ describe('the shipped providers', () => {
         'zoom',
       ].toSorted(),
     );
-    expect(names).toHaveLength(33);
+    expect(names).toHaveLength(36);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -196,7 +204,9 @@ describe('the ways of the shipped providers', () => {
       ['hubspot', ['authorization'], []],
       ['linear', ['authorization'], []],
       ['microsoft-advertising', ['authorization'], []],
+      ['microsoft-teams', ['authorization'], []],
       ['notion', ['authorization'], []],
+      ['onedrive', ['authorization'], []],
       ['outlook', ['authorization'], []],
       ['posthog', ['authorization'], []],
       ['profound', ['authorization', 'secret'], []],
@@ -204,6 +214,7 @@ describe('the ways of the shipped providers', () => {
       ['slack', ['authorization'], []],
       ['slack-api', ['secret'], []],
       ['stripe', ['authorization'], []],
+      ['work-iq', ['authorization'], []],
       ['youtube', ['authorization'], []],
       ['youtube-analytics', ['authorization'], []],
       ['youtube-management', ['authorization'], []],

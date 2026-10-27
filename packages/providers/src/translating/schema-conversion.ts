@@ -1,7 +1,7 @@
 import { JsonPointer, Schema } from 'effect';
 
-import { byName, referencesIn } from './discovery-document.ts';
-import { isJsonFields, isJsonList, type Found, type JsonFields } from './openapi-operations.ts';
+import { byName, isJsonList, isJsonObject, referencesIn } from './discovery-document.ts';
+import type { Found, JsonFields } from './openapi-operations.ts';
 
 type Json = Schema.Json;
 
@@ -29,12 +29,12 @@ const localReference = '#/';
 const decodeJson = Schema.decodeUnknownSync(Schema.Json);
 
 function fieldOf(value: Json | undefined, key: string): Json | undefined {
-  return isJsonFields(value) ? value[key] : undefined;
+  return isJsonObject(value) ? value[key] : undefined;
 }
 
 export function fieldsAt(value: Json | undefined, key: string): JsonFields {
   const found = fieldOf(value, key);
-  return isJsonFields(found) ? found : {};
+  return isJsonObject(found) ? found : {};
 }
 
 export function textAt(value: Json | undefined, key: string): string | undefined {
@@ -44,7 +44,7 @@ export function textAt(value: Json | undefined, key: string): string | undefined
 
 export function sourceOf(read: unknown): Source {
   const json = decodeJson(read);
-  const description = isJsonFields(json) ? json : {};
+  const description = isJsonObject(json) ? json : {};
   return description['swagger'] === undefined
     ? { description, references: componentSchemas, schemas: fieldsAt(description['components'], 'schemas') }
     : { description, references: swaggerDefinitions, schemas: fieldsAt(description, 'definitions') };
@@ -59,14 +59,14 @@ export function resolved(description: JsonFields, value: Json): JsonFields {
           .split('/')
           .reduce<Json | undefined>((node, token) => fieldOf(node, JsonPointer.unescapeToken(token)), description)
       : value;
-  return isJsonFields(target) ? target : {};
+  return isJsonObject(target) ? target : {};
 }
 
 export function operationsIn({ description }: Source): readonly Found[] {
   const paths = fieldsAt(description, 'paths');
   return Object.keys(paths).flatMap((path) =>
     Object.entries(fieldsAt(paths, path)).flatMap(([method, operation]: Keyword): readonly Found[] =>
-      methods.has(method) && isJsonFields(operation) ? [{ path, method, operation, held: new Map() }] : [],
+      methods.has(method) && isJsonObject(operation) ? [{ path, method, operation, held: new Map() }] : [],
     ),
   );
 }
@@ -87,7 +87,7 @@ function convertedKeyword([keyword, value]: Keyword, references: string): readon
   if (keyword === '$ref' && typeof value === 'string') {
     return [['$ref', value.replace(references, componentSchemas)]];
   }
-  if (keyword === 'properties' && isJsonFields(value)) {
+  if (keyword === 'properties' && isJsonObject(value)) {
     return [['properties', convertedProperties(value, references)]];
   }
   return [[keyword, childSchemas.has(keyword) ? convertedSchema(value, references) : value]];
@@ -97,7 +97,7 @@ export function convertedSchema(schema: Json, references: string): Json {
   if (isJsonList(schema)) {
     return schema.map((each) => convertedSchema(each, references));
   }
-  if (!isJsonFields(schema)) {
+  if (!isJsonObject(schema)) {
     return schema;
   }
   const converted = Object.fromEntries(

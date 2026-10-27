@@ -1,0 +1,983 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "OneDrive, SharePoint and Excel over Microsoft Graph",
+    "version": "v1.0",
+    "description": "Twelve operations of Microsoft Graph v1.0 on the drives, the files, the Excel workbooks and the SharePoint sites the person who connected reaches, translated from Microsoft's OpenAPI description, which names no permission for any operation, with an oauth2 scheme at the endpoints of Microsoft's authorization server for work accounts. Each operation says only that it answers, since Microsoft's answers reach most of the schemas of Microsoft Graph."
+  },
+  "servers": [
+    {
+      "url": "https://graph.microsoft.com/v1.0"
+    }
+  ],
+  "security": [
+    {
+      "microsoft_graph_oauth": []
+    }
+  ],
+  "paths": {
+    "/me/drive": {
+      "get": {
+        "tags": ["me.drive"],
+        "summary": "Get Drive",
+        "description": "Retrieve the properties and relationships of a Drive resource. A Drive is the top-level container for a file system, such as OneDrive or SharePoint document libraries.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/drive-get?view=graph-rest-1.0"
+        },
+        "operationId": "me.GetDrive",
+        "parameters": [
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/search(q='{q}')": {
+      "get": {
+        "tags": ["drives.drive.Functions"],
+        "summary": "Invoke function search",
+        "description": "Search the hierarchy of items for items matching a query.\r\nYou can search within a folder hierarchy, a whole drive, or files shared with the current user.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/driveitem-search?view=graph-rest-1.0"
+        },
+        "operationId": "drives.drive.search",
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "q",
+            "in": "path",
+            "description": "Usage: q='{q}'",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/children": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "List children of a driveItem",
+        "description": "Return a collection of DriveItems in the children relationship of a DriveItem. DriveItems with a non-null folder or package facet can have one or more child DriveItems.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/driveitem-list-children?view=graph-rest-1.0"
+        },
+        "operationId": "drives.items.ListChildren",
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "Get items from drives",
+        "description": "All items contained in the drive. Read-only. Nullable.",
+        "operationId": "drives.GetItems",
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/worksheets": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "Get worksheets from drives",
+        "description": "Represents a collection of worksheets associated with the workbook. Read-only.",
+        "operationId": "drives.items.workbook.ListWorksheets",
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/worksheets/{workbookWorksheet-id}/range(address='{address}')": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "Invoke function range",
+        "operationId": "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.range-b0fa",
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        },
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "name": "workbookWorksheet-id",
+            "in": "path",
+            "description": "The unique identifier of workbookWorksheet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "workbookWorksheet"
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Usage: address='{address}'",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ]
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/worksheets/{workbookWorksheet-id}/usedRange()": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "Invoke function usedRange",
+        "operationId": "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.usedRange-5ff6",
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        },
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "name": "workbookWorksheet-id",
+            "in": "path",
+            "description": "The unique identifier of workbookWorksheet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "workbookWorksheet"
+          }
+        ]
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/tables": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "Get tables from drives",
+        "description": "Represents a collection of tables associated with the workbook. Read-only.",
+        "operationId": "drives.items.workbook.ListTables",
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/tables/{workbookTable-id}/rows": {
+      "get": {
+        "tags": ["drives.driveItem"],
+        "summary": "Get rows from drives",
+        "description": "The list of all the rows in the table. Read-only.",
+        "operationId": "drives.items.workbook.tables.ListRows",
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "name": "workbookTable-id",
+            "in": "path",
+            "description": "The unique identifier of workbookTable",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "workbookTable"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/sites/{site-id}/drives": {
+      "get": {
+        "tags": ["sites.drive"],
+        "summary": "Get drives from sites",
+        "description": "The collection of drives (document libraries) under this site.",
+        "operationId": "sites.ListDrives",
+        "parameters": [
+          {
+            "name": "site-id",
+            "in": "path",
+            "description": "The unique identifier of site",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "site"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/worksheets/add": {
+      "post": {
+        "tags": ["drives.driveItem"],
+        "summary": "Invoke action add",
+        "description": "Add a new worksheet to the workbook. The worksheet is added at the end of existing worksheets. If you want to activate the newly added worksheet, call .activate() on it.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/worksheetcollection-add?view=graph-rest-1.0"
+        },
+        "operationId": "drives.drive.items.driveItem.workbook.worksheets.add",
+        "requestBody": {
+          "description": "Action parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        },
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          }
+        ]
+      }
+    },
+    "/drives/{drive-id}/items/{driveItem-id}/workbook/tables/{workbookTable-id}/rows/add": {
+      "post": {
+        "tags": ["drives.driveItem"],
+        "summary": "Invoke action add",
+        "description": "Adds rows to the end of the table. Note that the API can accept multiple rows data using this API. Adding one row at a time could lead to performance degradation. The recommended approach would be to batch the rows together in a single call rather than doing single row insertion. For best results, collect the rows to be inserted on the application side and perform single rows add operation. Experiment with the number of rows to determine the ideal number of rows to use in single API call. ",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/tablerowcollection-add?view=graph-rest-1.0"
+        },
+        "operationId": "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add",
+        "requestBody": {
+          "description": "Action parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "maximum": 2147483647,
+                    "minimum": -2147483648,
+                    "type": "number",
+                    "format": "int32",
+                    "nullable": true
+                  },
+                  "values": {}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        },
+        "parameters": [
+          {
+            "name": "drive-id",
+            "in": "path",
+            "description": "The unique identifier of drive",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "drive"
+          },
+          {
+            "name": "driveItem-id",
+            "in": "path",
+            "description": "The unique identifier of driveItem",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "driveItem"
+          },
+          {
+            "name": "workbookTable-id",
+            "in": "path",
+            "description": "The unique identifier of workbookTable",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "workbookTable"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "count": {
+        "name": "$count",
+        "in": "query",
+        "description": "Include count of items",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "filter": {
+        "name": "$filter",
+        "in": "query",
+        "description": "Filter items by property values",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "search": {
+        "name": "$search",
+        "in": "query",
+        "description": "Search items by search phrases",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "skip": {
+        "name": "$skip",
+        "in": "query",
+        "description": "Skip the first n items",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "top": {
+        "name": "$top",
+        "in": "query",
+        "description": "Show only the first n items",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "example": 50
+      }
+    },
+    "securitySchemes": {
+      "microsoft_graph_oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize",
+            "tokenUrl": "https://login.microsoftonline.com/organizations/oauth2/v2.0/token",
+            "scopes": {}
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { googleApi, workspaceServerAt } from './google-vendors.ts';
+import { microsoftAdvertising, microsoftGraph, workIq } from './microsoft-vendors.ts';
 import type { VendorOfTheWay } from './vendor-fakes.ts';
 
 const zoomScopes = [
@@ -58,17 +59,6 @@ function registeringServerAt(server: string, issuer: string): VendorOfTheWay {
     protectedResourceAt: `${origin}/.well-known/oauth-protected-resource${pathname}`,
     authorizationServerAt: `${issuer}/.well-known/oauth-authorization-server`,
     resource,
-  };
-}
-
-const microsoft = 'https://login.microsoftonline.com';
-
-const workIq = 'https://workiq.svc.cloud.microsoft';
-
-function microsoftEndpointsAt(tenant: string) {
-  return {
-    authorization: `${microsoft}/${tenant}/oauth2/v2.0/authorize`,
-    token: `${microsoft}/${tenant}/oauth2/v2.0/token`,
   };
 }
 
@@ -189,23 +179,11 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     resource: hubspotMcp,
   },
   linear: registeringServerAt('https://mcp.linear.app/mcp', 'https://mcp.linear.app'),
-  'microsoft-advertising': {
-    metadata: { issuer: `${microsoft}/common/v2.0` },
-    endpointsAt: microsoftEndpointsAt('common'),
-    resource: null,
-  },
+  'microsoft-advertising': microsoftAdvertising,
+  'microsoft-teams': microsoftGraph,
   notion: registeringServerAt('https://mcp.notion.com/mcp', 'https://mcp.notion.com'),
-  outlook: {
-    metadata: {
-      issuer: `${microsoft}/organizations/v2.0`,
-      authorizationServers: [`${microsoft}/organizations/v2.0`],
-      protectedResource: `${workIq}/mcp`,
-      protectedScopes: ['fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask'],
-    },
-    protectedResourceAt: `${workIq}/.well-known/oauth-protected-resource/mcp`,
-    endpointsAt: microsoftEndpointsAt('organizations'),
-    resource: `${workIq}/mcp`,
-  },
+  onedrive: microsoftGraph,
+  outlook: microsoftGraph,
   posthog: registeringServerAt('https://mcp.posthog.com/mcp?mode=tools', 'https://oauth.posthog.com'),
   profound: {
     metadata: {
@@ -248,6 +226,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     authorizationServerAt: 'https://access.stripe.com/.well-known/oauth-authorization-server/mcp',
     resource: stripeMcp,
   },
+  'work-iq': workIq,
   youtube: googleApi,
   'youtube-analytics': googleApi,
   'youtube-management': googleApi,
