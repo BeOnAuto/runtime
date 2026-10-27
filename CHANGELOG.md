@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.0](https://github.com/BeOnAuto/runtime/compare/v0.27.0...v0.28.0) (2026-10-27)
+
+
+### Features
+
+* **meter:** an offline installation spends an allocation Auto signed, and reports it signed ([#347](https://github.com/BeOnAuto/runtime/issues/347)) ([2fb2e8a](https://github.com/BeOnAuto/runtime/commit/2fb2e8ac47e2eddc31d7d400d59232a7684f3ecd))
+
 ## [0.27.0](https://github.com/BeOnAuto/runtime/compare/v0.26.0...v0.27.0) (2026-10-27)
 
 
