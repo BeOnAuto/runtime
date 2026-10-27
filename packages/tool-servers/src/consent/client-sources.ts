@@ -65,7 +65,11 @@ type ClientMetadata = Readonly<{
   application_type: string;
 }>;
 
-type ClientDocument = ClientMetadata & Readonly<{ client_id: string; token_endpoint_auth_method: 'none' }>;
+type PublicClient = Readonly<{ token_endpoint_auth_method: 'none' }>;
+
+type ClientDocument = ClientMetadata & PublicClient & Readonly<{ client_id: string }>;
+
+type RegistrationAsked = ClientMetadata & Partial<PublicClient>;
 
 export interface ClientMetadataDocument {
   readonly address: string;
@@ -75,6 +79,8 @@ export interface ClientMetadataDocument {
 const metadataDocumentPath = '/oauth/client.json';
 
 const clientName = 'Auto Runtime';
+
+const publicClient: PublicClient = { token_endpoint_auth_method: 'none' };
 
 const between = '\n';
 
@@ -135,7 +141,7 @@ function clientNameFor(server: string | null): string {
   return server === null ? clientName : `${clientName} for ${new URL(server).host}`;
 }
 
-export function clientMetadataOf(returnAddress: string, server: string | null = null): ClientMetadata {
+function clientMetadataOf(returnAddress: string, server: string | null = null): ClientMetadata {
   return {
     client_name: clientNameFor(server),
     redirect_uris: [returnAddress],
@@ -154,8 +160,24 @@ export function clientMetadataDocumentOf(
     ? undefined
     : {
         address,
-        document: { client_id: address, ...clientMetadataOf(returnAddress), token_endpoint_auth_method: 'none' },
+        document: { client_id: address, ...clientMetadataOf(returnAddress), ...publicClient },
       };
+}
+
+function takesPublicClientsAlone(tokenEndpointMethods: readonly string[] | undefined): boolean {
+  return (
+    tokenEndpointMethods !== undefined &&
+    tokenEndpointMethods.every((method) => method === publicClient.token_endpoint_auth_method)
+  );
+}
+
+export function registrationAskedOf(
+  returnAddress: string,
+  server: string | null,
+  tokenEndpointMethods: readonly string[] | undefined,
+): RegistrationAsked {
+  const metadata = clientMetadataOf(returnAddress, server);
+  return takesPublicClientsAlone(tokenEndpointMethods) ? { ...metadata, ...publicClient } : metadata;
 }
 
 function isHad(source: ClientSource, way: WayOfClients, had: ClientsHad): boolean {

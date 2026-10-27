@@ -1,7 +1,7 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { Clock, Deferred, Effect, Option, Redacted, Schema } from 'effect';
 
-import { ClientIdSchema, clientMetadataOf } from './client-sources.ts';
+import { ClientIdSchema, registrationAskedOf } from './client-sources.ts';
 import type {
   ClientRegistrations,
   ConsentRefusal,
@@ -53,6 +53,7 @@ export interface Registration {
   readonly place: RegistrationPlace;
   readonly endpoint: string;
   readonly returnAddress: string;
+  readonly tokenEndpointMethods: readonly string[] | undefined;
   readonly fetch: FetchLike;
 }
 
@@ -79,6 +80,7 @@ function answeredRegistration({
   place,
   endpoint,
   returnAddress,
+  tokenEndpointMethods,
   fetch,
 }: Registration): Effect.Effect<KeptRegistration, ConsentRefusal> {
   return Effect.tryPromise({
@@ -86,7 +88,7 @@ function answeredRegistration({
       const answer = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify(clientMetadataOf(returnAddress, place.server)),
+        body: JSON.stringify(registrationAskedOf(returnAddress, place.server, tokenEndpointMethods)),
       });
       return answer.ok ? answeredFieldsOf(await answer.json()) : Option.none();
     },

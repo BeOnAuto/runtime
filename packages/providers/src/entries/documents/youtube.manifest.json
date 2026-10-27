@@ -1,0 +1,7 @@
+{
+  "type": "discovery",
+  "discovery": "https://youtube.googleapis.com/$discovery/rest?version=v3",
+  "revision": "20261026",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": ["youtube.channels.list", "youtube.playlists.list", "youtube.playlistItems.list", "youtube.videos.list"]
+}

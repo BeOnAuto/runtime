@@ -1,0 +1,12 @@
+name: stripe
+title: Stripe
+description: Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who connects and for no connected account. Stripe asks that user to confirm certain writes, such as refunds and outbound payments, and a write they approve is asked again.
+website: https://docs.stripe.com/mcp
+type: mcp
+url: https://mcp.stripe.com
+credentials:
+  - kind: authorization
+    issuer: https://access.stripe.com/mcp
+    scope: mcp
+    clients: [registered, dynamic]
+    description: Sign in to Stripe and allow access to the accounts and sandboxes you choose.

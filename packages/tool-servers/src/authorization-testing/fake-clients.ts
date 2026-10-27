@@ -25,6 +25,7 @@ export interface ClientRegistration {
   readonly publishesMetadata?: boolean;
   readonly endpointHost?: string;
   readonly takesBasicSecrets?: boolean;
+  readonly takesPublicClientsAlone?: boolean;
   readonly listsRevocationMethods?: boolean;
   readonly scopesSupported?: readonly string[];
   readonly protectedScopes?: readonly string[];
@@ -150,7 +151,7 @@ async function namedIn(registry: Registry, form: Readonly<URLSearchParams>): Pro
   return client !== undefined && isPublic(client) ? client : undefined;
 }
 
-async function authenticatedIn(
+async function credentialedIn(
   registry: Registry,
   request: Readonly<Request>,
   form: Readonly<URLSearchParams>,
@@ -163,6 +164,17 @@ async function authenticatedIn(
   }
   const assertion = form.get('client_assertion');
   return assertion === null ? namedIn(registry, form) : assertedIn(registry, assertion);
+}
+
+async function authenticatedIn(
+  registry: Registry,
+  request: Readonly<Request>,
+  form: Readonly<URLSearchParams>,
+): Promise<KnownClient | undefined> {
+  const client = await credentialedIn(registry, request, form);
+  return registry.registration.takesPublicClientsAlone === true && client !== undefined && !isPublic(client)
+    ? undefined
+    : client;
 }
 
 function secretEndOf({ registrationSecretSeconds }: ClientRegistration): number {

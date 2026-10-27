@@ -137,7 +137,13 @@ function dynamicallyRegistered(
 ): Effect.Effect<ActingClient, ConsentRefusal> {
   const { returnAddress } = asked;
   const place = { issuer: asked.way.issuer, server: originOf(handGivenUrlOf(asked.server)) };
-  const registration = { place, endpoint: required(server.registration_endpoint), returnAddress, fetch };
+  const registration = {
+    place,
+    endpoint: required(server.registration_endpoint),
+    returnAddress,
+    tokenEndpointMethods: server.token_endpoint_auth_methods_supported,
+    fetch,
+  };
   return Effect.map(registrationFor(registration, choosing), (kept) => dynamicActing(kept, returnAddress));
 }
 

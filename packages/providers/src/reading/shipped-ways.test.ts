@@ -56,6 +56,10 @@ const hostsOfTheWays = [
   [[['searchads360.googleapis.com', google]]],
   [[['mcp.slack.com', 'mcp.slack.com']]],
   [[['slack.com']]],
+  [[['mcp.stripe.com', 'access.stripe.com']]],
+  [[['youtube.googleapis.com', google]]],
+  [[['youtubeanalytics.googleapis.com', google]]],
+  [[['youtube.googleapis.com', google]]],
   [[['api.zoom.us', 'zoom.us', 'zoom.us', 'zoom.us', 'zoom.us']]],
 ];
 

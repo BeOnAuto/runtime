@@ -147,6 +147,10 @@ describe('every way of consent of a shipped provider, against the fake authoriza
       'profound',
       'search-ads-360',
       'slack',
+      'stripe',
+      'youtube',
+      'youtube-analytics',
+      'youtube-management',
       'zoom',
     ]);
   });
@@ -157,6 +161,6 @@ describe('every way of consent of a shipped provider, against the fake authoriza
     const consents = await Promise.all(registering.map((consenting) => consentOf(consenting, false)));
 
     expect(consents).toEqual(registering.map((consenting) => consentExpectedOf(consenting, 'dynamic')));
-    expect(registering.map(({ name }) => name)).toEqual(['adobe-analytics-mcp', 'profound']);
+    expect(registering.map(({ name }) => name)).toEqual(['adobe-analytics-mcp', 'profound', 'stripe']);
   });
 });

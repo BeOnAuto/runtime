@@ -75,6 +75,10 @@ const loginWithAmazon = 'https://lwa.amazon.com';
 
 const amazonAdsMcp = 'https://advertising-ai.amazon.com';
 
+const stripeMcp = 'https://mcp.stripe.com';
+
+const stripeAccess = 'https://access.stripe.com/mcp';
+
 const microsoft = 'https://login.microsoftonline.com';
 
 const workIq = 'https://workiq.svc.cloud.microsoft';
@@ -219,6 +223,25 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     authorizationServerAt: 'https://mcp.slack.com/.well-known/oauth-authorization-server',
     resource: 'https://mcp.slack.com',
   },
+  stripe: {
+    metadata: {
+      issuer: stripeAccess,
+      authorizationServers: [stripeAccess],
+      protectedResource: stripeMcp,
+      protectedScopes: ['mcp'],
+      scopesSupported: ['mcp'],
+      dynamicRegistration: true,
+      clientSecret: undefined,
+      takesPublicClientsAlone: true,
+      listsRevocationMethods: false,
+    },
+    protectedResourceAt: `${stripeMcp}/.well-known/oauth-protected-resource`,
+    authorizationServerAt: 'https://access.stripe.com/.well-known/oauth-authorization-server/mcp',
+    resource: stripeMcp,
+  },
+  youtube: googleApi,
+  'youtube-analytics': googleApi,
+  'youtube-management': googleApi,
   zoom: {
     metadata: { issuer: 'https://zoom.us', grantedScope: zoomScopes.join(' ') },
     authorizationServerAt: 'https://zoom.us/.well-known/oauth-authorization-server',

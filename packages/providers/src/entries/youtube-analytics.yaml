@@ -1,0 +1,15 @@
+name: youtube-analytics
+title: YouTube Analytics
+description: Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue, by day, video, country and the other dimensions YouTube offers.
+website: https://developers.google.com/youtube/analytics
+type: openapi
+document: documents/youtube-analytics.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow YouTube Analytics.
