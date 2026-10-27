@@ -12,6 +12,18 @@ export type { Rounding } from './quantities/fraction.ts';
 export { licenseClaims, readLicenseClaims } from './licenses/claims.ts';
 export { licenseVerifier } from './licenses/verification.ts';
 export {
+  installationKeyFingerprint,
+  readInstallationPublicKey,
+  type InstallationPublicKey,
+} from './licenses/installation-keys.ts';
+export {
+  INSTALLATION_CHALLENGE_MILLISECONDS,
+  INSTALLATION_PROOF_TYPE,
+  installationProofPayload,
+  verifyInstallationProof,
+  type InstallationChallenge,
+} from './licenses/installation-proofs.ts';
+export {
   LICENSE_AUDIENCE,
   LICENSE_POLICY_VERSION,
   LICENSE_TOKEN_TYPE,
