@@ -5,6 +5,7 @@ import {
   type CapabilityAnswer,
   type CapabilityRejection,
   type StrippedForms,
+  type BeforeRunDispatch,
 } from '@on.auto/definitions';
 import { Conflict, type InvalidInput } from '@on.auto/operations';
 import { jsonBytesOf, pooledJob, type ProgramPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
@@ -25,6 +26,7 @@ export type ComputationRun = (
   document: ComputationFunctionDefinitionDocument,
   input: Schema.Json,
   stripped: StrippedForms,
+  beforeDispatch: BeforeRunDispatch,
 ) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
 
 interface Runnable {
@@ -70,7 +72,7 @@ function runnableOf(
 }
 
 export function computationRun({ pool, ...bounds }: ComputationRunOptions): ComputationRun {
-  return (document, input, stripped) =>
+  return (document, input, stripped, beforeDispatch) =>
     Effect.all([
       runnableOf(document, stripped),
       checkedInput(input, document.input.schema, functionResourceLabels.computation.singular),
@@ -81,8 +83,11 @@ export function computationRun({ pool, ...bounds }: ComputationRunOptions): Comp
           CapabilityAnswer,
           CapabilityRejection | InvalidInput
         > =>
-          pooledJob('program', 'computation', (signal) =>
-            pool.run(requestOf(runnable, admitted, moment, bounds), signal),
+          Effect.andThen(
+            Effect.suspend(beforeDispatch),
+            pooledJob('program', 'computation', (signal) =>
+              pool.run(requestOf(runnable, admitted, moment, bounds), signal),
+            ),
           ).pipe(
             Effect.flatMap((outcome) =>
               endingOf(outcome, {

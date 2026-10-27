@@ -53,8 +53,11 @@ export const echo = defineCapability({
       required: ['greeting', 'input'],
     },
   }),
-  run: ({ greeting }, input) =>
+  run: ({ greeting }, input, context) =>
     Predicate.isObject(input) && !Array.isArray(input)
-      ? Effect.succeed({ output: { greeting, input }, record: { greeting } })
+      ? Effect.andThen(
+          Effect.suspend(context.beforeDispatch),
+          Effect.succeed({ output: { greeting, input }, record: { greeting } }),
+        )
       : Effect.fail(notAnObject),
 });

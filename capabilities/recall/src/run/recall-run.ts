@@ -11,7 +11,7 @@ import type { KeptView, ViewsPort } from '@on.auto/workflow-host';
 import { Effect, type Schema } from 'effect';
 
 import type { Answered } from './answer-endings.ts';
-import { answerOf, type RecallRunOptions, type RunnableRecall } from './view-answer.ts';
+import { answerOf, type DispatchingRecall, type RecallRunOptions, type RunnableRecall } from './view-answer.ts';
 import { rebuildingDetail, stalledDetail } from './view-words.ts';
 
 export type RecallRun = (
@@ -52,7 +52,7 @@ function recordOf(kept: KeptView, answered: Answered, input: Schema.Json): Schem
 
 function answeredFrom(
   options: RecallRunOptions,
-  runnable: RunnableRecall,
+  runnable: DispatchingRecall,
   kept: KeptView,
   input: Schema.Json,
 ): Effect.Effect<CapabilityAnswer, Conflict | Unavailable> {
@@ -69,7 +69,7 @@ function ranOn(options: RecallRunOptions, runnable: RunnableRecall, run: RunCont
     if (kept.stall !== undefined) {
       return Effect.fail(new Conflict({ detail: stalledDetail(run.definition.name, kept.stall), kind: 'stalled' }));
     }
-    return answeredFrom(options, runnable, kept, input);
+    return answeredFrom(options, { ...runnable, beforeDispatch: run.beforeDispatch }, kept, input);
   };
 }
 

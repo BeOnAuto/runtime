@@ -4,6 +4,7 @@ import type {
   PreparedDefinition,
   Capability,
   RunContext,
+  BeforeRunDispatch,
 } from '@on.auto/definitions';
 import {
   checkingWithin,
@@ -68,21 +69,29 @@ export type RunBounds = Omit<ComputationFunctionAdapterOptions, 'pool'>;
 
 const runsAwaitedAtMostMs = 30_000;
 
-export function computationWith(pool: ProgramPool = poolOf(), bounds: RunBounds = {}): ComputationRuns {
+export function computationWith(
+  pool: ProgramPool = poolOf(),
+  bounds: RunBounds = {},
+  beforeDispatch: BeforeRunDispatch = run.beforeDispatch,
+): ComputationRuns {
   const capability = makeComputationFunctionAdapter({ pool, deadlineMs: runsAwaitedAtMostMs, ...bounds });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   const saved = (source: string) =>
     Effect.flatMap(prepared(source).check(nothingSaved), (stripped) => capability.prepare(source, stripped));
+  const context = { ...run, beforeDispatch };
   return {
     capability,
     prepared,
     running: (source, input = {}) =>
-      Effect.runPromiseExit(Effect.flatMap(saved(source), (definition) => definition.run(input, run))),
-    runningUnsaved: (source, input = {}) => Effect.runPromiseExit(prepared(source).run(input, run)),
+      Effect.runPromiseExit(Effect.flatMap(saved(source), (definition) => definition.run(input, context))),
+    runningUnsaved: (source, input = {}) => Effect.runPromiseExit(prepared(source).run(input, context)),
     runningAt: (moment, source, input = {}) =>
       Effect.runPromiseExit(
         Effect.flatMap(saved(source), (definition) =>
-          TestClock.setTime(moment).pipe(Effect.andThen(definition.run(input, run)), Effect.provide(TestClock.layer())),
+          TestClock.setTime(moment).pipe(
+            Effect.andThen(definition.run(input, context)),
+            Effect.provide(TestClock.layer()),
+          ),
         ),
       ),
   };

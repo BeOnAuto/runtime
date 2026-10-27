@@ -1,4 +1,4 @@
-import { checkedWorker } from '@on.auto/definitions';
+import { checkedWorker, type BeforeRunDispatch } from '@on.auto/definitions';
 import { Conflict, type Unavailable } from '@on.auto/operations';
 import { pooledJob, type ProgramPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
 import type { ViewsPort } from '@on.auto/workflow-host';
@@ -32,6 +32,10 @@ export interface RunnableRecall {
   readonly program: string | undefined;
 }
 
+export interface DispatchingRecall extends RunnableRecall {
+  readonly beforeDispatch: BeforeRunDispatch;
+}
+
 const notCompiled = new Conflict({
   detail:
     'The recall function was saved without the module its check strips for the sandbox; update it to save it again',
@@ -62,10 +66,12 @@ function answeredBy(
   { pool, deadlineMs, budget, memoryBytes }: RecallRunOptions,
   { document, program }: Readonly<{ document: RecallFunctionDefinitionDocument; program: string }>,
   asked: Asked,
+  beforeDispatch: BeforeRunDispatch,
 ): Answering {
   const bounds = { deadlineMs, budget, memoryBytes };
-  return pooledJob('program', 'recall', (signal) =>
-    pool.run(requestOf({ document, program }, asked, bounds), signal),
+  return Effect.andThen(
+    Effect.suspend(beforeDispatch),
+    pooledJob('program', 'recall', (signal) => pool.run(requestOf({ document, program }, asked, bounds), signal)),
   ).pipe(
     Effect.flatMap((outcome) =>
       answerEndingOf(outcome, {
@@ -80,16 +86,16 @@ function answeredBy(
 
 export function answerOf(
   options: RecallRunOptions,
-  { document, program }: RunnableRecall,
+  { document, program, beforeDispatch }: DispatchingRecall,
   view: Schema.Json,
   input: Schema.Json,
 ): Answering {
   if (!document.answers) {
-    return viewAnswered(view, document.output.schema);
+    return viewAnswered(view, document.output.schema).pipe(Effect.tap(beforeDispatch));
   }
   return program === undefined
     ? Effect.fail(notCompiled)
     : Effect.flatMap(Clock.currentTimeMillis, (moment) =>
-        answeredBy(options, { document, program }, { view, input, moment }),
+        answeredBy(options, { document, program }, { view, input, moment }, beforeDispatch),
       );
 }

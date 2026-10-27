@@ -2,6 +2,7 @@ import type { CallerIdentity, CallLink, Conflict, RunCancelled, TriggerLink } fr
 import type { CallEnded, CallStarted } from '@on.auto/tool-servers';
 import type { Effect, Schema } from 'effect';
 
+import type { BeforeRunDispatch } from '../dispatch/run-admission.ts';
 import type { CallFact } from '../runs/run-commands.ts';
 import type { RecordedCall } from '../runs/run-events.ts';
 
@@ -26,6 +27,7 @@ export interface RunLineage {
 }
 
 export interface RunContext {
+  readonly beforeDispatch: BeforeRunDispatch;
   readonly id: string;
   readonly org: string;
   readonly playbook: string;

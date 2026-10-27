@@ -1,4 +1,4 @@
-import type { CallLink } from '@on.auto/operations';
+import type { CallLink, TriggerLink } from '@on.auto/operations';
 import { Deferred, Effect } from 'effect';
 
 import { modelCallAnswered, modelCallSent } from '../journal-testing/model-calls.ts';
@@ -46,7 +46,10 @@ export function momentAfter(ms: number): string {
   return new Date(Date.parse(firstMoment) + ms).toISOString();
 }
 
-export async function startedAndLeft(options: ResumerOptions = {}) {
+export async function startedAndLeft(
+  options: ResumerOptions = {},
+  chain: { readonly called_by?: CallLink; readonly trigger?: TriggerLink } = {},
+) {
   const resuming = resumer(options);
   const operations = definitionOperationsFor([resuming.capability]);
   const definitions = harness();
@@ -56,7 +59,7 @@ export async function startedAndLeft(options: ResumerOptions = {}) {
   await definitions.run(
     Effect.orDie(
       Effect.all([
-        definitions.ledger.service.execute(stream, runDecider, startOfTheStep),
+        definitions.ledger.service.execute(stream, runDecider, { ...startOfTheStep, ...chain }),
         definitions.ledger.service.execute(stream, runDecider, {
           type: 'call',
           fact: { type: 'model_call_started', data: { number: 1, ...modelCallSent() } },

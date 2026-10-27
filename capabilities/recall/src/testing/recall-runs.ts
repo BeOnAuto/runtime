@@ -4,6 +4,7 @@ import type {
   PreparedDefinition,
   Capability,
   RunContext,
+  BeforeRunDispatch,
 } from '@on.auto/definitions';
 import {
   checkingWithin,
@@ -84,18 +85,23 @@ export function liveView(view: Schema.Json, more: Partial<KeptView> = {}): KeptV
 
 export type AnswerBounds = Pick<RecallFunctionAdapterOptions, 'deadlineMs' | 'budget' | 'memoryBytes'>;
 
-export function recallWith(pool: ProgramPool = poolOf(), bounds: AnswerBounds = {}): RecallRuns {
+export function recallWith(
+  pool: ProgramPool = poolOf(),
+  bounds: AnswerBounds = {},
+  beforeDispatch: BeforeRunDispatch = reviewsRun.beforeDispatch,
+): RecallRuns {
   const views = keptViews();
   const capability = makeRecallFunctionAdapter({ pool, views: views.views, ...bounds });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   const saved = (source: string) =>
     Effect.flatMap(prepared(source).check(nothingSaved), (stripped) => capability.prepare(source, stripped));
+  const context = { ...reviewsRun, beforeDispatch };
   return {
     ...views,
     capability,
     prepared,
     running: (source, input = {}) =>
-      Effect.runPromiseExit(Effect.flatMap(saved(source), (definition) => definition.run(input, reviewsRun))),
-    runningUnsaved: (source, input = {}) => Effect.runPromiseExit(prepared(source).run(input, reviewsRun)),
+      Effect.runPromiseExit(Effect.flatMap(saved(source), (definition) => definition.run(input, context))),
+    runningUnsaved: (source, input = {}) => Effect.runPromiseExit(prepared(source).run(input, context)),
   };
 }

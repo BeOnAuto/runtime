@@ -56,7 +56,7 @@ export function makeComputationFunctionAdapter({
     parse,
     check: documentCheck(pool),
     summarize,
-    run: (document, input, _run, stripped) => run(document, input, stripped),
+    run: (document, input, context, stripped) => run(document, input, stripped, context.beforeDispatch),
     longestAnyRunMs: deadlineMs,
   });
 }

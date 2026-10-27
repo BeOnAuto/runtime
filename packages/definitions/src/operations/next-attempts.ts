@@ -6,8 +6,9 @@ import { attemptIsLive, claimOf, stillRunning, type Claim } from '../runs/run-de
 import { answerOf, noRunCalled } from '../runs/run-lookup.ts';
 import type { RunDetail } from '../runs/run.ts';
 import { preparedVersion } from './definition-preparation.ts';
+import { contextOf, type Called, type Prepared } from './prepared-context.ts';
 import { claimedAttempt, loadAttempt, loadStartedRun } from './run-access.ts';
-import { answeredWith, contextOf, type AttemptOfARun, type Called, type Prepared } from './run-contexts.ts';
+import { answeredWith, type AttemptOfARun } from './run-contexts.ts';
 
 export type Resumed = Extract<Claim, { readonly type: 'resume' }>['run'];
 
@@ -47,13 +48,27 @@ const deadAttemptOf = Effect.fnUntraced(function* (
 function attemptAfterTheDead(id: string, run: Resumed, dead: DeadAttempt) {
   const { toRun, given, read, correlationId } = dead;
   const lineage = { startId: read.lastMessageId, correlationId };
-  return Effect.map(contextOf(id, toRun, given, { lineage, attempt: read.attempt }), (context): AttemptOfARun => ({
-    id,
-    run: toRun,
-    input: run.input,
-    context,
-    number: run.attempt,
-  }));
+  return Effect.map(
+    contextOf(id, toRun, given, { lineage, attempt: read.attempt, ...admissionOf(run) }),
+    (context): AttemptOfARun => ({
+      id,
+      run: toRun,
+      input: run.input,
+      context,
+      number: run.attempt,
+    }),
+  );
+}
+
+function admissionOf({ run, input, calledBy, trigger }: Resumed) {
+  return {
+    request: { definition_type: run.type, name: run.name, input },
+    dispatchLineage: {
+      calledBy:
+        calledBy === undefined ? null : { run_id: calledBy.runId, reference: calledBy.reference, run: calledBy.run },
+      trigger: trigger ?? null,
+    },
+  };
 }
 
 export const resumedAttemptOf = Effect.fnUntraced(function* (
@@ -79,7 +94,11 @@ const claimedAfter = Effect.fnUntraced(function* (id: string, run: Resumed, dead
     { readAt: read.readAt, attempt: number },
     { causationId: read.lastMessageId, correlationId },
   );
-  const context = yield* contextOf(id, toRun, given, { lineage: { startId, correlationId }, attempt: read.attempt });
+  const context = yield* contextOf(id, toRun, given, {
+    lineage: { startId, correlationId },
+    attempt: read.attempt,
+    ...admissionOf(run),
+  });
   const claimed: AttemptOfARun = { id, run: toRun, input: run.input, context, number };
   return claimed;
 });

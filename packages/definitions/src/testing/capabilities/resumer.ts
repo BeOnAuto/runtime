@@ -102,6 +102,7 @@ export function resumer({
         Effect.gen(function* () {
           contexts.push(context);
           yield* beforeItsCall;
+          yield* Effect.suspend(context.beforeDispatch);
           yield* context.journal.record(callOf(context, startsAToolCall)).pipe(Effect.tapError(() => whenRefused));
           yield* afterItsCall;
           return { output: { source, calls: context.journal.attempt.calls.length }, record: {} };

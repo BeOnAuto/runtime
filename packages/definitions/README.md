@@ -14,6 +14,10 @@ These are stored records with names, versions and audit fields. The adapters' pa
 
 ## Defining a runtime adapter
 
+`RunAdmission` is the composition port for authorizing a run's first dispatch. The prepared `RunContext.beforeDispatch()` captures that service with the actual organization, playbook, logical run ID, definition source/version, input and authorized caller. Each check receives an independent copy. A resumed attempt retains its recorded parent and trigger for funding, even when the retry comes through a different call path. Reading an already completed run does not request dispatch again.
+
+Computation and recall call this port after input and readiness checks, immediately before submitting their answer program or returning an admitted view. A refusal propagates through the ordinary run outcome. The remaining capability adapters and the protected server composition still need integration. The port itself does not reserve, charge or settle credits: its implementation must persist admission/dispatch evidence and recover retries under stable billing identities. Compositions without `RunAdmission` keep their existing behavior; this is not yet a protected release or a customer-facing switch for disabling billing.
+
 `defineCapability` turns what a capability package declares, a `CapabilityDeclaration`, into a `Capability`. The server passes its capabilities, in an explicit list, to `makeDefinitionOperations`.
 
 This extension interface accepts custom adapters. Product categories use the shared `FunctionType` metadata: `functionTypeOrder`, and `functionCategoryLabels`, `functionResourceLabels` and `functionDescriptions`, each keyed by type.

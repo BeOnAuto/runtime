@@ -31,6 +31,7 @@ export {
   type StandingRequest,
 } from './capability/capability.ts';
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
+export { RunAdmission, type BeforeRunDispatch, type RunDispatch } from './dispatch/run-admission.ts';
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
 export { nextAttemptOf, type NextAttempt } from './operations/next-attempts.ts';
 export { attemptEnded, type AttemptOfARun } from './operations/run-contexts.ts';
@@ -104,7 +105,7 @@ export {
 } from './run-work/work-recorder.ts';
 export { answeredAlready, cancelledUnanswered, endedUnanswered, runEnded } from './run-work/work-decisions.ts';
 export { nestedRunId } from './run-work/nested-run-ids.ts';
-export { mostCallDepth } from './operations/run-requests.ts';
+export { mostCallDepth } from './operations/prepared-run.ts';
 export {
   cancelRequestOf,
   lastEndingOf,
