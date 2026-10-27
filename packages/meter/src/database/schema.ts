@@ -1,5 +1,6 @@
 import { statement, type ConnectionPorts } from '@on.auto/ledger';
 
+import { licenseStateSchema } from '../license-state/schema.ts';
 import { clockReceiptGuards } from './clock-receipt-guards.ts';
 
 export async function prepareMeter(connection: ConnectionPorts): Promise<void> {
@@ -28,5 +29,6 @@ export async function prepareMeter(connection: ConnectionPorts): Promise<void> {
       trusted_at BIGINT NOT NULL CHECK (trusted_at BETWEEN 0 AND 8640000000000000)
     )`,
     ...clockReceiptGuards(connection.dialect),
+    ...licenseStateSchema(connection.dialect),
   ]);
 }

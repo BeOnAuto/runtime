@@ -10,3 +10,12 @@ export type {
   LicenseProtocolOptions,
   VerifiedLicenseBundle,
 } from './licensing/records.ts';
+export { openLicenseState } from './license-state/license-state.ts';
+export type {
+  CurrentLicense,
+  LicenseHead,
+  LicenseRecordRequest,
+  LicenseRecordResult,
+  LicenseState,
+  LicenseStateOptions,
+} from './license-state/records.ts';

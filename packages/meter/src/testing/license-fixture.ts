@@ -79,8 +79,9 @@ function bundlesFor(sign: (license: LicenseEntitlement) => Promise<string>) {
   };
 }
 
-export async function licenseFixture() {
-  const installation = await openInstallation(await sqliteDatabase());
+export async function licenseFixture(open = sqliteDatabase) {
+  const database = await open();
+  const installation = await openInstallation(database);
   const keys = await generateKeyPair('EdDSA', { crv: 'Ed25519' });
   const publicKey = readInstallationPublicKey(await exportJWK(keys.publicKey));
   const trust: LicenseTrust = {
@@ -99,6 +100,7 @@ export async function licenseFixture() {
     },
   });
   return {
+    database,
     installation,
     trust,
     protocol,
