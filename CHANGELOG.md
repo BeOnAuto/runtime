@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.0](https://github.com/BeOnAuto/runtime/compare/v0.26.0...v0.27.0) (2026-10-27)
+
+
+### Features
+
+* **meter:** every runtime meters its actions from its ledger, and self-hosted ones are licensed ([#340](https://github.com/BeOnAuto/runtime/issues/340)) ([2b67136](https://github.com/BeOnAuto/runtime/commit/2b67136957a009c6e84d3e294af9ff503c1a01b3))
+
 ## [0.26.0](https://github.com/BeOnAuto/runtime/compare/v0.25.0...v0.26.0) (2026-10-27)
 
 
