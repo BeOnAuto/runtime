@@ -325,22 +325,23 @@ Some runs finish within their call, and others later. A task waits for the longe
 
 A run of the function that does not succeed raises an error the workflow can catch:
 
-| The function's run                                         | Error type                                  | Status |
-| ---------------------------------------------------------- | ------------------------------------------- | ------ |
-| Rejected with `invalid_input`                              | `validation`                                | 400    |
-| Rejected with `forbidden`                                  | `authorization`                             | 403    |
-| Rejected with `not_found`                                  | `configuration`                             | 404    |
-| Rejected with `conflict`                                   | `runtime`                                   | 409    |
-| Rejected with `conflict` of the kind `tools_called`        | `https://on.auto/problems/tools_called`     | 409    |
-| Rejected with `conflict` of the kind `effect_unknown`      | `https://on.auto/problems/effect_unknown`   | 409    |
-| Rejected with `unavailable`                                | `communication`                             | 503    |
-| Rejected with `unavailable` of the kind `tools_unfinished` | `https://on.auto/problems/tools_unfinished` | 503    |
-| Rejected with `unavailable` of the kind `rebuilding`       | `https://on.auto/problems/rebuilding`       | 503    |
-| Rejected with `cancelled`                                  | `https://on.auto/problems/cancelled`        | 409    |
-| Rejected with `unanswered`                                 | `https://on.auto/problems/unanswered`       | 410    |
-| Ran past the wait of its task                              | `timeout`                                   | 408    |
-| Failed                                                     | `runtime`                                   | 500    |
-| Could not be reached                                       | `communication`                             | 503    |
+| The function's run                                         | Error type                                   | Status |
+| ---------------------------------------------------------- | -------------------------------------------- | ------ |
+| Rejected with `invalid_input`                              | `validation`                                 | 400    |
+| Rejected with `forbidden`                                  | `authorization`                              | 403    |
+| Rejected with `not_found`                                  | `configuration`                              | 404    |
+| Rejected with `conflict`                                   | `runtime`                                    | 409    |
+| Rejected with `conflict` of the kind `tools_called`        | `https://on.auto/problems/tools_called`      | 409    |
+| Rejected with `conflict` of the kind `effect_unknown`      | `https://on.auto/problems/effect_unknown`    | 409    |
+| Rejected with `conflict` of the kind `credits_exhausted`   | `https://on.auto/problems/credits_exhausted` | 409    |
+| Rejected with `unavailable`                                | `communication`                              | 503    |
+| Rejected with `unavailable` of the kind `tools_unfinished` | `https://on.auto/problems/tools_unfinished`  | 503    |
+| Rejected with `unavailable` of the kind `rebuilding`       | `https://on.auto/problems/rebuilding`        | 503    |
+| Rejected with `cancelled`                                  | `https://on.auto/problems/cancelled`         | 409    |
+| Rejected with `unanswered`                                 | `https://on.auto/problems/unanswered`        | 410    |
+| Ran past the wait of its task                              | `timeout`                                    | 408    |
+| Failed                                                     | `runtime`                                    | 500    |
+| Could not be reached                                       | `communication`                              | 503    |
 
 The status is the workflow error's own. It equals the HTTP status of the same rejection except for `invalid_input`: the HTTP API responds 422, while a workflow raises a `validation` error of status 400. A `catch` for that rejection matches status 400 or the `validation` type, never 422. The error's `title` names the definition and what its run did, in plain words, such as `The computation function month-window refused its input`. Its `detail` carries the detail the run gave. A rejection that has a kind carries it as the error's `kind`, and its cause as `because`, as the [HTTP problem document](http.md#responses-and-errors) does. `when: '${ $error.kind == "tool_not_offered" }'` handles only that kind, and `${ $error.because }` names why.
 

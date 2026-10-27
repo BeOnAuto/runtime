@@ -26,6 +26,11 @@ export interface RecordedWork {
   readonly at: string;
 }
 
+export interface ModelCallCost {
+  readonly number: number;
+  readonly cost_usd: number;
+}
+
 export interface RecordedRunState extends CallNumbering {
   readonly attempt: number;
   readonly input: Schema.Json;
@@ -36,6 +41,7 @@ export interface RecordedRunState extends CallNumbering {
   readonly resumes: boolean;
   readonly mayHaveChanged: boolean;
   readonly calledOnlyReadOnly: boolean;
+  readonly costs: readonly ModelCallCost[];
   readonly answer: RecordedAnswer | null;
   readonly work: readonly RecordedWork[];
   readonly cancel?: AskedCancel;
@@ -63,15 +69,16 @@ export function cancelBeforeStartOf(state: RunStreamState): AskedCancel | undefi
   return state !== undefined && 'cancelledBeforeStart' in state ? state.cancelledBeforeStart : undefined;
 }
 
-type CallsBefore = CallNumbering & Pick<RecordedRunState, 'mayHaveChanged' | 'calledOnlyReadOnly'>;
+type CallsBefore = CallNumbering & Pick<RecordedRunState, 'mayHaveChanged' | 'calledOnlyReadOnly' | 'costs'>;
 
 function callsBefore(earlier: RunState): CallsBefore {
   return earlier === undefined
-    ? { ...numberingFrom(0, 0), mayHaveChanged: false, calledOnlyReadOnly: true }
+    ? { ...numberingFrom(0, 0), mayHaveChanged: false, calledOnlyReadOnly: true, costs: [] }
     : {
         ...numberingFrom(earlier.lastCall, earlier.lastModelCall),
         mayHaveChanged: earlier.mayHaveChanged,
         calledOnlyReadOnly: earlier.calledOnlyReadOnly,
+        costs: earlier.costs,
       };
 }
 
@@ -181,6 +188,14 @@ type RecordedWorkFact = Exclude<
   >
 >;
 
+function costsAfter(costs: readonly ModelCallCost[], event: RecordedWorkFact): readonly ModelCallCost[] {
+  if (event.type !== 'model_call_answered' && event.type !== 'model_call_failed') {
+    return costs;
+  }
+  const { number, cost_usd: cost } = event.data;
+  return cost === undefined ? costs : [...costs, { number, cost_usd: cost }];
+}
+
 function evolveWork(state: RecordedRunState, event: RecordedWorkFact): RecordedRunState {
   if (event.type === 'request_answered') {
     return { ...state, answer: recordedAnswerOf(event) };
@@ -188,7 +203,7 @@ function evolveWork(state: RecordedRunState, event: RecordedWorkFact): RecordedR
   if (event.type === 'work') {
     return { ...state, work: [...state.work, workOf(event)] };
   }
-  const numbered = { ...state, ...numberingAfter(state, event) };
+  const numbered = { ...state, ...numberingAfter(state, event), costs: costsAfter(state.costs, event) };
   return event.type === 'tool_call_started'
     ? {
         ...numbered,

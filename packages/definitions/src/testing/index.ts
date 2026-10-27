@@ -7,6 +7,7 @@ export {
   type RecordingJournal,
 } from '../journal-testing/recording-journal.ts';
 export { recordedOnTheRun } from './run-facts.ts';
+export { recordingMeter, type MeterRefusal, type RecordingMeter } from './recording-meter.ts';
 export { noCalledDefinitions } from './called-definitions.ts';
 export { nothingSaved } from './nothing-saved.ts';
 export { checkingWithin, checksAwaitedAtMostMs } from './time/patient-checks.ts';

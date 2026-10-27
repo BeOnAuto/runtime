@@ -21,6 +21,7 @@ export const ConflictKindSchema = Schema.Literals([
   'build_ended',
   'already_active',
   'connections_full',
+  'credits_exhausted',
 ]);
 
 export type ConflictKind = typeof ConflictKindSchema.Type;

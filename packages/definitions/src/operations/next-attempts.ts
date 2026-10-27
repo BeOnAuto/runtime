@@ -5,9 +5,10 @@ import type { Capability } from '../capability/capability.ts';
 import { attemptIsLive, claimOf, stillRunning, type Claim } from '../runs/run-decisions.ts';
 import { answerOf, noRunCalled } from '../runs/run-lookup.ts';
 import type { RunDetail } from '../runs/run.ts';
+import { answeredWith, type AttemptOfARun } from './attempt-endings.ts';
 import { preparedVersion } from './definition-preparation.ts';
 import { claimedAttempt, loadAttempt, loadStartedRun } from './run-access.ts';
-import { answeredWith, contextOf, type AttemptOfARun, type Called, type Prepared } from './run-contexts.ts';
+import { contextOf, type Called, type Prepared } from './run-contexts.ts';
 
 export type Resumed = Extract<Claim, { readonly type: 'resume' }>['run'];
 

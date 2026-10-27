@@ -174,6 +174,7 @@ const recordedState = {
   openModelCalls: new Set(),
   mayHaveChanged: false,
   calledOnlyReadOnly: true,
+  costs: [],
   answer: null,
   work: [],
   depth: 0,

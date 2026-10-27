@@ -14,11 +14,12 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect, Schema } from 'effect';
 
+import { settledWithTheMeter } from '../metering/run-meter.ts';
 import { withinResultLimit } from './recorded-size.ts';
 import type { RunResult, RunSettlement } from './run-commands.ts';
 import { runDecider, runDeciderAsRead, runStreamNameOf } from './run-decider.ts';
 import { runOf } from './run-lookup.ts';
-import type { RunStreamState } from './run-state.ts';
+import { startedRunOf, type RunStreamState } from './run-state.ts';
 import type { RunRejection, Run } from './run.ts';
 
 export type { Settlement } from '@on.auto/operations';
@@ -146,7 +147,8 @@ function settlerOver(
         Effect.tapDefect(() => Effect.ignore(settle(target, failure, by, lineage))),
       );
       const { state } = yield* settle(target, result, by, lineage);
-      return yield* runOf(run.id.toLowerCase(), state);
+      yield* settledWithTheMeter(run, target.runId, startedRunOf(state));
+      return yield* runOf(target.runId, state);
     });
 }
 

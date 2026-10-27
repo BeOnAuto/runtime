@@ -13,6 +13,7 @@ export const UnavailableKindSchema = Schema.Literals([
   'dataset_not_ready',
   'model_process_busy',
   'model_process_failed',
+  'meter_unavailable',
 ]);
 
 export type UnavailableKind = typeof UnavailableKindSchema.Type;
