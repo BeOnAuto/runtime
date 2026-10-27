@@ -39,7 +39,7 @@ export function refusedKind(detail: string): readonly Issue[] {
 
 export function failingAt(path: string): ConsentClientOptions['fetch'] {
   return (...[address, init]: readonly [unknown, unknown?]) =>
-    String(address).includes(path)
+    new URL(String(address)).pathname === path
       ? Promise.resolve(new Response('failing', { status: 500 }))
       : globalThis.fetch(String(address), Object.assign({}, init));
 }

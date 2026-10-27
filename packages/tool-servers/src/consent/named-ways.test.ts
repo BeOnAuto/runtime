@@ -69,12 +69,12 @@ function challengedWith(server: string, challenge: string): Fetched {
 }
 
 function offTheLoopbackOf(fetched: Fetched): readonly string[] {
-  return fetched.asked().filter((address) => address.startsWith(unpinned));
+  return fetched.asked().filter((address) => new URL(address).origin === new URL(unpinned).origin);
 }
 
 function failingAt(path: string): FetchLike {
   return (...[address, init]: readonly [unknown, unknown?]) =>
-    String(address).includes(path)
+    new URL(String(address)).pathname === path
       ? Promise.resolve(new Response('failing', { status: 500 }))
       : globalThis.fetch(String(address), Object.assign({}, init));
 }
@@ -249,7 +249,7 @@ describe('the naming of a way that cannot ask the server', () => {
   it('is unanswered at the issuer where its authorization server answers its metadata with an error', async () => {
     const fake = await served({ dynamicRegistration: true });
 
-    expect(await refused(askedAt(fake), { fetch: failingAt('oauth-authorization-server') })).toEqual({
+    expect(await refused(askedAt(fake), { fetch: failingAt('/.well-known/oauth-authorization-server') })).toEqual({
       refused: 'at_the_issuer',
       issuer: fake.origin,
       refusal: { refused: 'unanswered' },

@@ -161,7 +161,7 @@ describe('a server given by hand that does not answer', () => {
     silent.holdNextOf('ping');
     const failing = await served({ dynamicRegistration: true });
     const bounded = harnessByHand({ consenting: { requestMs: 50 } });
-    const unread = harnessByHand({ consenting: { fetch: failingAt('oauth-authorization-server') } });
+    const unread = harnessByHand({ consenting: { fetch: failingAt('/.well-known/oauth-authorization-server') } });
 
     expect([await adding(bounded, byHandAt(silent)), await adding(unread, byHandAt(failing))]).toEqual([
       {
