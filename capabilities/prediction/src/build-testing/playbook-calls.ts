@@ -1,4 +1,5 @@
 import type { PlaybookOperation } from '@on.auto/definitions';
+import { admittingMeter } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   contentOfBytes,
@@ -82,6 +83,7 @@ export function playbookCalls(ledger: MemoryLedger, { runDefinition }: Operation
     Layer.succeed(Clock.Clock, clock),
     memoryPlaybookRegistry([alpha]),
     recordingReporter().layer,
+    admittingMeter,
   );
   const dispatcher = makeDispatcher([]);
   const started: ChildStart[] = [];

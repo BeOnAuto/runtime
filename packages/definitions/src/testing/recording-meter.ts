@@ -1,25 +1,25 @@
 import { Conflict, Unavailable } from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
-import { RunMeter, type MeteredEnding, type MeteredRun } from '../index.ts';
+import { RunMeter, type MeteredRun } from '../index.ts';
 
-export type MeterRefusal = 'credits_exhausted' | 'meter_unavailable';
+export type MeterRefusal = 'credits_exhausted' | 'license_required' | 'metering_fault' | 'meter_unavailable';
 
 export interface RecordingMeter {
   readonly layer: Layer.Layer<RunMeter>;
   readonly admitted: () => readonly MeteredRun[];
-  readonly settled: () => readonly MeteredEnding[];
   readonly refuseNext: (refusal: MeterRefusal) => void;
 }
 
 const refusals = {
   credits_exhausted: new Conflict({ detail: 'The account has no credits left', kind: 'credits_exhausted' }),
+  license_required: new Conflict({ detail: 'This runtime needs a license', kind: 'license_required' }),
+  metering_fault: new Conflict({ detail: 'The meter does not agree with the ledger', kind: 'metering_fault' }),
   meter_unavailable: new Unavailable({ detail: 'The account could not be asked', kind: 'meter_unavailable' }),
 } as const;
 
 export function recordingMeter(): RecordingMeter {
   const admitted: MeteredRun[] = [];
-  const settled: MeteredEnding[] = [];
   const refusing: MeterRefusal[] = [];
   return {
     layer: Layer.succeed(
@@ -34,16 +34,13 @@ export function recordingMeter(): RecordingMeter {
             admitted.push(run);
             return Effect.void;
           }),
-        settle: (ending) =>
-          Effect.sync(() => {
-            settled.push(ending);
-          }),
       }),
     ),
     admitted: () => admitted,
-    settled: () => settled,
     refuseNext: (refusal) => {
       refusing.push(refusal);
     },
   };
 }
+
+export const admittingMeter: Layer.Layer<RunMeter> = Layer.succeed(RunMeter, RunMeter.of({ admit: () => Effect.void }));

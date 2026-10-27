@@ -1,8 +1,6 @@
-import { PlaybookContext } from '@on.auto/operations';
 import { Cause, Effect, type Schema } from 'effect';
 
 import type { CapabilityAnswer, CapabilityRejection } from '../capability/capability.ts';
-import { settledWithTheMeter } from '../metering/run-meter.ts';
 import type { InterruptedAttempt, RunOutcome } from '../runs/run-commands.ts';
 import { isTaken } from '../runs/run-decisions.ts';
 import { answerOf } from '../runs/run-lookup.ts';
@@ -20,7 +18,6 @@ export function answeredWith(
     const causationId = outcome.type === 'run_deferred' ? context.lineage.startId : yield* context.journal.latest;
     const lineage = { causationId, correlationId: context.lineage.correlationId };
     const { state } = yield* recordRun(id, { type: 'finish', result: outcome, attempt: number }, lineage);
-    yield* settledWithTheMeter(yield* PlaybookContext, id, state);
     return yield* answerOf(id, state);
   });
 }

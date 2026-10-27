@@ -10,7 +10,7 @@ import {
   type Capability,
   type RecordWork,
 } from '@on.auto/definitions';
-import { standingClock } from '@on.auto/definitions/testing';
+import { standingClock, admittingMeter } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   makeDispatcher,
@@ -106,6 +106,7 @@ function servicesOf(ledger: HarnessLedger): Layer.Layer<DispatcherServices> {
     memoryPlaybookRegistry([alpha]),
     recordingReporter().layer,
     Layer.succeed(Clock.Clock, standingClock),
+    admittingMeter,
   );
 }
 

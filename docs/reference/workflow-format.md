@@ -334,6 +334,9 @@ A run of the function that does not succeed raises an error the workflow can cat
 | Rejected with `conflict` of the kind `tools_called`        | `https://on.auto/problems/tools_called`      | 409    |
 | Rejected with `conflict` of the kind `effect_unknown`      | `https://on.auto/problems/effect_unknown`    | 409    |
 | Rejected with `conflict` of the kind `credits_exhausted`   | `https://on.auto/problems/credits_exhausted` | 409    |
+| Rejected with `conflict` of the kind `license_required`    | `https://on.auto/problems/license_required`  | 409    |
+| Rejected with `conflict` of the kind `license_invalid`     | `https://on.auto/problems/license_invalid`   | 409    |
+| Rejected with `conflict` of the kind `metering_fault`      | `https://on.auto/problems/metering_fault`    | 409    |
 | Rejected with `unavailable`                                | `communication`                              | 503    |
 | Rejected with `unavailable` of the kind `tools_unfinished` | `https://on.auto/problems/tools_unfinished`  | 503    |
 | Rejected with `unavailable` of the kind `rebuilding`       | `https://on.auto/problems/rebuilding`        | 503    |

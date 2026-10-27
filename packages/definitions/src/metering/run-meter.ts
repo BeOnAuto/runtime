@@ -1,10 +1,5 @@
-import type { Conflict, PlaybookAddress, StartingTrigger, Unavailable } from '@on.auto/operations';
+import { Conflict, type StartingTrigger, type Unavailable } from '@on.auto/operations';
 import { Context, Effect, Option } from 'effect';
-
-import type { ModelCallCost, RunState } from '../runs/run-state.ts';
-import type { RunRejection } from '../runs/run.ts';
-
-export type { ModelCallCost } from '../runs/run-state.ts';
 
 export interface MeteredRun {
   readonly org: string;
@@ -19,52 +14,18 @@ export interface MeteredRun {
   readonly started_by: string;
 }
 
-export interface MeteredEnding {
-  readonly org: string;
-  readonly playbook: string;
-  readonly run_id: string;
-  readonly status: 'succeeded' | 'rejected' | 'failed';
-  readonly rejection?: RunRejection['reason'];
-  readonly model_calls: readonly ModelCallCost[];
-}
-
 export interface Meter {
   readonly admit: (run: MeteredRun) => Effect.Effect<void, Conflict | Unavailable>;
-  readonly settle: (ending: MeteredEnding) => Effect.Effect<void>;
 }
 
 export class RunMeter extends Context.Service<RunMeter, Meter>()('@on.auto/definitions/RunMeter') {}
 
-export const admittedByTheMeter = Effect.fnUntraced(function* (run: MeteredRun) {
-  const meter = yield* Effect.serviceOption(RunMeter);
-  if (Option.isSome(meter)) {
-    yield* meter.value.admit(run);
-  }
+const unmetered = new Conflict({
+  detail: 'This runtime was composed without its meter, so it starts no run; reinstall it as it is released',
+  kind: 'metering_fault',
 });
 
-function endingOf({ org, playbook }: PlaybookAddress, runId: string, state: RunState): MeteredEnding | undefined {
-  if (state?.result === undefined || state.run.status === 'started') {
-    return undefined;
-  }
-  const rejection = state.run.rejection?.reason;
-  return {
-    org,
-    playbook,
-    run_id: runId,
-    status: state.run.status,
-    ...(rejection === undefined ? {} : { rejection }),
-    model_calls: state.costs,
-  };
-}
-
-export const settledWithTheMeter = Effect.fnUntraced(function* (
-  address: PlaybookAddress,
-  runId: string,
-  state: RunState,
-) {
-  const ending = endingOf(address, runId, state);
+export const admittedByTheMeter = Effect.fnUntraced(function* (run: MeteredRun) {
   const meter = yield* Effect.serviceOption(RunMeter);
-  if (ending !== undefined && Option.isSome(meter)) {
-    yield* meter.value.settle(ending);
-  }
+  return yield* Option.isNone(meter) ? unmetered : meter.value.admit(run);
 });

@@ -23,6 +23,7 @@ import { DateTime, Effect, Layer } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import { runOutcomeMapping, type PlaybookOperation, type RunMeter } from '../index.ts';
+import { admittingMeter } from './recording-meter.ts';
 
 export const firstMoment = '2026-10-01T09:00:00.000Z';
 
@@ -78,7 +79,7 @@ function readsRecordedIn(ledger: Ledger['Service'], recorded: (read: LedgerRead)
   });
 }
 
-export function harness(meter?: Layer.Layer<RunMeter>): Harness {
+export function harness(meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admittingMeter): Harness {
   const ledger = memoryLedger(runOutcomeMapping);
   const reads: LedgerRead[] = [];
   const recording = recordingReporter();
@@ -92,7 +93,7 @@ export function harness(meter?: Layer.Layer<RunMeter>): Harness {
     memoryPlaybookRegistry(knownPlaybooks),
     recording.layer,
     TestClock.layer(),
-    meter ?? Layer.empty,
+    meter,
   );
   const dispatcher = makeDispatcher([]);
   const dispatch: Harness['dispatch'] = (operation, request) =>

@@ -32,7 +32,7 @@ export {
 } from './capability/capability.ts';
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
-export { RunMeter, type Meter, type MeteredEnding, type MeteredRun, type ModelCallCost } from './metering/run-meter.ts';
+export { RunMeter, type Meter, type MeteredRun } from './metering/run-meter.ts';
 export { nextAttemptOf, type NextAttempt } from './operations/next-attempts.ts';
 export { attemptEnded, type AttemptOfARun } from './operations/attempt-endings.ts';
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';

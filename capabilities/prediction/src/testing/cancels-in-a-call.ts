@@ -1,4 +1,5 @@
 import { defineCancelRun, defineCreateDefinition, defineRunDefinition, type Capability } from '@on.auto/definitions';
+import { admittingMeter } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   Ledger,
@@ -57,6 +58,7 @@ export function cancelsInACall(capability: Capability): CancelsInACall {
     Layer.succeed(Ledger, ports),
     memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
     recordingReporter().layer,
+    admittingMeter,
   );
   function dispatch(operation: Operation, input: object): Effect.Effect<Outcome> {
     return dispatcher

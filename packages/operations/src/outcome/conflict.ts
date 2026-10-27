@@ -22,6 +22,9 @@ export const ConflictKindSchema = Schema.Literals([
   'already_active',
   'connections_full',
   'credits_exhausted',
+  'license_required',
+  'license_invalid',
+  'metering_fault',
 ]);
 
 export type ConflictKind = typeof ConflictKindSchema.Type;
