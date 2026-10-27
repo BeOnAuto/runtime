@@ -29,6 +29,10 @@ const AdmittedSchema = Schema.Struct({ admission: SignedSchema });
 
 const TakenSchema = Schema.Struct({ taken: Schema.Literal(true) });
 
+const AllocationSchema = Schema.Struct({ allocation: SignedSchema });
+
+const AllocationTakenSchema = Schema.Struct({ taken: Schema.String });
+
 const RefusalSchema = Schema.Struct({
   kind: Schema.optionalKey(Schema.String),
   detail: Schema.optionalKey(Schema.String),
@@ -82,6 +86,10 @@ const admittedIn = answerIn(AdmittedSchema);
 
 const takenIn = answerIn(TakenSchema);
 
+const allocationIn = answerIn(AllocationSchema);
+
+const allocationTakenIn = answerIn(AllocationTakenSchema);
+
 export function accountServiceAt(at: AccountsAt): AccountPorts {
   return {
     activate: (key, usage) => Effect.flatMap(asked(at, '/v1/installations/activate', key, usage), activationIn),
@@ -92,6 +100,16 @@ export function accountServiceAt(at: AccountsAt): AccountPorts {
       ),
     report: (key, usage) =>
       asked(at, '/v1/installations/reports', key, usage).pipe(Effect.flatMap(takenIn), Effect.asVoid),
+    refreshAllocation: (key, id) =>
+      asked(at, '/v1/installations/allocations/refresh', key, { allocation: id }).pipe(
+        Effect.flatMap(allocationIn),
+        Effect.map(({ allocation }) => allocation),
+      ),
+    reportAllocation: (key, report) =>
+      asked(at, '/v1/installations/allocations/report', key, report).pipe(
+        Effect.flatMap(allocationTakenIn),
+        Effect.map(({ taken }) => taken),
+      ),
   };
 }
 

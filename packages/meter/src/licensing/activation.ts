@@ -37,7 +37,7 @@ function installationFor(licensing: Licensing, key: string, state: MeterState): 
       );
 }
 
-function usageOf(licensing: Licensing, state: MeterState): Effect.Effect<Usage> {
+export function usageOf(licensing: Licensing, state: MeterState): Effect.Effect<Usage> {
   const kept = usageFrom(state.checkpoint);
   return state.fault === undefined
     ? caughtUp(licensing, state).pipe(

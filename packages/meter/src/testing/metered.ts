@@ -25,12 +25,15 @@ export interface Metered extends Pick<
   readonly admitted: (run: MeteredRun) => Promise<Answer>;
   readonly activated: (key: string) => Promise<Answer>;
   readonly held: (key: string) => Promise<void>;
+  readonly allocated: (allocation: Parameters<LicensePorts['allocate']>[0]) => Promise<Answer>;
+  readonly madeReport: (of?: string) => Promise<Effect.Success<ReturnType<LicensePorts['allocationReport']>>>;
+  readonly refusedReport: (of?: string) => Promise<Answer>;
   readonly refreshed: () => Promise<Answer>;
   readonly reported: () => Promise<Answer>;
   readonly started: (run: string, playbook?: string, org?: string) => Promise<void>;
   readonly noted: (stream: string, count: number) => Promise<void>;
   readonly lastCounted: () => Promise<string>;
-  readonly restarted: (options?: MeteredOptions) => Promise<Metered>;
+  readonly restarted: (options: MeteredOptions, meanwhile: () => Promise<void>) => Promise<Metered>;
   readonly dispose: () => Promise<void>;
 }
 
@@ -55,6 +58,9 @@ export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Pro
     admitted: (run) => timed(answerOf(meter.admit(run), 'admitted')),
     activated: (given) => timed(answerOf(license.activate(given), 'activated')),
     held: (given) => timed(license.held(given)),
+    allocated: (allocation) => timed(answerOf(license.allocate(allocation), 'allocated')),
+    madeReport: (of) => timed(license.allocationReport(of)),
+    refusedReport: (of) => timed(answerOf(license.allocationReport(of), 'made')),
     refreshed: () => timed(answerOf(license.refreshed, 'refreshed')),
     reported: () => timed(answerOf(license.reported, 'reported')),
     started: async (run, playbook, org) => {
@@ -64,8 +70,9 @@ export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Pro
       await onTheLedger((ledger) => ledger.execute(stream, appending('noted', count), null));
     },
     lastCounted: async () => String((await state()).checkpoint?.last),
-    restarted: async (again = {}) => {
+    restarted: async (again, meanwhile) => {
       await metering.dispose();
+      await meanwhile();
       return meteredOn(at, { ...options, account, ...again });
     },
   };

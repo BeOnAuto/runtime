@@ -5529,6 +5529,319 @@
         ]
       }
     },
+    "/orgs/{org}/license/allocation": {
+      "post": {
+        "operationId": "activate_allocation",
+        "summary": "Activate allocation",
+        "description": "Gives this runtime the allocation an operator of Auto signed for its installation, for an installation that does not reach Auto: credits it spends where Auto cannot see, with seven days of grace since it was last refreshed. From then on the runtime admits each new action against the allocation itself, asking Auto nothing, until its credits are spent or its grace has passed. It answers the allocation, its credits, what was spent of them and when it must be refreshed by; one not signed by Auto, for another installation or past its grace is refused as a conflict of the kind license_invalid.",
+        "tags": [
+          "license"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/activate_allocation/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "allocation": {
+                    "type": "object",
+                    "properties": {
+                      "payload": {
+                        "type": "string"
+                      },
+                      "signature": {
+                        "type": "string"
+                      },
+                      "kid": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "payload",
+                      "signature",
+                      "kid"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The allocation an operator of Auto signed for this installation: its payload, signature and kid"
+                  }
+                },
+                "required": [
+                  "allocation"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/activate_allocation/output",
+                  "type": "object",
+                  "properties": {
+                    "allocation": {
+                      "type": "string"
+                    },
+                    "installation": {
+                      "type": "string"
+                    },
+                    "credits": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN"
+                          ]
+                        }
+                      ]
+                    },
+                    "spent": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN"
+                          ]
+                        }
+                      ]
+                    },
+                    "refresh_by": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "allocation",
+                    "installation",
+                    "credits",
+                    "spent",
+                    "refresh_by"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/license/allocation/report": {
+      "post": {
+        "operationId": "report_allocation",
+        "summary": "Report allocation",
+        "description": "Makes the next report of what this runtime spent of its allocation, numbered one after the last and counted in all from its ledger, signed with the key of its installation. An owner of its org uploads it in Studio for an installation that does not reach Auto; one that reaches Auto sends its report every hour itself. A runtime with no allocation, or with no key to sign with, is refused as a conflict.",
+        "tags": [
+          "license"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/report_allocation/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "allocation": {
+                    "type": "string",
+                    "description": "The allocation the report is of, which must be the one the runtime holds; that one when left out"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/report_allocation/output",
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "allocation": {
+                          "type": "string"
+                        },
+                        "installation": {
+                          "type": "string"
+                        },
+                        "sequence": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN"
+                              ]
+                            }
+                          ]
+                        },
+                        "spent": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN"
+                              ]
+                            }
+                          ]
+                        },
+                        "at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "allocation",
+                        "installation",
+                        "sequence",
+                        "spent",
+                        "at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "signature": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "report",
+                    "signature"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/playbooks/{playbook}/definitions/{type}": {
       "post": {
         "operationId": "create_definition",

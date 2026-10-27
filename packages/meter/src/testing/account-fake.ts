@@ -5,6 +5,7 @@ import { Effect } from 'effect';
 import { AccountFailure, unreachable } from '../accounts/account-failure.ts';
 import type { AccountPorts, InstallationUsage, Usage } from '../accounts/account-service.ts';
 import type { Signed } from '../licensing/signed-answers.ts';
+import { allocationFake, type AllocationFake } from './allocation-fake.ts';
 import { signedByAnotherKey, signedByTheTestKey } from './test-signing.ts';
 
 export type Answering =
@@ -21,7 +22,7 @@ interface Registration {
   readonly org: string;
 }
 
-export interface AccountFake {
+export interface AccountFake extends Omit<AllocationFake, 'ports'> {
   readonly ports: AccountPorts;
   readonly keyFor: (installation: string, org?: string) => string;
   readonly revoke: (key: string) => void;
@@ -96,8 +97,9 @@ const answers: Readonly<Record<Answering, (payload: Payload) => Signed>> = {
   expired: (payload) => signedByTheTestKey({ ...payload, expires_at: payload['issued_at'] }),
 };
 
-function portsOf(standing: Standing, records: Records): AccountPorts {
+function portsOf(standing: Standing, records: Records, allocations: AllocationFake): AccountPorts {
   return {
+    ...allocations.ports,
     activate: (key, usage) =>
       Effect.map(standing.reached(key), ({ installation, org }) => {
         records.activated(usage);
@@ -186,8 +188,10 @@ function accountRecords(): Records {
 export function accountFake(): AccountFake {
   const standing = accountStanding();
   const records = accountRecords();
+  const { ports, ...allocations } = allocationFake(standing);
   return {
-    ports: portsOf(standing, records),
+    ports: portsOf(standing, records, { ports, ...allocations }),
+    ...allocations,
     keyFor: (installation, org = 'acme') => {
       const key = `alk.${org}.${installation}.${randomUUID().replaceAll('-', '')}`;
       standing.registered(key, { installation, org });

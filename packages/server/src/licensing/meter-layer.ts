@@ -22,6 +22,7 @@ export const unlicensed: MeterComposing = {
   studio: meterDefaults.studio,
   accounts: defaultAccountsOrigin,
   key: undefined,
+  allocation: undefined,
 };
 
 export function meterLayerOver(

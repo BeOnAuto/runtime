@@ -22,7 +22,7 @@ describe('the chores of a license', () => {
     ]);
   });
 
-  it('ask again in a minute when the account could not be asked, and say so', async () => {
+  it('ask again in 15 minutes when the account could not be asked, and say so', async () => {
     const lines: string[] = [];
     const logging = Logger.layer([
       Logger.make(({ message }: { readonly message: unknown }) => {
@@ -37,8 +37,8 @@ describe('the chores of a license', () => {
       1000 + askAgainAfterMs,
     ]);
     expect(lines).toEqual([
-      'The license of this runtime could not be refreshed: The account service could not be reached; it asks again in a minute',
-      'This runtime could not report its actions to Auto: The account service could not be reached; it asks again in a minute',
+      'The license of this runtime could not be refreshed: The account service could not be reached; it asks again in 15 minutes',
+      'This runtime could not report its actions to Auto: The account service could not be reached; it asks again in 15 minutes',
     ]);
   });
 });

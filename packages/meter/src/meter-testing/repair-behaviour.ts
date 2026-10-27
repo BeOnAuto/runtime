@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import type { Answering } from '../testing/account-fake.ts';
 import { runOf } from '../testing/runs.ts';
-import { opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { opened, restartedAfter, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
 const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d';
 
@@ -12,8 +12,8 @@ async function licensedThenLosing(ledgerOf: LedgerOf) {
   await metered.activated(key);
   await startedOnceAdmitted(metered, 'run-1');
   await metered.admitted(runOf('run-2'));
-  await tampering.deleted(await metered.lastCounted());
-  return { metered: await restartedOf(metered, { key }), key };
+  const counted = await metered.lastCounted();
+  return { metered: await restartedAfter(metered, () => tampering.deleted(counted), { key }), key };
 }
 
 const notAuto: readonly (readonly [string, Answering])[] = [

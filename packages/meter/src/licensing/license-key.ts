@@ -6,6 +6,10 @@ export function installationOfKey(key: string): string | undefined {
   return LICENSE_KEY.exec(key)?.[1];
 }
 
+export function secretOfKey(key: string): string {
+  return key.slice(key.lastIndexOf('.') + 1);
+}
+
 export function isLicenseKey(key: string): boolean {
   return installationOfKey(key) !== undefined;
 }

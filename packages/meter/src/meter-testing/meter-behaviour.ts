@@ -1,5 +1,6 @@
 import { describe } from 'vitest';
 
+import { allocationsBehaviour } from './allocation-behaviour.ts';
 import { allowanceBehaviour, concurrencyBehaviour } from './allowance-behaviour.ts';
 import { checkpointBehaviour, verificationBehaviour } from './checkpoint-behaviour.ts';
 import { countingBehaviour, recountingBehaviour } from './counting-behaviour.ts';
@@ -44,6 +45,9 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
       invalidLicenseBehaviour(ledgerOf);
       revocationBehaviour(ledgerOf);
       licensedAdmissionBehaviour(ledgerOf);
+    });
+    describe('allocations', () => {
+      allocationsBehaviour(ledgerOf);
     });
     describe('reports', () => {
       reportBehaviour(ledgerOf);

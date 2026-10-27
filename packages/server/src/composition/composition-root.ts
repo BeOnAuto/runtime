@@ -56,7 +56,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       retryStateKeys,
       shippedFiles,
       ...functions.parts,
-      orgOperations: [...functions.parts.orgOperations, ...connections, license.operation],
+      orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],
       dueWork: [...functions.parts.dueWork, ...license.dueWork],
       ...(clock === undefined ? {} : { clock }),
     };

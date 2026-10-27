@@ -168,5 +168,8 @@ allowed_origins:
 # its installation, written as a reference to the variable that holds it, since
 # this file never holds a secret. AUTO_RUNTIME_LICENSE_KEY wins over it. See
 # https://on.auto/docs/self-host/licenses
+# An installation that never reaches Auto also takes the allocation an operator
+# of Auto signs for it, the JSON of its payload, signature and kid.
 # license:
 #   key: ${ACME_LICENSE_KEY}
+#   allocation: ${ACME_ALLOCATION}

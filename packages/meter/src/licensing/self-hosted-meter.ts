@@ -6,8 +6,8 @@ import { Context, Effect, Layer, Ref } from 'effect';
 import { AccountService, type AccountPorts } from '../accounts/account-service.ts';
 import { meterAdmitting, meteringOver, type MeteredLedger } from '../admission/admitting.ts';
 import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
-import { admittedSelfHosted } from './licensed-admission.ts';
 import { licensePortsOf, RuntimeLicense, unlicensed, type LicenseGiven, type LicensePorts } from './runtime-license.ts';
+import { admittedSelfHosted } from './self-hosted-admission.ts';
 
 export interface SelfHostedMeter {
   readonly meter: Meter;

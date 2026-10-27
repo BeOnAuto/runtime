@@ -5,9 +5,11 @@ export { meterDefaults, type MeterOptions } from './admission/metering.ts';
 export { type Counted } from './counting/checkpoint-digest.ts';
 export { countedAfter, countedFromTheStart, type Counting, type FirstStartOf } from './counting/run-starts.ts';
 export { AccountFailure, type AccountRefusal } from './accounts/account-failure.ts';
+export { type AllocationStanding } from './allocations/allocation.ts';
 export {
   AccountService,
   type AccountPorts,
+  type SignedReport,
   type Activation,
   type InstallationUsage,
   type Usage,
@@ -21,5 +23,5 @@ export {
   type LicenseStanding,
 } from './licensing/runtime-license.ts';
 export { ledgerMeter, selfHostedMeterOver, type SelfHostedMeter } from './licensing/self-hosted-meter.ts';
-export { autoSigners, type Signed, type Signers } from './licensing/signed-answers.ts';
+export { autoSigners, SignedSchema, type Signed, type Signers } from './licensing/signed-answers.ts';
 export { METER_STREAM } from './meter-stream/meter-events.ts';

@@ -2,6 +2,7 @@ import { ActedContextSchema, factOf } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import { SignedSchema } from '../licensing/signed-answers.ts';
+import { allocationAfter, AllocationEventSchema, type Allocation } from './allocation-events.ts';
 
 export const METER_STREAM = 'meter';
 
@@ -54,6 +55,7 @@ export const MeterEventSchema = Schema.Union([
     Schema.Struct({ id: Schema.String, reason: Schema.String, issued_at: Schema.String, repair: SignedSchema }),
     ActedContextSchema,
   ),
+  AllocationEventSchema,
 ]);
 
 export type MeterEvent = typeof MeterEventSchema.Type;
@@ -98,6 +100,7 @@ export interface MeterState {
   readonly license: License | undefined;
   readonly reported: Report | undefined;
   readonly repairs: readonly string[];
+  readonly allocation: Allocation | undefined;
 }
 
 export const noMeter: MeterState = {
@@ -108,15 +111,29 @@ export const noMeter: MeterState = {
   license: undefined,
   reported: undefined,
   repairs: [],
+  allocation: undefined,
 };
 
 function licensed({ installation, org, plan, expires_at: expiresAt, key_sha256: sha256 }: LicenseRecord): License {
   return { installation, org, plan, expires_at: expiresAt, key_sha256: sha256, invalid: undefined };
 }
 
-function invalidated(license: License | undefined, detail: string): License | undefined {
+type LicenseEvent = Extract<MeterEvent, { type: `license_${string}` }>;
+
+type AllocationEvent = Extract<MeterEvent, { type: `allocation_${string}` }>;
+
+function isLicenseEvent(event: MeterEvent): event is LicenseEvent {
+  return event.type.startsWith('license_');
+}
+
+function isAllocationEvent(event: MeterEvent): event is AllocationEvent {
+  return event.type.startsWith('allocation_');
+}
+
+function licenseAfter(license: License | undefined, event: LicenseEvent): License | undefined {
+  if (event.type !== 'license_invalidated') return licensed(event.data);
   return Option.getOrUndefined(
-    Option.map(Option.fromNullishOr(license), (standing) => ({ ...standing, invalid: detail })),
+    Option.map(Option.fromNullishOr(license), (standing) => ({ ...standing, invalid: event.data.detail })),
   );
 }
 
@@ -131,14 +148,12 @@ function counted(state: MeterState, data: Extract<MeterEvent, { type: 'actions_c
 }
 
 export function evolveMeter(state: MeterState, event: MeterEvent): MeterState {
+  if (isAllocationEvent(event)) return { ...state, allocation: allocationAfter(state.allocation, event) };
+  if (isLicenseEvent(event)) return { ...state, license: licenseAfter(state.license, event) };
   if (event.type === 'installation_identified') return { ...state, installation: event.data.installation };
   if (event.type === 'actions_counted') return counted(state, event.data);
   if (event.type === 'action_admitted') return { ...state, holds: [...state.holds, event.data] };
   if (event.type === 'metering_faulted') return { ...state, fault: event.data };
-  if (event.type === 'license_activated' || event.type === 'license_refreshed') {
-    return { ...state, license: licensed(event.data) };
-  }
-  if (event.type === 'license_invalidated') return { ...state, license: invalidated(state.license, event.data.detail) };
   if (event.type === 'usage_reported') return { ...state, reported: event.data };
   return { ...state, fault: undefined, checkpoint: undefined, repairs: [...state.repairs, event.data.id] };
 }
