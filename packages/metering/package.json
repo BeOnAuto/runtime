@@ -12,6 +12,9 @@
     "typecheck": "tsc",
     "test": "vitest run --coverage"
   },
+  "dependencies": {
+    "jose": "catalog:"
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"

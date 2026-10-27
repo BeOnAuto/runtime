@@ -9,6 +9,25 @@ export {
   MOST_CREDIT_UNITS,
 } from './quantities/credits.ts';
 export type { Rounding } from './quantities/fraction.ts';
+export { licenseClaims, readLicenseClaims } from './licenses/claims.ts';
+export { licenseVerifier } from './licenses/verification.ts';
+export {
+  LICENSE_AUDIENCE,
+  LICENSE_POLICY_VERSION,
+  LICENSE_TOKEN_TYPE,
+  LICENSE_VERSION,
+  MOST_LICENSE_TOKEN_CHARACTERS,
+  STANDARD_OFFLINE_MILLISECONDS,
+  type ExpectedLicense,
+  type InstallationBinding,
+  type LicenseCapability,
+  type LicenseEntitlement,
+  type LicenseMode,
+  type LicensePlan,
+  type LicenseRing,
+  type LicenseTrust,
+  type TrustedLicenseKey,
+} from './licenses/entitlements.ts';
 export { runChargeId, resourceReceiptId, type ChargeKind, type RunIdentity } from './runs/identity.ts';
 export { maximumSpend, type SpendingBound, type WorkBound } from './quotes/work-bounds.ts';
 export { reserveFromLots } from './funding/reservations.ts';
