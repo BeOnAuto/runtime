@@ -18,7 +18,14 @@ function configFile(text: string): string {
   return path;
 }
 
+const allocation = { payload: 'eyJ2IjoxfQ', signature: 'c2lnbmVk', kid: 'auto-2026-10' };
+
 const refusals: readonly (readonly [string, Readonly<Record<string, string>>, string])[] = [
+  [
+    'an allocation that is not the JSON Auto signs',
+    { AUTO_RUNTIME_ALLOCATION: '{"payload":"x"}' },
+    'AUTO_RUNTIME_ALLOCATION',
+  ],
   ['a key that is not one of Studio', { AUTO_RUNTIME_LICENSE_KEY: 'ak_one_two' }, 'alk.<org>.<installation>.<secret>'],
   [
     'an account service that is no origin',
@@ -34,13 +41,17 @@ const refusals: readonly (readonly [string, Readonly<Record<string, string>>, st
 
 describe('the license settings', () => {
   it('hold no key, and Auto’s account service, when nothing sets them', () => {
-    expect(readSettingsOf({}).license).toEqual({ key: undefined, accounts: 'https://accounts.on.auto' });
+    expect(readSettingsOf({}).license).toEqual({
+      key: undefined,
+      allocation: undefined,
+      accounts: 'https://accounts.on.auto',
+    });
   });
 
   it('read the key from AUTO_RUNTIME_LICENSE_KEY and another account service from ACCOUNTS_ORIGIN', () => {
     expect(
       readSettingsOf({ AUTO_RUNTIME_LICENSE_KEY: key, ACCOUNTS_ORIGIN: 'http://127.0.0.1:19720' }).license,
-    ).toEqual({ key, accounts: 'http://127.0.0.1:19720' });
+    ).toEqual({ key, allocation: undefined, accounts: 'http://127.0.0.1:19720' });
   });
 
   it('read the key from license.key of the configuration file, a reference to the variable that holds it', () => {
@@ -50,6 +61,28 @@ describe('the license settings', () => {
     expect(
       readSettingsOf({ CONFIG_FILE: path, ACME_LICENSE_KEY: key, AUTO_RUNTIME_LICENSE_KEY: `${key}2` }).license.key,
     ).toBe(`${key}2`);
+  });
+});
+
+describe('the allocation settings', () => {
+  it('read an allocation from AUTO_RUNTIME_ALLOCATION, or from license.allocation of the file, which the variable wins over', () => {
+    const path = configFile('license:\n  key: ${ACME_LICENSE_KEY}\n  allocation: ${ACME_ALLOCATION}\n');
+    const other = { ...allocation, kid: 'auto-2026-11' };
+
+    expect(readSettingsOf({ AUTO_RUNTIME_ALLOCATION: JSON.stringify(allocation) }).license.allocation).toEqual(
+      allocation,
+    );
+    expect(
+      readSettingsOf({ CONFIG_FILE: path, ACME_LICENSE_KEY: key, ACME_ALLOCATION: JSON.stringify(allocation) }).license,
+    ).toMatchObject({ key, allocation });
+    expect(
+      readSettingsOf({
+        CONFIG_FILE: path,
+        ACME_LICENSE_KEY: key,
+        ACME_ALLOCATION: JSON.stringify(allocation),
+        AUTO_RUNTIME_ALLOCATION: JSON.stringify(other),
+      }).license.allocation,
+    ).toEqual(other);
   });
 
   it('refuse a key written out in the configuration file, and one that is not a key of Studio, at its place', () => {

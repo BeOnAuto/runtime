@@ -2,7 +2,7 @@ import { startedInWords } from '@on.auto/api';
 import type { KeyCommandConsole } from '@on.auto/identity';
 import { Effect } from 'effect';
 
-import { runLicenseActivation } from './license-command.ts';
+import { licenseCommandOf } from './license-command.ts';
 import {
   askedTo,
   stoppedWhenAsked,
@@ -97,11 +97,9 @@ export function runRuntimeCommand(command: RuntimeCommand, port: number, asking:
 export function runtimeCommandOf(
   args: readonly string[],
 ): ((port: number, asking: RuntimeAsking) => Effect.Effect<number>) | undefined {
-  const [name = '', verb, key = ''] = args;
+  const [name = '', verb = '', given = ''] = args;
   if (args.length === 1 && isRuntimeCommand(name)) {
     return (port, asking) => runRuntimeCommand(name, port, asking);
   }
-  return args.length === 3 && name === 'license' && verb === 'activate'
-    ? (port, asking) => runLicenseActivation(key, port, asking)
-    : undefined;
+  return name === 'license' ? licenseCommandOf(args.length, verb, given) : undefined;
 }

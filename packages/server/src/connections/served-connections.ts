@@ -108,6 +108,6 @@ export async function storesAndConnectionsOf(
     source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),
     offering: makeProviderOffering(services),
     clientMetadata: clientMetadataRoutes(servedClientMetadataDocumentOf(settings, pages)),
-    license: await licenseServedBy(runtime, settings.license.key, stores.secrets),
+    license: await licenseServedBy(runtime, settings.license, stores.secrets),
   };
 }
