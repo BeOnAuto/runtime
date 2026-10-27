@@ -93,7 +93,7 @@ describe('a run of a reasoning function that calls a tool, with telemetry on', (
 });
 
 describe('the events of a run of a reasoning function that calls a tool, with telemetry on', () => {
-  it('keep the trace of the run, as the log record of each does', async () => {
+  it('keep the trace of the run, as the log record of each does, and so do the meter’s events of its admission', async () => {
     const { traceId, history, server } = await tracedRun();
     const logged = logsIn(server.receiver.received()).filter((log) => log.traceId === traceId);
 
@@ -109,8 +109,9 @@ describe('the events of a run of a reasoning function that calls a tool, with te
         'run_succeeded',
       ].map((type) => [type, traceId]),
     );
-    expect(logged.map(({ eventName, traceId: logTrace }) => [eventName, logTrace])).toEqual(
-      history.map(([type, trace]) => [type, trace]),
-    );
+    expect(logged.map(({ eventName, traceId: logTrace }) => [eventName, logTrace])).toEqual([
+      ...['installation_identified', 'actions_counted', 'action_admitted'].map((type) => [type, traceId]),
+      ...history.map(([type, trace]) => [type, trace]),
+    ]);
   });
 });

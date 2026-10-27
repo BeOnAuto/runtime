@@ -34,8 +34,10 @@ describe('the services the playbook operations run on', () => {
 
     expect(keys.filter((key) => !key.startsWith('effect/')).toSorted()).toEqual([
       '@on.auto/definitions/LiveAttempts',
+      '@on.auto/definitions/RunMeter',
       '@on.auto/ledger/LedgerChores',
       '@on.auto/ledger/LedgerConnection',
+      '@on.auto/ledger/LedgerLog',
       '@on.auto/operations/IncidentReporter',
       '@on.auto/operations/Ledger',
       '@on.auto/operations/PlaybookRegistry',

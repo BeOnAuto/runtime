@@ -19,12 +19,12 @@ export function compositionRootWith(
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
     const database = await ledgerDatabaseOf(settings, telemetry.appended);
     const capabilities = capabilityRegistryHeld();
+    const ledgerLayer = withARefusedLayoutExplained(
+      ledgerLayerFor(settings, database, wiring.projections.appends),
+      settings,
+    );
     return {
-      services: capabilities.closedFirstOf(
-        applicationLayer(
-          withARefusedLayoutExplained(ledgerLayerFor(settings, database, wiring.projections.appends), settings),
-        ),
-      ),
+      services: capabilities.closedFirstOf(applicationLayer(ledgerLayer, settings.studio.origin)),
       serve: async (runtime, ownOrigin) => {
         const { ledger, workflows, identityIssuer } = settings;
         const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata } =

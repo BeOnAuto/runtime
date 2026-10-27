@@ -1,6 +1,7 @@
 import type { AppRuntime } from '@on.auto/api';
 import { liveAttemptsClosed, liveAttemptsLayer } from '@on.auto/definitions';
 import type { LedgerServices } from '@on.auto/ledger';
+import { ledgerMeter, meterDefaults } from '@on.auto/meter';
 import { IncidentReporter, type DispatcherServices } from '@on.auto/operations';
 import { ledgerPlaybookRegistry } from '@on.auto/playbooks';
 import { Layer } from 'effect';
@@ -11,10 +12,14 @@ import type { Served } from '../server-options/server-options.ts';
 
 const loggingIncidentReporter = Layer.succeed(IncidentReporter, IncidentReporter.of({ report: logIncident }));
 
-export function applicationLayer(ledger: Layer.Layer<LedgerServices>): Layer.Layer<ServerServices> {
+export function applicationLayer(
+  ledger: Layer.Layer<LedgerServices>,
+  studio: string = meterDefaults.studio,
+): Layer.Layer<ServerServices> {
   return Layer.mergeAll(
     ledger,
     ledgerPlaybookRegistry.pipe(Layer.provide(ledger)),
+    ledgerMeter({ ...meterDefaults, studio }).pipe(Layer.provide(ledger)),
     loggingIncidentReporter,
     liveAttemptsLayer.pipe(Layer.provide(loggingIncidentReporter)),
   );
