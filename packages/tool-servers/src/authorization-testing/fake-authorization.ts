@@ -65,12 +65,18 @@ function metadataOf(origin: string, registration: ClientRegistration) {
   };
 }
 
+const wellKnownResourceMetadataPath = '/.well-known/oauth-protected-resource/mcp';
+
 const metadataPaths = [
-  '/.well-known/oauth-protected-resource/mcp',
+  wellKnownResourceMetadataPath,
   '/.well-known/oauth-protected-resource',
   '/.well-known/oauth-authorization-server',
   '/.well-known/openid-configuration',
 ];
+
+export function resourceMetadataPathOf(registration: ClientRegistration | undefined): string {
+  return registration?.resourceMetadataPath ?? wellKnownResourceMetadataPath;
+}
 
 function unpublished(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 404 }));
@@ -81,13 +87,14 @@ function documentRoutesOf(origin: string, registration: ClientRegistration): rea
     return metadataPaths.map((path): Route => [path, unpublished]);
   }
   const metadata = metadataOf(origin, registration);
+  const authorizationServers = registration.authorizationServers ?? [origin];
   const resource = {
     resource: registration.protectedResource ?? `${origin}/mcp`,
-    authorization_servers: [registration.authorizationServer ?? origin],
+    ...(authorizationServers.length === 0 ? {} : { authorization_servers: authorizationServers }),
     ...(registration.protectedScopes === undefined ? {} : { scopes_supported: registration.protectedScopes }),
   };
   return [
-    ['/.well-known/oauth-protected-resource/mcp', () => Promise.resolve(json(resource))],
+    [resourceMetadataPathOf(registration), () => Promise.resolve(json(resource))],
     registration.openIdConnect === true
       ? ['/.well-known/openid-configuration', () => Promise.resolve(json({ ...metadata, ...openIdFields(origin) }))]
       : ['/.well-known/oauth-authorization-server', () => Promise.resolve(json(metadata))],

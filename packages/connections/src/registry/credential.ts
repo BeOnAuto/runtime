@@ -222,8 +222,9 @@ function consentIssuesOfTheKind(credential: CredentialFields): readonly FieldIss
   return credential.kind === 'authorization' ? consentIssuesOf(credential) : [];
 }
 
-export const credentialDescription =
-  'How the server is credentialled, never its value, which the person gives on the page';
+const credentialledHow = 'How the server is credentialled, never its value, which the person gives on the page';
+
+export const credentialDescription = `${credentialledHow}; an MCP server given by hand that signs people in itself takes kind authorization alone, the runtime finding its authorization server`;
 
 export function credentialFieldIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return [
@@ -246,7 +247,7 @@ export function placesNoValue(kind: CredentialKind): boolean {
   return kindsPlacingNoValue.has(kind);
 }
 
-export const CredentialSchema = CredentialFieldsSchema.annotate({ description: credentialDescription }).check(
+export const CredentialSchema = CredentialFieldsSchema.annotate({ description: credentialledHow }).check(
   Schema.makeFilter((credential: CredentialFields) => credentialFieldIssuesOf(credential)),
 );
 

@@ -3,13 +3,24 @@ import { DateTime, Effect, Redacted } from 'effect';
 
 import { answeredTokensOf, keptOf, keptValueOf } from '../consent-tokens/kept-tokens.ts';
 import { libraryClientOf, type Requests, type ServerSource } from './acting-clients.ts';
-import type { CodeFinishAsked, ConsentRefusal, FinishedConsent, StartAsked, StartedConsent } from './consent-client.ts';
+import type {
+  CodeFinishAsked,
+  ConsentRefusal,
+  FinishedConsent,
+  NamedWay,
+  StartAsked,
+  StartedConsent,
+  WayAsked,
+  WayRefusal,
+} from './consent-client.ts';
 import { exchangeRefusalOf } from './consent-failures.ts';
+import { namedWayOf } from './named-ways.ts';
 import { revocationOf } from './revocation.ts';
 import { grantedScopeOf } from './scopes.ts';
 import { libraryMetadataOf, scopeAskedOf, serverMetadataOf } from './server-metadata.ts';
 
 export interface ServerConsents {
+  readonly namedWay: (asked: WayAsked) => Effect.Effect<NamedWay, WayRefusal>;
   readonly start: (
     asked: StartAsked,
     sources: readonly ServerSource[],
@@ -87,8 +98,9 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
   });
 }
 
-export function serverConsentsOf(requests: Requests): ServerConsents {
+export function serverConsentsOf(requests: Requests, publicUrl: string | undefined): ServerConsents {
   return {
+    namedWay: (asked) => namedWayOf(asked, requests.fetchFor(asked.reaches), publicUrl),
     start: (asked, sources) => started(asked, requests, sources),
     finish: (asked) => finished(asked, requests),
   };

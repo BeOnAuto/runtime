@@ -26,8 +26,7 @@ const byHand = {
   credential: { kind: 'authorization', issuer: 'https://accounts.files.example.com' },
 };
 
-const consentByHand =
-  'Expected another kind: consent is offered through a provider alone, so name the provider, as search lists it, in provider';
+const issuerByHand = 'Expected no issuer: the server names its authorization server itself';
 
 let server: ReasoningServer;
 
@@ -80,7 +79,7 @@ describe('the start and the finish of a consent over HTTP', () => {
 });
 
 describe('a connection of consent given by hand', () => {
-  it('is refused over HTTP and over MCP at the kind of its credential, which the input takes by its name', async () => {
+  it('is refused over HTTP and over MCP at the issuer it gives beside its kind, which the input takes by its name', async () => {
     const overHttp = await server.call('POST', connections, { body: byHand });
     const overMcp = await withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, (session) =>
       session.callTool('add_connection', byHand),
@@ -88,10 +87,10 @@ describe('a connection of consent given by hand', () => {
 
     expect(overHttp).toMatchObject({
       status: 422,
-      body: { reason: 'invalid_input', errors: [{ pointer: '/credential/kind', detail: consentByHand }] },
+      body: { reason: 'invalid_input', errors: [{ pointer: '/credential/issuer', detail: issuerByHand }] },
     });
     expect(overMcp).toMatchObject({ isError: true });
-    expect(JSON.stringify(overMcp)).toContain(consentByHand);
+    expect(JSON.stringify(overMcp)).toContain(issuerByHand);
   });
 });
 

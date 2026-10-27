@@ -27,8 +27,8 @@ function required<A>(value: A | undefined): A {
   return Option.getOrThrow(Option.fromNullishOr(value));
 }
 
-export function namedOf({ name, credential }: RecordedConnection): ConsentNamed {
-  return { name, issuer: required(credential.issuer) };
+export function namedOf({ name, provider, credential }: RecordedConnection): ConsentNamed {
+  return { name, issuer: required(credential.issuer), provider };
 }
 
 function serverOf({ type, entry }: RecordedConnection): ConsentServer {

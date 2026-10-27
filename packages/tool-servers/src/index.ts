@@ -99,8 +99,10 @@ export {
   type HandleFinishAsked,
   type FinishedConsent,
   type HeldTokens,
+  type IssuerRefusal,
   type KeptRow,
   type KeptRegistration,
+  type NamedWay,
   type RegistrationUnavailable,
   type RevocationFailure,
   type RevokeAsked,
@@ -111,6 +113,8 @@ export {
   type TokensClaimed,
   type TokensEnded,
   type TokensReplaced,
+  type WayAsked,
+  type WayRefusal,
 } from './consent/consent-client.ts';
 export { isScope } from './consent/scopes.ts';
 export { keptTokensIn, type KeptTokens } from './consent-tokens/kept-tokens.ts';

@@ -1,11 +1,20 @@
 import { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
-import type { ClientSource, ConsentRefusal, RevocationFailure, SecretKeepingFailure } from '@on.auto/tool-servers';
+import type {
+  ClientSource,
+  ConsentRefusal,
+  IssuerRefusal,
+  RevocationFailure,
+  SecretKeepingFailure,
+  WayRefusal,
+} from '@on.auto/tool-servers';
 
+import { invalidAddition } from '../entries/entry-checks.ts';
 import { servingWords } from '../serving/serving-words.ts';
 
 export interface ConsentNamed {
   readonly name: string;
   readonly issuer: string;
+  readonly provider: string | null;
 }
 
 export type ConsentRefused = Conflict | Forbidden | InvalidInput | Unavailable;
@@ -31,6 +40,22 @@ type Unnamed = Exclude<ConflictingRefusal['refused'], 'another_issuer' | 'anothe
 
 const notAsAdded = 'so it cannot be connected as it was added';
 
+const notByConsent = 'so this runtime cannot connect it by consent';
+
+const takesNoChallenge = 'does not take the authorization code with an S256 challenge, which Auto asks for';
+
+const answersNot = 'did not answer as an authorization server does; try again in a moment';
+
+const notAScope = 'written with characters a scope does not hold';
+
+function namesAsItsResource(other: string): string {
+  return `names ${other} as the resource it protects, which is not its own address`;
+}
+
+function namesAsItsIssuer(other: string): string {
+  return `names ${other} as its issuer in its own metadata`;
+}
+
 export const unavailableWords = {
   registration: (name: string, detail: string) =>
     `The client the runtime registered for the connection ${name} cannot be kept or read now: ${detail}`,
@@ -49,8 +74,7 @@ export const unavailableWords = {
 const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = {
   no_metadata: ({ name, issuer }) =>
     `The authorization server of the connection ${name}, ${issuer}, publishes no metadata, ${notAsAdded}`,
-  no_challenge: ({ name }) =>
-    `The authorization server of the connection ${name} does not take the authorization code with an S256 challenge, which Auto asks for`,
+  no_challenge: ({ name }) => `The authorization server of the connection ${name} ${takesNoChallenge}`,
   no_client: ({ name }) =>
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
   client_gone: ({ name }) => servingWords.clientGone(name),
@@ -59,18 +83,24 @@ const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = 
   studio_elsewhere: ({ name }) =>
     `The connection ${name} takes consent through Auto's client only where Studio is Auto's or on this computer, so whoever runs this runtime registers a client`,
   malformed_scope: ({ name }) =>
-    `The authorization server of the connection ${name} granted a scope written with characters a scope does not hold, ${notAsAdded}`,
+    `The authorization server of the connection ${name} granted a scope ${notAScope}, ${notAsAdded}`,
   no_scope: ({ name }) =>
     `The authorization server of the connection ${name} granted none of the scopes asked, so the connection is not connected; start again and allow them`,
 };
 
+function whereItWasNamed({ issuer, provider }: ConsentNamed): string {
+  return provider === null
+    ? `where it named ${issuer} when the connection was added`
+    : `where its provider names ${issuer}`;
+}
+
 const issuerNamedBy: Readonly<
   Record<'server' | 'authorization_server', (named: ConsentNamed, other: string) => string>
 > = {
-  server: ({ name, issuer }, other) =>
-    `The server of the connection ${name} names ${other} as its authorization server, where its provider names ${issuer}, ${notAsAdded}`,
-  authorization_server: ({ name, issuer }, other) =>
-    `The authorization server of the connection ${name} names ${other} as its issuer in its own metadata, where its provider names ${issuer}, ${notAsAdded}`,
+  server: (named, other) =>
+    `The server of the connection ${named.name} names ${other} as its authorization server, ${whereItWasNamed(named)}, ${notAsAdded}`,
+  authorization_server: (named, other) =>
+    `The authorization server of the connection ${named.name} ${namesAsItsIssuer(other)}, ${whereItWasNamed(named)}, ${notAsAdded}`,
 };
 
 function refusedAt(pointer: string, detail: string): InvalidInput {
@@ -82,7 +112,7 @@ function detailOf(named: ConsentNamed, refusal: ConflictingRefusal): string {
     return issuerNamedBy[refusal.by](named, refusal.named);
   }
   return refusal.refused === 'another_resource'
-    ? `The server of the connection ${named.name} names ${refusal.named} as the resource it protects, which is not its own address, ${notAsAdded}`
+    ? `The server of the connection ${named.name} ${namesAsItsResource(refusal.named)}, ${notAsAdded}`
     : conflictsOf[refusal.refused](named);
 }
 
@@ -96,7 +126,7 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
   }
   if (refusal.refused === 'unanswered') {
     return new Unavailable({
-      detail: `The authorization server of the connection ${named.name} did not answer as an authorization server does; try again in a moment`,
+      detail: `The authorization server of the connection ${named.name} ${answersNot}`,
     });
   }
   if (refusal.refused === 'registration_unavailable') {
@@ -113,6 +143,59 @@ export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): 
   return refusal.refused === 'code'
     ? refusedAt('/code', 'Expected a code the authorization server takes; it refused this one')
     : conflictOf(named, refusal);
+}
+
+type RefusedAtTheServer = Exclude<WayRefusal, { readonly refused: 'host' | 'unanswered' | 'at_the_issuer' }>;
+
+type RefusedAtTheIssuer = Extract<WayRefusal, { readonly refused: 'at_the_issuer' }>;
+
+export type WayRefused = Forbidden | InvalidInput | Unavailable;
+
+const offeredByTheIssuer: Readonly<Record<Exclude<IssuerRefusal['refused'], 'another_issuer' | 'unanswered'>, string>> =
+  {
+    no_metadata: `publishes no metadata this runtime can read, ${notByConsent}`,
+    no_challenge: `${takesNoChallenge}, ${notByConsent}`,
+    no_client: `registers no clients, ${notByConsent}: it takes a client registered dynamically or named by a metadata document, and offers neither`,
+  };
+
+function refusedKindOf(detail: string): InvalidInput {
+  return invalidAddition([{ pointer: '/credential/kind', detail }]);
+}
+
+function serverWordsOf(url: string, refusal: RefusedAtTheServer): string {
+  if (refusal.refused === 'another_resource') {
+    return `The server at ${url} ${namesAsItsResource(refusal.named)}, ${notByConsent}`;
+  }
+  return refusal.refused === 'malformed_scope'
+    ? `The server at ${url} asks a scope ${notAScope}, ${notByConsent}`
+    : `The server at ${url} names no authorization server, so it offers no consent; give the credential it takes: a secret in a header, or none`;
+}
+
+function issuerWordsOf(refusal: Exclude<IssuerRefusal, { readonly refused: 'unanswered' }>): string {
+  return refusal.refused === 'another_issuer'
+    ? `${namesAsItsIssuer(refusal.named)}, ${notByConsent}`
+    : offeredByTheIssuer[refusal.refused];
+}
+
+function issuerRefusalOf(url: string, { issuer, refusal }: RefusedAtTheIssuer): InvalidInput | Unavailable {
+  const named = `The authorization server ${issuer} of the server at ${url}`;
+  return refusal.refused === 'unanswered'
+    ? new Unavailable({ detail: `${named} ${answersNot}` })
+    : refusedKindOf(`${named} ${issuerWordsOf(refusal)}`);
+}
+
+export function wayRefusalOf(url: string, refusal: WayRefusal): WayRefused {
+  if (refusal.refused === 'host') {
+    return new Forbidden({ detail: refusal.rule });
+  }
+  if (refusal.refused === 'unanswered') {
+    return new Unavailable({
+      detail: `The server at ${url} did not answer as an MCP server does; try again in a moment`,
+    });
+  }
+  return refusal.refused === 'at_the_issuer'
+    ? issuerRefusalOf(url, refusal)
+    : refusedKindOf(serverWordsOf(url, refusal));
 }
 
 export function tokensUnkeptOf({ name }: ConsentNamed, { _tag, detail }: SecretKeepingFailure): Conflict | Unavailable {

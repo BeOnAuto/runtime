@@ -125,6 +125,17 @@ describe('the start of a consent at an MCP server', () => {
   });
 });
 
+describe('the start of a consent at an MCP server that publishes its metadata only where its challenge names it', () => {
+  it('reads the metadata there and sends its resource', async () => {
+    const fake = await served({ resourceMetadataPath: '/metadata/files' });
+    const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
+
+    const { searchParams } = new URL((await started(client, startAskedAt(fake))).url);
+
+    expect(searchParams.get('resource')).toBe(fake.url);
+  });
+});
+
 describe('the start of a consent at an MCP server whose way gives its endpoints', () => {
   it('reads no metadata at the issuer, so metadata that names another issuer is not read', async () => {
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
@@ -147,7 +158,7 @@ describe('the start of a consent at an MCP server whose way gives its endpoints'
 
 describe('a start refused for what its server says', () => {
   it('is refused before a client is chosen where the server names another authorization server, or its metadata another issuer', async () => {
-    const another = await served({ authorizationServer: 'https://elsewhere.example.com' });
+    const another = await served({ authorizationServers: ['https://elsewhere.example.com'] });
     const echoing = await served({ issuer: 'https://elsewhere.example.com' });
     const client = consentClientWith();
 

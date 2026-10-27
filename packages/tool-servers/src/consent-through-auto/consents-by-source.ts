@@ -9,8 +9,11 @@ import type {
   FinishAsked,
   FinishedConsent,
   LoadedOptions,
+  NamedWay,
   StartAsked,
   StartedConsent,
+  WayAsked,
+  WayRefusal,
 } from '../consent/consent-client.ts';
 import { serverConsentsOf, type ServerConsents } from '../consent/consent-requests.ts';
 import { servedKindOf } from './auto-clients.ts';
@@ -18,6 +21,7 @@ import { handedOff, startedThroughAuto } from './auto-consents.ts';
 import { autoRenewalsOf } from './auto-renewals.ts';
 
 export interface ConsentRequests extends TokenRequests {
+  readonly namedWay: (asked: WayAsked) => Effect.Effect<NamedWay, WayRefusal>;
   readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
 }
@@ -71,8 +75,9 @@ function finished(asked: FinishAsked, { options, requests, server }: Consenting)
 export function consentRequests(options: LoadedOptions): ConsentRequests {
   const bounds = requestBoundsOf(options);
   const requests = requestsOf({ ...options, ...bounds });
-  const consenting: Consenting = { options, requests, server: serverConsentsOf(requests) };
+  const consenting: Consenting = { options, requests, server: serverConsentsOf(requests, options.publicUrl) };
   return {
+    namedWay: (asked) => consenting.server.namedWay(asked),
     start: (asked) => started(asked, consenting),
     finish: (asked) => finished(asked, consenting),
     ...tokenRequestsOf(
