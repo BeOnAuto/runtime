@@ -2,7 +2,7 @@ import type { ConnectionPorts } from '@on.auto/ledger';
 import type { InstallationChallenge, LicenseTrust } from '@on.auto/metering';
 
 import type { ClockSamples, LicenseClock } from '../clock/records.ts';
-import type { InstallationIdentity, InstallationStorage } from '../installation/records.ts';
+import type { InstallationSigner, InstallationStorage } from '../installation/records.ts';
 import type { CurrentLicense, LicenseHead, LicenseState } from '../license-state/records.ts';
 import type { LicenseFetch, LicenseProtocol } from '../licensing/records.ts';
 
@@ -33,7 +33,7 @@ export interface LicensePollResult {
 
 export interface ClientServices {
   readonly connection: ConnectionPorts;
-  readonly installation: InstallationIdentity;
+  readonly installation: InstallationSigner;
   readonly trust: LicenseTrust;
   readonly clock: LicenseClock;
   readonly state: LicenseState;
