@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { requestBoundsOf } from '../bounds/call-bounds.ts';
 import { tokenRequestsOf, type TokenRequests } from '../consent-tokens/token-requests.ts';
 import { isServerSource, requestsOf, type Requests } from '../consent/acting-clients.ts';
-import { serviceClientFor, sourcesHad, sourceTakenOf, type ServiceClient } from '../consent/client-sources.ts';
+import { serviceClientTakenOf, sourcesHad, sourceTakenOf, type ServiceClient } from '../consent/client-sources.ts';
 import type {
   ConsentRefusal,
   FinishAsked,
@@ -49,9 +49,9 @@ function started(asked: StartAsked, { options, requests, server }: Consenting) {
     const kind = servedKindOf(auto, asked.studioBase);
     const listed = kind === undefined ? noServiceClients : yield* options.serviceClients;
     const had = { ...options, serviceClients: listed };
-    const listedClient = serviceClientFor(listed, asked.way);
-    if (sourceTakenOf(asked.way, had) === 'auto' && auto.enabled && kind !== undefined && listedClient !== undefined) {
-      return yield* startedThroughAuto(asked, requests.fetchFor, { auto, clientId: listedClient.client_id, kind });
+    const taken = serviceClientTakenOf(asked.way, had);
+    if (taken !== undefined && auto.enabled && kind !== undefined) {
+      return yield* startedThroughAuto(asked, requests.fetchFor, { auto, clientId: taken.client_id, kind });
     }
     const sources = sourcesHad(asked.way, had);
     if (sources.length === 0 && kind === undefined && (yield* takenThroughAutoAlone(asked, options))) {

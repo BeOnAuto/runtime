@@ -251,15 +251,15 @@ export function checkedServer(
   return rule === undefined ? Effect.succeed(server) : Effect.fail({ refused: 'host', rule });
 }
 
-export function serverMetadataOf(
+function metadataOf(
   { server, way, reaches }: ConsentAsked,
   fetch: FetchLike,
+  boundToItsResource?: string,
 ): Effect.Effect<ServerMetadata, ConsentRefusal> {
   return Effect.gen(function* () {
     const protectedResource = yield* discoveredResourceOf(server, fetch);
-    const handGiven = handGivenUrlOf(server);
-    if (protectedResource === undefined && handGiven !== undefined) {
-      return yield* Effect.fail<ConsentRefusal>({ refused: 'authorization_server_unnamed', url: handGiven });
+    if (protectedResource === undefined && boundToItsResource !== undefined) {
+      return yield* Effect.fail<ConsentRefusal>({ refused: 'authorization_server_unnamed', url: boundToItsResource });
     }
     const named = protectedResource?.authorization_servers ?? [way.issuer];
     if (!named.some((issuer) => isSameIssuer(issuer, way.issuer))) {
@@ -268,6 +268,17 @@ export function serverMetadataOf(
     const resolved = builtServerOf(way) ?? (yield* discoveredServerOf(way.issuer, fetch));
     return { server: yield* checkedServer(resolved, reaches), resource: protectedResource?.resource };
   });
+}
+
+export function serverMetadataOf(asked: ConsentAsked, fetch: FetchLike): Effect.Effect<ServerMetadata, ConsentRefusal> {
+  return metadataOf(asked, fetch, handGivenUrlOf(asked.server));
+}
+
+export function revocationMetadataOf(
+  asked: ConsentAsked,
+  fetch: FetchLike,
+): Effect.Effect<ServerMetadata, ConsentRefusal> {
+  return metadataOf(asked, fetch);
 }
 
 export function scopeAskedOf({ scope }: ConsentWay, server: AuthorizationServer): string | undefined {

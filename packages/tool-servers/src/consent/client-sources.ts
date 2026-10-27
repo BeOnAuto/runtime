@@ -182,3 +182,7 @@ export function sourceTakenOf(way: WayOfClients, had: ClientsHad): ClientSource 
   const [first] = sourcesHad(way, had);
   return first;
 }
+
+export function serviceClientTakenOf(way: WayOfClients, had: ClientsHad): ServiceClient | undefined {
+  return sourceTakenOf(way, had) === 'auto' ? serviceClientFor(had.serviceClients, way) : undefined;
+}

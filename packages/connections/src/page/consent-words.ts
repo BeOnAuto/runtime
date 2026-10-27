@@ -47,7 +47,7 @@ const notAsAdded = 'so it cannot be connected as it was added';
 
 const notByConsent = 'so this runtime cannot connect it by consent';
 
-const takesNoChallenge = 'does not take the authorization code with an S256 challenge, which Auto asks for';
+const takesNoChallenge = 'does not take the authorization code with an S256 challenge';
 
 const didNotAnswerAsAnAuthorizationServer = 'did not answer as an authorization server does; try again in a moment';
 
@@ -87,7 +87,8 @@ export const unavailableWords = {
 const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = {
   no_metadata: ({ name, issuer }) =>
     `The authorization server of the connection ${name}, ${issuer}, publishes no metadata, ${notAsAdded}`,
-  no_challenge: ({ name }) => `The authorization server of the connection ${name} ${takesNoChallenge}`,
+  no_challenge: ({ name }) =>
+    `The authorization server of the connection ${name} ${takesNoChallenge}, which Auto asks for`,
   no_client: ({ name }) =>
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
   client_gone: ({ name }) => servingWords.clientGone(name),

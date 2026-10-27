@@ -1,5 +1,6 @@
 import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import {
+  admitted,
   autoClientsOf,
   consentedAt,
   metadataWithdrawnFrom,
@@ -21,6 +22,7 @@ import {
   tokenRequestsSeen,
 } from '../testing/by-hand.ts';
 import { consentedOf, consentFake, finishing, startedAt, starting } from '../testing/consents.ts';
+import { ada, operationNamed } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -208,8 +210,8 @@ function noLongerNamedAt({ url }: FakeMcpServer): string {
   return `The server at ${url} no longer names its authorization server, so the consent cannot go on; remove the connection and add it again`;
 }
 
-describe('the start and the finish of a server given by hand that no longer publishes its metadata', () => {
-  it('refuse the start where the server answers its ping with a 2xx and its well-known paths with 404s, sending the person nowhere', async () => {
+describe('a connection given by hand whose server no longer publishes its metadata', () => {
+  it('is refused at its start, where the server answers its ping with a 2xx and its well-known paths with 404s, sending the person nowhere', async () => {
     const { fake, withdrawn, h, link } = await withdrawnLater();
 
     withdrawn.withdraw();
@@ -218,7 +220,7 @@ describe('the start and the finish of a server given by hand that no longer publ
     expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_consent_started');
   });
 
-  it('refuse the finish, redeeming no code, so no token is asked without the resource', async () => {
+  it('is refused at its finish, redeeming no code, so no token is asked without the resource', async () => {
     const { fake, withdrawn, h, link } = await withdrawnLater();
     const consented = await consentedAt((await startedAt(h, link)).url);
 
@@ -226,5 +228,17 @@ describe('the start and the finish of a server given by hand that no longer publ
 
     expect(await finishing(h, link, consented)).toMatchObject({ reason: 'conflict', detail: noLongerNamedAt(fake) });
     expect(fake.tokenRequests()).toBe(0);
+  });
+
+  it('is removed with its tokens revoked at the issuer it recorded, so none stays alive', async () => {
+    const { fake, withdrawn, h, link } = await withdrawnLater();
+    await finishing(h, link, await consentedOf(h, link));
+    const accessToken = accessTokenKeptIn(h);
+
+    withdrawn.withdraw();
+    await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: link.id });
+
+    expect(fake.heard().map(({ path }) => path)).toContain('/revoke');
+    expect(await admitted(fake, accessToken)).toBe(false);
   });
 });

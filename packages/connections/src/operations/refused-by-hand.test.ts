@@ -145,7 +145,7 @@ describe('a server given by hand whose way of consent the runtime cannot take fo
       atTheIssuer(
         plain,
         plain.origin,
-        'does not take the authorization code with an S256 challenge, which Auto asks for, so this runtime cannot connect it by consent',
+        'does not take the authorization code with an S256 challenge, so this runtime cannot connect it by consent',
       ),
       atTheIssuer(
         plaintext,
