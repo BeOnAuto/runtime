@@ -67,6 +67,17 @@ describe('rendering a template', () => {
   });
 });
 
+describe('a prompt that formats its input', () => {
+  it('writes an amount as money, clips a text and counts its words, as every template may', () => {
+    expect(
+      rendered('{{ input.amount | money }} for {{ input.note | clip: 5 }}, in {{ input.note | words }} words', {
+        amount: 1234.5,
+        note: 'Hello, world',
+      }),
+    ).toEqual({ message: '$1,234.50 for Hello…, in 2 words' });
+  });
+});
+
 describe('the parts of a rendered template', () => {
   it('run in document order, so what the system block assigns is known after it', () => {
     expect(

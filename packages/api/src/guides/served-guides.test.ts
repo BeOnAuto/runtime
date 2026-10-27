@@ -79,12 +79,13 @@ const pages: Readonly<Record<string, string>> = {
   'recall-function': 'reference/recall-format.md',
   'prediction-function': 'reference/prediction-format.md',
   workflow: 'reference/workflow-format.md',
+  templates: 'reference/template.md',
 };
 
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type and the four recipes, ten in all', () => {
+  it('are the terminology, a guide per type, the templates and the four recipes, eleven in all', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'terminology',
       'reasoning-function',
@@ -92,6 +93,7 @@ describe('the guides of a server that runs every type of definition', () => {
       'recall-function',
       'prediction-function',
       'workflow',
+      'templates',
       'first-playbook',
       'remember',
       'give-tools',
@@ -106,7 +108,7 @@ describe('the guides of a server that runs every type of definition', () => {
     ]);
   });
 
-  it('give each type the whole public page of its format, without the markup of the documentation site, its links resolved, and the reasoning page what this server offers', () => {
+  it('give each type the whole public page of its format and the templates guide the page of templates, without the markup of the documentation site, their links resolved, and the reasoning page what this server offers', () => {
     const [reasoningGuide, ...otherGuides] = guides.slice(1);
     const [reasoningPage = '', ...otherPages] = Object.values(pages);
 
@@ -122,13 +124,14 @@ describe('the guides of a server that runs every type of definition', () => {
 describe('the titles and links of the guides of a server that runs every type of definition', () => {
   const { guides } = served;
 
-  it('title each type guide as its page is titled', () => {
+  it('title each type guide and the templates as their pages are titled', () => {
     expect(guides.slice(1).map(({ title }) => title)).toEqual([
       'Reasoning function format',
       'Computation function format',
       'Recall function format',
       'Prediction function format',
       'Workflow format',
+      'Templates',
     ]);
   });
 
@@ -165,6 +168,7 @@ describe('the size and the words of the guides of a server', () => {
       'How recall functions are written: their document, fields, examples and bounds.',
       'How prediction functions are written: their document, fields, examples and bounds.',
       'How workflows are written: their document, fields, examples and bounds.',
+      'The filters a template may use, the same in every template of every definition.',
     ]);
   });
 });

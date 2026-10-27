@@ -6,23 +6,6 @@ export interface CorpusCase {
   readonly firstLine: number;
 }
 
-const filterInputs: readonly (readonly [string, Schema.Json])[] = [
-  ['{{ input.value | money }}', 364_028],
-  ['{{ input.value | money }}', -1_250_000],
-  ['{{ input.value | money }}', 1234.5],
-  ['{{ input.value | money }}', ' 19.99 '],
-  ['{{ input.value | money }}', 'many'],
-  ['{{ input.value | clip }}', 'a'.repeat(401)],
-  ['{{ input.value | clip: 5 }}', 'Hello, world'],
-  ['{{ input.value | clip: 2 }}', '😀😀😀'],
-  ['{{ input.value | clip: 3 }}', 123_456],
-  ['{{ input.value | clip: 3 }}', null],
-  ['{{ input.value | clip: -1 }}', 'Hello'],
-  ['{{ input.value | words }}', 'The quick  brown\n\tfox'],
-  ['{{ input.value | words }}', null],
-  ['{% assign n = input.value | words %}{% if n > 2 %}long{% else %}short{% endif %}', 'a b c'],
-];
-
 const tagBodies: readonly string[] = [
   '{% assign a = 1 %}{{ a }}',
   '{% case input.a %}{% when 1 %}one{% else %}other{% endcase %}',
@@ -84,6 +67,5 @@ const prompts: readonly (readonly [string, Schema.Json, number])[] = [
 
 export const renderingCorpus: readonly CorpusCase[] = [
   ...prompts.map(([body, input, firstLine]) => ({ body, input, firstLine })),
-  ...filterInputs.map(([body, value]) => ({ body, input: { value }, firstLine: 1 })),
   ...tagBodies.map((body) => ({ body, input: tagInput, firstLine: 1 })),
 ];

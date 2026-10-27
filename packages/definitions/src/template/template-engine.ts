@@ -10,6 +10,7 @@ import {
   type Template,
 } from 'liquidjs';
 
+import { addedFilters } from './added-filters.ts';
 import { renderDeadlineOn, type RenderClock } from './render-clock.ts';
 
 export const templateLimits = {
@@ -171,7 +172,7 @@ export function templateEngine(registrations: () => EngineRegistrations = noRegi
     liquid.unregisterFilter(name);
   }
   tagsRemovedFrom(() => liquid);
-  for (const [name, filter] of Object.entries(filters)) {
+  for (const [name, filter] of Object.entries({ ...addedFilters, ...filters })) {
     liquid.registerFilter(name, filter);
   }
   for (const [name, tag] of Object.entries(tags)) {

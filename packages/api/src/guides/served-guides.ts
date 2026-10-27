@@ -16,6 +16,14 @@ export interface ServedType {
 
 const terminologyPage = 'concepts/terminology.md';
 
+const templatesPage = 'reference/template.md';
+
+const templatesAbout: Omit<Guide, 'text'> = {
+  name: 'templates',
+  title: 'Templates',
+  description: 'The filters a template may use, the same in every template of every definition.',
+};
+
 function pageOfGuide(guide: string): string {
   return `reference/${guide.replace(/-function$/u, '')}-format.md`;
 }
@@ -24,18 +32,20 @@ function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
   return shippedFiles.text(shippedFileIn(documentation, page));
 }
 
+async function pageGuideOf(shippedFiles: ShippedFiles, page: string, about: Omit<Guide, 'text'>): Promise<Guide> {
+  return { ...about, text: withLinksResolved(withoutSiteMarkup(await pageText(shippedFiles, page)), page) };
+}
+
 async function typeGuideOf(
   shippedFiles: ShippedFiles,
   { noun, guide }: Pick<ServedType, 'noun' | 'guide'>,
 ): Promise<Guide> {
-  const page = pageOfGuide(guide.name);
-  const text = withLinksResolved(withoutSiteMarkup(await pageText(shippedFiles, page)), page);
-  return {
+  const { text, ...about } = await pageGuideOf(shippedFiles, pageOfGuide(guide.name), {
     name: guide.name,
     title: `${capitalized(noun.one)} format`,
     description: `How ${noun.other} are written: their document, fields, examples and bounds.`,
-    text: guide.onThisServer === undefined ? text : `${text.trimEnd()}\n\n${guide.onThisServer}\n`,
-  };
+  });
+  return { ...about, text: guide.onThisServer === undefined ? text : `${text.trimEnd()}\n\n${guide.onThisServer}\n` };
 }
 
 export async function guideShelfFrom(shippedFiles: ShippedFiles, types: readonly ServedType[]): Promise<GuideShelf> {
@@ -50,6 +60,7 @@ export async function guideShelfFrom(shippedFiles: ShippedFiles, types: readonly
       definitionTypes.map(({ noun }) => noun),
     ),
     ...(await Promise.all(types.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
+    await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
   ];
   return guideShelfOf(guides, await recipesFor(shippedFiles, guides), definitionTypes);
 }

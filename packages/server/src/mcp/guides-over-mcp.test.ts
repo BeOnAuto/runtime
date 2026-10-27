@@ -37,6 +37,7 @@ const guideNames = [
   'recall-function',
   'prediction-function',
   'workflow',
+  'templates',
   'first-playbook',
   'remember',
   'give-tools',

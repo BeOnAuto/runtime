@@ -1,3 +1,4 @@
+import { clip } from '@on.auto/definitions/template';
 import { Predicate } from 'effect';
 
 import { ContentRefused } from '../failure/content-refused.ts';
@@ -7,7 +8,6 @@ import type { ModelFailure } from '../failure/model-failure.ts';
 import { ProviderUnavailable } from '../failure/provider-unavailable.ts';
 import { RateLimited } from '../failure/rate-limited.ts';
 import { RequestTooLong } from '../failure/request-too-long.ts';
-import { clip } from '../template/prompt-filters.ts';
 
 export interface ApiCallDetails {
   readonly provider: string;

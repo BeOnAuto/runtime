@@ -12850,7 +12850,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: the terminology, the format of a definition type, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: the terminology, the format of a definition type, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -12861,6 +12861,7 @@
                 "recall-function",
                 "prediction-function",
                 "workflow",
+                "templates",
                 "first-playbook",
                 "remember",
                 "give-tools",
