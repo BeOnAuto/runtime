@@ -8,7 +8,8 @@ type LicensePath =
   | '/licenses/activation-challenge'
   | '/licenses/refresh-challenge'
   | '/licenses/complete'
-  | '/licenses/time';
+  | '/licenses/time'
+  | '/licenses/usage-reports';
 export type LicenseTransport = (path: LicensePath, value: unknown) => Promise<unknown>;
 
 export interface LicenseProtocolOptions {

@@ -10,7 +10,8 @@ export function offlineChargeSchema(dialect: Dialect): readonly Statement[] {
       capability TEXT NOT NULL, evidence_digest TEXT NOT NULL,
       admitted_at BIGINT NOT NULL CHECK (admitted_at BETWEEN 0 AND 8640000000000000),
       committed_at BIGINT NOT NULL CHECK (committed_at >= admitted_at AND committed_at <= 8640000000000000),
-      UNIQUE (id, allocation_id), FOREIGN KEY (reservation_id, allocation_id) REFERENCES meter_reservations(id, allocation_id)
+      UNIQUE (id, allocation_id), FOREIGN KEY (reservation_id, allocation_id) REFERENCES meter_reservations(id, allocation_id),
+      FOREIGN KEY (command_id, allocation_id) REFERENCES meter_local_commands(id, allocation_id) DEFERRABLE INITIALLY DEFERRED
     )`,
     statement`CREATE TABLE IF NOT EXISTS meter_offline_charge_parts (
       charge_id TEXT NOT NULL, allocation_id TEXT NOT NULL, lot_id TEXT NOT NULL,

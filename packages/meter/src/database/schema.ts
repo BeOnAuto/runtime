@@ -3,6 +3,7 @@ import { statement, type ConnectionPorts } from '@on.auto/ledger';
 import { licenseStateSchema } from '../license-state/schema.ts';
 import { capacitySchema } from '../offline-capacity/schema.ts';
 import { offlineLedgerSchema } from '../offline-ledger/schema.ts';
+import { offlineReportSchema } from '../offline-reports/schema.ts';
 import { offlineReservationSchema } from '../offline-reservations/schema.ts';
 import { offlineChargeSchema } from '../offline-settlement/schema.ts';
 import { clockReceiptGuards } from './clock-receipt-guards.ts';
@@ -39,6 +40,7 @@ export async function prepareMeter(connection: ConnectionPorts): Promise<void> {
     ...offlineLedgerSchema(connection.dialect),
     ...offlineReservationSchema(connection.dialect),
     ...offlineChargeSchema(connection.dialect),
+    ...offlineReportSchema(connection.dialect),
     statement`CREATE TABLE IF NOT EXISTS meter_pending_license (
       id INTEGER PRIMARY KEY CHECK (id = 1), challenge_id TEXT NOT NULL UNIQUE,
       expected_revision BIGINT NOT NULL CHECK (expected_revision BETWEEN 0 AND 9007199254740991),

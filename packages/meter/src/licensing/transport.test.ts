@@ -56,6 +56,20 @@ describe('the fixed account-service transport', () => {
 });
 
 describe('bounded and private license exchanges', () => {
+  it('allows bounded signed usage bodies while limiting their acknowledgement to eight KiB', async () => {
+    const transport = licenseTransport(issuer, () => Promise.resolve(Response.json({ result: 'accepted' })));
+    expect(await transport('/licenses/usage-reports', { signedReport: 'x'.repeat(100_000) })).toEqual({
+      result: 'accepted',
+    });
+    await expect(transport('/licenses/usage-reports', { signedReport: 'x'.repeat(140_000) })).rejects.toThrow(
+      'license_request_invalid',
+    );
+    const oversized = licenseTransport(issuer, () => Promise.resolve(Response.json({ data: 'x'.repeat(8192) })));
+    await expect(oversized('/licenses/usage-reports', {})).rejects.toThrow('license_service_unavailable');
+  });
+});
+
+describe('private license request boundaries', () => {
   it('bounds outgoing UTF-8 bytes before reaching the authority', async () => {
     const transport = licenseTransport(issuer, () => Promise.reject(new Error('must_not_send')));
     await expect(transport('/licenses/activation-challenge', { activationKey: 'é'.repeat(5000) })).rejects.toThrow(

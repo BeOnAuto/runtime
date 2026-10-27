@@ -51,27 +51,29 @@ async function counters(read: ConnectionPorts['read'], allocation: OfflineAlloca
 }
 
 export function capacitySnapshot(connection: ConnectionPorts): Promise<CapacitySnapshot | undefined> {
-  return connection.readConsistently(async (read): Promise<CapacitySnapshot | undefined> => {
-    const head = await readCapacityHead({ read });
-    if (head.currentId === null) return undefined;
-    const [row] = stateRow(
-      await read(statement`SELECT s.revision, s.state, s.checkpoint, h.claims_json
+  return connection.readConsistently(readCapacitySnapshot);
+}
+
+export async function readCapacitySnapshot(read: ConnectionPorts['read']): Promise<CapacitySnapshot | undefined> {
+  const head = await readCapacityHead({ read });
+  if (head.currentId === null) return undefined;
+  const [row] = stateRow(
+    await read(statement`SELECT s.revision, s.state, s.checkpoint, h.claims_json
       FROM meter_capacity_state s JOIN meter_capacity_history h ON h.id = s.id WHERE s.id = ${head.currentId}`),
-    );
-    const claims: unknown = JSON.parse(row.claims_json);
-    const allocation = readAllocationClaims(claims);
-    if (
-      allocationPayload(allocation) !== row.claims_json ||
-      allocation.id !== head.currentId ||
-      allocation.epoch !== head.epoch
-    )
-      throw new Error('offline_capacity_projection_invalid');
-    return {
-      allocation,
-      revision: row.revision,
-      state: row.state,
-      checkpoint: row.checkpoint,
-      counters: await counters(read, allocation),
-    };
-  });
+  );
+  const claims: unknown = JSON.parse(row.claims_json);
+  const allocation = readAllocationClaims(claims);
+  if (
+    allocationPayload(allocation) !== row.claims_json ||
+    allocation.id !== head.currentId ||
+    allocation.epoch !== head.epoch
+  )
+    throw new Error('offline_capacity_projection_invalid');
+  return {
+    allocation,
+    revision: row.revision,
+    state: row.state,
+    checkpoint: row.checkpoint,
+    counters: await counters(read, allocation),
+  };
 }
