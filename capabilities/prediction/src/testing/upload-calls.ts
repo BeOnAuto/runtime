@@ -1,3 +1,4 @@
+import { admittingMeter } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   contentOfBytes,
@@ -66,6 +67,7 @@ export function uploading(content: RecordedContent = memoryRecordedContent()): U
     memoryLedger().layer,
     memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
     recordingReporter().layer,
+    admittingMeter,
   );
   const dispatcher = makeDispatcher([]);
   const uploadStream = (body: StreamedContent, sha256: string) =>

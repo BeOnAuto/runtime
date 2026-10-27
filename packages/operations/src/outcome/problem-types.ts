@@ -5,6 +5,10 @@ const reasonsOfKinds = {
   tools_called: 'conflict',
   effect_unknown: 'conflict',
   rebuilding: 'unavailable',
+  credits_exhausted: 'conflict',
+  license_required: 'conflict',
+  license_invalid: 'conflict',
+  metering_fault: 'conflict',
 } as const;
 
 export type KindWithType = keyof typeof reasonsOfKinds;
@@ -14,6 +18,10 @@ export const kindsWithTypes: readonly KindWithType[] = [
   'tools_called',
   'effect_unknown',
   'rebuilding',
+  'credits_exhausted',
+  'license_required',
+  'license_invalid',
+  'metering_fault',
 ];
 
 export function problemTypeOf(name: string): string {

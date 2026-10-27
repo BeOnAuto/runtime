@@ -6,6 +6,7 @@ import {
   type Capability,
   type SettleRun,
 } from '@on.auto/definitions';
+import { admittingMeter } from '@on.auto/definitions/testing';
 import {
   makeDispatcher,
   settle as settleCall,
@@ -44,6 +45,7 @@ export function playbookOn(ledger: MemoryLedger, capabilities: readonly Capabili
     ledger.layer,
     memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
     recordingReporter().layer,
+    admittingMeter,
   );
   const dispatcher = makeDispatcher([]);
   const createDefinition = defineCreateDefinition(capabilities);

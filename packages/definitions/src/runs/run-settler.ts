@@ -146,7 +146,7 @@ function settlerOver(
         Effect.tapDefect(() => Effect.ignore(settle(target, failure, by, lineage))),
       );
       const { state } = yield* settle(target, result, by, lineage);
-      return yield* runOf(run.id.toLowerCase(), state);
+      return yield* runOf(target.runId, state);
     });
 }
 

@@ -1,12 +1,6 @@
 import { authenticatorFor, createApiKey, type Authenticator } from '@on.auto/identity';
 import { allPermissions, makeCatalog, makeDispatcher, type DispatcherServices } from '@on.auto/operations';
-import {
-  memoryPlaybookRegistry,
-  memoryLedger,
-  recordingReporter,
-  type ReportedIncident,
-} from '@on.auto/operations/testing';
-import { Layer, Redacted, Tracer } from 'effect';
+import { Redacted, type Tracer } from 'effect';
 import type { MiddlewareHandler } from 'hono';
 
 import type { ApiEnv } from '../api-env.ts';
@@ -28,11 +22,12 @@ import {
 import { createTestHandler, type ReportedThrown } from './api-calls.ts';
 import { testShelf } from './guides.ts';
 import { notebookOperations } from './notebook.ts';
+import { operationServices, type OperationServices } from './operation-services.ts';
 
 export interface OperationServer {
   readonly handler: ApiHandler;
   readonly runtime: AppRuntime<DispatcherServices>;
-  readonly incidents: () => readonly ReportedIncident[];
+  readonly incidents: OperationServices['incidents'];
   readonly thrown: () => readonly ReportedThrown[];
   readonly mcpErrors: () => readonly string[];
 }
@@ -42,12 +37,6 @@ export const testServerInfo = { name: '@on.auto/runtime', version: '0.0.0-test' 
 export const testIdentityIssuer = 'https://identity.example';
 
 export const testRetryStateKeys: RetryStateKeys = { current: Redacted.make(new Uint8Array(32).fill(7)) };
-
-const knownPlaybooks = [
-  { org: 'acme', playbook: 'alpha' },
-  { org: 'acme', playbook: 'beta' },
-  { org: 'globex', playbook: 'gamma' },
-];
 
 export const acmeAdmin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
 
@@ -91,10 +80,6 @@ export interface OperationServerOptions {
   readonly callContext?: CallContext;
 }
 
-function tracingWith(tracer: Tracer.Tracer | undefined): Layer.Layer<never> {
-  return tracer === undefined ? Layer.empty : Layer.succeed(Tracer.Tracer, tracer);
-}
-
 type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys'> & {
   readonly heartbeatEveryMs: number | undefined;
 };
@@ -123,11 +108,8 @@ export async function operationServer({
   heartbeatEveryMs,
   callContext,
 }: OperationServerOptions = {}): Promise<OperationServer> {
-  const ledger = memoryLedger();
-  const recording = recordingReporter();
-  const runtime = await makeAppRuntime(
-    Layer.mergeAll(ledger.layer, memoryPlaybookRegistry(knownPlaybooks), recording.layer, tracingWith(tracer)),
-  );
+  const services = operationServices(tracer);
+  const runtime = await makeAppRuntime(services.layer);
   const catalog = makeCatalog(operations);
   const dispatcher = makeDispatcher([]);
   const mcpErrors: string[] = [];
@@ -151,7 +133,7 @@ export async function operationServer({
   return {
     handler,
     runtime,
-    incidents: recording.reported,
+    incidents: services.incidents,
     thrown: () => [...reported],
     mcpErrors: () => [...mcpErrors],
   };

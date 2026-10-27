@@ -55,10 +55,6 @@ export const recordRun = Effect.fnUntraced(function* (id: string, command: RunSt
   };
 });
 
-export const answeredRun = Effect.fnUntraced(function* (id: string, command: RunFinish, lineage: Lineage) {
-  return yield* answerOf(id, (yield* recordRun(id, command, lineage)).state);
-});
-
 export const answerAfterAnother = Effect.fnUntraced(function* (id: string) {
   const answer = yield* answerOf(id, yield* loadRunStream(id));
   return answer.status === 'started' ? yield* stillRunning : answer;

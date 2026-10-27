@@ -1,29 +1,46 @@
 import type { McpSession, ToolResult } from '@on.auto/api/testing';
+import { accountFake, accountServerOver, testSigners } from '@on.auto/meter/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 
-import type { ReasoningServer } from './reasoning-server.ts';
-import { servingWorkflows } from './workflow-server.ts';
+import { servingReasoning, type ReasoningServer } from './reasoning-server.ts';
 
 const toolServerKey = 'graph-api-key-4f1d9a7c2b';
 
 type InPlaybook = (input: Readonly<Record<string, unknown>>) => Readonly<Record<string, unknown>>;
 
-export async function servingWithAToolServer(replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
+export interface ToolServing extends ReasoningServer {
+  readonly licenseKey: string;
+}
+
+export async function servingWithAToolServer(replies: readonly ScriptedReplies[]): Promise<ToolServing> {
   const graph = await serveFakeMcp({ bearer: toolServerKey });
-  const server = await servingWorkflows(replies, {
+  const account = accountFake();
+  const accounts = await accountServerOver(account);
+  const environment = {
     GRAPH_API_KEY: toolServerKey,
     TOOL_SERVERS: JSON.stringify({
       graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'local' },
     }),
-  });
+    ACCOUNTS_ORIGIN: accounts.origin,
+  };
+  const server = await servingReasoning(replies, environment, undefined, { signers: testSigners });
   return {
     ...server,
+    licenseKey: account.keyFor('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a'),
     stop: async () => {
       await server.stop();
       await graph.close();
+      await accounts.close();
     },
   };
+}
+
+export async function licenseActivated(
+  session: McpSession,
+  { licenseKey }: Pick<ToolServing, 'licenseKey'>,
+): Promise<readonly (readonly [string, ToolResult])[]> {
+  return [['activate_license', await session.callTool('activate_license', { key: licenseKey })]];
 }
 
 export async function toolServerToolsCalled(

@@ -1,4 +1,5 @@
 import type { RuntimeAction } from '@on.auto/api';
+import type { KeyCommandConsole } from '@on.auto/identity';
 import { Effect, Function, Option, Schedule, Schema } from 'effect';
 
 import { longestStopMs } from '../lifecycle/shutdown.ts';
@@ -7,12 +8,17 @@ interface RuntimeRequest {
   readonly method: 'GET' | 'POST';
   readonly timeoutMs: number;
   readonly signal: Readonly<AbortSignal>;
+  readonly body?: string;
 }
 
 export type RuntimeFetch = (address: string, request: RuntimeRequest) => Promise<Response>;
 
-export const overTheNetwork: RuntimeFetch = (address, { method, timeoutMs, signal }) =>
-  fetch(address, { method, signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) });
+function sentBody(body: string | undefined): RequestInit {
+  return body === undefined ? {} : { body, headers: { 'content-type': 'application/json' } };
+}
+
+export const overTheNetwork: RuntimeFetch = (address, { method, timeoutMs, signal, body }) =>
+  fetch(address, { method, signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]), ...sentBody(body) });
 
 const RunningStatusSchema = Schema.Struct({
   version: Schema.String,
@@ -133,5 +139,32 @@ function isDown(probe: Probe): boolean {
 export function stoppedWhenAsked(port: number, fetch: RuntimeFetch): Effect.Effect<boolean> {
   return Effect.gen(function* () {
     return (yield* askedTo('stop', port, fetch)) && (yield* waitedFor(port, fetch, stopWaitMs, isDown));
+  });
+}
+
+interface Probing {
+  readonly fetch: RuntimeFetch;
+  readonly console: Pick<KeyCommandConsole, 'error'>;
+}
+
+const refusals: Readonly<Record<Exclude<Probe['state'], 'running'>, (port: number) => string>> = {
+  down: (port) => `No Auto Runtime is running on port ${port}`,
+  uncontrolled: (port) =>
+    `The Auto Runtime on port ${port} cannot be controlled from here: only one the auto-runtime command started in local mode can`,
+  foreign: (port) => `Another program answers on port ${port}, not Auto Runtime`,
+};
+
+export function whenRunning(
+  port: number,
+  asking: Probing,
+  answer: (status: RunningStatus) => Effect.Effect<number>,
+): Effect.Effect<number> {
+  return Effect.gen(function* () {
+    const probe = yield* probeAt(port, asking.fetch);
+    if (probe.state !== 'running') {
+      asking.console.error(refusals[probe.state](port));
+      return 1;
+    }
+    return yield* answer(probe.status);
   });
 }

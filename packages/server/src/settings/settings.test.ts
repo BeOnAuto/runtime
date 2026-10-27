@@ -80,6 +80,7 @@ describe('readSettings', () => {
       providerValues: new Map(),
       telemetry: undefined,
       usagePing: { distribution: 'source' },
+      license: { key: undefined, accounts: 'https://accounts.on.auto' },
       distribution: 'source',
       configFile: undefined,
     });
@@ -111,6 +112,8 @@ const everySetting = {
   }),
   AUTO_CLIENTS: 'true',
   CONSENT_SERVICE_URL: 'https://consent.example.com',
+  AUTO_RUNTIME_LICENSE_KEY: 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.c2VjcmV0',
+  ACCOUNTS_ORIGIN: 'https://accounts.example.com',
 };
 
 const everySettingRead = {
@@ -157,6 +160,10 @@ const everySettingRead = {
   providerValues: new Map(),
   telemetry: undefined,
   usagePing: { distribution: 'source' },
+  license: {
+    key: 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.c2VjcmV0',
+    accounts: 'https://accounts.example.com',
+  },
   distribution: 'source',
   configFile: undefined,
 };

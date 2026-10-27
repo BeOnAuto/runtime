@@ -2,12 +2,13 @@ import { startedInWords } from '@on.auto/api';
 import type { KeyCommandConsole } from '@on.auto/identity';
 import { Effect } from 'effect';
 
+import { runLicenseActivation } from './license-command.ts';
 import {
   askedTo,
-  probeAt,
   stoppedWhenAsked,
   throughARestart,
   waitedFor,
+  whenRunning,
   type Probe,
   type RunningStatus,
   type RuntimeFetch,
@@ -17,7 +18,7 @@ export type RuntimeCommand = 'status' | 'stop' | 'restart';
 
 const runtimeCommands: ReadonlySet<string> = new Set<RuntimeCommand>(['status', 'stop', 'restart']);
 
-export function isRuntimeCommand(name: string): name is RuntimeCommand {
+function isRuntimeCommand(name: string): name is RuntimeCommand {
   return runtimeCommands.has(name);
 }
 
@@ -89,20 +90,18 @@ function answered(
   return shown(status, port, asking);
 }
 
-const refusals: Readonly<Record<Exclude<Probe['state'], 'running'>, (port: number) => string>> = {
-  down: (port) => `No Auto Runtime is running on port ${port}`,
-  uncontrolled: (port) =>
-    `The Auto Runtime on port ${port} cannot be controlled from here: only one the auto-runtime command started in local mode can`,
-  foreign: (port) => `Another program answers on port ${port}, not Auto Runtime`,
-};
-
 export function runRuntimeCommand(command: RuntimeCommand, port: number, asking: RuntimeAsking): Effect.Effect<number> {
-  return Effect.gen(function* () {
-    const probe = yield* probeAt(port, asking.fetch);
-    if (probe.state !== 'running') {
-      asking.console.error(refusals[probe.state](port));
-      return 1;
-    }
-    return yield* answered(command, port, probe.status, asking);
-  });
+  return whenRunning(port, asking, (status) => answered(command, port, status, asking));
+}
+
+export function runtimeCommandOf(
+  args: readonly string[],
+): ((port: number, asking: RuntimeAsking) => Effect.Effect<number>) | undefined {
+  const [name = '', verb, key = ''] = args;
+  if (args.length === 1 && isRuntimeCommand(name)) {
+    return (port, asking) => runRuntimeCommand(name, port, asking);
+  }
+  return args.length === 3 && name === 'license' && verb === 'activate'
+    ? (port, asking) => runLicenseActivation(key, port, asking)
+    : undefined;
 }

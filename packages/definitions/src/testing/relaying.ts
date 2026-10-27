@@ -1,7 +1,7 @@
 import type { PlaybookRequest, Lineage } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Effect, type Layer } from 'effect';
 
-import { runSettler, type RunStreamAddress, type Settlement } from '../index.ts';
+import { runSettler, type RunMeter, type RunStreamAddress, type Settlement } from '../index.ts';
 import { acmeAdmin } from './callers.ts';
 import { probe } from './capabilities/probe.ts';
 import { relay } from './capabilities/relay.ts';
@@ -22,11 +22,11 @@ function handingOn(input: unknown): PlaybookRequest {
   return toAlpha(acmeAdmin, { type: 'relay', name: 'hand-on', input, run_id: relayedId });
 }
 
-export async function withHandOn() {
+export async function withHandOn(meter?: Layer.Layer<RunMeter>) {
   const relayer = relay();
   const prober = probe();
   const operations = definitionOperationsFor([relayer.capability, prober.capability]);
-  const definitions = harness();
+  const definitions = harness(meter);
   await definitions.call(
     operations.createDefinition,
     toAlpha(acmeAdmin, { type: 'relay', name: 'hand-on', source: 'text' }),

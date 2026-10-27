@@ -171,12 +171,8 @@ export { defineHttpOperation, type HttpOperation } from './definition/http-opera
 export { isStreamedBody, mediaTypeOfBody } from './definition/http-body.ts';
 export type { HttpBody, OfferedLink, StreamedBody } from './definition/definition.ts';
 export { OrgReader } from './ledger/org-reader.ts';
-export {
-  explanationOf,
-  refusalInWords,
-  unsuccessfulWords,
-  type ExplainedRejection,
-} from './plain-language/explanation.ts';
+export { explanationOf, unsuccessfulWords, type ExplainedRejection } from './plain-language/explanation.ts';
+export { refusalInWords } from './plain-language/refusal-words.ts';
 export {
   alternatives,
   articled,

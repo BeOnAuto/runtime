@@ -3,6 +3,7 @@ import type { Cancelled, Failed, Rejected, RejectionReason } from '../outcome/ou
 import type { RejectionBecause } from '../outcome/rejection-because.ts';
 import type { RejectionKind } from '../outcome/rejection.ts';
 import { connectionBecauses, connectionExplanations, connectionRemedies } from './connection-explanations.ts';
+import { creditExplanations } from './credit-explanations.ts';
 import type { Explanation, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
 
@@ -98,6 +99,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
   },
   ...predictionExplanations,
   ...connectionExplanations,
+  ...creditExplanations,
   requested: {
     why: 'it was cancelled at the request of someone allowed to change the playbook',
     remedy: ranUntilCancelled,
@@ -217,26 +219,6 @@ const explanationByKindAndBecause: Readonly<
 };
 
 const noRemedies: Remedies = {};
-
-const refusalByReason: Readonly<Record<RejectionReason, string>> = {
-  invalid_input: 'refused its input',
-  unavailable: 'was not available',
-  not_found: 'could not be found',
-  forbidden: 'was not allowed',
-  conflict: 'could not go through',
-  cancelled: 'was cancelled',
-  unanswered: 'went unanswered',
-};
-
-const refusedForAnotherReason = 'did not go through';
-
-function isRejectionReason(reason: string): reason is RejectionReason {
-  return Object.hasOwn(refusalByReason, reason);
-}
-
-export function refusalInWords(reason: string): string {
-  return isRejectionReason(reason) ? refusalByReason[reason] : refusedForAnotherReason;
-}
 
 export function explanationOf(
   { reason, kind, because }: ExplainedRejection,

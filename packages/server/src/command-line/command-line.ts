@@ -7,7 +7,7 @@ import { Effect } from 'effect';
 import { instanceStartedInBackground } from '../background-start/background-process.ts';
 import { release } from '../composition/release.ts';
 import type { LocalStarting } from '../local-runtime/local-control.ts';
-import { isRuntimeCommand, runRuntimeCommand, type RuntimeAsking } from '../local-runtime/runtime-commands.ts';
+import { runtimeCommandOf, type RuntimeAsking } from '../local-runtime/runtime-commands.ts';
 import { runtimePortOf } from '../local-runtime/runtime-port.ts';
 import { localSettings, type LocalPlace } from './local-settings.ts';
 
@@ -27,6 +27,7 @@ const usage = [
   '  status                 Show the Auto Runtime running on this computer: its version, process, start and directory',
   '  stop                   Stop the Auto Runtime running on this computer',
   '  restart                Restart the Auto Runtime running on this computer',
+  '  license activate <key> Activate the license of the Auto Runtime running on this computer with the key Studio gave',
   '  key --org <org id>     Issue an API key for a machine or a pipeline; --help after it lists its options',
   '  --version              Print the version',
   '  --help                 Print this help',
@@ -91,8 +92,9 @@ export function runCommandLine(args: readonly string[], host: CommandLineHost): 
   if (args.length === 1 && name === 'mcp') {
     return relayed(host);
   }
-  if (args.length === 1 && isRuntimeCommand(name)) {
-    return Effect.runPromise(runRuntimeCommand(name, runtimePortOf(host.environment, host.place.home), host));
+  const command = runtimeCommandOf(args);
+  if (command !== undefined) {
+    return Effect.runPromise(command(runtimePortOf(host.environment, host.place.home), host));
   }
   return Promise.resolve(answered(args, host));
 }

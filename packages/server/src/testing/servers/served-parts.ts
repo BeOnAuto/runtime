@@ -1,3 +1,4 @@
+import type { Signers } from '@on.auto/meter';
 import { Ledger } from '@on.auto/operations';
 import type { LanguageModel } from '@on.auto/reasoning';
 import type { Timing } from '@on.auto/tool-servers';
@@ -17,6 +18,7 @@ export interface ServedParts {
   readonly ledgerOver?: LedgerOver;
   readonly admit?: LanguageModel['Service']['admit'];
   readonly ledger?: TemporaryLedger;
+  readonly signers?: Signers;
 }
 
 export function composedWithTheLedgerOver(

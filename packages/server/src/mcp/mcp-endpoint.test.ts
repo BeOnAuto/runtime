@@ -44,7 +44,7 @@ const definitionTools = [
 
 const connectionTools = ['add_connection', 'list_connections', 'remove_connection'];
 
-const orgTools = [...playbookTools, 'list_models', 'search', ...connectionTools];
+const orgTools = [...playbookTools, 'list_models', 'search', ...connectionTools, 'activate_license'];
 
 const insideAPlaybookAlone = definitionTools.filter((name) => !orgTools.includes(name));
 
@@ -212,12 +212,13 @@ function reachingOutside(tools: readonly ListedTool[]): readonly string[] {
 }
 
 describe('the open-world hint of the tools of /mcp', () => {
-  it('is set for list_models and run_definition, which reach model providers, for the four tools over the tool servers, which reach them, and for no other tool', async () => {
+  it('is set for list_models and run_definition, which reach model providers, for the four tools over the tool servers, which reach them, for activate_license, which reaches Auto, and for no other tool', async () => {
     server = await servingReasoning([]);
 
     expect(reachingOutside(await listingOn('/mcp'))).toEqual([
       'list_models',
       'search',
+      'activate_license',
       'run_definition',
       'introspect',
       'dry_run',

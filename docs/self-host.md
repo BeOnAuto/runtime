@@ -62,6 +62,7 @@ With PostgreSQL, the container keeps nothing of its own. [Run with PostgreSQL](s
 - [Let people add connections](self-host/connections.md): the tool servers people add to an org through their agents and approve in Studio, their credentials, and the rules you set for them
 - [Workflow storage and failover](self-host/workflows.md): where runs are kept, how a server stops and restarts, and how several servers share the workflows
 - [Send telemetry](self-host/telemetry.md): traces, metrics and logs over OTLP, what they record and leave out, and Grafana on your machine to read them
+- [Register and license a runtime](self-host/licenses.md): the 100 actions before registration, registering in Studio, the ways to activate a key, what each refusal means, and faults
 - [Troubleshooting](self-host/troubleshooting.md): common problems, from a busy port to error responses
 
 The [configuration reference](self-host/configuration.md) lists every setting, the configuration file, and the tool servers functions may call. The [model settings reference](reference/model-settings.md) holds aliases, allowed and declared models, and what happens when a model call fails. The [sign-in and token reference](reference/authentication.md) sets out how Auto checks tokens and what a refused client is told.

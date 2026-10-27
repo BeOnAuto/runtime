@@ -14,7 +14,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { interactionsCalled } from '../testing/interaction-servers/interaction-calls.ts';
 import { servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { servingWithAToolServer, toolServerToolsCalled } from '../testing/servers/tool-server-calls.ts';
+import {
+  licenseActivated,
+  servingWithAToolServer,
+  toolServerToolsCalled,
+} from '../testing/servers/tool-server-calls.ts';
 import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
 
 type Called = readonly (readonly [string, ToolResult])[];
@@ -228,11 +232,13 @@ const audienceWords: Readonly<Record<string, string>> = {
 
 describe('the plain words that lead each result over MCP', () => {
   it('lead every tool’s success and every kind of error, name no internal term, and come before the details', async () => {
-    server = await servingWithAToolServer(replies);
+    const served = await servingWithAToolServer(replies);
+    server = served;
 
     const { tools, successes, errors } = await onMcp(async (session) => ({
       tools: toolNamesIn(await session.listTools()).filter((name) => name !== 'get_guide'),
       successes: [
+        ...(await licenseActivated(session, served)),
         ...(await playbooksCalled(session)),
         ...(await reasonFunctionsCalled(session)),
         ...(await workflowsCalled(session)),

@@ -1,4 +1,4 @@
-import { clientMetadataRoutes, type AppRuntime, type RegisterRoutes, type RetryStateKeys } from '@on.auto/api';
+import { clientMetadataRoutes, type RegisterRoutes, type RetryStateKeys } from '@on.auto/api';
 import {
   makeConnectionOperations,
   makeConnectionSource,
@@ -8,12 +8,12 @@ import {
   type RuntimeAccess,
 } from '@on.auto/connections';
 import { accessModeOf } from '@on.auto/identity';
-import type { DispatcherServices } from '@on.auto/operations';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/served-consent.ts';
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
+import { licenseServedBy, type ServedLicense } from '../licensing/served-license.ts';
 import { retryStateKeysOf, secretsKeptBy } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
 
@@ -25,6 +25,7 @@ export interface StoresAndConnections {
   readonly source: ReturnType<typeof makeConnectionSource>;
   readonly offering: ReturnType<typeof makeProviderOffering>;
   readonly clientMetadata: RegisterRoutes;
+  readonly license: ServedLicense;
 }
 
 type ServingSettings = Pick<
@@ -41,6 +42,7 @@ type ServingSettings = Pick<
   | 'accessMode'
   | 'studio'
   | 'registeredClients'
+  | 'license'
 >;
 
 function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): RuntimeAccess {
@@ -71,7 +73,7 @@ function connectionServicesOf(settings: ServingSettings, { secrets, consent, pag
 }
 
 function sourceServedBy(
-  runtime: AppRuntime<DispatcherServices>,
+  runtime: Parameters<typeof runtimeLedger>[0],
   settings: ServingSettings,
   { secrets, pages }: Omit<Composed, 'consent'>,
 ): ReturnType<typeof makeConnectionSource> {
@@ -88,7 +90,7 @@ function sourceServedBy(
 }
 
 export async function storesAndConnectionsOf(
-  runtime: AppRuntime<DispatcherServices>,
+  runtime: Parameters<typeof licenseServedBy>[0],
   settings: Settings,
   database: LedgerDatabase,
   ownOrigin: () => string,
@@ -106,5 +108,6 @@ export async function storesAndConnectionsOf(
     source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),
     offering: makeProviderOffering(services),
     clientMetadata: clientMetadataRoutes(servedClientMetadataDocumentOf(settings, pages)),
+    license: await licenseServedBy(runtime, settings.license.key, stores.secrets),
   };
 }
