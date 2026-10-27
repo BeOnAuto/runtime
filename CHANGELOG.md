@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.0](https://github.com/BeOnAuto/runtime/compare/v0.28.0...v0.29.0) (2026-10-27)
+
+
+### Features
+
+* **connections:** a refused credential breaks the connection, and a link reconnects it ([#345](https://github.com/BeOnAuto/runtime/issues/345)) ([8928f6b](https://github.com/BeOnAuto/runtime/commit/8928f6b40f9f6cceed96397b39be2f2c1d7beaf1))
+
 ## [0.28.0](https://github.com/BeOnAuto/runtime/compare/v0.27.0...v0.28.0) (2026-10-27)
 
 
