@@ -19,7 +19,14 @@ export function middlewareFor(
   const pages = { studio, allowedOrigins };
   return [
     ...(requests === undefined ? [] : [requests]),
-    landingPageFor({ control: runtimeControl, studio, installId, licenseNotice, style: pageStyle }),
+    landingPageFor({
+      control: runtimeControl,
+      studio,
+      resource: authenticator.resource,
+      installId,
+      licenseNotice,
+      style: pageStyle,
+    }),
     ...requestIdAndSecurityHeadersFor(studio),
     ...[validateOrigin(pages, authenticator.resource), ...hostValidation].map((middleware) =>
       exceptOn(isPublic, middleware),

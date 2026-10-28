@@ -1,8 +1,9 @@
-import { studioLinkOf, type StudioSettings } from '@on.auto/identity';
+import { studioLinkOf, type ProtectedResource, type StudioSettings } from '@on.auto/identity';
 import type { Context, MiddlewareHandler } from 'hono';
 import { html, raw } from 'hono/html';
 
 import type { ApiEnv } from '../api-env.ts';
+import { publicOriginOf } from '../discovery/public-addresses.ts';
 import { brand } from './auto-logo.ts';
 import type { PageStyle } from './page-style.ts';
 import {
@@ -137,9 +138,12 @@ function guarded(answer: Answer): Answer {
     }) ?? answer(c);
 }
 
-function landingAnswerOf({ control, studio, installId, licenseNotice }: Landing, { head, style }: Dressing): Answer {
+function landingAnswerOf(
+  { control, studio, resource, installId, licenseNotice }: Landing,
+  { head, style }: Dressing,
+): Answer {
   return async (c) => {
-    const server = new URL(c.req.url);
+    const server = new URL(publicOriginOf(c, resource));
     const studioLink = studioLinkOf(studio, {
       ownOrigin: server.origin,
       openedFrom: 'runtime-page',
@@ -174,6 +178,7 @@ function controlAnswersOf(control: RuntimeControl, dressing: Dressing): Readonly
 interface Landing {
   readonly control: RuntimeControl | undefined;
   readonly studio: StudioSettings;
+  readonly resource: ProtectedResource | undefined;
   readonly installId: (() => string | undefined) | undefined;
   readonly licenseNotice: (() => Promise<string | undefined>) | undefined;
   readonly style: PageStyle;
