@@ -10,5 +10,8 @@ credentials:
     authorization_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/token
     scope: fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask offline_access
+    says:
+      fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask: Ask Work IQ about Microsoft 365 mail, meetings, files and chats, and act on them where the tenant allows.
+      offline_access: Keep access to Work IQ when nobody is signed in.
     clients: [registered]
     description: Sign in with your work account and allow Work IQ.

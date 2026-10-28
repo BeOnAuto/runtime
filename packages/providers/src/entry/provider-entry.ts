@@ -50,11 +50,11 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   ),
   credentials: Schema.Array(CredentialWaySchema).check(Schema.isMinLength(1)).annotate({
     description:
-      'The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials or none',
+      'The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials or none; a way that asks a scope says, beside it, what a connection can do through each scope',
   }),
 });
 
-export const entryProse: readonly string[] = ['title', 'description'];
+export const entryProse: readonly string[] = ['title', 'description', 'says'];
 
 export type ProviderEntry = typeof ProviderEntryFieldsSchema.Type;
 

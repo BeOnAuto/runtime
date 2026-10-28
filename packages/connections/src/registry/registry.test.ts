@@ -19,6 +19,7 @@ const crm = {
   placeholders: null,
   entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
   credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+  says: {},
   added_by: { id: 'person:ada', name: 'Ada Lovelace' },
 } as const;
 
@@ -64,7 +65,9 @@ describe('an added connection, as the stream folds it', () => {
         added_at: '2026-10-15T14:00:00.000Z',
         connected_at: null,
         connected_by: null,
+        asked_scopes: [],
         granted_scope: null,
+        granted_scopes: null,
         broken: null,
       },
       link: { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
@@ -105,15 +108,18 @@ describe('a later link of a connection, as the stream folds it', () => {
 });
 
 describe('a connected connection, as the stream folds it', () => {
-  it('takes a break with its sentence, and a removal, which keeps the id of the secret to forget', () => {
+  it('takes a break with its kind, its sentence and its time, and a removal, which keeps the id of the secret to forget', () => {
     const breaking: ConnectionEvent = {
       type: 'connection_broken',
-      data: { connection: '0199-crm', reason: 'Its credential cannot be read' },
+      data: { connection: '0199-crm', kind: 'credential_gone', reason: 'Its credential is gone' },
     };
     const removal: ConnectionEvent = { type: 'connection_removed', data: { connection: '0199-crm' } };
 
     expect(crmAfter(connection, breaking)).toMatchObject({
-      connection: { status: 'broken', broken: 'Its credential cannot be read' },
+      connection: {
+        status: 'broken',
+        broken: { kind: 'credential_gone', detail: 'Its credential is gone', at: '2026-10-15T14:05:00.000Z' },
+      },
     });
     expect(crmAfter(connection, removal)).toMatchObject({
       connection: { status: 'removed', broken: null },
@@ -155,6 +161,7 @@ describe('a connection of client credentials whose client id is given on the pag
         placeholders: null,
         entry: { document: 'https://billing.example.com/openapi.json' },
         credential: { kind: 'client_credentials', issuer },
+        says: {},
         added_by: { id: 'person:ada', name: 'Ada Lovelace' },
       },
     };
@@ -172,5 +179,53 @@ describe('a connection of client credentials whose client id is given on the pag
       { kind: 'client_credentials', issuer },
       { kind: 'client_credentials', issuer, client_id: 'acme' },
     ]);
+  });
+});
+
+const filesRead = 'Read the files of the account.';
+
+describe('the scopes of a connection of consent, as the stream folds it', () => {
+  it('are those its credential asks, in its words, and those granted, in the words of those asked or bare', () => {
+    const drive: ConnectionEvent = {
+      type: 'connection_added',
+      data: {
+        ...crm,
+        connection: '0199-drive',
+        name: 'drive',
+        provider: 'drive',
+        placeholders: {},
+        credential: {
+          kind: 'authorization',
+          issuer: 'https://accounts.drive.example.com',
+          scope: 'files.read files.write',
+        },
+        says: { 'files.read': filesRead, 'files.write': 'Create and change the files of the account.' },
+      },
+    };
+    const granted: ConnectionEvent = {
+      type: 'connection_connected',
+      data: {
+        connection: '0199-drive',
+        secret_id: 'secret-3',
+        scope: 'files.read offline_access',
+        connected_by: { id: 'person:grace', name: 'Grace Hopper' },
+      },
+    };
+    const registry = [drive, granted].reduce(
+      (state, event) => evolvedWith(state, event, later),
+      registryDecider.initialState,
+    );
+
+    expect(registry.get('0199-drive')?.connection).toMatchObject({
+      asked_scopes: [
+        { name: 'files.read', says: filesRead },
+        { name: 'files.write', says: 'Create and change the files of the account.' },
+      ],
+      granted_scope: 'files.read offline_access',
+      granted_scopes: [
+        { name: 'files.read', says: filesRead },
+        { name: 'offline_access', says: null },
+      ],
+    });
   });
 });

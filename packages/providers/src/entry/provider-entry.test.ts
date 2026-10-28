@@ -97,7 +97,7 @@ describe('the ways of an entry', () => {
       ['/credentials/1/issuer', 'Expected no issuer: a none way takes no other field but its description'],
     ]);
     expect(problemsOf({ ...ledgers, credentials: [{ kind: 'client_credentials', in: 'header' }] })).toEqual([
-      ['/credentials/0/in', 'Expected no in: a client_credentials way takes issuer and scope'],
+      ['/credentials/0/in', 'Expected no in: a client_credentials way takes issuer, scope, and says'],
       ['/credentials/0/issuer', 'Expected issuer, which a client_credentials way takes'],
     ]);
   });

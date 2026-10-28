@@ -62,15 +62,21 @@ describe('the text the model sees of a result', () => {
 });
 
 describe('the tools a server lists', () => {
-  it('are read with the four hints of their annotations and nothing else', () => {
+  it('are read with their title, the four hints of their annotations and the title of the annotations, and nothing else', () => {
     const hints = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
     const listed = [
-      { name: 'search', title: 'Search', inputSchema: { type: 'object' }, annotations: { ...hints, title: 'Search' } },
+      {
+        name: 'search',
+        title: 'Search',
+        inputSchema: { type: 'object' },
+        annotations: { ...hints, title: 'Search' },
+        icons: [],
+      },
       { name: 'post', inputSchema: { type: 'object' } },
     ];
 
     expect(decodeListedTools({ tools: listed }).tools).toEqual([
-      { name: 'search', inputSchema: { type: 'object' }, annotations: hints },
+      { name: 'search', title: 'Search', inputSchema: { type: 'object' }, annotations: { ...hints, title: 'Search' } },
       { name: 'post', inputSchema: { type: 'object' } },
     ]);
   });

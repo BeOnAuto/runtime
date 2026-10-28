@@ -16,9 +16,22 @@ credentials:
   - kind: client_credentials
     issuer: https://ims-na1.adobelogin.com
     scope: openid session AdobeID read_organizations additional_info.projectedProductContext
+    says:
+      openid: Read the unique identifier of the Adobe account the connection signs in as.
+      session: Keep a session at Adobe IMS for the technical account of the credential.
+      AdobeID: Act as the Adobe ID of the account in calls to Adobe APIs.
+      read_organizations: Read the Adobe organizations the account belongs to.
+      additional_info.projectedProductContext: Read the Adobe product profiles and Adobe Analytics permissions of the account.
     description: The client id and secret of a Server-to-Server credential of an Adobe Developer Console project with the Adobe Analytics API.
   - kind: authorization
     issuer: https://ims-na1.adobelogin.com
     scope: openid AdobeID read_organizations additional_info.projectedProductContext additional_info.job_function offline_access
+    says:
+      openid: Read the unique identifier of the Adobe account the connection signs in as.
+      AdobeID: Act as the Adobe ID of the account in calls to Adobe APIs.
+      read_organizations: Read the Adobe organizations the account belongs to.
+      additional_info.projectedProductContext: Read the Adobe product profiles and Adobe Analytics permissions of the account.
+      additional_info.job_function: Read the job function in the Adobe profile of the account.
+      offline_access: Keep access to Adobe Analytics when nobody is signed in.
     clients: [registered]
     description: Sign in with your Adobe ID and allow Adobe Analytics.

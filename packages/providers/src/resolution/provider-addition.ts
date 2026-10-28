@@ -46,6 +46,7 @@ export interface ProviderAddition {
   readonly credential: ProviderCredential;
   readonly provider: string;
   readonly placeholders: Readonly<Record<string, string>>;
+  readonly says?: Readonly<Record<string, string>>;
 }
 
 type Placed = Readonly<Record<string, string>>;
@@ -152,6 +153,7 @@ export function additionOfProvider(
         credential: credentialOf(chosen, values),
         provider: provider.name,
         placeholders,
+        ...(chosen.says === undefined ? {} : { says: chosen.says }),
       })),
   });
 }

@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/drive.file
+    says:
+      https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
     parameters:
       access_type: offline
       prompt: consent

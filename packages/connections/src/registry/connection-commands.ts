@@ -2,6 +2,7 @@ import type { RecordedCaller } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import type { ConnectionEntry, ConnectionType } from './connection-entry.ts';
+import type { BrokenKind } from './connection.ts';
 import type { Credential } from './credential.ts';
 import type { OpenLink } from './registry.ts';
 
@@ -14,6 +15,7 @@ export interface ConnectionAddition {
   readonly placeholders: Readonly<Record<string, string>> | null;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
+  readonly says: Readonly<Record<string, string>>;
   readonly added_by: RecordedCaller;
   readonly link: OpenLink;
 }
@@ -66,6 +68,7 @@ export interface ConnectionBreaking {
   readonly type: 'break';
   readonly connection: string;
   readonly connected_at: string;
+  readonly kind: BrokenKind;
   readonly reason: string;
 }
 

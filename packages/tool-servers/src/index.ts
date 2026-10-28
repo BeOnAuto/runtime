@@ -123,6 +123,7 @@ export { defineSearch } from './search/search.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
 export type { OfferedProvider, ProviderOffering } from './search/found-providers.ts';
 export { defineIntrospect } from './tool-reads/introspect.ts';
+export { defineListConnectionTools } from './listing/list-connection-tools.ts';
 export { defineValidate } from './tool-reads/validate.ts';
 export { defineDryRun } from './tool-reads/dry-run.ts';
 export { defineExecute } from './execute/execute.ts';

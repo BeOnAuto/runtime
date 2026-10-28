@@ -20,6 +20,7 @@ const driveAdded: ConnectionEvent = {
     placeholders: {},
     entry: { url: 'https://mcp.drive.example.com/mcp' },
     credential: { kind: 'authorization', issuer: 'https://accounts.drive.example.com' },
+    says: {},
     added_by: { id: 'person:ada', name: 'Ada Lovelace' },
   },
 };

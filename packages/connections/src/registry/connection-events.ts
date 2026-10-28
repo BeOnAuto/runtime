@@ -3,6 +3,7 @@ import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
+import { BrokenKindSchema } from './connection.ts';
 import { CredentialSchema, type Credential } from './credential.ts';
 
 const ofTheConnection = { connection: Schema.String };
@@ -41,6 +42,7 @@ export const ConnectionEventSchema = Schema.Union([
       placeholders: Schema.NullOr(Schema.Record(Schema.String, Schema.String)),
       entry: ConnectionEntrySchema,
       credential: CredentialSchema,
+      says: Schema.Record(Schema.String, Schema.String),
       added_by: RecordedCallerSchema,
     }).check(Schema.makeFilter(clientIssuesOf)),
     ActedContextSchema,
@@ -76,7 +78,11 @@ export const ConnectionEventSchema = Schema.Union([
     }),
     ActedContextSchema,
   ),
-  factOf('connection_broken', Schema.Struct({ ...ofTheConnection, reason: Schema.String }), ActedContextSchema),
+  factOf(
+    'connection_broken',
+    Schema.Struct({ ...ofTheConnection, kind: BrokenKindSchema, reason: Schema.String }),
+    ActedContextSchema,
+  ),
   factOf('connection_removed', Schema.Struct(ofTheConnection), ActedContextSchema),
 ]);
 

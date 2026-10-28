@@ -88,6 +88,7 @@ export function toolAccessOf(
     listServers: (scope, named) => Effect.flatMap(tools, (access) => access.listServers(scope, named)),
     listServersInOrg: (scope, named) => Effect.flatMap(tools, (access) => access.listServersInOrg(scope, named)),
     lookUp: (address, reference) => Effect.flatMap(tools, (access) => access.lookUp(address, reference)),
+    listConnection: (org, connection) => Effect.flatMap(tools, (access) => access.listConnection(org, connection)),
     close: () => Promise.resolve(),
   };
 }

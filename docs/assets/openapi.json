@@ -1391,6 +1391,183 @@
         ]
       }
     },
+    "/orgs/{org}/connections/{id}/tools": {
+      "get": {
+        "operationId": "list_connection_tools",
+        "summary": "List the tools of a connection",
+        "description": "Lists the tools a connection's server offers now, those its entry allows, by name, a page at a time. Each has its title where the server gives one, its whole description and its hints: read_only, destructive, idempotent and open_world. Use it to show the person what one connection can do; search finds tools across servers. `cursor` is the next_cursor of the page before, to read on only as the person needs.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "The most items to answer with, from 1 to 100; 20 when left out"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The next_cursor of the page before, or the cursor of an item, to read on after it"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_connection_tools/output",
+                  "type": "object",
+                  "properties": {
+                    "connection": {
+                      "type": "string",
+                      "description": "The id of the connection, as given"
+                    },
+                    "server": {
+                      "type": "string",
+                      "description": "The name of the connection, which a function writes before the slash"
+                    },
+                    "tools": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the tool, which a function writes after the slash"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "What a person reads as its name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "What the tool does, as its server describes it, cut to 4 KiB; empty when it gives none"
+                          },
+                          "read_only": {
+                            "type": "boolean",
+                            "description": "Whether its server marks the tool read-only"
+                          },
+                          "destructive": {
+                            "type": "boolean",
+                            "description": "Whether its server marks the tool destructive, where it is not read-only"
+                          },
+                          "idempotent": {
+                            "type": "boolean",
+                            "description": "Whether its server marks the tool idempotent"
+                          },
+                          "open_world": {
+                            "type": "boolean",
+                            "description": "Whether its server marks the tool as reaching beyond its server"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "description"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A tool, with the hints its server gives it, each absent where it gives none"
+                      },
+                      "description": "The tools of this page, by name"
+                    },
+                    "has_more": {
+                      "type": "boolean",
+                      "description": "Whether more remains to read after this page"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "connection",
+                    "server",
+                    "tools",
+                    "has_more",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/connections": {
       "post": {
         "operationId": "add_connection",
@@ -1828,6 +2005,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -1838,6 +2044,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -1853,13 +2095,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     },
                     "connect": {
                       "type": "object",
@@ -1908,7 +2179,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -2273,6 +2546,35 @@
                           ],
                           "description": "The caller who connected it, approving it or giving its credential, by id and name"
                         },
+                        "asked_scopes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                        },
                         "granted_scope": {
                           "anyOf": [
                             {
@@ -2283,6 +2585,42 @@
                             }
                           ],
                           "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                        },
+                        "granted_scopes": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "description": "The scope, as the authorization server names it"
+                                  },
+                                  "says": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "says"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                         },
                         "credential_ends_with": {
                           "anyOf": [
@@ -2298,13 +2636,42 @@
                         "broken": {
                           "anyOf": [
                             {
-                              "type": "string"
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "credential_refused",
+                                    "credential_wanted",
+                                    "credential_gone",
+                                    "credential_not_tokens",
+                                    "consent_ended",
+                                    "client_gone",
+                                    "key_unknown"
+                                  ],
+                                  "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                                },
+                                "detail": {
+                                  "type": "string",
+                                  "description": "Why, in the runtime's words, which say what mends it"
+                                },
+                                "at": {
+                                  "type": "string",
+                                  "description": "When it broke, in ISO 8601 UTC"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "detail",
+                                "at"
+                              ],
+                              "additionalProperties": false
                             },
                             {
                               "type": "null"
                             }
                           ],
-                          "description": "Why it is broken, while it is"
+                          "description": "Why and since when it is broken, while it is"
                         }
                       },
                       "required": [
@@ -2320,7 +2687,9 @@
                         "added_at",
                         "connected_at",
                         "connected_by",
+                        "asked_scopes",
                         "granted_scope",
+                        "granted_scopes",
                         "credential_ends_with",
                         "broken"
                       ],
@@ -2672,6 +3041,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -2682,6 +3080,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -2697,13 +3131,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     }
                   },
                   "required": [
@@ -2719,7 +3182,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -3067,6 +3532,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -3077,6 +3571,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -3092,13 +3622,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     }
                   },
                   "required": [
@@ -3114,7 +3673,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -3481,6 +4042,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -3491,6 +4081,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -3506,13 +4132,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     },
                     "connect": {
                       "type": "object",
@@ -3561,7 +4216,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -3925,6 +4582,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -3935,6 +4621,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -3950,13 +4672,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     },
                     "link": {
                       "type": "object",
@@ -4014,7 +4765,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken",
                     "link"
@@ -4389,6 +5142,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -4399,6 +5181,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -4414,13 +5232,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     }
                   },
                   "required": [
@@ -4436,7 +5283,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -4837,6 +5686,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -4847,6 +5725,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -4862,13 +5776,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     }
                   },
                   "required": [
@@ -4884,7 +5827,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -5454,6 +6399,35 @@
                       ],
                       "description": "The caller who connected it, approving it or giving its credential, by id and name"
                     },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                    },
                     "granted_scope": {
                       "anyOf": [
                         {
@@ -5464,6 +6438,42 @@
                         }
                       ],
                       "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
                     },
                     "credential_ends_with": {
                       "anyOf": [
@@ -5479,13 +6489,42 @@
                     "broken": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Why it is broken, while it is"
+                      "description": "Why and since when it is broken, while it is"
                     }
                   },
                   "required": [
@@ -5501,7 +6540,9 @@
                     "added_at",
                     "connected_at",
                     "connected_by",
+                    "asked_scopes",
                     "granted_scope",
+                    "granted_scopes",
                     "credential_ends_with",
                     "broken"
                   ],
@@ -5671,6 +6712,28 @@
                               "scope": {
                                 "type": "string"
                               },
+                              "scopes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "description": "A scope of scope, as the authorization server names it"
+                                    },
+                                    "says": {
+                                      "type": "string",
+                                      "description": "What a connection can do through it, in one sentence"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "says"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The scopes the way asks, in its order, each with its words; empty where it asks none"
+                              },
                               "description": {
                                 "type": "string"
                               },
@@ -5685,6 +6748,7 @@
                             },
                             "required": [
                               "kind",
+                              "scopes",
                               "offered"
                             ],
                             "additionalProperties": false,

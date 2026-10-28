@@ -22,6 +22,8 @@ import { servingWords } from './serving-words.ts';
 
 export type Given = Effect.Effect<GivenValue | undefined, ConnectionUnready>;
 
+type BrokenKind = NonNullable<KeptConnection['connection']['broken']>['kind'];
+
 const endedWords: Readonly<Record<TokensEnded, (name: string) => string>> = {
   consent_ended: servingWords.consentEnded,
   client_gone: servingWords.clientGone,
@@ -36,7 +38,7 @@ export function connectedAtOf({ connected_at: connectedAt }: KeptConnection['con
   return Option.getOrThrow(Option.fromNullishOr(connectedAt));
 }
 
-function recordedBreak({ org, kept, services }: Serving, reason: string): Effect.Effect<void> {
+function recordedBreak({ org, kept, services }: Serving, kind: BrokenKind, reason: string): Effect.Effect<void> {
   const { id, name } = kept.connection;
   const connectedAt = connectedAtOf(kept.connection);
   return Effect.gen(function* () {
@@ -45,6 +47,7 @@ function recordedBreak({ org, kept, services }: Serving, reason: string): Effect
       type: 'break',
       connection: id,
       connected_at: connectedAt,
+      kind,
       reason,
       by: byTheRuntime,
       at,
@@ -56,9 +59,9 @@ function recordedBreak({ org, kept, services }: Serving, reason: string): Effect
   });
 }
 
-function brokenWith(serving: Serving, reason: string): Effect.Effect<never, ConnectionUnready> {
+function brokenWith(serving: Serving, kind: BrokenKind, reason: string): Effect.Effect<never, ConnectionUnready> {
   const unready: ConnectionUnready = { because: 'connection_broken', detail: reason };
-  return Effect.andThen(recordedBreak(serving, reason), Effect.fail(unready));
+  return Effect.andThen(recordedBreak(serving, kind, reason), Effect.fail(unready));
 }
 
 function refusedWordsOf({ kind, variable }: Credential): string {
@@ -69,8 +72,10 @@ function refusedWordsOf({ kind, variable }: Credential): string {
 }
 
 export function credentialRefusedOf(serving: Serving, context: Context.Context<never>): ConnectionServer['refused'] {
-  const reason = refusedWordsOf(serving.kept.connection.credential);
-  return Effect.provideContext(Effect.as(recordedBreak(serving, reason), reason), context);
+  const { credential } = serving.kept.connection;
+  const reason = refusedWordsOf(credential);
+  const kind = credential.kind === 'none' ? 'credential_wanted' : 'credential_refused';
+  return Effect.provideContext(Effect.as(recordedBreak(serving, kind, reason), reason), context);
 }
 
 export function loggedCauses(): LoggedCauses {
@@ -121,7 +126,9 @@ function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnread
     Effect.matchEffect({
       onFailure: (failure) => unavailableNow(serving, failure),
       onSuccess: (stored) =>
-        stored === undefined ? brokenWith(serving, servingWords.gone(name)) : readNow(serving, stored),
+        stored === undefined
+          ? brokenWith(serving, 'credential_gone', servingWords.gone(name))
+          : readNow(serving, stored),
     }),
   );
 }
@@ -149,7 +156,7 @@ function heldTokensOf(serving: Serving): Effect.Effect<HeldTokens, ConnectionUnr
   const { name } = serving.kept.connection;
   return Effect.flatMap(keptSecretOf(serving), ({ value, version, claimedUntil }) =>
     Option.match(keptTokensIn(value), {
-      onNone: () => brokenWith(serving, servingWords.notTokens(name)),
+      onNone: () => brokenWith(serving, 'credential_not_tokens', servingWords.notTokens(name)),
       onSome: (tokens) => Effect.succeed({ tokens, version, claimedUntil }),
     }),
   );
@@ -163,7 +170,7 @@ function tokensOfTheRow(serving: Serving, context: Context.Context<never>): Conn
     read: Effect.provideContext(heldTokensOf(serving), context),
     replace: (version, value) => Effect.provideContext(secrets.replace(secretId, version, value), context),
     claim: (version, lastingMs) => Effect.provideContext(secrets.claim(secretId, version, lastingMs), context),
-    broken: (ended) => Effect.provideContext(brokenWith(serving, endedWords[ended](name)), context),
+    broken: (ended) => Effect.provideContext(brokenWith(serving, ended, endedWords[ended](name)), context),
   };
 }
 

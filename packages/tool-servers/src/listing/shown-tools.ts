@@ -1,4 +1,4 @@
-import { Predicate, Schema } from 'effect';
+import { Predicate, Schema, Struct } from 'effect';
 
 import { cutToDescriptionBound } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
@@ -24,8 +24,14 @@ function scrubbing(scrub: Scrub): (key: string, value: unknown) => unknown {
   };
 }
 
-function annotationsOf({ annotations }: ListedTool) {
-  return annotations === undefined || Object.keys(annotations).length === 0 ? {} : { annotations };
+function annotationsOf({ annotations = {} }: ListedTool) {
+  const hints = Struct.omit(annotations, ['title']);
+  return Object.keys(hints).length === 0 ? {} : { annotations: hints };
+}
+
+function titleOf({ title, annotations }: ListedTool, scrub: Scrub) {
+  const given = title ?? annotations?.title;
+  return given === undefined ? {} : { title: scrub(given) };
 }
 
 export function scrubbedSchema(inputSchema: Schema.JsonObject, scrub: Scrub): Schema.JsonObject {
@@ -37,6 +43,7 @@ export function shownTool(tool: ListedTool, showing: Showing): ServerTool {
   const { scrub } = showing.secrets;
   return {
     name: scrub(name),
+    ...titleOf(tool, scrub),
     description: cutToDescriptionBound(scrub(description)),
     input_schema: scrubbedSchema(inputSchema, scrub),
     ...annotationsOf(tool),

@@ -51,6 +51,8 @@ const providersOfTheFile = `connections:
         - kind: client_credentials
           issuer: https://auth.books.example.com
           scope: invoices.read
+          says:
+            invoices.read: Read the invoices of the account.
 `;
 
 const serversOfProviders = `tool_servers:
@@ -153,9 +155,9 @@ describe('the credential of an entry that names a provider, written out', () => 
     );
 
     expect([asText, asValue, asClientId]).toEqual([
-      'ConfigFileInvalid: The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:36:17 tool_servers.code.credential: Looks like a credential, which this file never holds; write a reference to the environment variable that holds it instead, such as ${GATEWAY_API_KEY}',
-      'tool_server_settings_invalid: The tool server settings are invalid. auto-runtime.yaml:37:14 tool_servers.code.credential.value: Expected a reference alone to the environment variable that holds the credential, such as ${TRACKER_TOKEN}, which the provider places where its way says',
-      `ConfigFileInvalid: The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:37:18 tool_servers.invoices.credential.client_id: ${clientIdWrittenOut}`,
+      'ConfigFileInvalid: The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:38:17 tool_servers.code.credential: Looks like a credential, which this file never holds; write a reference to the environment variable that holds it instead, such as ${GATEWAY_API_KEY}',
+      'tool_server_settings_invalid: The tool server settings are invalid. auto-runtime.yaml:39:14 tool_servers.code.credential.value: Expected a reference alone to the environment variable that holds the credential, such as ${TRACKER_TOKEN}, which the provider places where its way says',
+      `ConfigFileInvalid: The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:39:18 tool_servers.invoices.credential.client_id: ${clientIdWrittenOut}`,
     ]);
   });
 });
@@ -169,8 +171,8 @@ describe('a placeholder of an entry that names a provider', () => {
 
     expect(referred).toBe(
       'tool_server_settings_invalid: The tool server settings are invalid. ' +
-        'auto-runtime.yaml:38:13 tool_servers.accounts.placeholders.team: The provider crm has no placeholder team; it takes tenant; ' +
-        'auto-runtime.yaml:37:15 tool_servers.accounts.placeholders.tenant: Holds a $, which a placeholder never holds, since a reference to an environment variable begins with it',
+        'auto-runtime.yaml:40:13 tool_servers.accounts.placeholders.team: The provider crm has no placeholder team; it takes tenant; ' +
+        'auto-runtime.yaml:39:15 tool_servers.accounts.placeholders.tenant: Holds a $, which a placeholder never holds, since a reference to an environment variable begins with it',
     );
   });
 
@@ -213,9 +215,9 @@ describe('an entry that names a provider, refused', () => {
       ),
     ).toBe(
       'tool_server_settings_invalid: The tool server settings are invalid. ' +
-        'auto-runtime.yaml:36:10 tool_servers.code.url: Expected no url: the provider gives the server; ' +
-        'auto-runtime.yaml:39:5 tool_servers.accounts.placeholders.tenant: Expected tenant: The tenant of your CRM, as in https://<tenant>.crm.example.com; ' +
-        'auto-runtime.yaml:40:25 tool_servers.accounts.credential.kind: The provider crm takes no client_credentials credential; it takes secret or none',
+        'auto-runtime.yaml:38:10 tool_servers.code.url: Expected no url: the provider gives the server; ' +
+        'auto-runtime.yaml:41:5 tool_servers.accounts.placeholders.tenant: Expected tenant: The tenant of your CRM, as in https://<tenant>.crm.example.com; ' +
+        'auto-runtime.yaml:42:25 tool_servers.accounts.credential.kind: The provider crm takes no client_credentials credential; it takes secret or none',
     );
   });
 });

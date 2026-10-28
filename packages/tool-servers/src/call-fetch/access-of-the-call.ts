@@ -24,6 +24,7 @@ export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions
     listServers: (scope, named) => Effect.flatMap(ofTheCall, (access) => access.listServers(scope, named)),
     listServersInOrg: (scope, named) => Effect.flatMap(ofTheCall, (access) => access.listServersInOrg(scope, named)),
     lookUp: (address, reference) => Effect.flatMap(ofTheCall, (access) => access.lookUp(address, reference)),
+    listConnection: (org, connection) => Effect.flatMap(ofTheCall, (access) => access.listConnection(org, connection)),
     close: own.close,
   };
 }

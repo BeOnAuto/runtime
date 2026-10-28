@@ -83,7 +83,31 @@ describe('the scope of a finish', () => {
     await finishing(h, link, await consentedOf(h, link));
 
     expect(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id: link.id })).toMatchObject({
-      output: { credential: { scope: 'files.read files.write' }, granted_scope: 'files.read' },
+      output: {
+        credential: { scope: 'files.read files.write' },
+        asked_scopes: [
+          { name: 'files.read', says: 'Read the files of the account.' },
+          { name: 'files.write', says: 'Create and change the files of the account.' },
+        ],
+        granted_scope: 'files.read',
+        granted_scopes: [{ name: 'files.read', says: 'Read the files of the account.' }],
+      },
+    });
+  });
+
+  it('says each scope granted in the words of the way, and names bare a scope the way does not ask', async () => {
+    const fake = await served({ grantedScope: 'files.read offline_access' });
+    const h = consentHarnessAt(fake);
+    const link = await filesOf(h);
+
+    expect(await finishing(h, link, await consentedOf(h, link))).toMatchObject({
+      output: {
+        asked_scopes: [{ name: 'files.read', says: 'Read the files of the account.' }],
+        granted_scopes: [
+          { name: 'files.read', says: 'Read the files of the account.' },
+          { name: 'offline_access', says: null },
+        ],
+      },
     });
   });
 

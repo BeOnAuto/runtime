@@ -8,6 +8,9 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/dfareporting https://www.googleapis.com/auth/dfatrafficking
+    says:
+      https://www.googleapis.com/auth/dfareporting: Read and manage Campaign Manager 360 reports.
+      https://www.googleapis.com/auth/dfatrafficking: Read and manage Campaign Manager 360 display ad campaigns.
     parameters:
       access_type: offline
       prompt: consent

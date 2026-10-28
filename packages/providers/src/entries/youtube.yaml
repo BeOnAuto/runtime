@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/youtube.readonly
+    says:
+      https://www.googleapis.com/auth/youtube.readonly: See the YouTube account, its channel, videos, playlists and their statistics.
     parameters:
       access_type: offline
       prompt: consent

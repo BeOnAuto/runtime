@@ -16,6 +16,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/adwords
+    says:
+      https://www.googleapis.com/auth/adwords: See, create, change and delete Google Ads accounts and data.
     parameters:
       access_type: offline
       prompt: consent

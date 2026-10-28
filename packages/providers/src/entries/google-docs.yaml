@@ -8,6 +8,9 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/documents
+    says:
+      https://www.googleapis.com/auth/documents.readonly: See all Google Docs documents.
+      https://www.googleapis.com/auth/documents: See, change, create and delete all Google Docs documents.
     parameters:
       access_type: offline
       prompt: consent

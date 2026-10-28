@@ -21,6 +21,7 @@ const crmAdded: ConnectionEvent = {
     placeholders: null,
     entry: { url: 'https://crm.example.com/mcp' },
     credential: { kind: 'none' },
+    says: {},
     added_by: { id: 'person:ada', name: 'Ada Lovelace' },
   },
 };
@@ -70,6 +71,7 @@ const breaking: ConnectionCommand = {
   type: 'break',
   connection: 'crm-id',
   connected_at: acted.at,
+  kind: 'credential_gone',
   reason: 'The credential of the connection crm cannot be read',
   ...acted,
 };
@@ -78,7 +80,7 @@ describe('breaking a connection whose credential cannot be read', () => {
   it('records why for a connected one, and nothing for one that is pending, broken already or removed', () => {
     const brokenAlready: ConnectionEvent = {
       type: 'connection_broken',
-      data: { connection: 'crm-id', reason: 'Gone' },
+      data: { connection: 'crm-id', kind: 'credential_gone', reason: 'Gone' },
     };
     const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'crm-id' } };
 
@@ -88,7 +90,9 @@ describe('breaking a connection whose credential cannot be read', () => {
       decided(breaking, crmAdded, connected, brokenAlready),
       decided(breaking, crmAdded, connected, removed),
     ]).toEqual([
-      Result.succeed([{ type: 'connection_broken', data: { connection: 'crm-id', reason: breaking.reason } }]),
+      Result.succeed([
+        { type: 'connection_broken', data: { connection: 'crm-id', kind: 'credential_gone', reason: breaking.reason } },
+      ]),
       Result.succeed([]),
       Result.succeed([]),
       Result.succeed([]),
@@ -113,6 +117,7 @@ function addedAs(index: number): ConnectionEvent {
       placeholders: null,
       entry: { url: 'https://crm.example.com/mcp' },
       credential: { kind: 'none' },
+      says: {},
       added_by: { id: 'person:ada', name: 'Ada Lovelace' },
     },
   };
@@ -130,6 +135,7 @@ describe('adding a connection to an org that holds the most it may', () => {
       placeholders: null,
       entry: { url: 'https://wiki.example.com/mcp' },
       credential: { kind: 'none' },
+      says: {},
       added_by: { id: 'person:ada', name: 'Ada Lovelace' },
       link: { token_sha256: 'c3d4', expires_at: '2026-10-16T14:00:00.000Z' },
       ...acted,

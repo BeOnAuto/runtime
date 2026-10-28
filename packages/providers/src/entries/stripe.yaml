@@ -8,5 +8,7 @@ credentials:
   - kind: authorization
     issuer: https://access.stripe.com/mcp
     scope: mcp
+    says:
+      mcp: Read and change Stripe data in the accounts and sandboxes chosen, with the permissions granted at sign-in.
     clients: [registered, dynamic]
     description: Sign in to Stripe and allow access to the accounts and sandboxes you choose.

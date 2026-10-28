@@ -8,6 +8,9 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly
+    says:
+      https://www.googleapis.com/auth/yt-analytics.readonly: See YouTube Analytics reports for YouTube content.
+      https://www.googleapis.com/auth/yt-analytics-monetary.readonly: See monetary and non-monetary YouTube Analytics reports for YouTube content.
     parameters:
       access_type: offline
       prompt: consent

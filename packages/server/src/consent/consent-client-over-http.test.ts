@@ -19,7 +19,13 @@ const sealing = { SECRETS_KEY: secretsKey.toString('base64') };
 type Environment = Readonly<Record<string, string>>;
 
 function documentedAt(fake: FakeMcpServer): Environment {
-  const way = { kind: 'authorization', issuer: fake.origin, scope: 'files.read', clients: ['metadata_document'] };
+  const way = {
+    kind: 'authorization',
+    issuer: fake.origin,
+    scope: 'files.read',
+    says: { 'files.read': 'Read the files of the account.' },
+    clients: ['metadata_document'],
+  };
   return {
     CONNECTIONS: JSON.stringify({
       allowed_hosts: ['127.0.0.1'],

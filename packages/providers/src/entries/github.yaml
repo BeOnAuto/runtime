@@ -10,6 +10,9 @@ credentials:
   - kind: authorization
     issuer: https://github.com/login/oauth
     scope: read:org repo
+    says:
+      read:org: Read organization membership, organization projects and team membership.
+      repo: Manage all repositories with collaborators, invitations and webhooks, and organization projects and team memberships.
     clients: [registered]
     description: Sign in to GitHub and allow access to your repositories.
   - kind: secret
