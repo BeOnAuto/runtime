@@ -40,6 +40,8 @@ const modelProvidersByDefault = [
   'vertex-anthropic',
 ];
 
+const notLocal = { loopbackAllowed: false };
+
 describe('readSettings', () => {
   it('listens on every interface at port 5555, allows no origin, has no API keys and keeps the ledger in data/ by default', () => {
     const { models, toolServers, interaction, ...server } = readSettingsOf({});
@@ -71,7 +73,7 @@ describe('readSettings', () => {
       computation: { workers: 4 },
       recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
-      connections: { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] },
+      connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
       registeredClients: [],
       autoClientsWritten: undefined,
       autoClients: { enabled: false, serviceUrl: 'https://consent.on.auto' },
@@ -151,7 +153,13 @@ const everySettingRead = {
   computation: { workers: 4 },
   recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
   prediction: defaultPrediction,
-  connections: { peopleMayAdd: false, allowedHosts: ['*.example.com'], credentialKinds: ['none'], variables: [] },
+  connections: {
+    peopleMayAdd: false,
+    allowedHosts: ['*.example.com'],
+    ...notLocal,
+    credentialKinds: ['none'],
+    variables: [],
+  },
   registeredClients: [],
   autoClientsWritten: false,
   autoClients: { enabled: true, serviceUrl: 'https://consent.example.com' },

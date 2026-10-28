@@ -101,12 +101,13 @@ model_aliases:
 # leaving the section out lets people add any connection to a public host.
 # A connection to a loopback, private, link-local or cloud metadata address,
 # such as localhost, 10.0.0.5 or 169.254.169.254, or to a name that resolves to
-# one, is refused until allowed_hosts names its host, and so is a connection
-# that sends headers. providers adds providers of your own beside those the
-# runtime ships, which a person connects by name and an entry of tool_servers
-# may name; one named as a shipped provider takes its place. auto_clients lets
-# a provider take Auto's client, through Auto's consent service, where you
-# register none at its vendor: on in local mode and off otherwise when left out.
+# one, is refused. Only an address allowed_hosts names by itself, such as
+# 10.0.0.5, may be reached, and loopback needs no naming in local mode.
+# providers adds providers of your own beside those the runtime ships, which a
+# person connects by name and an entry of tool_servers may name; one named as a
+# shipped provider takes its place. auto_clients lets a provider take Auto's
+# client, through Auto's consent service, where you register none at its vendor:
+# on in local mode and off otherwise when left out.
 # connections:
 #   people_may_add: true
 #   auto_clients: true

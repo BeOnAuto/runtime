@@ -230,17 +230,25 @@ function endpointsOf(server: AuthorizationServer): readonly string[] {
   return endpoints.filter((endpoint) => endpoint !== undefined);
 }
 
-function refusedHostOf(server: AuthorizationServer, reaches: Reaches): Effect.Effect<string | undefined> {
-  return Effect.promise(async () => {
-    const rules = await Promise.all(endpointsOf(server).map((endpoint) => Promise.resolve(reaches(endpoint))));
-    return rules.find((rule) => rule !== undefined);
+const unanswered: Refused<'unanswered'> = { refused: 'unanswered' };
+
+function refusedHostOf(
+  server: AuthorizationServer,
+  reaches: Reaches,
+): Effect.Effect<string | undefined, Refused<'unanswered'>> {
+  return Effect.tryPromise({
+    try: async () => {
+      const rules = await Promise.all(endpointsOf(server).map((endpoint) => Promise.resolve(reaches(endpoint))));
+      return rules.find((rule) => rule !== undefined);
+    },
+    catch: () => unanswered,
   });
 }
 
 export function checkedServer(
   server: AuthorizationServer,
   reaches: Reaches,
-): Effect.Effect<AuthorizationServer, Refused<'no_challenge' | 'unpinned_endpoint' | 'host'>> {
+): Effect.Effect<AuthorizationServer, Refused<'no_challenge' | 'unpinned_endpoint' | 'host' | 'unanswered'>> {
   if (!takesTheCodeWithItsChallenge(server)) {
     return Effect.fail(noChallenge);
   }

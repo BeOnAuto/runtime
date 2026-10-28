@@ -147,11 +147,17 @@ describe('the rules of the runtime over HTTP', () => {
 });
 
 const refusedAddresses: readonly (readonly [string, string, string])[] = [
-  ['https://127.0.0.1/mcp', '127.0.0.1', 'a loopback address'],
   ['https://10.0.0.5/mcp', '10.0.0.5', 'a private address'],
   ['https://169.254.169.254/latest/meta-data', '169.254.169.254', 'a cloud metadata address'],
   ['https://metadata.google.internal/computeMetadata/v1', 'metadata.google.internal', 'a cloud metadata host'],
 ];
+
+const namedByTheOperator = ', unless its operator names the host in connections.allowed_hosts';
+
+function refusalFor(host: string, kind: string): string {
+  const unless = kind.startsWith('a cloud metadata') ? '' : namedByTheOperator;
+  return `A connection may not reach the host ${host}, ${kind}${unless}`;
+}
 
 function mcpServerAt(url: string) {
   return { name: 'probe', type: 'mcp', entry: { url }, credential: { kind: 'none' } };
@@ -162,7 +168,7 @@ function detailOf({ status, body }: { readonly status: number; readonly body: un
 }
 
 describe('the hosts of a runtime whose operator names none, over HTTP', () => {
-  it('answers 403 for a server at a loopback, private, link-local or cloud metadata address, and 201 at a public one', async () => {
+  it('answers 403 for a server at a private, link-local or cloud metadata address, and 201 at a public one', async () => {
     const served = await serving({ CONNECTIONS: '' });
 
     const refused = await Promise.all(
@@ -170,30 +176,41 @@ describe('the hosts of a runtime whose operator names none, over HTTP', () => {
     );
 
     expect(refused.map((answer) => detailOf(answer))).toEqual(
-      refusedAddresses.map(([, host, kind]) => [
-        403,
-        `A connection may not reach the host ${host}, ${kind}, unless its operator names the host in connections.allowed_hosts`,
-      ]),
+      refusedAddresses.map(([, host, kind]) => [403, refusalFor(host, kind)]),
     );
     expect(await served.call('POST', connections, { body: mcpServerAt('https://8.8.8.8/mcp') })).toMatchObject({
       status: 201,
     });
   });
 
-  it('answers 403 for headers to any host', async () => {
+  it('answers 201 for a server on loopback, since this runtime is local', async () => {
     const served = await serving({ CONNECTIONS: '' });
 
-    expect(detailOf(await served.call('POST', connections, { body: crm }))).toEqual([
+    expect(await served.call('POST', connections, { body: mcpServerAt('http://127.0.0.1:8443/mcp') })).toMatchObject({
+      status: 201,
+    });
+  });
+
+  it('answers 201 for headers to a public host', async () => {
+    const served = await serving({ CONNECTIONS: '' });
+
+    expect(await served.call('POST', connections, { body: crm })).toMatchObject({ status: 201 });
+  });
+
+  it('answers 403 for headers to a server at an address its operator did not name', async () => {
+    const served = await serving({ CONNECTIONS: '' });
+    const intranet = { ...crm, entry: { ...crm.entry, url: 'https://10.0.0.5/mcp' } };
+
+    expect(detailOf(await served.call('POST', connections, { body: intranet }))).toEqual([
       403,
-      'A connection sends the headers it is given only to a host its operator names in connections.allowed_hosts, and this runtime names none',
+      refusalFor('10.0.0.5', 'a private address'),
     ]);
   });
 
-  it('takes a server at a private address its operator names', async () => {
+  it('takes a server at a private address its operator names, headers or not', async () => {
     const served = await serving(connectionsAllowing(['10.0.0.5']));
+    const intranet = { ...crm, entry: { ...crm.entry, url: 'https://10.0.0.5/mcp' } };
 
-    expect(
-      await served.call('POST', connections, { body: { ...mcpServerAt('https://10.0.0.5/mcp'), name: 'intranet' } }),
-    ).toMatchObject({ status: 201 });
+    expect(await served.call('POST', connections, { body: intranet })).toMatchObject({ status: 201 });
   });
 });

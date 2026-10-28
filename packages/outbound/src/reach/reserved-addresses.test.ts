@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { reservedHostKindOf } from '../index.ts';
+import { loopbackHostOf, operatorMayNameHost, reservedHostKindOf } from '../index.ts';
 
 const metadata = 'a cloud metadata address';
 
@@ -36,6 +36,20 @@ const refusedHosts: readonly (readonly [string, string])[] = [
   ['[::ffff:7f00:1]', 'a loopback address'],
   ['[::ffff:169.254.169.254]', metadata],
   ['[64:ff9b::a00:1]', 'a private address'],
+  ['[64:ff9b:1::1]', 'a reserved address'],
+  ['[64:ff9b:1:ffff::1]', 'a reserved address'],
+  ['[2002:7f00:1::]', 'a loopback address'],
+  ['[2002:a9fe:a9fe::1]', metadata],
+  ['[2002:a00:1::1]', 'a private address'],
+  ['[::127.0.0.1]', 'a loopback address'],
+  ['[::7f00:1]', 'a loopback address'],
+  ['[::10.0.0.1]', 'a private address'],
+  ['[::169.254.169.254]', metadata],
+  ['[::ffff:0:7f00:1]', 'a loopback address'],
+  ['[::ffff:10.1.2.3]', 'a private address'],
+  ['[0:0:0:0:0:ffff:a9fe:a9fe]', metadata],
+  ['[fec0::1]', 'a private address'],
+  ['[feff::1]', 'a private address'],
 ];
 
 const reachedHosts: readonly string[] = [
@@ -50,6 +64,10 @@ const reachedHosts: readonly string[] = [
   '[::ffff:8.8.8.8]',
   '[64:ff9b::808:808]',
   '[64:ff9b::1:808:808]',
+  '[2002:808:808::1]',
+  '[::8.8.8.8]',
+  '[::ffff:0:808:808]',
+  '[2001:4860:4860::8888]',
   'crm.example.com',
   'localhost.example.com',
   'metadata.example.internal',
@@ -71,4 +89,38 @@ describe('the hosts a connection may reach only where its operator names them', 
       written.map(() => 'a loopback address'),
     );
   });
+});
+
+describe('the hosts an operator may name', () => {
+  it.each(['10.0.0.5', '127.0.0.1', 'localhost', 'app.localhost', '[fd12:3456::1]', '192.168.0.1'])(
+    'lets the operator name %s',
+    (host) => {
+      expect(operatorMayNameHost(host)).toBe(true);
+    },
+  );
+
+  it.each([
+    '169.254.169.254',
+    '100.100.100.200',
+    '[fd00:ec2::254]',
+    'metadata.google.internal',
+    'crm.example.com',
+    '8.8.8.8',
+  ])('does not let the operator name %s', (host) => {
+    expect(operatorMayNameHost(host)).toBe(false);
+  });
+
+  it.each(['127.0.0.1', '127.9.9.9', '[::1]', 'localhost', 'LOCALHOST.', 'crm.localhost'])(
+    'finds %s on loopback',
+    (host) => {
+      expect(loopbackHostOf(host)).toBe(true);
+    },
+  );
+
+  it.each(['10.0.0.5', '169.254.169.254', '8.8.8.8', 'crm.example.com', 'metadata.google.internal'])(
+    'finds %s off loopback',
+    (host) => {
+      expect(loopbackHostOf(host)).toBe(false);
+    },
+  );
 });

@@ -65,10 +65,13 @@ export const acmePlaybookWriter: CallerIdentity = {
 
 export const harnessPages = { studio, runtime: () => runtimeOrigin };
 
+const publicEverywhere = () => Promise.resolve(['93.184.216.34']);
+
 export const fixtureServing = {
   providers: fixtureProviders,
   providerValues: new Map<string, Redacted.Redacted>(),
   pages: harnessPages,
+  resolve: publicEverywhere,
 };
 
 export const loopbackPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] });
@@ -122,6 +125,7 @@ function composedOf(
     pages: harnessPages,
     access: 'people',
     consent,
+    resolve: publicEverywhere,
     ...given,
   };
 }

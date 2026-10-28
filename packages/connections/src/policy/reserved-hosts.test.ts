@@ -8,12 +8,18 @@ function mcpAt(url: string) {
   return { ...notes, entry: { url } };
 }
 
-function refusedFor(host: string, reached: string) {
+const namedByTheOperator = ', unless its operator names the host in connections.allowed_hosts';
+
+function refusedFor(host: string, reached: string, unless = namedByTheOperator) {
   return {
     status: 'rejected',
     reason: 'forbidden',
-    detail: `A connection may not reach the host ${host}, ${reached}, unless its operator names the host in connections.allowed_hosts`,
+    detail: `A connection may not reach the host ${host}, ${reached}${unless}`,
   };
+}
+
+function unlessFor(reached: string): string {
+  return reached.startsWith('a cloud metadata') ? '' : namedByTheOperator;
 }
 
 const refusedServers: readonly (readonly [string, string, string])[] = [
@@ -38,7 +44,7 @@ describe('a server of a connection on an address only its operator may name', ()
     const h = harness();
     const host = new URL(url).hostname;
 
-    expect(await adding(h, mcpAt(url))).toEqual(refusedFor(host, reached));
+    expect(await adding(h, mcpAt(url))).toEqual(refusedFor(host, reached, unlessFor(reached)));
     expect(await h.facts()).toEqual([]);
   });
 
@@ -50,7 +56,7 @@ describe('a server of a connection on an address only its operator may name', ()
 
     expect([await adding(h, document), await adding(h, baseUrl), await adding(h, issuer)]).toEqual([
       refusedFor('10.0.0.7', 'a private address'),
-      refusedFor('169.254.169.254', 'a cloud metadata address'),
+      refusedFor('169.254.169.254', 'a cloud metadata address', ''),
       refusedFor('192.168.0.3', 'a private address'),
     ]);
   });
@@ -61,6 +67,51 @@ describe('a server of a connection on an address only its operator may name', ()
     expect(await adding(h, mcpAt('https://10.1.2.3/mcp'))).toMatchObject({
       reason: 'forbidden',
       detail: 'A connection may not reach the host 10.1.2.3 on this runtime, which allows *.example.com',
+    });
+  });
+});
+
+describe('a server of a connection on an address the operator names or the runtime takes', () => {
+  it('is refused at a cloud metadata address or host even when the operator names it', async () => {
+    const h = harness({
+      policy: connectionPolicyOf({ allowed_hosts: ['169.254.169.254', 'metadata.google.internal'] }),
+    });
+
+    expect([
+      await adding(h, mcpAt('https://169.254.169.254/mcp')),
+      await adding(h, mcpAt('https://metadata.google.internal/mcp')),
+    ]).toEqual([
+      refusedFor('169.254.169.254', 'a cloud metadata address', ''),
+      refusedFor('metadata.google.internal', 'a cloud metadata host', ''),
+    ]);
+  });
+
+  it('is refused at an address a *. pattern covers, since only a literal name allows one', async () => {
+    const h = harness({ policy: connectionPolicyOf({ allowed_hosts: ['*.1.2.3'] }) });
+
+    expect(await adding(h, mcpAt('https://10.1.2.3/mcp'))).toEqual(refusedFor('10.1.2.3', 'a private address'));
+  });
+});
+
+describe('a server of a connection on a local runtime', () => {
+  it('is taken on loopback on a local runtime, and refused at a private address', async () => {
+    const h = harness({ policy: { ...connectionPolicyOf({}), loopbackAllowed: true } });
+
+    expect([
+      (await adding(h, mcpAt('https://127.0.0.1:8443/mcp'))).status,
+      (await adding(h, { ...mcpAt('http://localhost:8443/mcp'), name: 'local' })).status,
+      (await adding(h, { ...mcpAt('http://[::1]:8443/mcp'), name: 'six' })).status,
+    ]).toEqual(['succeeded', 'succeeded', 'succeeded']);
+    expect(await adding(h, mcpAt('https://10.1.2.3/mcp'))).toEqual(refusedFor('10.1.2.3', 'a private address'));
+  });
+
+  it('is refused at a loopback address on a local runtime whose operator lists other hosts', async () => {
+    const h = harness({
+      policy: { ...connectionPolicyOf({ allowed_hosts: ['*.example.com'] }), loopbackAllowed: true },
+    });
+
+    expect(await adding(h, mcpAt('https://127.0.0.1/mcp'))).toMatchObject({
+      detail: 'A connection may not reach the host 127.0.0.1 on this runtime, which allows *.example.com',
     });
   });
 
@@ -82,22 +133,31 @@ describe('a server of a connection on an address only its operator may name', ()
 });
 
 describe('the headers of a connection given by hand', () => {
-  it('are refused where the operator names no host, since no host is one its operator allows', async () => {
+  it('are taken where the operator names no host, for a server at a public host', async () => {
     const h = harness();
 
-    expect(await adding(h, crmWithTenant)).toEqual({
-      status: 'rejected',
-      reason: 'forbidden',
-      detail:
-        'A connection sends the headers it is given only to a host its operator names in connections.allowed_hosts, and this runtime names none',
-    });
-    expect(await h.facts()).toEqual([]);
+    expect((await adding(h, crmWithTenant)).status).toBe('succeeded');
   });
 
   it('are taken where the operator names the host', async () => {
     const h = harness({ policy: connectionPolicyOf({ allowed_hosts: ['*.example.com'] }) });
 
     expect((await adding(h, crmWithTenant)).status).toBe('succeeded');
+  });
+
+  it('are refused for a server at an address its operator did not name, as the server is', async () => {
+    const h = harness();
+    const intranet = { ...crmWithTenant, entry: { ...crmWithTenant.entry, url: 'https://10.0.0.5/mcp' } };
+
+    expect(await adding(h, intranet)).toEqual(refusedFor('10.0.0.5', 'a private address'));
+    expect(await h.facts()).toEqual([]);
+  });
+
+  it('are taken for a server at an address its operator names', async () => {
+    const h = harness({ policy: connectionPolicyOf({ allowed_hosts: ['10.0.0.5'] }) });
+    const intranet = { ...crmWithTenant, entry: { ...crmWithTenant.entry, url: 'https://10.0.0.5/mcp' } };
+
+    expect((await adding(h, intranet)).status).toBe('succeeded');
   });
 
   it('are not needed to add a connection that sends none', async () => {

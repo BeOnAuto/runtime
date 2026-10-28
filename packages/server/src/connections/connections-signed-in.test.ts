@@ -84,6 +84,23 @@ describe('a connection on a runtime that signs people in', () => {
     });
     expect(byAda).toMatchObject({ status: 200, body: { status: 'connected' } });
   });
+});
+
+describe('a server on loopback on a runtime that signs people in', () => {
+  it('is refused, since only a local runtime takes it unnamed', async () => {
+    const issuer = await issuerOverHttps();
+    server = await servingReasoning([], { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl });
+    const ada = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+    const onLoopback = { ...notes, entry: { url: 'http://127.0.0.1:8443/mcp' } };
+
+    expect(await server.call('POST', connections, { key: ada, body: onLoopback })).toMatchObject({
+      status: 403,
+      body: {
+        detail:
+          'A connection may not reach the host 127.0.0.1, a loopback address, unless its operator names the host in connections.allowed_hosts',
+      },
+    });
+  });
 
   it('is refused to a key, since no person would approve it', async () => {
     const issuer = await issuerOverHttps();

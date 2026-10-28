@@ -5,5 +5,12 @@ export { proxySettingsOf, proxySettingsVariables, type ProxySettings } from './p
 export { withUserAgent, type OutboundFetch } from './user-agent/user-agent-fetch.ts';
 export { fetchWithin, HostRefused, type Reaches } from './reach/fetch-within.ts';
 export { boundedAnswerOf } from './reach/bounded-answer.ts';
-export { reservedHostKindOf } from './reach/reserved-addresses.ts';
-export { reservedReachOf, resolvedBySystem, type Resolve } from './reach/reserved-reach.ts';
+export { loopbackHostOf, operatorMayNameHost, reservedHostKindOf } from './reach/reserved-addresses.ts';
+export {
+  HostUnresolved,
+  reservedReachOf,
+  resolvedBySystem,
+  resolvedWith,
+  type Noted,
+  type Resolve,
+} from './reach/reserved-reach.ts';

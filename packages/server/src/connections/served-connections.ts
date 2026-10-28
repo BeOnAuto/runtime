@@ -52,6 +52,10 @@ function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): Runti
   return signIn === undefined ? 'keys' : 'people';
 }
 
+function policyServedAt(settings: ServingSettings): ConnectionServices['policy'] {
+  return { ...settings.connections, loopbackAllowed: accessOf(settings) === 'local' };
+}
+
 interface Composed {
   readonly secrets: LedgerStores['secrets'];
   readonly consent: ReturnType<typeof consentClientOf>;
@@ -62,7 +66,7 @@ function connectionServicesOf(settings: ServingSettings, { secrets, consent, pag
   return {
     consent,
     secrets,
-    policy: settings.connections,
+    policy: policyServedAt(settings),
     fileEntries: settings.toolServers.servers.map(({ name }) => name),
     modelProviders: settings.modelProviders,
     providers: settings.providers,
@@ -81,7 +85,7 @@ function sourceServedBy(
   return makeConnectionSource({
     registry: runtimeLedger(runtime),
     secrets,
-    policy: settings.connections,
+    policy: policyServedAt(settings),
     pages,
     variables: settings.connectionVariables,
     modelProviders: settings.modelProviders,

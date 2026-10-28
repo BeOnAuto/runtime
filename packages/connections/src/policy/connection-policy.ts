@@ -70,7 +70,7 @@ const policyFields = {
   allowed_hosts: Schema.optionalKey(
     Schema.Array(HostPatternSchema).annotate({
       description:
-        'The hosts a connection may reach, each a host or *. and a host for every host under it, and the only hosts that may be a loopback, private, link-local or cloud metadata address, or take headers; every host that is none of those addresses when left out',
+        'The hosts a connection may reach, each a host or *. and a host for every host under it; a loopback, private or link-local address is reached only where it is named here by itself, and a name that resolves to one never is; every host that is none of those addresses when left out',
     }),
   ),
   credential_kinds: Schema.optionalKey(
@@ -115,6 +115,7 @@ type Environment = Readonly<Record<string, string | undefined>>;
 export interface ConnectionPolicy {
   readonly peopleMayAdd: boolean;
   readonly allowedHosts: readonly string[] | null;
+  readonly loopbackAllowed: boolean;
   readonly credentialKinds: readonly CredentialKind[] | null;
   readonly variables: readonly string[];
 }
@@ -153,7 +154,13 @@ export function connectionPolicyOf({
   credential_kinds: credentialKinds,
   variables = [],
 }: ConnectionPolicyFields): ConnectionPolicy {
-  return { peopleMayAdd, allowedHosts: allowedHosts ?? null, credentialKinds: credentialKinds ?? null, variables };
+  return {
+    peopleMayAdd,
+    allowedHosts: allowedHosts ?? null,
+    loopbackAllowed: false,
+    credentialKinds: credentialKinds ?? null,
+    variables,
+  };
 }
 
 function ownVariableProblems(

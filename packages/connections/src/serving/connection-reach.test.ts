@@ -1,9 +1,10 @@
-import type { Resolve } from '@on.auto/outbound';
+import { HostUnresolved, type Resolve } from '@on.auto/outbound';
 import type { ConnectionUnready, OrgConnection } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
+import { reachesUnder } from '../policy/policy-rules.ts';
 import { added, crmWithTenant, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 import { servedAs, sourceOver } from '../testing/served-connections.ts';
@@ -16,7 +17,9 @@ const publicAddress = '93.184.216.34';
 function resolving(answers: Readonly<Record<string, readonly string[]>>): Resolve {
   return (host) => {
     const answer = answers[host];
-    return answer === undefined ? Promise.reject(new Error(`ENOTFOUND ${host}`)) : Promise.resolve(answer);
+    return answer === undefined
+      ? Promise.reject(Object.assign(new Error(`ENOTFOUND ${host}`), { code: 'ENOTFOUND' }))
+      : Promise.resolve(answer);
   };
 }
 
@@ -25,7 +28,14 @@ function policyOf(fields: ConnectionPolicyFields) {
 }
 
 function notAllowedUnlessNamed(host: string, reached: string): string {
-  return `A connection may not reach the host ${host}, ${reached}, unless its operator names the host in connections.allowed_hosts`;
+  const unless = reached.startsWith('a cloud metadata')
+    ? ''
+    : ', unless its operator names the host in connections.allowed_hosts';
+  return `A connection may not reach the host ${host}, ${reached}${unless}`;
+}
+
+function notAllowedForWhatItResolvesTo(host: string, reached: string): string {
+  return `A connection may not reach the host ${host}, which resolves to ${reached}`;
 }
 
 async function connected(h: Harness, input: unknown, given: Readonly<Record<string, string>> = {}): Promise<string> {
@@ -57,6 +67,10 @@ async function unreadyUnder(h: Harness, id: string): Promise<ConnectionUnready> 
   return Effect.runPromise(Effect.flip(server));
 }
 
+const timedOut = () => Promise.reject(Object.assign(new Error('timed out'), { code: 'EAI_AGAIN' }));
+
+const broken = () => Promise.reject(new TypeError('lookup is not a function'));
+
 const insideTheNetwork: readonly (readonly [string, string, string])[] = [
   ['https://127.0.0.1:8443/mcp', '127.0.0.1', 'a loopback address'],
   ['https://localhost/mcp', 'localhost', 'a loopback host'],
@@ -80,20 +94,17 @@ const resolvedInsideTheNetwork = resolving({
 });
 
 const resolvedRefusals: readonly (readonly [string, string])[] = [
-  [
-    'https://rebound.example.com/mcp',
-    notAllowedUnlessNamed('rebound.example.com', 'which resolves to 10.0.0.9, a private address'),
-  ],
+  ['https://rebound.example.com/mcp', notAllowedForWhatItResolvesTo('rebound.example.com', 'a private address')],
   [
     'https://metadata-alias.example.com/mcp',
-    notAllowedUnlessNamed('metadata-alias.example.com', 'which resolves to 169.254.169.254, a cloud metadata address'),
+    notAllowedForWhatItResolvesTo('metadata-alias.example.com', 'a cloud metadata address'),
   ],
   [
     'https://loopback-alias.example.com/mcp',
-    notAllowedUnlessNamed('loopback-alias.example.com', 'which resolves to ::1, a loopback address'),
+    notAllowedForWhatItResolvesTo('loopback-alias.example.com', 'a loopback address'),
   ],
-  ['https://empty.example.com/mcp', notAllowedUnlessNamed('empty.example.com', 'which resolves to no address')],
-  ['https://missing.example.com/mcp', notAllowedUnlessNamed('missing.example.com', 'which resolves to no address')],
+  ['https://empty.example.com/mcp', notAllowedForWhatItResolvesTo('empty.example.com', 'no address')],
+  ['https://missing.example.com/mcp', notAllowedForWhatItResolvesTo('missing.example.com', 'no address')],
 ];
 
 describe('the hosts a connected connection reaches where its operator names none', () => {
@@ -120,11 +131,12 @@ describe('the names a connected connection reaches where its operator names none
 });
 
 describe('the hosts a connected connection reaches where its operator names them', () => {
-  it('are taken at an address or a name the operator names, without the name being resolved', async () => {
+  it('are taken at an address the operator names, without it being resolved, and at a name that resolves to public addresses', async () => {
     const listing = policyOf({ allowed_hosts: ['10.0.0.5', 'wiki.corp.example', '*.internal.example.com'] });
     const h = harness(listing);
     const id = await connected(h, { ...notes, entry: { url: 'https://10.0.0.5/mcp' } });
-    const reaches = await reachesOf(h, id, { ...listing, resolve: resolving({}) });
+    const resolve = resolving({ 'wiki.corp.example': [publicAddress], 'a.internal.example.com': [publicAddress] });
+    const reaches = await reachesOf(h, id, { ...listing, resolve });
 
     expect(
       await reaches(
@@ -142,6 +154,105 @@ describe('the hosts a connected connection reaches where its operator names them
   });
 });
 
+describe('the names a connected connection reaches where its operator lists them', () => {
+  it('are refused at a name they list that resolves to a private or metadata address, a *. pattern or not', async () => {
+    const listing = policyOf({ allowed_hosts: ['*.example.com', 'wiki.corp.example', 'intranet.example.net'] });
+    const h = harness(listing);
+    const id = await connected(h, notes);
+    const resolve = resolving({
+      'alias.example.com': ['169.254.169.254'],
+      'wiki.corp.example': ['10.0.0.9'],
+      'intranet.example.net': ['::ffff:192.168.0.1'],
+    });
+    const reaches = await reachesOf(h, id, { ...listing, resolve });
+
+    expect(
+      await reaches(
+        'https://alias.example.com/mcp',
+        'https://wiki.corp.example/mcp',
+        'https://intranet.example.net/mcp',
+      ),
+    ).toEqual([
+      notAllowedForWhatItResolvesTo('alias.example.com', 'a cloud metadata address'),
+      notAllowedForWhatItResolvesTo('wiki.corp.example', 'a private address'),
+      notAllowedForWhatItResolvesTo('intranet.example.net', 'a private address'),
+    ]);
+  });
+
+  it('are refused at an address a *. pattern covers, though it is not resolved', async () => {
+    const reaches = reachesUnder(connectionPolicyOf({ allowed_hosts: ['*.0.0.5'] }), resolving({}));
+
+    expect(await reaches('https://10.0.0.5/mcp')).toEqual(notAllowedUnlessNamed('10.0.0.5', 'a private address'));
+  });
+});
+
+describe('the hosts of a connected connection on a local runtime', () => {
+  it('are taken on loopback whatever the operator names, and refused at any other reserved address', async () => {
+    const local = { policy: { ...connectionPolicyOf({}), loopbackAllowed: true } };
+    const h = harness(local);
+    const id = await connected(h, notes);
+    const reaches = await reachesOf(h, id, { ...local, resolve: resolving({}) });
+
+    expect(
+      await reaches(
+        'http://127.0.0.1:8443/mcp',
+        'http://localhost:8443/mcp',
+        'http://[::1]:8443/mcp',
+        'http://10.0.0.5/mcp',
+        'http://127.0.0.1.nip.example/mcp',
+      ),
+    ).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      notAllowedUnlessNamed('10.0.0.5', 'a private address'),
+      notAllowedForWhatItResolvesTo('127.0.0.1.nip.example', 'no address'),
+    ]);
+  });
+});
+
+describe('a name a connected connection reaches whose lookup does not answer', () => {
+  it('is not refused as a host: the call fails, for the caller to try again', async () => {
+    const h = harness();
+    const id = await connected(h, notes);
+    const { server } = await connectedUnder(h, id, { resolve: timedOut });
+    const { reaches } = await Effect.runPromise(server);
+
+    await expect(Promise.resolve(reaches('https://notes.example.com/mcp'))).rejects.toEqual(
+      new HostUnresolved({ host: 'notes.example.com' }),
+    );
+  });
+
+  it('is refused as a host whose address this runtime cannot look up, where the lookup breaks for no reason of DNS', async () => {
+    const h = harness();
+    const id = await connected(h, notes);
+    const reaches = await reachesOf(h, id, { resolve: broken });
+
+    expect(await reaches('https://notes.example.com/mcp')).toEqual([
+      'A connection may not reach the host notes.example.com, whose address this runtime cannot look up',
+    ]);
+  });
+});
+
+describe('the address a name resolved to, which a refusal does not name', () => {
+  it('is logged for whoever runs the runtime, and is not in the refusal', async () => {
+    const h = harness();
+    const id = await connected(h, notes);
+    const resolve = resolving({ 'rebound.example.com': [publicAddress, '10.0.0.9'] });
+    const reaches = await reachesOf(h, id, { resolve });
+    const lines: string[] = [];
+    const logged = vi.spyOn(console, 'log').mockImplementation((...written: readonly unknown[]) => {
+      lines.push(...written.map(String));
+    });
+
+    const [refusal] = await reaches('https://rebound.example.com/mcp');
+    logged.mockRestore();
+
+    expect(refusal).not.toContain('10.0.0.9');
+    expect(lines.join('\n')).toContain('The host rebound.example.com resolves to 10.0.0.9, a private address');
+  });
+});
+
 describe('a connection that reaches an address its operator did not name', () => {
   it('is refused in the words of the rule when it is first used after the rule, its credential unread', async () => {
     const naming = policyOf({ allowed_hosts: ['10.0.0.5'] });
@@ -155,16 +266,11 @@ describe('a connection that reaches an address its operator did not name', () =>
     });
   });
 
-  it('is refused when it holds headers the operator did not name a host for', async () => {
+  it('keeps its headers while it reaches a public host, whatever the operator names', async () => {
     const naming = policyOf({ allowed_hosts: ['crm.example.com'] });
     const h = harness(naming);
     const id = await connected(h, crmWithTenant, { value: crmKey });
 
     expect(await reachesOf(h, id, naming)).toBeDefined();
-    expect(await unreadyUnder(h, id)).toEqual({
-      because: 'connection_not_allowed',
-      detail:
-        'A connection sends the headers it is given only to a host its operator names in connections.allowed_hosts, and this runtime names none',
-    });
   });
 });

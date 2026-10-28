@@ -1,8 +1,9 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
-import { fetchWithin } from '@on.auto/outbound';
+import { fetchWithin, HostUnresolved } from '@on.auto/outbound';
 import { Effect, Predicate, Result } from 'effect';
 
 import type { LinkOptions } from '../clients/link-openers.ts';
+import { failureOf } from '../clients/server-failures.ts';
 import { serverLink } from '../clients/server-links.ts';
 import type { Describing, LinkedServerSettings } from '../openapi/described-api.ts';
 import type { Linking } from './connection-links.ts';
@@ -22,6 +23,20 @@ interface Describe {
 
 type Described = { readonly settings: LinkedServerSettings } | Exclude<Linking, { readonly link: unknown }>;
 
+async function refusalToReach(
+  server: ConnectionServer,
+  url: string,
+): Promise<string | undefined | { readonly unreached: HostUnresolved }> {
+  try {
+    return await server.reaches(url);
+  } catch (error) {
+    if (error instanceof HostUnresolved) {
+      return { unreached: error };
+    }
+    throw error;
+  }
+}
+
 async function describedConnection(
   settings: ConnectionServerSettings,
   { server, fetch, linking }: Describe,
@@ -37,10 +52,13 @@ async function describedConnection(
     const unusable = serverFailed({ settings }, { kind: 'refused', message }, linking.options.secrets);
     return Predicate.isTagged(failure, 'document_unread') ? { unread: unusable } : { refused: unusable };
   }
-  const refusal = await server.reaches(described.success.api.baseUrl);
-  return refusal === undefined
-    ? { settings: described.success }
-    : { refused: { because: 'connection_not_allowed', detail: refusal } };
+  const refusal = await refusalToReach(server, described.success.api.baseUrl);
+  if (refusal === undefined) {
+    return { settings: described.success };
+  }
+  return typeof refusal === 'string'
+    ? { refused: { because: 'connection_not_allowed', detail: refusal } }
+    : { unread: serverFailed({ settings }, failureOf(refusal.unreached), linking.options.secrets) };
 }
 
 export async function connectionLinkOf(
