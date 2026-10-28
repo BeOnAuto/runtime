@@ -80,7 +80,7 @@ async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall)
       await Effect.runPromise(Effect.forEach(items, (item) => item.perform(now)));
       return keysOf(items);
     },
-    nextAfter: (moment: number) => Effect.runPromise(work.nextDueAt(moment)),
+    nextAfter: (moment: number, callsOut?: boolean) => Effect.runPromise(work.nextDueAt(moment, callsOut)),
     started: (...calls: readonly StartCall[]) =>
       Effect.runPromise(
         Effect.andThen(
@@ -108,6 +108,7 @@ export function dispatchSuite(settings: SettingsOf): void {
 
     const before = await calls.dueAt(startedAt + quickMs - 1);
     const firstNext = await calls.nextAfter(startedAt);
+    const firstNextOfEachLane = [await calls.nextAfter(startedAt, true), await calls.nextAfter(startedAt, false)];
     const quickAgain = await calls.performedAt(startedAt + quickMs);
     const secondNext = await calls.nextAfter(startedAt + quickMs);
     const bothAgain = await calls.performedAt(startedAt + slowMs);
@@ -118,6 +119,7 @@ export function dispatchSuite(settings: SettingsOf): void {
       [callKeyText(quick.key), callKeyText(slow.key)],
     ]);
     expect([firstNext, secondNext]).toEqual([startedAt + quickMs, startedAt + quickMs * 2]);
+    expect(firstNextOfEachLane).toEqual([startedAt + quickMs, null]);
     expect([await calls.dueAtAmongTheRest(startedAt + slowMs * 3), againAttemptsOf(calls.attempts())]).toEqual([
       [],
       ['/do/0/a', '/do/0/a', '/do/1/b'],

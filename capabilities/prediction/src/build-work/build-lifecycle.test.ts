@@ -101,6 +101,21 @@ describe('a build of a prediction function performed by the due work of the host
 
     expect([waiting, await Effect.runPromise(due.nextDueAt(0))]).toEqual([null, expect.any(Number)]);
   });
+
+  it('is due among the work that calls out nowhere, and never among the work that calls out', async () => {
+    const playbook = buildPlaybook();
+    await savedFunction(playbook);
+    const build = await askedBuild(playbook);
+    const due = buildsDue({ ports: playbook.test.ports, runs: playbook.startChild });
+    await answered(playbook, build, { candidates: [] });
+
+    const lanes = await Effect.runPromise(
+      Effect.all([due.nextDueAt(0), due.nextDueAt(0, false), due.nextDueAt(0, true)]),
+    );
+
+    expect(lanes).toEqual([lanes[0], lanes[0], null]);
+    expect(lanes[0]).toEqual(expect.any(Number));
+  });
 });
 
 describe('a build whose trainer answers while the due work of the host performs it', () => {

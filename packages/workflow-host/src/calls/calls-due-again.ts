@@ -26,6 +26,6 @@ export function callsDueAgainOf(database: HostDatabase, executor: Pick<HostExecu
   return {
     name: 'waiting calls',
     due: (now, most, callsOut) => (callsOut ? due(now, most) : Effect.succeed(nothingDue)),
-    nextDueAt: (after) => soonestDueAfter(database, after),
+    nextDueAt: (after, callsOut = true) => (callsOut ? soonestDueAfter(database, after) : Effect.succeed(null)),
   };
 }

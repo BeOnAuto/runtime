@@ -14,7 +14,7 @@ export interface DueItem {
 export interface DueWork {
   readonly name: string;
   readonly due: (now: number, most: number, callsOut: boolean) => Effect.Effect<readonly DueItem[], unknown>;
-  readonly nextDueAt: (after: number) => Effect.Effect<number | null, unknown>;
+  readonly nextDueAt: (after: number, callsOut?: boolean) => Effect.Effect<number | null, unknown>;
 }
 
 export interface DuePerformer {

@@ -48,6 +48,7 @@ export function buildsDue(parts: BuildsDueParts): DueWork {
             ledger.readDueRows(predictionBuildsName, { column: 'next_due_at', through: now, limit: most }),
             (rows) => rows.map((kept) => itemOf(parts, kept)),
           ),
-    nextDueAt: (after) => ledger.nextDueOf(predictionBuildsName, 'next_due_at', after),
+    nextDueAt: (after, callsOut = false) =>
+      callsOut ? Effect.succeed(null) : ledger.nextDueOf(predictionBuildsName, 'next_due_at', after),
   };
 }
