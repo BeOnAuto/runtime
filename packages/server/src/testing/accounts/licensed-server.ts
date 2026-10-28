@@ -1,5 +1,6 @@
 import { accountFake, accountServerOver, testSigners, type AccountFake } from '@on.auto/meter/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
+import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
@@ -14,13 +15,33 @@ export interface Accounts {
   readonly account: AccountFake;
   readonly origin: string;
   readonly key: string;
+  readonly reportsAsked: () => number;
+}
+
+function withItsReportsCounted(account: AccountFake, counted: () => void): AccountFake {
+  return {
+    ...account,
+    ports: {
+      ...account.ports,
+      report: (key, usage) =>
+        Effect.suspend(() => {
+          counted();
+          return account.ports.report(key, usage);
+        }),
+    },
+  };
 }
 
 export async function accountsServed(): Promise<Accounts> {
   const account = accountFake();
-  const served = await accountServerOver(account);
+  const asked = { reports: 0 };
+  const served = await accountServerOver(
+    withItsReportsCounted(account, () => {
+      asked.reports += 1;
+    }),
+  );
   onTestFinished(() => served.close());
-  return { account, origin: served.origin, key: account.keyFor(installation) };
+  return { account, origin: served.origin, key: account.keyFor(installation), reportsAsked: () => asked.reports };
 }
 
 export async function servedBy(
