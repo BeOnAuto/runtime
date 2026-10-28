@@ -29,9 +29,10 @@ function hostOn(port: number, home: string, say: (line: string) => void): Comman
 }
 
 describe('auto-runtime license, against the runtime running on this computer', () => {
-  it('activates the license with the key, and says what the runtime is licensed to', async () => {
+  it('activates the license with the key, and says the name of the org the runtime is licensed to', async () => {
     const home = aHome();
     const { port, accounts } = await controlledLicensedServer(home);
+    accounts.account.orgNamed('acme', 'Acme Corporation');
     const said: string[] = [];
 
     expect(
@@ -42,7 +43,9 @@ describe('auto-runtime license, against the runtime running on this computer', (
         }),
       ),
     ).toBe(0);
-    expect(said[0]).toBe(`Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id ${installation}.`);
+    expect(said[0]).toBe(
+      `Licensed to Acme Corporation (free plan) until 2026-11-03; renews daily. Runtime id ${installation}.`,
+    );
     expect(accounts.account.activations()).toHaveLength(1);
   }, 60_000);
 

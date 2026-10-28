@@ -15,6 +15,7 @@ const EntitlementSchema = Schema.Struct({
   kind: Schema.Literal('entitlement'),
   installation: Schema.String,
   org: Schema.String,
+  org_name: Schema.optionalKey(Schema.NullOr(Schema.String)),
   plan: Schema.String,
   issued_at: Schema.String,
   expires_at: Schema.String,

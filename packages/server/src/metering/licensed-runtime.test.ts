@@ -142,3 +142,23 @@ describe('a key activated through the API', () => {
     expect(unreached.body).toMatchObject({ kind: 'meter_unavailable' });
   });
 });
+
+describe('a key activated through the API for an org Auto names', () => {
+  it('answers the name of the org beside its id, which an agent is told in words', async () => {
+    const accounts = await accountsServed();
+    accounts.account.orgNamed('acme', 'Acme Corporation');
+    const server = await servedBy(accounts);
+    const [activated] = await withMcpSession(
+      'current revision',
+      { url: `${server.origin}/orgs/acme/mcp`, headers: {} },
+      async (session) => [await session.callTool('activate_license', { key: accounts.key })],
+    );
+    const overHttp = await server.call('POST', '/v1/orgs/acme/license', { body: { key: accounts.key } });
+
+    expect(activated?.structuredContent).toMatchObject({ org: 'acme', org_name: 'Acme Corporation', plan: 'free' });
+    expect(JSON.stringify(activated?.content)).toContain(
+      'licensed to the org Acme Corporation (acme) on the plan free',
+    );
+    expect(overHttp.body).toMatchObject({ org: 'acme', org_name: 'Acme Corporation' });
+  });
+});

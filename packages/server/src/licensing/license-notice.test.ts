@@ -8,6 +8,7 @@ const unregistered: LicenseStatus = {
   runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
   free_runs: { used: 12, of: 100 },
   org: null,
+  org_name: null,
   plan: null,
   expires_at: null,
   renewed_at: null,
@@ -20,10 +21,23 @@ const offline = { credits: 50, spent: 7, usable_until: '2026-11-03T12:00:00.000Z
 
 describe('the line that says what a runtime holds', () => {
   it('counts the free runs it used while it is unregistered, and names who it is licensed to once it is', () => {
+    const licensed: LicenseStatus = {
+      ...unregistered,
+      state: 'licensed',
+      org: 'acme',
+      plan: 'team',
+      key_source: 'environment',
+    };
+
     expect([
       licenseNoticeOf(unregistered),
-      licenseNoticeOf({ ...unregistered, state: 'licensed', org: 'acme', plan: 'team', key_source: 'environment' }),
-    ]).toEqual(['12 of 100 free runs used, then a free key from Studio', 'Licensed to acme (team plan)']);
+      licenseNoticeOf({ ...licensed, org_name: 'Acme Corporation' }),
+      licenseNoticeOf(licensed),
+    ]).toEqual([
+      '12 of 100 free runs used, then a free key from Studio',
+      'Licensed to Acme Corporation (team plan)',
+      'Licensed to acme (team plan)',
+    ]);
   });
 
   it('counts the offline credits it spent, and until when it may spend them', () => {

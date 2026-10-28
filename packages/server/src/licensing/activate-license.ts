@@ -10,6 +10,7 @@ const ActivationSchema = Schema.Struct({ key: LicenseKey });
 const LicenseSchema = Schema.Struct({
   installation: Schema.String,
   org: Schema.String,
+  org_name: Schema.NullOr(Schema.String),
   plan: Schema.String,
   expires_at: Schema.String,
 });
@@ -40,8 +41,8 @@ export function defineActivateLicense(license: Pick<LicensePorts, 'activate'>, k
     plainLanguage: {
       task: 'activate the license of this runtime',
       attempt: () => 'activate the license with the key given',
-      outcome: ({ org, plan, expires_at: expiresAt }) =>
-        `This runtime is licensed to the org ${org} on the plan ${plan} until ${expiresAt}, and renews its license every day.`,
+      outcome: ({ org, org_name: orgName, plan, expires_at: expiresAt }) =>
+        `This runtime is licensed to the org ${orgName === null ? org : `${orgName} (${org})`} on the plan ${plan} until ${expiresAt}, and renews its license every day.`,
     },
   });
 }

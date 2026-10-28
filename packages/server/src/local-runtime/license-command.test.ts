@@ -48,6 +48,22 @@ async function ranWith(args: readonly string[], answer: () => Promise<Response>)
 
 const licensed = { installation: '0199a3c4', org: 'acme', plan: 'free', expires_at: '2026-11-03T12:00:00.000Z' };
 
+describe('auto-runtime license activate, for an org Auto names', () => {
+  it('says the name of the org it is licensed to where the runtime gives one, and its id where it gives none', async () => {
+    const named = await ranWith(['activate', key], () =>
+      Promise.resolve(Response.json({ ...licensed, org_name: 'Acme Corporation' })),
+    );
+    const unnamed = await ranWith(['activate', key], () =>
+      Promise.resolve(Response.json({ ...licensed, org_name: null })),
+    );
+
+    expect([named.logged, unnamed.logged]).toEqual([
+      ['Licensed to Acme Corporation (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
+      ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
+    ]);
+  });
+});
+
 describe('auto-runtime license activate', () => {
   it('sends the key to the runtime running on this computer and says what it is licensed to', async () => {
     const asked = await ranWith(['activate', key], () => Promise.resolve(Response.json(licensed)));

@@ -2,7 +2,7 @@ import type { KeyCommandConsole } from '@on.auto/identity';
 import { SignedSchema } from '@on.auto/meter';
 import { Effect, Option, Schema } from 'effect';
 
-import { dayOf, offlineCreditsNotice } from '../licensing/license-notice.ts';
+import { dayOf, licensedToOf, offlineCreditsNotice } from '../licensing/license-notice.ts';
 import { runtimeAddressOf, whenRunning, type RuntimeFetch } from './runtime-probe.ts';
 
 interface RuntimeAsking {
@@ -24,7 +24,13 @@ const askedWithinMs = 30_000;
 
 const licensedIn = Schema.decodeUnknownOption(
   Schema.fromJsonString(
-    Schema.Struct({ installation: Schema.String, org: Schema.String, plan: Schema.String, expires_at: Schema.String }),
+    Schema.Struct({
+      installation: Schema.String,
+      org: Schema.String,
+      org_name: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      plan: Schema.String,
+      expires_at: Schema.String,
+    }),
   ),
 );
 
@@ -90,8 +96,8 @@ function activation(key: string): LicenseCommand {
     path: '/license',
     body: { key },
     answerIn: licensedIn,
-    said: ({ org, plan, installation, expires_at: expiresAt }) =>
-      `Licensed to ${org} (${plan} plan) until ${dayOf(expiresAt)}; renews daily. Runtime id ${installation}.`,
+    said: ({ org, org_name: orgName, plan, installation, expires_at: expiresAt }) =>
+      `Licensed to ${licensedToOf(org, orgName)} (${plan} plan) until ${dayOf(expiresAt)}; renews daily. Runtime id ${installation}.`,
     failed: 'Auto Runtime did not activate the key',
   });
 }

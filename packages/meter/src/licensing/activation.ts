@@ -95,12 +95,22 @@ export function activated(licensing: Licensing, key: string): Effect.Effect<Lice
       .pipe(Effect.catch(refused(licensing, key, installation)));
     const {
       org,
+      org_name: named,
       plan,
       issued_at: issuedAt,
       expires_at: expiresAt,
     } = yield* entitlementFrom(licensing, answer.entitlement, installation);
+    const orgName = named ?? null;
     const sha256 = keyDigestOf(key);
-    const license = { installation, org, plan, issued_at: issuedAt, expires_at: expiresAt, key_sha256: sha256 };
+    const license = {
+      installation,
+      org,
+      ...(orgName === null ? {} : { org_name: orgName }),
+      plan,
+      issued_at: issuedAt,
+      expires_at: expiresAt,
+      key_sha256: sha256,
+    };
     yield* executed(licensing, {
       type: 'license',
       license: { ...license, entitlement: answer.entitlement },
@@ -111,6 +121,7 @@ export function activated(licensing: Licensing, key: string): Effect.Effect<Lice
     return {
       installation,
       org,
+      org_name: orgName,
       plan,
       issued_at: issuedAt,
       expires_at: expiresAt,

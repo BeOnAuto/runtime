@@ -9,9 +9,17 @@ export function offlineCreditsNotice({ credits, spent, usable_until: usableUntil
   return `Offline credits: ${spent} of ${credits} used, usable until ${dayOf(usableUntil)}`;
 }
 
-function licensedNotice({ org, plan }: LicenseStatus): string | undefined {
+export function licensedToOf(org: string, orgName: string | null | undefined): string {
+  return orgName ?? org;
+}
+
+function licensedNotice({ org, org_name: orgName, plan }: LicenseStatus): string | undefined {
   return Option.getOrUndefined(
-    Option.zipWith(Option.fromNullishOr(org), Option.fromNullishOr(plan), (to, on) => `Licensed to ${to} (${on} plan)`),
+    Option.zipWith(
+      Option.fromNullishOr(org),
+      Option.fromNullishOr(plan),
+      (to, on) => `Licensed to ${licensedToOf(to, orgName)} (${on} plan)`,
+    ),
   );
 }
 

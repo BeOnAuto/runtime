@@ -51,17 +51,17 @@ Give the runtime its key in one of four ways. A key in the environment or the co
   npx -y @on.auto/runtime license activate alk.<org>.<installation>.<secret>
   ```
 
-  It asks the runtime running on this computer to activate the key, and says what the runtime is licensed to:
+  It asks the runtime running on this computer to activate the key, and says what the runtime is licensed to, the org by its name at Auto, or by its id where Auto names none:
 
   ```text
-  Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.
+  Licensed to Acme Corporation (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.
   ```
 
 - **Studio, or any client of the API.** `POST /v1/orgs/{org}/license` with `{ "key": "<the key>" }`, or the MCP tool `activate_license`, activates the key for the whole runtime. It takes the permission to change the org, as adding a connection does.
 
 A key activated by the command or through the API is kept in the runtime's secret store, as the credentials of connections are, so it stands after a restart.
 
-The runtime activates a key by asking Auto's account service at `https://billing.on.auto`, which answers an entitlement Auto signs. The runtime ships Auto's public key and checks every answer against it; no setting adds or replaces a key. The entitlement lasts seven days, and the runtime renews it as it starts and every day after. Every hour, and as it stops, the runtime counts its ledger again from the first event and reports its count of actions to the account, which compares it with what it charged.
+The runtime activates a key by asking Auto's account service at `https://billing.on.auto`, which answers an entitlement Auto signs, naming the org, its name at Auto where Auto knows it, and its plan. The runtime ships Auto's public key and checks every answer against it; no setting adds or replaces a key. The entitlement lasts seven days, and the runtime renews it as it starts and every day after. Every hour, and as it stops, the runtime counts its ledger again from the first event and reports its count of actions to the account, which compares it with what it charged.
 
 The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules beside `studio.on.auto`.
 
@@ -75,6 +75,7 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
   "runtime_id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
   "free_runs": { "used": 100, "of": 100 },
   "org": "acme",
+  "org_name": "Acme Corporation",
   "plan": "free",
   "expires_at": "2026-11-03T12:00:00.000Z",
   "renewed_at": "2026-10-27T12:00:00.000Z",
@@ -88,10 +89,11 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
 - `runtime_id` is the installation an owner registers in Studio. A runtime that has no id yet takes one as it is first read, the id its first run would have taken.
 - `free_runs.used` is the actions the runtime counted from its ledger, at most the 100 it runs before it is registered.
 - `org`, `plan`, `expires_at` and `renewed_at` are those of the entitlement of the key in force, and `null` without one.
+- `org_name` is the name of that org at Auto, as Auto signed it into the entitlement and renewed with it every day, and `null` without one or where Auto named none.
 - `key_source` says where the key in force came from: `environment`, `configuration` or `activated`, by the command or the API; `null` without a key. A key in the environment or the configuration file wins over an activated one at each start.
 - `offline` is `{ credits, spent, usable_until }` while the runtime holds an allocation, and `null` otherwise.
 
-Started by `npx @on.auto/runtime`, the runtime says the same in its terminal and on the page it serves at its root: `12 of 100 free runs used, then a free key from Studio` while it is unregistered, and `Licensed to acme (free plan)` once it is licensed.
+Started by `npx @on.auto/runtime`, the runtime says the same in its terminal and on the page it serves at its root: `12 of 100 free runs used, then a free key from Studio` while it is unregistered, and `Licensed to Acme Corporation (free plan)` once it is licensed, with the org's id in place of its name where Auto named none.
 
 ## When a run is refused
 

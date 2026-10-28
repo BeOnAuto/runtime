@@ -9,7 +9,7 @@ const page = `https://studio.on.auto/licenses?installation=${installation}`;
 
 const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
 
-const noLicense = { org: null, plan: null, expires_at: null, renewed_at: null };
+const noLicense = { org: null, org_name: null, plan: null, expires_at: null, renewed_at: null };
 
 async function keyedOn(ledgerOf: LedgerOf, keySource: 'environment' | 'configuration' = 'environment') {
   const { metered, ...rest } = await opened(ledgerOf);
@@ -103,6 +103,7 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
       runtime_id: installation,
       free_runs: { used: 1, of: 100 },
       org: 'globex',
+      org_name: null,
       plan: 'free',
       expires_at: '2026-11-03T12:00:00.000Z',
       renewed_at: '2026-10-27T12:00:00.000Z',
@@ -117,6 +118,23 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
     await metered.activated(metered.account.keyFor(installation));
 
     expect(await metered.status()).toMatchObject({ state: 'licensed', key_source: 'activated' });
+  });
+}
+
+function namedStatusBehaviour(ledgerOf: LedgerOf): void {
+  it('reads the name of its org that Auto signed, through a restart', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.orgNamed('globex', 'Globex Corporation');
+    const key = metered.account.keyFor(installation, 'globex');
+    await metered.activated(key);
+    const restarted = await restartedOf(metered, { key: undefined });
+    await restarted.held(key);
+
+    expect(await restarted.status()).toMatchObject({
+      state: 'licensed',
+      org: 'globex',
+      org_name: 'Globex Corporation',
+    });
   });
 }
 
@@ -181,6 +199,7 @@ export function statusBehaviour(ledgerOf: LedgerOf): void {
   unregisteredStatusBehaviour(ledgerOf);
   countedStatusBehaviour(ledgerOf);
   licensedStatusBehaviour(ledgerOf);
+  namedStatusBehaviour(ledgerOf);
   invalidStatusBehaviour(ledgerOf);
   offlineStatusBehaviour(ledgerOf);
 }

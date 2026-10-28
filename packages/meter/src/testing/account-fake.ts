@@ -15,7 +15,8 @@ export type Answering =
   | 'for another installation'
   | 'for another action'
   | 'tampered'
-  | 'expired';
+  | 'expired'
+  | 'with more than it knows';
 
 interface Registration {
   readonly installation: string;
@@ -32,6 +33,7 @@ interface CreditRefusal {
 export interface AccountFake extends Omit<AllocationFake, 'ports'> {
   readonly ports: AccountPorts;
   readonly keyFor: (installation: string, org?: string) => string;
+  readonly orgNamed: (org: string, name: string) => void;
   readonly revoke: (key: string, because?: Revocation) => void;
   readonly exhaust: (refusal?: CreditRefusal) => void;
   readonly goDown: () => void;
@@ -57,11 +59,13 @@ interface FakeState {
 
 interface Standing {
   readonly reached: (key: string) => Effect.Effect<Registration, AccountFailure>;
+  readonly nameOf: (org: string) => Payload;
   readonly signed: (payload: Payload) => Signed;
   readonly iso: (laterMs?: number) => string;
   readonly noCredit: () => AccountFailure | undefined;
   readonly repairOf: (installation: string) => Signed | null;
   readonly registered: (key: string, registration: Registration) => void;
+  readonly named: (org: string, name: string) => void;
   readonly revoked: (key: string, because: Revocation | undefined) => void;
   readonly changed: (change: Readonly<Partial<FakeState>>) => void;
   readonly repairedWith: (installation: string, repair: Signed) => void;
@@ -120,6 +124,7 @@ const answers: Readonly<Record<Answering, (payload: Payload) => Signed>> = {
   'for another action': (payload) => signedByTheTestKey({ ...payload, action: 'installation:another/acme/alpha/run' }),
   tampered: (payload) => tampered(signedByTheTestKey(payload)),
   expired: (payload) => signedByTheTestKey({ ...payload, expires_at: payload['issued_at'] }),
+  'with more than it knows': (payload) => signedByTheTestKey({ ...payload, seats: 5, region: 'eu' }),
 };
 
 function portsOf(standing: Standing, records: Records, allocations: AllocationFake): AccountPorts {
@@ -128,7 +133,15 @@ function portsOf(standing: Standing, records: Records, allocations: AllocationFa
     activate: (key, usage) =>
       Effect.map(standing.reached(key), ({ installation, org }) => {
         records.activated(usage);
-        const entitlement = { v: 1, kind: 'entitlement', installation, org, plan: 'free', issued_at: standing.iso() };
+        const entitlement = {
+          v: 1,
+          kind: 'entitlement',
+          installation,
+          org,
+          ...standing.nameOf(org),
+          plan: 'free',
+          issued_at: standing.iso(),
+        };
         return {
           entitlement: standing.signed({ ...entitlement, expires_at: standing.iso(sevenDaysMs) }),
           repair: standing.repairOf(installation),
@@ -156,6 +169,7 @@ function accountStanding(): Standing {
   const registrations = new Map<string, Registration>();
   const revoked = new Map<string, AccountFailure>();
   const repairs = new Map<string, Signed>();
+  const names = new Map<string, string>();
   const now = Date.parse('2026-10-27T12:00:00.000Z');
   const state: FakeState = { now, up: true, exhausted: undefined, answering: 'signed' };
   return {
@@ -165,12 +179,19 @@ function accountStanding(): Standing {
         if (!state.up) return Effect.fail(unreachable('The account service could not be reached'));
         return registration === undefined ? Effect.fail(revoked.get(key) ?? unknownKey) : Effect.succeed(registration);
       }),
+    nameOf: (org) => {
+      const name = names.get(org);
+      return name === undefined ? {} : { org_name: name };
+    },
     signed: (payload) => answers[state.answering](payload),
     iso: (laterMs = 0) => new Date(state.now + laterMs).toISOString(),
     noCredit: () => (state.exhausted === undefined ? undefined : noCreditOf(state.exhausted)),
     repairOf: (installation) => repairs.get(installation) ?? null,
     registered: (key, registration) => {
       registrations.set(key, registration);
+    },
+    named: (org, name) => {
+      names.set(org, name);
     },
     revoked: (key, because) => {
       registrations.delete(key);
@@ -225,6 +246,9 @@ export function accountFake(): AccountFake {
       const key = `alk.${org}.${installation}.${randomUUID().replaceAll('-', '')}`;
       standing.registered(key, { installation, org });
       return key;
+    },
+    orgNamed: (org, name) => {
+      standing.named(org, name);
     },
     revoke: (key, because) => {
       standing.revoked(key, because);

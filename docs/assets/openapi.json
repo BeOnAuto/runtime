@@ -5913,6 +5913,16 @@
                     "org": {
                       "type": "string"
                     },
+                    "org_name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "plan": {
                       "type": "string"
                     },
@@ -5923,6 +5933,7 @@
                   "required": [
                     "installation",
                     "org",
+                    "org_name",
                     "plan",
                     "expires_at"
                   ],
@@ -5979,7 +5990,7 @@
       "get": {
         "operationId": "get_license",
         "summary": "Get license",
-        "description": "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license, where its key came from and the offline credits it spends. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
+        "description": "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
         "tags": [
           "license"
         ],
@@ -6039,7 +6050,18 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The org at Auto its license is of"
+                      "description": "The id of the org at Auto its license is of"
+                    },
+                    "org_name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The name of that org at Auto, as Auto signed it into the entitlement, or null where Auto named none"
                     },
                     "plan": {
                       "anyOf": [
@@ -6138,6 +6160,7 @@
                     "runtime_id",
                     "free_runs",
                     "org",
+                    "org_name",
                     "plan",
                     "expires_at",
                     "renewed_at",

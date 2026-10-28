@@ -47,6 +47,7 @@ describe('the license a runtime nobody registered holds', () => {
       runtime_id: runtimeId,
       free_runs: { used: 2, of: 100 },
       org: null,
+      org_name: null,
       plan: null,
       expires_at: null,
       renewed_at: null,
@@ -81,6 +82,7 @@ describe('the license a licensed runtime holds', () => {
       runtime_id: installation,
       free_runs: { used: 1, of: 100 },
       org: 'acme',
+      org_name: null,
       plan: 'free',
       expires_at: '2026-11-03T12:00:00.000Z',
       renewed_at: '2026-10-27T12:00:00.000Z',
@@ -108,6 +110,22 @@ describe('the license a licensed runtime holds', () => {
 
     expect((await configured.call('GET', license)).body).toMatchObject({ key_source: 'configuration' });
     expect((await activating.call('GET', license)).body).toMatchObject({ state: 'licensed', key_source: 'activated' });
+  });
+});
+
+describe('the license of a runtime whose org Auto names', () => {
+  it('reads the name of its org as Auto signed it, which the page at its root says in place of the id', async () => {
+    const accounts = await accountsServed();
+    accounts.account.orgNamed('acme', 'Acme Corporation');
+    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
+    await tallied(server);
+
+    expect((await server.call('GET', license)).body).toMatchObject({
+      state: 'licensed',
+      org: 'acme',
+      org_name: 'Acme Corporation',
+    });
+    expect(await pageOf(server)).toContain('<p class="license">Licensed to Acme Corporation (free plan)</p>');
   });
 });
 
