@@ -182,7 +182,7 @@ describe('a text that is not a prediction function document', () => {
       'Line 1: A prediction function definition starts with a line of three dashes (---) that opens its front matter of YAML',
     ]);
     expect(problemsOf('---\n---\n')).toEqual([
-      'Line 2: The front matter is empty; it names at least what it predicts, the data it learns from, how it is evaluated and where its builds go',
+      'Line 2: The front matter is empty; it names at least what it predicts, the data it learns from and how it is evaluated',
       'Line 3: The definition has no brief: write it after the front matter',
     ]);
     expect(problemsOf(weeklyOrdersWith(['source:', 'input:\n  schema: {}\nsource:']))).toEqual([

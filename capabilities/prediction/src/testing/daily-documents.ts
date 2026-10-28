@@ -75,6 +75,16 @@ export function uploadedDailyVisits(sha256: string): string {
   );
 }
 
+export function trainerlessDailyVisits(sha256: string): string {
+  return dailyVisitsWith(
+    ...projectionLines,
+    ['    - type: visit.made', `  dataset: ${sha256}`],
+    ['  target: { as: count }', ''],
+    ['source:', ''],
+    ['  expires: P1D', ''],
+  );
+}
+
 export function uploadedDailyTotals(sha256: string): string {
   return dailyTotalsWith(
     ...projectionLines,

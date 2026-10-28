@@ -21,7 +21,7 @@ export async function predictionServedBy(
   { store, runtimes }: { readonly store: WorkflowStore; readonly runtimes: PredictionPorts['runtimes'] },
 ): Promise<ServedPrediction> {
   const { mostFunctions, processes, processMemoryMebibytes, buildsAtOnce, buildsPerDay, cacheDirectory } = prediction;
-  const { pool, ports: models } = await servedModels(prediction);
+  const { pool, inline, ports: models } = await servedModels(prediction);
   await runtime.run(
     logPredictionFunctions({
       mostFunctions,
@@ -48,6 +48,7 @@ export async function predictionServedBy(
       routes,
       stopWork: async () => {
         await stopWork();
+        inline.close();
         await pool.close();
       },
     }),

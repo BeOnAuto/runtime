@@ -30,6 +30,7 @@ const reserved = [
   'candidate_disqualified',
   'baseline_scored',
   'baseline_not_walked',
+  'candidates_fitted',
   'interaction_requested',
   'telling_started',
   'telling_succeeded',

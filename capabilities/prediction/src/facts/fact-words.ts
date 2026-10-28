@@ -50,6 +50,15 @@ const buildWords = {
     `The baseline ${baseline} was walked over ${figure(walked)} series: ${primaryWords(scores)}`,
   baseline_not_walked: ({ baseline }: BuildWorkOf<'baseline_not_walked'>['data']) =>
     `The baseline ${baseline} could not be walked: no series had a season observed before an origin`,
+  candidates_fitted: ({ runtime, candidates, detail }: BuildWorkOf<'candidates_fitted'>['data']) => {
+    if (runtime === null) {
+      return 'No model runtime this server has installed fits its own models for the function, so the build fitted no candidate';
+    }
+    const fitter = `The model runtime ${runtime.name} ${runtime.version}`;
+    return detail === undefined
+      ? `${fitter} fitted ${figure(candidates.length)} candidates from the training rows, uploaded to the build as a trainer's are`
+      : `${fitter} fitted no candidate: ${detail}`;
+  },
 };
 
 const activatedWords: Readonly<Record<ModelFactOf<'version_activated'>['data']['rule'], string>> = {
@@ -106,6 +115,9 @@ export function buildSummaryOf(work: BuildWork): string {
   }
   if (work.type === 'candidate_disqualified') {
     return buildWords.candidate_disqualified(work.data);
+  }
+  if (work.type === 'candidates_fitted') {
+    return buildWords.candidates_fitted(work.data);
   }
   return work.type === 'baseline_scored'
     ? buildWords.baseline_scored(work.data)

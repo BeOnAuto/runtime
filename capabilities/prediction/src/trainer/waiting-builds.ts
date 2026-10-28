@@ -3,15 +3,28 @@ import { Conflict, NotFound, PlaybookContext, PlaybookReader } from '@on.auto/op
 import { Effect } from 'effect';
 
 import { childIdOf, requestReference } from '../build-work/child-runs.ts';
-import { buildRecordOf, buildStateOf, type BuildRecord, type BuildState } from '../builds/build-state.ts';
+import {
+  asksATrainer,
+  buildRecordOf,
+  buildStateOf,
+  type BuildState,
+  type RequestRecord,
+} from '../builds/build-state.ts';
 
 export interface WaitingBuild {
   readonly build: BuildState;
-  readonly record: BuildRecord;
+  readonly record: RequestRecord;
 }
 
 function notABuild(id: string): Conflict {
   return new Conflict({ detail: `Run ${id} is not a build`, kind: 'not_a_build' });
+}
+
+function noTrainer(id: string): Conflict {
+  return new Conflict({
+    detail: `Build ${id} asks no trainer: its function names no source, so the playbook fits its candidates itself`,
+    kind: 'no_trainer',
+  });
 }
 
 export const buildEnded = new Conflict({ detail: 'The build has ended', kind: 'build_ended' });
@@ -39,6 +52,9 @@ export function waitingBuildOf(
       return yield* notABuild(id);
     }
     const record = buildRecordOf(build.run);
+    if (record !== undefined && !asksATrainer(record)) {
+      return yield* noTrainer(id);
+    }
     if (record === undefined || !build.run.awaitsSettlement || build.run.answer !== null) {
       return yield* buildEnded;
     }

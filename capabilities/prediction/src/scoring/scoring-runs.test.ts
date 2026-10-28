@@ -87,7 +87,7 @@ describe('a candidate whose walk ends without an answer', { timeout: testTimeout
     const scripted = scriptedModels();
     const playbook = buildPlaybook({
       module: scripted.module,
-      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000 },
+      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000, fit: 30_000 },
     });
     const names: readonly CandidateName[] = ['visits-mean', 'visits-last', 'visits-wide', 'visits-even'];
     const build = await answeredWith(playbook, names);
@@ -181,7 +181,7 @@ describe('a candidate scored while every model process is taken', { timeout: tes
     const scripted = scriptedModels();
     const playbook = buildPlaybook({
       module: scripted.module,
-      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000 },
+      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000, fit: 30_000 },
     });
     const build = await answeredWith(playbook, ['visits-mean']);
     const { models } = playbook.test.ports;

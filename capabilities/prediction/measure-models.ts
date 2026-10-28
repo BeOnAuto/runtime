@@ -33,10 +33,13 @@ function mib(bytes: number): string {
   return `${(bytes / mebibyte).toFixed(0)} MiB`;
 }
 
-const [module = '', mean = '', large = ''] = process.argv.slice(2);
-const files = measuredFiles(module, mean, large);
+const [module = '', mean = '', large = '', bound = 'process'] = process.argv.slice(2);
+const kind = bound === 'inline' ? 'inline' : 'process';
+const files = measuredFiles({ module, mean, large, kind });
 try {
-  write(`Node ${process.version}, ${cpus().length} cores`);
+  write(
+    `Node ${process.version}, ${cpus().length} cores, the runtime bound ${kind === 'inline' ? 'inline, in this process' : 'in model processes'}`,
+  );
   const timed = await modelTimings(files);
   write(`a model process started cold, the model loaded and checked: ${ms(timed.coldCheckMs)}`);
   write(`a question on a process that has not loaded the model: ${ms(timed.coldRunMs)}`);
@@ -53,7 +56,7 @@ try {
   const memory = Schema.decodeUnknownSync(MemorySchema)(
     execFileSync(
       process.execPath,
-      [fileURLToPath(new URL('./measure/session-memory.ts', import.meta.url)), module, files.large, files.widest],
+      [fileURLToPath(new URL('./measure/session-memory.ts', import.meta.url)), module, files.large, files.widest, kind],
       { encoding: 'utf8' },
     ),
   );

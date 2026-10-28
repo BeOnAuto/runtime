@@ -18,7 +18,7 @@ const BuildRowSchema = Schema.Struct({
   standing: StandingSchema,
   through: Schema.NullOr(Schema.String),
   requested_at: Schema.Int,
-  expires_at: Schema.Int,
+  expires_at: Schema.NullOr(Schema.Int),
   uploaded: Schema.Int,
   scored: Schema.Int,
   winner: Schema.NullOr(Schema.String),

@@ -1,10 +1,28 @@
 import { readFile } from 'node:fs/promises';
 
-import type { FedShape, LoadModel, ModelAnswer, ModelFeeds } from '@on.auto/prediction-contract';
+import type {
+  DefaultModel,
+  FedShape,
+  FitModels,
+  FittedModel,
+  FunctionShape,
+  LoadModel,
+  ModelAnswer,
+  ModelFeeds,
+} from '@on.auto/prediction-contract';
 import { Schema } from 'effect';
 
 const RecipeSchema = Schema.Struct({
-  recipe: Schema.Literals(['mean', 'last', 'observed-mean', 'not-a-number', 'whole-numbers', 'allocating', 'run-rate']),
+  recipe: Schema.Literals([
+    'mean',
+    'last',
+    'observed-mean',
+    'not-a-number',
+    'whole-numbers',
+    'allocating',
+    'run-rate',
+    'period',
+  ]),
   steps: Schema.Int,
   low: Schema.Number,
   high: Schema.Number,
@@ -65,6 +83,9 @@ function levelOf(recipe: Recipe, feeds: ModelFeeds): number {
   if (recipe.recipe === 'run-rate') {
     return meanOf(y.slice(-runRateDays)) * valuesOf(feeds, 'h').reduce((sum, value) => sum + value, 0);
   }
+  if (recipe.recipe === 'period') {
+    return Number(valuesOf(feeds, 'at')[0]);
+  }
   return recipe.recipe === 'last' ? Number(y.at(-1)) : Number.NaN;
 }
 
@@ -88,6 +109,25 @@ function answered(recipe: Recipe, feeds: ModelFeeds): ModelAnswer {
     dims: [1, steps, percentiles],
   };
 }
+
+function fittedFor({ fed }: FunctionShape, recipe: Recipe['recipe'], spread: number): FittedModel {
+  const steps = fed.totals ? 1 : fed.horizon;
+  const fitted: Recipe = {
+    recipe: fed.totals ? 'run-rate' : recipe,
+    steps,
+    low: fed.totals ? 1 - spread / 10 : spread,
+    high: fed.totals ? 1 + spread / 10 : spread,
+    features: fed.features,
+    given: fed.given,
+    totals: fed.totals,
+  };
+  return { format: 'scripted', bytes: new TextEncoder().encode(JSON.stringify(fitted)) };
+}
+
+export const fitModels: FitModels = (shape) =>
+  Promise.resolve([fittedFor(shape, 'last', 1), fittedFor(shape, 'mean', 2)]);
+
+export const defaultModel: DefaultModel = (shape) => fittedFor(shape, 'last', 3);
 
 export const loadModel: LoadModel = async (path) => {
   const recipe = decodeRecipe(await readFile(path, 'utf8'));

@@ -49,6 +49,7 @@ async function answersFrom({ model, walk, rows }: Walking, step: number, answers
         x: walk.features === 0 ? null : slice(rows.features, 0, origin + 1, walk.features),
         given: givenAhead(rows, walk, origin, remaining ?? walk.steps),
         h: remaining,
+        at: walk.first === null ? null : walk.first + origin,
         features: walk.features,
         givens: walk.given.length,
       },
@@ -81,22 +82,38 @@ async function walkedSeries(
   return q;
 }
 
-async function walkedEach(
-  model: LoadedModel,
-  walk: WalkJob,
-  left: readonly SeriesRows[],
-  done: { readonly series: readonly string[]; readonly q: readonly Readonly<Float32Array>[] },
-): Promise<WalkAnswer> {
+export interface WalkAsked {
+  readonly model: LoadedModel;
+  readonly walk: WalkJob;
+  readonly signal: Readonly<AbortSignal> | undefined;
+}
+
+type Walked = { readonly series: readonly string[]; readonly q: readonly Readonly<Float32Array>[] };
+
+function aTurnLater(signal: Readonly<AbortSignal> | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    setImmediate(() => {
+      if (signal?.aborted === true) {
+        reject(new Error('The walk was stopped before it walked every series'));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+async function walkedEach(asked: WalkAsked, left: readonly SeriesRows[], done: Walked): Promise<WalkAnswer> {
   const [rows, ...rest] = left;
   if (rows === undefined) {
     return done;
   }
-  const answer = await walkedSeries(model, walk, rows);
+  await aTurnLater(asked.signal);
+  const answer = await walkedSeries(asked.model, asked.walk, rows);
   return typeof answer === 'string'
     ? { badly: answer }
-    : walkedEach(model, walk, rest, { series: [...done.series, rows.series], q: [...done.q, answer] });
+    : walkedEach(asked, rest, { series: [...done.series, rows.series], q: [...done.q, answer] });
 }
 
-export function walked(model: LoadedModel, walk: WalkJob, rows: readonly SeriesRows[]): Promise<WalkAnswer> {
-  return walkedEach(model, walk, rows, { series: [], q: [] });
+export function walked(asked: WalkAsked, rows: readonly SeriesRows[]): Promise<WalkAnswer> {
+  return walkedEach(asked, rows, { series: [], q: [] });
 }

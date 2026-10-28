@@ -4,7 +4,7 @@ import { aMinute, recordedWork, restingUntil, type Performing } from '../build-w
 import { untilTheRunEnds } from '../build-work/run-watch.ts';
 import type { BuildWorkOf } from '../facts/build-facts.ts';
 import type { ModelFile, ModelOutcome, WalkAnswer } from '../model-processes/model-processes.ts';
-import type { ExecutingRuntime, RuntimeNamed } from '../runtimes/model-runtimes.ts';
+import { readsTheCalendar, type ExecutingRuntime, type RuntimeNamed } from '../runtimes/model-runtimes.ts';
 import { baselineWalks } from './baselines.ts';
 import { verdictOf, type Scoring } from './candidate-scoring.ts';
 import { remainingOfTheOrigins } from './scoring-grid.ts';
@@ -31,7 +31,8 @@ interface Walked {
   readonly sha256: string;
 }
 
-function answeredFact(scoring: Scoring, { runtime, sha256 }: Walked, answer: WalkAnswer, milliseconds: number) {
+function answeredFact(scoring: Scoring, walked: Walked, answer: WalkAnswer, milliseconds: number) {
+  const { runtime, sha256 } = walked;
   const verdict = verdictOf(scoring, baselineWalks(scoring), answer);
   return verdict.verdict === 'scored'
     ? {
@@ -65,6 +66,7 @@ export function walkedCandidate(
       features: featureNamesOf(document).length,
       given: givenIndexesOf(document),
       remaining: remainingOfTheOrigins(scoring.grid),
+      first: readsTheCalendar(executing.runtime) ? scoring.grid.first : null,
     });
     const outcome = yield* Effect.raceFirst(walk, Effect.as(untilTheRunEnds(ports, build.address), cancelled));
     if (outcome.ended === 'answered') {

@@ -1,6 +1,6 @@
 import { cacheFolderProblem } from '@on.auto/operations';
-import { modelPorts, type ModelPorts } from '@on.auto/prediction';
-import { processPool, type ProcessPool } from '@on.auto/workflow-engine/dsl';
+import { inlineModels, modelPorts, type ModelPorts } from '@on.auto/prediction';
+import { processPool, type InlinePool, type ProcessPool } from '@on.auto/workflow-engine/dsl';
 
 import type { PredictionSettings } from '../function-settings/prediction-settings.ts';
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
@@ -9,6 +9,7 @@ const mebibyte = 1_048_576;
 
 export interface ServedModels {
   readonly pool: ProcessPool;
+  readonly inline: InlinePool;
   readonly ports: ModelPorts;
 }
 
@@ -25,5 +26,10 @@ export async function servedModels(settings: PredictionSettings): Promise<Served
   const { processes, processMemoryMebibytes, buildsAtOnce, cacheDirectory, path } = settings;
   await checkedCacheFolder(cacheDirectory);
   const pool = processPool({ processes, longJobs: buildsAtOnce, memoryBytes: processMemoryMebibytes * mebibyte, path });
-  return { pool, ports: modelPorts({ pool, scoringAtOnce: buildsAtOnce, directory: cacheDirectory }) };
+  const inline = inlineModels(pool);
+  return {
+    pool,
+    inline,
+    ports: modelPorts({ pool, inline, scoringAtOnce: buildsAtOnce, directory: cacheDirectory }),
+  };
 }

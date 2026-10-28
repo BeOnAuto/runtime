@@ -5,7 +5,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { SettingsOf } from '../dataset-testing/dataset-stores.ts';
-import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
+import { inlineScriptedRuntime, scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { asked, builtFrom, modelFactsOf, standingOf } from './built-versions.ts';
 import { performedOnce, performedUntilQuiet } from './due-driving.ts';
 import { gappyVisits, quietVisits, visits } from './projected-fixtures.ts';
@@ -151,7 +151,7 @@ function shadowWaits(settingsOf: SettingsOf): void {
   it('waits while every model process is taken, grades with no truth while its dataset is not made, and decides only at a later close that has one', async () => {
     const projected = await challenged(settingsOf, {
       ...visits,
-      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000 },
+      deadlines: { check: 30_000, run: 10_000, walk: 1500, baselines: 30_000, fit: 30_000 },
     });
     const { models } = projected.playbook.test.ports;
     projected.scripted.next('held');
@@ -188,6 +188,19 @@ function shadowWithoutARuntime(settingsOf: SettingsOf): void {
     expect(facts.filter(({ type }) => type === 'shadow_predicted')).toMatchObject([
       { data: { of: 2, count: 0, missing: 0, runtime: null } },
     ]);
+  });
+}
+
+function shadowInline(settingsOf: SettingsOf): void {
+  it('scores, shadows and activates the versions of a runtime bound inline in the server’s own process, which reads the calendar', async () => {
+    const projected = await challenged(settingsOf, { ...quietVisits, runtimes: [inlineScriptedRuntime] });
+    await performedUntilQuiet(projected.playbook, 4 * day);
+    const facts = await modelFactsOf(projected.playbook);
+
+    expect(facts.find(({ type }) => type === 'shadow_predicted')).toMatchObject({
+      data: { runtime: { name: 'inline-scripted-runtime', version: '1.0.0' } },
+    });
+    expect(facts.at(-1)).toMatchObject({ type: 'version_activated', data: { version: 2 } });
   });
 }
 
@@ -250,6 +263,14 @@ export function projectedBuildsSuite(settingsOf: SettingsOf): void {
   describe('the shadow of a challenger whose runtime is gone', { timeout: testTimeoutMs }, () => {
     shadowWithoutARuntime(settingsOf);
   });
+
+  describe(
+    'the shadow of a challenger whose runtime runs in the server’s own process',
+    { timeout: testTimeoutMs },
+    () => {
+      shadowInline(settingsOf);
+    },
+  );
 
   describe('the shadow of a challenger that a newer version supersedes', { timeout: testTimeoutMs }, () => {
     shadowSuperseded(settingsOf);

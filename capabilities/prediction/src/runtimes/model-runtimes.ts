@@ -5,6 +5,7 @@ import {
   ModelRuntimeSchema,
   modelRuntimePoint as modelRuntimePointName,
   type FedShape,
+  type FunctionShape,
   type ModelRuntime,
 } from '@on.auto/prediction-contract';
 import { Result, Schema } from 'effect';
@@ -34,10 +35,17 @@ function withAFileModule(runtime: ModelRuntime): Result.Result<ModelRuntime, str
   );
 }
 
+function reservedForTheRelease({ name, binding }: ModelRuntime): string | undefined {
+  return binding.kind === 'inline'
+    ? `it binds the model runtime ${name} inline, into the server's own process, which only the release's own extensions may: an extension's runtime runs in a model process, so its binding is a process`
+    : undefined;
+}
+
 export const modelRuntimePoint: ExtensionPoint<ModelRuntime> = {
   name: modelRuntimePointName,
   contracts: acceptedModelRuntimeContracts,
   implementationOf: (value) => Result.flatMap(Result.mapError(decodeRuntime(value), messageOf), withAFileModule),
+  reservedForTheRelease,
 };
 
 export function fedShapeOf({ predicts, data }: PredictionFunctionDefinitionDocument): FedShape {
@@ -46,6 +54,17 @@ export function fedShapeOf({ predicts, data }: PredictionFunctionDefinitionDocum
     given: data.given.length,
     horizon: longestHorizonOf(predicts),
     totals: predicts.accumulates !== undefined,
+  };
+}
+
+export function functionShapeOf(document: PredictionFunctionDefinitionDocument): FunctionShape {
+  const { predicts, evaluation } = document;
+  return {
+    fed: fedShapeOf(document),
+    grain: predicts.period,
+    season: predicts.season ?? null,
+    accumulates: predicts.accumulates ?? null,
+    holdout: evaluation.holdout,
   };
 }
 
@@ -78,6 +97,14 @@ export function formatsAcceptedFor(runtimes: readonly ModelRuntime[], fed: FedSh
   return [...executingRuntimes(runtimes)]
     .filter(([, runtime]: readonly [string, ModelRuntime]) => takesWhatItIsFed(runtime, fed))
     .map(([format, runtime]: readonly [string, ModelRuntime]) => ({ format, runtime }));
+}
+
+export function fittingRuntimeFor(runtimes: readonly ModelRuntime[], fed: FedShape): ModelRuntime | undefined {
+  return runtimes.find((runtime) => runtime.capabilities.fits === true && takesWhatItIsFed(runtime, fed));
+}
+
+export function readsTheCalendar({ capabilities }: ModelRuntime): boolean {
+  return capabilities.calendar === true;
 }
 
 export function runtimeNamed({ name, version }: ModelRuntime): RuntimeNamed {

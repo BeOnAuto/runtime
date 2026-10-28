@@ -3,7 +3,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { parsePredictionDocument } from '../document/document-parsing.ts';
-import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
+import { inlineScriptedRuntime, scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { dailyTotals, dailyVisits } from '../testing/daily-documents.ts';
 import { weeklyOrders } from '../testing/weekly-orders.ts';
 import { candidateFilesOf, listedFormats } from './format-words.ts';
@@ -26,10 +26,10 @@ function runtimeOf(
 }
 
 describe('the extension point of model runtimes', () => {
-  it('is prediction/model-runtime, accepting contract 1, and takes a model runtime whose module is a file', () => {
+  it('is prediction/model-runtime, accepting contracts 1 and 2, and takes a model runtime whose module is a file', () => {
     expect([modelRuntimePoint.name, modelRuntimePoint.contracts]).toEqual([
       'prediction/model-runtime',
-      { least: 1, most: 1 },
+      { least: 1, most: 2 },
     ]);
     expect(modelRuntimePoint.implementationOf(scriptedRuntime)).toEqual(Result.succeed(scriptedRuntime));
   });
@@ -58,6 +58,18 @@ describe('the extension point of model runtimes', () => {
       true,
       Result.fail('The module its binding names is not a file'),
       Result.fail('Its binding could not name its module: no module here'),
+    ]);
+  });
+});
+
+describe('the model runtimes only the release may provide', () => {
+  it("are those bound inline, into the server's own process, since an extension's runtime runs in a model process", () => {
+    expect([
+      modelRuntimePoint.reservedForTheRelease?.(inlineScriptedRuntime),
+      modelRuntimePoint.reservedForTheRelease?.(scriptedRuntime),
+    ]).toEqual([
+      "it binds the model runtime inline-scripted-runtime inline, into the server's own process, which only the release's own extensions may: an extension's runtime runs in a model process, so its binding is a process",
+      undefined,
     ]);
   });
 });

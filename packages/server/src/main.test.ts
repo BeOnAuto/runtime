@@ -75,7 +75,7 @@ const keptIn: readonly unknown[] = [
 ];
 
 const extensionsLoaded: unknown = expect.stringMatching(
-  /^Extensions loaded, in their order of precedence: @on\.auto\/prediction-onnx [\d.]+, of the release, filling prediction\/model-runtime$/u,
+  /^Extensions loaded, in their order of precedence: @on\.auto\/prediction-onnx [\d.]+, of the release, filling prediction\/model-runtime; @on\.auto\/prediction-series [\d.]+, of the release, filling prediction\/model-runtime$/u,
 );
 
 function startInLocalMode(...after: readonly string[]): readonly unknown[] {

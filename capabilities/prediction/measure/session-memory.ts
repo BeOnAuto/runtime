@@ -5,11 +5,11 @@ import { seriesRowsIn } from '../src/files/series-rows.ts';
 import { importedRuntime } from '../src/model-jobs/runtime-modules.ts';
 import { walked } from '../src/model-jobs/walk-job.ts';
 import { threadsOf } from '../src/model-processes/model-processes.ts';
-import { daysMeasured, widestFeatures } from './model-files.ts';
+import { daysMeasured, firstDayMeasured, widestFeatures } from './model-files.ts';
 
 const serverProcesses = 4;
 
-const [module = '', model = '', rows = ''] = process.argv.slice(2);
+const [module = '', model = '', rows = '', bound = 'process'] = process.argv.slice(2);
 const runtime = pathToFileURL(resolve(module)).href;
 const threads = threadsOf(serverProcesses);
 const before = process.memoryUsage().rss;
@@ -27,8 +27,9 @@ const walk = {
   features: 0,
   given: [],
   remaining: null,
+  first: bound === 'inline' ? firstDayMeasured : null,
 };
-const answer = await walked(loaded, walk, parsed);
+const answer = await walked({ model: loaded, walk, signal: undefined }, parsed);
 const walkMs = performance.now() - started;
 const after = process.memoryUsage().rss;
 const series = 'series' in answer ? answer.series.length : 0;

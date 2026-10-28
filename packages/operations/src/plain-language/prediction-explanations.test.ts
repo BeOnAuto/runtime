@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { explanationOf, unsuccessfulWords, rejected, type ExplainedRejection } from '../index.ts';
 
 const ofPrediction: ReadonlyArray<readonly [ExplainedRejection, string]> = [
-  [{ reason: 'conflict', kind: 'no_active_version' }, 'the function has no model that answers yet'],
+  [
+    { reason: 'conflict', kind: 'no_active_version' },
+    'the function has no active version, and no model runtime of this server answers a function with none',
+  ],
   [
     { reason: 'conflict', kind: 'data_changed' },
     'the data part of the function changed since its active version was built, so that model no longer fits its rows',
@@ -22,6 +25,10 @@ const ofPrediction: ReadonlyArray<readonly [ExplainedRejection, string]> = [
   [
     { reason: 'conflict', kind: 'build_ended' },
     'the build has ended or has taken its answer, so it takes nothing more from its trainer',
+  ],
+  [
+    { reason: 'conflict', kind: 'no_trainer' },
+    'the build asks no trainer, since its function names none, so the playbook fits its candidates itself',
   ],
   [{ reason: 'conflict', kind: 'already_active' }, 'that version is already the active one'],
   [{ reason: 'unavailable', kind: 'builds_full' }, 'this server is scoring as many builds as it may at once'],
@@ -56,7 +63,7 @@ const ofPrediction: ReadonlyArray<readonly [ExplainedRejection, string]> = [
   ],
   [
     { reason: 'unavailable', kind: 'model_process_failed', because: 'no_model_runtime' },
-    'no model runtime this server has installed executes the format of the active version’s model',
+    'no model runtime this server has installed executes the model it needs, or fits its own for a function that names no trainer',
   ],
 ];
 
@@ -69,7 +76,7 @@ describe('the explanation of a refusal of a prediction function', () => {
 
   it('says how to ask for a build when no version is active, and that nothing was changed', () => {
     expect(unsuccessfulWords('predict', 'command', rejected('conflict', 'x', undefined, 'no_active_version'))).toBe(
-      'Could not predict: the function has no model that answers yet. Nothing was changed. It answers once a build has given it an active version: ask for one with the input { build: {} }.',
+      'Could not predict: the function has no active version, and no model runtime of this server answers a function with none. Nothing was changed. It answers once a build has given it an active version: ask for one with the input { build: {} }.',
     );
   });
 

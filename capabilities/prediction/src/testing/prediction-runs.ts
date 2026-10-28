@@ -22,7 +22,7 @@ import { afterEach } from 'vitest';
 import { makePredictionFunctionAdapter } from '../capability/prediction-function.ts';
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import type { DatasetsPort } from '../dataset/datasets-port.ts';
-import { testPorts } from './prediction-ports.ts';
+import { testPorts, type PortOptions } from './prediction-ports.ts';
 
 const pools: ProgramPool[] = [];
 
@@ -98,12 +98,16 @@ function preparedOnTheStandingClock(definition: PreparedDefinition): PreparedDef
   };
 }
 
-export function predictionRuns(pool: ProgramPool = poolOf(), mostFunctions?: number): PredictionRuns {
+export function predictionRuns(
+  pool: ProgramPool = poolOf(),
+  mostFunctions?: number,
+  runtimes?: PortOptions['runtimes'],
+): PredictionRuns {
   const datasets = keptDatasets();
   const capability = makePredictionFunctionAdapter({
     pool,
     datasets,
-    ports: testPorts().ports,
+    ports: testPorts(runtimes === undefined ? {} : { runtimes }).ports,
     ...(mostFunctions === undefined ? {} : { mostFunctions }),
   });
   const prepared = (source: string) => preparedOnTheStandingClock(Effect.runSync(capability.prepare(source)));

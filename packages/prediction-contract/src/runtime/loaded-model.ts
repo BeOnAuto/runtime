@@ -31,6 +31,34 @@ export interface LoadedModel {
 
 export type LoadModel = (path: string, threads: number) => Promise<LoadedModel>;
 
+export type Grain = 'day' | 'week' | 'month' | 'quarter' | 'year';
+
+export type Enclosing = Exclude<Grain, 'day'>;
+
+export interface FunctionShape {
+  readonly fed: FedShape;
+  readonly grain: Grain;
+  readonly season: number | null;
+  readonly accumulates: Enclosing | null;
+  readonly holdout: number;
+}
+
+export interface TrainingRows {
+  readonly first: number;
+  readonly series: readonly Readonly<Float64Array>[];
+}
+
+export interface FittedModel {
+  readonly format: string;
+  readonly bytes: Readonly<Uint8Array>;
+}
+
+export type FitModels = (shape: FunctionShape, training: TrainingRows) => Promise<readonly FittedModel[]>;
+
+export type DefaultModel = (shape: FunctionShape) => FittedModel;
+
 export interface ModelRuntimeModule {
   readonly loadModel: LoadModel;
+  readonly fitModels?: FitModels;
+  readonly defaultModel?: DefaultModel;
 }

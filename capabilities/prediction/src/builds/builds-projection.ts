@@ -18,15 +18,36 @@ import {
 } from '../facts/model-facts.ts';
 import { buildRowOf, predictionBuildsName, type BuildRow } from './build-rows.ts';
 
-const DeferredBuildSchema = Schema.Struct({
-  expires_at: Schema.String,
-  build: Schema.Struct({ brief_sha256: Schema.String }),
-  waiting_for: Schema.optionalKey(Schema.Struct({ run: Schema.String })),
-});
+const DeferredBuildSchema = Schema.Union([
+  Schema.Struct({
+    expires_at: Schema.String,
+    build: Schema.Struct({ brief_sha256: Schema.String }),
+    waiting_for: Schema.optionalKey(Schema.Struct({ run: Schema.String })),
+  }),
+  Schema.Struct({ trainer: Schema.Null, build: Schema.Struct({ training_sha256: Schema.String }) }),
+]);
+
+type DeferredBuild = typeof DeferredBuildSchema.Type;
 
 const decodeDeferred = Schema.decodeUnknownOption(DeferredBuildSchema);
 
 type RunType = RecordedRunEvent['type'];
+
+type Asking = Pick<BuildRow, 'standing' | 'through' | 'expires_at' | 'next_due_at' | 'scoring_since'>;
+
+function askingOf(record: DeferredBuild, at: number): Asking {
+  if ('trainer' in record) {
+    return { standing: 'scoring', through: null, expires_at: null, next_due_at: at, scoring_since: at };
+  }
+  const through = record.waiting_for !== undefined;
+  return {
+    standing: through ? 'starting_request' : 'waiting_for_trainer',
+    through: record.waiting_for?.run ?? null,
+    expires_at: Date.parse(record.expires_at),
+    next_due_at: through ? at : null,
+    scoring_since: null,
+  };
+}
 
 function deferred(
   { data, context }: RecordedRunFact<'run_deferred'>,
@@ -38,23 +59,18 @@ function deferred(
   return Option.getOrUndefined(
     Option.map(decodeDeferred(data.record), (record): BuildRow => {
       const at = Date.parse(context.at);
-      const through = record.waiting_for !== undefined;
       return {
         function: context.definitionName,
         definition_version: context.definitionVersion,
-        standing: through ? 'starting_request' : 'waiting_for_trainer',
-        through: record.waiting_for?.run ?? null,
+        ...askingOf(record, at),
         requested_at: at,
-        expires_at: Date.parse(record.expires_at),
         uploaded: 0,
         scored: 0,
         winner: null,
         version: null,
         rule: null,
         shadow_origins: 0,
-        next_due_at: through ? at : null,
         open: true,
-        scoring_since: null,
         ended: null,
         staged: false,
         cause: message.id,
@@ -102,7 +118,13 @@ function onRun(row: BuildRow, fact: RecordedRunEvent, message: ProjectedMessage)
 
 const uploadType = 'candidate_uploaded';
 
-const scoringTypes = ['candidate_scored', 'candidate_disqualified', 'baseline_scored', 'baseline_not_walked'];
+const scoringTypes = [
+  'candidates_fitted',
+  'candidate_scored',
+  'candidate_disqualified',
+  'baseline_scored',
+  'baseline_not_walked',
+];
 
 const workTypes: ReadonlySet<string> = new Set([uploadType, ...scoringTypes]);
 
