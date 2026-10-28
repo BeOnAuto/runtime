@@ -124,12 +124,17 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
   };
 }
 
+function sourceTakenBesideARegisteredClient({ clients }: WayOfConsent): string {
+  return clients.includes('registered') ? 'registered' : 'dynamic';
+}
+
 const providersTakingConsent = [
   'adobe-analytics',
   'adobe-analytics-mcp',
   'amazon-ads',
   'amazon-ads-mcp',
   'atlassian',
+  'buffer',
   'campaign-manager-360',
   'display-video-360',
   'display-video-360-reports',
@@ -163,10 +168,12 @@ const providersTakingConsent = [
 ];
 
 describe('every way of consent of a shipped provider, against the fake authorization server at its vendor’s addresses', () => {
-  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, and finishes connected with that scope', async () => {
+  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, or the one it registers itself where the way takes none registered, and finishes connected with that scope', async () => {
     const consents = await Promise.all(waysOfConsent.map((consenting) => consentOf(consenting, true)));
 
-    expect(consents).toEqual(waysOfConsent.map((consenting) => consentExpectedOf(consenting, 'registered')));
+    expect(consents).toEqual(
+      waysOfConsent.map((consenting) => consentExpectedOf(consenting, sourceTakenBesideARegisteredClient(consenting))),
+    );
     expect(waysOfConsent.map(({ name }) => name)).toEqual(providersTakingConsent);
   });
 
@@ -179,6 +186,7 @@ describe('every way of consent of a shipped provider, against the fake authoriza
     expect(registering.map(({ name }) => name)).toEqual([
       'adobe-analytics-mcp',
       'atlassian',
+      'buffer',
       'linear',
       'notion',
       'posthog',

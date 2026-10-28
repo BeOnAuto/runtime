@@ -106,6 +106,8 @@ function isResourceOf(url: string, resource: string): boolean {
 
 type ResourceRefusal = Refused<'another_resource' | 'host' | 'unanswered'>;
 
+export const answeredNotFound = (status: number): boolean => status === notFound;
+
 async function pingedBy(answer: Readonly<Response>): Promise<Pinged> {
   await answer.body?.cancel();
   const { resourceMetadataUrl, scope } = extractWWWAuthenticateParams(answer);
@@ -122,6 +124,7 @@ export function pingedAt(url: string, fetch: FetchLike): Effect.Effect<Pinged, R
 function resourceReadAt(
   url: string,
   fetch: FetchLike,
+  unpublished: typeof answeredNotFound,
   resourceMetadataUrl?: string,
 ): Effect.Effect<ProtectedResource | undefined, ResourceRefusal> {
   const answered = { status: 0 };
@@ -145,7 +148,7 @@ function resourceReadAt(
       isResourceOf(url, metadata.resource)
         ? Effect.succeed(metadata)
         : Effect.fail<Refused<'another_resource'>>({ refused: 'another_resource', named: metadata.resource }),
-    onFailure: (error) => (answered.status === notFound ? Effect.undefined : Effect.fail(refusalOf(error))),
+    onFailure: (error) => (unpublished(answered.status) ? Effect.undefined : Effect.fail(refusalOf(error))),
   });
 }
 
@@ -157,16 +160,17 @@ export function protectedResourceOf(
   url: string,
   fetch: FetchLike,
   challenge: Challenge,
+  unpublishedAtTheWellKnownPaths: typeof answeredNotFound = answeredNotFound,
 ): Effect.Effect<ProtectedResource | undefined, ResourceRefusal> {
   const followed = followedMetadataOf(challenge);
   const atTheChallenge =
     followed === undefined
       ? Effect.undefined
-      : resourceReadAt(url, fetch, followed).pipe(
+      : resourceReadAt(url, fetch, answeredNotFound, followed).pipe(
           Effect.catch((refusal) => (refusal.refused === 'another_resource' ? Effect.fail(refusal) : Effect.undefined)),
         );
   return Effect.flatMap(atTheChallenge, (resource) =>
-    resource === undefined ? resourceReadAt(url, fetch) : Effect.succeed(resource),
+    resource === undefined ? resourceReadAt(url, fetch, unpublishedAtTheWellKnownPaths) : Effect.succeed(resource),
   );
 }
 

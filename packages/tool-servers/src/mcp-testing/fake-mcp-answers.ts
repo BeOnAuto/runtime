@@ -210,7 +210,7 @@ function bearerChecked(
           : Promise.reject(new OAuthError(OAuthErrorCode.InvalidToken, 'The token is not valid')),
     },
     requiredScopes,
-    resourceMetadataUrl: `${origin}${resourceMetadataPathOf(client)}`,
+    ...(authorization === undefined ? {} : { resourceMetadataUrl: `${origin}${resourceMetadataPathOf(client)}` }),
   });
   return async (request) => {
     const passed = await gate(request);

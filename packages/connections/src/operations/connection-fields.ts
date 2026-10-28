@@ -78,7 +78,9 @@ export type AdditionGiven = typeof AdditionFieldsSchema.Type;
 
 type ModeIssue = Schema.FilterIssue;
 
-const givenByHand = ['name', 'type', 'entry', 'credential'] as const;
+const givenByHand = ['name', 'type', 'entry'] as const;
+
+const credentialOfAnApiByHand = 'Expected credential, which an HTTP API given by hand takes, or provider';
 
 const serverFields = ['url', 'document', 'base_url', 'headers', 'query_params', 'request_id'] as const;
 
@@ -126,6 +128,10 @@ function consentByHandIssuesOf(credential: AddedCredential, type: AdditionGiven[
     }));
 }
 
+function missingCredentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeIssue[] {
+  return credential === undefined && type !== 'mcp' ? [{ path: ['credential'], issue: credentialOfAnApiByHand }] : [];
+}
+
 function credentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeIssue[] {
   if (credential === undefined) {
     return [];
@@ -141,6 +147,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...givenByHand
       .filter((field) => given[field] === undefined)
       .map((field) => ({ path: [field], issue: `Expected ${field}, which a server given by hand takes, or provider` })),
+    ...missingCredentialIssuesOf(given),
     ...(placeholders === undefined
       ? []
       : [{ path: ['placeholders'], issue: 'Expected no placeholders without provider' }]),

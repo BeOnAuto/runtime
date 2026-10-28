@@ -1,11 +1,13 @@
 import { createApiKey, signInScopes } from '@on.auto/identity';
 import type { FakeIssuer } from '@on.auto/identity/testing';
 import { allPermissions } from '@on.auto/operations';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
 import { answerFieldsOf } from '../testing/servers/connected-servers.ts';
+import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const publicUrl = 'http://localhost:5555';
@@ -14,12 +16,19 @@ const connections = '/v1/orgs/acme/connections';
 
 const builder = createApiKey({ id: 'acme-builder', org: 'acme', permissions: allPermissions, playbooks: '*' });
 
-const notes = {
-  name: 'notes',
-  type: 'mcp',
-  entry: { url: 'https://notes.example.com/mcp' },
-  credential: { kind: 'none' },
-};
+let notesServer: FakeMcpServer;
+
+beforeAll(async () => {
+  notesServer = await serveFakeMcp();
+});
+
+afterAll(async () => {
+  await notesServer.close();
+});
+
+function notes() {
+  return { name: 'notes', type: 'mcp', entry: { url: notesServer.url }, credential: { kind: 'none' } };
+}
 
 const AddedSchema = Schema.Struct({ id: Schema.String, connect: Schema.Struct({ url: Schema.String }) });
 
@@ -66,11 +75,15 @@ function grantedOnly(issuer: FakeIssuer, ...permissions: readonly string[]): Pro
 describe('a connection on a runtime that signs people in', () => {
   it('links to the page with PUBLIC_URL as the server, and is approved by the person who added it alone', async () => {
     const issuer = await issuerOverHttps();
-    server = await servingReasoning([], { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl });
+    server = await servingReasoning([], {
+      IDENTITY_ISSUER: issuer.issuer,
+      PUBLIC_URL: publicUrl,
+      ...connectionsOnLoopback,
+    });
     const ada = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
     const grace = await tokenOfAnotherPerson(issuer);
 
-    const answer = await server.call('POST', connections, { key: ada, body: notes });
+    const answer = await server.call('POST', connections, { key: ada, body: notes() });
     const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
     const { token, server: named } = linkOf(connect.url);
     const byGrace = await server.call('POST', `${connections}/${id}/approve`, { key: grace, body: { token } });
@@ -91,7 +104,7 @@ describe('a server on loopback on a runtime that signs people in', () => {
     const issuer = await issuerOverHttps();
     server = await servingReasoning([], { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl });
     const ada = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
-    const onLoopback = { ...notes, entry: { url: 'http://127.0.0.1:8443/mcp' } };
+    const onLoopback = { ...notes(), entry: { url: 'http://127.0.0.1:8443/mcp' } };
 
     expect(await server.call('POST', connections, { key: ada, body: onLoopback })).toMatchObject({
       status: 403,
@@ -110,7 +123,7 @@ describe('a server on loopback on a runtime that signs people in', () => {
       API_KEYS: JSON.stringify([builder.entry]),
     });
 
-    expect(await server.call('POST', connections, { key: builder.key, body: notes })).toMatchObject({
+    expect(await server.call('POST', connections, { key: builder.key, body: notes() })).toMatchObject({
       status: 403,
       body: {
         detail:
@@ -123,10 +136,14 @@ describe('a server on loopback on a runtime that signs people in', () => {
 describe('the link of a connection on a runtime that signs people in', () => {
   it('answers its five routes 403 to a person who granted no org:write, and leaves it open to the one who did', async () => {
     const issuer = await issuerOverHttps();
-    const served = await servingReasoning([], { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl });
+    const served = await servingReasoning([], {
+      IDENTITY_ISSUER: issuer.issuer,
+      PUBLIC_URL: publicUrl,
+      ...connectionsOnLoopback,
+    });
     server = served;
     const adder = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
-    const added = await served.call('POST', connections, { key: adder, body: notes });
+    const added = await served.call('POST', connections, { key: adder, body: notes() });
     const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(added.body);
     const { token } = linkOf(connect.url);
     const withoutOrgWrite = [
@@ -156,7 +173,7 @@ describe('a connection on a runtime of keys alone', () => {
   it('is refused, since the runtime signs in no person to approve it, and says what to set', async () => {
     server = await servingReasoning([], { API_KEYS: JSON.stringify([builder.entry]) });
 
-    expect(await server.call('POST', connections, { key: builder.key, body: notes })).toMatchObject({
+    expect(await server.call('POST', connections, { key: builder.key, body: notes() })).toMatchObject({
       status: 403,
       body: {
         detail:

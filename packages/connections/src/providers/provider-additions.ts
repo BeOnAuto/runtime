@@ -19,6 +19,7 @@ import {
 import type { AdditionGiven } from '../operations/connection-fields.ts';
 import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
+import type { Credential } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
 import { consentUnsetUp, isConsentUnsetUp } from './consent-offered.ts';
 import { isOfferedWay, type Listing } from './provider-listing.ts';
@@ -35,6 +36,8 @@ const whereProvidersAreListed = 'search lists the providers a person may connect
 
 const writtenByTheCaller: readonly string[] = ['/entry/playbooks', '/entry/allowed', '/entry/record_content'];
 
+const namedByTheServer: Credential = { kind: 'authorization' };
+
 function givenByHand(given: AdditionGiven): GivenAddition {
   return {
     name: required(given.name),
@@ -42,7 +45,7 @@ function givenByHand(given: AdditionGiven): GivenAddition {
     provider: null,
     placeholders: null,
     entry: required(given.entry),
-    credential: required(given.credential),
+    credential: given.credential ?? namedByTheServer,
   };
 }
 

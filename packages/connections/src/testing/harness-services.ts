@@ -1,4 +1,5 @@
 import type { StreamReader, StreamWriter } from '@on.auto/operations';
+import { loopbackHostOf } from '@on.auto/outbound';
 import { valuesInTheClear } from '@on.auto/secrets/testing';
 import { makeConsentClient, type ConsentClient, type ConsentClientOptions } from '@on.auto/tool-servers';
 import { DateTime, Effect } from 'effect';
@@ -20,6 +21,26 @@ export interface KeptSecrets extends SecretKeeping {
 }
 
 const nowMillis = Effect.map(DateTime.now, DateTime.toEpochMillis);
+
+const challengeNamingNoMetadata = { 'www-authenticate': 'Bearer realm="elsewhere"' };
+
+function answeredAsAServerTakingASecret({ method }: Readonly<Request>): Promise<Response> {
+  return Promise.resolve(
+    method === 'POST'
+      ? new Response(null, { status: 401, headers: challengeNamingNoMetadata })
+      : new Response(null, { status: 404 }),
+  );
+}
+
+export const serversTakingASecret: ConsentClientOptions['fetch'] = (...[address, init]: readonly [unknown, unknown?]) =>
+  answeredAsAServerTakingASecret(new Request(String(address), Object.assign({}, init)));
+
+const serversOffTheLoopback: ConsentClientOptions['fetch'] = (...[address, init]: readonly [unknown, unknown?]) => {
+  const request = new Request(String(address), Object.assign({}, init));
+  return loopbackHostOf(new URL(request.url).hostname)
+    ? globalThis.fetch(request)
+    : answeredAsAServerTakingASecret(request);
+};
 
 export function keptSecrets({
   beforeKeeping = () => Promise.resolve(),
@@ -59,7 +80,7 @@ export function harnessConsentOf(
   consenting: Partial<ConsentClientOptions> = {},
 ): ConsentClient {
   return makeConsentClient({
-    fetch: globalThis.fetch,
+    fetch: serversOffTheLoopback,
     registeredClients: [],
     publicUrl: undefined,
     registrations: makeClientRegistrations({ registry, secrets }),

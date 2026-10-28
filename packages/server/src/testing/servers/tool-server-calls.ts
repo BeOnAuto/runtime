@@ -51,8 +51,10 @@ export async function toolServerToolsCalled(
 ): Promise<readonly (readonly [string, ToolResult])[]> {
   const asked = { server: 'graph', tool: 'search' };
   const searchedFor = { ...asked, arguments: { query: 'acme' } };
-  const crm = { name: 'crm', type: 'mcp', entry: { url: 'https://crm.example.com/mcp' }, credential: { kind: 'none' } };
+  const crmServer = await serveFakeMcp();
+  const crm = { name: 'crm', type: 'mcp', entry: { url: crmServer.url }, credential: { kind: 'none' } };
   const added = await session.callTool('add_connection', crm);
+  await crmServer.close();
   const { id, token } = linkIn(added.structuredContent);
   await server.call('POST', `/v1/orgs/local/connections/${id}/approve`, { body: { token } });
   return [

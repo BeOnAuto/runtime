@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { retriedWith, stateAskedBy } from '@on.auto/api/testing';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -51,20 +52,20 @@ function onMcpOf({ origin }: ReasoningServer) {
   return { url: `${origin}/mcp`, headers: {} };
 }
 
-const adding = {
-  name: 'add_connection',
-  arguments: {
-    name: 'notes-raced',
-    type: 'mcp',
-    entry: { url: 'https://notes.example.com/mcp' },
-    credential: { kind: 'none' },
-  },
-};
+async function addingANotesServer() {
+  const notes = await serveFakeMcp();
+  onTestFinished(notes.close);
+  return {
+    name: 'add_connection',
+    arguments: { name: 'notes-raced', type: 'mcp', entry: { url: notes.url }, credential: { kind: 'none' } },
+  };
+}
 
 describe.skipIf(skipped)(`Two servers that start at once on one ledger in PostgreSQL${notice}`, () => {
   it('keep one key that signs the state of a retry between them, recorded once and kept in one row, so a retry one asked for is answered by the other', async () => {
     const database = await aDatabaseOfItsOwn();
     const [first, second] = await Promise.all([servedOn(database), servedOn(database)]);
+    const adding = await addingANotesServer();
 
     const state = await stateAskedBy(onMcpOf(first), adding);
     const retried = await retriedWith(onMcpOf(second), adding, state);

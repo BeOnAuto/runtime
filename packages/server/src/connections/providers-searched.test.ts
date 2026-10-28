@@ -1,6 +1,7 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import { required } from '@on.auto/operations';
 import type { Provider } from '@on.auto/providers';
+import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
@@ -167,11 +168,13 @@ describe('the providers of a search the caller may not add from', () => {
   it('are left out on a runtime that lets nobody add, with a server named, and from the search of a playbook, and kept with a playbook', async () => {
     const server = await served();
     const closed = await served({ CONNECTIONS: JSON.stringify({ people_may_add: false }) });
+    const notes = await serveFakeMcp();
+    onTestFinished(notes.close);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await addedConnection(server, {
       name: 'notes',
       type: 'mcp',
-      entry: { url: 'https://notes.example.com/mcp' },
+      entry: { url: notes.url },
       credential: { kind: 'none' },
     });
 

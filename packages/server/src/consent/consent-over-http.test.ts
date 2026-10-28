@@ -1,5 +1,5 @@
 import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
-import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { serveFakeMcp, servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { consentSecret } from '@on.auto/tool-servers/testing';
 import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
@@ -17,12 +17,16 @@ import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/se
 
 const connections = '/v1/orgs/local/connections';
 
-const crm = {
-  name: 'crm',
-  type: 'mcp',
-  entry: { url: 'https://crm.example.com/mcp' },
-  credential: { kind: 'secret', name: 'Authorization', in: 'header' },
-};
+let crmServer: FakeMcpServer;
+
+function crm() {
+  return {
+    name: 'crm',
+    type: 'mcp',
+    entry: { url: crmServer.url },
+    credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+  };
+}
 
 const byHand = {
   name: 'files',
@@ -37,14 +41,16 @@ let server: ReasoningServer;
 
 beforeAll(async () => {
   server = await servingReasoning([], { SECRETS_KEY: secretsKey.toString('base64') });
+  crmServer = await serveFakeMcp({ bearer: 'crm-token' });
 });
 
 afterAll(async () => {
   await server.stop();
+  await crmServer.close();
 });
 
 async function addedCrm() {
-  return linkAddedBy(await server.call('POST', connections, { body: crm }));
+  return linkAddedBy(await server.call('POST', connections, { body: crm() }));
 }
 
 describe('the start and the finish of a consent over HTTP', () => {
