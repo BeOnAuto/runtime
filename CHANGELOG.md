@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.0](https://github.com/BeOnAuto/runtime/compare/v0.34.1...v0.35.0) (2026-10-28)
+
+
+### Features
+
+* **meter:** a license names its org, as Auto signs it ([#368](https://github.com/BeOnAuto/runtime/issues/368)) ([d6bb729](https://github.com/BeOnAuto/runtime/commit/d6bb729dcfe8b97e5f573655b7593d7b1425ac13))
+
 ## [0.34.1](https://github.com/BeOnAuto/runtime/compare/v0.34.0...v0.34.1) (2026-10-28)
 
 
