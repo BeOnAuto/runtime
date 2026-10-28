@@ -48,7 +48,7 @@ Two runtimes that execute one format are resolved by their order: the first exec
 
 The server loads each extension as it starts, in order, and stops at the first it refuses, with one line that names the package and why:
 
-```
+```text
 Auto Runtime could not start: ExtensionRefused: The extension @acme/prediction-models is refused: it provides prediction/model-runtime built against contract 2, and this runtime accepts contracts 1 to 1
 ```
 
@@ -65,7 +65,7 @@ It refuses a package:
 
 The server logs the extensions it loaded, each with its version, whether the list named it or it is the release's, and the points it fills:
 
-```
+```text
 Extensions loaded, in their order of precedence: @on.auto/prediction-onnx <the release's version>, of the release, filling prediction/model-runtime
 ```
 
