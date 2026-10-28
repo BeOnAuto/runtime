@@ -556,6 +556,6 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 ## Availability
 
-Interaction functions are available in every runtime. A request reaches a person through the inbox, or through the tools of the tool servers the operator configures. See [Functions and availability](../concepts/functions.md#availability).
+Interaction functions are available in every runtime. A request reaches a person through the inbox, or through the tools of the tool servers the operator configures and of the org's connections. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>
