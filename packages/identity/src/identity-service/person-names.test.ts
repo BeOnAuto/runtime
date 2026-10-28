@@ -23,6 +23,15 @@ describe('the person a token names, by id and by name', () => {
 
     expect(names).toEqual(['Ada Lovelace', 'ada', ofTheBytesOfAReference]);
   });
+
+  it('is called by its subject where an access token names no one, as an identity service may issue it', async () => {
+    const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const person = principalIn(
+      await identityService.personOf(await token({ sub: 'user_ada', name: undefined }), '/mcp'),
+    );
+
+    expect([person?.own.id, person?.own.name]).toEqual(['person:user_ada', 'user_ada']);
+  });
 });
 
 function refusalOf(claim: string): string {
@@ -36,7 +45,6 @@ const refusedNames: ReadonlyArray<readonly [string, Claims, string]> = [
   ['a sub over 256 bytes', { sub: 'ü'.repeat(129) }, refusalOf('sub')],
   ['a sub with a control character', { sub: 'ada\u0000' }, refusalOf('sub')],
   ['a sub with a noncharacter', { sub: 'ada\uFFFF' }, refusalOf('sub')],
-  ['no name', { name: undefined }, 'ERR_JWT_CLAIM_VALIDATION_FAILED on its name claim'],
   ['an empty name', { name: '' }, refusalOf('name')],
   ['a name that is not a string', { name: { given: 'Ada' } }, refusalOf('name')],
   ['a name over 256 bytes', { name: 'ü'.repeat(129) }, refusalOf('name')],

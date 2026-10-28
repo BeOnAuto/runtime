@@ -91,7 +91,7 @@ function optionsOf({ issuer, audiences, now }: Expected, form: Form): JWTVerifyO
     ...(form === 'access token' ? { audience: [...audiences] } : {}),
     algorithms: signingAlgorithms,
     clockTolerance: leewaySeconds,
-    requiredClaims: ['exp', 'sub', nameClaim],
+    requiredClaims: form === 'session' ? ['exp', 'sub', nameClaim] : ['exp', 'sub'],
     currentDate: new Date(now),
   };
 }
@@ -144,7 +144,8 @@ function permissionsGrantedBy({ [scopeClaim]: scope = '' }: Payload, form: Form)
 }
 
 function personIn(payload: Payload, form: Form, now: number): string | VerifiedPerson {
-  const { iat, sub, [nameClaim]: name } = payload;
+  const { iat, sub, [nameClaim]: given } = payload;
+  const name = given === undefined ? sub : given;
   const orgClaimPath = orgClaimPathOf(payload, form);
   const org = orgIn(payload, orgClaimPath);
   if (Predicate.isNumber(iat) && iat > now / 1000 + leewaySeconds) {
