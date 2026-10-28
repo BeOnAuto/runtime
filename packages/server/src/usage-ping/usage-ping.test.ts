@@ -210,9 +210,9 @@ describe('a usage ping that fails', () => {
 });
 
 describe('the notice of the first start', () => {
-  it('says in one line that the ping is anonymous, how to turn it off and where to read more', () => {
+  it('says in one line that it sends a usage ping with an id for the copy, how to turn it off and where to read more', () => {
     expect(firstStartNotice).toBe(
-      'Auto Runtime sends an anonymous usage ping when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. https://on.auto/docs/self-host/configuration#usage-ping',
+      'Auto Runtime sends a usage ping, with a random id for this copy, when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. https://on.auto/docs/self-host/configuration#usage-ping',
     );
   });
 });

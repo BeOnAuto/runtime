@@ -44,7 +44,7 @@ In the image, Auto:
 - keeps a SQLite ledger on the volume at `/data`, unless you give it a PostgreSQL database;
 - checks its own health at `/health`;
 - stops cleanly on `SIGTERM`, the signal Docker sends to ask a program to stop;
-- sends an anonymous [usage ping](configuration.md#usage-ping) when it starts, which `DO_NOT_TRACK=1` in `auto-runtime.env` turns off.
+- sends a [usage ping](configuration.md#usage-ping) when it starts, with a random id kept on the `/data` volume, which `DO_NOT_TRACK=1` in `auto-runtime.env` turns off.
 
 ## 1. Start Auto {#start-the-server}
 

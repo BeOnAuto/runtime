@@ -604,7 +604,7 @@
     },
     "usage_ping": {
       "type": "boolean",
-      "description": "Whether the runtime sends its anonymous usage ping when it starts: its release, the operating system, the processor, the version of Node.js, how it was installed and a random install id, and nothing of its work. On when left out; DO_NOT_TRACK or SCARF_NO_ANALYTICS in the environment turns it off too. USAGE_PING wins over it"
+      "description": "Whether the runtime sends its usage ping when it starts: its release, the operating system, the processor, the version of Node.js, how it was installed and a random install id, the same at every start, and nothing of its work. On when left out; DO_NOT_TRACK or SCARF_NO_ANALYTICS in the environment turns it off too. USAGE_PING wins over it"
     },
     "license": {
       "type": "object",

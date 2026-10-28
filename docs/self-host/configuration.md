@@ -107,7 +107,7 @@ Every setting is an environment variable. The tables below group them by area.
 | `CONFIG_FILE` | none; `auto-runtime.yaml` with `npx` when it is in the folder | The configuration file, absolute or relative to the working directory                                                                                                                                                                                                      |
 | `LOG_FORMAT`  | `json`, `console` with `npx`                                  | `json`: one JSON object per line on stderr. `pretty`: lines of text for a person. `console`: a time, a mark for the level and the message, in color at a terminal                                                                                                          |
 | `LOG_LEVEL`   | `info`, `error` with `npx`                                    | The least level logged: `debug`, `info`, `warn` or `error`                                                                                                                                                                                                                 |
-| `USAGE_PING`  | `true`                                                        | `true` or `false`: whether Auto sends its anonymous [usage ping](#usage-ping) when it starts. `DO_NOT_TRACK` and `SCARF_NO_ANALYTICS` turn it off too; `usage_ping` in the file                                                                                            |
+| `USAGE_PING`  | `true`                                                        | `true` or `false`: whether Auto sends its [usage ping](#usage-ping) when it starts. `DO_NOT_TRACK` and `SCARF_NO_ANALYTICS` turn it off too; `usage_ping` in the file                                                                                                      |
 
 ### Sign-in and access
 
@@ -242,7 +242,7 @@ The folder of `PREDICTION_CACHE_DIR` follows these rules:
 
 ## Usage ping {#usage-ping}
 
-Each time Auto starts, it sends one short message, the usage ping, so that the people who make Auto can count how many copies run and on what. The message is anonymous. It goes to `https://get.on.auto/runtime/start`, a service that [Scarf](https://scarf.sh) runs for Auto, and it holds these facts and nothing else:
+Each time Auto starts, it sends one short message, the usage ping, so that the people who make Auto can count how many copies run and on what. It goes to `https://get.on.auto/runtime/start`, a service that [Scarf](https://scarf.sh) runs for Auto, and it holds these facts and nothing else:
 
 | Field          | What it holds                                                                                              |
 | -------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -260,11 +260,13 @@ What it never sends:
 - API keys, passwords or other secrets;
 - your settings, names, email addresses or file paths.
 
-Like any request on the internet, the message comes from an address. Scarf uses that address to look up the company it belongs to, and does not store the address.
+It names no one, but it is not anonymous: its install id stays the same at every start of a copy until the file that keeps it is deleted, so it tells the pings of one copy apart from those of every other.
+
+Like any request on the internet, the message comes from the address of your network. Scarf uses that address to look up the company or network it belongs to, and Auto copies the list of the companies Scarf found, with their counts, into its own product analytics every day. What Scarf keeps of the address, and for how long, is set by Scarf's own terms.
 
 Auto keeps the install id in a file named `install-id`, beside the ledger file, as it keeps `secrets.key`: `~/.auto-runtime/install-id` with `npx`, and on the `/data` volume in the image. Where the ledger is in PostgreSQL, the file is in `~/.auto-runtime` in the home folder of the user that runs Auto. Delete the file and Auto makes a new id at its next start. Where Auto cannot write the file, it sends the message without an id.
 
-The first time Auto makes the id, it says so in one line when it is ready, with how to turn the ping off. While the ping is on, the links to Studio in that ready message and on the page at the runtime's root carry the id, and say which of the two they came from, so that visits to Studio from one copy count as one.
+The first time Auto makes the id, it says so in one line when it is ready, with how to turn the ping off. While the ping is on, the links to Studio in that ready message and on the page at the runtime's root carry the id, and say which of the two they came from, so that visits to Studio from one copy count as one. When you follow one to `studio.on.auto` and sign in, Studio's product analytics keeps the id on your profile there, which links that copy to you.
 
 The ping never holds up a start or a stop: Auto gives up on it after 3 seconds, or as soon as it stops, and a ping that fails changes nothing and is not logged. Pulls of the image through `docker.on.auto`, as in [Run with Docker](docker.md#the-image), are counted by Scarf too.
 

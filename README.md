@@ -12,7 +12,7 @@ Your agent builds and directs the work. **Auto Runtime** stores and executes it;
 
 Start with hosted Auto: connect your agent to `https://mcp.on.auto`, sign in when it asks, and see your work in [Auto Studio](https://studio.on.auto). The [quick start](https://on.auto/docs/get-started/cloud) needs nothing installed and no model key.
 
-To run Auto Runtime on your own infrastructure, every release is the image `docker.on.auto/onauto/runtime`, from Docker Hub. Your team reaches it at its `PUBLIC_URL`, the `https` address people sign in at, and opens it in Studio from `https://studio.on.auto`; see [Self-hosting](docs/self-host.md), [Run with Docker](docs/self-host/docker.md) and [Deploy for your team](docs/self-host/production.md). Auto sends an anonymous usage ping when it starts, which `DO_NOT_TRACK=1` turns off; [Usage ping](docs/self-host/configuration.md#usage-ping) lists exactly what it sends.
+To run Auto Runtime on your own infrastructure, every release is the image `docker.on.auto/onauto/runtime`, from Docker Hub. Your team reaches it at its `PUBLIC_URL`, the `https` address people sign in at, and opens it in Studio from `https://studio.on.auto`; see [Self-hosting](docs/self-host.md), [Run with Docker](docs/self-host/docker.md) and [Deploy for your team](docs/self-host/production.md). Auto sends a usage ping when it starts, with a random id for the copy, which `DO_NOT_TRACK=1` turns off; [Usage ping](docs/self-host/configuration.md#usage-ping) lists exactly what it sends.
 
 To run it for yourself on your own computer, `npx @on.auto/runtime` starts it in local mode, with no sign-in, on Node.js 26.10 or later on macOS or Linux; see [Run Auto on your computer](docs/get-started/local.md).
 

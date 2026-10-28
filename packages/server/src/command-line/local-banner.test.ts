@@ -24,7 +24,7 @@ const ready = {
 const newInstall = { id: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b', isNew: true };
 
 const firstStartLine =
-  '  Auto Runtime sends an anonymous usage ping when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. https://on.auto/docs/self-host/configuration#usage-ping';
+  '  Auto Runtime sends a usage ping, with a random id for this copy, when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. https://on.auto/docs/self-host/configuration#usage-ping';
 
 describe('the header of the auto-runtime command', () => {
   it('names the runtime and its version in plain text where there are no colors', () => {
@@ -140,7 +140,7 @@ describe('the notice that a server in local mode is ready', () => {
 });
 
 describe('the notice that the server is ready, the first time it starts with a usage ping', () => {
-  it('says once, above the way to stop it, that it sends an anonymous usage ping and how to turn it off', () => {
+  it('says once, above the way to stop it, that it sends a usage ping with an id for the copy and how to turn it off', () => {
     const lines = readyNoticeOf({ ...ready, install: newInstall }, 1).split('\n');
 
     expect(lines.slice(-6)).toEqual([

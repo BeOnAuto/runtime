@@ -28,7 +28,7 @@ async function announced(folder: string): Promise<readonly string[]> {
 }
 
 describe('the announcement of a server whose usage ping is on', () => {
-  it('says after the port, at the first start alone, that it sends an anonymous usage ping', async () => {
+  it('says after the port, at the first start alone, that it sends a usage ping with an id for the copy', async () => {
     const folder = folderOfTheTest();
 
     const first = await announced(folder);

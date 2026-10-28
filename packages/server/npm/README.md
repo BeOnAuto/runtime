@@ -55,7 +55,7 @@ Settings are environment variables. The command reads them from the shell and fr
 
 The command shows only the server's errors; set `LOG_LEVEL=warn` to see its warnings too, or `LOG_LEVEL=info` to see everything it logs.
 
-Each time it starts, Auto Runtime sends one anonymous usage ping: its version, the operating system, the processor, the version of Node.js, how it was installed and a random id for this copy, kept in `~/.auto-runtime/install-id`, never anything of your work or your keys. `DO_NOT_TRACK=1` or `USAGE_PING=false` turns it off. [Usage ping](https://on.auto/docs/self-host/configuration#usage-ping) says exactly what it sends.
+Each time it starts, Auto Runtime sends one usage ping: its version, the operating system, the processor, the version of Node.js, how it was installed and a random id for this copy, kept in `~/.auto-runtime/install-id` and the same at every start, never anything of your work or your keys. `DO_NOT_TRACK=1` or `USAGE_PING=false` turns it off. [Usage ping](https://on.auto/docs/self-host/configuration#usage-ping) says exactly what it sends.
 
 The ledger, where playbooks and their runs are kept, is the SQLite file `~/.auto-runtime/ledger.db` unless `LEDGER_FILE` names another file or `DATABASE_URL` names a PostgreSQL database. The secrets it keeps are sealed under the key in `secrets.key` beside the ledger file, which the command makes at its first start, unless `SECRETS_KEY` gives one, `SECRETS_KEY_FILE` names another file or `SECRETS_KEY_KMS` names a key in AWS KMS, as a ledger in PostgreSQL needs. `PORT` changes the port.
 

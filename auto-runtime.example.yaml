@@ -160,9 +160,9 @@ allowed_origins:
 #     playbooks: '*'
 #     sha256: <the digest pnpm key prints>
 
-# The anonymous usage ping Auto Runtime sends when it starts: its release, the
-# operating system, the processor, the version of Node.js, how it was installed
-# and a random install id, never anything of its work. On when left out;
+# The usage ping Auto Runtime sends when it starts: its release, the operating
+# system, the processor, the version of Node.js, how it was installed and a
+# random install id, the same at every start, never anything of its work. On when left out;
 # DO_NOT_TRACK=1 in the environment turns it off as well. See
 # https://on.auto/docs/self-host/configuration#usage-ping
 # usage_ping: false

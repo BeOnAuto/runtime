@@ -139,7 +139,9 @@ describe('serving the runtime on this computer for the first time', () => {
     local.stop();
     await serving;
 
-    expect(local.written[1]).toContain('  Auto Runtime sends an anonymous usage ping when it starts.');
+    expect(local.written[1]).toContain(
+      '  Auto Runtime sends a usage ping, with a random id for this copy, when it starts.',
+    );
   });
 });
 

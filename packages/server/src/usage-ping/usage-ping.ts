@@ -31,7 +31,7 @@ const startPingEndpoint = 'https://get.on.auto/runtime/start';
 
 const usagePingDocumentation = 'https://on.auto/docs/self-host/configuration#usage-ping';
 
-export const firstStartNotice = `Auto Runtime sends an anonymous usage ping when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. ${usagePingDocumentation}`;
+export const firstStartNotice = `Auto Runtime sends a usage ping, with a random id for this copy, when it starts. To turn it off, set DO_NOT_TRACK=1 or USAGE_PING=false. ${usagePingDocumentation}`;
 
 const giveUpAfterMs = 3000;
 

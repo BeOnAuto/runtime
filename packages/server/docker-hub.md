@@ -43,7 +43,7 @@ Open it in Studio at `https://studio.on.auto/?server=https://auto.example.com`, 
 
 Every setting is an environment variable; The [configuration reference](https://on.auto/docs/self-host/configuration) lists them all, with the configuration file for tool servers, gateways and model aliases. [Troubleshooting](https://on.auto/docs/self-host/troubleshooting) covers the common problems.
 
-Pull the image through `docker.on.auto/onauto/runtime`: it is this same image, and [Scarf](https://scarf.sh) counts each pull for Auto. When it starts, the runtime sends one anonymous usage ping: its version, platform, processor, Node.js version, that it runs from the image, and a random install id kept on the `/data` volume, never anything of its work. `DO_NOT_TRACK=1` turns it off. [Usage ping](https://on.auto/docs/self-host/configuration#usage-ping) lists exactly what it sends.
+Pull the image through `docker.on.auto/onauto/runtime`: it is this same image, and [Scarf](https://scarf.sh) counts each pull for Auto. When it starts, the runtime sends one usage ping: its version, platform, processor, Node.js version, that it runs from the image, and a random install id kept on the `/data` volume and the same at every start, never anything of its work. `DO_NOT_TRACK=1` turns it off. [Usage ping](https://on.auto/docs/self-host/configuration#usage-ping) lists exactly what it sends.
 
 ## Tags
 
