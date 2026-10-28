@@ -32,9 +32,9 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Fix.**
 
-- Check the agent's MCP entry. The [quick start](../get-started/local.md#connect-your-agent) gives it: the `mcp` command of `@on.auto/runtime`, run by `npx`. An agent that connects over HTTP instead, as one that signs you in does, uses `http://localhost:5555/mcp`, or the port you set.
+- Check the agent's MCP entry. For a team's runtime, it is `/mcp` at the runtime's `PUBLIC_URL`, over HTTP, such as `https://auto.example.com/mcp`. For Auto on your computer, [Run Auto on your computer](../get-started/local.md#connect-your-agent) gives it: the `mcp` command of `@on.auto/runtime`, run by `npx`; an agent that connects over HTTP instead, as one that signs you in does, uses `http://localhost:5555/mcp`, or the port you set.
 - Restart the agent session.
-- Confirm that the agent runs on the same computer as Auto Runtime.
+- For Auto on your computer, confirm that the agent runs on the same computer as Auto Runtime.
 
 ## A call answers that Auto Runtime stopped or does not answer {#runtime-stopped-answering}
 

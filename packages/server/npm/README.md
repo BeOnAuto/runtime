@@ -2,9 +2,21 @@
 
 Auto Runtime runs the playbooks your agent builds: their reasoning, interaction, prediction, recall and computation functions, and the workflows that coordinate them. [Auto Studio](https://studio.on.auto) lets you inspect and manage them.
 
-## Connect your agent
+For hosted Auto, connect your agent to `https://mcp.on.auto` and open Studio at `https://studio.on.auto`: the [quick start](https://on.auto/docs/get-started/cloud) needs nothing installed and no model key. This package runs Auto Runtime yourself, on a server for your team or on your own computer. It needs Node.js 26.10 or later, with its `npx`, on macOS or Linux.
 
-It needs Node.js 26.10 or later, with its `npx`, on macOS or Linux.
+## Run it for your team
+
+A team's runtime is reached at its `PUBLIC_URL`, the `https` address people sign in at, with HTTPS in front of the port it listens on, `5555` on `127.0.0.1` unless `PORT` and `HOST` say otherwise:
+
+```bash
+PUBLIC_URL=https://auto.example.com npx @on.auto/runtime
+```
+
+People sign in through the Auto identity service. When it is ready, it prints that address for Studio, `https://studio.on.auto/?server=https://auto.example.com`, for the server and for its MCP endpoint, and the commands that connect an agent to it, such as `claude mcp add --transport http auto-runtime https://auto.example.com/mcp`. For a deployment, run the same release as the image `docker.on.auto/onauto/runtime`, as [Deploy for your team](https://on.auto/docs/self-host/production) sets out.
+
+## Run it on your computer
+
+### Connect your agent
 
 <!-- x-release-please-start-version -->
 
@@ -21,19 +33,19 @@ When your agent connects, the command starts Auto Runtime in the background if i
 
 While your agent is connected, the command watches each call: the runtime sends a heartbeat every 5 seconds while it works on one, and the command pings it when 15 seconds pass with none. When Auto Runtime stops, for example when you close the terminal it runs in, the next request waits up to 5 seconds for it to come back, then starts one in the background. When the runtime the command started stops answering, the command stops it and starts another, and `~/.auto-runtime/runtime.log` says what it did. A request that never reached the runtime is sent again. A tool call that may have reached it is never sent twice: once the command has made sure the runtime runs, your agent is told to look at the playbook, its definitions and its runs for whether it took effect, and whether Auto Runtime runs again or why it does not. A runtime started in a terminal or by another agent's connection, one that asks for a credential, and another program on the port are left alone, and your agent is told what to do. Your agent hears back within 45 seconds of a request the command holds, and a request it cancels meanwhile is never sent.
 
-## Start it yourself
+### Start it yourself
 
 ```bash
 npx @on.auto/runtime
 ```
 
-The server starts at `http://localhost:5555` in local mode: no one signs in, and every request on your computer acts as you, the local developer, in the org `local`. Do not expose it through a tunnel or public proxy. Its MCP endpoint is `http://localhost:5555/mcp`; connect Claude Code with:
+Without `PUBLIC_URL` or `API_KEYS`, the server starts at `http://localhost:5555` in local mode: no one signs in, and every request on your computer acts as you, the local developer, in the org `local`. Do not expose it through a tunnel or public proxy. Its MCP endpoint is `http://localhost:5555/mcp`; connect Claude Code with:
 
 ```bash
 claude mcp add --transport http auto-runtime http://localhost:5555/mcp
 ```
 
-To sign people in through the Auto identity service instead, set `PUBLIC_URL=http://localhost:5555`: the first time it connects, your agent then opens the sign-in page in your browser.
+To sign in through the Auto identity service on your own computer instead, set `PUBLIC_URL=http://localhost:5555`: the first time it connects, your agent then opens the sign-in page in your browser.
 
 In local mode, `http://localhost:5555` shows which release runs, in which process, since when and from which directory, with buttons that restart and stop it, and `http://localhost:5555/studio/` is Studio, which the runtime serves itself, since a page on a public address may not reach an address on your machine: it fetches Studio from Auto's Studio host, `STUDIO_ORIGIN`, and keeps its files in `~/.auto-runtime/auto-runtime-studio`. `SERVE_STUDIO=false` turns it off.
 

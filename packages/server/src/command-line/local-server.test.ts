@@ -27,6 +27,7 @@ interface Options {
 function stoppable(count: () => void, signIn?: SignInSettings, install?: Install): ReturnType<LocalServerHost['run']> {
   return Promise.resolve({
     port: 5600,
+    publicUrl: signIn?.publicUrl,
     mode: signIn === undefined ? 'local' : 'credentials',
     signIn,
     studio: { origin: 'https://studio.on.auto', served: signIn === undefined },
@@ -107,8 +108,8 @@ describe('serving the runtime on this computer', () => {
     expect(local.stops()).toBe(1);
   });
 
-  it('shows the identity service persons sign in through when the server signs them in', async () => {
-    const local = served({ signIn: { issuer: 'https://clerk.on.auto', publicUrl: 'http://localhost:5600' } });
+  it('shows the address persons reach the server at, and the identity service they sign in through, when the server signs them in', async () => {
+    const local = served({ signIn: { issuer: 'https://clerk.on.auto', publicUrl: 'https://auto.example.com' } });
 
     const serving = servedLocally(local.host);
     await expect.poll(() => local.written).toHaveLength(2);
@@ -116,7 +117,7 @@ describe('serving the runtime on this computer', () => {
     await serving;
 
     expect(local.written[1]).toContain(
-      '     MCP      http://localhost:5600/mcp\n     Sign-in  https://clerk.on.auto\n',
+      '     Server   https://auto.example.com\n     MCP      https://auto.example.com/mcp\n     Sign-in  https://clerk.on.auto\n',
     );
     expect(local.written[1]).not.toContain('Local mode');
   });

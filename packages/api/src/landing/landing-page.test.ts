@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { readPageStyle, type ApiHandler, apiShippedRoots } from '../index.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
 import { operationServer } from '../testing/operation-server.ts';
+import { signedInServer } from '../testing/signed-in.ts';
 import { servedStudio } from '../testing/studios.ts';
 
 const apiFilesOnDisk = shippedFilesOnDisk(apiShippedRoots());
@@ -77,6 +78,16 @@ describe('the studio the page at the root of the server opens', () => {
     expect(page).toContain(
       'href="http://localhost:5555/studio/?server=http%3A%2F%2Flocalhost%3A5555&amp;src=runtime-page"',
     );
+  });
+
+  it('opens the studio on the address people reach the server at, its PUBLIC_URL, whatever address the request came to', async () => {
+    const { server } = await signedInServer();
+
+    const page = await (await open(server.handler, 'http://10.0.0.5:5555/')).text();
+
+    expect(page).toContain('<span class="address">runtime.example</span>');
+    expect(page).toContain('href="https://studio.on.auto/?server=https%3A%2F%2Fruntime.example&amp;src=runtime-page"');
+    expect(page).not.toContain('10.0.0.5');
   });
 
   it('names the install of this server in the studio it opens, once the server has one', async () => {

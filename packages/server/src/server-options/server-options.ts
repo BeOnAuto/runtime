@@ -23,6 +23,7 @@ export type LicenseNotice = () => Promise<string | undefined>;
 
 export interface RunningServer {
   readonly port: number;
+  readonly publicUrl: string | undefined;
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
   readonly studio: StudioSettings;

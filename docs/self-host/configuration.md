@@ -264,7 +264,7 @@ Like any request on the internet, the message comes from an address. Scarf uses 
 
 Auto keeps the install id in a file named `install-id`, beside the ledger file, as it keeps `secrets.key`: `~/.auto-runtime/install-id` with `npx`, and on the `/data` volume in the image. Where the ledger is in PostgreSQL, the file is in `~/.auto-runtime` in the home folder of the user that runs Auto. Delete the file and Auto makes a new id at its next start. Where Auto cannot write the file, it sends the message without an id.
 
-The first time Auto makes the id, it says so in one line when it is ready, with how to turn the ping off. While the ping is on, the links to Studio in that ready message and on the page at `http://localhost:5555` carry the id, and say which of the two they came from, so that visits to Studio from one copy count as one.
+The first time Auto makes the id, it says so in one line when it is ready, with how to turn the ping off. While the ping is on, the links to Studio in that ready message and on the page at the runtime's root carry the id, and say which of the two they came from, so that visits to Studio from one copy count as one.
 
 The ping never holds up a start or a stop: Auto gives up on it after 3 seconds, or as soon as it stops, and a ping that fails changes nothing and is not logged. Pulls of the image through `docker.on.auto`, as in [Run with Docker](docker.md#the-image), are counted by Scarf too.
 
