@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.0](https://github.com/BeOnAuto/runtime/compare/v0.38.0...v0.39.0) (2026-10-28)
+
+
+### Features
+
+* **connections:** a server given by hand says how it authenticates ([#387](https://github.com/BeOnAuto/runtime/issues/387)) ([b337351](https://github.com/BeOnAuto/runtime/commit/b3373517c6fee46357e776639420a77dc9bca13e))
+
 ## [0.38.0](https://github.com/BeOnAuto/runtime/compare/v0.37.1...v0.38.0) (2026-10-28)
 
 
