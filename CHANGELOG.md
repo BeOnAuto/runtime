@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.37.0](https://github.com/BeOnAuto/runtime/compare/v0.36.0...v0.37.0) (2026-10-28)
+
+
+### Features
+
+* **server:** a runtime at its PUBLIC_URL gives that address, never localhost ([#378](https://github.com/BeOnAuto/runtime/issues/378)) ([93a962d](https://github.com/BeOnAuto/runtime/commit/93a962d9482b29c077893a43cb9e6829c12cf142))
+
+
+### Bug Fixes
+
+* **connections:** refuse private and metadata connection targets ([#374](https://github.com/BeOnAuto/runtime/issues/374)) ([b8ff5f2](https://github.com/BeOnAuto/runtime/commit/b8ff5f288f8be104e4abb089a7e8f7f724fe5556))
+
 ## [0.36.0](https://github.com/BeOnAuto/runtime/compare/v0.35.2...v0.36.0) (2026-10-28)
 
 
