@@ -107,7 +107,7 @@ describe('a credential given in the wrong fields', () => {
       detail: 'The connection notes takes no credential to give, so it is approved as it is',
     });
     expect(await giving(h, { id, token, value: 'x' }, grace)).toMatchObject({ reason: 'forbidden' });
-    expect(await giving(h, { id, token, value: 'x' }, ada, '2026-10-15T14:10:00.000Z')).toMatchObject({
+    expect(await giving(h, { id, token, value: 'x' }, ada, '2026-10-16T14:00:00.000Z')).toMatchObject({
       reason: 'not_found',
     });
     expect(h.secrets.values().size).toBe(0);

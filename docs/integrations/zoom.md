@@ -25,7 +25,7 @@ You connect as yourself. The connection reaches your own meetings, recordings an
 
    Your agent may ask which playbook the connection is for. Name the playbooks that may use it, or say that every playbook of your org may. A connection that names no playbook is for every playbook of the org.
 
-2. Your agent asks you to open a page of Studio, or gives you its link. The link works for ten minutes. On an Auto that signs people in, only you can use it, signed in as yourself.
+2. Your agent asks you to open a page of Studio, or gives you its link. The link works for 24 hours. On an Auto that signs people in, only you can use it, signed in as yourself.
 3. Check what the page says you are connecting, and press Continue.
 4. Zoom asks you to sign in and to allow access. Sign in with your Zoom account and allow it.
 5. Zoom sends you back to Studio, which finishes the connection and shows Zoom as connected. Your agent sees it connected too.

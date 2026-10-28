@@ -10,7 +10,7 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
-import { isTheLinkOf } from '../links/link-token.ts';
+import { tokenSha256OfPage } from '../links/link-token.ts';
 import type { GivenAddition } from '../providers/provider-additions.ts';
 import type { ConnectionAddition, ConnectionCommandData } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
@@ -33,13 +33,19 @@ export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerO
 interface OfferStanding {
   readonly connect?: { readonly url: string; readonly expires_at: string };
   readonly link_ran_out?: true;
+  readonly link_replaced?: true;
 }
 
-function standingOfTheOffer({ link }: KeptConnection, url: string, at: string): OfferStanding {
-  if (link === undefined || !isTheLinkOf(link, url)) {
+function standingOfTheOffer({ link, replacedLinks }: KeptConnection, url: string, at: string): OfferStanding {
+  if (link === undefined) {
     return {};
   }
-  return link.expires_at > at ? { connect: { url, expires_at: link.expires_at } } : { link_ran_out: true };
+  const offered = tokenSha256OfPage(url);
+  const isOpen = link.expires_at > at;
+  if (link.token_sha256 === offered) {
+    return isOpen ? { connect: { url, expires_at: link.expires_at } } : { link_ran_out: true };
+  }
+  return isOpen && replacedLinks.has(offered) ? { link_replaced: true } : {};
 }
 
 export const standingAfterTheLink = Effect.fnUntraced(function* (

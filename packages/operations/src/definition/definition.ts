@@ -15,6 +15,7 @@ export interface OfferedLink {
 export interface AnswerAfterTheLink<Out, R extends DeclarableReason, Services> {
   readonly idOf: (output: Out) => string;
   readonly read: (link: OfferedLink) => Effect.Effect<Out, Rejection<R>, Services>;
+  readonly linkLastsMs: number;
 }
 
 interface ObjectValue {

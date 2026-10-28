@@ -4,18 +4,13 @@ import { Effect, Logger, Redacted, type Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
-import { added, billing, crm, notes, reconnected } from '../testing/additions.ts';
+import { added, billing, notes, reconnected } from '../testing/additions.ts';
+import { connectedCrm } from '../testing/crm-connections.ts';
 import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 import { preparedOf, servedAs as connectionOf, sourceOver as sourceOf } from '../testing/served-connections.ts';
 
 function policyOf(fields: ConnectionPolicyFields) {
   return { policy: connectionPolicyOf(fields) };
-}
-
-async function connectedCrm(h: Harness): Promise<string> {
-  const { id, token } = await added(h, crm);
-  await h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value: 'Bearer crm-key-0f3c9a71' });
-  return id;
 }
 
 function refusalIn(

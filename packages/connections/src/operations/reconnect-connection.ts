@@ -11,9 +11,9 @@ import { recordInRegistry, recordedCaller } from './registry-access.ts';
 import { shownConnection } from './shown-connections.ts';
 
 const description = [
-  "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; nothing else changes.",
+  "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working, and nothing else changes.",
   'Use it where list_connections or search says a connection is broken and its reason says to reconnect it, rather than removing it and adding it again.',
-  'It answers the connection with the link, which the person who added it opens within ten minutes, or, where a broken connection sends a variable of the runtime that is set, connected again at once.',
+  'It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once.',
 ].join(' ');
 
 type Reconnecting = Pick<ConnectionServices, 'secrets' | 'pages' | 'providers' | 'access' | 'variables'>;

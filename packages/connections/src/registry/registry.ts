@@ -28,6 +28,7 @@ export interface StartedConsent {
 export interface KeptConnection {
   readonly connection: RecordedConnection;
   readonly link: OpenLink | undefined;
+  readonly replacedLinks: ReadonlySet<string>;
   readonly consent: StartedConsent | undefined;
   readonly secretId: string | undefined;
   readonly algorithm: string | undefined;
@@ -57,6 +58,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       broken: null,
     },
     link: undefined,
+    replacedLinks: new Set(),
     consent: undefined,
     secretId: undefined,
     algorithm: undefined,
@@ -71,8 +73,16 @@ function withConsent(kept: KeptConnection, { data, context }: ConsentStarted): K
   };
 }
 
+function replacedLinksOf({ link, replacedLinks }: KeptConnection): ReadonlySet<string> {
+  return link === undefined ? replacedLinks : new Set(replacedLinks).add(link.token_sha256);
+}
+
 function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
-  return { ...kept, link: { token_sha256: data.token_sha256, expires_at: data.expires_at } };
+  return {
+    ...kept,
+    link: { token_sha256: data.token_sha256, expires_at: data.expires_at },
+    replacedLinks: replacedLinksOf(kept),
+  };
 }
 
 function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnected): Credential {
@@ -97,6 +107,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       broken: null,
     },
     link: undefined,
+    replacedLinks: kept.replacedLinks,
     consent: undefined,
     secretId: data.secret_id,
     algorithm: data.algorithm,

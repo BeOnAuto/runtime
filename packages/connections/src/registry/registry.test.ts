@@ -28,7 +28,7 @@ const history: readonly ConnectionEvent[] = [
   crmAdded,
   {
     type: 'connection_link_issued',
-    data: { connection: '0199-crm', token_sha256: 'a1b2', expires_at: '2026-10-15T14:10:00.000Z' },
+    data: { connection: '0199-crm', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
   },
 ];
 
@@ -67,7 +67,8 @@ describe('an added connection, as the stream folds it', () => {
         granted_scope: null,
         broken: null,
       },
-      link: { token_sha256: 'a1b2', expires_at: '2026-10-15T14:10:00.000Z' },
+      link: { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
+      replacedLinks: new Set(),
       secretId: undefined,
       algorithm: undefined,
     });
@@ -85,6 +86,21 @@ describe('an added connection, as the stream folds it', () => {
       link: undefined,
       secretId: 'secret-1',
     });
+  });
+});
+
+describe('a later link of a connection, as the stream folds it', () => {
+  it('takes the place of the one before, keeping the digest of one it replaced and none of one used up', () => {
+    const nextLink: ConnectionEvent = {
+      type: 'connection_link_issued',
+      data: { connection: '0199-crm', token_sha256: 'c3d4', expires_at: '2026-10-16T14:05:00.000Z' },
+    };
+
+    expect(crmAfter(nextLink)).toMatchObject({
+      link: { token_sha256: 'c3d4', expires_at: '2026-10-16T14:05:00.000Z' },
+      replacedLinks: new Set(['a1b2']),
+    });
+    expect(crmAfter(approval, connection, nextLink)?.replacedLinks).toEqual(new Set());
   });
 });
 

@@ -136,7 +136,7 @@ describe('a start refused by its link', () => {
 
     expect([
       await starting(h, { ...link, token: 'unknown' }),
-      await starting(h, link, '2026-10-15T14:11:00.000Z'),
+      await starting(h, link, '2026-10-16T14:01:00.000Z'),
       await h.call(operationNamed(h.operations, 'start'), grace, { id: link.id, token: link.token }),
       await starting(h, secret),
     ]).toMatchObject([

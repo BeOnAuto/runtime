@@ -134,6 +134,7 @@ function dispatchingOf<R>(
           toOpen: link.toOpen,
           idOf: link.idOf,
           dispatchAfter: (offeredLink) => dispatchTo(link.answerAfter(offeredLink)),
+          linkLastsMs: link.linkLastsMs,
         },
       };
 }

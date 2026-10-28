@@ -112,6 +112,7 @@ export function linkFields<Out extends ObjectSchema, R extends DeclarableReason,
       toOpen: (output) => linkToOpen(decodeOutput(output)),
       idOf: (output) => answerAfterTheLink.idOf(decodeOutput(output)),
       answerAfter: (offered) => answeringBy(() => answerAfterTheLink.read(offered)),
+      linkLastsMs: answerAfterTheLink.linkLastsMs,
     },
   };
 }

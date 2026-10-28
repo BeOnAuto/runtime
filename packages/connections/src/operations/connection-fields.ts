@@ -27,6 +27,12 @@ export const AddedSchema = Schema.Struct({
       description: 'Answered after the link: the link offered ran out unused, so the connection stands as it was',
     }),
   ),
+  link_replaced: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description:
+        'Answered after the link: a newer link, still open, replaced the link offered, so the person who added the connection opens the newest',
+    }),
+  ),
 }).annotate({
   identifier: 'AddedConnection',
   description: 'The connection, and the link that approves it while there is one to open',

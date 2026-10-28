@@ -2,7 +2,7 @@ import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { added, notes, reconnecting } from '../testing/additions.ts';
+import { added, notes, reconnected, reconnecting } from '../testing/additions.ts';
 import { ada, harness, operationNamed, recordedAs, type Harness } from '../testing/harness.ts';
 import { preparedOf, servedAs, sourceOver } from '../testing/served-connections.ts';
 
@@ -12,9 +12,7 @@ const noteKeySet = new Map([['NOTES_API_KEY', Redacted.make('notes-key-5b2e9d')]
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
-const elevenMinutesLater = '2026-10-15T14:11:00.000Z';
-
-const newLinkExpires = '2026-10-15T14:21:00.000Z';
+const newLinkExpires = '2026-10-16T14:05:00.000Z';
 
 const reference = {
   ...notes,
@@ -27,10 +25,14 @@ async function connectedReference(h: Harness): Promise<string> {
   return id;
 }
 
-async function brokenReference(h: Harness): Promise<string> {
-  const id = await connectedReference(h);
+async function breaking(h: Harness, id: string): Promise<void> {
   const source = sourceOver(h, { policy: sendingAVariable, variables: noteKeySet });
   await Effect.runPromise((await preparedOf(source, id)).refused);
+}
+
+async function brokenReference(h: Harness): Promise<string> {
+  const id = await connectedReference(h);
+  await breaking(h, id);
   return id;
 }
 
@@ -65,14 +67,37 @@ describe('reconnecting a connection of a reference its server refused', () => {
   });
 });
 
+describe('reconnecting a connection of a reference its server refused while a link of it is open', () => {
+  it('mends it in place all the same, which uses that link up', async () => {
+    const h = harness({ policy: sendingAVariable, variables: noteKeySet });
+    const id = await connectedReference(h);
+    const { token } = await reconnected(h, id);
+    await breaking(h, id);
+
+    const mended = await reconnecting(h, id, fiveMinutesLater);
+
+    expect(mended).toMatchObject({
+      status: 'succeeded',
+      output: { id, status: 'connected', broken: null, connected_at: fiveMinutesLater },
+    });
+    expect(mended).not.toHaveProperty('output.connect');
+    expect(await h.call(operationNamed(h.operations, 'read_link'), ada, { id, token }, fiveMinutesLater)).toMatchObject(
+      {
+        reason: 'not_found',
+        detail: 'There is no open link of this token: it is unknown, used up or expired',
+      },
+    );
+  });
+});
+
 describe('reconnecting a connection of a reference that is not broken', () => {
-  it('gives one pending whose link ran out, and one connected, a new link and grants nothing, as for any other kind', async () => {
+  it('gives one pending and one connected a new link and grants nothing, as for any other kind', async () => {
     const h = harness({ policy: sendingAVariable, variables: noteKeySet });
     const { id: pending } = await added(h, { ...reference, name: 'drafts' });
     const connected = await connectedReference(h);
 
-    const fromPending = await reconnecting(h, pending, elevenMinutesLater);
-    const fromConnected = await reconnecting(h, connected, elevenMinutesLater);
+    const fromPending = await reconnecting(h, pending, fiveMinutesLater);
+    const fromConnected = await reconnecting(h, connected, fiveMinutesLater);
 
     expect([fromPending, fromConnected]).toMatchObject([
       { status: 'succeeded', output: { id: pending, status: 'pending', connect: { expires_at: newLinkExpires } } },

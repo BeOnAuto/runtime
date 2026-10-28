@@ -26,7 +26,7 @@ const driveAdded: ConnectionEvent = {
 
 const linkIssued: ConnectionEvent = {
   type: 'connection_link_issued',
-  data: { connection: 'drive-id', token_sha256: 'a1b2', expires_at: '2026-10-15T14:10:00.000Z' },
+  data: { connection: 'drive-id', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
 };
 
 function decided(command: ConnectionCommand, ...history: readonly ConnectionEvent[]) {
