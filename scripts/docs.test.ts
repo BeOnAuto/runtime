@@ -120,7 +120,7 @@ await test('engineering guides remain in the repository without entering the pub
 
 await test('public docs lead to hosted Auto and make self-hosting a contact-led choice', () => {
   const selfHost = readFileSync(join(docs, 'self-host.md'), 'utf8');
-  assert.ok(markdownDestinations(selfHost).includes('https://on.auto/contact-us'));
+  assert.ok(markdownDestinations(selfHost).some((href) => href === 'https://on.auto/contact-us'));
   assert.doesNotMatch(selfHost, /```|npx|docker run/u);
   const index = readFileSync(join(docs, 'index.md'), 'utf8');
   const destinations = markdownDestinations(index);
