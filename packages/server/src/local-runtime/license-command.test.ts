@@ -56,10 +56,18 @@ describe('auto-runtime license activate, for an org Auto names', () => {
     const unnamed = await ranWith(['activate', key], () =>
       Promise.resolve(Response.json({ ...licensed, org_name: null })),
     );
+    const blank = await ranWith(['activate', key], () =>
+      Promise.resolve(Response.json({ ...licensed, org_name: '  ' })),
+    );
+    const unruly = await ranWith(['activate', key], () =>
+      Promise.resolve(Response.json({ ...licensed, org_name: '\u001B[2JAcme\r\nCorporation\u202E' })),
+    );
 
-    expect([named.logged, unnamed.logged]).toEqual([
+    expect([named.logged, unnamed.logged, blank.logged, unruly.logged]).toEqual([
       ['Licensed to Acme Corporation (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
       ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
+      ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
+      ['Licensed to [2JAcme Corporation (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
     ]);
   });
 });

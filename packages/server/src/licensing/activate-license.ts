@@ -3,6 +3,7 @@ import { Caller, defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { KeptLicenseKey } from './kept-license-key.ts';
+import { licensedToOf } from './license-notice.ts';
 import { LicenseKey } from './license-settings.ts';
 
 const ActivationSchema = Schema.Struct({ key: LicenseKey });
@@ -21,6 +22,11 @@ const description = [
   'It answers the installation, the org at Auto, its plan and when the entitlement Auto signed expires; the runtime refreshes it every day, and keeps the key in its secret store so it stands after a restart.',
   'A key Auto does not know, or one for another installation, is refused as a conflict of the kind license_invalid.',
 ].join(' ');
+
+function orgInWords(org: string, orgName: string | null): string {
+  const named = licensedToOf(org, orgName);
+  return named === org ? org : `${named} (${org})`;
+}
 
 export function defineActivateLicense(license: Pick<LicensePorts, 'activate'>, kept: KeptLicenseKey) {
   return defineCommand('org', {
@@ -42,7 +48,7 @@ export function defineActivateLicense(license: Pick<LicensePorts, 'activate'>, k
       task: 'activate the license of this runtime',
       attempt: () => 'activate the license with the key given',
       outcome: ({ org, org_name: orgName, plan, expires_at: expiresAt }) =>
-        `This runtime is licensed to the org ${orgName === null ? org : `${orgName} (${org})`} on the plan ${plan} until ${expiresAt}, and renews its license every day.`,
+        `This runtime is licensed to the org ${orgInWords(org, orgName)} on the plan ${plan} until ${expiresAt}, and renews its license every day.`,
     },
   });
 }

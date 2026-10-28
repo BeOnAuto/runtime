@@ -137,6 +137,18 @@ function orgNameBehaviour(ledgerOf: LedgerOf): void {
     expect((await metered.state()).license).toMatchObject({ org: 'acme', org_name: null });
   });
 
+  it('keeps the name of its org on one line of at most 80 characters, and no name where Auto signed a blank one', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.orgNamed('globex', `Globex\n\u001B[31mCorporation\u202E ${'x'.repeat(100)}`);
+    await metered.activated(metered.account.keyFor(installation, 'globex'));
+    const named = (await metered.state()).license?.org_name;
+    metered.account.orgNamed('globex', ' \n\t\u200B ');
+    await metered.refreshed();
+
+    expect(named).toBe(`Globex [31mCorporation ${'x'.repeat(57)}`);
+    expect((await metered.state()).license?.org_name).toBeNull();
+  });
+
   it('takes an entitlement that carries more than it knows, as a later account service may sign', async () => {
     const { metered } = await opened(ledgerOf);
     metered.account.answer('with more than it knows');

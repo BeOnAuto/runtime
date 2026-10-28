@@ -1,4 +1,4 @@
-import type { LicenseState, LicenseStatus, OfflineCredits } from '@on.auto/meter';
+import { shownOrgName, type LicenseState, type LicenseStatus, type OfflineCredits } from '@on.auto/meter';
 import { Function, Option } from 'effect';
 
 export function dayOf(moment: string): string {
@@ -10,7 +10,7 @@ export function offlineCreditsNotice({ credits, spent, usable_until: usableUntil
 }
 
 export function licensedToOf(org: string, orgName: string | null | undefined): string {
-  return orgName ?? org;
+  return shownOrgName(orgName) ?? org;
 }
 
 function licensedNotice({ org, org_name: orgName, plan }: LicenseStatus): string | undefined {

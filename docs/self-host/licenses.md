@@ -89,7 +89,7 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
 - `runtime_id` is the installation an owner registers in Studio. A runtime that has no id yet takes one as it is first read, the id its first run would have taken.
 - `free_runs.used` is the actions the runtime counted from its ledger, at most the 100 it runs before it is registered.
 - `org`, `plan`, `expires_at` and `renewed_at` are those of the entitlement of the key in force, and `null` without one.
-- `org_name` is the name of that org at Auto, as Auto signed it into the entitlement and renewed with it every day, and `null` without one or where Auto named none.
+- `org_name` is the name of that org at Auto, as Auto signed it into the entitlement and renewed with it every day, kept on one line of at most 80 characters, its control and format characters taken out, and `null` without one or where Auto named none or a blank one.
 - `key_source` says where the key in force came from: `environment`, `configuration` or `activated`, by the command or the API; `null` without a key. A key in the environment or the configuration file wins over an activated one at each start.
 - `offline` is `{ credits, spent, usable_until }` while the runtime holds an allocation, and `null` otherwise.
 

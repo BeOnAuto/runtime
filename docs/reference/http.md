@@ -1204,7 +1204,7 @@ A runtime runs 100 actions before it is registered, and after them each new acti
 | `runtime_id`      | The runtime's installation, which an owner registers in Studio; a runtime that has no id yet takes one as it is first read                                                      |
 | `free_runs`       | `{ used, of }`: the actions it counted from its ledger, at most `of`, the 100 it runs before it is registered                                                                   |
 | `org`, `plan`     | The org at Auto and its plan, of the entitlement of the key in force; `null` without one                                                                                        |
-| `org_name`        | The name of that org at Auto, as Auto signed it into the entitlement; `null` without one, or where Auto named none                                                              |
+| `org_name`        | The name of that org at Auto, as Auto signed it into the entitlement, on one line of at most 80 characters; `null` without one, or where Auto named none or a blank one         |
 | `expires_at`      | When that entitlement ends unless the runtime renews it; `null` without one                                                                                                     |
 | `renewed_at`      | When Auto last signed it; `null` without one                                                                                                                                    |
 | `key_source`      | Where the key in force came from: `environment`, `configuration` or `activated`; `null` without a key. A key in the environment or the configuration file wins at each start    |

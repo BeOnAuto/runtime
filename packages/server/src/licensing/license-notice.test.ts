@@ -1,7 +1,7 @@
 import type { LicenseStatus } from '@on.auto/meter';
 import { describe, expect, it } from 'vitest';
 
-import { licenseNoticeOf, offlineCreditsNotice } from './license-notice.ts';
+import { licensedToOf, licenseNoticeOf, offlineCreditsNotice } from './license-notice.ts';
 
 const unregistered: LicenseStatus = {
   state: 'unregistered',
@@ -38,6 +38,17 @@ describe('the line that says what a runtime holds', () => {
       'Licensed to Acme Corporation (team plan)',
       'Licensed to acme (team plan)',
     ]);
+  });
+
+  it('names the org on one line of at most 80 characters, and by its id where its name is blank', () => {
+    const licensed: LicenseStatus = { ...unregistered, state: 'licensed', org: 'acme', plan: 'team' };
+
+    expect([
+      licenseNoticeOf({ ...licensed, org_name: 'Acme\n\u001B[2J\u202ECorp' }),
+      licenseNoticeOf({ ...licensed, org_name: ' \t\u200B ' }),
+      licensedToOf('acme', 'a'.repeat(90)),
+      licensedToOf('acme', null),
+    ]).toEqual(['Licensed to Acme [2JCorp (team plan)', 'Licensed to acme (team plan)', 'a'.repeat(80), 'acme']);
   });
 
   it('counts the offline credits it spent, and until when it may spend them', () => {
