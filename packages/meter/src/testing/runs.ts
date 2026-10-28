@@ -46,11 +46,25 @@ export function runStreamOf(run: string, playbook = 'alpha', org = 'acme'): stri
 export interface Answer {
   readonly kind: string;
   readonly detail: string;
+  readonly because?: string;
+  readonly resolve_at?: string;
+  readonly runtime_id?: string;
+}
+
+function memberOf(refused: object, member: keyof Answer): Partial<Answer> {
+  const value: unknown = Reflect.get(refused, member);
+  return typeof value === 'string' ? { [member]: value } : {};
 }
 
 function answerOfRefusal(refusal: unknown): Answer {
   const refused = new Object(refusal);
-  return { kind: String(Reflect.get(refused, 'kind')), detail: String(Reflect.get(refused, 'detail')) };
+  return {
+    kind: String(Reflect.get(refused, 'kind')),
+    detail: String(Reflect.get(refused, 'detail')),
+    ...memberOf(refused, 'because'),
+    ...memberOf(refused, 'resolve_at'),
+    ...memberOf(refused, 'runtime_id'),
+  };
 }
 
 export function answerOf<A, E, R>(work: Effect.Effect<A, E, R>, kind: string): Effect.Effect<Answer, never, R> {

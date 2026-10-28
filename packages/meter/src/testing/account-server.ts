@@ -79,8 +79,12 @@ async function bodyOf(request: IncomingMessage): Promise<string> {
   return text;
 }
 
-function refusedWith({ status, kind, detail }: AccountRefusal): Answer | 'dropped' {
-  return kind === 'unreachable' ? 'dropped' : { status, body: { kind, detail } };
+function refusedWith({ status, kind, detail, because, resolve_at: resolveAt }: AccountRefusal): Answer | 'dropped' {
+  const resolution = {
+    ...(because === undefined ? {} : { because }),
+    ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+  };
+  return kind === 'unreachable' ? 'dropped' : { status, body: { kind, detail, ...resolution } };
 }
 
 function answered<A>(work: Effect.Effect<A, AccountFailure>, body: (answer: A) => object): Promise<Answer | 'dropped'> {

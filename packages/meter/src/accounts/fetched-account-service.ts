@@ -36,6 +36,8 @@ const AllocationTakenSchema = Schema.Struct({ taken: Schema.String });
 const RefusalSchema = Schema.Struct({
   kind: Schema.optionalKey(Schema.String),
   detail: Schema.optionalKey(Schema.String),
+  because: Schema.optionalKey(Schema.String),
+  resolve_at: Schema.optionalKey(Schema.String),
 });
 
 const refusalIn = Schema.decodeUnknownOption(Schema.fromJsonString(RefusalSchema));
@@ -58,11 +60,12 @@ function asked(at: AccountsAt, path: string, key: string, body: object): Effect.
 }
 
 function refusalOf({ status, text }: Answer): AccountFailure {
-  const { kind = 'unknown', detail = `The account service answered ${status}` } = Option.getOrElse(
-    refusalIn(text),
-    () => unworded,
-  );
-  return new AccountFailure({ status, kind, detail });
+  const {
+    kind = 'unknown',
+    detail = `The account service answered ${status}`,
+    ...resolution
+  } = Option.getOrElse(refusalIn(text), () => unworded);
+  return new AccountFailure({ status, kind, detail, ...resolution });
 }
 
 function answerIn<S extends Schema.Codec<unknown, unknown>>(

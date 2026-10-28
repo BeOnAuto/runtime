@@ -13,12 +13,16 @@ export function licensedEvents({ license }: Licensing, state: MeterState): reado
 }
 
 export function invalidatedEvents(
-  { key_sha256: sha256, detail }: Invalidating,
+  { key_sha256: sha256, invalidity }: Invalidating,
   state: MeterState,
 ): readonly DecidedEvent[] {
   const standing = state.license;
   const stands = standing?.key_sha256 === sha256 && standing.invalid === undefined;
-  return stands ? [{ type: 'license_invalidated', data: { key_sha256: sha256, detail } }] : [];
+  return stands ? [{ type: 'license_invalidated', data: { key_sha256: sha256, ...invalidity } }] : [];
+}
+
+export function identifiedEvents(installation: string, state: MeterState): readonly DecidedEvent[] {
+  return state.installation === undefined ? [{ type: 'installation_identified', data: { installation } }] : [];
 }
 
 export function reportedEvents({ report }: Reporting): readonly DecidedEvent[] {

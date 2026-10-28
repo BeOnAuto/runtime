@@ -29,6 +29,7 @@ export interface Metering {
   readonly log: LogPorts;
   readonly options: MeterOptions;
   readonly admissionNumbered: Effect.Effect<number>;
+  readonly runtimeIdOf: (state: MeterState) => string | undefined;
 }
 
 export const meterUnavailable = new Unavailable({
@@ -36,10 +37,19 @@ export const meterUnavailable = new Unavailable({
   kind: 'meter_unavailable',
 });
 
-export function faultRefusal({ detail }: Fault, { studio }: MeterOptions): Conflict {
+export function licensesPageOf({ studio }: MeterOptions, installation: string | undefined): string {
+  return installation === undefined ? `${studio}/licenses` : `${studio}/licenses?installation=${installation}`;
+}
+
+export function faultRefusal({ detail }: Fault, { options, runtimeIdOf }: Metering, state: MeterState): Conflict {
+  const support = `${options.studio}/support`;
+  const runtimeId = runtimeIdOf(state);
+  const naming = runtimeId === undefined ? '' : ` (runtime id ${runtimeId})`;
   return new Conflict({
-    detail: `This runtime stopped starting runs: ${detail}. Nothing new runs until Auto repairs its meter; reach Auto at ${studio}/support`,
+    detail: `This runtime stopped starting runs because ${detail}. We need to repair it; see ${support}${naming}. Reading, editing and exporting still work.`,
     kind: 'metering_fault',
+    resolve_at: support,
+    ...(runtimeId === undefined ? {} : { runtime_id: runtimeId }),
   });
 }
 
@@ -71,7 +81,7 @@ function faulted(metering: Metering, fault: Fault): Effect.Effect<never, Conflic
   return Effect.gen(function* () {
     const command: MeterCommand = { type: 'fault', fault, at: yield* nowIso };
     yield* Effect.ignore(metering.ledger.execute(METER_STREAM, meterDecider, command));
-    return yield* faultRefusal(fault, metering.options);
+    return yield* faultRefusal(fault, metering, yield* meterStateOf(metering));
   });
 }
 

@@ -57,6 +57,25 @@ describe('the refusals of the account service over HTTP', () => {
     });
   });
 
+  it('answers the case of the refusal and where a person resolves it, where the account gives them', async () => {
+    const { fake, account, key } = await served();
+    fake.exhaust({ because: 'free_month_used', resolve_at: 'https://studio.on.auto/billing?org=acme' });
+    const exhausted = await outcomeOf(account.admit(key, runOf('run-1')));
+    fake.revoke(key, 'key_rotated');
+
+    expect(exhausted).toMatchObject({
+      kind: 'credits_exhausted',
+      because: 'free_month_used',
+      resolve_at: 'https://studio.on.auto/billing?org=acme',
+    });
+    expect(await outcomeOf(account.admit(key, runOf('run-2')))).toMatchObject({
+      status: 403,
+      kind: 'license_invalid',
+      detail: 'The key was rotated',
+      because: 'key_rotated',
+    });
+  });
+
   it('answers a refusal without words with its status alone', async () => {
     const { server, key } = await served();
     const elsewhere = accountServiceAt({ origin: `${server.origin}/elsewhere`, fetch });

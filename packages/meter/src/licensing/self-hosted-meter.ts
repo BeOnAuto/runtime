@@ -6,12 +6,17 @@ import { Context, Effect, Layer, Ref } from 'effect';
 import { AccountService, type AccountPorts } from '../accounts/account-service.ts';
 import { meterAdmitting, meteringOver, type MeteredLedger } from '../admission/admitting.ts';
 import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
+import type { KeyInHand, Licensing } from './licensing.ts';
 import { licensePortsOf, RuntimeLicense, unlicensed, type LicenseGiven, type LicensePorts } from './runtime-license.ts';
 import { admittedSelfHosted } from './self-hosted-admission.ts';
 
 export interface SelfHostedMeter {
   readonly meter: Meter;
   readonly license: LicensePorts;
+}
+
+function activatedKey(key: string): KeyInHand {
+  return { key, source: 'activated' };
 }
 
 export function selfHostedMeterOver(
@@ -21,13 +26,14 @@ export function selfHostedMeterOver(
 ): Effect.Effect<SelfHostedMeter> {
   return Effect.gen(function* () {
     const metering = yield* meteringOver(ledgered, options);
-    const inHand = yield* Ref.make(key);
-    const licensing = {
+    const inForce = yield* Ref.make<KeyInHand | undefined>(key);
+    const licensing: Licensing = {
       ...metering,
       account: ledgered.account,
       signers,
-      keyInHand: Ref.get(inHand),
-      keyHeld: (held: string) => Ref.set(inHand, held),
+      keyInForce: Ref.get(inForce),
+      keyInHand: Effect.map(Ref.get(inForce), (held) => held?.key),
+      keyHeld: (held) => Ref.update(inForce, (current) => (current?.key === held ? current : activatedKey(held))),
     };
     const meter = meterAdmitting(metering, (run, counting) => admittedSelfHosted(licensing, run, counting));
     return { meter, license: licensePortsOf(licensing) };

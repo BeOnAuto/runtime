@@ -1,8 +1,7 @@
 import { expect, it } from 'vitest';
 
 import { runOf } from '../testing/runs.ts';
-import { allocatedOn } from './allocated.ts';
-import { opened, restartedAfter, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { allocatedOn, opened, restartedAfter, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
 function madeReportBehaviour(ledgerOf: LedgerOf): void {
   it('makes reports numbered one after another, each of all it spent under its allocation and signed with its key', async () => {

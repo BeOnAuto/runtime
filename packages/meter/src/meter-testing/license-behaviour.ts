@@ -2,20 +2,16 @@ import { expect, it } from 'vitest';
 
 import type { Answering } from '../testing/account-fake.ts';
 import { runOf } from '../testing/runs.ts';
-import { opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { licensedInstallation, licensedOn, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { creditCaseBehaviour, keptWordingBehaviour, revocationCaseBehaviour } from './refusal-behaviour.ts';
 
-const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+const installation = licensedInstallation;
 
 const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
 
-async function licensedOn(ledgerOf: LedgerOf) {
-  const { metered, ...rest } = await opened(ledgerOf);
-  const key = metered.account.keyFor(installation);
-  const licensed = await restartedOf(metered, { key });
-  return { ...rest, metered: licensed, key };
-}
+const page = `https://studio.on.auto/licenses?installation=${installation}`;
 
-export function activationBehaviour(ledgerOf: LedgerOf): void {
+function activationBehaviour(ledgerOf: LedgerOf): void {
   it('activates a key, recording the entitlement Auto signed, and admits each new action by the account from then on', async () => {
     const { metered } = await opened(ledgerOf, { allowance: 1 });
     const key = metered.account.keyFor(installation, 'globex');
@@ -54,7 +50,7 @@ export function activationBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-export function keyBehaviour(ledgerOf: LedgerOf): void {
+function keyBehaviour(ledgerOf: LedgerOf): void {
   it('activates a key given as it starts at its first admission, and asks again for no entitlement while one stands', async () => {
     const { metered } = await licensedOn(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
@@ -76,7 +72,7 @@ export function keyBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-export function refreshBehaviour(ledgerOf: LedgerOf): void {
+function refreshBehaviour(ledgerOf: LedgerOf): void {
   it('refreshes its entitlement when asked, and refreshes nothing without a key', async () => {
     const { metered } = await licensedOn(ledgerOf);
     await metered.admitted(runOf('run-1'));
@@ -99,8 +95,13 @@ export function refreshBehaviour(ledgerOf: LedgerOf): void {
     const refused = await metered.admitted(runOf('run-2'));
     metered.account.comeBack();
 
-    expect(refused.kind).toBe('license_invalid');
-    expect(refused.detail).toContain('expired at 2026-11-03T12:00:00.000Z and could not be refreshed');
+    expect(refused).toEqual({
+      kind: 'license_invalid',
+      detail:
+        "This runtime's license wasn't renewed by 2026-11-03. Check that it can reach billing.on.auto (it renews every day), then run this again.",
+      resolve_at: page,
+      runtime_id: installation,
+    });
     expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
     expect((await metered.state()).license?.expires_at).toBe('2026-11-11T12:00:00.000Z');
   });
@@ -125,7 +126,7 @@ const notAuto: readonly (readonly [string, Answering, string])[] = [
   ['expired', 'expired', 'expired at 2026-10-27T12:00:00.000Z'],
 ];
 
-export function invalidLicenseBehaviour(ledgerOf: LedgerOf): void {
+function invalidLicenseBehaviour(ledgerOf: LedgerOf): void {
   it.each(notAuto)('refuses an entitlement %s as license_invalid, and records no license', async (_, how, why) => {
     const { metered } = await opened(ledgerOf);
     metered.account.answer(how);
@@ -157,20 +158,9 @@ export function invalidLicenseBehaviour(ledgerOf: LedgerOf): void {
     expect(refused.detail).toContain(`https://studio.on.auto/licenses?installation=${identified}`);
     expect(metered.account.activations()).toEqual([]);
   });
-
-  it('refuses what is not a key of Studio, and a key Auto does not know, as license_invalid', async () => {
-    const { metered } = await opened(ledgerOf);
-    const notAKey = await metered.activated('alk_acme_secret');
-    const unknown = await metered.activated(`alk.acme.${installation}.unknown`);
-
-    expect(notAKey.kind).toBe('license_invalid');
-    expect(notAKey.detail).toMatch(/registers at https:\/\/studio\.on\.auto\/licenses$/u);
-    expect(unknown.kind).toBe('license_invalid');
-    expect(unknown.detail).toContain('was rotated away');
-  });
 }
 
-export function revocationBehaviour(ledgerOf: LedgerOf): void {
+function revocationBehaviour(ledgerOf: LedgerOf): void {
   it('refuses new runs as license_invalid once its key is revoked, without asking again, until another key is activated', async () => {
     const { metered, key } = await licensedOn(ledgerOf);
     await metered.admitted(runOf('run-1'));
@@ -182,7 +172,7 @@ export function revocationBehaviour(ledgerOf: LedgerOf): void {
 
     expect([refused.kind, again.kind]).toEqual(['license_invalid', 'license_invalid']);
     expect(metered.account.askedToAdmit()).toBe(askedBefore);
-    expect((await metered.state()).license?.invalid).toContain('revoked');
+    expect((await metered.state()).license?.invalid?.detail).toContain('revoked');
     expect((await metered.activated(rotated)).kind).toBe('activated');
     expect((await metered.admitted(runOf('run-3'))).kind).toBe('admitted');
   });
@@ -193,12 +183,12 @@ export function revocationBehaviour(ledgerOf: LedgerOf): void {
     metered.account.revoke(key);
 
     expect(await metered.refreshed()).toEqual({ kind: 'refreshed', detail: '' });
-    expect((await metered.state()).license?.invalid).toContain('revoked');
+    expect((await metered.state()).license?.invalid?.detail).toContain('revoked');
     expect(metered.warnings().at(-1)).toContain('The license of this runtime could not be refreshed');
   });
 }
 
-export function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
+function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
   it('is charged once per run id however often it is asked, and a run already started is admitted without asking', async () => {
     const { metered } = await licensedOn(ledgerOf);
     await metered.admitted(runOf('run-1'));
@@ -239,4 +229,16 @@ export function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
 
     expect((await metered.admitted(runOf('run-2'))).kind).toBe('meter_unavailable');
   });
+}
+
+export function licensesBehaviour(ledgerOf: LedgerOf): void {
+  activationBehaviour(ledgerOf);
+  keyBehaviour(ledgerOf);
+  refreshBehaviour(ledgerOf);
+  invalidLicenseBehaviour(ledgerOf);
+  revocationBehaviour(ledgerOf);
+  revocationCaseBehaviour(ledgerOf);
+  licensedAdmissionBehaviour(ledgerOf);
+  creditCaseBehaviour(ledgerOf);
+  keptWordingBehaviour(ledgerOf);
 }

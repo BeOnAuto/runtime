@@ -15,11 +15,17 @@ function repairOf(installation: string, sign = signedByTheTestKey): ReturnType<t
 }
 
 describe('a meter whose authority admits each action, once it finds a fault', () => {
-  it('refuses every run once it finds a fault, admitting nothing, and asks the authority for a repair at each run after', async () => {
+  it('refuses every run once it finds a fault, naming the installation of its authority, and asks the authority for a repair at each run after', async () => {
     const asking = authorityAnswering(admitting);
     const metered = await faultedOver(asking);
 
-    expect((await metered.admitted('run-3')).kind).toBe('metering_fault');
+    expect(await metered.admitted('run-3')).toEqual({
+      kind: 'metering_fault',
+      detail:
+        'This runtime stopped starting runs because the event its meter counted last is no longer in its ledger. We need to repair it; see https://studio.on.auto/support (runtime id cloud/acme/alpha). Reading, editing and exporting still work.',
+      resolve_at: 'https://studio.on.auto/support',
+      runtime_id: playbookObject,
+    });
     expect(asking.faults()).toEqual([]);
     expect((await metered.admitted('run-3')).kind).toBe('metering_fault');
     expect((await metered.admitted('run-4')).kind).toBe('metering_fault');

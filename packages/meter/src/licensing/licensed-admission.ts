@@ -1,18 +1,29 @@
 import type { MeteredRun } from '@on.auto/definitions';
 import { Conflict, type Unavailable } from '@on.auto/operations';
-import { Effect, Option } from 'effect';
+import { Effect, Option, Schema } from 'effect';
 
 import type { AccountRefusal } from '../accounts/account-failure.ts';
 import { actionOf, checkpointed, meterStateOf } from '../admission/metering.ts';
 import type { Counting } from '../counting/run-starts.ts';
 import { standingFor } from './activation.ts';
-import { accountUnavailable, invalidated, licenseInvalid, type Licensing } from './licensing.ts';
+import { accountUnavailable, invalidated, invalidityOf, licenseInvalidated, type Licensing } from './licensing.ts';
 import { admissionIn } from './signed-answers.ts';
 
 interface Asking {
   readonly key: string;
   readonly run: MeteredRun;
   readonly counting: Counting;
+}
+
+const isCreditBecause = Schema.is(Schema.Literals(['none_left', 'free_daily_limit', 'free_month_used']));
+
+function creditsExhausted({ detail, because, resolve_at: resolveAt }: AccountRefusal): Conflict {
+  return new Conflict({
+    detail,
+    kind: 'credits_exhausted',
+    ...(isCreditBecause(because) ? { because } : {}),
+    ...(resolveAt !== undefined && URL.canParse(resolveAt) ? { resolve_at: resolveAt } : {}),
+  });
 }
 
 function refused(
@@ -22,12 +33,13 @@ function refused(
 ): (failure: AccountRefusal) => Effect.Effect<never, Conflict | Unavailable> {
   return (failure) => {
     if (failure.kind === 'credits_exhausted') {
-      return Effect.fail(new Conflict({ detail: failure.detail, kind: 'credits_exhausted' }));
+      return Effect.fail(creditsExhausted(failure));
     }
     if (failure.kind === 'license_invalid') {
+      const invalidity = invalidityOf(failure);
       return Effect.andThen(
-        invalidated(licensing, key, failure.detail),
-        Effect.fail(licenseInvalid(licensing.options, installation, failure.detail)),
+        invalidated(licensing, key, invalidity),
+        Effect.fail(licenseInvalidated(licensing.options, installation, invalidity)),
       );
     }
     return Effect.fail(accountUnavailable);

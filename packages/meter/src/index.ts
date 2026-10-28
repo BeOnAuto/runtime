@@ -16,6 +16,8 @@ export {
 } from './accounts/account-service.ts';
 export { accountServiceLayer, type AccountsAt } from './accounts/fetched-account-service.ts';
 export { isLicenseKey } from './licensing/license-key.ts';
+export { type KeyInHand, type KeySource } from './licensing/licensing.ts';
+export { type LicenseState, type LicenseStatus, type OfflineCredits } from './licensing/license-status.ts';
 export {
   RuntimeLicense,
   type LicenseGiven,

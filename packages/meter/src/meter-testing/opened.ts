@@ -47,3 +47,23 @@ export async function checkpointOf(metered: Metered) {
 export async function actionsOf(metered: Metered): Promise<number> {
   return Number((await metered.state()).checkpoint?.actions);
 }
+
+const allocatedInstallation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f';
+
+export async function allocatedOn(ledgerOf: LedgerOf, credits: number, withAKey = true) {
+  const { metered, ...rest } = await opened(ledgerOf);
+  const key = metered.account.keyFor(allocatedInstallation);
+  const allocation = metered.account.allocationFor(allocatedInstallation, credits);
+  const given = await restartedOf(metered, withAKey ? { key } : {});
+  await given.allocated(allocation);
+  return { ...rest, metered: given, key, allocation };
+}
+
+export const licensedInstallation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+export async function licensedOn(ledgerOf: LedgerOf) {
+  const { metered, ...rest } = await opened(ledgerOf);
+  const key = metered.account.keyFor(licensedInstallation);
+  const licensed = await restartedOf(metered, { key });
+  return { ...rest, metered: licensed, key };
+}

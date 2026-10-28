@@ -3,7 +3,7 @@ import { Effect, Function, Option } from 'effect';
 
 import { executed, meterStateOf, meterUnavailable, nowIso } from '../admission/metering.ts';
 import { usageOf } from '../licensing/activation.ts';
-import { isLiveAt, licenseInvalid, nowMs, type Licensing } from '../licensing/licensing.ts';
+import { isLiveAt, licenseInvalid, nowMs, offlineCreditsStopped, type Licensing } from '../licensing/licensing.ts';
 import { allocationIn, type AllocationPayload, type Signed } from '../licensing/signed-answers.ts';
 import type { Allocation } from '../meter-stream/allocation-events.ts';
 import type { MeterState } from '../meter-stream/meter-events.ts';
@@ -46,9 +46,7 @@ function allocationVerified(
       return yield* invalid(`its allocation is for the installation ${allocation.installation}`);
     }
     if (!isLiveAt(allocation.refresh_by, yield* nowMs)) {
-      return yield* invalid(
-        `its allocation ${allocation.id} was to be refreshed with Auto by ${allocation.refresh_by}`,
-      );
+      return yield* offlineCreditsStopped(licensing.options, allocation.installation, allocation.refresh_by);
     }
     return allocation;
   });
