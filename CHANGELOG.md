@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.1](https://github.com/BeOnAuto/runtime/compare/v0.34.0...v0.34.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **api:** the landing page names Studio ([#366](https://github.com/BeOnAuto/runtime/issues/366)) ([659021a](https://github.com/BeOnAuto/runtime/commit/659021a367952d4178d93d14038cb48107ffa3bb))
+
 ## [0.34.0](https://github.com/BeOnAuto/runtime/compare/v0.33.0...v0.34.0) (2026-10-28)
 
 
