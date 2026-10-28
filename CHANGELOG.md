@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.38.0](https://github.com/BeOnAuto/runtime/compare/v0.37.1...v0.38.0) (2026-10-28)
+
+
+### Features
+
+* **prediction:** model runtimes behind one contract, loaded as extensions ([#388](https://github.com/BeOnAuto/runtime/issues/388)) ([8bf5c5d](https://github.com/BeOnAuto/runtime/commit/8bf5c5d00bb7fa51126ea612c7f31ed77c0400ee))
+* **workflow-host:** a due work answers its next time per lane ([#389](https://github.com/BeOnAuto/runtime/issues/389)) ([e9e3be9](https://github.com/BeOnAuto/runtime/commit/e9e3be9549b34d2c87941d6aa41fc4c832f6321f))
+
 ## [0.37.1](https://github.com/BeOnAuto/runtime/compare/v0.37.0...v0.37.1) (2026-10-28)
 
 
