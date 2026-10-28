@@ -37,11 +37,44 @@ describe('a runtime given its license key in AUTO_RUNTIME_LICENSE_KEY', () => {
     const exhaustedServer = await servedBy(exhausted, { AUTO_RUNTIME_LICENSE_KEY: exhausted.key });
 
     const refused = await tallied(revokedServer);
-    expect(refused).toMatchObject({ status: 409, body: { kind: 'license_invalid' } });
-    expect(JSON.stringify(refused.body)).toContain(`${studio}/licenses?installation=${installation}`);
+    expect(refused).toMatchObject({
+      status: 409,
+      body: {
+        kind: 'license_invalid',
+        resolve_at: `${studio}/licenses?installation=${installation}`,
+        runtime_id: installation,
+      },
+    });
     expect(await tallied(exhaustedServer)).toMatchObject({
       status: 409,
       body: { kind: 'credits_exhausted', detail: 'The org acme has no credits left' },
+    });
+  });
+});
+
+describe('a licensed runtime the account refuses in the words of its case', () => {
+  it('refuses a run in the words of the case the account gives, with where a person resolves it', async () => {
+    const rotated = await accountsServed();
+    const rotatedServer = await servedBy(rotated, { AUTO_RUNTIME_LICENSE_KEY: rotated.key });
+    await tallied(rotatedServer);
+    rotated.account.revoke(rotated.key, 'key_rotated');
+    const exhausted = await accountsServed();
+    exhausted.account.exhaust({ because: 'free_daily_limit', resolve_at: `${studio}/billing?org=acme` });
+    const exhaustedServer = await servedBy(exhausted, { AUTO_RUNTIME_LICENSE_KEY: exhausted.key });
+
+    expect(await tallied(rotatedServer)).toMatchObject({
+      status: 409,
+      body: {
+        kind: 'license_invalid',
+        because: 'key_rotated',
+        detail: `This runtime's key was replaced. Activate the new key an owner was shown when they rotated it, then run this again. If the key is lost, an owner can rotate it again at ${studio}/licenses?installation=${installation}.`,
+        resolve_at: `${studio}/licenses?installation=${installation}`,
+        runtime_id: installation,
+      },
+    });
+    expect(await tallied(exhaustedServer)).toMatchObject({
+      status: 409,
+      body: { kind: 'credits_exhausted', because: 'free_daily_limit', resolve_at: `${studio}/billing?org=acme` },
     });
   });
 });

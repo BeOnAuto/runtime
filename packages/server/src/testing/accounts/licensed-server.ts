@@ -1,6 +1,6 @@
 import { accountFake, accountServerOver, testSigners, type AccountFake } from '@on.auto/meter/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
@@ -60,4 +60,10 @@ export async function servedBy(
   onTestFinished(stop);
   await tallyCreated(server);
   return { ...server, stop };
+}
+
+const runtimeIdIn = Schema.decodeUnknownSync(Schema.Struct({ runtime_id: Schema.String }));
+
+export async function runtimeIdOf(server: Pick<ReasoningServer, 'call'>): Promise<string> {
+  return runtimeIdIn((await server.call('GET', '/v1/orgs/acme/license')).body).runtime_id;
 }

@@ -161,7 +161,7 @@ const everySettingRead = {
   telemetry: undefined,
   usagePing: { distribution: 'source' },
   license: {
-    key: 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.c2VjcmV0',
+    key: { key: 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.c2VjcmV0', source: 'environment' },
     allocation: undefined,
     accounts: 'https://accounts.example.com',
   },

@@ -1,14 +1,14 @@
 import type { AppRuntime } from '@on.auto/api';
-import { RuntimeLicense, type Signed } from '@on.auto/meter';
-import { Effect } from 'effect';
+import { RuntimeLicense, type KeyInHand, type Signed } from '@on.auto/meter';
+import { Effect, Function } from 'effect';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import type { ServerServices } from '../server-options/composed-options.ts';
 import { inRuntime } from '../workflows/in-runtime.ts';
-import { defineActivateLicense } from './activate-license.ts';
-import { defineActivateAllocation, defineReportAllocation } from './allocation-operations.ts';
 import { keptLicenseKeyOn, type KeptLicenseKeyServices } from './kept-license-key.ts';
 import { licenseChores } from './license-chores.ts';
+import { licenseNoticeOf } from './license-notice.ts';
+import { licenseOperationsOf } from './license-operations.ts';
 
 const lastReportWithinMs = 5000;
 
@@ -21,18 +21,15 @@ interface Worded {
 }
 
 export interface ServedLicense {
-  readonly operations: readonly [
-    ReturnType<typeof defineActivateLicense>,
-    ReturnType<typeof defineActivateAllocation>,
-    ReturnType<typeof defineReportAllocation>,
-  ];
+  readonly operations: ReturnType<typeof licenseOperationsOf>;
   readonly dueWork: ReturnType<typeof licenseChores>;
+  readonly notice: () => Promise<string | undefined>;
   readonly withALastReport: <S extends Stopping>(served: S) => S;
 }
 
 export async function licenseServedBy(
   runtime: AppRuntime<ServerServices>,
-  given: { readonly key: string | undefined; readonly allocation: Signed | undefined },
+  given: { readonly key: KeyInHand | undefined; readonly allocation: Signed | undefined },
   secrets: KeptLicenseKeyServices['secrets'],
 ): Promise<ServedLicense> {
   const inTheRuntime = <A, E>(work: Effect.Effect<A, E, ServerServices>) => Effect.runPromise(inRuntime(runtime, work));
@@ -54,12 +51,10 @@ export async function licenseServedBy(
     );
   }
   return {
-    operations: [
-      defineActivateLicense(license, kept),
-      defineActivateAllocation(license),
-      defineReportAllocation(license),
-    ],
+    operations: licenseOperationsOf(license, kept),
     dueWork: licenseChores(license),
+    notice: () =>
+      inTheRuntime(license.status.pipe(Effect.map(licenseNoticeOf), Effect.orElseSucceed(Function.constUndefined))),
     withALastReport: (served) => ({
       ...served,
       stopWork: async () => {

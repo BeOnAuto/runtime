@@ -19,18 +19,22 @@ export interface StartPing {
 
 export type UsagePing = (settings: Pick<Settings, 'usagePing' | 'ledger'>) => StartPing | undefined;
 
+export type LicenseNotice = () => Promise<string | undefined>;
+
 export interface RunningServer {
   readonly port: number;
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
   readonly studio: StudioSettings;
   readonly install: Install | undefined;
+  readonly licenseNotice?: LicenseNotice;
   stop(): Promise<void>;
 }
 
 export interface Served {
   readonly routes: readonly RegisterRoutes[];
   readonly stopWork: () => Promise<void>;
+  readonly licenseNotice?: LicenseNotice;
 }
 
 export type ServedClosing = (served: Served) => Served;

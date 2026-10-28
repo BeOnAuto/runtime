@@ -54,9 +54,7 @@ describe('auto-runtime license activate', () => {
 
     expect(asked).toEqual({
       code: 0,
-      logged: [
-        'Auto Runtime is licensed to the org acme on the plan free, as the installation 0199a3c4, until 2026-11-03T12:00:00.000Z; it renews the license every day',
-      ],
+      logged: ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
       errors: [],
       sent: [
         ['http://127.0.0.1:5555/runtime', undefined],
@@ -105,9 +103,7 @@ describe('auto-runtime license allocation and report', () => {
       'http://127.0.0.1:5555/v1/orgs/local/license/allocation',
       JSON.stringify({ allocation }),
     ]);
-    expect(asked.logged).toEqual([
-      'Auto Runtime holds the allocation a1 of 50 credits, 0 of them spent, until 2026-11-03T12:00:00.000Z unless Auto refreshes it',
-    ]);
+    expect(asked.logged).toEqual(['Offline credits: 0 of 50 used, usable until 2026-11-03.']);
   });
 
   it('refuses what is not the JSON of an allocation without asking the runtime', async () => {

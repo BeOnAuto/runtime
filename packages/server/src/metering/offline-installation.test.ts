@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { accountsServed, installation, servedBy } from '../testing/accounts/licensed-server.ts';
+import { accountsServed, installation, servedBy, studio } from '../testing/accounts/licensed-server.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { tallied } from '../testing/servers/tally-server.ts';
 
@@ -45,7 +45,16 @@ describe('a runtime given an allocation in AUTO_RUNTIME_ALLOCATION, which never 
     const ran = [await tallied(server), await tallied(server)];
 
     expect(ran.map(({ status }) => status)).toEqual([200, 200]);
-    expect(await tallied(server)).toMatchObject({ status: 409, body: { kind: 'credits_exhausted' } });
+    expect(await tallied(server)).toMatchObject({
+      status: 409,
+      body: {
+        kind: 'credits_exhausted',
+        because: 'none_left',
+        detail: `This runtime has used all 2 offline credits. An owner can request more at ${studio}/licenses?installation=${installation}.`,
+        resolve_at: `${studio}/licenses?installation=${installation}`,
+        runtime_id: installation,
+      },
+    });
     expect(accounts.account.askedToAdmit()).toBe(0);
   });
 });

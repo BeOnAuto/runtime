@@ -17,6 +17,7 @@ const ready = {
   identityService: undefined,
   studio: servedStudio,
   install: undefined,
+  license: '12 of 100 free runs used, then a free key from Studio',
 } as const;
 
 const newInstall = { id: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b', isNew: true };
@@ -41,8 +42,11 @@ describe('the header of the auto-runtime command', () => {
   });
 });
 
+const localModeLine =
+  '  Local mode: no sign-in, so anyone using this computer can act as you. To require sign-in, set PUBLIC_URL.';
+
 describe('the notice that the server is ready', () => {
-  it('gives the addresses, says that it is in local mode and how to sign people in, and how to connect an agent', () => {
+  it('gives the addresses, the free runs it used, that it is in local mode and how to require sign-in, and how to connect an agent', () => {
     expect(readyNoticeOf(ready, 1).split('\n')).toEqual([
       '  ✔ Ready in 640 ms',
       '  ➜  Studio   http://localhost:5555/studio/',
@@ -50,8 +54,8 @@ describe('the notice that the server is ready', () => {
       '     MCP      http://localhost:5555/mcp',
       '     Docs     https://on.auto/docs/',
       '',
-      '  Local mode: anyone on this computer acts as you, with no sign-in.',
-      '  Set PUBLIC_URL=http://localhost:5555, and no ACCESS_MODE, to sign people in.',
+      '  12 of 100 free runs used, then a free key from Studio',
+      localModeLine,
       '',
       '  Connect your agent',
       '    Claude Code   claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.9.1 mcp',
@@ -118,13 +122,21 @@ describe('how the notice shows Studio', () => {
 });
 
 describe('the notice that a server in local mode is ready', () => {
-  it('names the port the server listens on in the PUBLIC_URL that signs people in, and dims both lines of local mode', () => {
+  it('dims the line of its license and the line of local mode', () => {
     const lines = readyNoticeOf({ ...ready, port: 6000 }, 24).split('\n');
 
-    expect(lines).toContain('  \u001B[2mLocal mode: anyone on this computer acts as you, with no sign-in.\u001B[22m');
+    expect(lines).toContain('  \u001B[2m12 of 100 free runs used, then a free key from Studio\u001B[22m');
     expect(lines).toContain(
-      '  \u001B[2mSet PUBLIC_URL=http://localhost:6000, and no ACCESS_MODE, to sign people in.\u001B[22m',
+      '  \u001B[2mLocal mode: no sign-in, so anyone using this computer can act as you. To require sign-in, set PUBLIC_URL.\u001B[22m',
     );
+  });
+
+  it('says who it is licensed to once it is licensed, and leaves out the line of a license it cannot read', () => {
+    const licensed = readyNoticeOf({ ...ready, license: 'Licensed to acme (team plan)' }, 1).split('\n');
+    const unread = readyNoticeOf({ ...ready, license: undefined }, 1).split('\n');
+
+    expect(licensed.slice(5, 8)).toEqual(['', '  Licensed to acme (team plan)', localModeLine]);
+    expect(unread.slice(5, 8)).toEqual(['', localModeLine, '']);
   });
 });
 
@@ -180,9 +192,13 @@ describe('how the notice says to connect an agent', () => {
 
 describe('the notice that a server that signs persons in is ready', () => {
   it('names the identity service they sign in through, beneath the MCP endpoint, and says nothing of local mode', () => {
-    const lines = readyNoticeOf({ ...ready, mode: 'credentials', identityService: 'https://clerk.on.auto' }, 1).split(
-      '\n',
-    );
+    const signingIn = {
+      ...ready,
+      mode: 'credentials',
+      identityService: 'https://clerk.on.auto',
+      license: undefined,
+    } as const;
+    const lines = readyNoticeOf(signingIn, 1).split('\n');
 
     expect(lines.slice(3, 8)).toEqual([
       '     MCP      http://localhost:5555/mcp',
@@ -196,7 +212,7 @@ describe('the notice that a server that signs persons in is ready', () => {
 
 describe('the notice that a server that takes keys alone is ready', () => {
   it('names no identity service and says nothing of local mode', () => {
-    const lines = readyNoticeOf({ ...ready, mode: 'credentials' }, 1).split('\n');
+    const lines = readyNoticeOf({ ...ready, mode: 'credentials', license: undefined }, 1).split('\n');
 
     expect(lines.slice(3, 7)).toEqual([
       '     MCP      http://localhost:5555/mcp',

@@ -62,7 +62,7 @@ async function started(settings: Readonly<Record<string, string>> = {}): Promise
 }
 
 describe('the auto-runtime command', () => {
-  it('starts the server in local mode with no setting, and shows where it answers and how to sign people in', async () => {
+  it('starts the server in local mode with no setting, and shows where it answers, its free runs and how to require sign-in', async () => {
     const runtime = await started();
 
     const health = await fetch(`${runtime.url}/health`);
@@ -73,7 +73,7 @@ describe('the auto-runtime command', () => {
     expect(runtime.output().stdout).toContain(`     MCP      ${runtime.url}/mcp\n`);
     expect(runtime.output().stdout).toContain('     Docs     https://on.auto/docs/\n');
     expect(runtime.output().stdout).toContain(
-      `  Local mode: anyone on this computer acts as you, with no sign-in.\n  Set PUBLIC_URL=${runtime.url}, and no ACCESS_MODE, to sign people in.\n`,
+      '  0 of 100 free runs used, then a free key from Studio\n  Local mode: no sign-in, so anyone using this computer can act as you. To require sign-in, set PUBLIC_URL.\n',
     );
     expect(runtime.output().stderr).toBe('');
     runtime.interrupt();

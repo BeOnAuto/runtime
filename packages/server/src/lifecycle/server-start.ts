@@ -1,11 +1,4 @@
-import {
-  createApiHandler,
-  makeAppRuntime,
-  type ApiHandler,
-  type AppRuntime,
-  type PageStyle,
-  type RegisterRoutes,
-} from '@on.auto/api';
+import { createApiHandler, makeAppRuntime, type ApiHandler, type AppRuntime, type PageStyle } from '@on.auto/api';
 import type { Authenticator } from '@on.auto/identity';
 import { Data, Effect, Function, Layer } from 'effect';
 
@@ -91,7 +84,7 @@ function telemetryServing(telemetry: Telemetry, local: LocalServing | undefined)
 interface Answering<R> {
   readonly settings: Settings;
   readonly authenticator: Authenticator;
-  readonly routes: readonly RegisterRoutes[];
+  readonly served: Served;
   readonly runtime: AppRuntime<R>;
   readonly telemetry: Telemetry;
   readonly local: LocalServing | undefined;
@@ -100,7 +93,8 @@ interface Answering<R> {
 }
 
 function apiOf<R>(answering: Answering<R>): ApiHandler {
-  const { settings, authenticator, routes, runtime, telemetry, local, startPing, pageStyle } = answering;
+  const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
+  const { routes, licenseNotice } = served;
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
     studio: servedStudioOf(settings, {
@@ -117,6 +111,7 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
     ...(telemetry.requests === undefined ? {} : { requests: telemetry.requests }),
     ...(local?.runtimeControl === undefined ? {} : { runtimeControl: local.runtimeControl }),
     installId: startPing.installId,
+    ...(authenticator.mode === 'local' && licenseNotice !== undefined ? { licenseNotice } : {}),
   });
 }
 
@@ -146,8 +141,7 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
   const ownOrigin = (): string => settings.publicUrl ?? ownOriginOf(settings.host, listening.port);
   const served = await servedOf(composed, runtime, ownOrigin);
   const startPing = options.usagePing?.(settings) ?? noStartPing;
-  const routes = served.routes;
-  const api = apiOf({ settings, authenticator, routes, runtime, telemetry, local, startPing, pageStyle });
+  const api = apiOf({ settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle });
   const server = createHttpServer(api.listener);
   try {
     await listen(server, settings.port, settings.host);
@@ -166,6 +160,7 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
     signIn: settings.signIn,
     studio: settings.studio,
     install,
+    ...(served.licenseNotice === undefined ? {} : { licenseNotice: served.licenseNotice }),
     stop: async () => {
       startPing.stop();
       stopping ??= shutDown(
