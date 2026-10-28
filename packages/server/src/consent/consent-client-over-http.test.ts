@@ -22,6 +22,7 @@ function documentedAt(fake: FakeMcpServer): Environment {
   const way = { kind: 'authorization', issuer: fake.origin, scope: 'files.read', clients: ['metadata_document'] };
   return {
     CONNECTIONS: JSON.stringify({
+      allowed_hosts: ['127.0.0.1'],
       providers: [
         {
           name: 'files',
@@ -139,6 +140,7 @@ function audiencesServedBy(api: FakeApiServer): Environment {
   };
   return {
     CONNECTIONS: JSON.stringify({
+      allowed_hosts: ['127.0.0.1'],
       registered_clients: [{ issuers: [issuer], client_id: 'auto-runtime', client_secret: '${AUDIENCES_SECRET}' }],
       providers: [provider],
     }),

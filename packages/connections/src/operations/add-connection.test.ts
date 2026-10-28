@@ -3,12 +3,12 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { added, adding, billing, crm, issuesIn, notes, statusesOf } from '../testing/additions.ts';
-import { acmeReader, ada, harness, operationNamed } from '../testing/harness.ts';
+import { added, adding, billing, crm, crmWithTenant, issuesIn, notes, statusesOf } from '../testing/additions.ts';
+import { acmeReader, ada, harness, operationNamed, crmPolicy } from '../testing/harness.ts';
 
 describe('the answer to adding a connection', () => {
   it('is the connection pending, added by the caller, and the time its link expires, ten minutes on', async () => {
-    expect(await adding(harness(), crm)).toMatchObject({
+    expect(await adding(harness({ policy: crmPolicy }), crmWithTenant)).toMatchObject({
       status: 'succeeded',
       output: {
         name: 'crm',

@@ -10,8 +10,8 @@ import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
-import { added, billing, crm, notes } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness, fixtureServing } from '../testing/harness.ts';
+import { added, billing, crm, crmWithTenant, notes } from '../testing/additions.ts';
+import { ada, harness, operationNamed, type Harness, fixtureServing, crmPolicy } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
 
@@ -137,10 +137,10 @@ describe('the connections of a runtime', () => {
 
 describe('a connected connection as a tool server', () => {
   it('holds its secret in the header it names, every value of it a secret and the credential after its scheme too', async () => {
-    const h = harness();
-    const id = await connected(h, crm, { value: crmKey });
+    const h = harness({ policy: crmPolicy });
+    const id = await connected(h, crmWithTenant, { value: crmKey });
 
-    const settings = await settingsOf(sourceOf(h), id);
+    const settings = await settingsOf(sourceOf(h, { policy: crmPolicy }), id);
 
     expect(settings).toMatchObject({
       type: 'mcp',
@@ -160,11 +160,12 @@ describe('a connected connection as a tool server', () => {
 
 describe('the entry of a connected connection', () => {
   it('is sent as it is written, a $ in it too, and keeps what it says of its content', async () => {
-    const h = harness();
+    const listing = policyOf({ allowed_hosts: ['notes.example.com'] });
+    const h = harness(listing);
     const entry = { ...notes.entry, headers: { 'X-Tenant': 'acme$eu$$' }, record_content: false };
     const id = await connected(h, { ...notes, entry });
 
-    const settings = await settingsOf(sourceOf(h), id);
+    const settings = await settingsOf(sourceOf(h, listing), id);
 
     expect([placedOf(settings).headers, settings.record_content]).toEqual([{ 'X-Tenant': 'acme$eu$$' }, false]);
   });
@@ -271,7 +272,7 @@ describe('the hosts a connected connection reaches', () => {
 
     const { reaches } = await connectedOf(sourceOf(h, policyOf({ allowed_hosts: ['*.example.com'] })), id);
 
-    expect([reaches(notes.entry.url), reaches('https://other.example.org/mcp')]).toEqual([
+    expect([await reaches(notes.entry.url), await reaches('https://other.example.org/mcp')]).toEqual([
       undefined,
       'A connection may not reach the host other.example.org on this runtime, which allows *.example.com',
     ]);

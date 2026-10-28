@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, crm } from '../testing/additions.ts';
 import { consentFake, consentHarnessAt, finishing, startedAt, starting, studioReturn } from '../testing/consents.ts';
-import { acmeWriter, grace, harness, operationNamed } from '../testing/harness.ts';
+import { acmeWriter, grace, harness, operationNamed, loopbackAndCrmPolicy } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -130,7 +130,7 @@ describe('the start of a consent, as the link shows it', () => {
 describe('a start refused by its link', () => {
   it('is refused for a token unknown or expired, to another person, and for a connection that takes no consent', async () => {
     const fake = await served();
-    const h = consentHarnessAt(fake);
+    const h = consentHarnessAt(fake, { policy: loopbackAndCrmPolicy });
     const link = await added(h, { provider: 'files' });
     const secret = await added(h, crm);
 

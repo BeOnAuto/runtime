@@ -18,7 +18,7 @@ import { unavailableWords, unrevokedWordsOf, type ConsentNamed } from './consent
 
 export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
 
-export type ConsentServices = Pick<ConnectionServices, 'consent' | 'policy' | 'pages' | 'secrets'> & {
+export type ConsentServices = Pick<ConnectionServices, 'consent' | 'policy' | 'pages' | 'secrets' | 'resolve'> & {
   readonly bindsPerson: boolean;
 };
 
@@ -46,13 +46,13 @@ export function wayOf({ credential }: RecordedConnection): ConsentAsked['way'] {
 
 export function consentAskedOf(
   connection: RecordedConnection,
-  services: Pick<ConnectionServices, 'policy' | 'pages'>,
+  services: Pick<ConnectionServices, 'policy' | 'pages' | 'resolve'>,
 ): ConsentAsked {
   return {
     server: serverOf(connection),
     way: wayOf(connection),
     returnAddress: returnAddressOf(services.pages),
-    reaches: reachesUnder(services.policy),
+    reaches: reachesUnder(services.policy, services.resolve),
   };
 }
 

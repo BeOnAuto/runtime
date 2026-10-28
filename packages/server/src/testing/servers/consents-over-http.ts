@@ -73,6 +73,7 @@ export async function connectedByConsent(served: ReasoningServer, consenting: Co
 export function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> {
   return {
     CONNECTIONS: JSON.stringify({
+      allowed_hosts: ['127.0.0.1'],
       registered_clients: [
         { issuers: [fake.origin], client_id: 'auto-runtime', client_secret: '${FILES_CLIENT_SECRET}' },
       ],

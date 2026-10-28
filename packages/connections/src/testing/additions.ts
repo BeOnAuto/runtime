@@ -8,11 +8,15 @@ export const crm = {
   type: 'mcp',
   entry: {
     url: 'https://crm.example.com/mcp',
-    headers: { 'X-Tenant': 'acme-eu' },
     allowed: ['search'],
     playbooks: ['sales'],
   },
   credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+} as const;
+
+export const crmWithTenant = {
+  ...crm,
+  entry: { ...crm.entry, headers: { 'X-Tenant': 'acme-eu' } },
 } as const;
 
 export const billing = {

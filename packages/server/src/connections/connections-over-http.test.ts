@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
@@ -14,6 +15,8 @@ const crm = {
   entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
   credential: { kind: 'secret', name: 'Authorization', in: 'header' },
 };
+
+const DetailSchema = Schema.Struct({ detail: Schema.String });
 
 const AddedSchema = Schema.Struct({
   id: Schema.String,
@@ -33,6 +36,7 @@ async function serving(environment: Readonly<Record<string, string>> = {}): Prom
   server = await servingReasoning([], {
     LEDGER_FILE: ledger.fileName,
     SECRETS_KEY: secretsKey.toString('base64'),
+    ...connectionsAllowing(['crm.example.com']),
     ...environment,
   });
   return server;
@@ -123,7 +127,7 @@ describe('giving the credential of a connection over HTTP', () => {
 describe('the rules of the runtime over HTTP', () => {
   it('answers 403 with the sentence of a rule the policy holds, and 409 for the name of an entry of the configuration', async () => {
     const served = await serving({
-      CONNECTIONS: JSON.stringify({ credential_kinds: ['none'] }),
+      ...connectionsAllowing(['crm.example.com'], { credential_kinds: ['none'] }),
       TOOL_SERVERS: JSON.stringify({ wiki: { url: 'http://127.0.0.1:9/mcp', org: 'local' } }),
     });
 
@@ -139,5 +143,57 @@ describe('the rules of the runtime over HTTP', () => {
       },
     });
     expect(taken).toMatchObject({ status: 409, body: { kind: 'taken' } });
+  });
+});
+
+const refusedAddresses: readonly (readonly [string, string, string])[] = [
+  ['https://127.0.0.1/mcp', '127.0.0.1', 'a loopback address'],
+  ['https://10.0.0.5/mcp', '10.0.0.5', 'a private address'],
+  ['https://169.254.169.254/latest/meta-data', '169.254.169.254', 'a cloud metadata address'],
+  ['https://metadata.google.internal/computeMetadata/v1', 'metadata.google.internal', 'a cloud metadata host'],
+];
+
+function mcpServerAt(url: string) {
+  return { name: 'probe', type: 'mcp', entry: { url }, credential: { kind: 'none' } };
+}
+
+function detailOf({ status, body }: { readonly status: number; readonly body: unknown }) {
+  return [status, Schema.decodeUnknownSync(DetailSchema)(body).detail];
+}
+
+describe('the hosts of a runtime whose operator names none, over HTTP', () => {
+  it('answers 403 for a server at a loopback, private, link-local or cloud metadata address, and 201 at a public one', async () => {
+    const served = await serving({ CONNECTIONS: '' });
+
+    const refused = await Promise.all(
+      refusedAddresses.map(([url]) => served.call('POST', connections, { body: mcpServerAt(url) })),
+    );
+
+    expect(refused.map((answer) => detailOf(answer))).toEqual(
+      refusedAddresses.map(([, host, kind]) => [
+        403,
+        `A connection may not reach the host ${host}, ${kind}, unless its operator names the host in connections.allowed_hosts`,
+      ]),
+    );
+    expect(await served.call('POST', connections, { body: mcpServerAt('https://8.8.8.8/mcp') })).toMatchObject({
+      status: 201,
+    });
+  });
+
+  it('answers 403 for headers to any host', async () => {
+    const served = await serving({ CONNECTIONS: '' });
+
+    expect(detailOf(await served.call('POST', connections, { body: crm }))).toEqual([
+      403,
+      'A connection sends the headers it is given only to a host its operator names in connections.allowed_hosts, and this runtime names none',
+    ]);
+  });
+
+  it('takes a server at a private address its operator names', async () => {
+    const served = await serving(connectionsAllowing(['10.0.0.5']));
+
+    expect(
+      await served.call('POST', connections, { body: { ...mcpServerAt('https://10.0.0.5/mcp'), name: 'intranet' } }),
+    ).toMatchObject({ status: 201 });
   });
 });

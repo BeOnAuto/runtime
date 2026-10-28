@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, type Added } from '../testing/additions.ts';
 import { consentHarnessAt, startedAt, starting } from '../testing/consents.ts';
-import { acmeWriter, ada, operationNamed, type Harness } from '../testing/harness.ts';
+import { acmeWriter, ada, operationNamed, type Harness, loopbackAndCrmPolicy } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -26,6 +26,7 @@ async function throughAuto(fetch: ConsentClientOptions['fetch'] = globalThis.fet
   const serving = await servedThroughAuto();
   closing.push(serving.close);
   const h = consentHarnessAt(serving.fake, {
+    policy: loopbackAndCrmPolicy,
     consenting: { autoClients: autoClientsOf(serving.service), fetch },
     pages: { studio: { origin: 'https://studio.example.com', served: false }, runtime: () => 'http://localhost:5555' },
   });

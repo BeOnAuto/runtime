@@ -7,7 +7,7 @@ import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added } from '../testing/additions.ts';
-import { harness } from '../testing/harness.ts';
+import { harness, loopbackPolicy } from '../testing/harness.ts';
 import { givenThrough, sealedIn, sourceLoggingInto } from '../testing/sealed-connections.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -84,7 +84,7 @@ function warningsIn(lines: readonly string[]): readonly string[] {
 describe('a connection whose credential the secret store cannot read now', () => {
   it('fails a tool call in the words of the store, records nothing and stays connected, logs the cause once, and is called once the custodian answers again', async () => {
     const fake = await fakeServerAt();
-    const h = harness();
+    const h = harness({ policy: loopbackPolicy });
     const { custodian, store } = sealedIn(memoryRows({ now }));
     const id = await givenThrough(h, store, graphAt(fake), fakeApiKey);
     const pending = await added(h, { ...graphAt(fake), name: 'notes' });
@@ -120,7 +120,7 @@ async function wrappedAgainBadly(rows: ReturnType<typeof memoryRows>, kid: strin
 describe('the log of a credential that cannot be read now', () => {
   it('holds each cause once, by the failure and the key it names and not by its words, again when the cause changes, and again once a read succeeded between', async () => {
     const fake = await fakeServerAt();
-    const h = harness();
+    const h = harness({ policy: loopbackPolicy });
     const rows = memoryRows({ now });
     const { custodian, store } = sealedIn(rows);
     const id = await givenThrough(h, store, graphAt(fake), fakeApiKey);
@@ -163,7 +163,7 @@ describe('the log of a credential that cannot be read now', () => {
 describe('a connection whose custodian does not answer', () => {
   it('is unavailable once the store has waited 10 seconds, and never broken', async () => {
     const fake = await fakeServerAt();
-    const h = harness();
+    const h = harness({ policy: loopbackPolicy });
     const { custodian, store } = sealedIn(memoryRows({ now }));
     const id = await givenThrough(h, store, graphAt(fake), fakeApiKey);
     const served = servedOf(await connectionOf(sourceLoggingInto(h, store, loggedLines().logging), id));

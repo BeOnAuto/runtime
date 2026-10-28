@@ -71,6 +71,12 @@ export const fixtureServing = {
   pages: harnessPages,
 };
 
+export const loopbackPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] });
+
+export const crmPolicy = connectionPolicyOf({ allowed_hosts: ['crm.example.com'] });
+
+export const loopbackAndCrmPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', 'crm.example.com'] });
+
 export const developerToken = 'metrics-developer-token-0123';
 
 export const developerTokenSet: ReadonlyMap<string, Redacted.Redacted> = new Map([

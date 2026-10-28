@@ -5,10 +5,9 @@ import { DateTime, Effect, type Layer } from 'effect';
 
 import { makeConnectionOperations, type ConnectionOperations } from '../operations/connection-operations.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added } from './additions.ts';
-import { ada, fixtureServing, operationNamed, type Harness } from './harness.ts';
+import { ada, fixtureServing, operationNamed, type Harness, loopbackPolicy } from './harness.ts';
 
 export interface Sealed<Rows extends SecretRows = SecretRows> {
   readonly rows: Rows;
@@ -39,7 +38,7 @@ export function operationsOver(
   return makeConnectionOperations({
     ...fixtureServing,
     secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicy,
     fileEntries: [],
     modelProviders: [],
     variables: new Map(),
@@ -67,7 +66,7 @@ export function sourceLoggingInto(h: Harness, secrets: SecretStore, logging: Lay
     ...fixtureServing,
     registry: h.ledger.service,
     secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicy,
     variables: new Map(),
     modelProviders: [],
   });

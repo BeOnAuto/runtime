@@ -70,7 +70,7 @@ const policyFields = {
   allowed_hosts: Schema.optionalKey(
     Schema.Array(HostPatternSchema).annotate({
       description:
-        'The hosts a connection may reach, each a host or *. and a host for every host under it; every host when left out',
+        'The hosts a connection may reach, each a host or *. and a host for every host under it, and the only hosts that may be a loopback, private, link-local or cloud metadata address, or take headers; every host that is none of those addresses when left out',
     }),
   ),
   credential_kinds: Schema.optionalKey(

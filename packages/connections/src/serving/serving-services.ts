@@ -1,4 +1,5 @@
 import type { StreamReader, StreamWriter } from '@on.auto/operations';
+import type { Resolve } from '@on.auto/outbound';
 import type { ProviderList } from '@on.auto/providers';
 import type { Redacted } from 'effect';
 
@@ -16,6 +17,7 @@ export interface ServingServices {
   readonly modelProviders: readonly string[];
   readonly providers: ProviderList;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
+  readonly resolve?: Resolve;
 }
 
 export interface LoggedCauses {

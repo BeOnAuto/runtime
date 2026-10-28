@@ -1,5 +1,6 @@
 import { placeholdersIn, placeholdersReplaced } from '@on.auto/config';
 import { listed } from '@on.auto/operations';
+import { reservedHostKindOf } from '@on.auto/outbound';
 import {
   hostAlternativesOf,
   operatorVariablesOf,
@@ -47,7 +48,7 @@ function couldBeAllowed(pattern: string, template: string): boolean {
 
 function couldReach(allowedHosts: readonly string[] | null, host: string): boolean {
   if (allowedHosts === null) {
-    return true;
+    return placeholdersIn(host).length > 0 || reservedHostKindOf(host) === undefined;
   }
   return placeholdersIn(host).length === 0
     ? hostRefusalOf(allowedHosts, host.toLowerCase()) === undefined

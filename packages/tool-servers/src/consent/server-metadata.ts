@@ -230,10 +230,11 @@ function endpointsOf(server: AuthorizationServer): readonly string[] {
   return endpoints.filter((endpoint) => endpoint !== undefined);
 }
 
-function refusedHostOf(server: AuthorizationServer, reaches: Reaches): string | undefined {
-  return endpointsOf(server)
-    .map((endpoint) => reaches(endpoint))
-    .find((rule) => rule !== undefined);
+function refusedHostOf(server: AuthorizationServer, reaches: Reaches): Effect.Effect<string | undefined> {
+  return Effect.promise(async () => {
+    const rules = await Promise.all(endpointsOf(server).map((endpoint) => Promise.resolve(reaches(endpoint))));
+    return rules.find((rule) => rule !== undefined);
+  });
 }
 
 export function checkedServer(
@@ -247,8 +248,9 @@ export function checkedServer(
   if (unpinned !== undefined) {
     return Effect.fail({ refused: 'unpinned_endpoint', endpoint: unpinned });
   }
-  const rule = refusedHostOf(server, reaches);
-  return rule === undefined ? Effect.succeed(server) : Effect.fail({ refused: 'host', rule });
+  return Effect.flatMap(refusedHostOf(server, reaches), (rule) =>
+    rule === undefined ? Effect.succeed(server) : Effect.fail({ refused: 'host', rule }),
+  );
 }
 
 function metadataOf(

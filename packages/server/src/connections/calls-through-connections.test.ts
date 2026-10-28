@@ -11,6 +11,7 @@ import {
   connectionsOfAcme,
   linkIn,
 } from '../testing/servers/connected-servers.ts';
+import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const crmKey = 'crm-api-key-6e2b9d41';
@@ -32,9 +33,7 @@ const decodeEvents = Schema.decodeUnknownSync(
 
 const closing: (() => Promise<void>)[] = [];
 
-afterEach(async () => {
-  await Promise.all(closing.splice(0).map((close) => close()));
-});
+afterEach(() => Promise.all(closing.splice(0).map((close) => close())));
 
 async function crmServer(): Promise<FakeMcpServer> {
   const fake = await serveFakeMcp({ bearer: crmKey });
@@ -47,7 +46,7 @@ function reasoningFunction(tool: string): string {
 }
 
 async function serving(...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
-  const server = await servingReasoning(replies);
+  const server = await servingReasoning(replies, connectionsOnLoopback);
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, {

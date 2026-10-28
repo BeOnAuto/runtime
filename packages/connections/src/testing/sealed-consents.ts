@@ -7,7 +7,7 @@ import { registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing'
 import type { ConnectionOperations } from '../operations/connection-operations.ts';
 import { consentHarnessAt, filesAt, filesWay } from './consents.ts';
 import { harnessConsentOf } from './harness-services.ts';
-import { ada, operationNamed, type Harness } from './harness.ts';
+import { ada, operationNamed, type Harness, loopbackPolicy } from './harness.ts';
 import { operationsOver, sealedInMemory, type Sealed } from './sealed-connections.ts';
 
 export interface SealedHarness extends Sealed<MemoryRows> {
@@ -29,7 +29,11 @@ export function sealedConsentAt(
   const h = consentHarnessAt(fake, { way, consenting: clients });
   const sealed = sealedInMemory();
   const consent = harnessConsentOf(h.ledger.service, registrations ?? sealed.store, clients);
-  const operations = operationsOver(h, sealed.store, { providers: providerListOf(filesAt(fake, way)), consent });
+  const operations = operationsOver(h, sealed.store, {
+    providers: providerListOf(filesAt(fake, way)),
+    consent,
+    policy: loopbackPolicy,
+  });
   return { ...sealed, h, operations };
 }
 

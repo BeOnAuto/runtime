@@ -37,7 +37,7 @@ async function describedConnection(
     const unusable = serverFailed({ settings }, { kind: 'refused', message }, linking.options.secrets);
     return Predicate.isTagged(failure, 'document_unread') ? { unread: unusable } : { refused: unusable };
   }
-  const refusal = server.reaches(described.success.api.baseUrl);
+  const refusal = await server.reaches(described.success.api.baseUrl);
   return refusal === undefined
     ? { settings: described.success }
     : { refused: { because: 'connection_not_allowed', detail: refusal } };

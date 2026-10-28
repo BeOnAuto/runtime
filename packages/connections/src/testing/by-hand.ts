@@ -5,10 +5,17 @@ import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { describedAccess, patientTiming, playbookToolCalls } from '@on.auto/tool-servers/testing';
 import { Option, Schema } from 'effect';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import type { Added } from './additions.ts';
-import { acmeWriter, harness, harnessPages, operationNamed, type Harness, type HarnessOptions } from './harness.ts';
+import {
+  acmeWriter,
+  harness,
+  harnessPages,
+  operationNamed,
+  type Harness,
+  type HarnessOptions,
+  loopbackPolicy,
+} from './harness.ts';
 
 export interface Called {
   readonly called: Settled<Succeeded>;
@@ -22,7 +29,7 @@ export function byHandAt({ url }: Pick<FakeMcpServer, 'url'>) {
 }
 
 export function harnessByHand(options: HarnessOptions = {}): Harness {
-  return harness({ mostSecretCharacters: 4096, ...options });
+  return harness({ mostSecretCharacters: 4096, policy: loopbackPolicy, ...options });
 }
 
 export function readingTheLink(h: Harness, { id, token }: Added): Promise<Outcome<Succeeded>> {
@@ -88,7 +95,7 @@ function sourceOf(h: Harness) {
   return makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
-    policy: connectionPolicyOf({}),
+    policy: loopbackPolicy,
     pages: harnessPages,
     variables: new Map(),
     modelProviders: [],
