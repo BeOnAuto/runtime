@@ -1,5 +1,5 @@
 import type { CallerIdentity, Outcome, Succeeded } from '@on.auto/operations';
-import { providersOf, regions, tracker } from '@on.auto/providers/testing';
+import { providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -107,6 +107,14 @@ async function waysListedUnder(policy: ConnectionPolicyFields): Promise<readonly
   );
 }
 
+async function namesListedUnder(policy: ConnectionPolicyFields): Promise<readonly string[]> {
+  const answer = await listing({
+    policy: connectionPolicyOf(policy),
+    providers: providerListOf(intranetProvider, selfHostedProvider),
+  });
+  return listedOf(answer).output.providers.map(({ name }) => name);
+}
+
 async function offeringsOf(name: string, options: HarnessOptions) {
   const { providers } = listedOf(await listing(options)).output;
   return providers
@@ -151,6 +159,28 @@ describe('the providers listed', () => {
   });
 });
 
+const intranetProvider = providerOf({
+  name: 'intranet',
+  title: 'Intranet',
+  description: 'Read the pages of the intranet.',
+  website: 'https://intranet.example.com',
+  type: 'mcp',
+  url: 'https://10.0.0.5/mcp',
+  credentials: [{ kind: 'none' }],
+});
+const selfHostedProvider = providerOf({
+  name: 'self-hosted',
+  title: 'Self-hosted',
+  description: 'Read the pages of a server you host.',
+  website: 'https://hosted.example.com',
+  type: 'mcp',
+  url: 'https://{host}/mcp',
+  credentials: [{ kind: 'none' }],
+  placeholders: {
+    host: { description: 'The host of your server', pattern: '^[a-z.]+$', example: 'wiki.example.com' },
+  },
+});
+
 describe('the providers the rules of the runtime could allow', () => {
   it('are those whose hosts a pattern could take, a host with a placeholder by its shape or its fixed end', async () => {
     const policies: readonly ConnectionPolicyFields[] = [
@@ -169,6 +199,13 @@ describe('the providers the rules of the runtime could allow', () => {
       ['tracker: secret, none', 'regions: secret'],
       ['regions: secret'],
       [],
+    ]);
+  });
+
+  it('leave out a provider whose fixed host is an address only its operator may name, unless a pattern names it', async () => {
+    expect([await namesListedUnder({}), await namesListedUnder({ allowed_hosts: ['10.0.0.5'] })]).toEqual([
+      ['self-hosted'],
+      ['intranet'],
     ]);
   });
 

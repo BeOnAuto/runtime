@@ -1,3 +1,4 @@
+import type { Reaches } from '@on.auto/outbound';
 import { Effect, Schema } from 'effect';
 
 import type { McpServerSettings, OpenApiServerSettings, ServerSettings } from '../settings/server-settings.ts';
@@ -33,7 +34,7 @@ export interface ConnectionUnready {
 
 export interface ConnectionServer {
   readonly settings: ConnectionServerSettings;
-  readonly reaches: (url: string) => string | undefined;
+  readonly reaches: Reaches;
   readonly refused: Effect.Effect<string>;
 }
 

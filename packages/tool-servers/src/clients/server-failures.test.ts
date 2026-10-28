@@ -6,6 +6,7 @@ import {
   SdkErrorCode,
   SdkHttpError,
 } from '@modelcontextprotocol/client';
+import { HostRefused, HostUnresolved } from '@on.auto/outbound';
 import { describe, expect, it } from 'vitest';
 
 import { AnsweredStatus } from '../openapi/answered-status.ts';
@@ -67,6 +68,24 @@ describe('what a server failure is', () => {
     });
     expect(failureOf(caused('EPROTO'))).toEqual({ kind: 'failing', message: 'fetch failed' });
     expect(failureOf('a string thrown')).toEqual({ kind: 'failing', message: 'a string thrown' });
+  });
+});
+
+describe('what a host that cannot be looked up is', () => {
+  it('is a server that could not be reached, to try again, however deep its cause lies', () => {
+    const unresolved = new HostUnresolved({ host: 'crm.example.com' });
+
+    expect(failureOf(unresolved)).toEqual({ kind: 'unreachable', message: 'The tool server could not be reached' });
+    expect(failureOf(new Error('fetch failed', { cause: unresolved }))).toEqual({
+      kind: 'unreachable',
+      message: 'The tool server could not be reached',
+    });
+  });
+
+  it('is not allowed where the host was refused, whatever else caused it', () => {
+    const refusal = new HostRefused({ rule: 'no' });
+
+    expect(failureOf(new Error('fetch failed', { cause: refusal }))).toEqual({ kind: 'not_allowed', message: 'no' });
   });
 });
 

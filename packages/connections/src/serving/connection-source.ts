@@ -60,7 +60,7 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
     const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionServerSettings));
     return {
       settings: auth === undefined ? settings : { ...settings, auth },
-      reaches: reachesUnder(policy),
+      reaches: reachesUnder(policy, serving.services.resolve),
       refused: credentialRefusedOf(serving, yield* Effect.context()),
     };
   });

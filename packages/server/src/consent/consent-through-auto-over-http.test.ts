@@ -22,6 +22,7 @@ const ListedSchema = Schema.Struct({
 function filesAt({ fake }: Pick<ThroughAuto, 'fake'>): Environment {
   return {
     CONNECTIONS: JSON.stringify({
+      allowed_hosts: ['127.0.0.1'],
       providers: [
         {
           name: 'files',

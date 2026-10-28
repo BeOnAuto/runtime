@@ -1,6 +1,17 @@
 import { isSignedInPerson } from '@on.auto/identity';
 import { Forbidden, articled, listed, type CallerIdentity } from '@on.auto/operations';
+import {
+  loopbackHostOf,
+  operatorMayNameHost,
+  reservedHostKindOf,
+  reservedReachOf,
+  resolvedBySystem,
+  type Noted,
+  type Reaches,
+  type Resolve,
+} from '@on.auto/outbound';
 import { wayAddresses } from '@on.auto/providers';
+import { Effect } from 'effect';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
@@ -9,6 +20,7 @@ import type { ConnectionPolicy } from './connection-policy.ts';
 export type RuntimeAccess = 'people' | 'keys' | 'local';
 
 export interface Addition {
+  readonly provider: string | null;
   readonly type: ConnectionType;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
@@ -40,8 +52,52 @@ export function hostRefusalOf(allowedHosts: readonly string[] | null, host: stri
       });
 }
 
-export function reachesUnder({ allowedHosts }: ConnectionPolicy): (url: string) => string | undefined {
-  return (url) => hostRefusalOf(allowedHosts, new URL(url).hostname)?.detail;
+const operatorNames = 'unless its operator names the host in connections.allowed_hosts';
+
+function reservedRefusalOf(host: string, reached: string): Forbidden {
+  const unless = operatorMayNameHost(host) ? `, ${operatorNames}` : '';
+  return new Forbidden({ detail: `A connection may not reach the host ${host}, ${reached}${unless}` });
+}
+
+function namesLiterally(allowedHosts: readonly string[] | null, host: string): boolean {
+  return (
+    allowedHosts !== null &&
+    operatorMayNameHost(host) &&
+    allowedHosts.some((pattern) => !pattern.startsWith('*.') && matches(pattern, host))
+  );
+}
+
+function allowsReserved(policy: ConnectionPolicy, host: string): boolean {
+  return namesLiterally(policy.allowedHosts, host) || (policy.loopbackAllowed && loopbackHostOf(host));
+}
+
+async function reachRefusalOf(
+  policy: ConnectionPolicy,
+  host: string,
+  resolve: Resolve,
+  noted: Noted,
+): Promise<string | undefined> {
+  const unlisted = hostRefusalOf(policy.allowedHosts, host);
+  if (unlisted !== undefined) {
+    return unlisted.detail;
+  }
+  if (allowsReserved(policy, host)) {
+    return undefined;
+  }
+  const reached = await reservedReachOf(host, resolve, noted);
+  return reached === undefined ? undefined : reservedRefusalOf(host, reached).detail;
+}
+
+function loggedAsWarning(words: string): void {
+  Effect.runSync(Effect.logWarning(words));
+}
+
+export function reachesUnder(
+  policy: ConnectionPolicy,
+  resolve: Resolve = resolvedBySystem,
+  noted: Noted = loggedAsWarning,
+): Reaches {
+  return (url) => reachRefusalOf(policy, new URL(url).hostname, resolve, noted);
 }
 
 function hostRefusal(
@@ -51,6 +107,18 @@ function hostRefusal(
 ): Forbidden | undefined {
   const refused = hostsOf(addition, documentServer).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
   return refused === undefined ? undefined : hostRefusalOf(allowedHosts, refused);
+}
+
+function reservedHostRefusal(
+  policy: ConnectionPolicy,
+  addition: Addition,
+  documentServer: string | undefined,
+): Forbidden | undefined {
+  const refusals = hostsOf(addition, documentServer).flatMap((host) => {
+    const kind = allowsReserved(policy, host) ? undefined : reservedHostKindOf(host);
+    return kind === undefined ? [] : [reservedRefusalOf(host, kind)];
+  });
+  return refusals[0];
 }
 
 const variablesRule = 'A reference may name only a variable the operator lists in connections.variables';
@@ -102,6 +170,7 @@ function rulesRefusalOf(
 ): Forbidden | undefined {
   return (
     hostRefusal(policy.allowedHosts, addition, documentServer) ??
+    reservedHostRefusal(policy, addition, documentServer) ??
     kindRefusal(policy.credentialKinds, addition) ??
     referenceRefusal(policy.variables, addition)
   );

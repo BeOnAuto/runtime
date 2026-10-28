@@ -2,7 +2,7 @@ import { Data } from 'effect';
 
 import type { OutboundFetch } from '../user-agent/user-agent-fetch.ts';
 
-export type Reaches = (url: string) => string | undefined;
+export type Reaches = (url: string) => string | undefined | Promise<string | undefined>;
 
 export class HostRefused extends Data.TaggedError('host_refused')<{ readonly rule: string }> {}
 
@@ -11,11 +11,12 @@ type Sending = (url: string, init: Readonly<{ redirect: 'manual' }>) => Promise<
 const unfollowed = { redirect: 'manual' } as const;
 
 export function fetchWithin(fetch: Sending, reaches: Reaches): OutboundFetch {
-  return (...[url, init]: readonly [unknown, unknown?]) => {
+  return async (...[url, init]: readonly [unknown, unknown?]) => {
     const address = String(url);
-    const refusal = reaches(address);
-    return refusal === undefined
-      ? fetch(address, Object.assign({}, init, unfollowed))
-      : Promise.reject(new HostRefused({ rule: refusal }));
+    const refusal = await reaches(address);
+    if (refusal !== undefined) {
+      throw new HostRefused({ rule: refusal });
+    }
+    return fetch(address, Object.assign({}, init, unfollowed));
   };
 }

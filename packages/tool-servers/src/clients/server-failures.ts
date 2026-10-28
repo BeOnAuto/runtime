@@ -6,7 +6,7 @@ import {
   SdkErrorCode,
   SdkHttpError,
 } from '@modelcontextprotocol/client';
-import { causesOf, codesOf, HostRefused, isUntrustedCertificate } from '@on.auto/outbound';
+import { causesOf, codesOf, HostRefused, HostUnresolved, isUntrustedCertificate } from '@on.auto/outbound';
 
 import { AnsweredStatus } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
@@ -63,6 +63,10 @@ function isHostRefused(cause: object): cause is HostRefused {
 
 function refusedRuleIn(error: unknown): string | undefined {
   return causesOf(error).find((cause) => isHostRefused(cause))?.rule;
+}
+
+function isHostUnresolved(cause: object): cause is HostUnresolved {
+  return cause instanceof HostUnresolved;
 }
 
 export const untrustedCertificate =
@@ -138,7 +142,12 @@ function knownFailureOf(error: unknown): ServerFailure {
 
 export function failureOf(error: unknown): ServerFailure {
   const rule = refusedRuleIn(error);
-  return rule === undefined ? knownFailureOf(error) : { kind: 'not_allowed', message: rule };
+  if (rule !== undefined) {
+    return { kind: 'not_allowed', message: rule };
+  }
+  return causesOf(error).some((cause) => isHostUnresolved(cause))
+    ? { kind: 'unreachable', message: 'The tool server could not be reached' }
+    : knownFailureOf(error);
 }
 
 export function isCredentialRefused(error: unknown): boolean {

@@ -5,7 +5,7 @@ import { consentedAt, registeredAt, type ClientRegistration, type Consented } fr
 import { Schema } from 'effect';
 
 import type { Added } from './additions.ts';
-import { ada, harness, operationNamed, type Harness, type HarnessOptions } from './harness.ts';
+import { ada, harness, operationNamed, type Harness, type HarnessOptions, loopbackPolicy } from './harness.ts';
 
 export const studioReturn = 'https://studio.on.auto/connect-return';
 
@@ -46,6 +46,7 @@ export function consentHarnessAt(fake: FakeMcpServer, { way, ...options }: Conse
     providers: providerListOf(filesAt(fake, way)),
     consenting: { registeredClients: [registeredAt(fake.origin)] },
     mostSecretCharacters: 4096,
+    policy: loopbackPolicy,
     ...options,
   });
 }

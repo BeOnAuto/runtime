@@ -9,6 +9,7 @@ import {
   linkAddedBy,
   servedStudioReturn,
 } from '../testing/servers/consents-over-http.ts';
+import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const keyRefused =
@@ -23,9 +24,14 @@ interface Serving {
 
 async function servingOver(fake: FakeMcpServer, environment: Readonly<Record<string, string>>): Promise<Serving> {
   const ledger = temporaryLedger();
-  const server = await servingReasoning([], { SECRETS_KEY: secretsKey.toString('base64'), ...environment }, noNetwork, {
-    ledger,
-  });
+  const server = await servingReasoning(
+    [],
+    { SECRETS_KEY: secretsKey.toString('base64'), ...connectionsOnLoopback, ...environment },
+    noNetwork,
+    {
+      ledger,
+    },
+  );
   onTestFinished(async () => {
     await server.stop();
     await fake.close();

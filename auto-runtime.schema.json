@@ -351,7 +351,7 @@
             "type": "string",
             "pattern": "^(?:\\*\\.)?[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$"
           },
-          "description": "The hosts a connection may reach, each a host or *. and a host for every host under it; every host when left out"
+          "description": "The hosts a connection may reach, each a host or *. and a host for every host under it; a loopback, private or link-local address is reached only where it is named here by itself, and a name that resolves to one never is; every host that is none of those addresses when left out"
         },
         "credential_kinds": {
           "type": "array",

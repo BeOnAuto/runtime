@@ -1,3 +1,4 @@
+import type { Resolve } from '@on.auto/outbound';
 import type { ProviderList } from '@on.auto/providers';
 import type {
   ConsentClient,
@@ -37,4 +38,5 @@ export interface ConnectionServices {
   readonly pages: ConnectPages;
   readonly access: RuntimeAccess;
   readonly consent: ConsentClient;
+  readonly resolve?: Resolve;
 }

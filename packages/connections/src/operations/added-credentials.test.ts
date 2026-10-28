@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { adding, billing, crm, issuesIn, statusesOf } from '../testing/additions.ts';
-import { harness } from '../testing/harness.ts';
+import { adding, billing, crm, crmWithTenant, issuesIn, statusesOf } from '../testing/additions.ts';
+import { harness, crmPolicy } from '../testing/harness.ts';
 
 const refusedCredentials = [
   ['a kind of credential there is not', { kind: 'consent' }, '/credential/kind'],
@@ -40,7 +40,7 @@ const refusedCredentials = [
 
 describe('a credential that cannot be taken', () => {
   it.each(refusedCredentials)('is refused for %s', async (_, credential, pointer) => {
-    expect(await adding(harness(), { ...crm, credential })).toMatchObject({
+    expect(await adding(harness({ policy: crmPolicy }), { ...crmWithTenant, credential })).toMatchObject({
       status: 'rejected',
       reason: 'invalid_input',
       issues: [{ pointer }],

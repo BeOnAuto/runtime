@@ -12,13 +12,13 @@ import type { ConnectionServices } from './connection-services.ts';
 
 type Admitting = Pick<
   ConnectionServices,
-  'policy' | 'fileEntries' | 'modelProviders' | 'providers' | 'providerValues' | 'consent'
+  'policy' | 'fileEntries' | 'modelProviders' | 'providers' | 'providerValues' | 'consent' | 'resolve'
 > & {
   readonly org: string;
   readonly studioBase: string;
 };
 
-type WayNaming = Pick<ConnectionServices, 'policy' | 'consent'>;
+type WayNaming = Pick<ConnectionServices, 'policy' | 'consent' | 'resolve'>;
 
 function takesTheWayItNames({ provider, credential }: GivenAddition): boolean {
   return provider === null && credential.kind === 'authorization';
@@ -30,13 +30,13 @@ function credentialOf({ issuer, clients, scope }: NamedWay): Credential {
 
 function withTheWayItNames(
   addition: GivenAddition,
-  { consent, policy }: WayNaming,
+  { consent, policy, resolve }: WayNaming,
 ): Effect.Effect<GivenAddition, WayRefused> {
   if (!takesTheWayItNames(addition)) {
     return Effect.succeed(addition);
   }
   const url = required(addition.entry.url);
-  return consent.namedWay({ url, reaches: reachesUnder(policy) }).pipe(
+  return consent.namedWay({ url, reaches: reachesUnder(policy, resolve) }).pipe(
     Effect.map((named): GivenAddition => ({ ...addition, credential: credentialOf(named) })),
     Effect.mapError((refusal) => wayRefusalOf(url, refusal)),
   );

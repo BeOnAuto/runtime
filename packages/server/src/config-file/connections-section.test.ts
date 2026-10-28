@@ -48,6 +48,7 @@ describe('the connections section of the configuration file', () => {
     expect(readSettingsOf({ CONFIG_FILE: fileOf(policy) }).connections).toEqual({
       peopleMayAdd: true,
       allowedHosts: ['*.example.com', 'crm.example.com'],
+      loopbackAllowed: false,
       credentialKinds: ['none', 'reference', 'secret', 'client_credentials'],
       variables: ['CRM_API_KEY'],
     });

@@ -38,7 +38,13 @@ const misplacedInAClient =
 
 describe('the policy of connections', () => {
   it('lets people add any connection when CONNECTIONS is left out or empty', () => {
-    const everything = { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] };
+    const everything = {
+      peopleMayAdd: true,
+      allowedHosts: null,
+      loopbackAllowed: false,
+      credentialKinds: null,
+      variables: [],
+    };
 
     expect([policyOf({}), policyOf({ CONNECTIONS: '' })]).toEqual([everything, everything]);
   });
@@ -54,6 +60,7 @@ describe('the policy of connections', () => {
     expect(policyOf({ CONNECTIONS: JSON.stringify(rules) })).toEqual({
       peopleMayAdd: false,
       allowedHosts: ['*.example.com'],
+      loopbackAllowed: false,
       credentialKinds: ['none', 'secret'],
       variables: ['CRM_API_KEY'],
     });
@@ -95,7 +102,7 @@ describe('the providers of CONNECTIONS', () => {
     expect([Effect.runSync(settingRead({ CONNECTIONS: '{}' })).providers, providers, policy]).toEqual([
       [],
       [notes],
-      { peopleMayAdd: true, allowedHosts: null, credentialKinds: null, variables: [] },
+      { peopleMayAdd: true, allowedHosts: null, loopbackAllowed: false, credentialKinds: null, variables: [] },
     ]);
   });
 
@@ -138,6 +145,7 @@ describe('the registered clients of CONNECTIONS', () => {
     expect(policy).toEqual({
       peopleMayAdd: true,
       allowedHosts: ['*.example.com'],
+      loopbackAllowed: false,
       credentialKinds: null,
       variables: [],
     });

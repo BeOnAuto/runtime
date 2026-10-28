@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes, statusesOf, type Added } from '../testing/additions.ts';
 import { consentFake } from '../testing/consents.ts';
-import { ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, harness, operationNamed, type Harness, loopbackPolicy } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -76,7 +76,7 @@ describe('the words of adding an MCP server given by hand that signs people in i
   it('say the person signs in at the host of its issuer on the page, and ask an agent to have them open it to do so', async () => {
     const fake = await consentFake({ dynamicRegistration: true });
     closing.push(fake.close);
-    const h = harness();
+    const h = harness({ policy: loopbackPolicy });
     const byHand = { name: 'files', type: 'mcp', entry: { url: fake.url }, credential: { kind: 'authorization' } };
     const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, byHand));
     const { host } = new URL(fake.origin);

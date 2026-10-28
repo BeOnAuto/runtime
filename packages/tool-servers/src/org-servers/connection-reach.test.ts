@@ -1,3 +1,4 @@
+import { HostUnresolved } from '@on.auto/outbound';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -42,6 +43,11 @@ function refusing(path: string): ConnectionServer['reaches'] {
   return (url) => (new URL(url).pathname.startsWith(path) ? outsideTheRule : undefined);
 }
 
+function unresolvedAt(path: string): ConnectionServer['reaches'] {
+  return (url) =>
+    new URL(url).pathname.startsWith(path) ? Promise.reject(new HostUnresolved({ host: 'api' })) : undefined;
+}
+
 describe('a connection to an HTTP API whose document names where its calls go', () => {
   it('is not allowed once its document is read, when the rules do not allow that address, and no call is sent', async () => {
     const fake = await serveFakeApi({ key: fakeApiKey });
@@ -60,6 +66,22 @@ describe('a connection to an HTTP API whose document names where its calls go', 
       ),
     ).toMatchObject({ kind: 'unopened', refused: 'tool_not_offered', because: 'connection_not_allowed' });
     expect([fake.documentReads(), fake.seen()]).toEqual([1, []]);
+  });
+});
+
+describe('a connection to an HTTP API whose base address cannot be looked up', () => {
+  it('is listed unreachable, to try again, not refused by the rules', async () => {
+    const fake = await serveFakeApi({ key: fakeApiKey });
+    closing.push(fake.close);
+    const access = await accessThrough({
+      entry: { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' } },
+      reaches: unresolvedAt('/v1'),
+    });
+
+    expect(await Effect.runPromise(access.listServers(alpha))).toMatchObject([
+      { name: 'graph', because: 'unreachable' },
+    ]);
+    expect(fake.seen()).toEqual([]);
   });
 });
 

@@ -2,6 +2,7 @@ import type { Outcome, Succeeded } from '@on.auto/operations';
 import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
 import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
+import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added } from './additions.ts';
 import { consentFake, consentHarnessAt, finishing, startedAt } from './consents.ts';
 import type { Harness, HarnessOptions } from './harness.ts';
@@ -113,6 +114,18 @@ function registeredAtTheVendor(issuer: string, { metadata }: Vendor): Registered
     : registeredAt(issuer);
 }
 
+const urlOrigin = /https?:\/\/[^/\s"'{}:]+/gu;
+
+function vendorDomainsOf(host: string): readonly string[] {
+  const domain = host.split('.').slice(-2).join('.');
+  return [domain, `*.${domain}`];
+}
+
+function hostsAtTheVendor(fakeOrigin: string, written: string): string[] {
+  const named = [...written.matchAll(urlOrigin)].flat().map((each) => new URL(each).hostname);
+  return [...new Set([new URL(fakeOrigin).hostname, ...named.flatMap((host) => vendorDomainsOf(host))])];
+}
+
 export function harnessAtTheVendor(
   fake: FakeMcpServer,
   vendor: Vendor,
@@ -120,6 +133,7 @@ export function harnessAtTheVendor(
 ): Harness {
   return consentHarnessAt(fake, {
     providers,
+    policy: connectionPolicyOf({ allowed_hosts: hostsAtTheVendor(fake.origin, JSON.stringify([vendor, providers])) }),
     consenting: {
       fetch: answeredAsTheVendor(fake, vendor),
       registeredClients: registeredIssuer === undefined ? [] : [registeredAtTheVendor(registeredIssuer, vendor)],

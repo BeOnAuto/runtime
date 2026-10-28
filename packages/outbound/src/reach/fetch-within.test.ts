@@ -42,6 +42,23 @@ describe('a fetch held within the hosts it may reach', () => {
     ]);
   });
 
+  it('sends nothing to an address the rules do not allow, and fails with the rule, as they answer it later', async () => {
+    const { sent, fetch } = recording();
+    const within = fetchWithin(fetch, () => Promise.resolve(rule));
+
+    await expect(within('https://elsewhere.example.org/mcp')).rejects.toMatchObject({ _tag: 'host_refused', rule });
+    expect(sent).toEqual([]);
+  });
+
+  it('sends to an address the rules allow later', async () => {
+    const { sent, fetch } = recording();
+    const within = fetchWithin(fetch, () => Promise.resolve(everywhere()));
+
+    await within('https://graph.example.com/mcp');
+
+    expect(sent).toEqual([{ address: 'https://graph.example.com/mcp', init: { redirect: 'manual' } }]);
+  });
+
   it('sends nothing to an address the rules do not allow, and fails with the rule', async () => {
     const { sent, fetch } = recording();
     const within = fetchWithin(fetch, () => rule);

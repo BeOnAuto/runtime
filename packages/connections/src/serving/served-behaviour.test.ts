@@ -18,7 +18,7 @@ import { makeConnectionSource } from './connection-source.ts';
 
 const variable = 'GRAPH_API_KEY';
 
-const policy = connectionPolicyOf({ variables: [variable] });
+const policy = connectionPolicyOf({ variables: [variable], allowed_hosts: ['127.0.0.1'] });
 
 type SentIn = Exclude<CredentialUnderTest, { readonly in: 'auth' }>;
 
