@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.0](https://github.com/BeOnAuto/runtime/compare/v0.39.0...v0.40.0) (2026-10-28)
+
+
+### Features
+
+* **connections:** a connection says what it does, and answers its tools ([#393](https://github.com/BeOnAuto/runtime/issues/393)) ([de33a18](https://github.com/BeOnAuto/runtime/commit/de33a1834849d0a6c459571761dbe080190b9132))
+
 ## [0.39.0](https://github.com/BeOnAuto/runtime/compare/v0.38.0...v0.39.0) (2026-10-28)
 
 
