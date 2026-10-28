@@ -5,6 +5,7 @@ import { Effect } from 'effect';
 import { AccountFailure, unreachable, type AccountRefusal } from '../accounts/account-failure.ts';
 import type { AccountPorts, InstallationUsage, Usage } from '../accounts/account-service.ts';
 import type { Signed } from '../licensing/signed-answers.ts';
+import { accountRefusals, type AccountRefusals } from './account-refusals.ts';
 import { allocationFake, type AllocationFake } from './allocation-fake.ts';
 import { signedByAnotherKey, signedByTheTestKey } from './test-signing.ts';
 
@@ -25,22 +26,11 @@ interface Registration {
 
 export type Revocation = 'key_rotated' | 'installation_revoked';
 
-interface CreditRefusal {
-  readonly because?: string;
-  readonly resolve_at?: string;
-}
-
-interface ClosedAccount extends CreditRefusal {
-  readonly detail: string;
-}
-
-export interface AccountFake extends Omit<AllocationFake, 'ports'> {
+export interface AccountFake extends Omit<AllocationFake, 'ports'>, AccountRefusals {
   readonly ports: AccountPorts;
   readonly keyFor: (installation: string, org?: string) => string;
   readonly orgNamed: (org: string, name: string) => void;
   readonly revoke: (key: string, because?: Revocation) => void;
-  readonly exhaust: (refusal?: CreditRefusal) => void;
-  readonly close: (closed: ClosedAccount) => void;
   readonly goDown: () => void;
   readonly comeBack: () => void;
   readonly answer: (how: Answering) => void;
@@ -59,6 +49,7 @@ interface FakeState {
   now: number;
   up: boolean;
   refusing: AccountRefusal | undefined;
+  terms: AccountRefusal | undefined;
   answering: Answering;
 }
 
@@ -68,7 +59,8 @@ interface Standing {
   readonly signed: (payload: Payload) => Signed;
   readonly iso: (laterMs?: number) => string;
   readonly refusal: () => AccountFailure | undefined;
-  readonly closed: () => AccountFailure | undefined;
+  readonly activationRefusal: () => AccountFailure | undefined;
+  readonly termsUnaccepted: () => AccountFailure | undefined;
   readonly repairOf: (installation: string) => Signed | null;
   readonly registered: (key: string, registration: Registration) => void;
   readonly named: (org: string, name: string) => void;
@@ -108,10 +100,6 @@ const revocations: Readonly<Record<Revocation, AccountFailure>> = {
   }),
 };
 
-function noCreditOf(refusal: CreditRefusal): AccountRefusal {
-  return { status: 409, kind: 'credits_exhausted', detail: 'The org acme has no credits left', ...refusal };
-}
-
 function tampered(signed: Signed): Signed {
   const text = `${Buffer.from(signed.payload, 'base64url').toString('utf8')} `;
   return { ...signed, payload: Buffer.from(text, 'utf8').toString('base64url') };
@@ -133,8 +121,8 @@ function portsOf(standing: Standing, records: Records, allocations: AllocationFa
     ...allocations.ports,
     activate: (key, usage) =>
       Effect.flatMap(standing.reached(key), ({ installation, org }) => {
-        const closed = standing.closed();
-        if (closed !== undefined) return Effect.fail(closed);
+        const activationRefusal = standing.activationRefusal();
+        if (activationRefusal !== undefined) return Effect.fail(activationRefusal);
         records.activated(usage);
         const entitlement = {
           v: 1,
@@ -165,6 +153,13 @@ function portsOf(standing: Standing, records: Records, allocations: AllocationFa
       Effect.map(standing.reached(key), () => {
         records.reported(usage);
       }),
+    refreshAllocation: (key, allocation) =>
+      Effect.flatMap(standing.reached(key), () => {
+        const unaccepted = standing.termsUnaccepted();
+        return unaccepted === undefined
+          ? allocations.ports.refreshAllocation(key, allocation)
+          : Effect.fail(unaccepted);
+      }),
   };
 }
 
@@ -174,7 +169,8 @@ function accountStanding(): Standing {
   const repairs = new Map<string, Signed>();
   const names = new Map<string, string>();
   const now = Date.parse('2026-10-27T12:00:00.000Z');
-  const state: FakeState = { now, up: true, refusing: undefined, answering: 'signed' };
+  const state: FakeState = { now, up: true, refusing: undefined, terms: undefined, answering: 'signed' };
+  const termsUnaccepted = () => (state.terms === undefined ? undefined : new AccountFailure(state.terms));
   return {
     reached: (key) =>
       Effect.suspend(() => {
@@ -189,7 +185,9 @@ function accountStanding(): Standing {
     signed: (payload) => answers[state.answering](payload),
     iso: (laterMs = 0) => new Date(state.now + laterMs).toISOString(),
     refusal: () => (state.refusing === undefined ? undefined : new AccountFailure(state.refusing)),
-    closed: () => (state.refusing?.kind === 'account_closed' ? new AccountFailure(state.refusing) : undefined),
+    activationRefusal: () =>
+      state.refusing?.kind === 'account_closed' ? new AccountFailure(state.refusing) : termsUnaccepted(),
+    termsUnaccepted,
     repairOf: (installation) => repairs.get(installation) ?? null,
     registered: (key, registration) => {
       registrations.set(key, registration);
@@ -257,12 +255,7 @@ export function accountFake(): AccountFake {
     revoke: (key, because) => {
       standing.revoked(key, because);
     },
-    exhaust: (refusal = {}) => {
-      standing.changed({ refusing: noCreditOf(refusal) });
-    },
-    close: (closed) => {
-      standing.changed({ refusing: { status: 409, kind: 'account_closed', ...closed } });
-    },
+    ...accountRefusals(standing),
     goDown: () => {
       standing.changed({ up: false });
     },

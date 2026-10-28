@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import type { Revocation } from '../testing/account-fake.ts';
 import { runOf } from '../testing/runs.ts';
-import { licensedInstallation, licensedOn, opened, restartedOf, type LedgerOf } from './opened.ts';
+import { allocatedOn, licensedInstallation, licensedOn, opened, restartedOf, type LedgerOf } from './opened.ts';
 
 const installation = licensedInstallation;
 
@@ -132,6 +132,114 @@ export function closedAccountBehaviour(ledgerOf: LedgerOf): void {
       detail: 'The org acme is closed',
     });
   });
+}
+
+const accountsPage = `https://studio.example.com/licenses?installation=${installation}`;
+
+function termsWords(at: string): string {
+  return `Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at ${at}; then run this again.`;
+}
+
+function termsRequiredAt(at: string) {
+  return { kind: 'terms_required', detail: termsWords(at), resolve_at: at, runtime_id: installation };
+}
+
+const unlinkedTerms: readonly (readonly [string, Readonly<{ resolve_at?: string }>])[] = [
+  ['gives no page', {}],
+  ['gives a page that is no URL', { resolve_at: 'the licenses page' }],
+];
+
+function termsActivationBehaviour(ledgerOf: LedgerOf): void {
+  it('refuses to activate a key as terms_required at the page the account gives, never as unavailable, and activates it once an owner accepted', async () => {
+    const { metered } = await opened(ledgerOf);
+    const key = metered.account.keyFor(installation);
+    metered.account.requireTerms({ resolve_at: accountsPage });
+    const refused = await metered.activated(key);
+    const { license } = await metered.state();
+    metered.account.acceptTerms();
+
+    expect(refused).toEqual(termsRequiredAt(accountsPage));
+    expect(license).toBeUndefined();
+    expect(await metered.activated(key)).toEqual({ kind: 'activated', detail: '' });
+  });
+
+  it.each(unlinkedTerms)(
+    'refuses as terms_required at its own page of the installation in Studio when the account %s',
+    async (_, refusal) => {
+      const { metered } = await opened(ledgerOf);
+      const key = metered.account.keyFor(installation);
+      metered.account.requireTerms(refusal);
+
+      expect(await metered.activated(key)).toEqual(termsRequiredAt(page));
+    },
+  );
+
+  it('refuses each run as terms_required with the key it was given, keeps the key across a restart, and admits once an owner accepted', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.requireTerms({ resolve_at: accountsPage });
+    const given = await restartedOf(metered, { key: metered.account.keyFor(installation) });
+    const refused = await given.admitted(runOf('run-1'));
+    const restarted = await restartedOf(given);
+    const again = await restarted.admitted(runOf('run-1'));
+    const { license } = await restarted.state();
+    metered.account.acceptTerms();
+
+    expect([refused, again]).toEqual([termsRequiredAt(accountsPage), termsRequiredAt(accountsPage)]);
+    expect(license).toBeUndefined();
+    expect((await restarted.admitted(runOf('run-1'))).kind).toBe('admitted');
+    expect(metered.account.charged()).toEqual([`installation:${installation}/acme/alpha/run-1`]);
+  });
+}
+
+function termsRenewalBehaviour(ledgerOf: LedgerOf): void {
+  it('refuses a run as terms_required when the expired entitlement it renews waits on the terms, never as a license not renewed, and renews once an owner accepted', async () => {
+    const { metered } = await licensedOn(ledgerOf);
+    await metered.admitted(runOf('run-1'));
+    metered.at(aWeekAndADayLater);
+    metered.account.at(aWeekAndADayLater);
+    metered.account.requireTerms();
+    const refused = await metered.admitted(runOf('run-2'));
+    const { license } = await metered.state();
+    metered.account.acceptTerms();
+
+    expect(refused).toEqual(termsRequiredAt(page));
+    expect(license?.invalid).toBeUndefined();
+    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
+    expect((await metered.state()).license?.expires_at).toBe('2026-11-11T12:00:00.000Z');
+  });
+
+  it('keeps admitting by a live entitlement while its daily refresh is refused as terms_required, saying why in its words', async () => {
+    const { metered } = await licensedOn(ledgerOf);
+    await metered.admitted(runOf('run-1'));
+    metered.account.requireTerms();
+
+    expect(await metered.refreshed()).toEqual({ kind: 'refreshed', detail: '' });
+    expect(metered.warnings().at(-1)).toBe(`The license of this runtime could not be refreshed: ${termsWords(page)}`);
+    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
+    const { license } = await metered.state();
+    expect([license?.invalid, license?.expires_at]).toEqual([undefined, '2026-11-03T12:00:00.000Z']);
+  });
+
+  it('keeps its allocation while its refresh is refused as terms_required, saying why in its words, and admits by it', async () => {
+    const { metered } = await allocatedOn(ledgerOf, 5);
+    metered.account.requireTerms();
+    await metered.refreshed();
+    const { allocation } = await metered.state();
+    const allocated = String(allocation?.installation);
+    const allocatedPage = `https://studio.on.auto/licenses?installation=${allocated}`;
+
+    expect(
+      metered.warnings().filter((line) => line.startsWith('This runtime could not refresh its allocation')),
+    ).toEqual([`This runtime could not refresh its allocation with Auto: ${termsWords(allocatedPage)}`]);
+    expect([allocation?.withdrawn, allocation?.refresh_by]).toEqual([undefined, '2026-11-03T12:00:00.000Z']);
+    expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
+    expect(metered.account.askedToAdmit()).toBe(0);
+  });
+}
+
+export function termsBehaviour(ledgerOf: LedgerOf): void {
+  termsActivationBehaviour(ledgerOf);
+  termsRenewalBehaviour(ledgerOf);
 }
 
 export function keptWordingBehaviour(ledgerOf: LedgerOf): void {

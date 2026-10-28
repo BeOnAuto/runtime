@@ -116,6 +116,20 @@ export function licenseNotRenewed(options: MeterOptions, installation: string, e
   );
 }
 
+export function termsRequired(
+  options: MeterOptions,
+  installation: string,
+  { resolve_at: resolveAt }: Pick<AccountRefusal, 'resolve_at'>,
+): Conflict {
+  const page = resolveAt !== undefined && URL.canParse(resolveAt) ? resolveAt : licensesPageOf(options, installation);
+  return new Conflict({
+    detail: `Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at ${page}; then run this again.`,
+    kind: 'terms_required',
+    resolve_at: page,
+    runtime_id: installation,
+  });
+}
+
 export function offlineCreditsStopped(options: MeterOptions, installation: string, refreshBy: string): Conflict {
   return refusedLicense(
     options,

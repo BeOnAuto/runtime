@@ -8,6 +8,7 @@ import {
   creditCaseBehaviour,
   keptWordingBehaviour,
   revocationCaseBehaviour,
+  termsBehaviour,
 } from './refusal-behaviour.ts';
 
 const installation = licensedInstallation;
@@ -287,5 +288,6 @@ export function licensesBehaviour(ledgerOf: LedgerOf): void {
   licensedAdmissionBehaviour(ledgerOf);
   creditCaseBehaviour(ledgerOf);
   closedAccountBehaviour(ledgerOf);
+  termsBehaviour(ledgerOf);
   keptWordingBehaviour(ledgerOf);
 }

@@ -89,6 +89,57 @@ describe('the refusals of the account service over HTTP', () => {
   });
 });
 
+describe('a refusal of the account service until an owner accepts Auto’s activation terms', () => {
+  const page = `https://studio.on.auto/licenses?installation=${installation}`;
+
+  it('answers the kind terms_required, its words and its page, from the problem document of the account service', async () => {
+    const problem = {
+      type: 'about:blank',
+      title: 'Conflict',
+      status: 409,
+      detail: 'An owner of the org acme has not accepted the activation terms',
+      reason: 'conflict',
+      kind: 'terms_required',
+      resolve_at: page,
+      terms_version: '2026-10-28-draft.1',
+    };
+    const asked: string[] = [];
+    const account = accountServiceAt({
+      origin: 'https://accounts.example.com',
+      fetch: (address) => {
+        asked.push(address);
+        return Promise.resolve(Response.json(problem, { status: 409 }));
+      },
+    });
+    const refused = {
+      _tag: 'account_failure',
+      status: 409,
+      kind: 'terms_required',
+      detail: problem.detail,
+      resolve_at: page,
+    };
+
+    expect(await outcomeOf(account.activate('alk.acme.one.secret', { installation, ...usage }))).toMatchObject(refused);
+    expect(await outcomeOf(account.refreshAllocation('alk.acme.one.secret', 'a1'))).toMatchObject(refused);
+    expect(asked).toEqual([
+      'https://accounts.example.com/v1/installations/activate',
+      'https://accounts.example.com/v1/installations/allocations/refresh',
+    ]);
+  });
+
+  it('refuses an activation and the refresh of an allocation as terms_required, and never an admission, over the fake', async () => {
+    const { fake, account, key } = await served();
+    const signed = fake.allocationFor(installation, 5);
+    const { id } = Option.getOrThrow(allocationIn(signed, testSigners));
+    fake.requireTerms({ resolve_at: page });
+    const refused = { status: 409, kind: 'terms_required', resolve_at: page };
+
+    expect(await outcomeOf(account.activate(key, { installation, ...usage }))).toMatchObject(refused);
+    expect(await outcomeOf(account.refreshAllocation(key, id))).toMatchObject(refused);
+    expect(await outcomeOf(account.admit(key, runOf('run-1')))).toMatchObject({ kid: 'test-2026-10' });
+  });
+});
+
 describe('the account service over HTTP that does not answer', () => {
   it('is unreachable when no answer comes, or one in a shape the runtime does not know', async () => {
     const { fake, server, account, key } = await served();

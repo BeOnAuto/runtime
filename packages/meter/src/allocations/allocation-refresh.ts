@@ -4,7 +4,7 @@ import { Effect, Option } from 'effect';
 import type { AccountRefusal } from '../accounts/account-failure.ts';
 import { executed, meterStateOf, nowIso } from '../admission/metering.ts';
 import { activated } from '../licensing/activation.ts';
-import type { Licensing } from '../licensing/licensing.ts';
+import { termsRequired, type Licensing } from '../licensing/licensing.ts';
 import { allocationIn, type Signed } from '../licensing/signed-answers.ts';
 import type { Allocation } from '../meter-stream/allocation-events.ts';
 import { standingAllocation } from './allocation.ts';
@@ -33,12 +33,18 @@ function refused(
   licensing: Licensing,
   allocation: Allocation,
 ): (failure: AccountRefusal) => Effect.Effect<void, Worded> {
-  return ({ status, kind, detail }) =>
-    status === 409 && kind === 'license_invalid'
-      ? Effect.flatMap(nowIso, (at) =>
-          executed(licensing, { type: 'withdraw_allocation', id: allocation.id, detail, at }),
-        ).pipe(Effect.asVoid)
-      : Effect.fail({ detail });
+  return (failure) => {
+    const { status, kind, detail } = failure;
+    if (status === 409 && kind === 'license_invalid') {
+      return Effect.flatMap(nowIso, (at) =>
+        executed(licensing, { type: 'withdraw_allocation', id: allocation.id, detail, at }),
+      ).pipe(Effect.asVoid);
+    }
+    if (kind === 'terms_required') {
+      return Effect.fail(termsRequired(licensing.options, allocation.installation, failure));
+    }
+    return Effect.fail({ detail });
+  };
 }
 
 function allocationRefreshed(licensing: Licensing, key: string): Effect.Effect<void> {
