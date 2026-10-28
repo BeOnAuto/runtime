@@ -25,6 +25,7 @@ export const ConflictKindSchema = Schema.Literals([
   'license_required',
   'license_invalid',
   'account_closed',
+  'terms_required',
   'metering_fault',
 ]);
 

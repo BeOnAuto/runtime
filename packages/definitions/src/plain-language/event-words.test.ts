@@ -31,3 +31,11 @@ describe('the words of a run refused because the account of its org is closed, i
     ]);
   });
 });
+
+describe('the words of a run refused until an owner accepts Auto’s activation terms, in the playbook’s history', () => {
+  it('say what Auto needs, as the words of the meter’s other refusals do', () => {
+    expect(runRejected({ reason: 'conflict', detail: 'An owner reads and accepts them', kind: 'terms_required' })).toBe(
+      'A run did not go through: Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes.',
+    );
+  });
+});

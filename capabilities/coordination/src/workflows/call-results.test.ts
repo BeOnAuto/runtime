@@ -209,6 +209,41 @@ describe('a step whose run the meter refuses because the account of its org is c
   });
 });
 
+describe('a step whose run the meter refuses until an owner accepts Auto’s activation terms', () => {
+  const unaccepted = {
+    status: 'rejected',
+    reason: 'conflict',
+    detail:
+      "Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a; then run this again.",
+    kind: 'terms_required',
+  } as const;
+
+  it('raises a 409 of the type of terms_required, with the page in its detail, which the document can catch', async () => {
+    expect(await caughtFor(() => unaccepted)).toEqual({
+      kind: 'completed',
+      output: {
+        type: 'https://on.auto/problems/terms_required',
+        status: 409,
+        instance: '/do/0/lookup/try/0/fetch',
+        title: 'The reasoning function lookup could not go through',
+        detail: unaccepted.detail,
+        kind: 'terms_required',
+      },
+    });
+  });
+
+  it('is not retried by a retry of runtime errors, and ends the workflow as that conflict', async () => {
+    const { settlement } = await interpret(retryingRuntime, { respond: () => unaccepted });
+
+    expect(settlement).toEqual({
+      status: 'rejected',
+      reason: 'conflict',
+      detail: `The reasoning function lookup could not go through, at the step fetch: ${unaccepted.detail}`,
+      kind: 'terms_required',
+    });
+  });
+});
+
 describe('a failed run', () => {
   it('is a runtime error', async () => {
     expect(await caughtFor(() => ({ status: 'failed', detail: 'It failed with incident 7' }))).toEqual({

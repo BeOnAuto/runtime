@@ -181,6 +181,10 @@ describe('the words of a rejection of a function a workflow called', () => {
       'A function the workflow called did not succeed. The account it runs under is closed, since its org was deleted.',
     ],
     [
+      rejectedWith('terms_required'),
+      'A function the workflow called did not succeed. Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes.',
+    ],
+    [
       rejectedWith('input_schema'),
       'A function the workflow called did not succeed. What was given does not fit what it needs.',
     ],

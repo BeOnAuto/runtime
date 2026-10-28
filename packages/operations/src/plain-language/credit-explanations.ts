@@ -9,6 +9,7 @@ type CreditKind = Extract<
   | 'license_required'
   | 'license_invalid'
   | 'account_closed'
+  | 'terms_required'
   | 'metering_fault'
   | 'meter_unavailable'
 >;
@@ -43,6 +44,13 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
       'A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the details below say which this is, and the resolve_at link, where they give one, says until when.',
     remedyOnRecord:
       'A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below says which this is.',
+  },
+  terms_required: {
+    why: 'Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes',
+    remedy:
+      'An owner reads and accepts them in Auto Studio at the resolve_at link in the details below; then run this again. The key needs no change.',
+    remedyOnRecord:
+      'An owner reads and accepts them in Auto Studio, at the page the detail of the rejection below links to; once they have, it can be run again.',
   },
   metering_fault: {
     why: 'this runtime stopped starting runs, since what it counted no longer agrees with its ledger',

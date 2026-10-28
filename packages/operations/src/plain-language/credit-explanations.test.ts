@@ -41,6 +41,11 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
     'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted for good. The org can no longer be restored, so none of its runs will run again; the details below say more.',
   ],
   [
+    'a runtime whose org has not accepted Auto’s activation terms',
+    { reason: 'conflict', kind: 'terms_required' },
+    'Could not run the workflow “tally”: Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes. An owner reads and accepts them in Auto Studio at the resolve_at link in the details below; then run this again. The key needs no change.',
+  ],
+  [
     'a meter that no longer agrees with its ledger',
     { reason: 'conflict', kind: 'metering_fault' },
     'Could not run the workflow “tally”: this runtime stopped starting runs, since what it counted no longer agrees with its ledger. Auto needs to repair it: the details below give its runtime id and link to Auto’s support at resolve_at. Reading, editing and exporting still work.',
@@ -113,5 +118,16 @@ describe('the words of a closed account said of a run’s record', () => {
     expect(onRecord.map((remedy) => remedy.includes('the detail of the rejection below'))).toEqual([true, true]);
     expect(onRecord.filter((remedy) => remedy.includes('resolve_at'))).toEqual([]);
     expect(onRecord.flatMap((remedy) => internalTermsIn(remedy))).toEqual([]);
+  });
+});
+
+describe('the words of activation terms not yet accepted, said of a run’s record', () => {
+  it('point to the page the detail of its rejection links to, never to a link the record does not hold', () => {
+    const { remedyOnRecord = '' } = explanationOf({ reason: 'conflict', kind: 'terms_required' });
+
+    expect(remedyOnRecord).toBe(
+      'An owner reads and accepts them in Auto Studio, at the page the detail of the rejection below links to; once they have, it can be run again.',
+    );
+    expect([remedyOnRecord.includes('resolve_at'), internalTermsIn(remedyOnRecord)]).toEqual([false, []]);
   });
 });

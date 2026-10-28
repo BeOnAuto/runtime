@@ -201,6 +201,29 @@ describe('a run refused because the account of its org is closed', () => {
   });
 });
 
+describe('a run or an activation refused until an owner accepts Auto’s activation terms', () => {
+  it('is described at 409 under a type of its own, with where an owner accepts them and the runtime, and asks for no retry', () => {
+    const page = 'https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+    const unaccepted = problemOf('conflict', 'An owner reads and accepts them', {
+      kind: 'terms_required',
+      resolve_at: page,
+      runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+    });
+
+    expect(unaccepted).toEqual({
+      type: 'https://on.auto/problems/terms_required',
+      title: 'Terms required',
+      status: 409,
+      detail: 'An owner reads and accepts them',
+      reason: 'conflict',
+      kind: 'terms_required',
+      resolve_at: page,
+      runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+    });
+    expect(problemResponse(unaccepted).headers.get('retry-after')).toBeNull();
+  });
+});
+
 describe('a run whose tool may have changed something', () => {
   it('is described at 409 under a type of its own, with its because, and asks for no retry', () => {
     const unknown = problemOf('conflict', 'It may have posted', { kind: 'effect_unknown', because: 'tool_error' });

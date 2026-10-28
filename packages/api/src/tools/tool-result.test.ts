@@ -23,6 +23,19 @@ const purged: Rejected = {
   resolve_at: 'https://studio.example.com/orgs',
 };
 
+const termsPage = 'https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const termsUnaccepted: Rejected = {
+  ...rejected(
+    'conflict',
+    `Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at ${termsPage}; then run this again.`,
+    undefined,
+    'terms_required',
+  ),
+  resolve_at: termsPage,
+  runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+};
+
 const textsIn = Schema.decodeUnknownSync(
   Schema.Array(Schema.Struct({ type: Schema.Literal('text'), text: Schema.String })),
 );
@@ -77,6 +90,26 @@ describe('the tool result of a refusal of the meter', () => {
       kind: 'account_closed',
       because: 'org_purged',
       resolve_at: 'https://studio.example.com/orgs',
+    });
+  });
+});
+
+describe('the tool result of a refusal until an owner accepts Auto’s activation terms', () => {
+  it('says an owner accepts them at its resolve_at, beside its problem', () => {
+    const [words = '', problem = ''] = textsOf(termsUnaccepted);
+
+    expect(words).toBe(
+      'Could not run the workflow “tally”: Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes. Nothing was changed. An owner reads and accepts them in Auto Studio at the resolve_at link in the details below; then run this again. The key needs no change.',
+    );
+    expect(problemIn(problem)).toEqual({
+      type: 'https://on.auto/problems/terms_required',
+      title: 'Terms required',
+      status: 409,
+      detail: termsUnaccepted.detail,
+      reason: 'conflict',
+      kind: 'terms_required',
+      resolve_at: termsPage,
+      runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
     });
   });
 });

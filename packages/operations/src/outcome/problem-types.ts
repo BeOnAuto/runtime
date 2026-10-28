@@ -9,6 +9,7 @@ const reasonsOfKinds = {
   license_required: 'conflict',
   license_invalid: 'conflict',
   account_closed: 'conflict',
+  terms_required: 'conflict',
   metering_fault: 'conflict',
 } as const;
 

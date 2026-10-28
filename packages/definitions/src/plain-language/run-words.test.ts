@@ -127,6 +127,11 @@ const rejections: ReadonlyArray<readonly [string, Readonly<Record<string, unknow
     'the account it runs under is closed, since its org was deleted for good. The org can no longer be restored, so none of its runs will run again; the details below say more.',
   ],
   [
+    'a run refused until an owner accepts Auto’s activation terms, whose record keeps the page in its detail',
+    { reason: 'conflict', detail: 'x', kind: 'terms_required' },
+    'Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes. An owner reads and accepts them in Auto Studio, at the page the detail of the rejection below links to; once they have, it can be run again.',
+  ],
+  [
     'a step that met a run whose tools may have been called',
     { reason: 'conflict', detail: 'x', kind: 'tools_called' },
     'this run calls tools, and an attempt of it under the same id may still be in progress or did not succeed, so its tools may have changed something. So it was not run again: start a new run instead, after checking what its history shows it has called so far.',
