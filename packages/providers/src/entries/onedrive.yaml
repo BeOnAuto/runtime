@@ -11,5 +11,9 @@ credentials:
     authorization_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/token
     scope: Files.ReadWrite.All Sites.Read.All offline_access
+    says:
+      Files.ReadWrite.All: Read, create, change and delete all OneDrive and SharePoint files the person who connects can reach.
+      Sites.Read.All: Read documents and list items in the SharePoint sites the person who connects can reach.
+      offline_access: Keep access to OneDrive and SharePoint when nobody is signed in.
     clients: [registered]
     description: Sign in with your work account and allow access to your files and the SharePoint sites you can read. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for files and sites.

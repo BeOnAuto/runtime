@@ -8,5 +8,12 @@ credentials:
   - kind: authorization
     issuer: https://auth.buffer.com
     scope: posts:read ideas:read account:read insights:read posts:write ideas:write
+    says:
+      posts:read: Read Buffer posts and the queue.
+      ideas:read: Read Buffer ideas.
+      account:read: Read Buffer account information, organizations and channels.
+      insights:read: Read the analytics of Buffer posts.
+      posts:write: Create, schedule and manage Buffer posts.
+      ideas:write: Create and manage Buffer ideas.
     clients: [dynamic]
     description: Sign in to Buffer and allow access to your organizations and channels.

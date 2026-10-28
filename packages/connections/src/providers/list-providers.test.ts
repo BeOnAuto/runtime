@@ -49,6 +49,10 @@ const ledgersListed = {
       kind: 'client_credentials',
       issuer: 'https://auth.ledgers.example.com/{tenant}',
       scope: 'journal.read journal.write',
+      scopes: [
+        { name: 'journal.read', says: 'Read the journal entries of the tenant.' },
+        { name: 'journal.write', says: 'Post journal entries to the tenant.' },
+      ],
       description: 'The client id and secret of a client registered for your tenant.',
       offered: true,
     },
@@ -123,7 +127,7 @@ async function offeringsOf(name: string, options: HarnessOptions) {
 }
 
 describe('the providers listed', () => {
-  it('are every provider by name, with its ways, the placeholders a person gives, and whether the caller may add', async () => {
+  it('are every provider by name, with its ways and the words of their scopes, the placeholders a person gives, and whether the caller may add', async () => {
     const { output } = Schema.decodeUnknownSync(Schema.Struct({ output: Schema.Unknown }))(await listing());
 
     expect(output).toMatchObject({
@@ -132,7 +136,7 @@ describe('the providers listed', () => {
         { name: 'metrics', placeholders: [] },
         {
           name: 'regions',
-          credentials: [{ kind: 'secret', in: 'query', name: 'api_key', offered: true }],
+          credentials: [{ kind: 'secret', in: 'query', name: 'api_key', scopes: [], offered: true }],
           placeholders: regionsPlaceholders,
         },
         { name: 'tracker', credentials: [{ kind: 'secret', scheme: 'Bearer' }, { kind: 'none' }] },

@@ -10,6 +10,12 @@ const ListedWaySchema = Schema.Struct({
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
   scope: Schema.optionalKey(wayFields.scope),
+  scopes: Schema.Array(
+    Schema.Struct({
+      name: Schema.String.annotate({ description: 'A scope of scope, as the authorization server names it' }),
+      says: Schema.String.annotate({ description: 'What a connection can do through it, in one sentence' }),
+    }),
+  ).annotate({ description: 'The scopes the way asks, in its order, each with its words; empty where it asks none' }),
   description: Schema.optionalKey(Schema.String),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
   because: Schema.optionalKey(Schema.String.annotate({ description: 'Why the way is not offered, where it is not' })),

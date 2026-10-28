@@ -90,6 +90,7 @@ describe('the addition a provider of client credentials makes', () => {
       },
       provider: 'ledgers',
       placeholders: { tenant: 'acme' },
+      says: ledgers.credentials[0]?.says,
     });
     expect(resolved(ledgers, { placeholders: { tenant: 'acme', manager: '1234567890' } }).entry.headers).toEqual({
       'X-Client': '{client_id}',

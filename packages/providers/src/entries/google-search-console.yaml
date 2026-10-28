@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/webmasters
+    says:
+      https://www.googleapis.com/auth/webmasters: Read and manage Search Console data of verified sites.
     parameters:
       access_type: offline
       prompt: consent

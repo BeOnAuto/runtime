@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/doubleclickbidmanager
+    says:
+      https://www.googleapis.com/auth/doubleclickbidmanager: Read and manage Display & Video 360 reports in Bid Manager.
     parameters:
       access_type: offline
       prompt: consent

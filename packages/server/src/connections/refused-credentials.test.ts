@@ -72,7 +72,7 @@ function brokenOnce(name: string) {
     refused: { outcome: 'server_failure', text: `The tool server ${name} failed: ${keyRefused}` },
     tokensAsked: 1,
     callsSent: 2,
-    standing: { status: 'broken', broken: keyRefused },
+    standing: { status: 'broken', broken: { kind: 'credential_refused', detail: keyRefused } },
     breaks: ['connection_broken'],
   };
 }

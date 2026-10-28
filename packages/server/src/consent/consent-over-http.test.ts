@@ -176,7 +176,7 @@ describe('a connection connected by consent over HTTP', () => {
       expect.arrayContaining([`Bearer ${first.access_token}`, `Bearer ${renewed.access_token}`]),
     );
     expect(refused.body).not.toMatchObject({ outcome: 'result' });
-    expect(read.body).toMatchObject({ status: 'broken', broken: consentEnded });
+    expect(read.body).toMatchObject({ status: 'broken', broken: { kind: 'consent_ended', detail: consentEnded } });
     expect(JSON.stringify([called.body, renewedCall.body, refused.body, read.body])).not.toContain(
       renewed.refresh_token,
     );

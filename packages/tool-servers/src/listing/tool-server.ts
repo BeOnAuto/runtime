@@ -11,6 +11,7 @@ export type UnavailableBecause = typeof UnavailableBecauseSchema.Type;
 
 export interface ServerTool {
   readonly name: string;
+  readonly title?: string;
   readonly description: string;
   readonly input_schema: Schema.JsonObject;
   readonly annotations?: ToolAnnotations;

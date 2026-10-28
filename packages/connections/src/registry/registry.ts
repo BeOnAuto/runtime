@@ -8,7 +8,7 @@ import type {
   LinkIssued,
   RecordedConnectionEvent,
 } from './connection-events.ts';
-import type { RecordedConnection } from './connection.ts';
+import { scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
 
 export interface OpenLink {
@@ -39,7 +39,7 @@ export type Registry = ReadonlyMap<string, KeptConnection>;
 export const initialRegistry: Registry = new Map();
 
 function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
-  const { connection: id, name, server_type: type, provider, placeholders, entry, credential, added_by } = data;
+  const { connection: id, name, server_type: type, provider, placeholders, entry, credential, says, added_by } = data;
   return {
     connection: {
       id,
@@ -54,7 +54,9 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       added_at: context.at,
       connected_at: null,
       connected_by: null,
+      asked_scopes: scopesSaid(credential.scope, says),
       granted_scope: null,
+      granted_scopes: null,
       broken: null,
     },
     link: undefined,
@@ -104,6 +106,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       connected_at: context.at,
       connected_by: data.connected_by,
       granted_scope: data.scope ?? null,
+      granted_scopes: data.scope === undefined ? null : scopesSaid(data.scope, wordsOf(kept.connection.asked_scopes)),
       broken: null,
     },
     link: undefined,
@@ -114,8 +117,12 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
   };
 }
 
-function broken(kept: KeptConnection, { data }: ConnectionBroken): KeptConnection {
-  return { ...kept, connection: { ...kept.connection, status: 'broken', broken: data.reason } };
+function broken(kept: KeptConnection, { data, context }: ConnectionBroken): KeptConnection {
+  const { kind, reason } = data;
+  return {
+    ...kept,
+    connection: { ...kept.connection, status: 'broken', broken: { kind, detail: reason, at: context.at } },
+  };
 }
 
 function removed(kept: KeptConnection): KeptConnection {

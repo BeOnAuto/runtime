@@ -29,9 +29,12 @@ export const ToolAnnotationsSchema = Schema.Struct({
 
 const ListedToolSchema = Schema.Struct({
   name: Schema.String,
+  title: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
   inputSchema: Schema.JsonObject,
-  annotations: Schema.optionalKey(ToolAnnotationsSchema),
+  annotations: Schema.optionalKey(
+    Schema.Struct({ ...ToolAnnotationsSchema.fields, title: Schema.optionalKey(Schema.String) }),
+  ),
 });
 
 export type ToolResult = typeof ToolResultSchema.Type;

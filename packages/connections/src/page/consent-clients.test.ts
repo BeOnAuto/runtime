@@ -95,6 +95,10 @@ function tenantAt(fake: FakeMcpServer, tenant: string) {
         authorization_endpoint: `${fake.origin}/authorize`,
         token_endpoint: `${fake.origin}/token`,
         scope: 'adverts.manage offline_access',
+        says: {
+          'adverts.manage': 'Manage the campaigns of the accounts reached.',
+          offline_access: 'Keep access to Adverts when nobody is signed in.',
+        },
       },
     ],
   });

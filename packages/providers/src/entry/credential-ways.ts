@@ -6,6 +6,15 @@ import { wayAddresses, type WayAddress } from './templates.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
+const mostScopeWordsCharacters = 120;
+
+const ScopeWordsSchema = Schema.String.check(
+  Schema.isMaxLength(mostScopeWordsCharacters),
+  Schema.isPattern(/^[A-Z][^.]*(?:\.[^.\s][^.]*)*\.$/u, {
+    expected: 'one sentence that opens with a capital letter and ends with its one period',
+  }),
+);
+
 export const wayFields = {
   in: Schema.Literals(['header', 'query', 'security']),
   name: NamedSchema,
@@ -17,6 +26,7 @@ export const wayFields = {
   token_endpoint: Schema.String,
   revocation_endpoint: Schema.String,
   clients: Schema.Array(WayClientSourceSchema),
+  says: Schema.Record(Schema.String, ScopeWordsSchema),
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
@@ -45,6 +55,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   token_endpoint: Schema.optionalKey(wayFields.token_endpoint),
   revocation_endpoint: Schema.optionalKey(wayFields.revocation_endpoint),
   clients: Schema.optionalKey(wayFields.clients),
+  says: Schema.optionalKey(wayFields.says),
   description: Schema.optionalKey(NamedSchema),
 });
 
@@ -72,13 +83,17 @@ const everyField: readonly Field[] = [
   'parameters',
   ...consentEndpoints,
   'clients',
+  'says',
 ];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   secret: { required: ['in', 'name'], optional: ['scheme'] },
-  client_credentials: { required: ['issuer'], optional: ['scope'] },
+  client_credentials: { required: ['issuer'], optional: ['scope', 'says'] },
   none: { required: [], optional: [] },
-  authorization: { required: ['issuer'], optional: ['scope', 'parameters', ...consentEndpoints, 'clients'] },
+  authorization: {
+    required: ['issuer'],
+    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'clients'],
+  },
 };
 
 const parametersTheRequestSets: ReadonlySet<string> = new Set([
@@ -183,9 +198,28 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
   ];
 }
 
+export function scopesIn(scope: string | undefined): readonly string[] {
+  return scope === undefined ? [] : scope.split(' ');
+}
+
+function wordsIssuesOf({ scope, says = {} }: CredentialWayFields): readonly WayIssue[] {
+  const asked = scope === undefined || isScope(scope) ? scopesIn(scope) : Object.keys(says);
+  return [
+    ...asked
+      .filter((name) => !Object.hasOwn(says, name))
+      .map((name) => ({
+        path: ['says'],
+        issue: `Expected words for the scope ${name}: one sentence of at most ${mostScopeWordsCharacters} characters that says what a connection can do through it`,
+      })),
+    ...Object.keys(says)
+      .filter((name) => !asked.includes(name))
+      .map((name) => ({ path: ['says', name], issue: 'Expected words only for a scope the way asks' })),
+  ];
+}
+
 function wayIssuesOf(way: CredentialWayFields): readonly WayIssue[] {
-  const presence = presenceIssuesOf(way);
-  return way.kind === 'authorization' ? [...presence, ...consentIssuesOf(way)] : presence;
+  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way)];
+  return way.kind === 'authorization' ? [...issues, ...consentIssuesOf(way)] : issues;
 }
 
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));

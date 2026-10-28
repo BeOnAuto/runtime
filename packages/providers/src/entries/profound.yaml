@@ -8,6 +8,9 @@ credentials:
   - kind: authorization
     issuer: https://auth.tryprofound.com
     scope: openid offline_access
+    says:
+      openid: Read the unique identifier of the Profound account that connects.
+      offline_access: Keep access to Profound when nobody is signed in.
     clients: [registered, metadata_document, dynamic]
     description: Sign in to Profound and allow access.
   - kind: secret

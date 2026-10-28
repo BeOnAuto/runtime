@@ -15,6 +15,8 @@ const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 const keyRefused =
   'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
 
+const refusedAsBroken = { kind: 'credential_refused', detail: keyRefused };
+
 const replacedLink = {
   status: 'rejected',
   reason: 'not_found',
@@ -47,7 +49,7 @@ describe('reconnecting a connection its server refused', () => {
 
     expect(answered).toMatchObject({
       status: 'succeeded',
-      output: { id, status: 'broken', broken: keyRefused, connect: { expires_at: aDayOn } },
+      output: { id, status: 'broken', broken: refusedAsBroken, connect: { expires_at: aDayOn } },
     });
     expect(given).toMatchObject({
       status: 'succeeded',

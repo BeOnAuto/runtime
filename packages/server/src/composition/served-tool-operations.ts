@@ -3,6 +3,7 @@ import {
   defineDryRun,
   defineExecute,
   defineIntrospect,
+  defineListConnectionTools,
   defineSearch,
   defineSearchInOrg,
   defineValidate,
@@ -16,7 +17,7 @@ export interface ProvidersOffered {
 
 export function toolOperationsOf(tools: ToolAccess, { offering }: ProvidersOffered) {
   return {
-    inOrg: [defineSearchInOrg(tools, foundPlaybook, offering)],
+    inOrg: [defineSearchInOrg(tools, foundPlaybook, offering), defineListConnectionTools(tools)],
     inPlaybook: [
       defineSearch(tools),
       defineIntrospect(tools),

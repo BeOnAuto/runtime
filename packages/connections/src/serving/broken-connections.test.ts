@@ -61,7 +61,7 @@ const brokenReason =
   'The credential of the connection crm is no longer in the secret store, so the person who added it reconnects it';
 
 describe('a connection whose credential the secret store no longer holds', () => {
-  it('is broken by the runtime with the sentence of why, and answered broken from then on', async () => {
+  it('is broken by the runtime with its kind, the sentence of why and its time, and answered broken from then on', async () => {
     const h = harness();
     const id = await connectedCrm(h);
     await Effect.runPromise(h.secrets.forget('secret-1'));
@@ -69,10 +69,14 @@ describe('a connection whose credential the secret store no longer holds', () =>
     const refused = await refusalOf(sourceOf(h), id);
 
     expect(refused).toEqual({ because: 'connection_broken', detail: brokenReason });
-    expect((await h.facts()).at(-1)).toMatchObject({
+    const fact = (await h.facts()).at(-1);
+    expect(fact).toMatchObject({
       type: 'connection_broken',
-      data: { connection: id, reason: brokenReason },
+      data: { connection: id, kind: 'credential_gone', reason: brokenReason },
       context: { by: 'runtime' },
+    });
+    expect(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id })).toMatchObject({
+      output: { status: 'broken', broken: { kind: 'credential_gone', detail: brokenReason, at: fact?.context.at } },
     });
     expect((await connectionOf(sourceOf(h), id)).state).toEqual({
       status: 'unready',
@@ -227,7 +231,7 @@ describe('a connection of client credentials whose server refuses them', () => {
 });
 
 describe('a connection whose server asks for a credential it does not hold', () => {
-  it('is broken in words that say to remove it and add it again with one', async () => {
+  it('is broken as wanting a credential, in words that say to remove it and add it again with one', async () => {
     const h = harness();
     const { id, token } = await added(h, notes);
     await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
@@ -237,6 +241,7 @@ describe('a connection whose server asks for a credential it does not hold', () 
     expect(await breaksOf(h)).toMatchObject([
       {
         data: {
+          kind: 'credential_wanted',
           reason:
             'The tool server answered HTTP 401: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one',
         },
@@ -259,6 +264,7 @@ describe('a connection of a reference whose server refuses the value of its vari
     expect(await breaksOf(h)).toMatchObject([
       {
         data: {
+          kind: 'credential_refused',
           reason:
             'The tool server answered HTTP 401: it refused the value of the variable NOTES_API_KEY, so whoever runs the runtime sets it right and starts it again, and the person who added the connection reconnects it',
         },

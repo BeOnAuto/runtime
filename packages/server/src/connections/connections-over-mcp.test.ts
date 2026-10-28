@@ -63,10 +63,16 @@ function toolsOn(path: string): Promise<readonly string[]> {
   );
 }
 
-const connectionTools = ['add_connection', 'list_connections', 'reconnect_connection', 'remove_connection'];
+const connectionTools = [
+  'list_connection_tools',
+  'add_connection',
+  'list_connections',
+  'reconnect_connection',
+  'remove_connection',
+];
 
 describe('the tools of connections', () => {
-  it('are four operations on /mcp and on the org endpoint, and neither get_connection nor any of the three of the link', async () => {
+  it('are five operations on /mcp and on the org endpoint, and neither get_connection nor any of the three of the link', async () => {
     const [own, org] = [await toolsOn('/mcp'), await toolsOn('/orgs/local/mcp')];
 
     expect([own, org].map((names) => names.filter((name) => name.includes('connection')))).toEqual([

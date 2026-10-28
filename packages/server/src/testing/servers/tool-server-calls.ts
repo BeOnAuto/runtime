@@ -54,11 +54,13 @@ export async function toolServerToolsCalled(
   const crmServer = await serveFakeMcp();
   const crm = { name: 'crm', type: 'mcp', entry: { url: crmServer.url }, credential: { kind: 'none' } };
   const added = await session.callTool('add_connection', crm);
-  await crmServer.close();
   const { id, token } = linkIn(added.structuredContent);
   await server.call('POST', `/v1/orgs/local/connections/${id}/approve`, { body: { token } });
+  const toolsListed = await session.callTool('list_connection_tools', { id });
+  await crmServer.close();
   return [
     ['add_connection', added],
+    ['list_connection_tools', toolsListed],
     ['list_connections', await session.callTool('list_connections', {})],
     ['reconnect_connection', await session.callTool('reconnect_connection', { id })],
     ['remove_connection', await session.callTool('remove_connection', { id })],

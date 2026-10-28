@@ -31,7 +31,14 @@ function filesAt({ fake }: Pick<ThroughAuto, 'fake'>): Environment {
           website: 'https://developer.files.example.com',
           type: 'mcp',
           url: fake.url,
-          credentials: [{ kind: 'authorization', issuer: fake.origin, scope: 'files.read' }],
+          credentials: [
+            {
+              kind: 'authorization',
+              issuer: fake.origin,
+              scope: 'files.read',
+              says: { 'files.read': 'Read the files of the account.' },
+            },
+          ],
         },
       ],
     }),

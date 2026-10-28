@@ -4,6 +4,7 @@ import { reservedHostKindOf } from '@on.auto/outbound';
 import {
   hostAlternativesOf,
   operatorVariablesOf,
+  scopesIn,
   type CredentialWay,
   type Placeholder,
   type Provider,
@@ -107,12 +108,21 @@ export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Li
   );
 }
 
+function scopesSaidBy({
+  scope,
+  says = {},
+}: CredentialWay): readonly { readonly name: string; readonly says: unknown }[] {
+  return scopesIn(scope).map((name) => ({ name, says: says[name] }));
+}
+
 function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
   const { name, title, description, website, type, credentials } = provider.entry;
   const offering = offeringOf(provider, listing.providerValues);
   const ways = credentials
     .filter((way) => isListed(provider, way, listing.policy))
-    .map((way) => listedWayOf({ ...way, ...wayOfferingOf(way, offering, provider, listing) }));
+    .map((way) =>
+      listedWayOf({ ...way, scopes: scopesSaidBy(way), ...wayOfferingOf(way, offering, provider, listing) }),
+    );
   return ways.length === 0
     ? []
     : [{ name, title, description, website, type, credentials: ways, placeholders: placeholdersOf(provider) }];

@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/analytics.readonly
+    says:
+      https://www.googleapis.com/auth/analytics.readonly: See and download Google Analytics data.
     parameters:
       access_type: offline
       prompt: consent

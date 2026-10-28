@@ -16,6 +16,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/doubleclicksearch
+    says:
+      https://www.googleapis.com/auth/doubleclicksearch: Read and manage Search Ads 360 advertising data.
     parameters:
       access_type: offline
       prompt: consent

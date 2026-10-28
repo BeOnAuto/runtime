@@ -92,8 +92,8 @@ function hasNoConstraint({ name, keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(30);
+  it('are thirty-one, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(31);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -207,6 +207,7 @@ const served: Readonly<Record<string, Hints>> = {
   list_connections: [true, false, true, false],
   reconnect_connection: [false, false, false, false],
   remove_connection: [false, true, true, false],
+  list_connection_tools: [true, false, true, true],
   activate_license: [false, false, true, true],
   create_definition: [false, false, false, false],
   list_definitions: [true, false, true, false],
@@ -249,6 +250,25 @@ function rowOf([, name = '', readOnly, destructive, idempotent, openWorld]: read
 ] {
   return [name, [readOnly === 'true', destructive === 'true', idempotent === 'true', openWorld === 'true']];
 }
+
+function reachingOutside(listed: readonly ListedTool[]): readonly string[] {
+  return listed.filter(({ annotations }) => annotations?.['openWorldHint'] === true).map(({ name }) => name);
+}
+
+describe('the open-world hint of the tools of /mcp', () => {
+  it('is set for list_models and run_definition, which reach model providers, for the four tools over the tool servers and the one over the tools of a connection, which reach them, for activate_license, which reaches Auto, and for no other tool', () => {
+    expect(reachingOutside(tools)).toEqual([
+      'list_models',
+      'search',
+      'list_connection_tools',
+      'activate_license',
+      'run_definition',
+      'introspect',
+      'dry_run',
+      'execute',
+    ]);
+  });
+});
 
 describe('the annotations of the tools of /mcp', () => {
   it('say which tools only read, which cannot be undone, which may be repeated and which reach outside', () => {

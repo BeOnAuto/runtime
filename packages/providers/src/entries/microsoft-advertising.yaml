@@ -10,5 +10,8 @@ credentials:
     authorization_endpoint: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/common/oauth2/v2.0/token
     scope: https://ads.microsoft.com/msads.manage offline_access
+    says:
+      https://ads.microsoft.com/msads.manage: Manage the Microsoft Advertising accounts of the person who connects.
+      offline_access: Keep access to Microsoft Advertising when nobody is signed in.
     clients: [registered]
     description: Sign in with the Microsoft account you use for Microsoft Advertising and allow access.

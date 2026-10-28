@@ -146,7 +146,7 @@ const consentWays = [
   ['work-iq', forWorkAccounts('fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask')],
 ];
 
-const kindAndProse: ReadonlySet<string> = new Set(['kind', 'description']);
+const kindAndProse: ReadonlySet<string> = new Set(['kind', 'description', 'says']);
 
 function fieldsOfConsent(way: CredentialWay): Readonly<Record<string, unknown>> {
   return Object.fromEntries(
@@ -188,5 +188,50 @@ describe('the headers of the shipped providers', () => {
       ['google-ads', { 'login-customer-id': '{manager_id}' }],
       ['search-ads-360', { 'login-customer-id': '{manager_id}' }],
     ]);
+  });
+});
+
+const bareVerbs: ReadonlySet<string> = new Set([
+  'Act',
+  'Add',
+  'Ask',
+  'Change',
+  'Create',
+  'Delete',
+  'Keep',
+  'Manage',
+  'Post',
+  'Read',
+  'Run',
+  'Search',
+  'See',
+  'Send',
+]);
+
+const personalPronouns = /\b(?:I|me|my|mine|we|us|our|ours|you|your|yours|he|him|his|she|her|hers)\b/iu;
+
+interface SaidScope {
+  readonly provider: string;
+  readonly scope: string;
+  readonly says: string | undefined;
+}
+
+function saidScopesOf({ name, credentials }: ProviderEntry): readonly SaidScope[] {
+  return credentials.flatMap(({ scope, says = {} }) =>
+    (scope === undefined ? [] : scope.split(' ')).map((each) => ({ provider: name, scope: each, says: says[each] })),
+  );
+}
+
+function breaksTheRule({ says = '' }: SaidScope): boolean {
+  const [verb = ''] = says.split(/[ ,]/u);
+  return says.length > 120 || !bareVerbs.has(verb) || personalPronouns.test(says) || !says.endsWith('.');
+}
+
+const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry));
+
+describe('the words of the scopes the shipped providers ask', () => {
+  it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
+    expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
+    expect(saidScopes).toHaveLength(123);
   });
 });

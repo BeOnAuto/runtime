@@ -57,6 +57,13 @@ const echoTool = {
   input_schema: nothingTaken,
 };
 
+const verboseTool = {
+  name: 'verbose',
+  title: 'Verbose',
+  description: verboseDescription.slice(0, 4096),
+  input_schema: nothingTaken,
+};
+
 describe('the tool servers a playbook may use', () => {
   it('are those that serve its org and playbook, by name, each with the tools its entry allows', async () => {
     const fake = await fakeServer();
@@ -97,7 +104,7 @@ describe('the tool servers a playbook may use', () => {
         record_content: true,
         provider: null,
         playbooks: ['*'],
-        tools: [{ name: 'verbose', description: verboseDescription.slice(0, 4096), input_schema: nothingTaken }],
+        tools: [verboseTool],
       },
     ]);
   });

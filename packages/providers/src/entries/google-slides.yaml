@@ -8,6 +8,10 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/presentations.readonly https://www.googleapis.com/auth/presentations
+    says:
+      https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
+      https://www.googleapis.com/auth/presentations.readonly: See all Google Slides presentations.
+      https://www.googleapis.com/auth/presentations: See, change, create and delete all Google Slides presentations.
     parameters:
       access_type: offline
       prompt: consent

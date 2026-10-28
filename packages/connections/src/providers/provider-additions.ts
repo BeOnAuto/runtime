@@ -26,6 +26,7 @@ import { isOfferedWay, type Listing } from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
+  readonly says?: Readonly<Record<string, string>>;
 }
 
 type Checking = Omit<EntryChecking, 'providing'>;

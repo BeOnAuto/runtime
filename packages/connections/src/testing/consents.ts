@@ -25,6 +25,17 @@ export function consentFake(changes: Partial<ClientRegistration> = {}): Promise<
 
 export const filesWay = { scope: 'files.read', parameters: { access_type: 'offline' } };
 
+const filesWords: Readonly<Record<string, string>> = {
+  'files.read': 'Read the files of the account.',
+  'files.write': 'Create and change the files of the account.',
+  'files.list': 'See the names of the files of the account.',
+};
+
+function saidFor(way: Readonly<Record<string, unknown>>): Readonly<Record<string, string>> {
+  const asked = new Set(String(way['scope']).split(' '));
+  return Object.fromEntries(Object.entries(filesWords).filter(([name]: readonly [string, string]) => asked.has(name)));
+}
+
 export function filesAt(fake: FakeMcpServer, way: Readonly<Record<string, unknown>> = filesWay) {
   return providerOf({
     name: 'files',
@@ -33,7 +44,7 @@ export function filesAt(fake: FakeMcpServer, way: Readonly<Record<string, unknow
     website: 'https://developer.files.example.com',
     type: 'mcp',
     url: fake.url,
-    credentials: [{ kind: 'authorization', issuer: fake.origin, ...way }],
+    credentials: [{ kind: 'authorization', issuer: fake.origin, says: saidFor(way), ...way }],
   });
 }
 

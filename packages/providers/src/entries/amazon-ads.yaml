@@ -41,5 +41,7 @@ credentials:
     authorization_endpoint: https://{sign_in_host}/ap/oa
     token_endpoint: https://{token_host}/auth/o2/token
     scope: advertising::campaign_management
+    says:
+      advertising::campaign_management: Read and manage the campaigns, ad groups, ads, targets and reports of Amazon Ads advertiser accounts.
     clients: [registered]
     description: Sign in with Amazon and allow Amazon Ads campaign management.

@@ -42,7 +42,13 @@ const definitionTools = [
   'send_run_event',
 ];
 
-const connectionTools = ['add_connection', 'list_connections', 'reconnect_connection', 'remove_connection'];
+const connectionTools = [
+  'list_connection_tools',
+  'add_connection',
+  'list_connections',
+  'reconnect_connection',
+  'remove_connection',
+];
 
 const orgTools = [...playbookTools, 'list_models', 'search', ...connectionTools, 'activate_license'];
 
@@ -204,26 +210,6 @@ describe('the instructions an agent receives when it connects', () => {
     expect(createDefinition?.inputSchema).toMatchObject({
       properties: { type: { description: "The definition's type" } },
     });
-  });
-});
-
-function reachingOutside(tools: readonly ListedTool[]): readonly string[] {
-  return tools.filter(({ annotations }) => annotations?.['openWorldHint'] === true).map(({ name }) => name);
-}
-
-describe('the open-world hint of the tools of /mcp', () => {
-  it('is set for list_models and run_definition, which reach model providers, for the four tools over the tool servers, which reach them, for activate_license, which reaches Auto, and for no other tool', async () => {
-    server = await servingReasoning([]);
-
-    expect(reachingOutside(await listingOn('/mcp'))).toEqual([
-      'list_models',
-      'search',
-      'activate_license',
-      'run_definition',
-      'introspect',
-      'dry_run',
-      'execute',
-    ]);
   });
 });
 

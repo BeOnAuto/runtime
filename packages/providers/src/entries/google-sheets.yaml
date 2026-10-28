@@ -8,6 +8,9 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/spreadsheets
+    says:
+      https://www.googleapis.com/auth/spreadsheets.readonly: See all Google Sheets spreadsheets.
+      https://www.googleapis.com/auth/spreadsheets: See, change, create and delete all Google Sheets spreadsheets.
     parameters:
       access_type: offline
       prompt: consent

@@ -8,5 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://mcp.linear.app
     scope: read write
+    says:
+      read: Read the issues, projects, comments, teams and other data the Linear account can see.
+      write: Create, change, archive and delete issues, projects, comments and other data as the Linear account.
     clients: [registered, metadata_document, dynamic]
     description: Sign in to Linear, choose a workspace and allow access.

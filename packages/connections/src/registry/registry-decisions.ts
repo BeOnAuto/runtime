@@ -138,9 +138,20 @@ function addedData({
   placeholders,
   entry,
   credential,
+  says,
   added_by: addedBy,
 }: Omit<ConnectionAddition, 'link'>) {
-  return { connection, name, server_type: serverType, provider, placeholders, entry, credential, added_by: addedBy };
+  return {
+    connection,
+    name,
+    server_type: serverType,
+    provider,
+    placeholders,
+    entry,
+    credential,
+    says,
+    added_by: addedBy,
+  };
 }
 
 function decideApproval(command: ConnectionApproval & CommandMetadata, registry: Registry): Decision {
@@ -196,10 +207,10 @@ function isConnectedAt({ connection }: KeptConnection, connectedAt: string): boo
   return connection.status === 'connected' && connection.connected_at === connectedAt;
 }
 
-function decideBreaking({ connection, connected_at, reason }: ConnectionBreaking, registry: Registry): Decision {
+function decideBreaking({ connection, connected_at, kind, reason }: ConnectionBreaking, registry: Registry): Decision {
   return Result.flatMap(keptConnectionOf(registry, connection), (kept) =>
     isConnectedAt(kept, connected_at)
-      ? Result.succeed([{ type: 'connection_broken', data: { connection, reason } }])
+      ? Result.succeed([{ type: 'connection_broken', data: { connection, kind, reason } }])
       : nothingToRecord,
   );
 }

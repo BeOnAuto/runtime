@@ -24,6 +24,8 @@ const pendingWords =
 const keyRefused =
   'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
 
+const refusedAsBroken = { kind: 'credential_refused', detail: keyRefused };
+
 const scopeLacking =
   'The tool server answered HTTP 403: the credential lacks the scope crm.write this request needs; a credential granted that scope would allow it';
 
@@ -196,7 +198,7 @@ describe('a connection whose server refuses its credential at a call', () => {
       outcome: 'server_failure',
       text: `The tool server crm failed: ${keyRefused}`,
     });
-    expect(broken).toMatchObject({ status: 'broken', broken: keyRefused });
+    expect(broken).toMatchObject({ status: 'broken', broken: refusedAsBroken });
     expect(again).toMatchObject({
       status: 503,
       body: { kind: 'tool_not_offered', because: 'connection_broken', detail: keyRefused },
@@ -270,11 +272,10 @@ describe('a connection that holds no credential', () => {
 
     await executing(server, 'execute');
 
-    expect(await standingOf(server, id)).toMatchObject({
-      status: 'broken',
-      broken:
-        'The tool server answered HTTP 401: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one',
-    });
+    const standing = await standingOf(server, id);
+
+    expect(standing).toMatchObject({ status: 'broken', broken: { kind: 'credential_wanted' } });
+    expect(JSON.stringify(standing)).toContain('it asks for a credential the connection does not hold, so the person');
   });
 });
 
@@ -292,7 +293,7 @@ describe('a connection reconnected', () => {
     });
     const executed = await executing(server, 'execute');
 
-    expect(reconnected).toMatchObject({ status: 200, body: { id, status: 'broken', broken: keyRefused } });
+    expect(reconnected).toMatchObject({ status: 200, body: { id, status: 'broken', broken: refusedAsBroken } });
     expect(given.body).toMatchObject({ status: 'connected', broken: null, credential_ends_with: '9d41' });
     expect(executed.body).toMatchObject({ outcome: 'result', text: '{"said":"hi"}' });
   });

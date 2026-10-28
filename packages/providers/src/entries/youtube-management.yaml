@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/youtube.force-ssl
+    says:
+      https://www.googleapis.com/auth/youtube.force-ssl: See, change and permanently delete YouTube videos, ratings, comments and captions.
     parameters:
       access_type: offline
       prompt: consent

@@ -8,5 +8,7 @@ credentials:
   - kind: authorization
     issuer: https://mcp.notion.com
     scope: default
+    says:
+      default: Search, read, create and change the pages and databases of the Notion workspace chosen.
     clients: [registered, metadata_document, dynamic]
     description: Sign in to Notion, choose a workspace and allow access.

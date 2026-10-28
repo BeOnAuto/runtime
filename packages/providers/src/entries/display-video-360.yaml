@@ -8,6 +8,8 @@ credentials:
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/display-video
+    says:
+      https://www.googleapis.com/auth/display-video: See, create, change and permanently delete Display & Video 360 entities and reports.
     parameters:
       access_type: offline
       prompt: consent

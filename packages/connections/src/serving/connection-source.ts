@@ -81,7 +81,10 @@ function orgConnectionOf(serving: Serving): OrgConnection {
         ...serves,
         state: {
           status: 'unready',
-          unready: { because: 'connection_broken', detail: Option.getOrThrow(Option.fromNullishOr(connection.broken)) },
+          unready: {
+            because: 'connection_broken',
+            detail: Option.getOrThrow(Option.fromNullishOr(connection.broken)).detail,
+          },
         },
       }
     : {

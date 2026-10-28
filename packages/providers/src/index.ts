@@ -3,6 +3,7 @@ export {
   consentEndpoints,
   consentIssuesOf,
   holdsAClientId,
+  scopesIn,
   wayFields,
   type ConsentFields,
   type CredentialWay,

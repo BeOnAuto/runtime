@@ -11,5 +11,11 @@ credentials:
     authorization_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/token
     scope: Mail.ReadWrite Mail.Send Calendars.ReadWrite User.Read offline_access
+    says:
+      Mail.ReadWrite: Read, create, change and delete Outlook mail, without sending it.
+      Mail.Send: Send mail as the person who connects.
+      Calendars.ReadWrite: Read, create, change and delete events in Outlook calendars.
+      User.Read: Read the Microsoft profile of the person who connects, and basic company information.
+      offline_access: Keep access to Outlook mail and calendars when nobody is signed in.
     clients: [registered]
     description: Sign in with your work account and allow access to your mail and calendar. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for mail and calendar.

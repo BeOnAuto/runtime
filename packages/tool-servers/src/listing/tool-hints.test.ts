@@ -36,7 +36,7 @@ const queried = {
 };
 
 describe('the hints a listing shows of each tool', () => {
-  it('are those its server gives, booleans only, and none where it gives none, a title left out', async () => {
+  it('are those its server gives, booleans only, and none where it gives none, the title of its annotations its title', async () => {
     const listing = await listed({ allowed: ['search', 'echo', 'environment', 'graph.query.v2'] });
 
     expect(listing).toEqual([
@@ -56,6 +56,7 @@ describe('the hints a listing shows of each tool', () => {
           { name: 'echo', description: 'Answers with its arguments.', input_schema: nothingTaken },
           {
             name: 'environment',
+            title: 'Environment',
             description: 'Answers with the names of the environment variables of the server.',
             input_schema: nothingTaken,
           },

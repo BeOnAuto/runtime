@@ -24,6 +24,7 @@ export interface ListingWays {
   readonly listServers: (scope: ServersScope, named?: string) => Effect.Effect<readonly ToolServer[]>;
   readonly listServersInOrg: (scope: ServersScope, named?: string) => Effect.Effect<OrgListing>;
   readonly lookUp: (address: PlaybookAddress, reference: ToolReference) => Effect.Effect<LookedUp>;
+  readonly listConnection: (org: string, connection: string) => Effect.Effect<ToolServer | undefined>;
 }
 
 async function listedOn(server: OrgServer, loaded: Load): Promise<ToolServer> {
@@ -64,6 +65,11 @@ export function listingWaysOf(access: OrgAccess): ListingWays {
           return Option.getOrThrow(Option.fromNullishOr(server));
         });
         return { naming, listed };
+      }),
+    listConnection: (org, connection) =>
+      Effect.flatMap(access.serversOf(org), (servers) => {
+        const server = servers.find(({ settings }) => settings.connection === connection);
+        return server === undefined ? Effect.undefined : Effect.promise(() => listedOn(server, access.loaded));
       }),
   };
 }
