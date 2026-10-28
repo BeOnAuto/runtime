@@ -10,13 +10,17 @@ Your agent builds and directs the work. **Auto Runtime** stores and executes it;
 
 ## Get started
 
-Start Auto Runtime on your computer with `npx @on.auto/runtime`. It needs Node.js 26.10 or later on macOS or Linux, and listens on `http://localhost:5555` in local mode, where every request on your computer acts as you, with no sign-in; `PUBLIC_URL=http://localhost:5555` signs you in through the Auto identity service instead. Every release is also the image `docker.on.auto/onauto/runtime`, from Docker Hub; see [Run with Docker](docs/self-host/docker.md) and the [self-hosting guides](docs/self-host.md). Auto sends an anonymous usage ping when it starts, which `DO_NOT_TRACK=1` turns off; [Usage ping](docs/self-host/configuration.md#usage-ping) lists exactly what it sends.
+Start with hosted Auto: connect your agent to `https://mcp.on.auto`, sign in when it asks, and see your work in [Auto Studio](https://studio.on.auto). The [quick start](https://on.auto/docs/get-started/cloud) needs nothing installed and no model key.
 
-Follow the [local setup guide](docs/get-started/local.md) or browse the [Auto documentation](https://on.auto/docs/). See [function availability](docs/concepts/functions.md#availability) for implemented capabilities.
+To run Auto Runtime on your own infrastructure, every release is the image `docker.on.auto/onauto/runtime`, from Docker Hub. Your team reaches it at its `PUBLIC_URL`, the `https` address people sign in at, and opens it in Studio from `https://studio.on.auto`; see [Self-hosting](docs/self-host.md), [Run with Docker](docs/self-host/docker.md) and [Deploy for your team](docs/self-host/production.md). Auto sends an anonymous usage ping when it starts, which `DO_NOT_TRACK=1` turns off; [Usage ping](docs/self-host/configuration.md#usage-ping) lists exactly what it sends.
+
+To run it for yourself on your own computer, `npx @on.auto/runtime` starts it in local mode, with no sign-in, on Node.js 26.10 or later on macOS or Linux; see [Run Auto on your computer](docs/get-started/local.md).
+
+Browse the [Auto documentation](https://on.auto/docs/), and see [function availability](docs/concepts/functions.md#availability) for implemented capabilities.
 
 ![Auto Studio showing the Accounts Payable playbook, its Brain, workflows, pending decisions and sample runs](docs/assets/studio-dashboard.png)
 
-_Local runtime with synthetic Accounts Payable data._
+_Auto Studio with synthetic Accounts Payable data._
 
 ## Contribute and get help
 

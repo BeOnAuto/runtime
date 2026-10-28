@@ -6,10 +6,12 @@ Auto Runtime runs the playbooks your agent builds: their reasoning, interaction,
 
 ## Quick start
 
-A person signs in through the Auto identity service, and the runtime needs only the address it is reached at, `PUBLIC_URL`. Put it in a file of settings, and start the server with its port published on this machine's loopback address and a volume for its ledger:
+For hosted Auto, connect your agent to `https://mcp.on.auto` and open Studio at `https://studio.on.auto`: the [quick start](https://on.auto/docs/get-started/cloud) needs nothing installed. This image runs Auto Runtime on your own infrastructure.
+
+People sign in through the Auto identity service, and the runtime needs only the address they reach it at, `PUBLIC_URL`: your team's `https` address, served by a reverse proxy in front of the port. Put it in a file of settings, and start the server with its port published on this machine's loopback address, for the proxy, and a volume for its ledger:
 
 ```bash
-echo 'PUBLIC_URL=http://localhost:5555' > auto-runtime.env
+echo 'PUBLIC_URL=https://auto.example.com' > auto-runtime.env
 docker volume create auto-runtime-data
 docker run --detach --name auto-runtime --restart unless-stopped \
   --publish 127.0.0.1:5555:5555 --env-file auto-runtime.env --volume auto-runtime-data:/data \
@@ -17,11 +19,13 @@ docker run --detach --name auto-runtime --restart unless-stopped \
 curl http://localhost:5555/health
 ```
 
-Then connect your agent to `/mcp`, for example in Claude Code, and sign in when it opens the Auto identity service in your browser:
+Then connect your agent to `/mcp` at that address, for example in Claude Code, and sign in when it opens the Auto identity service in your browser:
 
 ```bash
-claude mcp add --transport http auto-runtime http://localhost:5555/mcp
+claude mcp add --transport http auto-runtime https://auto.example.com/mcp
 ```
+
+Open it in Studio at `https://studio.on.auto/?server=https://auto.example.com`, the link its page at `https://auto.example.com` opens too. To try it on this machine alone before the proxy is in place, use `PUBLIC_URL=http://localhost:5555` and `http://localhost:5555/mcp`.
 
 **[Run with Docker](https://on.auto/docs/self-host/docker)** walks through each step, adds a model provider, gives a machine or a pipeline an API key and has a Compose file that runs the runtime beside PostgreSQL.
 
@@ -53,7 +57,7 @@ Every tag is published for `linux/amd64` and `linux/arm64`, built in GitHub Acti
 
 ## Without Docker
 
-`npx @on.auto/runtime` runs the same server on macOS or Linux with Node.js 26.10 or later, on `http://localhost:5555`, in local mode, where every request on that computer acts as you, with no sign-in. See the [local quick start](https://on.auto/docs/get-started/local).
+`npx @on.auto/runtime` runs the same server on macOS or Linux with Node.js 26.10 or later. With `PUBLIC_URL` set it signs people in at that address, as the image does; without it, it runs on `http://localhost:5555` in local mode, where every request on that computer acts as you, with no sign-in. See [Run Auto on your computer](https://on.auto/docs/get-started/local).
 
 ## License
 

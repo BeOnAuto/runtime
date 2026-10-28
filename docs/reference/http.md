@@ -6,7 +6,7 @@ The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `
 
 ## Requests and access
 
-Send requests to the server's address, such as `http://localhost:5555`, with a credential.
+Send requests to the server's address, such as `https://auto.example.com`, the `PUBLIC_URL` of a team's runtime, with a credential.
 
 - Org routes begin at `/v1/orgs/{org}`. Playbook routes begin at `/v1/orgs/{org}/playbooks/{playbook}`.
 - Send the credential, an [API key](../self-host/security.md#api-keys) or a signed-in person's token, as `Authorization: Bearer <key>`. Keep credentials out of prompts and source documents.
