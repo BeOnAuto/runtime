@@ -368,7 +368,7 @@ Read `structuredContent`. The first text block is not JSON. No tool advertises a
 - The summary repeats a short result in words, and points to `structuredContent` for a long one.
 - A review that recommends Revise still belongs to a succeeded run: the operation completed and produced that recommendation.
 
-For a workflow, the summaries read like these. They were recorded from a run of the [first-workflow tutorial](../tutorials/first-workflow.md), in the order the tutorial calls the tools. Only the review's words come from a scripted model:
+These summaries were recorded from a two-step review-and-approval workflow on a self-hosted runtime. Its approval step uses the [example interaction function](interaction-format.md#a-function-document). Only the review's words come from a scripted model:
 
 ```text
 create_definition: Created the interaction function “approve-campaign-brief”. What it does: Asks the campaign owner to approve a reviewed brief. It has been saved but has not been run yet.

@@ -6,7 +6,7 @@ A workflow coordinates a playbook's functions through steps. The API stores it a
 
 ## A workflow document
 
-This workflow reviews a campaign brief, then asks the brief's owner to approve the review. It calls two functions, whose documents follow it: the reasoning function `review-campaign-brief` and the interaction function `approve-campaign-brief`. [Build your first playbook](../tutorials/first-playbook.md) and [Build your first workflow](../tutorials/first-workflow.md) save both in the playbook `campaign-review-tutorial`.
+This workflow reviews a campaign brief, then asks the brief's owner to approve the review. It calls two functions, whose documents follow it: the reasoning function `review-campaign-brief` and the interaction function `approve-campaign-brief`. This example uses interaction, which is available in self-hosted deployments. The [first workflow tutorial](../tutorials/first-workflow.md) uses two reasoning functions and works in hosted Auto.
 
 ```yaml
 document:

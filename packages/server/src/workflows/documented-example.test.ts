@@ -45,7 +45,7 @@ describe('the example of the workflow format, through the server', () => {
     const approval = { verdict: 'approve', note: 'Approved for the spring sale.' };
     await server.call('POST', `${alpha}/runs/${String(request?.run_id)}/answer`, { body: { answer: approval } });
 
-    expect(approveCampaignBrief).toBe(fencedBlocksOf('tutorials/first-workflow.md').get('markdown'));
+    expect(approveCampaignBrief).toBe(fencedBlocksOf('reference/interaction-format.md').get('markdown'));
     expect(created.status).toBe(201);
     expect(await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`)).toMatchObject({
       body: { status: 'succeeded', output: { review: 'Revise: the audience lacks a job role.', approval } },

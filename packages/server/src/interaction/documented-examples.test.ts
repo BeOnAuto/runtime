@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { fencedBlocksOf, pageOf, tutorialRunOn } from '../testing/servers/tutorial-calls.ts';
+import { approvalRunOn, fencedBlocksOf, pageOf } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, servingWorkflows } from '../testing/servers/workflow-server.ts';
 
 const reference = fencedBlocksOf('reference/interaction-format.md');
@@ -36,12 +36,12 @@ describe('the example of the interaction function format', () => {
   });
 });
 
-describe('the tutorial of a first workflow', () => {
-  it('reviews, asks through the inbox and ends with the answer, in the words the tutorial and the MCP reference quote', async () => {
+describe('the approval workflow in the MCP reference', () => {
+  it('reviews, asks through the inbox and ends with the answer, in the words the MCP reference quotes', async () => {
     const server = await servingWorkflows([answers(textResult('Revise: the audience lacks a job role.'))]);
     onTestFinished(server.stop);
-    const run = await withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, tutorialRunOn);
-    const quoted = `${pageOf('tutorials/first-workflow.md')}\n${pageOf('reference/mcp.md')}`;
+    const run = await withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, approvalRunOn);
+    const quoted = pageOf('reference/mcp.md');
 
     expect(run.summaries.filter((summary) => !quoted.includes(summary))).toEqual([]);
     expect(run.output).toEqual({
