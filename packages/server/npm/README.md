@@ -8,11 +8,11 @@ It needs Node.js 26.10 or later, with its `npx`, on macOS or Linux.
 
 <!-- x-release-please-start-version -->
 
-Add Auto Runtime to your agent as an MCP server that runs `npx -y @on.auto/runtime@0.35.1 mcp`, the release this README comes with, such as:
+Add Auto Runtime to your agent as an MCP server that runs `npx -y @on.auto/runtime@0.35.2 mcp`, the release this README comes with, such as:
 
 ```bash
-claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.35.1 mcp
-codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.35.1 mcp
+claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.35.2 mcp
+codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.35.2 mcp
 ```
 
 <!-- x-release-please-end -->
