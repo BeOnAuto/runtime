@@ -69,7 +69,7 @@ function pageOf(head: string, { studioLink, server, status, notice }: Showing): 
         <main>
           ${raw(brand)}
           <h1>Auto Runtime is running</h1>
-          <p>Create and manage your playbooks in the studio.</p>
+          <p>Create and manage your playbooks in Studio.</p>
           ${notice === undefined ? '' : html`<p class="license">${notice}</p>`}
           <span class="address">${server.host}</span>
           <a class="open" href="${studioLink}">Open studio ${raw(arrow)}</a>
