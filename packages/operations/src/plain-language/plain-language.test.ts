@@ -31,6 +31,16 @@ function shelving(kind?: ConflictKind) {
           }),
         );
       }
+      if (title === 'unlicensed') {
+        return Effect.fail(
+          new Conflict({
+            detail: 'This shelf needs a key',
+            kind: 'license_required',
+            resolve_at: 'https://studio.example.com/licenses?installation=shelf-1',
+            runtime_id: 'shelf-1',
+          }),
+        );
+      }
       return title === 'taken'
         ? Effect.fail(new Conflict({ detail: 'There is a shelf taken', ...(kind === undefined ? {} : { kind }) }))
         : Effect.succeed({ title, books: 0 });
@@ -108,6 +118,23 @@ describe('the remedies of a registration', () => {
 });
 
 const toAcme = toOrg('acme');
+
+describe('the resolution of a conflict', () => {
+  it('reaches the rejected outcome with where a person resolves it and the runtime it names', async () => {
+    const { dispatcher, run } = harness();
+
+    const outcome = await run(dispatcher.dispatchToOrg(registration, toAcme(acmeAdmin, { title: 'unlicensed' })));
+
+    expect(outcome).toEqual({
+      status: 'rejected',
+      reason: 'conflict',
+      detail: 'This shelf needs a key',
+      kind: 'license_required',
+      resolve_at: 'https://studio.example.com/licenses?installation=shelf-1',
+      runtime_id: 'shelf-1',
+    });
+  });
+});
 
 describe('the kind of a conflict', () => {
   it.each<ConflictKind>(['taken', 'retired', 'concurrent_change', 'unworkable'])(

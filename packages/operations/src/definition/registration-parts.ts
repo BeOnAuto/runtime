@@ -1,6 +1,7 @@
 import { Effect, Result } from 'effect';
 
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
+import { Conflict, resolutionOf } from '../outcome/conflict.ts';
 import { rejected, type Rejected, type Succeeded } from '../outcome/outcome.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import { checkedDefinition } from './definition-checks.ts';
@@ -24,10 +25,12 @@ export function settledOf<Answer, S extends Succeeded, R extends DeclarableReaso
     const issues = 'issues' in rejection ? rejection.issues : undefined;
     const kind = 'kind' in rejection ? rejection.kind : undefined;
     const because = 'because' in rejection ? rejection.because : undefined;
-    const described = rejected(reason, detail, issues, kind);
-    return yield* reasons.includes(reason)
-      ? Effect.fail(because === undefined ? described : { ...described, because })
-      : Effect.die(rejection);
+    const described: Rejected = {
+      ...rejected(reason, detail, issues, kind),
+      ...(because === undefined ? {} : { because }),
+      ...(rejection instanceof Conflict ? resolutionOf(rejection) : {}),
+    };
+    return yield* reasons.includes(reason) ? Effect.fail(described) : Effect.die(rejection);
   });
 }
 

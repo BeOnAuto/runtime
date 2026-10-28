@@ -1,6 +1,7 @@
 import type { Schema } from 'effect';
 
 import type { StreamedContent } from '../content/streamed-content.ts';
+import type { Resolution } from './conflict.ts';
 import { cappedIssues, type Issue } from './issue.ts';
 import type { RejectionBecause } from './rejection-because.ts';
 import type { DeclarableReason, RejectionKind } from './rejection.ts';
@@ -19,7 +20,7 @@ export interface Streamed {
 
 export type Succeeded = Answered | Streamed;
 
-export interface Rejected {
+export interface Rejected extends Resolution {
   readonly status: 'rejected';
   readonly reason: RejectionReason;
   readonly detail: string;

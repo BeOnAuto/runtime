@@ -29,9 +29,23 @@ export const ConflictKindSchema = Schema.Literals([
 
 export type ConflictKind = typeof ConflictKindSchema.Type;
 
-export class Conflict extends Data.TaggedError('conflict')<{
+export interface Resolution {
+  readonly resolve_at?: string;
+  readonly runtime_id?: string;
+}
+
+export function resolutionOf({ resolve_at: resolveAt, runtime_id: runtimeId }: Resolution): Resolution {
+  return {
+    ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+    ...(runtimeId === undefined ? {} : { runtime_id: runtimeId }),
+  };
+}
+
+interface Clash extends Resolution {
   readonly detail: string;
   readonly kind?: ConflictKind;
   readonly because?: RejectionBecause;
   readonly record?: Schema.JsonObject;
-}> {}
+}
+
+export class Conflict extends Data.TaggedError('conflict')<Clash> {}

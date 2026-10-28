@@ -29,6 +29,11 @@ export const RejectionBecauseSchema = Schema.Literals([
   'not_finite',
   'not_in_order',
   'baseline_check',
+  'none_left',
+  'free_daily_limit',
+  'free_month_used',
+  'key_rotated',
+  'installation_revoked',
 ]);
 
 export type RejectionBecause = typeof RejectionBecauseSchema.Type;
