@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.1](https://github.com/BeOnAuto/runtime/compare/v0.37.0...v0.37.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **connections:** a new link replaces an open one, and a link lasts 24 hours ([#382](https://github.com/BeOnAuto/runtime/issues/382)) ([50f3240](https://github.com/BeOnAuto/runtime/commit/50f32405f45f7a4a76071c49db42d470118ff8ef))
+* **global:** the tests compare the contact link whole and build no code from values ([#384](https://github.com/BeOnAuto/runtime/issues/384)) ([b845b81](https://github.com/BeOnAuto/runtime/commit/b845b81832d6381837fb991acc9659e11fdd59d5))
+
 ## [0.37.0](https://github.com/BeOnAuto/runtime/compare/v0.36.0...v0.37.0) (2026-10-28)
 
 
