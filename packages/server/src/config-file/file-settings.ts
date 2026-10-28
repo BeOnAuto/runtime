@@ -6,6 +6,7 @@ import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGat
 import { ToolServersSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { extensionsFileSetting } from '../extensions/extension-settings.ts';
 import { licenseFileSetting } from '../licensing/license-settings.ts';
 import { Origin, StudioOrigin } from '../settings/origin.ts';
 
@@ -101,4 +102,5 @@ export const fileSettings: readonly FileSetting[] = [
     String,
   ),
   licenseFileSetting,
+  extensionsFileSetting,
 ];

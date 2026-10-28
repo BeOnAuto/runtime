@@ -3,12 +3,12 @@ import { textOfContent, type Outcome } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 import { expect } from 'vitest';
 
+import { candidateSha256, uploaded, type CandidateName } from '../runtime-testing/scripted-candidates.ts';
 import { uploadedDailyVisits } from '../testing/daily-documents.ts';
 import { dailyRows, steadyVisits, type DailyRows } from '../testing/daily-rows.ts';
-import { uploadCandidate } from '../trainer/candidate-upload.ts';
 import { uploadDataset } from '../upload/upload-dataset.ts';
 import type { BuildPlaybook } from './build-playbook.ts';
-import { candidateBytes, candidateSha256, performedUntilQuiet, type CandidateName } from './due-driving.ts';
+import { performedUntilQuiet } from './due-driving.ts';
 
 const StartedSchema = Schema.Struct({ output: Schema.Struct({ run_id: Schema.String }) });
 
@@ -34,16 +34,6 @@ export function buildAsked(playbook: BuildPlaybook, name = 'daily-visits'): Prom
 
 export async function askedBuild(playbook: BuildPlaybook, name = 'daily-visits'): Promise<string> {
   return Schema.decodeUnknownSync(StartedSchema)(await buildAsked(playbook, name)).output.run_id;
-}
-
-export async function uploaded(playbook: BuildPlaybook, build: string, names: readonly CandidateName[]): Promise<void> {
-  const [first, ...rest] = names;
-  if (first === undefined) {
-    return;
-  }
-  const upload = uploadCandidate(playbook.test.ports);
-  expect(await playbook.send(upload, { run_id: build }, candidateBytes(first))).toMatchObject({ status: 'succeeded' });
-  await uploaded(playbook, build, rest);
 }
 
 export function answered(playbook: BuildPlaybook, build: string, answer: object): Promise<Outcome> {

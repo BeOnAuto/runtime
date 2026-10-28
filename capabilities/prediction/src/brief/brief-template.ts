@@ -11,6 +11,7 @@ import {
   type RenderFailure,
   type TemplateEngine,
 } from '@on.auto/definitions/template';
+import { Conflict } from '@on.auto/operations';
 import { Predicate, Result, type Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
@@ -20,6 +21,11 @@ import type { Checked } from '../document/checked-parts.ts';
 import { briefVariableIssues, renderedNameOf } from './brief-variables.ts';
 
 const briefEngine = templateEngine();
+
+export const unworkableBrief = new Conflict({
+  detail: `The brief does not render over this dataset within the ${figure(predictionBounds.mostBriefBytes)} bytes a brief may; shorten it or loop over less`,
+  kind: 'unworkable',
+});
 
 export type BriefVariables = Readonly<Record<'dataset' | 'function', Schema.JsonObject>>;
 

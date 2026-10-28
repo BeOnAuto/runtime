@@ -1,17 +1,25 @@
+import type { ModelFeeds } from '@on.auto/prediction-contract';
 import { Schema } from 'effect';
 
 import { BaselineSchema, MetricSchema } from '../document/evaluation-names.ts';
 import { enclosings } from '../periods/enclosing.ts';
 import { grains } from '../periods/grains.ts';
-import type { ModelFeeds } from './model-sessions.ts';
 
 const Floats = Schema.declare((value: unknown): value is Float32Array => value instanceof Float32Array);
 
 const Whole = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
-export const CheckJobSchema = Schema.Struct({ model: Schema.String, threads: Whole });
+const FedShapeSchema = Schema.Struct({ features: Whole, given: Whole, horizon: Whole, totals: Schema.Boolean });
+
+export const CheckJobSchema = Schema.Struct({
+  runtime: Schema.String,
+  model: Schema.String,
+  threads: Whole,
+  fed: FedShapeSchema,
+});
 
 export const RunJobSchema = Schema.Struct({
+  runtime: Schema.String,
   model: Schema.String,
   threads: Whole,
   y: Floats,
@@ -23,6 +31,7 @@ export const RunJobSchema = Schema.Struct({
 });
 
 export const WalkJobSchema = Schema.Struct({
+  runtime: Schema.String,
   model: Schema.String,
   threads: Whole,
   rows: Schema.String,

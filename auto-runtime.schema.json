@@ -620,6 +620,27 @@
       },
       "additionalProperties": false,
       "description": "The license of this runtime, after the 100 actions it runs before it is registered: its key, and the allocation of an installation that does not reach Auto. AUTO_RUNTIME_LICENSE wins over it"
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "package": {
+            "type": "string",
+            "maxLength": 214,
+            "pattern": "^(?:@[a-z0-9][a-z0-9._~-]*\\/)?[a-z0-9][a-z0-9._~-]*$",
+            "description": "The package of the extension, which the server imports by its name"
+          },
+          "integrity": {
+            "type": "string",
+            "pattern": "^sha512-[A-Za-z0-9+/]{86}==$",
+            "description": "The integrity of the installed package, sha512- and the base64 of the SHA-512 of its files; a package whose files differ stops the start"
+          }
+        },
+        "required": ["package"],
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,

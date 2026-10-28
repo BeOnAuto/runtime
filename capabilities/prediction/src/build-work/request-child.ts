@@ -41,6 +41,7 @@ function requested(performing: Performing, through: string, record: BuildRecord)
             function: build.run.run.name,
             brief_sha256: record.build.brief_sha256,
             routes: { ...routesOf(build.address) },
+            formats: [...record.build.formats],
             expires_at: record.expires_at,
           },
         },

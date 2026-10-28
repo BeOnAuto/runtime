@@ -85,6 +85,7 @@ describe('readSettings', () => {
       license: { key: undefined, allocation: undefined, accounts: 'https://billing.on.auto' },
       distribution: 'source',
       configFile: undefined,
+      extensions: [],
     });
   });
 });
@@ -106,6 +107,7 @@ const everySetting = {
   OPENAI_API_KEY: 'sk-test',
   INTERACTION_OPEN_REQUESTS: '250',
   REASONING_MAX_INPUT_TOKENS: '500000',
+  AUTO_RUNTIME_EXTENSIONS: JSON.stringify([{ package: '@acme/models' }]),
   CONNECTIONS: JSON.stringify({
     people_may_add: false,
     allowed_hosts: ['*.example.com'],
@@ -175,6 +177,7 @@ const everySettingRead = {
   },
   distribution: 'source',
   configFile: undefined,
+  extensions: [{ package: '@acme/models' }],
 };
 
 describe('readSettings given the distribution', () => {

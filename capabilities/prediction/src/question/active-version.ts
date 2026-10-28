@@ -8,6 +8,7 @@ import { modelsRowOf, predictionModelsName, type ModelsRow } from '../models/mod
 export interface ActiveVersion {
   readonly version: number;
   readonly file: string;
+  readonly format: string;
 }
 
 export interface Answering {
@@ -59,15 +60,16 @@ function sameSignature(answering: Answering, builtOn: number): Effect.Effect<boo
 export function activeVersionOf(answering: Answering): Effect.Effect<ActiveVersion, Conflict> {
   return Effect.gen(function* () {
     const row = yield* readModelsRow(answering);
-    if (row.active === null || row.active_file_sha256 === null || row.active_definition_version === null) {
+    const { active, active_file_sha256: file, active_file_format: format } = row;
+    if (active === null || file === null || format === null || row.active_definition_version === null) {
       return yield* Effect.fail(noActiveVersion);
     }
     if (row.active_data_sha256 !== answering.document.dataSha256) {
-      return yield* Effect.fail(changed(row.active, 'data part'));
+      return yield* Effect.fail(changed(active, 'data part'));
     }
     if (!(yield* sameSignature(answering, row.active_definition_version))) {
-      return yield* Effect.fail(changed(row.active, 'horizons, the given features or the total'));
+      return yield* Effect.fail(changed(active, 'horizons, the given features or the total'));
     }
-    return { version: row.active, file: row.active_file_sha256 };
+    return { version: active, file, format };
   });
 }

@@ -1,13 +1,13 @@
 import { Effect } from 'effect';
 
-import { documentOfBuild } from '../builds/build-document.ts';
 import type { BuildState } from '../builds/build-state.ts';
 import { predictionBounds } from '../capability/prediction-bounds.ts';
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
+import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { BuildWorkOf } from '../facts/build-facts.ts';
-import type { CachedFile } from '../model-cache/model-files.ts';
+import { modelFileName, type CachedFile } from '../model-cache/model-files.ts';
 import type { ModelOutcome, Signature } from '../model-processes/model-processes.ts';
-import { signatureIssue } from './signature-check.ts';
+import { fedShapeOf, runtimeNamed, type ExecutedFormat } from '../runtimes/model-runtimes.ts';
 
 type Uploaded = BuildWorkOf<'candidate_uploaded'>['data'];
 
@@ -17,6 +17,12 @@ export type Checked =
   | { readonly uploaded: Uploaded; readonly already: boolean }
   | { readonly refused: BuildWorkOf<'candidate_refused'>['data'] }
   | { readonly busy: true };
+
+export interface Checking {
+  readonly build: BuildState;
+  readonly document: PredictionFunctionDefinitionDocument;
+  readonly chosen: ExecutedFormat;
+}
 
 const { candidatesInABuild } = predictionBounds;
 
@@ -34,27 +40,32 @@ function refusalOf(outcome: Exclude<ModelOutcome<Signature>, { readonly ended: '
     : undefined;
 }
 
-function answeredOf(
-  ports: PredictionPorts,
-  build: BuildState,
-  file: CachedFile,
-  signature: Signature,
-): Effect.Effect<Checked> {
+function answeredOf({ chosen }: Checking, file: CachedFile, signature: Signature): Checked {
   const { sha256, bytes } = file;
   if (!signature.loaded) {
     const detail = `The file is not a model the runtime loads: ${signature.detail}`;
-    return Effect.succeed({ refused: { sha256, bytes, because: 'failed_to_load', detail } });
+    return { refused: { sha256, bytes, because: 'failed_to_load', detail } };
   }
-  return Effect.map(documentOfBuild(ports.ledger, build), (document): Checked => {
-    const issue = signatureIssue(document, signature);
-    const { inputs, outputs, opset } = signature;
-    return issue === undefined
-      ? { uploaded: { sha256, bytes, opset, inputs, outputs }, already: false }
-      : { refused: { sha256, bytes, because: 'wrong_signature', detail: issue } };
-  });
+  if (signature.issue !== null) {
+    return { refused: { sha256, bytes, because: 'wrong_signature', detail: signature.issue } };
+  }
+  const runtime = runtimeNamed(chosen.runtime);
+  return {
+    uploaded: { sha256, bytes, format: chosen.format, runtime, signature: signature.signature },
+    already: false,
+  };
 }
 
-export function checkedCandidate(ports: PredictionPorts, build: BuildState, file: CachedFile): Effect.Effect<Checked> {
+export function receivedCandidate(
+  ports: PredictionPorts,
+  { chosen }: Checking,
+  stream: ReadableStream<Uint8Array>,
+): Effect.Effect<CachedFile> {
+  return ports.caches.models.received(stream, modelFileName(chosen.format));
+}
+
+export function checkedCandidate(ports: PredictionPorts, checking: Checking, file: CachedFile): Effect.Effect<Checked> {
+  const { build, document, chosen } = checking;
   const { sha256, bytes } = file;
   const already = build.uploads.find((uploaded) => uploaded.sha256 === sha256);
   if (already !== undefined) {
@@ -64,11 +75,12 @@ export function checkedCandidate(ports: PredictionPorts, build: BuildState, file
     const detail = `The build has its ${candidatesInABuild} candidates`;
     return Effect.succeed({ refused: { sha256, bytes, because: 'too_many', detail } });
   }
-  return Effect.flatMap(ports.models.check({ sha256, path: file.path }), (outcome): Effect.Effect<Checked> => {
+  const checked = ports.models.check(chosen.runtime, { sha256, path: file.path }, fedShapeOf(document));
+  return Effect.map(checked, (outcome): Checked => {
     if (outcome.ended === 'answered') {
-      return answeredOf(ports, build, file, outcome.answer);
+      return answeredOf(checking, file, outcome.answer);
     }
     const refusal = refusalOf(outcome);
-    return Effect.succeed(refusal === undefined ? { busy: true } : { refused: { sha256, bytes, ...refusal } });
+    return refusal === undefined ? { busy: true } : { refused: { sha256, bytes, ...refusal } };
   });
 }

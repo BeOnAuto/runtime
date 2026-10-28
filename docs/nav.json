@@ -139,6 +139,10 @@
         "link": "/reference/prediction-format"
       },
       {
+        "text": "Model runtimes",
+        "link": "/reference/model-runtimes"
+      },
+      {
         "text": "Recall function format",
         "link": "/reference/recall-format"
       },

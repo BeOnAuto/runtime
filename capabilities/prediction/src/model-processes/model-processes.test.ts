@@ -1,18 +1,18 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { importedWithoutAnAddress } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { candidateUrl, type CandidateName } from '../build-testing/due-driving.ts';
 import { scriptedModels } from '../build-testing/scripted-models.ts';
+import { candidateFile, type CandidateName } from '../runtime-testing/scripted-candidates.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { closedAfterTheTest, scratchDirectory } from '../testing/scratch.ts';
 import { modelDeadlines, modelProcesses, modelProcessModule, threadsOf } from './model-processes.ts';
 
 function fileOf(name: CandidateName) {
-  return { sha256: name, path: fileURLToPath(candidateUrl(name)) };
+  return { sha256: name, path: candidateFile(name) };
 }
 
 const question = { y: Float32Array.of(10, 12), x: null, given: null, h: null, features: 0, givens: 0 };
@@ -27,18 +27,20 @@ const walk = { window: 2, holdout: 1, steps: 2, features: 0, given: [], remainin
 
 const ofAnyLength: unknown = expect.any(Number);
 
+const fed = { features: 0, given: 0, horizon: 2, totals: false };
+
 describe('the model processes of a server', () => {
   it('check a file, answer a question and walk the held-back origins in the process that holds the model', async () => {
     const models = modelProcesses({ pool: closedAfterTheTest(3) });
     const mean = fileOf('visits-mean');
 
-    const checked = await Effect.runPromise(models.check(mean));
-    const answered = await Effect.runPromise(models.run(mean, question));
-    const walked = await Effect.runPromise(models.walk(mean, { ...walk, rows: rowsFile() }));
+    const checked = await Effect.runPromise(models.check(scriptedRuntime, mean, fed));
+    const answered = await Effect.runPromise(models.run(scriptedRuntime, mean, question));
+    const walked = await Effect.runPromise(models.walk(scriptedRuntime, mean, { ...walk, rows: rowsFile() }));
 
     expect(checked).toMatchObject({
       ended: 'answered',
-      answer: { loaded: true, opset: 13 },
+      answer: { loaded: true, signature: { recipe: 'mean' }, issue: null },
       milliseconds: ofAnyLength,
     });
     expect(answered).toMatchObject({
@@ -57,7 +59,9 @@ describe('the model processes of a server', () => {
       deadlines: { check: 1, run: 1, walk: 1, baselines: 30_000 },
     });
 
-    expect(await Effect.runPromise(models.check(fileOf('visits-mean')))).toMatchObject({ ended: 'timed_out' });
+    expect(await Effect.runPromise(models.check(scriptedRuntime, fileOf('visits-mean'), fed))).toMatchObject({
+      ended: 'timed_out',
+    });
     expect(modelDeadlines).toEqual({ check: 30_000, run: 10_000, walk: 600_000, baselines: 30_000 });
   });
 });
@@ -69,13 +73,13 @@ describe('a model process that fails', () => {
     const mean = fileOf('visits-mean');
 
     scripted.next('exits');
-    const exited = await Effect.runPromise(models.run(mean, question));
+    const exited = await Effect.runPromise(models.run(scriptedRuntime, mean, question));
     scripted.next('allocates');
-    const exhausted = await Effect.runPromise(models.run(mean, question));
+    const exhausted = await Effect.runPromise(models.run(scriptedRuntime, mean, question));
     scripted.next('garbage');
-    const garbage = await Effect.runPromise(models.check(mean));
+    const garbage = await Effect.runPromise(models.check(scriptedRuntime, mean, fed));
     scripted.next('badly');
-    const badly = await Effect.runPromise(models.walk(mean, { ...walk, rows: rowsFile() }));
+    const badly = await Effect.runPromise(models.walk(scriptedRuntime, mean, { ...walk, rows: rowsFile() }));
 
     expect([exited.ended, exhausted.ended]).toEqual(['crashed', 'out_of_memory']);
     expect(garbage).toMatchObject({

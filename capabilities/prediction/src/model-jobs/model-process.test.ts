@@ -13,10 +13,9 @@ import { closedAfterTheTest, scratchDirectory } from '../testing/scratch.ts';
 
 const packagesAModelProcessLoads: readonly string[] = [
   '@on.auto/prediction',
+  '@on.auto/prediction-contract',
   '@on.auto/workflow-engine',
   'effect',
-  'onnxruntime-common',
-  'onnxruntime-node',
 ];
 
 const decodeManifest = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ name: Schema.String })));
@@ -96,7 +95,7 @@ describe('the module a model process runs', () => {
     expect([heard[0], await ended]).toEqual([{ ready: true }, [0, null]]);
   });
 
-  it('loads no package beyond its own, the engine’s process loop, Effect and the model runtime, through the check of a build’s baselines', async () => {
+  it('loads no package beyond its own, the contract of its runtimes, the engine’s process loop and Effect, and no model runtime, through the check of a build’s baselines', async () => {
     const watched = watchedModelProcess();
     const models = modelProcesses({ pool: closedAfterTheTest(1, 1), module: watched.module });
     const checked = await Effect.runPromise(models.baselines({ sha256: 'rows', path: rowsFile() }, baselinesJob));

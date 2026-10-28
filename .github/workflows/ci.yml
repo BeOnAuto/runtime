@@ -93,6 +93,8 @@ jobs:
               - operations
               - outbound
               - playbooks
+              - prediction-contract
+              - prediction-onnx
               - providers
               - reasoning
               - recall
@@ -511,12 +513,13 @@ jobs:
         run: |
           docker run --rm --entrypoint sh \
             --volume "$PWD/capabilities/prediction/measure:/app/capabilities/prediction/measure:ro" \
-            --volume "$PWD/capabilities/prediction/candidates:/app/capabilities/prediction/candidates:ro" \
+            --volume "$PWD/packages/prediction-onnx/measure:/app/packages/prediction-onnx/measure:ro" \
+            --volume "$PWD/packages/prediction-onnx/candidates:/app/packages/prediction-onnx/candidates:ro" \
             onauto/runtime:ci -c '
-              node capabilities/prediction/measure/large-model.ts /tmp/large.onnx
+              node packages/prediction-onnx/measure/large-model.ts /tmp/large.onnx
               node capabilities/prediction/measure/large-rows.ts /tmp/rows.csv
-              prlimit --core=0 --data=1342177280 \
-                node capabilities/prediction/measure/session-memory.ts /tmp/large.onnx /tmp/rows.csv' > session.json
+              prlimit --core=0 --data=1342177280 node capabilities/prediction/measure/session-memory.ts \
+                packages/prediction-onnx/src/sessions/model-sessions.ts /tmp/large.onnx /tmp/rows.csv' > session.json
           test "$(jq --raw-output .series session.json)" = 1000
           {
             echo "### A 64 MiB model walking the widest rows on linux/${{ matrix.architecture }}, under 1280 MiB of data"
@@ -867,10 +870,10 @@ jobs:
           test "$(head --lines 1 training.csv | tr --delete '\r')" = series,period,visits
           for model in visits-mean visits-allocating; do
             test "$(call "$model.json" --header 'content-type: application/octet-stream' \
-              --data-binary "@capabilities/prediction/candidates/$model.onnx" "$playbook/runs/$build/build/candidates")" = 200
+              --data-binary "@packages/prediction-onnx/candidates/$model.onnx" "$playbook/runs/$build/build/candidates")" = 200
           done
           candidate="$(jq --raw-output .candidate visits-mean.json)"
-          test "$candidate" = "$(sha256sum capabilities/prediction/candidates/visits-mean.onnx | cut --delimiter ' ' --fields 1)"
+          test "$candidate" = "$(sha256sum packages/prediction-onnx/candidates/visits-mean.onnx | cut --delimiter ' ' --fields 1)"
           allocating="$(jq --raw-output .candidate visits-allocating.json)"
           answer="$(jq --null-input --arg candidate "$candidate" --arg allocating "$allocating" \
             '{answer: {candidates: [$candidate, $allocating]}}')"

@@ -39,6 +39,7 @@ export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
 export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
 export { toolEnded } from './journal/run-journal.ts';
 export type { SavedDefinition, SavedDefinitions } from './capability/saved-definitions.ts';
+export type { ExtensionPoint, ImplementationsProvided } from './capability/extension-points.ts';
 export {
   changedExpressions,
   noStrippedForms,

@@ -74,8 +74,19 @@ const keptIn: readonly unknown[] = [
   ),
 ];
 
+const extensionsLoaded: unknown = expect.stringMatching(
+  /^Extensions loaded, in their order of precedence: @on\.auto\/prediction-onnx [\d.]+, of the release, filling prediction\/model-runtime$/u,
+);
+
 function startInLocalMode(...after: readonly string[]): readonly unknown[] {
-  return [expect.stringMatching(/^Local mode is on: /u), ...keptIn, noModelProvider, ...functionsRun, ...after];
+  return [
+    expect.stringMatching(/^Local mode is on: /u),
+    ...keptIn,
+    extensionsLoaded,
+    noModelProvider,
+    ...functionsRun,
+    ...after,
+  ];
 }
 
 describe('main', () => {
@@ -180,7 +191,7 @@ describe('main with settings', () => {
     expect({ withoutKey: withoutKey.status, withKey: withKey.status }).toEqual({ withoutKey: 401, withKey: 200 });
     expect(withoutKey.headers.get('www-authenticate')).toBe('Bearer');
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual([...keptIn, noModelProvider, ...functionsRun]);
+    expect(messagesOf(child.output().stderr)).toEqual([...keptIn, extensionsLoaded, noModelProvider, ...functionsRun]);
   });
 
   it.each(invalidSettings)(

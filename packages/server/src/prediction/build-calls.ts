@@ -21,7 +21,7 @@ const StartedSchema = Schema.Struct({ run_id: Schema.String });
 export const visits = dailyRows('visits', ['north', 'south'], 40, steadyVisits);
 
 export function candidateFile(name: string): Readonly<Uint8Array> {
-  return readFileSync(new URL(`../../../../capabilities/prediction/candidates/${name}.onnx`, import.meta.url));
+  return readFileSync(new URL(`../../../../packages/prediction-onnx/candidates/${name}.onnx`, import.meta.url));
 }
 
 export function digestOf(bytes: Readonly<Uint8Array>): string {
@@ -57,8 +57,10 @@ export async function sentCandidate(
   server: ReasoningServer,
   build: string,
   bytes: Readonly<Uint8Array>,
+  format?: string,
 ): Promise<Answer> {
-  const response = await fetch(`${server.origin}${buildRoute(build, 'candidates')}`, {
+  const query = format === undefined ? '' : `?format=${format}`;
+  const response = await fetch(`${server.origin}${buildRoute(build, 'candidates')}${query}`, {
     method: 'POST',
     headers: { 'content-type': 'application/octet-stream' },
     body: new Uint8Array(bytes),

@@ -5,6 +5,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { SettingsOf } from '../dataset-testing/dataset-stores.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { asked, builtFrom, modelFactsOf, standingOf } from './built-versions.ts';
 import { performedOnce, performedUntilQuiet } from './due-driving.ts';
 import { gappyVisits, quietVisits, visits } from './projected-fixtures.ts';
@@ -15,6 +16,8 @@ const testTimeoutMs = 120_000;
 type Script = Parameters<Projected['scripted']['next']>[0];
 
 const aRest = 2 * 60_000;
+
+const heldFed = { features: 0, given: 0, horizon: 2, totals: false };
 
 function performedIn(projected: Projected, turns: readonly Script[], rested = 0): Promise<unknown> {
   const ahead = projected.playbook.now() + 4 * day + rested * aRest;
@@ -60,6 +63,9 @@ function shadowDecisions(settingsOf: SettingsOf): void {
       },
     });
     expect(typesOf(facts).filter((type) => type === 'shadow_predicted')).toHaveLength(4);
+    expect(facts.find(({ type }) => type === 'shadow_predicted')).toMatchObject({
+      data: { runtime: { name: 'scripted-runtime', version: '1.0.0' } },
+    });
     expect(typesOf(facts).filter((type) => type === 'shadow_graded').length).toBeGreaterThanOrEqual(4);
     expect(facts.at(-2)).toMatchObject({ type: 'shadow_passed', data: { version: 2, metric: 'mase' } });
     expect(facts.at(-1)).toMatchObject({ type: 'version_activated', data: { version: 2, rule: 'automatic' } });
@@ -150,7 +156,7 @@ function shadowWaits(settingsOf: SettingsOf): void {
     const { models } = projected.playbook.test.ports;
     projected.scripted.next('held');
     const held = ['first', 'second'].map((sha256) =>
-      Effect.runPromiseExit(models.check({ sha256, path: `/${sha256}.onnx` })),
+      Effect.runPromiseExit(models.check(scriptedRuntime, { sha256, path: `/${sha256}.scripted` }, heldFed)),
     );
     await projected.scripted.untilSleeping(['check', 'check']);
     await performedIn(projected, ['held']);
@@ -168,6 +174,20 @@ function shadowWaits(settingsOf: SettingsOf): void {
     expect(undecided.find(({ type }) => type === 'shadow_graded')).toMatchObject({ data: { graded: 0, answered: 0 } });
     expect(undecided.filter((fact) => decidesAShadow(fact))).toMatchObject([{ data: { version: 1 } }]);
     expect(decisions).toMatchObject([{ data: { version: 1 } }, { data: { version: 2 } }]);
+  });
+}
+
+function shadowWithoutARuntime(settingsOf: SettingsOf): void {
+  it('predicts nothing with a version whose format no model runtime of the server executes any more, and names no runtime', async () => {
+    const runtimes = [scriptedRuntime];
+    const projected = await challenged(settingsOf, { ...visits, runtimes });
+    runtimes.splice(0);
+    await performedIn(projected, ['real']);
+    const facts = await modelFactsOf(projected.playbook);
+
+    expect(facts.filter(({ type }) => type === 'shadow_predicted')).toMatchObject([
+      { data: { of: 2, count: 0, missing: 0, runtime: null } },
+    ]);
   });
 }
 
@@ -225,6 +245,10 @@ export function projectedBuildsSuite(settingsOf: SettingsOf): void {
 
   describe('the shadow of a challenger that has to wait', { timeout: testTimeoutMs }, () => {
     shadowWaits(settingsOf);
+  });
+
+  describe('the shadow of a challenger whose runtime is gone', { timeout: testTimeoutMs }, () => {
+    shadowWithoutARuntime(settingsOf);
   });
 
   describe('the shadow of a challenger that a newer version supersedes', { timeout: testTimeoutMs }, () => {

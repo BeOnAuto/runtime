@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook } from '../build-testing/build-playbook.ts';
 import { activeVisitsOn, asked, builtFrom, savedFunction, visitsRows } from '../build-testing/built-versions.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { uploadedDailyVisits } from '../testing/daily-documents.ts';
 import { dailyRows } from '../testing/daily-rows.ts';
 
@@ -54,6 +55,7 @@ describe('the answer to a question to a prediction function', () => {
         output: steadySouth,
         record: {
           version: 1,
+          runtime: { name: 'scripted-runtime', version: '1.0.0' },
           coverage: 0.8,
           origin: '2026-10-09',
           dataset_checkpoint: null,
@@ -130,6 +132,23 @@ describe('the history in the answer to a question to a prediction function', () 
     });
     expect(await asked(playbook, { series: 'north', horizon: 1 })).toMatchObject({
       output: { output: { origin: '2026-10-09', lines: [{ name: 'observed', points: [] }, { name: 'predicted' }] } },
+    });
+  });
+});
+
+describe('a question to a version whose format no model runtime of the server executes', () => {
+  it('is unavailable, its model process failed because no runtime executes the format, until a runtime does', async () => {
+    const runtimes = [scriptedRuntime];
+    const playbook = await activeVisitsOn(buildPlaybook({ runtimes }));
+    runtimes.splice(0);
+
+    expect(await asked(playbook, { series: 'south' })).toMatchObject({
+      status: 'rejected',
+      reason: 'unavailable',
+      kind: 'model_process_failed',
+      because: 'no_model_runtime',
+      detail:
+        'No model runtime this server has installed executes the format scripted of version 1; install the extension that executes it, or ask for a build',
     });
   });
 });

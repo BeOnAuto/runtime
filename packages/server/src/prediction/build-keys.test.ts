@@ -108,7 +108,10 @@ describe('the routes a trainer calls under API keys', () => {
       await sent(buildRoute(build, 'candidates'), { method: 'POST', key: admin.key, type: octets, body: candidate }),
     ];
 
-    expect([read.status, read.text]).toEqual([200, 'Fit a model of the daily visits of each of 2 stores.']);
+    expect([read.status, read.text.split('\n', 1)]).toEqual([
+      200,
+      ['Fit a model of the daily visits of each of 2 stores.'],
+    ]);
     expect([refused.status, readOnly.status, written.status]).toEqual([403, 403, 200]);
   });
 });

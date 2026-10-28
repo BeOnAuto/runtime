@@ -3,21 +3,21 @@ import { Unavailable, type PlaybookAddress } from '@on.auto/operations';
 import { Clock, Effect, Option, Schema } from 'effect';
 
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
-import type { PredictionFunctionDefinitionDocument, Predicts } from '../document/prediction-document.ts';
-import { enclosingOf, periodsToTheEnd } from '../periods/enclosing.ts';
-import { periodForm } from '../periods/grains.ts';
-import { activeVersionOf } from './active-version.ts';
+import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
+import { executingRuntimeOf } from '../runtimes/model-runtimes.ts';
+import { activeVersionOf, type ActiveVersion } from './active-version.ts';
 import { checkedAnswer } from './answer-check.ts';
+import {
+  aheadOf,
+  askedOf,
+  givenOf,
+  observedOf,
+  originFormOf,
+  predictedOf,
+  QuestionSchema,
+  type Question,
+} from './question-asked.ts';
 import { seriesWindow, type SeriesWindow } from './series-window.ts';
-
-const QuestionSchema = Schema.Struct({
-  series: Schema.String,
-  horizon: Schema.optionalKey(Schema.Int),
-  given: Schema.optionalKey(Schema.Record(Schema.String, Schema.Number)),
-  marks: Schema.optionalKey(Schema.Array(Schema.Struct({ label: Schema.String, value: Schema.Number }))),
-});
-
-type Question = typeof QuestionSchema.Type;
 
 const coverage = 0.8;
 
@@ -25,81 +25,19 @@ const busy = new Unavailable({ detail: 'Every model process is busy; try again s
 
 const ended = new Unavailable({ detail: 'The model process ended before it answered', kind: 'model_process_failed' });
 
+function noRuntimeFor({ version, format }: ActiveVersion): Unavailable {
+  return new Unavailable({
+    detail: `No model runtime this server has installed executes the format ${format} of version ${version}; install the extension that executes it, or ask for a build`,
+    kind: 'model_process_failed',
+    because: 'no_model_runtime',
+  });
+}
+
 const notFinite = new Unavailable({
   detail: 'The model answered something other than finite numbers in the shape its signature gives',
   kind: 'model_process_failed',
   because: 'not_finite',
 });
-
-interface AskedPoint {
-  readonly step: number;
-  readonly period: number;
-}
-
-interface Asked {
-  readonly steps: number;
-  readonly summed: number | null;
-  readonly points: readonly AskedPoint[];
-}
-
-type ObservedPoint = { readonly at: string; readonly value: number };
-
-type PredictedPoint = ObservedPoint & { readonly low: number; readonly high: number };
-
-function askedOf({ period: grain, horizons, accumulates }: Predicts, origin: number, question: Question): Asked {
-  if (accumulates === undefined) {
-    const asked =
-      question.horizon === undefined ? horizons.toSorted((left, right) => left - right) : [question.horizon];
-    return {
-      steps: Math.max(...horizons),
-      summed: null,
-      points: asked.map((horizon) => ({ step: horizon - 1, period: origin + horizon })),
-    };
-  }
-  const remaining = periodsToTheEnd(grain, accumulates, origin);
-  return { steps: remaining, summed: remaining, points: [{ step: 0, period: origin + remaining }] };
-}
-
-function aheadOf({ period: grain, accumulates }: Predicts, origin: number) {
-  return accumulates === undefined
-    ? { line: 'predicted', record: {} }
-    : { line: 'total', record: { total_to: periodForm(accumulates, enclosingOf(grain, accumulates, origin + 1)) } };
-}
-
-function givenOf(
-  document: PredictionFunctionDefinitionDocument,
-  { given }: Question,
-  steps: number,
-): Float32Array | null {
-  if (given === undefined) {
-    return null;
-  }
-  const values = document.data.given.map((name) => Number(given[name]));
-  return Float32Array.from(Array.from({ length: steps }, () => values).flat());
-}
-
-function predictedOf(
-  q: Readonly<Float32Array>,
-  { period: grain }: Predicts,
-  points: readonly AskedPoint[],
-): readonly PredictedPoint[] | undefined {
-  const predicted: readonly PredictedPoint[] = points.map(({ step, period }) => {
-    const [low, value, high] = Array.from(q.subarray(step * 3, step * 3 + 3));
-    return { at: periodForm(grain, period), value: Number(value), low: Number(low), high: Number(high) };
-  });
-  return predicted.every(({ low, value, high }) => [low, value, high].every((each) => Number.isFinite(each)))
-    ? predicted
-    : undefined;
-}
-
-function observedOf({ y, origin }: SeriesWindow, { period: grain, history }: Predicts): readonly ObservedPoint[] {
-  const first = origin - history + 1;
-  const shown: readonly ObservedPoint[] = Array.from(y.subarray(y.length - history), (value, at) => ({
-    at: periodForm(grain, first + at),
-    value,
-  }));
-  return shown.filter(({ value }) => Number.isFinite(value));
-}
 
 interface Answering {
   readonly ports: PredictionPorts;
@@ -108,16 +46,19 @@ interface Answering {
   readonly question: Question;
 }
 
-function answered(
-  { ports, playbook, document, question }: Answering,
-  active: { readonly version: number; readonly file: string },
-  window: SeriesWindow,
-) {
+function answered({ ports, playbook, document, question }: Answering, active: ActiveVersion, window: SeriesWindow) {
   return Effect.gen(function* () {
+    const executing = executingRuntimeOf(ports.runtimes, { sha256: active.file, format: active.format });
+    if (executing === undefined) {
+      return yield* Effect.fail(noRuntimeFor(active));
+    }
     const asked = askedOf(document.predicts, window.origin, question);
-    const kept = yield* ports.caches.models.pathOf(active.file, () => ports.ledger.content.get(playbook, active.file));
+    const kept = yield* ports.caches.models.pathOf(executing.file, () =>
+      ports.ledger.content.get(playbook, active.file),
+    );
     const path = Option.getOrThrow(Option.fromNullishOr(kept));
     const outcome = yield* ports.models.run(
+      executing.runtime,
       { sha256: active.file, path },
       {
         y: Float32Array.from(window.y),
@@ -142,7 +83,7 @@ function answered(
     if (outcome.answer.dims.join(',') !== expected || predicted === undefined) {
       return yield* Effect.fail(notFinite);
     }
-    return { predicted, milliseconds: outcome.milliseconds };
+    return { predicted, runtime: executing.named, milliseconds: outcome.milliseconds };
   });
 }
 
@@ -165,8 +106,8 @@ export function questionRun(
     });
     const now = yield* Clock.currentTimeMillis;
     const window = yield* seriesWindow(ports, { playbook, document, series: question.series, now });
-    const { predicted, milliseconds } = yield* answered({ ports, playbook, document, question }, active, window);
-    const origin = periodForm(predicts.period, window.origin);
+    const answer = yield* answered({ ports, playbook, document, question }, active, window);
+    const origin = originFormOf(predicts, window.origin);
     const ahead = aheadOf(predicts, window.origin);
     const output = {
       unit: predicts.unit,
@@ -174,7 +115,7 @@ export function questionRun(
       origin,
       lines: [
         { name: 'observed', points: observedOf(window, predicts) },
-        { name: ahead.line, points: predicted },
+        { name: ahead.line, points: answer.predicted },
       ],
       ...(question.marks === undefined ? {} : { marks: question.marks }),
     };
@@ -183,11 +124,12 @@ export function questionRun(
       output,
       record: {
         version: active.version,
+        runtime: { ...answer.runtime },
         coverage,
         ...ahead.record,
         origin,
         dataset_checkpoint: window.checkpoint,
-        duration_ms: Math.round(milliseconds),
+        duration_ms: Math.round(answer.milliseconds),
       },
     };
   });

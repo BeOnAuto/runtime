@@ -1,5 +1,5 @@
 {
-  "layout": 5,
+  "layout": 6,
   "catalog": [
     {
       "name": "conversations_3",
@@ -99,7 +99,7 @@
     },
     {
       "name": "prediction_models_1",
-      "sql": "CREATE TABLE prediction_models_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, active INTEGER, active_data_sha256 TEXT, active_file_sha256 TEXT, active_definition_version INTEGER, latest INTEGER, versions INTEGER, challenger INTEGER, challenger_build TEXT, shadow_predicted INTEGER, shadow_graded INTEGER, shadow TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "sql": "CREATE TABLE prediction_models_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, active INTEGER, active_data_sha256 TEXT, active_file_sha256 TEXT, active_file_format TEXT, active_definition_version INTEGER, latest INTEGER, versions INTEGER, challenger INTEGER, challenger_build TEXT, shadow_predicted INTEGER, shadow_graded INTEGER, shadow TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
       "name": "prediction_rows",

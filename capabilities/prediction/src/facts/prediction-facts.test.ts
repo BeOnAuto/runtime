@@ -11,6 +11,8 @@ const sha256 = 'a1b2c3d4e5f6'.padEnd(64, '0');
 
 const score = { horizon: 1, pairs: 4, mase: 0.75, winkler: 3.5, quantile: 1.25 };
 
+const runtime = { name: 'scripted-runtime', version: '1.0.0' };
+
 const inTheRun = {
   at,
   by: 'playbook:alpha',
@@ -76,8 +78,8 @@ const card = {
   build: 'run-1',
   trained_by: { id: 'acme-trainer', name: 'acme-trainer' },
   dataset: cardDataset,
-  file: { sha256, bytes: 600, opset: 13 },
-  inputs: [],
+  file: { sha256, bytes: 600, format: 'scripted', runtime },
+  signature: { recipe: 'mean' },
   scores: [score],
   coverage: 0.8,
   against: [],
@@ -91,49 +93,58 @@ const keptRecipe: KeptContent = (digest) => ({ ['r'.repeat(64)]: 'Gradient boost
 
 const verdict = { version: 2, build: 'run-2', metric: 'mase', challenger: 0.5, active: 0.75 };
 
+const buildFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
+  [
+    'dataset_assembled',
+    assembled,
+    "The dataset was read into the build's two files: 1,200 rows of 3 series from 2026-09-01 to 2026-10-10, the last 7 periods held back from the trainer",
+  ],
+  [
+    'candidate_uploaded',
+    { sha256, bytes: 600, format: 'scripted', runtime, signature: { recipe: 'mean' } },
+    'Candidate a1b2c3d4e5f6… was uploaded, 600 bytes in the format scripted, which scripted-runtime 1.0.0 checked',
+  ],
+  [
+    'candidate_refused',
+    { sha256, bytes: 600, because: 'wrong_signature', detail: 'No y' },
+    'Candidate a1b2c3d4e5f6… was refused: its inputs or outputs are not the signature the playbook feeds',
+  ],
+  [
+    'candidate_scored',
+    {
+      sha256,
+      runtime,
+      scores: [score, { ...score, horizon: 2, mase: 1.5 }],
+      coverage: 0.8,
+      against: [],
+      duration_ms: 40,
+    },
+    'Candidate a1b2c3d4e5f6… was scored on the held-back periods: mase 1.125 over its horizons, its interval holding 0.8 of the truths',
+  ],
+  [
+    'candidate_scored',
+    { sha256, runtime, scores: [{ ...score, mase: null }], coverage: null, against: [], duration_ms: 40 },
+    'Candidate a1b2c3d4e5f6… was scored on the held-back periods: no mase over its horizons, its interval holding none of the truths',
+  ],
+  [
+    'candidate_disqualified',
+    { sha256, because: 'not_better' },
+    'Candidate a1b2c3d4e5f6… was disqualified: it did not beat every baseline with the confidence asked',
+  ],
+  [
+    'baseline_scored',
+    { baseline: 'persistence', scores: [score], coverage: 0.7, series_walked: 3 },
+    'The baseline persistence was walked over 3 series: mase 0.75',
+  ],
+  [
+    'baseline_not_walked',
+    { baseline: 'seasonal-naive', because: 'too_short' },
+    'The baseline seasonal-naive could not be walked: no series had a season observed before an origin',
+  ],
+];
+
 describe('the facts of a build, as a run shows them', () => {
-  it.each<readonly [string, Schema.JsonObject, string]>([
-    [
-      'dataset_assembled',
-      assembled,
-      "The dataset was read into the build's two files: 1,200 rows of 3 series from 2026-09-01 to 2026-10-10, the last 7 periods held back from the trainer",
-    ],
-    [
-      'candidate_uploaded',
-      { sha256, bytes: 600, opset: 13, inputs: [], outputs: [] },
-      'Candidate a1b2c3d4e5f6… was uploaded, 600 bytes in opset 13',
-    ],
-    [
-      'candidate_refused',
-      { sha256, bytes: 600, because: 'wrong_signature', detail: 'No y' },
-      'Candidate a1b2c3d4e5f6… was refused: its inputs or outputs are not the signature the playbook feeds',
-    ],
-    [
-      'candidate_scored',
-      { sha256, scores: [score, { ...score, horizon: 2, mase: 1.5 }], coverage: 0.8, against: [], duration_ms: 40 },
-      'Candidate a1b2c3d4e5f6… was scored on the held-back periods: mase 1.125 over its horizons, its interval holding 0.8 of the truths',
-    ],
-    [
-      'candidate_scored',
-      { sha256, scores: [{ ...score, mase: null }], coverage: null, against: [], duration_ms: 40 },
-      'Candidate a1b2c3d4e5f6… was scored on the held-back periods: no mase over its horizons, its interval holding none of the truths',
-    ],
-    [
-      'candidate_disqualified',
-      { sha256, because: 'not_better' },
-      'Candidate a1b2c3d4e5f6… was disqualified: it did not beat every baseline with the confidence asked',
-    ],
-    [
-      'baseline_scored',
-      { baseline: 'persistence', scores: [score], coverage: 0.7, series_walked: 3 },
-      'The baseline persistence was walked over 3 series: mase 0.75',
-    ],
-    [
-      'baseline_not_walked',
-      { baseline: 'seasonal-naive', because: 'too_short' },
-      'The baseline seasonal-naive could not be walked: no series had a season observed before an origin',
-    ],
-  ])('says what %s means', (type, data, summary) => {
+  it.each(buildFacts)('says what %s means', (type, data, summary) => {
     expect(buildSummary(type, data)).toBe(summary);
   });
 });
@@ -146,6 +157,7 @@ const modelFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
       version: 2,
       of: 1,
       build: 'run-2',
+      runtime,
       origin: '2026-10-11',
       count: 3,
       missing: 1,
@@ -177,6 +189,7 @@ const modelFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
       definition_version: 1,
       data_sha256: sha256,
       file_sha256: sha256,
+      file_format: 'scripted',
       rule: 'approved',
       approved_by: { id: 'ada', name: 'ada' },
       build: 'run-2',

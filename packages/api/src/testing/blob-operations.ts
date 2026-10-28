@@ -7,16 +7,19 @@ const Named = Schema.Struct({ name: Schema.String });
 
 export const sourceFailure = 'The store failed at /var/lib/ledger/blobs, which no client may read';
 
+const Labelled = Schema.Struct({ name: Schema.String, label: Schema.optionalKey(Schema.String) });
+
 const keepBlob = defineHttpOperation('playbook', 'command', {
   name: 'keep_blob',
   title: 'Keep blob',
-  description: 'Keeps a blob and answers it.',
+  description: 'Keeps a blob and answers it, or the label its query gives it.',
   route: { method: 'POST', path: '/blobs/{name}' },
   body: { kind: 'octet-stream', mostBytes: 1024 },
-  inputSchema: Named,
+  inputSchema: Labelled,
   answer: { kind: 'stream', mediaType: 'application/octet-stream' },
   reasons: [],
-  handle: (_input, body) => Effect.succeed(body),
+  handle: ({ label }, body) =>
+    Effect.succeed(label === undefined ? body : contentOfText(label, 'application/octet-stream')),
 });
 
 const keepRows = defineHttpOperation('playbook', 'command', {

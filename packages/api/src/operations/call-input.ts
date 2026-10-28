@@ -4,6 +4,7 @@ import {
   type HttpBody,
   type InputEncoding,
   type RouteRegistration,
+  type StreamedBody,
   type StreamedContent,
 } from '@on.auto/operations';
 import { Result } from 'effect';
@@ -31,6 +32,19 @@ const queryBesideABody = Result.fail(
     'An operation called by POST or PUT takes no query parameters; send its input in the JSON body',
   ),
 );
+
+function streamedInputOf(
+  request: Request,
+  body: StreamedBody,
+  pathFields: JsonObject,
+  query: URLSearchParams,
+): Result.Result<CallInput, Problem> {
+  return Result.flatMap(queryFieldsOf(query), (given) =>
+    Result.flatMap(combined(pathFields, given, 'strings'), ({ input, encoding }) =>
+      Result.map(streamedBodyOf(request, body), (streamed) => ({ input, encoding, body: streamed })),
+    ),
+  );
+}
 
 function givenTwice(name: string): Result.Result<never, Problem> {
   return Result.fail(problemOf('bad_request', `The field ${name} is given in more than one place`));
@@ -66,16 +80,12 @@ export async function parseCallInput(
   if (takesNoBody(registration.route)) {
     return Result.flatMap(queryFieldsOf(query), (given) => combined(pathFields, given, 'strings'));
   }
-  if (query.size > 0) {
-    return queryBesideABody;
-  }
   const body = registration.servedOverHttpAlone ?? jsonBody;
   if (isStreamedBody(body)) {
-    return Result.map(streamedBodyOf(c.req.raw, body), (streamed) => ({
-      input: pathFields,
-      encoding: 'json',
-      body: streamed,
-    }));
+    return streamedInputOf(c.req.raw, body, pathFields, query);
+  }
+  if (query.size > 0) {
+    return queryBesideABody;
   }
   const given = body.kind === 'json' ? await parseJsonBody(c.req.raw) : await noBodyIn(c.req.raw);
   return Result.flatMap(given, (fields) => combined(pathFields, fields, 'json'));

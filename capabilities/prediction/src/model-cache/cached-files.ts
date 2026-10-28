@@ -58,18 +58,28 @@ async function shelvedIfWhole(path: string, sha256: string): Promise<Shelved | u
   return { path, bytes: found.size, modifiedMs: found.mtimeMs };
 }
 
-async function verifiedEntry(directory: string, fileName: string, name: string): Promise<readonly Shelved[]> {
-  const folder = join(directory, name);
-  const whole = digestName.test(name) ? await shelvedIfWhole(join(folder, fileName), name) : undefined;
+async function verifiedFile(folder: string, name: string, sha256: string): Promise<readonly Shelved[]> {
+  const path = join(folder, name);
+  const whole = await shelvedIfWhole(path, sha256);
   if (whole === undefined) {
-    await rm(folder, { recursive: true, force: true });
+    await rm(path, { recursive: true, force: true });
     return [];
   }
   return [whole];
 }
 
-export async function verifiedFilesIn(directory: string, fileName: string): Promise<readonly Shelved[]> {
+async function verifiedEntry(directory: string, name: string): Promise<readonly Shelved[]> {
+  const folder = join(directory, name);
+  const files = digestName.test(name) ? await readdir(folder).catch((): readonly string[] => []) : [];
+  const whole = (await Promise.all(files.map((file) => verifiedFile(folder, file, name)))).flat();
+  if (whole.length === 0) {
+    await rm(folder, { recursive: true, force: true });
+  }
+  return whole;
+}
+
+export async function verifiedFilesIn(directory: string): Promise<readonly Shelved[]> {
   const names = await readdir(directory).catch((): readonly string[] => []);
-  const found = await Promise.all(names.map((name) => verifiedEntry(directory, fileName, name)));
+  const found = await Promise.all(names.map((name) => verifiedEntry(directory, name)));
   return found.flat().toSorted((one, other) => one.modifiedMs - other.modifiedMs);
 }

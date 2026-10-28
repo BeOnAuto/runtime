@@ -2,19 +2,12 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook } from '../build-testing/build-playbook.ts';
-import {
-  answered,
-  askedBuild,
-  runOf,
-  savedFunction,
-  standingOf,
-  uploaded,
-  workOf,
-} from '../build-testing/built-versions.ts';
-import { candidateSha256, performedOnce, performedUntilQuiet } from '../build-testing/due-driving.ts';
+import { answered, askedBuild, runOf, savedFunction, standingOf, workOf } from '../build-testing/built-versions.ts';
+import { performedOnce, performedUntilQuiet } from '../build-testing/due-driving.ts';
 import { scriptedModels } from '../build-testing/scripted-models.ts';
 import { clockRunningFrom } from '../build-testing/suite-clock.ts';
 import { buildsDue } from '../builds/builds-due.ts';
+import { candidateSha256, uploaded } from '../runtime-testing/scripted-candidates.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 

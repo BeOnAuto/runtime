@@ -86,6 +86,7 @@ An interaction function asks a system and returns its result at once, or asks a 
 | Build          | A run of a prediction function that asks a trainer for candidate models, scores them and keeps the winner as a version.    |
 | Trainer        | The person or agent who reads a build's brief and rows, fits models outside the playbook and uploads them.                 |
 | Candidate      | A model file a trainer uploads to a build, scored on periods the trainer never saw.                                        |
+| Model runtime  | What checks, loads and runs the model files of a format: ONNX in the release, others from the extensions a server lists.   |
 | Card           | What a version was built from and how it scored, recorded when the build keeps it.                                         |
 | Shadow         | The trial in which a later version predicts beside the active version as periods close, before it may replace it.          |
 | Active version | The version of a prediction function whose predictions its runs return.                                                    |

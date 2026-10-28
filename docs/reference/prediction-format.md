@@ -13,11 +13,11 @@ Its document says:
 
 ## How a prediction function learns
 
-The function's model is a file in the ONNX format. Someone fits the model outside the playbook, and the playbook judges it. The function is the definition; it does not change when its model does. A model goes through these stages:
+The function's model is a file in a format a [model runtime](model-runtimes.md) of the server executes, such as ONNX. Someone fits the model outside the playbook, and the playbook judges it. The function is the definition; it does not change when its model does. A model goes through these stages:
 
 1. The playbook keeps a **dataset** for the function: one row for each series and period. It builds the rows from its history once the function is saved, or someone uploads them.
 2. A **build** is a run that asks for a new version. It writes the training rows from the dataset. It renders the **brief**, the text in the document's body that a trainer reads first.
-3. The **trainer** is whoever fits the model: a person, or an agent with an environment that runs code. It reads the brief and the rows and fits models. It uploads each model as a **candidate**, a file in the ONNX format.
+3. The **trainer** is whoever fits the model: a person, or an agent with an environment that runs code. It reads the brief and the rows and fits models. It uploads each model as a **candidate**, a file in a format the build's brief lists.
 4. The playbook scores each candidate on periods the trainer never saw, against simple baselines. The winner becomes the function's next version, with a **card** that records how it was built and how it scored.
 5. A later version first runs as a **shadow** beside the current one for some periods. It replaces the current one only when it predicts as well. A person may also have to approve it.
 6. The **active version** makes the predictions. A question is a run that asks for one series, and answers its last observed periods and the periods ahead.
@@ -137,7 +137,7 @@ A question's output is the **prediction**, a [series](output-shapes.md#series) o
 - Each `at` and the `origin` are in the ISO 8601 form of the grain: `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM`, `YYYY-Qn` or `YYYY`.
 - `value` is the 50th percentile, `low` the 10th and `high` the 90th.
 - The observed periods are the last of the window the model reads, so the answer reads nothing more.
-- The run's record holds `version`, the version of the model that predicted, and `coverage`, 0.8, the share of truths `low` and `high` are meant to hold.
+- The run's record holds `version`, the version of the model that predicted, `runtime`, the model runtime that answered, and `coverage`, 0.8, the share of truths `low` and `high` are meant to hold.
 
 `get_definition` shows the [series shape](output-shapes.md#what-a-saved-definition-shows) as the function's `output_schema`, and `series` as its `details.shape`, as for a reasoning function that declares `output.shape: series`. A build's output is `{ version, winner, candidates }`. `version` and `winner` are null when no candidate beat the baselines.
 
@@ -309,6 +309,8 @@ The body of the document is the brief, a Liquid template that a build renders fo
 
 Write what the trainer needs to know that the rows do not say: what the target means, why a feature matters, what a good model must not do.
 
+The build closes the brief with a section `## Candidates` naming the formats an upload takes; the bounds above are the brief's before it.
+
 ## A build
 
 A build asks a trainer for candidate models. It scores each against rows the trainer never saw, and keeps the best as the function's next version. To ask for one, run the function with the input `{ build: {} }` through `run_definition`. A person, a schedule and a workflow step all ask this way. The run returns `started` and waits for its trainer; `get_run` shows it until it ends.
@@ -336,10 +338,10 @@ Of these refusals:
 - Two builds asked at the same moment are decided one after the other, and the second is refused at its claim. The rows and the brief it wrote stay kept under their digests, though no record names them.
 - The builds the server is scoring, and the playbook's open requests, are counted before the build is decided. So builds asked at the same moment may pass those two bounds, by up to their number.
 
-Otherwise the build writes the two files of [The rows a build reads](#the-rows-a-build-reads) and scores each baseline it names over the scoring rows, as [How a candidate is scored](#how-a-candidate-is-scored) does, in a model process it waits up to 30 seconds for. A candidate must beat each walked baseline, and no score is below 0. So when a walked baseline scores 0 on `evaluation.metric` wherever that metric is defined, and is defined somewhere, the build is refused `baseline_perfect` before it renders its brief. This happens when the periods held back never move: `persistence` then predicts each one exactly, and its `mase` is 0. When no series moved during the training periods, `mase`, which scales each error by that movement, scores no period held back, so no candidate could be judged against a walked baseline, and the build is refused `unscorable`. A series with nothing held back is left out, and a build whose baselines walk no series goes ahead, judged by its coverage alone; `winkler` and `quantile` judge such series. Either way, a build can be asked again once the series moves. Otherwise the build renders the brief over the two files and asks its trainer:
+Otherwise the build writes the two files of [The rows a build reads](#the-rows-a-build-reads) and scores each baseline it names over the scoring rows, as [How a candidate is scored](#how-a-candidate-is-scored) does, in a model process it waits up to 30 seconds for. A candidate must beat each walked baseline, and no score is below 0. So when a walked baseline scores 0 on `evaluation.metric` wherever that metric is defined, and is defined somewhere, the build is refused `baseline_perfect` before it renders its brief. This happens when the periods held back never move: `persistence` then predicts each one exactly, and its `mase` is 0. When no series moved during the training periods, `mase`, which scales each error by that movement, scores no period held back, so no candidate could be judged against a walked baseline, and the build is refused `unscorable`. A series with nothing held back is left out, and a build whose baselines walk no series goes ahead, judged by its coverage alone; `winkler` and `quantile` judge such series. Either way, a build can be asked again once the series moves. Otherwise the build renders the brief over the two files, closes it with a section `## Candidates` that names the formats the server's model runtimes execute for the function, and asks its trainer:
 
-- With `source.to`, the default, the build is a request in the playbook's inbox. `list_interactions` lists it for its party. Its message, within 8 KiB, names the build's run id, its three routes and the opening of the brief. Its answer is `{ candidates, recipe?, limitations? }`.
-- With `source.through`, the build starts that interaction function with the input `{ build: { run_id, function, brief_sha256, routes, expires_at } }`. That function's request is the one the inbox lists, and its answer is the build's.
+- With `source.to`, the default, the build is a request in the playbook's inbox. `list_interactions` lists it for its party. Its message, within 8 KiB, names the build's run id, its three routes, the formats an upload takes and the opening of the brief. Its answer is `{ candidates, recipe?, limitations? }`.
+- With `source.through`, the build starts that interaction function with the input `{ build: { run_id, function, brief_sha256, routes, formats, expires_at } }`. That function's request is the one the inbox lists, and its answer is the build's.
 
 ### Sending a build through an interaction function
 
@@ -386,7 +388,7 @@ A trainer is whoever fits the model: a person, or any agent with an environment 
 1. Find the build. `list_interactions` with `to` set to the function's party lists its request; the party is `trainer` unless `source.to` names another. The request's `run_id` is the build's. Its message names the three routes below and how to answer. With `source.through`, the message of that function's request carries the build's `run_id` and routes; see [Sending a build through an interaction function](#sending-a-build-through-an-interaction-function).
 2. Read the brief and the training rows over the routes below, sending the key as `Authorization: Bearer <key>`.
 3. Fit a model to the rows, as the brief and the rules say.
-4. Export it to ONNX in [the signature of a candidate](#the-signature-of-a-candidate), within 64 MiB.
+4. Export it in a format the brief lists, in [the signature of a candidate](#the-signature-of-a-candidate), within 64 MiB.
 5. Upload each candidate, at most 8, and keep the SHA-256 each upload returns as `candidate`.
 6. Answer the request, under the `run_id` that `list_interactions` gave, through the tool `answer_interaction`, or over HTTP alone with `POST /v1/orgs/{org}/playbooks/{playbook}/runs/{run_id}/answer` and the same key. The answer is `{ "candidates": [<the SHA-256 of each>] }`, with `recipe` and `limitations` in words beside them if the trainer wrote them. Over HTTP, the body is `{ "answer": { "candidates": [...] } }`.
 
@@ -396,7 +398,7 @@ An agent that can only call tools, as an agent connected to the runtime over MCP
 | -------------------------------------- | ------------------------------------------ | ---------------- |
 | `GET /runs/{run_id}/build/brief`       | The brief, as `text/markdown`, whole       | `playbook:read`  |
 | `GET /runs/{run_id}/build/rows`        | The training rows, as `text/csv`, streamed | `playbook:read`  |
-| `POST /runs/{run_id}/build/candidates` | `{ candidate, bytes, opset }` for a model  | `playbook:write` |
+| `POST /runs/{run_id}/build/candidates` | `{ candidate, bytes, format, signature }`  | `playbook:write` |
 
 The routes are relative to `/v1/orgs/{org}/playbooks/{playbook}` and served over HTTP alone. Send the caller's own key as `Authorization: Bearer <key>`; a runtime in [local mode](../self-host/security.md#local-mode) does not ask for one. The routes serve only a build that waits for its answer:
 
@@ -404,10 +406,11 @@ The routes are relative to `/v1/orgs/{org}/playbooks/{playbook}` and served over
 - a run that is no build is refused `conflict` with the kind `not_a_build`;
 - a build that took its answer or ended is refused `conflict` with the kind `build_ended`.
 
-A candidate is the ONNX file, sent as `application/octet-stream` with its `Content-Length`:
+A candidate is the model's file, sent as `application/octet-stream` with its `Content-Length`, its format in the query, `?format=onnx`:
 
 - A body without a `Content-Length` is refused with 411, and one past 64 MiB with 413, before the body is read.
-- The playbook checks the file in a model process within 30 seconds. It refuses the file as `invalid_input` when the runtime does not load it, or when its signature is not the one the function feeds. It also refuses an opset older than 13, and any file once the build has its 8 candidates.
+- `format`, one the brief lists, may be left out when it lists one; another is refused `invalid_input` at `/format` before the body is read.
+- The runtime of its format checks the file in a model process within 30 seconds. The playbook refuses it as `invalid_input` when the runtime does not load it or finds its signature is not the one the function feeds, and any file once the build has its 8 candidates.
 - It responds `unavailable` with the kind `model_process_busy` while every model process a build may hold is taken. A check holds one of the processes that builds share, never one a question needs.
 - The same accepted bytes sent again return the same result, and nothing is recorded for them twice. A refused file sent again is checked again and refused again.
 - Uploads checked at the same moment may pass eight. The one recorded past the eighth is refused `conflict`, "The build took its 8 candidates meanwhile", and records nothing.
@@ -421,7 +424,7 @@ An answer that comes through the function of `source.through` is checked the sam
 
 ### The signature of a candidate
 
-A candidate takes the target, and the features the function names, over the periods up to an origin. It returns the 10th, 50th and 90th percentiles of each step ahead:
+A candidate takes the target, and the features the function names, over the periods up to an origin. It returns the 10th, 50th and 90th percentiles of each step ahead. The runtime of a candidate's format checks it against what the function feeds. In ONNX, the release's format, they are tensors:
 
 | Tensor  | Shape       | Type    | What it is                                                                                                       |
 | ------- | ----------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -440,7 +443,7 @@ A candidate takes the target, and the features the function names, over the peri
 
 ### How a candidate is scored
 
-The playbook walks each candidate over the scoring rows, one at a time, in a model process. Each held-back period is an origin. At each origin, it feeds the series up to that origin and reads the steps ahead that the holdout holds. It scores each horizon over every series:
+The playbook walks each candidate over the scoring rows, one at a time, in a model process, by the runtime of its format. Each held-back period is an origin. At each origin, it feeds the series up to that origin and reads the steps ahead that the holdout holds. It scores each horizon over every series:
 
 - `mase`: the mean absolute error, scaled by the error of the naive forecast over the training periods (one period to the next, or one season when a season is named);
 - `winkler`: the width of the interval from the 10th to the 90th percentile, plus ten times how far a truth falls outside it;
@@ -453,6 +456,7 @@ For each baseline, it estimates `p_better`: how sure it is that the candidate is
 
 A candidate is disqualified when:
 
+- no runtime of the server executes its format, as `not_loaded`;
 - its model process takes longer than 10 minutes, runs out of memory or ends;
 - it returns a tensor of another shape, a number that is not finite, or, at any origin, a 10th percentile above its 50th or a 90th below it, which a question would refuse;
 - its interval holds fewer truths than `coverage_floor`;
@@ -472,7 +476,7 @@ A build keeps a winner that beats the baselines as the function's next version. 
 
 - the build, and who trained it;
 - the dataset's digests and figures;
-- the file's digest, size and opset;
+- the file's digest, size, `format` and `signature`, and the `runtime` that scored it;
 - the features;
 - the scores, the coverage, and `p_better` against each baseline;
 - the baselines' scores;
@@ -565,6 +569,7 @@ A question ends within its call and cannot be cancelled while it runs:
 | `unavailable`, kind `model_process_failed`                         | The model process ended before it returned, such as when it ran out of time or memory                                                    |
 | `unavailable`, kind `model_process_failed`, because `not_finite`   | The model returned a number that is not finite, or a shape its signature does not give; asking again does not change it                  |
 | `unavailable`, kind `model_process_failed`, because `not_in_order` | The model returned a low above its likely value or a high below it, which no series holds; asking again does not change it               |
+| `unavailable`, because `no_model_runtime`                          | Of the kind `model_process_failed`: no runtime of the server executes the active version's format                                        |
 | `failed`                                                           | The runtime itself broke down                                                                                                            |
 
 A build finishes later, so `run_definition` returns it `started` and `get_run` shows how it ended:
@@ -686,7 +691,7 @@ A run that does not succeed raises the error of its rejection:
 - A build nobody answered raises the [problem type](http.md#responses-and-errors) `https://on.auto/problems/unanswered`, status 410, with the kind `expired`. Only a `catch` that names that type or status 410, or catches every error, takes it. So a workflow handles an unanswered build only on purpose.
 - A refusal raises status 503 for `unavailable` and 409 for `conflict`, with its `kind` and `because`.
 - `model_process_busy`, and a dataset still being built, pass with time. So a retry on status 503 suits a build as it suits a question.
-- These do not change when tried again: `builds_full` with `because` `builds_of_the_day`, a `stalled` dataset, and a `not_finite` or `not_in_order` result. Neither do `no_active_version` and `data_changed`, until a build makes a version. So leave 409 out of a retry policy, and read `$error.because` in a `when` to leave out the rest.
+- These do not change when tried again: `builds_full` with `because` `builds_of_the_day`, a `stalled` dataset, a `not_finite` or `not_in_order` result, and `no_model_runtime`. Neither do `no_active_version` and `data_changed`, until a build makes a version. So leave 409 out of a retry policy, and read `$error.because` in a `when` to leave out the rest.
 
 A workflow on a [schedule](workflow-format.md#triggers) can ask for a build on that schedule, within the builds a function may ask for in a day.
 
@@ -698,6 +703,6 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 ## Availability
 
-Prediction functions are available in every runtime. The runtime keeps the datasets, scores the candidates and predicts, running each model in a model process of the server. A trainer fits its models outside it. See [Functions and availability](../concepts/functions.md#availability).
+Prediction functions are available in every runtime. The runtime keeps the datasets, scores the candidates and predicts, running each model in a model process of the server, through the [model runtime](model-runtimes.md) of its format. A trainer fits its models outside it. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

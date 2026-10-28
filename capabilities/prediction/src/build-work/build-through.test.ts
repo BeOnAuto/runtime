@@ -2,10 +2,12 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbook.ts';
-import { readOf, runOf, standingOf, uploaded, workOf } from '../build-testing/built-versions.ts';
-import { candidateSha256, performedOnce, performedUntilQuiet } from '../build-testing/due-driving.ts';
+import { readOf, runOf, standingOf, workOf } from '../build-testing/built-versions.ts';
+import { performedOnce, performedUntilQuiet } from '../build-testing/due-driving.ts';
 import { sentThrough } from '../build-testing/sent-builds.ts';
 import { predictionBuildsName } from '../builds/build-rows.ts';
+import { uploaded } from '../runtime-testing/scripted-candidates.ts';
+import { candidateSha256 } from '../runtime-testing/scripted-candidates.ts';
 import { readBuildBrief } from '../trainer/build-reads.ts';
 import { childIdOf } from './child-runs.ts';
 
@@ -129,7 +131,7 @@ describe('a build sent through an interaction function, read and answered around
       input: { build: { run_id: 'asked-by-hand', function: 'daily-visits' } },
     });
 
-    expect(brief).toBe('Fit a model of the daily visits of each of 2 stores.');
+    expect(brief).toMatch(/^Fit a model of the daily visits of each of 2 stores\.\n\n## Candidates\n/u);
     expect(await standingOf(playbook)).toMatchObject({ output: { standing: { build: { run_id: build } } } });
   });
 

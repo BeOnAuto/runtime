@@ -1,8 +1,9 @@
 import { DefinitionContextSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
+import { CandidateSignatureSchema } from '@on.auto/prediction-contract';
 import { Schema } from 'effect';
 
 import { BaselineSchema } from '../document/evaluation-names.ts';
-import { AgainstSchema, ScoreSchema, TensorSchema } from './build-facts.ts';
+import { AgainstSchema, RuntimeSchema, ScoreSchema } from './build-facts.ts';
 
 export const modelsStreamKind = 'models';
 
@@ -34,8 +35,8 @@ const CardSchema = Schema.Struct({
   build: Schema.String,
   trained_by: RecordedCallerSchema,
   dataset: CardDatasetSchema,
-  file: Schema.Struct({ sha256: Schema.String, bytes: Schema.Int, opset: Schema.Int }),
-  inputs: Schema.Array(TensorSchema),
+  file: Schema.Struct({ sha256: Schema.String, bytes: Schema.Int, format: Schema.String, runtime: RuntimeSchema }),
+  signature: CandidateSignatureSchema,
   features: Schema.optionalKey(Schema.Array(Schema.String)),
   given: Schema.optionalKey(Schema.Array(Schema.String)),
   scores: Schema.Array(ScoreSchema),
@@ -57,6 +58,7 @@ const ShadowPredictedSchema = Schema.Struct({
   version: Schema.Int,
   of: Schema.Int,
   build: Schema.String,
+  runtime: Schema.NullOr(RuntimeSchema),
   origin: Schema.String,
   count: Schema.Int,
   missing: Schema.Int,
@@ -91,6 +93,7 @@ const ActivatedSchema = Schema.Struct({
   definition_version: Schema.Int,
   data_sha256: Schema.String,
   file_sha256: Schema.String,
+  file_format: Schema.String,
   rule: ActivationRuleSchema,
   approved_by: Schema.optionalKey(RecordedCallerSchema),
   build: Schema.optionalKey(Schema.String),

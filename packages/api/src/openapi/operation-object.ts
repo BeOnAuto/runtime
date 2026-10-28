@@ -96,7 +96,7 @@ function inputPartsOf(registration: RouteRegistration, operationId: string): Inp
   }
   const body = registration.servedOverHttpAlone ?? { kind: 'json' };
   if (isStreamedBody(body)) {
-    return { parameters: path, requestBody: streamedBodyOf(body) };
+    return { parameters: [...path, ...queryParametersOf(registration, given)], requestBody: streamedBodyOf(body) };
   }
   return body.kind === 'json'
     ? { parameters: path, requestBody: jsonBodyOf(operationId, given, registration.refusesEmptyBody) }

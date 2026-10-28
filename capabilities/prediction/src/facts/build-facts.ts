@@ -1,15 +1,10 @@
 import { RunContextSchema, factOf } from '@on.auto/operations';
+import { CandidateSignatureSchema } from '@on.auto/prediction-contract';
 import { Option, Schema } from 'effect';
 
 import { BaselineSchema } from '../document/evaluation-names.ts';
 
-export const TensorSchema = Schema.Struct({
-  name: Schema.String,
-  type: Schema.String,
-  shape: Schema.Array(Schema.Union([Schema.Int, Schema.String])),
-});
-
-export type TensorSignature = typeof TensorSchema.Type;
+export const RuntimeSchema = Schema.Struct({ name: Schema.String, version: Schema.String });
 
 export const ScoreSchema = Schema.Struct({
   horizon: Schema.NullOr(Schema.Int),
@@ -56,9 +51,9 @@ export type Assembled = typeof AssembledSchema.Type;
 const UploadedSchema = Schema.Struct({
   sha256: Schema.String,
   bytes: Schema.Int,
-  opset: Schema.Int,
-  inputs: Schema.Array(TensorSchema),
-  outputs: Schema.Array(TensorSchema),
+  format: Schema.String,
+  runtime: RuntimeSchema,
+  signature: CandidateSignatureSchema,
 });
 
 const RefusedSchema = Schema.Struct({
@@ -70,6 +65,7 @@ const RefusedSchema = Schema.Struct({
 
 const ScoredSchema = Schema.Struct({
   sha256: Schema.String,
+  runtime: RuntimeSchema,
   scores: Schema.Array(ScoreSchema),
   coverage: Schema.NullOr(Schema.Number),
   against: Schema.Array(AgainstSchema),
