@@ -125,6 +125,14 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Fix.** An owner of the org gets more credits at `resolve_at`, in Studio, with a plan or a top-up, or, for an offline installation, requests more there. Ask for the run again once they are added.
 
+## A run is refused as `account_closed` {#account-closed}
+
+**Symptom.** A run, or an activation of the license, is answered `409` with the kind `account_closed`, in the words of the org's account, its case in `because`, `org_deleted` or `org_purged`, and, where the account gives one, the page to restore the org in `resolve_at`.
+
+**Cause.** The org's account at Auto is closed. With `org_deleted`, the org was deleted and can still be restored, but only for a limited time; after it, the org is purged. With `org_purged`, it was, and cannot be restored.
+
+**Fix.** For `org_deleted`, an owner of the org restores it at `resolve_at`, which says until when it can be, and asks for the run again. For `org_purged`, the org's runs never run again; asking again changes nothing.
+
 ## Every run is refused as `metering_fault` {#metering-fault}
 
 **Symptom.** Every new run is answered `409` with the kind `metering_fault`: `This runtime stopped starting runs because`, what the runtime found, then `We need to repair it; see https://studio.on.auto/support (runtime id …). Reading, editing and exporting still work.`, with Studio's support page in `resolve_at` and the runtime's id in `runtime_id`.

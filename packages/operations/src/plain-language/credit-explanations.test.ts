@@ -26,6 +26,21 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
     'Could not run the workflow “tally”: this runtime was removed from its org. To use it again, an owner can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
   ],
   [
+    'an account that is closed, which names no case',
+    { reason: 'conflict', kind: 'account_closed' },
+    'Could not run the workflow “tally”: the account it runs under is closed. A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the details below say which this is, and the resolve_at link, where they give one, says until when.',
+  ],
+  [
+    'an account closed since its org was deleted',
+    { reason: 'conflict', kind: 'account_closed', because: 'org_deleted' },
+    'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted. An owner can restore the org only for a limited time, until the date at the resolve_at link in the details below, after which it is purged and its runs never run again; once it is restored, run this again.',
+  ],
+  [
+    'an account closed since its org was deleted for good',
+    { reason: 'conflict', kind: 'account_closed', because: 'org_purged' },
+    'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted for good. The org can no longer be restored, so none of its runs will run again; the details below say more.',
+  ],
+  [
     'a meter that no longer agrees with its ledger',
     { reason: 'conflict', kind: 'metering_fault' },
     'Could not run the workflow “tally”: this runtime stopped starting runs, since what it counted no longer agrees with its ledger. Auto needs to repair it: the details below give its runtime id and link to Auto’s support at resolve_at. Reading, editing and exporting still work.',
@@ -74,12 +89,29 @@ describe('the words of a refusal of the meter', () => {
         explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'free_month_used' }),
         explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'key_rotated' }),
         explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'installation_revoked' }),
+        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'org_deleted' }),
+        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'org_purged' }),
       ].map(({ why }) => why.slice(why.indexOf(', because') + 2)),
     ).toEqual([
       'because its free runs for the day are used',
       'because its free runs for the month are used',
       'because the key of this runtime was replaced',
       'because this runtime was removed from its org',
+      'because its org was deleted, though for a limited time it can still be restored',
+      'because its org was deleted for good',
     ]);
+  });
+});
+
+describe('the words of a closed account said of a run’s record', () => {
+  it('say what the record holds, the detail of its rejection, and never a link it does not hold', () => {
+    const onRecord = [
+      explanationOf({ reason: 'conflict', kind: 'account_closed' }),
+      explanationOf({ reason: 'conflict', kind: 'account_closed', because: 'org_deleted' }),
+    ].map(({ remedyOnRecord = '' }) => remedyOnRecord);
+
+    expect(onRecord.map((remedy) => remedy.includes('the detail of the rejection below'))).toEqual([true, true]);
+    expect(onRecord.filter((remedy) => remedy.includes('resolve_at'))).toEqual([]);
+    expect(onRecord.flatMap((remedy) => internalTermsIn(remedy))).toEqual([]);
   });
 });

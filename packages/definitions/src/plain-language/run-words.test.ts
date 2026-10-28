@@ -117,6 +117,16 @@ const rejections: ReadonlyArray<readonly [string, Readonly<Record<string, unknow
     'the step that waited for it ran out of time, so it was cancelled. Nothing more of it runs, but what it did before may have changed something; the step that waited for it decides what happens next.',
   ],
   [
+    'an account closed since its org was deleted, which an owner can restore for a limited time, in what its record holds',
+    { reason: 'conflict', detail: 'x', kind: 'account_closed', because: 'org_deleted' },
+    'the account it runs under is closed, since its org was deleted. An owner can restore the org only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below gives what its account said, and once the org is restored, it can be run again.',
+  ],
+  [
+    'an account closed since its org was deleted for good',
+    { reason: 'conflict', detail: 'x', kind: 'account_closed', because: 'org_purged' },
+    'the account it runs under is closed, since its org was deleted for good. The org can no longer be restored, so none of its runs will run again; the details below say more.',
+  ],
+  [
     'a step that met a run whose tools may have been called',
     { reason: 'conflict', detail: 'x', kind: 'tools_called' },
     'this run calls tools, and an attempt of it under the same id may still be in progress or did not succeed, so its tools may have changed something. So it was not run again: start a new run instead, after checking what its history shows it has called so far.',

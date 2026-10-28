@@ -107,6 +107,8 @@ Each refusal is a problem document with the status `409`, the reason `conflict` 
 | `metering_fault`    | The runtime found its ledger changed under its count                                                                                                   | [Ask Auto for a repair](#faults-and-repairs) at `resolve_at`, Studio's support page, naming the `runtime_id`                                                                                                   |
 | `meter_unavailable` | The runtime could not read its ledger, or reach the account service, to admit the run                                                                  | Ask again shortly; check that the runtime reaches `billing.on.auto`                                                                                                                                            |
 
+An org's account can also be closed: its runs are then refused as `account_closed`, with `because: "org_deleted"` until an owner restores the org, which they can do only for a limited time, until the date at the `resolve_at` Auto gives, after which the org is purged and its runs, with `because: "org_purged"`, never run again.
+
 The `detail` of a `license_invalid` refusal says which case it is:
 
 | Case                            | `detail`                                                                                                                                                                                |

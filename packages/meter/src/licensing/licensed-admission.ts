@@ -1,12 +1,20 @@
 import type { MeteredRun } from '@on.auto/definitions';
-import { Conflict, type Unavailable } from '@on.auto/operations';
-import { Effect, Option, Schema } from 'effect';
+import type { Conflict, Unavailable } from '@on.auto/operations';
+import { Effect, Option } from 'effect';
 
 import type { AccountRefusal } from '../accounts/account-failure.ts';
 import { actionOf, checkpointed, meterStateOf } from '../admission/metering.ts';
 import type { Counting } from '../counting/run-starts.ts';
 import { standingFor } from './activation.ts';
-import { accountUnavailable, invalidated, invalidityOf, licenseInvalidated, type Licensing } from './licensing.ts';
+import {
+  accountUnavailable,
+  invalidated,
+  invalidityOf,
+  isRefusedAsAnswered,
+  licenseInvalidated,
+  refusedAsAnswered,
+  type Licensing,
+} from './licensing.ts';
 import { admissionIn } from './signed-answers.ts';
 
 interface Asking {
@@ -15,25 +23,15 @@ interface Asking {
   readonly counting: Counting;
 }
 
-const isCreditBecause = Schema.is(Schema.Literals(['none_left', 'free_daily_limit', 'free_month_used']));
-
-function creditsExhausted({ detail, because, resolve_at: resolveAt }: AccountRefusal): Conflict {
-  return new Conflict({
-    detail,
-    kind: 'credits_exhausted',
-    ...(isCreditBecause(because) ? { because } : {}),
-    ...(resolveAt !== undefined && URL.canParse(resolveAt) ? { resolve_at: resolveAt } : {}),
-  });
-}
-
 function refused(
   licensing: Licensing,
   key: string,
   installation: string,
 ): (failure: AccountRefusal) => Effect.Effect<never, Conflict | Unavailable> {
   return (failure) => {
-    if (failure.kind === 'credits_exhausted') {
-      return Effect.fail(creditsExhausted(failure));
+    const { kind } = failure;
+    if (isRefusedAsAnswered(kind)) {
+      return Effect.fail(refusedAsAnswered(kind, failure));
     }
     if (failure.kind === 'license_invalid') {
       const invalidity = invalidityOf(failure);

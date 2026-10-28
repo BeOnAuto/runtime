@@ -15,6 +15,7 @@ import {
   licenseInvalidated,
   licenseNotRenewed,
   nowMs,
+  refusedAsAnswered,
   usageFrom,
   type Licensing,
 } from './licensing.ts';
@@ -57,6 +58,7 @@ function refused(
   installation: string,
 ): (failure: AccountRefusal) => Effect.Effect<never, Conflict | Unavailable> {
   return (failure) => {
+    if (failure.kind === 'account_closed') return Effect.fail(refusedAsAnswered('account_closed', failure));
     if (failure.kind !== 'license_invalid') return Effect.fail(activationUnavailable);
     const invalidity = invalidityOf(failure);
     return Effect.andThen(

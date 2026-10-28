@@ -45,8 +45,8 @@ export function explainedRejectionOf(rejection: DescribedRun['rejection']): Expl
 }
 
 function rejectionWords({ named }: RunContext, { rejection }: DescribedRun): string {
-  const { why, remedy } = explanationOf(explainedRejectionOf(rejection));
-  return `The run of ${named} did not go through: ${why}. ${remedy}`;
+  const { why, remedy, remedyOnRecord = remedy } = explanationOf(explainedRejectionOf(rejection));
+  return `The run of ${named} did not go through: ${why}. ${remedyOnRecord}`;
 }
 
 const wordsByStatus: Readonly<Record<RunDetail['status'], (context: RunContext, run: DescribedRun) => string>> = {

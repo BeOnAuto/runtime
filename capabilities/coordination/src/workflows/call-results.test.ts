@@ -171,6 +171,44 @@ describe('a step that meets a run whose tools may have been called', () => {
   });
 });
 
+describe('a step whose run the meter refuses because the account of its org is closed', () => {
+  const closed = {
+    status: 'rejected',
+    reason: 'conflict',
+    detail: 'The org acme was deleted for good',
+    kind: 'account_closed',
+    because: 'org_purged',
+  } as const;
+
+  it('raises a 409 of the type of account_closed, with its reason, which the document can catch', async () => {
+    expect(await caughtFor(() => closed)).toEqual({
+      kind: 'completed',
+      output: {
+        type: 'https://on.auto/problems/account_closed',
+        status: 409,
+        instance: '/do/0/lookup/try/0/fetch',
+        title: 'The reasoning function lookup could not go through',
+        detail: closed.detail,
+        kind: 'account_closed',
+        because: 'org_purged',
+      },
+    });
+  });
+
+  it('is not retried by a retry of runtime errors, and ends the workflow as that conflict, with its reason', async () => {
+    const { settlement } = await interpret(retryingRuntime, { respond: () => closed });
+
+    expect(settlement).toEqual({
+      status: 'rejected',
+      reason: 'conflict',
+      detail:
+        'The reasoning function lookup could not go through, at the step fetch: The org acme was deleted for good.',
+      kind: 'account_closed',
+      because: 'org_purged',
+    });
+  });
+});
+
 describe('a failed run', () => {
   it('is a runtime error', async () => {
     expect(await caughtFor(() => ({ status: 'failed', detail: 'It failed with incident 7' }))).toEqual({

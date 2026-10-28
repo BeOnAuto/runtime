@@ -1,5 +1,12 @@
-import { Conflict, Unavailable } from '@on.auto/operations';
-import { Clock, Effect } from 'effect';
+import {
+  AccountClosedBecauseSchema,
+  Conflict,
+  CreditsExhaustedBecauseSchema,
+  Unavailable,
+  type ConflictKind,
+  type RejectionBecause,
+} from '@on.auto/operations';
+import { Clock, Effect, Schema } from 'effect';
 
 import type { AccountRefusal } from '../accounts/account-failure.ts';
 import type { AccountPorts, Usage } from '../accounts/account-service.ts';
@@ -34,6 +41,29 @@ export const activationUnavailable = new Unavailable({
   detail: 'This runtime could not reach its account at Auto to activate its license; try again shortly',
   kind: 'meter_unavailable',
 });
+
+type RefusedAsAnswered = Extract<ConflictKind, 'credits_exhausted' | 'account_closed'>;
+
+const becausesOf: Readonly<Record<RefusedAsAnswered, (because: unknown) => because is RejectionBecause>> = {
+  credits_exhausted: Schema.is(CreditsExhaustedBecauseSchema),
+  account_closed: Schema.is(AccountClosedBecauseSchema),
+};
+
+export function isRefusedAsAnswered(kind: string): kind is RefusedAsAnswered {
+  return Object.hasOwn(becausesOf, kind);
+}
+
+export function refusedAsAnswered(
+  kind: RefusedAsAnswered,
+  { detail, because, resolve_at: resolveAt }: AccountRefusal,
+): Conflict {
+  return new Conflict({
+    detail,
+    kind,
+    ...(becausesOf[kind](because) ? { because } : {}),
+    ...(resolveAt !== undefined && URL.canParse(resolveAt) ? { resolve_at: resolveAt } : {}),
+  });
+}
 
 function dayOf(moment: string): string {
   return moment.slice(0, 10);

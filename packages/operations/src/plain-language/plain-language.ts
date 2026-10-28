@@ -5,6 +5,7 @@ export type Remedies = Readonly<Partial<Record<RejectionBecause, string>>>;
 export interface Explanation {
   readonly why: string;
   readonly remedy: string;
+  readonly remedyOnRecord?: string;
   readonly mayHaveChanged?: true;
 }
 

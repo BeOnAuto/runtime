@@ -34,6 +34,20 @@ export const RejectionBecauseSchema = Schema.Literals([
   'free_month_used',
   'key_rotated',
   'installation_revoked',
+  'org_deleted',
+  'org_purged',
 ]);
 
 export type RejectionBecause = typeof RejectionBecauseSchema.Type;
+
+export const CreditsExhaustedBecauseSchema = RejectionBecauseSchema.pick([
+  'none_left',
+  'free_daily_limit',
+  'free_month_used',
+]);
+
+export type CreditsExhaustedBecause = typeof CreditsExhaustedBecauseSchema.Type;
+
+export const AccountClosedBecauseSchema = RejectionBecauseSchema.pick(['org_deleted', 'org_purged']);
+
+export type AccountClosedBecause = typeof AccountClosedBecauseSchema.Type;
