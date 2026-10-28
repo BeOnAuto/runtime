@@ -75,6 +75,65 @@ export function creditCaseBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
+export const closedAccounts = [
+  [
+    'deleted, which can still be restored',
+    {
+      because: 'org_deleted',
+      detail: 'The org acme was deleted; an owner can restore it',
+      resolve_at: 'https://studio.example.com/orgs/acme',
+    },
+  ],
+  ['purged, which never runs again', { because: 'org_purged', detail: 'The org acme was deleted for good' }],
+] as const;
+
+const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
+
+export function closedAccountBehaviour(ledgerOf: LedgerOf): void {
+  it.each(closedAccounts)(
+    'refuses a run as account_closed when the account says the org was %s, in its words and with its reason',
+    async (_, closed) => {
+      const { metered } = await licensedOn(ledgerOf);
+      await metered.admitted(runOf('run-1'));
+      metered.account.close(closed);
+
+      expect(await metered.admitted(runOf('run-2'))).toEqual({ kind: 'account_closed', ...closed });
+    },
+  );
+
+  it.each(closedAccounts)(
+    'refuses to activate a key as account_closed when the org was %s, never as unavailable or as an invalid license',
+    async (_, closed) => {
+      const { metered } = await opened(ledgerOf);
+      const key = metered.account.keyFor(installation);
+      metered.account.close(closed);
+
+      expect(await metered.activated(key)).toEqual({ kind: 'account_closed', ...closed });
+    },
+  );
+
+  it('refuses a run as account_closed when the entitlement it renews is of a closed org, never as a license not renewed', async () => {
+    const [[, deleted]] = closedAccounts;
+    const { metered } = await licensedOn(ledgerOf);
+    await metered.admitted(runOf('run-1'));
+    metered.at(aWeekAndADayLater);
+    metered.account.at(aWeekAndADayLater);
+    metered.account.close(deleted);
+
+    expect(await metered.admitted(runOf('run-2'))).toEqual({ kind: 'account_closed', ...deleted });
+  });
+
+  it('leaves out a reason for closing that is neither of the two, and a place to restore the org that is no URL', async () => {
+    const { metered } = await licensedOn(ledgerOf);
+    metered.account.close({ detail: 'The org acme is closed', because: 'org_suspended', resolve_at: 'the org page' });
+
+    expect(await metered.admitted(runOf('run-1'))).toEqual({
+      kind: 'account_closed',
+      detail: 'The org acme is closed',
+    });
+  });
+}
+
 export function keptWordingBehaviour(ledgerOf: LedgerOf): void {
   it('refuses what is not a key of Studio, and a key Auto does not know, as license_invalid', async () => {
     const { metered } = await opened(ledgerOf);

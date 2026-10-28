@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { problemIn, withMcpSession } from '@on.auto/api/testing';
+import { plainTextIn, problemIn, withMcpSession } from '@on.auto/api/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { accountsServed, installation, servedBy, studio } from '../testing/accounts/licensed-server.ts';
@@ -76,6 +76,30 @@ describe('a licensed runtime the account refuses in the words of its case', () =
       status: 409,
       body: { kind: 'credits_exhausted', because: 'free_daily_limit', resolve_at: `${studio}/billing?org=acme` },
     });
+  });
+});
+
+describe('a licensed runtime whose account answers that the org was deleted', () => {
+  it('refuses a run as account_closed over HTTP and over MCP, in the account’s words, never to ask again shortly', async () => {
+    const accounts = await accountsServed();
+    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
+    const closed = {
+      because: 'org_deleted',
+      detail: 'The org acme was deleted; an owner can restore it',
+      resolve_at: `${studio}/orgs/acme`,
+    } as const;
+    accounts.account.close(closed);
+    const overHttp = await tallied(server);
+    const overMcp = await withMcpSession(
+      'current revision',
+      { url: `${server.origin}/orgs/acme/playbooks/alpha/mcp`, headers: {} },
+      (session) => session.callTool('run_definition', { type: 'workflow', name: 'tally', input: {} }),
+    );
+    const problem = { type: 'https://on.auto/problems/account_closed', status: 409, kind: 'account_closed', ...closed };
+
+    expect(overHttp).toMatchObject({ status: 409, body: problem });
+    expect({ isError: overMcp.isError, problem: problemIn(overMcp) }).toMatchObject({ isError: true, problem });
+    expect(plainTextIn(overMcp)).toContain('An owner can restore the org only for a limited time, until the date at');
   });
 });
 

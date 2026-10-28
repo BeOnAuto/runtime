@@ -3,6 +3,7 @@ import { Effect, Layer, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { admitting, authorityAnswering, cloudMetered } from '../meter-testing/cloud-metered.ts';
+import { closedAccounts } from '../meter-testing/refusal-behaviour.ts';
 import { sqliteLedger } from '../testing/ledgers.ts';
 import { runOf } from '../testing/runs.ts';
 import type { AuthorityAnswer } from './authority.ts';
@@ -65,4 +66,19 @@ describe('a meter whose authority refuses an action with the case and where to r
       resolve_at: 'https://studio.on.auto/billing?org=acme',
     });
   });
+});
+
+describe('a meter whose authority answers that the account of the org is closed', () => {
+  it.each(closedAccounts)(
+    'refuses as account_closed when the org was %s, in its words and with its reason, as a licensed runtime does',
+    async (_, closed) => {
+      const asking = authorityAnswering(() =>
+        Promise.resolve<AuthorityAnswer>({ admitted: false, kind: 'account_closed', ...closed }),
+      );
+      const metered = await cloudMetered(asking);
+
+      expect(await metered.admitted('run-1')).toEqual({ kind: 'account_closed', ...closed });
+      expect(asking.asked()).toEqual(['acme/alpha/run-1']);
+    },
+  );
 });

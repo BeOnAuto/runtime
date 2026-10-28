@@ -1,16 +1,21 @@
 import type { ConflictKind } from '../outcome/conflict.ts';
-import type { RejectionBecause } from '../outcome/rejection-because.ts';
+import type { AccountClosedBecause, CreditsExhaustedBecause, RejectionBecause } from '../outcome/rejection-because.ts';
 import type { UnavailableKind } from '../outcome/unavailable.ts';
 import type { Explanation } from './plain-language.ts';
 
 type CreditKind = Extract<
   ConflictKind | UnavailableKind,
-  'credits_exhausted' | 'license_required' | 'license_invalid' | 'metering_fault' | 'meter_unavailable'
+  | 'credits_exhausted'
+  | 'license_required'
+  | 'license_invalid'
+  | 'account_closed'
+  | 'metering_fault'
+  | 'meter_unavailable'
 >;
 
 type CreditBecause = Extract<
   RejectionBecause,
-  'none_left' | 'free_daily_limit' | 'free_month_used' | 'key_rotated' | 'installation_revoked'
+  CreditsExhaustedBecause | 'key_rotated' | 'installation_revoked' | AccountClosedBecause
 >;
 
 const freeRunsAgain =
@@ -32,6 +37,13 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
     remedy:
       'The details below say why and what to do, and an owner of its org can put it right in Auto Studio at their resolve_at link; then run this again.',
   },
+  account_closed: {
+    why: 'the account it runs under is closed',
+    remedy:
+      'A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the details below say which this is, and the resolve_at link, where they give one, says until when.',
+    remedyOnRecord:
+      'A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below says which this is.',
+  },
   metering_fault: {
     why: 'this runtime stopped starting runs, since what it counted no longer agrees with its ledger',
     remedy:
@@ -49,10 +61,12 @@ export const creditBecauses: Readonly<Record<CreditBecause, string>> = {
   free_month_used: 'because its free runs for the month are used',
   key_rotated: 'because the key of this runtime was replaced',
   installation_revoked: 'because this runtime was removed from its org',
+  org_deleted: 'because its org was deleted, though for a limited time it can still be restored',
+  org_purged: 'because its org was deleted for good',
 };
 
 export const creditExplanationsByBecause: Readonly<
-  Record<'credits_exhausted' | 'license_invalid', Partial<Record<RejectionBecause, Explanation>>>
+  Record<'credits_exhausted' | 'license_invalid' | 'account_closed', Partial<Record<RejectionBecause, Explanation>>>
 > = {
   credits_exhausted: {
     none_left: {
@@ -72,6 +86,19 @@ export const creditExplanationsByBecause: Readonly<
       why: 'this runtime was removed from its org',
       remedy:
         'To use it again, an owner can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
+    },
+  },
+  account_closed: {
+    org_deleted: {
+      why: 'the account it runs under is closed, since its org was deleted',
+      remedy:
+        'An owner can restore the org only for a limited time, until the date at the resolve_at link in the details below, after which it is purged and its runs never run again; once it is restored, run this again.',
+      remedyOnRecord:
+        'An owner can restore the org only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below gives what its account said, and once the org is restored, it can be run again.',
+    },
+    org_purged: {
+      why: 'the account it runs under is closed, since its org was deleted for good',
+      remedy: 'The org can no longer be restored, so none of its runs will run again; the details below say more.',
     },
   },
 };

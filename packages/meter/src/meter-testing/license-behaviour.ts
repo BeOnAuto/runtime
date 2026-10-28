@@ -3,7 +3,12 @@ import { expect, it } from 'vitest';
 import type { Answering } from '../testing/account-fake.ts';
 import { runOf } from '../testing/runs.ts';
 import { licensedInstallation, licensedOn, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
-import { creditCaseBehaviour, keptWordingBehaviour, revocationCaseBehaviour } from './refusal-behaviour.ts';
+import {
+  closedAccountBehaviour,
+  creditCaseBehaviour,
+  keptWordingBehaviour,
+  revocationCaseBehaviour,
+} from './refusal-behaviour.ts';
 
 const installation = licensedInstallation;
 
@@ -281,5 +286,6 @@ export function licensesBehaviour(ledgerOf: LedgerOf): void {
   revocationCaseBehaviour(ledgerOf);
   licensedAdmissionBehaviour(ledgerOf);
   creditCaseBehaviour(ledgerOf);
+  closedAccountBehaviour(ledgerOf);
   keptWordingBehaviour(ledgerOf);
 }

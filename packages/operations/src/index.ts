@@ -268,7 +268,14 @@ export {
   type RunOutcomeWindow,
   type RunStream,
 } from './run-outcomes/run-outcomes.ts';
-export { RejectionBecauseSchema, type RejectionBecause } from './outcome/rejection-because.ts';
+export {
+  AccountClosedBecauseSchema,
+  CreditsExhaustedBecauseSchema,
+  RejectionBecauseSchema,
+  type AccountClosedBecause,
+  type CreditsExhaustedBecause,
+  type RejectionBecause,
+} from './outcome/rejection-because.ts';
 export { Unavailable, UnavailableKindSchema, type UnavailableKind } from './outcome/unavailable.ts';
 export { uuidV5 } from './uuid/uuid-v5.ts';
 export { randomUUIDv7, uuidV7Before, uuidV7TimeOf } from './uuid/uuid-v7.ts';

@@ -1,5 +1,11 @@
 import type { MeteredRun } from '@on.auto/definitions';
-import { Conflict, type RejectionBecause, type Unavailable } from '@on.auto/operations';
+import {
+  Conflict,
+  type AccountClosedBecause,
+  type ConflictKind,
+  type RejectionBecause,
+  type Unavailable,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { Counting } from '../counting/run-starts.ts';
@@ -9,13 +15,23 @@ import type { Signed, Signers } from '../licensing/signed-answers.ts';
 import type { Fault } from '../meter-stream/meter-events.ts';
 import { actionOf, checkpointed, type Metering } from './metering.ts';
 
-interface AuthorityRefusal {
+interface Refusal {
   readonly admitted: false;
-  readonly kind: 'credits_exhausted' | 'license_invalid';
   readonly detail: string;
-  readonly because?: RejectionBecause;
   readonly resolve_at?: string;
 }
+
+interface CreditOrLicenseRefusal extends Refusal {
+  readonly kind: Extract<ConflictKind, 'credits_exhausted' | 'license_invalid'>;
+  readonly because?: RejectionBecause;
+}
+
+interface AccountClosedRefusal extends Refusal {
+  readonly kind: Extract<ConflictKind, 'account_closed'>;
+  readonly because: AccountClosedBecause;
+}
+
+type AuthorityRefusal = CreditOrLicenseRefusal | AccountClosedRefusal;
 
 export type AuthorityAnswer = { readonly admitted: true } | AuthorityRefusal;
 

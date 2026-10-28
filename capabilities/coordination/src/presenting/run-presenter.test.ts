@@ -177,6 +177,10 @@ describe('the words of a rejection of a function a workflow called', () => {
       'A function the workflow called did not succeed. It could not finish after calling a tool that may change something, so whether that happened is not known, because a tool server failed.',
     ],
     [
+      rejectedWith('account_closed', 'org_deleted'),
+      'A function the workflow called did not succeed. The account it runs under is closed, since its org was deleted.',
+    ],
+    [
       rejectedWith('input_schema'),
       'A function the workflow called did not succeed. What was given does not fit what it needs.',
     ],

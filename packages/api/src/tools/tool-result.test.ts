@@ -17,6 +17,12 @@ const exhausted: Rejected = {
   resolve_at: 'https://studio.on.auto/billing',
 };
 
+const purged: Rejected = {
+  ...rejected('conflict', 'The org acme was deleted for good.', undefined, 'account_closed'),
+  because: 'org_purged',
+  resolve_at: 'https://studio.example.com/orgs',
+};
+
 const textsIn = Schema.decodeUnknownSync(
   Schema.Array(Schema.Struct({ type: Schema.Literal('text'), text: Schema.String })),
 );
@@ -54,5 +60,23 @@ describe('the tool result of a refusal of the meter', () => {
       resolve_at: 'https://studio.on.auto/billing',
     });
     expect(problemIn(problem)).not.toHaveProperty('runtime_id');
+  });
+
+  it('says a run of an org whose account is closed never runs again once the org is purged, beside its problem', () => {
+    const [words = '', problem = ''] = textsOf(purged);
+
+    expect(words).toBe(
+      'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted for good. Nothing was changed. The org can no longer be restored, so none of its runs will run again; the details below say more.',
+    );
+    expect(problemIn(problem)).toEqual({
+      type: 'https://on.auto/problems/account_closed',
+      title: 'Account closed',
+      status: 409,
+      detail: 'The org acme was deleted for good.',
+      reason: 'conflict',
+      kind: 'account_closed',
+      because: 'org_purged',
+      resolve_at: 'https://studio.example.com/orgs',
+    });
   });
 });
