@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.0](https://github.com/BeOnAuto/runtime/compare/v0.33.0...v0.34.0) (2026-10-28)
+
+
+### Features
+
+* **meter:** refusals that resolve, and the status of the license ([#364](https://github.com/BeOnAuto/runtime/issues/364)) ([9d55675](https://github.com/BeOnAuto/runtime/commit/9d5567593b455d03fa8a1c9ada989e8920dfb43f))
+
 ## [0.33.0](https://github.com/BeOnAuto/runtime/compare/v0.32.1...v0.33.0) (2026-10-28)
 
 
