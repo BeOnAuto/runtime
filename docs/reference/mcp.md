@@ -2,15 +2,17 @@
 
 Auto Runtime serves its playbook, function and workflow operations to agents over the Model Context Protocol (MCP). Each MCP tool runs one operation of the [HTTP API](http.md), with the same fields, limits and refusals. This page maps each tool to its HTTP section, which is the home of those rules. It also covers what only MCP has: the endpoints, authentication from an MCP client, annotations, guides and prompts, model information, and the shape of results and errors.
 
-To connect Claude Code, Claude Desktop or Codex, follow the [quick start](../get-started/local.md#connect-your-agent). For a worked example, follow [Build your first playbook](../tutorials/first-playbook.md).
+To connect Claude Code, Claude Desktop or Codex, follow the [quick start](../get-started/cloud.md#connect-your-agent). For a worked example, follow [Build your first playbook](../tutorials/first-playbook.md).
 
 ## An inbound interface
 
 MCP here is an inbound interface: an external agent connects to Auto Runtime and calls its operations. It does not configure tools inside a reasoning function.
 
-A reasoning function can call tools itself, through tool servers the runtime's operator configures. That outbound connection is set up on the server, never by adding an endpoint to an external agent. The operator lists each server and the tools it allows in [`tool_servers`](../self-host/configuration.md#tool-servers), and a function names those tools in its [`tools`](reasoning-format.md#tools). [Tool access inside a reasoning function](../concepts/functions.md#tool-access-inside-a-reasoning-function) explains the difference.
+A reasoning function can call tools itself, through tool servers the runtime's operator configures or through [connections](#connections) people add to their organization. That outbound connection is set up in Auto, never by adding an endpoint to an external agent. The operator lists each server and the tools it allows in [`tool_servers`](../self-host/configuration.md#tool-servers), and a function names those tools in its [`tools`](reasoning-format.md#tools). [Tool access inside a reasoning function](../concepts/functions.md#tool-access-inside-a-reasoning-function) explains the difference.
 
 ## Endpoints {#endpoint-scope}
+
+For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization and its playbooks, and handles sign-in through MCP authentication. The paths below describe a self-hosted runtime. The tools a deployment exposes depend on its capabilities and your permissions.
 
 | Path                                   | Acts on                                                                | Tools                                                                                                                      |
 | -------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -50,10 +52,12 @@ The recall sentence says that a recall function reads run results, definitions a
 
 ## Authentication
 
+Hosted Auto signs you in when your agent connects; account creation is part of the same flow.
+
 An MCP client sends the same credentials as any HTTP caller, and has the same permissions; see [Requests and access](http.md#requests-and-access). A client connects in one of three ways:
 
-- With no credential, when the server runs in [local mode](../self-host/security.md#local-mode): it listens only on a loopback address, and neither `PUBLIC_URL` nor `API_KEYS` is set. The quick start's MCP entry starts Auto Runtime this way, and relays the agent to its endpoint, `http://localhost:5555/mcp`. It trusts every request on your computer, so never expose it through a tunnel or public proxy.
-- Signed in, where the operator sets `PUBLIC_URL`. Your agent signs you in through the Auto identity service when it connects. On your own computer, `PUBLIC_URL=http://localhost:5555` turns this on for a server started in a terminal, and the agent then connects to `http://localhost:5555/mcp` over HTTP, as the [quick start](../get-started/local.md#other-ways-to-run-auto) describes, rather than through the MCP entry.
+- Signed in. Hosted Auto uses this flow by default. For a self-hosted runtime, the operator enables sign-in with `PUBLIC_URL`. Your agent discovers the identity service and opens the browser for you to sign in.
+- With no credential, when a self-hosted server runs in [local mode](../self-host/security.md#local-mode). It listens only on a loopback address and trusts requests from that computer. Never expose local mode through a tunnel or public proxy.
 - With an [API key](../self-host/security.md#api-keys), sent as `Authorization: Bearer <key>`. Keep it in the connection configuration, outside prompts and function documents.
 
 [Authentication and security](../self-host/security.md) says how an operator sets each of these up. The [Sign-in and token reference](authentication.md) gives the rules the server applies.
@@ -364,7 +368,7 @@ Read `structuredContent`. The first text block is not JSON. No tool advertises a
 - The summary repeats a short result in words, and points to `structuredContent` for a long one.
 - A review that recommends Revise still belongs to a succeeded run: the operation completed and produced that recommendation.
 
-For a workflow, the summaries read like these. They were recorded from a run of the [first-workflow tutorial](../tutorials/first-workflow.md), in the order the tutorial calls the tools. Only the review's words come from a scripted model:
+These summaries were recorded from a two-step review-and-approval workflow on a self-hosted runtime. Its approval step uses the [example interaction function](interaction-format.md#a-function-document). Only the review's words come from a scripted model:
 
 ```text
 create_definition: Created the interaction function “approve-campaign-brief”. What it does: Asks the campaign owner to approve a reviewed brief. It has been saved but has not been run yet.

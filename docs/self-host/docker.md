@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Run with Docker
 
 This guide runs Auto Runtime with Docker, the tool that runs packaged programs in isolated environments called containers. You start Auto from its image (Auto Runtime packaged to run in a container) on Docker Hub, check that it responds, connect your agent and sign in through the Auto identity service. Then you add a model provider and give a machine or a pipeline an API key.

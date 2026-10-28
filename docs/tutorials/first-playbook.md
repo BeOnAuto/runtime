@@ -6,7 +6,7 @@ The campaign and figures below are sample data. Nothing here touches an advertis
 
 ## Before you start
 
-Finish the [quick start](../get-started/local.md) first. Auto should be running in its terminal window, with your agent (Claude Code, Claude Desktop or Codex) connected to it. Leave Auto running until you finish this tutorial.
+Finish the [quick start](../get-started/cloud.md) first. Your agent should be connected to Auto and signed in to the organization where you want to keep this tutorial.
 
 ## 1. Create a playbook
 
@@ -77,7 +77,7 @@ You should see:
 
 Each run also has its own id (`run_id`), which your agent can use to find this run again later.
 
-To see the same record in your browser, open Auto Studio from the link Auto showed when it started. It shows your playbook, its function and its runs.
+To see the same record in your browser, open [Auto Studio](https://studio.on.auto) in the same organization. Select the playbook, then its function to read the overview and see its runs.
 
 ## 5. Review the revised brief
 
@@ -104,15 +104,15 @@ Your playbook now holds one function and two recorded runs. The criteria live in
 
 Next:
 
-- [Build your first workflow](first-workflow.md) adds a step that asks the brief's owner to approve the review.
+- [Build your first workflow](first-workflow.md) adds a step that drafts feedback from the review.
 - To do the same with your own work, start with [Choose a first use case](https://on.auto/docs/get-started/discover), which helps you pick one repeatable task your team does.
 - [Give a function tools](../guides/tools.md) lets a function look things up while it runs.
 - [Playbooks and methods](../concepts/playbooks.md) explains how this example fits into a bigger playbook.
 
 ## If something goes wrong
 
-- **Your agent says it has no Auto tools.** It isn't connected to Auto. Go back to the quick start's [Connect your agent](../get-started/local.md#connect-your-agent) step.
-- **Your agent can't find a model, or says no model provider is set up.** Auto has no AI model key. Check the key you added in the quick start, and restart Auto.
+- **Your agent says it has no Auto tools.** It isn't connected to Auto. Go back to the quick start's [Connect your agent](../get-started/cloud.md#connect-your-agent) step.
+- **Your agent can't find a model, or says no model provider is set up.** Ask it to list the models Auto offers and show the error. Hosted Auto supplies its own model access; you do not need to add a key.
 - **Your agent suggests a model whose name ends in `*`, such as `anthropic/*`.** That stands for a family of models, not one model. Ask your agent to pick a specific model from the list Auto gives it. Do not use a wildcard as the model.
 - **Your agent reports a permissions error.** Check that it is using the Auto connection from the quick start.
 - **The review invents information.** Ask your agent to show you the function's instructions, and add a rule such as "If the brief does not say, report it as missing."

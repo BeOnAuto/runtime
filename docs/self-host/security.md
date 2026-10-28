@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Authentication and security
 
 Every request to the runtime comes from a caller. This page covers the tasks of the person who runs the server: letting people sign in, issuing API keys, using local mode and opening Studio. The [Sign-in and token reference](../reference/authentication.md) holds the protocol rules behind them.

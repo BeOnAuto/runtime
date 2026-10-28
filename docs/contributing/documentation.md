@@ -16,7 +16,7 @@ Use [Diátaxis](https://diataxis.fr/) to keep learning, doing, looking up and un
 
 Some pages keep an older address for links from elsewhere: Terminology is listed under Reference but lives at `concepts/terminology`, and the configuration reference lives at `self-host/configuration`.
 
-The newcomer pages (the quick start and the tutorials) are written for a business specialist who is new to terminals. Use plain words, explain a term in passing, say what the reader will see, let the agent do the technical work, and name playbooks and functions by plain names in quotes rather than ids.
+The newcomer pages (the quick start and the tutorials) are written for a business specialist using hosted Auto. Use plain words, explain a term in passing, say what the reader will see, let the agent do the technical work, and name playbooks and functions by plain names in quotes rather than ids.
 
 In a tutorial, choose the example for the reader. State prerequisites, show what should happen after each meaningful action and include a check the reader can repeat. Say which output comes from a model and varies, and which the runtime returns every time. Do not invent screens, endpoints or model access to make instructions look complete.
 
@@ -37,7 +37,7 @@ The runtime serves [Terminology](../concepts/terminology.md), every format refer
 
 These public pages under `docs/` hold everything a user of the runtime needs:
 
-- local setup and connecting an agent;
+- connecting an agent to hosted Auto;
 - the concepts, the tutorials and the task guides;
 - the self-hosting guides, from running the image to configuring and operating it;
 - the format of each definition, and the MCP and HTTP references.
@@ -80,7 +80,7 @@ Open the printed `/docs/` URL. Serve the preview through VitePress rather than o
 
 ## Add or change a page
 
-Create Markdown under the relevant directory and add its route to `docs/nav.json`. Links in that file are relative to the documentation base, such as `/concepts/playbooks`; do not prefix them with `/docs`.
+Create Markdown under the relevant directory and add its route to `docs/nav.json`. The local setup page, detailed self-hosting guides and operator model settings retain their addresses for existing links, but stay out of navigation and search. The public self-hosting overview directs new deployments to contact Auto. Links in that file are relative to the documentation base, such as `/concepts/playbooks`; do not prefix them with `/docs`.
 
 Use relative Markdown links inside pages, such as `../concepts/functions.md`. They work in the repository, the standalone preview and the composed website. Do not link to the website's own guides: the standalone preview does not have them, and its build fails on a dead link. Keep assets in `docs/assets/` and refer to them relatively. Do not place secrets or account information in public examples.
 

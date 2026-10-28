@@ -1,8 +1,15 @@
 ---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
 description: Add Auto Runtime to your agent as an MCP server, and let your agent set up the rest.
 ---
 
-# Quick start: connect your agent
+# Run Auto on your computer
+
+For hosted Auto, follow the [quick start](cloud.md). This page is for people maintaining a local runtime.
 
 Add Auto to your agent as an MCP server. Your agent starts Auto on your computer when it connects, and guides you through the rest.
 

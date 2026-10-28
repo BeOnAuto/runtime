@@ -4,7 +4,7 @@ description: Find the tools your Auto offers a playbook, try one, name it in a r
 
 # Give a function tools
 
-Let a reasoning function call tools while it runs, such as tools that read files, search the news or look up records in a business system. Tools come from a tool server: a service or program that offers tools for a function to call. Whoever runs Auto adds tool servers, and one server can serve many playbooks; a person can also add one to the org as a connection, through their agent. This guide uses the servers your Auto already has, and needs only your agent.
+Let a reasoning function call tools while it runs, such as tools that read files, search the news or look up records in a business system. Tools come from a tool server: a service or program that offers tools for a function to call. Connect a provider to your organization through your agent or Studio. That connection can serve several playbooks. Self-hosted operators can also configure tool servers for their deployment. This guide uses the servers your Auto already has, and needs only your agent.
 
 If no server offers the tools you need, [connect a provider](#connect-a-provider) that does, or [ask for a tool server](#ask-for-a-tool-server). If you run Auto yourself, [Add a tool server](../self-host/tool-servers.md) shows how to add it.
 
@@ -94,7 +94,7 @@ Check the run's status and output. Then check its history, which the agent reads
 
 The agent can read a call's whole arguments and answer with `get_event`, unless the server's entry keeps only their sizes.
 
-## Example: review a brief from the folder
+## Self-hosted example: review a brief from a folder {#example-review-a-brief-from-the-folder}
 
 This reasoning function reads one brief through the `files` server that [Example: a folder of briefs](../self-host/tool-servers.md#example-a-folder-of-briefs) adds, and reviews it. That server reads paths inside its `briefs` folder. `list_directory` with the path `.` lists the folder itself, one line such as `[FILE] autumn-reporting-trial.txt` for each file. `read_text_file` takes the file name alone as its `path`, and optionally `head` or `tail` to read only the first or last lines. If your model provider is not Anthropic, ask your agent to use one of your provider's models.
 
@@ -143,6 +143,10 @@ If `search` lists no provider for the service, the agent can add its server by h
 
 ## Ask for a tool server
 
+For hosted Auto, ask your agent to add a connection using the service's remote MCP address or OpenAPI document. The [connection reference](../reference/http.md#connections) describes these options. Enter credentials on the Studio page the agent gives you. If Auto cannot connect the service, [get in touch](https://on.auto/contact-us) with its name and the error.
+
+::: details For an existing self-hosted deployment
+
 Whoever runs Auto adds tool servers. Send them a message like this one, with your details in place of the parts in angle brackets. If the service needs a key, send the key separately, never through a prompt or a chat with your agent.
 
 ```text
@@ -157,6 +161,8 @@ https://on.auto/docs/self-host/tool-servers.
 ```
 
 When they confirm, start again at [Find the tools](#find-the-tools).
+
+:::
 
 ## If something goes wrong
 

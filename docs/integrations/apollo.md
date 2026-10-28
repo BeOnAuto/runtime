@@ -15,14 +15,14 @@ There are two ways to bring graph data into a function. They use different Apoll
 | [Pass graph evidence in](#pass-graph-evidence-into-a-function)    | Your agent, through Apollo MCP Server, beside its connection to Auto | You want to check the evidence yourself before a function runs        |
 | [Let the function call the graph](#let-a-function-call-the-graph) | Auto, through Apollo GraphOS Agent Services added as a tool server   | The function runs without you, such as in a workflow or on a schedule |
 
-In the first path, the function only sees the values your agent passes in. It does not inherit your agent's graph connection, query history or other context. In the second, the function calls the graph through Auto's tool server entry, with a key of its own that is separate from any your agent holds. Auto does not require Apollo for either.
+In the first path, the function only sees the values your agent passes in. It does not inherit your agent's graph connection, query history or other context. In the second, the function calls the graph through an Auto connection, with a key of its own that is separate from any your agent holds. Auto does not require Apollo for either.
 
 ## Before you start
 
-- Auto runs, and your agent is connected to it. The [quick start](../get-started/local.md) sets both up.
+- Your agent is connected to Auto. The [quick start](../get-started/cloud.md) sets this up.
 - You have a playbook with a reasoning function to give the data to, or you are about to write one. [Reasoning function format](../reference/reasoning-format.md) describes the document.
 - You may read the data you need through your graph.
-- For the second path, you can restart Auto, and you or your agent can edit its settings file, `auto-runtime.yaml`. If someone else runs Auto, [ask them to add the tool server](../guides/tools.md#ask-for-a-tool-server) instead.
+- For the second path, you have the remote MCP address and application API key from Apollo GraphOS Agent Services, and may connect it to your Auto organization.
 
 Decide which data the function needs, and confirm that it may be sent to Auto and to the function's model provider. A function's inputs and results become part of its recorded run. So do the graph's answers to a function's tool calls, unless the tool server's entry turns `record_content` off.
 
@@ -76,27 +76,21 @@ Check that the prompt contains the evidence you approved, and that the result co
 
 ## Let a function call the graph
 
-Apollo GraphOS Agent Services can be a tool server that Auto connects to. It fronts the systems your organization connected to it and applies its own policies to the application whose key Auto uses. [Add a tool server](../self-host/tool-servers.md) walks through adding any tool server, and [Give a function tools](../guides/tools.md) through using one. The steps below are what differ for Apollo.
+Apollo GraphOS Agent Services fronts the systems your organization connected to it and applies its own policies to the application whose key Auto uses. Connect its remote MCP server to Auto, then follow [Give a function tools](../guides/tools.md) to use it.
 
-### 1. Add the graph as a tool server
+### 1. Connect the graph to Auto
 
-Get an application API key from Apollo for the application that should serve your playbook. Then ask your agent to add an entry to `auto-runtime.yaml`, with the MCP address Apollo gives you in place of the example one:
+Get an application API key from Apollo for the application that should serve your playbook. Keep the key out of the conversation. Ask your agent:
 
-```yaml
-tool_servers:
-  graph:
-    url: https://agents.example.com/mcp
-    headers:
-      Authorization: Bearer ${GRAPH_API_KEY}
-    org: acme
-    playbooks: [marketing]
+```text
+Add an MCP connection named graph to my Auto organization, using
+<the remote MCP address Apollo gave me>. It authenticates with a bearer
+API key. Show me the connection page so I can enter the key there.
 ```
 
-`org` names your org, and `playbooks` the ids of the playbooks whose functions may use the graph; the agent puts your own in place of `acme` and `marketing`. On an Auto only you use, `org: '*'` without `playbooks` works too. Put the key in `.env` yourself as `GRAPH_API_KEY=` followed by the key, never in a prompt, and restart Auto. The key never goes in `auto-runtime.yaml`.
+Open the Studio link your agent gives you, review the request and enter the key. The connection should show as connected. It belongs to your organization; give individual functions only the tools they need.
 
-Check that Auto starts. If it stops, the message names the line and the key at fault.
-
-If someone else runs Auto, send them the message in [Ask for a tool server](../guides/tools.md#ask-for-a-tool-server). Give them the address Apollo gives you and the playbook, and send the key separately. Go on to the next step when they confirm.
+If Auto refuses the address or the connection type, ask your agent to show the reason. [Contact Auto](https://on.auto/contact-us) if the service needs configuration you cannot change.
 
 ### 2. Find the operations
 

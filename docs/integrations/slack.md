@@ -8,7 +8,7 @@ Connect your Slack account to Auto, so that the functions in your playbooks can 
 
 ## What you need
 
-- Auto running, with your agent connected to it as you. The [quick start](../get-started/local.md) sets this up on your own computer. On an Auto your team runs, your agent is signed in as you, with permission to change your org; an agent connected with a key cannot add a connection.
+- Your agent connected to Auto and signed in as you, with permission to change your org. Follow the [quick start](../get-started/cloud.md) if you have not connected yet. An agent connected with an API key cannot add a connection.
 - A Slack account in the workspace you want to connect. Auto reaches Slack at `slack.com` and `mcp.slack.com`.
 - If your workspace takes only the apps its owners approve, Slack asks you to request the app, and you allow access once a workspace owner or app manager approves it.
 

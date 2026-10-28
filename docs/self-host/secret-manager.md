@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Keep secrets in your secret manager
 
 By default the runtime keeps each secret it holds, such as a key a person pasted for a connection, a client secret you registered or the tokens a person's consent gives, sealed in the ledger's database under the secrets key, as [Secrets at rest](security.md#secrets-at-rest) describes. Set `SECRETS_KEEPER`, and it keeps each value in AWS Systems Manager Parameter Store instead, as it is, under the manager's own encryption. The ledger then keeps only the bookkeeping of each secret: its version, its claim while its tokens are renewed, its ending and the name and version of its value in Parameter Store. No secret rests in the runtime's database or in a backup of it, and no secrets key is needed.

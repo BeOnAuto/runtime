@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Workflow storage and failover
 
 The server runs its workflows itself, in its own process, and keeps their state in the ledger's database. Nothing runs beside the server, in development or in a container.

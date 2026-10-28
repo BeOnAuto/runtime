@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Use PostgreSQL
 
 Set `DATABASE_URL` to a PostgreSQL database, and the server keeps its ledger there instead of in a SQLite file. Use PostgreSQL when:

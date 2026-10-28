@@ -8,7 +8,7 @@ Connect your Zoom account to Auto, so that the functions in your playbooks can r
 
 ## What you need
 
-- Auto running, with your agent connected to it as you. The [quick start](../get-started/local.md) sets this up on your own computer. On an Auto your team runs, your agent is signed in as you, with permission to change your org; an agent connected with a key cannot add a connection.
+- Your agent connected to Auto and signed in as you, with permission to change your org. Follow the [quick start](../get-started/cloud.md) if you have not connected yet. An agent connected with an API key cannot add a connection.
 - A Zoom account. Auto reaches Zoom at `zoom.us`, so it does not serve a Zoom for Government account.
 - For some answers, a paid Zoom plan. Who attended a past meeting, cloud recordings and AI summaries need a Pro plan or higher. Recordings also need cloud recording turned on, and a summary the host's Meeting Summary with AI Companion setting.
 

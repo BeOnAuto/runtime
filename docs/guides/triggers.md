@@ -8,7 +8,7 @@ Make a saved workflow start on its own: at set times, every so often, or wheneve
 
 ## Before you start
 
-- Auto runs, and your agent is connected to it. The [quick start](../get-started/local.md) sets both up. A trigger starts runs only while Auto runs.
+- Your agent is connected to Auto. The [quick start](../get-started/cloud.md) sets this up. Hosted Auto keeps scheduled work running after you close your agent.
 - You have a playbook with a saved workflow that does the work, and it succeeds when your agent runs it. [Workflow format](../reference/workflow-format.md) describes the document.
 - To start a workflow on an event, you know which event. An event is a record that something happened, such as a brief being submitted. It may be one your systems publish to the playbook, or one of the playbook's own, such as a function's run succeeding.
 

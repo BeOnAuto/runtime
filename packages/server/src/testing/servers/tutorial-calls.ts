@@ -6,7 +6,7 @@ import { Schema } from 'effect';
 import { until } from '../waiting/until.ts';
 import { runIdIn } from './workflow-server.ts';
 
-export interface TutorialRun {
+export interface ApprovalRun {
   readonly summaries: readonly string[];
   readonly output: unknown;
   readonly answeredAgain: boolean | undefined;
@@ -63,7 +63,46 @@ export function fencedBlocksOf(page: string): ReadonlyMap<string, string> {
   return blocks;
 }
 
-const tutorial = fencedBlocksOf('tutorials/first-workflow.md');
+const approval = fencedBlocksOf('reference/interaction-format.md');
+const brief = fencedBlocksOf('tutorials/first-workflow.md').get('text');
+
+// The two-step approval workflow whose MCP summaries the reference quotes.
+const approvalWorkflow = [
+  'document:',
+  "  dsl: '1.0.3'",
+  '  namespace: campaign-review-tutorial',
+  '  name: review-and-approve',
+  "  version: '1.0.0'",
+  '  summary: Reviews a campaign brief, then asks its owner to approve it.',
+  'input:',
+  '  schema:',
+  '    document:',
+  '      type: object',
+  '      properties:',
+  '        brief: { type: string }',
+  '        owner: { type: string }',
+  '      required: [brief, owner]',
+  'do:',
+  '  - review-brief:',
+  '      call: run_definition',
+  '      with:',
+  '        type: reasoning',
+  '        name: review-campaign-brief',
+  '        input:',
+  '          brief: ${ $data.brief }',
+  '      output:',
+  "        as: '${ ({ owner: $input.owner, review: $data }) }'",
+  '  - ask-for-approval:',
+  '      call: run_definition',
+  '      with:',
+  '        type: interaction',
+  '        name: approve-campaign-brief',
+  '        input:',
+  '          owner: ${ $data.owner }',
+  '          review: ${ $data.review }',
+  '      output:',
+  "        as: '${ ({ review: $input.review, approval: $data }) }'",
+].join('\n');
 
 function inTutorial(input: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
   return { playbook: 'campaign-review-tutorial', ...input };
@@ -88,14 +127,14 @@ async function saved(session: McpSession): Promise<readonly string[]> {
       await called(session, 'create_definition', {
         type: 'interaction',
         name: 'approve-campaign-brief',
-        source: tutorial.get('markdown'),
+        source: approval.get('markdown'),
       }),
     ),
     plainTextIn(
       await called(session, 'create_definition', {
         type: 'workflow',
         name: 'review-and-approve',
-        source: tutorial.get('yaml'),
+        source: approvalWorkflow,
       }),
     ),
   ];
@@ -105,7 +144,7 @@ async function startedAndAsked(session: McpSession) {
   const started = await called(session, 'run_definition', {
     type: 'workflow',
     name: 'review-and-approve',
-    input: { brief: tutorial.get('text'), owner: 'ada@example.com' },
+    input: { brief, owner: 'ada@example.com' },
   });
   const listed = await until(
     () => called(session, 'list_interactions', {}),
@@ -120,7 +159,7 @@ async function startedAndAsked(session: McpSession) {
   };
 }
 
-export async function tutorialRunOn(session: McpSession): Promise<TutorialRun> {
+export async function approvalRunOn(session: McpSession): Promise<ApprovalRun> {
   const created = await saved(session);
   const { started, listed, workflowId, requestId } = await startedAndAsked(session);
   const answer = { verdict: 'approve', note: 'Approved for the autumn launch.' };

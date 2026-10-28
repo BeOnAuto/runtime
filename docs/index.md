@@ -1,5 +1,5 @@
 ---
-description: Run Auto Runtime, connect your agent, build playbooks and look up the formats and APIs.
+description: Connect your agent to hosted Auto, build playbooks, and look up the formats and APIs.
 ---
 
 # Auto documentation
@@ -8,7 +8,9 @@ Auto turns the way your team does a piece of work into functions and workflows t
 
 ## Get started
 
-Follow the [quick start](get-started/local.md) to run Auto on your computer and connect your agent. Then [build your first playbook](tutorials/first-playbook.md), which saves a campaign-brief review and compares two recorded runs, and [build your first workflow](tutorials/first-workflow.md), which adds an approval.
+Follow the [quick start](get-started/cloud.md) to connect your agent to `https://mcp.on.auto`. Sign in or create an account when your agent asks, then describe the work you want done.
+
+[Build your first playbook](tutorials/first-playbook.md) saves a campaign-brief review and compares two recorded runs. [Build your first workflow](tutorials/first-workflow.md) adds a second function that drafts feedback from the review.
 
 ## Understand the model
 
@@ -18,13 +20,15 @@ Follow the [quick start](get-started/local.md) to run Auto on your computer and 
 
 The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [make a playbook remember](guides/remember.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
 
-## Run it for a team
+## Work with your team
 
-[Self-hosting](self-host.md) covers running the server with Docker, PostgreSQL and object storage, and operating it for a team.
+Open [Auto Studio](https://studio.on.auto) to inspect your work and manage your organization. The website guides cover [sharing a playbook](https://on.auto/docs/cloud/sharing) and [connecting business data](https://on.auto/docs/cloud/connections).
+
+If your organization needs its own deployment, [get in touch about self-hosting](self-host.md).
 
 ## Look up a detail
 
-The references cover the [terminology](concepts/terminology.md), [MCP tools](reference/mcp.md), the [HTTP API](reference/http.md), [configuration](self-host/configuration.md) and the format of each definition, starting with the [reasoning function format](reference/reasoning-format.md).
+The references cover the [terminology](concepts/terminology.md), [MCP tools](reference/mcp.md), the [HTTP API](reference/http.md), the format of each definition, starting with the [reasoning function format](reference/reasoning-format.md).
 
 ## Contribute
 

@@ -15,7 +15,7 @@ A step is one place where a workflow uses a function. The step refers to the fun
 
 A workflow can call any function in its own playbook. It can also call another workflow, which is then a subworkflow. The workflow itself reaches nothing outside the playbook: it does that only through its functions.
 
-For example, [Build your first workflow](../tutorials/first-workflow.md) builds a workflow with two steps. It reviews a campaign brief with a reasoning function, then asks the brief's owner to approve the review with an interaction function. The run waits until the owner answers in the playbook's inbox.
+For example, [Build your first workflow](../tutorials/first-workflow.md) builds a workflow with two steps. It reviews a campaign brief with one reasoning function, then passes that review to a second function that drafts feedback. The run keeps both answers.
 
 ## Versions and runs
 

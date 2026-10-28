@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Licenses
 
 Auto Runtime counts the actions it runs: each run of a workflow or a function is one action, counted once by its run id however often it is asked again, retried or resumed. Nothing else is counted, neither a model call nor the compute a function takes. The count comes from the runtime's own ledger, and the runtime keeps it there.

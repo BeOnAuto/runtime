@@ -4,7 +4,7 @@
     "items": [
       {
         "text": "Quick start",
-        "link": "/get-started/local"
+        "link": "/get-started/cloud"
       }
     ]
   },
@@ -102,70 +102,8 @@
     "text": "Self-hosting",
     "items": [
       {
-        "text": "Self-hosting overview",
+        "text": "Discuss a deployment",
         "link": "/self-host"
-      },
-      {
-        "text": "Deploy",
-        "items": [
-          {
-            "text": "Run with Docker",
-            "link": "/self-host/docker"
-          },
-          {
-            "text": "Use PostgreSQL",
-            "link": "/self-host/postgresql"
-          },
-          {
-            "text": "Keep content on object storage",
-            "link": "/self-host/object-storage"
-          },
-          {
-            "text": "Keep secrets in your secret manager",
-            "link": "/self-host/secret-manager"
-          },
-          {
-            "text": "Deploy for your team",
-            "link": "/self-host/production"
-          }
-        ]
-      },
-      {
-        "text": "Operate",
-        "items": [
-          {
-            "text": "Add a tool server",
-            "link": "/self-host/tool-servers"
-          },
-          {
-            "text": "Let people add connections",
-            "link": "/self-host/connections"
-          },
-          {
-            "text": "Authentication and security",
-            "link": "/self-host/security"
-          },
-          {
-            "text": "Set up a model provider",
-            "link": "/self-host/models"
-          },
-          {
-            "text": "Workflow storage and failover",
-            "link": "/self-host/workflows"
-          },
-          {
-            "text": "Send telemetry",
-            "link": "/self-host/telemetry"
-          },
-          {
-            "text": "Register and license a runtime",
-            "link": "/self-host/licenses"
-          },
-          {
-            "text": "Troubleshooting",
-            "link": "/self-host/troubleshooting"
-          }
-        ]
       }
     ]
   },
@@ -183,14 +121,6 @@
       {
         "text": "HTTP API",
         "link": "/reference/http"
-      },
-      {
-        "text": "Configuration reference",
-        "link": "/self-host/configuration"
-      },
-      {
-        "text": "Model settings reference",
-        "link": "/reference/model-settings"
       },
       {
         "text": "Sign-in and token reference",

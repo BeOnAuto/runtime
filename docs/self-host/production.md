@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Deploy for your team
 
 Auto Runtime is in early development and is not ready for production use; see [Availability](../concepts/functions.md#availability). Your team can still run it today, and you can rely on these behaviors:

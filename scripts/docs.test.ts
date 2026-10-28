@@ -12,8 +12,6 @@ const markdownDestinations = (source: string): readonly string[] =>
   [...source.matchAll(/\]\(([^)]+)\)/gu)]
     .map((match: readonly string[]) => match[1])
     .filter((href) => href !== undefined);
-const selfHostGuidesLinkedFrom = (source: string): readonly string[] =>
-  [...new Set(markdownDestinations(source).filter((href) => /^self-host\/[a-z-]+\.md$/u.test(href)))].toSorted();
 const navigation = readFileSync(join(docs, 'nav.json'), 'utf8');
 const pages = readdirSync(docs, { recursive: true, withFileTypes: true })
   .filter(
@@ -31,7 +29,9 @@ const routes = [...navigation.matchAll(/"link"\s*:\s*"([^"]+)"/gu)]
 const navigationGroups = [...navigation.matchAll(/"text"\s*:\s*"([^"]+)"\s*,\s*"items"\s*:/gu)]
   .map((match: readonly string[]) => match[1])
   .filter((group) => group !== undefined);
-const guides = publicPages.filter((page) => page !== join(docs, 'index.md'));
+const guides = publicPages.filter(
+  (page) => page !== join(docs, 'index.md') && !/^search: false$/mu.test(readFileSync(page, 'utf8')),
+);
 const renderedPages = publicPages.map((page) => {
   const filename = relative(docs, page).replace(/\.md$/u, '.html');
   return { page, filename, html: readFileSync(join(output, filename), 'utf8') };
@@ -118,22 +118,20 @@ await test('engineering guides remain in the repository without entering the pub
   }
 });
 
-await test('public docs offer a local learning path and a self-hosting overview that leads to its guides', () => {
-  const selfHostGuides = publicPages
-    .filter((page) => relative(docs, page).startsWith('self-host/'))
-    .map((page) => relative(docs, page));
+await test('public docs lead to hosted Auto and make self-hosting a contact-led choice', () => {
   const selfHost = readFileSync(join(docs, 'self-host.md'), 'utf8');
-  assert.deepEqual(selfHostGuides.toSorted(), selfHostGuidesLinkedFrom(selfHost));
-  assert.ok(selfHost.includes('[Xolvio Professional Services](https://www.xolv.io/contact-us)'));
-  assert.ok(markdownDestinations(selfHost).includes('get-started/local.md'));
+  assert.ok(markdownDestinations(selfHost).includes('https://on.auto/contact-us'));
+  assert.doesNotMatch(selfHost, /```|npx|docker run/u);
   const index = readFileSync(join(docs, 'index.md'), 'utf8');
   const destinations = markdownDestinations(index);
-  assert.ok(destinations.includes('get-started/local.md'));
-  assert.ok(destinations.includes('self-host.md'));
-  assert.ok(destinations.indexOf('get-started/local.md') < destinations.indexOf('self-host.md'));
-  for (const { html } of renderedPages) assert.doesNotMatch(html, /temporal/iu);
-  for (const page of publicPages) assert.doesNotMatch(readFileSync(page, 'utf8'), /temporal/iu);
-  for (const page of publicPages) assert.doesNotMatch(readFileSync(page, 'utf8'), /Auto Cloud|request-invite/iu);
+  assert.ok(destinations.includes('get-started/cloud.md'));
+  assert.ok(destinations.indexOf('get-started/cloud.md') < destinations.indexOf('self-host.md'));
+  assert.ok(!routes.includes('/get-started/local'));
+  assert.ok(!routes.some((route) => route.startsWith('/self-host/')));
+  for (const page of publicPages.filter((candidate) => relative(docs, candidate).startsWith('self-host/'))) {
+    assert.match(readFileSync(page, 'utf8'), /^search: false$/mu);
+    assert.match(readFileSync(page, 'utf8'), /content: noindex, follow/u);
+  }
 });
 
 await test('documentation link checks compare the complete Markdown destination', () => {
@@ -162,14 +160,12 @@ await test('navigation separates concepts, learning, guides and reference', () =
     'Run and inspect',
     'Connect data',
     'Self-hosting',
-    'Deploy',
-    'Operate',
     'Reference',
     'Contributing',
   ]);
   assert.ok(routes.includes('/tutorials/first-playbook'));
-  assert.ok(routes.indexOf('/get-started/local') < routes.indexOf('/tutorials/first-playbook'));
-  assert.ok(routes.indexOf('/self-host') < routes.indexOf('/self-host/docker'));
+  assert.ok(routes.indexOf('/get-started/cloud') < routes.indexOf('/tutorials/first-playbook'));
+  assert.ok(routes.includes('/self-host'));
   const mcp = readFileSync(join(docs, 'reference/mcp.md'), 'utf8');
   assert.match(mcp, /^# MCP reference/mu);
   assert.ok(mcp.includes('../tutorials/first-playbook.md'));
@@ -184,7 +180,7 @@ await test('the first-playbook tutorial supplies inputs and observable checks fo
   assert.equal(inputs[0]?.includes('Success measure: Generate interest in the product'), true);
   assert.equal(inputs[1]?.includes('Finance directors at UK manufacturing companies'), true);
   assert.equal(inputs[1]?.includes('Success measure: 100 trial registrations'), true);
-  assert.ok(markdownDestinations(tutorial).includes('../get-started/local.md'));
+  assert.ok(markdownDestinations(tutorial).includes('../get-started/cloud.md'));
   assert.ok(tutorial.includes('review-campaign-brief'));
   assert.ok(tutorial.includes('USD 10,000'));
   assert.ok(tutorial.includes('status: succeeded'));
@@ -244,7 +240,8 @@ await test('public workflows are available and link their format and tutorial, w
   assert.ok(markdownDestinations(workflows).includes('../tutorials/first-workflow.md'));
   assert.ok(routes.includes('/reference/workflow-format'));
   assert.ok(routes.includes('/tutorials/first-workflow'));
-  assert.ok(tutorial.includes('send_run_event'));
+  assert.ok(tutorial.includes('Draft brief feedback'));
+  assert.doesNotMatch(tutorial, /answer_interaction|type: interaction/u);
   assert.ok(tutorial.includes('status: succeeded'));
   assert.doesNotMatch(tutorial, /localhost|127\.0\.0\.1|claude-|gpt-/u);
   const removedPages = ['get-started/self-hosted', 'reference/http-tutorial'];

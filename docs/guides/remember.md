@@ -8,7 +8,7 @@ Give later runs what your playbook decided before. A recall function keeps a vie
 
 ## Before you start
 
-- Auto runs, and your agent is connected to it. The [quick start](../get-started/local.md) sets both up.
+- Your agent is connected to Auto. The [quick start](../get-started/cloud.md) sets this up.
 - You have a playbook whose runs produce what you want remembered, such as the reviews a reasoning function writes.
 - A recall function keeps its view with a short TypeScript program. Your agent writes it, and you do not need to read it.
 
