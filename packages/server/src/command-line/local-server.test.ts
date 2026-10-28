@@ -31,6 +31,9 @@ function stoppable(count: () => void, signIn?: SignInSettings, install?: Install
     signIn,
     studio: { origin: 'https://studio.on.auto', served: signIn === undefined },
     install,
+    ...(signIn === undefined
+      ? { licenseNotice: () => Promise.resolve('3 of 100 free runs used, then a free key from Studio') }
+      : {}),
     stop: () => {
       count();
       return Promise.resolve();
@@ -85,7 +88,7 @@ function served({ depth = 1, run, signIn, install }: Options = {}): Served {
 }
 
 describe('serving the runtime on this computer', () => {
-  it('shows the header, then the ready notice with the port, the time it took and local mode, and stops when asked', async () => {
+  it('shows the header, then the ready notice with the port, the time it took, its free runs and local mode, and stops when asked', async () => {
     const local = served();
 
     const serving = servedLocally(local.host);
@@ -98,7 +101,7 @@ describe('serving the runtime on this computer', () => {
     expect(local.written[1]).toContain('     Server   http://localhost:5600\n');
     expect(local.written[1]).not.toContain('Sign-in');
     expect(local.written[1]).toContain(
-      '  Local mode: anyone on this computer acts as you, with no sign-in.\n  Set PUBLIC_URL=http://localhost:5600, and no ACCESS_MODE, to sign people in.\n',
+      '  3 of 100 free runs used, then a free key from Studio\n  Local mode: no sign-in, so anyone using this computer can act as you. To require sign-in, set PUBLIC_URL.\n',
     );
     expect(local.written.slice(2)).toEqual(['\n  Stopping…\n', '  ✔ Stopped\n']);
     expect(local.stops()).toBe(1);

@@ -87,7 +87,7 @@ export function reportVerificationBehaviour(ledgerOf: LedgerOf): void {
       { kind: 'reported', detail: '' },
       { kind: 'reported', detail: '' },
     ]);
-    expect((await metered.state()).license?.invalid).toContain('revoked');
+    expect((await metered.state()).license?.invalid?.detail).toContain('revoked');
     expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
     expect(metered.account.reportsSent() + unlicensed.metered.account.reportsSent()).toBe(0);
   });

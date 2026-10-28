@@ -1,9 +1,9 @@
-import type { Decided } from '@on.auto/operations';
+import type { Conflict, Decided } from '@on.auto/operations';
 
 import type { Counting } from '../counting/run-starts.ts';
 import type { Signed } from '../licensing/signed-answers.ts';
 import type { AllocationRecord } from './allocation-events.ts';
-import type { Fault, LicenseRecord, MeterEvent, Report } from './meter-events.ts';
+import type { Fault, Invalidity, LicenseRecord, MeterEvent, Report } from './meter-events.ts';
 
 export interface Admitting {
   readonly type: 'admit';
@@ -14,7 +14,13 @@ export interface Admitting {
   readonly until: string;
   readonly installation: string;
   readonly kind: 'license_required' | 'credits_exhausted';
-  readonly refusal: (installation: string) => string;
+  readonly refusal: (installation: string) => Conflict;
+}
+
+interface Identifying {
+  readonly type: 'identify';
+  readonly installation: string;
+  readonly at: string;
 }
 
 interface Checkpointing {
@@ -38,7 +44,7 @@ export interface Licensing {
 export interface Invalidating {
   readonly type: 'invalidate';
   readonly key_sha256: string;
-  readonly detail: string;
+  readonly invalidity: Invalidity;
   readonly at: string;
 }
 
@@ -89,6 +95,7 @@ export type AllocationCommand = Allocating | AllocationRefreshing | AllocationWi
 
 export type MeterCommand =
   | Admitting
+  | Identifying
   | Checkpointing
   | Faulting
   | Licensing

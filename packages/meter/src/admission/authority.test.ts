@@ -45,3 +45,24 @@ describe('a meter whose authority admits each action, as Auto’s hosting does t
     expect(asking.asked()).toEqual(['acme/alpha/run-1']);
   });
 });
+
+describe('a meter whose authority refuses an action with the case and where to resolve it', () => {
+  it('refuses with the case the authority names and where it says a person resolves it', async () => {
+    const refusing = authorityAnswering(() =>
+      Promise.resolve<AuthorityAnswer>({
+        admitted: false,
+        kind: 'credits_exhausted',
+        detail: 'The org acme has used its free runs for the day',
+        because: 'free_daily_limit',
+        resolve_at: 'https://studio.on.auto/billing?org=acme',
+      }),
+    );
+
+    expect(await (await cloudMetered(refusing)).admitted('run-1')).toEqual({
+      kind: 'credits_exhausted',
+      detail: 'The org acme has used its free runs for the day',
+      because: 'free_daily_limit',
+      resolve_at: 'https://studio.on.auto/billing?org=acme',
+    });
+  });
+});

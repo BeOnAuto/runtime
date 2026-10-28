@@ -4,7 +4,7 @@ import type { RejectionBecause } from '../outcome/rejection-because.ts';
 import type { RejectionKind } from '../outcome/rejection.ts';
 import { connectionBecauses, connectionExplanations, connectionRemedies } from './connection-explanations.ts';
 import { credentialBecauses, credentialRemedies } from './credential-explanations.ts';
-import { creditExplanations } from './credit-explanations.ts';
+import { creditBecauses, creditExplanations, creditExplanationsByBecause } from './credit-explanations.ts';
 import type { Explanation, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
 
@@ -174,6 +174,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   not_finite: 'because the model answered something other than finite numbers',
   not_in_order: 'because the model answered a low above its likely value or a high below it',
   baseline_check: 'because the process that checks a build’s baselines ended before it answered',
+  ...creditBecauses,
 };
 
 const remedyByBecause: Remedies = {
@@ -217,6 +218,7 @@ const explanationByKindAndBecause: Readonly<
       remedy: 'So it was not run again under its id: start a new run instead; its history shows what it called.',
     },
   },
+  ...creditExplanationsByBecause,
 };
 
 const noRemedies: Remedies = {};

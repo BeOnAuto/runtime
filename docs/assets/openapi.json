@@ -5975,6 +5975,227 @@
             ]
           }
         ]
+      },
+      "get": {
+        "operationId": "get_license",
+        "summary": "Get license",
+        "description": "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license, where its key came from and the offline credits it spends. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
+        "tags": [
+          "license"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/get_license/output",
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "unregistered",
+                        "licensed",
+                        "offline",
+                        "invalid"
+                      ],
+                      "description": "unregistered before a key is given, licensed while an entitlement Auto signed stands, offline while it spends an allocation, invalid while what it holds does not stand"
+                    },
+                    "runtime_id": {
+                      "type": "string",
+                      "description": "The id of this runtime, the installation an owner registers in Studio"
+                    },
+                    "free_runs": {
+                      "type": "object",
+                      "properties": {
+                        "used": {
+                          "type": "integer",
+                          "description": "The runs it has counted, at most the free runs it may make"
+                        },
+                        "of": {
+                          "type": "integer",
+                          "description": "The runs it may make before it is registered"
+                        }
+                      },
+                      "required": [
+                        "used",
+                        "of"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "org": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The org at Auto its license is of"
+                    },
+                    "plan": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The plan of that org"
+                    },
+                    "expires_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the entitlement Auto signed ends, unless the runtime renews it"
+                    },
+                    "renewed_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When Auto last signed its entitlement"
+                    },
+                    "key_source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "environment",
+                            "configuration",
+                            "activated"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the key in force came from: AUTO_RUNTIME_LICENSE_KEY, license.key of the configuration file, or an activation"
+                    },
+                    "offline": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "credits": {
+                              "type": "integer",
+                              "description": "The credits of the allocation it holds"
+                            },
+                            "spent": {
+                              "type": "integer",
+                              "description": "What it has spent of them"
+                            },
+                            "usable_until": {
+                              "type": "string",
+                              "description": "When they stop unless Auto refreshes them"
+                            }
+                          },
+                          "required": [
+                            "credits",
+                            "spent",
+                            "usable_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The allocation of an installation that does not reach Auto"
+                    },
+                    "invalid_because": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "While it is invalid, the words a run is refused in"
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "runtime_id",
+                    "free_runs",
+                    "org",
+                    "plan",
+                    "expires_at",
+                    "renewed_at",
+                    "key_source",
+                    "offline",
+                    "invalid_because"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
       }
     },
     "/orgs/{org}/license/allocation": {
@@ -8566,7 +8787,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ],
                               "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             }
@@ -8647,7 +8873,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ],
                               "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown"
                             }
@@ -9000,7 +9231,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ],
                               "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             }
@@ -9081,7 +9317,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ],
                               "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown"
                             }
@@ -9449,7 +9690,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ],
                               "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             }
@@ -9530,7 +9776,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ],
                               "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown"
                             }
@@ -9964,7 +10215,12 @@
                                 "stalled",
                                 "not_finite",
                                 "not_in_order",
-                                "baseline_check"
+                                "baseline_check",
+                                "none_left",
+                                "free_daily_limit",
+                                "free_month_used",
+                                "key_rotated",
+                                "installation_revoked"
                               ]
                             }
                           },
@@ -14073,9 +14329,22 @@
               "stalled",
               "not_finite",
               "not_in_order",
-              "baseline_check"
+              "baseline_check",
+              "none_left",
+              "free_daily_limit",
+              "free_month_used",
+              "key_rotated",
+              "installation_revoked"
             ],
             "description": "What the rejection comes from"
+          },
+          "resolve_at": {
+            "type": "string",
+            "description": "The absolute URL where a person resolves this refusal, such as the page of Studio that licenses this runtime"
+          },
+          "runtime_id": {
+            "type": "string",
+            "description": "The id of this runtime, on a refusal of its license or its meter"
           }
         },
         "required": [

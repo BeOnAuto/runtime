@@ -1,7 +1,9 @@
+import type { Unavailable } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import type { AccountRefusal } from '../accounts/account-failure.ts';
 import { executed, meterStateOf, nowIso } from '../admission/metering.ts';
+import { activated } from '../licensing/activation.ts';
 import type { Licensing } from '../licensing/licensing.ts';
 import { allocationIn, type Signed } from '../licensing/signed-answers.ts';
 import type { Allocation } from '../meter-stream/allocation-events.ts';
@@ -39,7 +41,7 @@ function refused(
       : Effect.fail({ detail });
 }
 
-export function allocationRefreshed(licensing: Licensing, key: string): Effect.Effect<void> {
+function allocationRefreshed(licensing: Licensing, key: string): Effect.Effect<void> {
   return Effect.gen(function* () {
     const allocation = standingAllocation(yield* meterStateOf(licensing));
     if (allocation === undefined) return;
@@ -52,4 +54,17 @@ export function allocationRefreshed(licensing: Licensing, key: string): Effect.E
       Effect.logWarning(`This runtime could not refresh its allocation with Auto: ${detail}`),
     ),
   );
+}
+
+export function refreshedDaily(licensing: Licensing): Effect.Effect<void, Unavailable> {
+  return Effect.gen(function* () {
+    const key = yield* licensing.keyInHand;
+    if (key === undefined) return;
+    yield* allocationRefreshed(licensing, key);
+    yield* activated(licensing, key).pipe(
+      Effect.catchTag('conflict', ({ detail }: Worded) =>
+        Effect.logWarning(`The license of this runtime could not be refreshed: ${detail}`),
+      ),
+    );
+  });
 }

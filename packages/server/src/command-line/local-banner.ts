@@ -14,6 +14,7 @@ export interface Ready {
   readonly identityService: string | undefined;
   readonly studio: StudioSettings;
   readonly install: Install | undefined;
+  readonly license: string | undefined;
 }
 
 const tagline = 'Runs the playbooks your agent builds';
@@ -59,13 +60,13 @@ export function headerOf(version: string, depth: ColorDepth): string {
   return depth === 1 ? plainHeader(version) : paintedHeader(version, depth);
 }
 
-function localModeNotice(url: string, depth: ColorDepth): readonly string[] {
+const localModeNotice =
+  'Local mode: no sign-in, so anyone using this computer can act as you. To require sign-in, set PUBLIC_URL.';
+
+function noticesOf({ mode, license }: Ready, depth: ColorDepth): readonly string[] {
   const paint = painterFor(depth);
-  return [
-    '',
-    `  ${paint('dim', 'Local mode: anyone on this computer acts as you, with no sign-in.')}`,
-    `  ${paint('dim', `Set PUBLIC_URL=${url}, and no ACCESS_MODE, to sign people in.`)}`,
-  ];
+  const notices = [...(license === undefined ? [] : [license]), ...(mode === 'local' ? [localModeNotice] : [])];
+  return notices.length === 0 ? [] : ['', ...notices.map((notice) => `  ${paint('dim', notice)}`)];
 }
 
 function usagePingNotice(install: Install | undefined, depth: ColorDepth): readonly string[] {
@@ -73,7 +74,7 @@ function usagePingNotice(install: Install | undefined, depth: ColorDepth): reado
 }
 
 export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
-  const { port, readyInMs, mode, identityService, install } = ready;
+  const { port, readyInMs, identityService, install } = ready;
   const paint = painterFor(depth);
   const link = linkerFor(depth);
   const url = `http://localhost:${port}`;
@@ -91,7 +92,7 @@ export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
     entry('MCP', mcp),
     ...signIn,
     entry('Docs', documentation),
-    ...(mode === 'local' ? localModeNotice(url, depth) : []),
+    ...noticesOf(ready, depth),
     '',
     `  ${paint('dim', 'Connect your agent')}`,
     ...agentCommandsFor(ready, mcp).map(([label, command]) => agent(label, command)),

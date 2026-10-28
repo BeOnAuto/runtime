@@ -52,7 +52,14 @@ function factsOf(status: RuntimeStatus): Page {
     </div>`;
 }
 
-function pageOf(head: string, studioLink: string, server: Readonly<URL>, status: RuntimeStatus | undefined): Page {
+interface Showing {
+  readonly studioLink: string;
+  readonly server: Readonly<URL>;
+  readonly status: RuntimeStatus | undefined;
+  readonly notice: string | undefined;
+}
+
+function pageOf(head: string, { studioLink, server, status, notice }: Showing): Page {
   return html`<!doctype html>
     <html lang="en">
       <head>
@@ -63,6 +70,7 @@ function pageOf(head: string, studioLink: string, server: Readonly<URL>, status:
           ${raw(brand)}
           <h1>Auto Runtime is running</h1>
           <p>Create and manage your playbooks in the studio.</p>
+          ${notice === undefined ? '' : html`<p class="license">${notice}</p>`}
           <span class="address">${server.host}</span>
           <a class="open" href="${studioLink}">Open studio ${raw(arrow)}</a>
           ${status === undefined ? '' : factsOf(status)}
@@ -129,16 +137,17 @@ function guarded(answer: Answer): Answer {
     }) ?? answer(c);
 }
 
-function landingAnswerOf({ control, studio, installId }: Landing, { head, style }: Dressing): Answer {
-  return (c) => {
+function landingAnswerOf({ control, studio, installId, licenseNotice }: Landing, { head, style }: Dressing): Answer {
+  return async (c) => {
     const server = new URL(c.req.url);
     const studioLink = studioLinkOf(studio, {
       ownOrigin: server.origin,
       openedFrom: 'runtime-page',
       installId: installId?.(),
     });
+    const notice = await licenseNotice?.();
     return c.html(
-      pageOf(head, studioLink, server, control?.status()),
+      pageOf(head, { studioLink, server, status: control?.status(), notice }),
       200,
       control === undefined ? style.readOnlyHeaders : style.controlHeaders,
     );
@@ -166,6 +175,7 @@ interface Landing {
   readonly control: RuntimeControl | undefined;
   readonly studio: StudioSettings;
   readonly installId: (() => string | undefined) | undefined;
+  readonly licenseNotice: (() => Promise<string | undefined>) | undefined;
   readonly style: PageStyle;
 }
 

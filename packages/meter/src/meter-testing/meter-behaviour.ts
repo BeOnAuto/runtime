@@ -4,18 +4,11 @@ import { allocationsBehaviour } from './allocation-behaviour.ts';
 import { allowanceBehaviour, concurrencyBehaviour } from './allowance-behaviour.ts';
 import { checkpointBehaviour, verificationBehaviour } from './checkpoint-behaviour.ts';
 import { countingBehaviour, recountingBehaviour } from './counting-behaviour.ts';
-import { faultBehaviour, rebuildingBehaviour } from './fault-behaviour.ts';
-import {
-  activationBehaviour,
-  invalidLicenseBehaviour,
-  keyBehaviour,
-  licensedAdmissionBehaviour,
-  refreshBehaviour,
-  revocationBehaviour,
-} from './license-behaviour.ts';
+import { faultsBehaviour, rebuildingBehaviour } from './fault-behaviour.ts';
+import { licensesBehaviour } from './license-behaviour.ts';
 import type { LedgerOf } from './opened.ts';
-import { repairBehaviour } from './repair-behaviour.ts';
 import { reportBehaviour, reportVerificationBehaviour } from './report-behaviour.ts';
+import { statusBehaviour } from './status-behaviour.ts';
 
 export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
   describe(`the meter on ${name}`, () => {
@@ -31,20 +24,14 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
       rebuildingBehaviour(ledgerOf);
     });
     describe('faults', () => {
-      faultBehaviour(ledgerOf);
-      repairBehaviour(ledgerOf);
+      faultsBehaviour(ledgerOf);
     });
     describe('allowances', () => {
       allowanceBehaviour(ledgerOf);
       concurrencyBehaviour(ledgerOf);
     });
     describe('licenses', () => {
-      activationBehaviour(ledgerOf);
-      keyBehaviour(ledgerOf);
-      refreshBehaviour(ledgerOf);
-      invalidLicenseBehaviour(ledgerOf);
-      revocationBehaviour(ledgerOf);
-      licensedAdmissionBehaviour(ledgerOf);
+      licensesBehaviour(ledgerOf);
     });
     describe('allocations', () => {
       allocationsBehaviour(ledgerOf);
@@ -52,6 +39,9 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
     describe('reports', () => {
       reportBehaviour(ledgerOf);
       reportVerificationBehaviour(ledgerOf);
+    });
+    describe('its license status', () => {
+      statusBehaviour(ledgerOf);
     });
   });
 }

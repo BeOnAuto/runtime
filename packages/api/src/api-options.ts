@@ -18,5 +18,6 @@ export interface ApiOptions {
   readonly requests?: MiddlewareHandler<ApiEnv>;
   readonly runtimeControl?: RuntimeControl;
   readonly installId?: () => string | undefined;
+  readonly licenseNotice?: () => Promise<string | undefined>;
   readonly callContext?: CallContext;
 }

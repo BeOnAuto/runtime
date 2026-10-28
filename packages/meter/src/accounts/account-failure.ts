@@ -4,6 +4,8 @@ export interface AccountRefusal {
   readonly status: number;
   readonly kind: string;
   readonly detail: string;
+  readonly because?: string;
+  readonly resolve_at?: string;
 }
 
 export class AccountFailure extends Data.TaggedError('account_failure')<AccountRefusal> {}

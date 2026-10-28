@@ -62,7 +62,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
     };
     const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
     const closing = license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] });
-    return withLiveAttemptsClosedFirst(runtime, closing);
+    return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice };
   };
 }
 

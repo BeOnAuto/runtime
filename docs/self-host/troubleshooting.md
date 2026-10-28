@@ -99,40 +99,39 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 ## A run is refused as `license_required` {#license-required}
 
-**Symptom.** A run is answered `409` with the kind `license_required`: `This runtime has run the 100 actions it may before it is registered`.
+**Symptom.** A run is answered `409` with the kind `license_required`: `This runtime has used its 100 free runs. Get a free key at …, then activate it on the runtime and run this again.`
 
 **Cause.** A runtime runs 100 actions before it is registered, and this one holds no license.
 
-**Fix.** Open the link in the refusal while signed in to Studio as an owner of the org, register the installation it names, and activate the key Studio shows once. [Register and license a runtime](licenses.md) gives the four ways to activate it.
+**Fix.** Open the refusal's `resolve_at` while signed in to Studio as an owner of the org, register the installation its `runtime_id` names, and activate the key Studio shows once. [Register and license a runtime](licenses.md) gives the four ways to activate it.
 
 ## A run is refused as `license_invalid` {#license-invalid}
 
-**Symptom.** A run, or an activation, is answered `409` with the kind `license_invalid`: `This runtime's license does not stand`, followed by why.
+**Symptom.** A run, or an activation, is answered `409` with the kind `license_invalid`, its `resolve_at` the installation's page in Studio and its `runtime_id` the runtime's id. Its `detail` says which case it is, and `GET /v1/orgs/{org}/license` answers the same words in `invalid_because`.
 
-**Cause.** The key was rotated away or its installation revoked in Studio; the key registers another installation than this runtime's; or the entitlement the runtime holds expired and could not be renewed, or was not signed by Auto.
+**Cause and fix.**
 
-**Fix.**
-
-- Activate a current key of this installation, from Studio's Licenses page; the refusal links the installation's page. A key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there.
-- A key for another installation is refused before the runtime asks Auto: register this runtime's installation, which the refusal names, rather than reuse another's key.
-- An offline installation's allocation has seven days of grace from its last refresh; past them every run is refused until the runtime refreshes it with Auto or takes the allocation an operator signs again.
-- An entitlement lasts seven days and is renewed every day. One that expired because the runtime could not reach `billing.on.auto` for a week renews as soon as it can; check the runtime's egress.
+- `This runtime's key was replaced.`, with `because: "key_rotated"`: an owner rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, an owner rotates it again at `resolve_at`.
+- `This runtime was removed from its org.`, with `because: "installation_revoked"`: an owner revoked the installation. An owner registers it again at `resolve_at`; activate the new key.
+- `This runtime's license wasn't renewed by` a date: an entitlement lasts seven days and is renewed every day, and this one could not be for a week. It renews as soon as the runtime reaches `billing.on.auto`; check the runtime's egress.
+- `These offline credits stopped on` a date: an offline installation's allocation has seven days of grace from its last refresh. An owner requests new credits at `resolve_at`, or the runtime refreshes it with Auto.
+- `This runtime's license does not stand`, followed by why: a key for another installation is refused before the runtime asks Auto, so register this runtime's installation, which `runtime_id` names, rather than reuse another's key; an entitlement not signed by Auto is refused whatever key brought it.
 
 ## A run is refused as `credits_exhausted` {#credits-exhausted}
 
-**Symptom.** A run is answered `409` with the kind `credits_exhausted`, in the words of the org's account.
+**Symptom.** A run is answered `409` with the kind `credits_exhausted`, in the words of the org's account, its case in `because`, `none_left`, `free_daily_limit` or `free_month_used`, and where an owner gets more in `resolve_at`; or, on an offline installation, `This runtime has used all … offline credits`, with `because: "none_left"`.
 
 **Cause.** The org's account at Auto has no credit left for the action, or an [offline installation](licenses.md#offline-installations) has spent the credits of its allocation. A run asked again under the id of a run that already started is not charged again, and is not refused.
 
-**Fix.** An owner of the org adds credit in Studio, under Billing, with a plan or a top-up, or, for an offline installation, asks Auto for another allocation. Ask for the run again once it is added.
+**Fix.** An owner of the org gets more credits at `resolve_at`, in Studio, with a plan or a top-up, or, for an offline installation, requests more there. Ask for the run again once they are added.
 
 ## Every run is refused as `metering_fault` {#metering-fault}
 
-**Symptom.** Every new run is answered `409` with the kind `metering_fault`: `This runtime stopped starting runs`, followed by what the runtime found, and a link to Studio's support page. Reading, editing and exporting still work.
+**Symptom.** Every new run is answered `409` with the kind `metering_fault`: `This runtime stopped starting runs because`, what the runtime found, then `We need to repair it; see https://studio.on.auto/support (runtime id …). Reading, editing and exporting still work.`, with Studio's support page in `resolve_at` and the runtime's id in `runtime_id`.
 
 **Cause.** The runtime found its ledger changed under the count it keeps: an event it counted is gone, another stands where it counted its last, or an event can no longer be read. Restoring an older backup of the ledger under a newer count, or editing the ledger's database by hand, does this.
 
-**Fix.** Reach Auto at [Studio's support page](https://studio.on.auto/support) with the installation's id and what changed the ledger. Auto issues a repair for that installation, which the runtime takes when it next renews its license, at its start or within a day; a restart takes it at once. See [Faults and repairs](licenses.md#faults-and-repairs).
+**Fix.** Reach Auto at [Studio's support page](https://studio.on.auto/support) with the runtime id and what changed the ledger. Auto issues a repair for that installation, which the runtime takes when it next renews its license, at its start or within a day; a restart takes it at once. See [Faults and repairs](licenses.md#faults-and-repairs).
 
 ## Error responses
 

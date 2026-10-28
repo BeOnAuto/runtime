@@ -38,7 +38,7 @@ export function meterAdmitting(metering: Metering, admitter: Admitter, repaired:
     admit: (run) =>
       Effect.gen(function* () {
         const state = yield* standingAfter(metering, repaired);
-        if (state.fault !== undefined) return yield* faultRefusal(state.fault, metering.options);
+        if (state.fault !== undefined) return yield* faultRefusal(state.fault, metering, state);
         const counting = yield* counted(metering, state);
         if (yield* hasStarted(metering, run)) return yield* Effect.void;
         return yield* admitter(run, counting);
@@ -46,7 +46,15 @@ export function meterAdmitting(metering: Metering, admitter: Admitter, repaired:
   };
 }
 
-export function meteringOver({ ledger, log }: MeteredLedger, options: MeterOptions): Effect.Effect<Metering> {
+function identifiedInstallation({ installation }: MeterState): string | undefined {
+  return installation;
+}
+
+export function meteringOver(
+  { ledger, log }: MeteredLedger,
+  options: MeterOptions,
+  runtimeIdOf: Metering['runtimeIdOf'] = identifiedInstallation,
+): Effect.Effect<Metering> {
   return Effect.gen(function* () {
     const admissions = yield* Ref.make(0);
     const metering: Metering = {
@@ -54,6 +62,7 @@ export function meteringOver({ ledger, log }: MeteredLedger, options: MeterOptio
       log,
       options,
       admissionNumbered: Ref.updateAndGet(admissions, (count) => count + 1),
+      runtimeIdOf,
     };
     yield* startedVerified(metering);
     return metering;

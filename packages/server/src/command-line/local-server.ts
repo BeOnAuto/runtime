@@ -2,7 +2,7 @@ import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identi
 
 import { release } from '../composition/release.ts';
 import type { ColorDepth } from '../logging/terminal.ts';
-import type { Install } from '../server-options/server-options.ts';
+import type { Install, LicenseNotice } from '../server-options/server-options.ts';
 import { clearedLine, headerOf, readyNoticeOf, startingLine, stoppedNotice, stoppingNotice } from './local-banner.ts';
 
 interface LocalServer {
@@ -11,6 +11,7 @@ interface LocalServer {
   readonly signIn: SignInSettings | undefined;
   readonly studio: StudioSettings;
   readonly install: Install | undefined;
+  readonly licenseNotice?: LicenseNotice;
   stop(): Promise<void>;
 }
 
@@ -54,6 +55,7 @@ export async function servedLocally(host: LocalServerHost): Promise<void> {
         identityService: server.signIn?.issuer,
         studio: server.studio,
         install: server.install,
+        license: await server.licenseNotice?.(),
       },
       host.depth,
     ),

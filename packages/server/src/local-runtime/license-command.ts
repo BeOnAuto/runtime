@@ -2,6 +2,7 @@ import type { KeyCommandConsole } from '@on.auto/identity';
 import { SignedSchema } from '@on.auto/meter';
 import { Effect, Option, Schema } from 'effect';
 
+import { dayOf, offlineCreditsNotice } from '../licensing/license-notice.ts';
 import { runtimeAddressOf, whenRunning, type RuntimeFetch } from './runtime-probe.ts';
 
 interface RuntimeAsking {
@@ -90,7 +91,7 @@ function activation(key: string): LicenseCommand {
     body: { key },
     answerIn: licensedIn,
     said: ({ org, plan, installation, expires_at: expiresAt }) =>
-      `Auto Runtime is licensed to the org ${org} on the plan ${plan}, as the installation ${installation}, until ${expiresAt}; it renews the license every day`,
+      `Licensed to ${org} (${plan} plan) until ${dayOf(expiresAt)}; renews daily. Runtime id ${installation}.`,
     failed: 'Auto Runtime did not activate the key',
   });
 }
@@ -109,8 +110,8 @@ function allocationGiven(text: string): LicenseCommand {
         path: '/license/allocation',
         body: { allocation },
         answerIn: allocationIn,
-        said: ({ allocation: id, credits, spent, refresh_by: refreshBy }) =>
-          `Auto Runtime holds the allocation ${id} of ${credits} credits, ${spent} of them spent, until ${refreshBy} unless Auto refreshes it`,
+        said: ({ credits, spent, refresh_by: refreshBy }) =>
+          `${offlineCreditsNotice({ credits, spent, usable_until: refreshBy })}.`,
         failed: 'Auto Runtime did not take the allocation',
       }),
   });

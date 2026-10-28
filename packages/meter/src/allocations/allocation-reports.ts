@@ -4,9 +4,15 @@ import { Effect, Function, Option } from 'effect';
 import type { SignedReport } from '../accounts/account-service.ts';
 import { caughtUp, executed, meterStateOf, meterUnavailable, nowIso, verified } from '../admission/metering.ts';
 import { usageFrom, type Licensing } from '../licensing/licensing.ts';
+import { reported } from '../licensing/reports.ts';
 import type { MeterState } from '../meter-stream/meter-events.ts';
 import { standingAllocation } from './allocation.ts';
 import { reportSignatureOf } from './report-signature.ts';
+
+const noKeyToSignWith = new Conflict({
+  detail:
+    'This runtime holds no license key to sign its report with: give it the key of its installation in AUTO_RUNTIME_LICENSE_KEY, or in license.key of its configuration file',
+});
 
 const nothingToReport = new Conflict({
   detail: 'This runtime holds no allocation to report on: an operator of Auto issues one for its installation',
@@ -26,7 +32,7 @@ function actionsToReport(licensing: Licensing, state: MeterState): Effect.Effect
     : Effect.succeed(kept);
 }
 
-export function allocationReportMade(
+function allocationReportMade(
   licensing: Licensing,
   key: string,
   of?: string,
@@ -49,7 +55,7 @@ export function allocationReportMade(
   });
 }
 
-export function allocationReportSent(licensing: Licensing, key: string): Effect.Effect<void> {
+function allocationReportSent(licensing: Licensing, key: string): Effect.Effect<void> {
   return Effect.gen(function* () {
     if (standingAllocation(yield* meterStateOf(licensing)) === undefined) return;
     const signed = yield* allocationReportMade(licensing, key);
@@ -63,5 +69,20 @@ export function allocationReportSent(licensing: Licensing, key: string): Effect.
     Effect.catch(({ detail }: Worded) =>
       Effect.logWarning(`This runtime could not report what it spent of its allocation to Auto: ${detail}`),
     ),
+  );
+}
+
+export function allocationReportOf(
+  licensing: Licensing,
+  of: string | undefined,
+): Effect.Effect<SignedReport, Conflict | Unavailable> {
+  return Effect.flatMap(licensing.keyInHand, (key) =>
+    key === undefined ? Effect.fail(noKeyToSignWith) : allocationReportMade(licensing, key, of),
+  );
+}
+
+export function reportedHourly(licensing: Licensing): Effect.Effect<void, Unavailable> {
+  return Effect.flatMap(licensing.keyInHand, (key) =>
+    key === undefined ? reported(licensing) : Effect.andThen(allocationReportSent(licensing, key), reported(licensing)),
   );
 }

@@ -67,13 +67,25 @@ export const ProblemSchema = Schema.Struct({
   errors: Schema.optionalKey(Schema.Array(IssueSchema).annotate({ description: 'Each place the input is wrong' })),
   kind: Schema.optionalKey(RejectionKindSchema),
   because: Schema.optionalKey(RejectionBecauseSchema.annotate({ description: 'What the rejection comes from' })),
+  resolve_at: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The absolute URL where a person resolves this refusal, such as the page of Studio that licenses this runtime',
+    }),
+  ),
+  runtime_id: Schema.optionalKey(
+    Schema.String.annotate({ description: 'The id of this runtime, on a refusal of its license or its meter' }),
+  ),
 }).annotate({ description: 'A problem document, as RFC 9457 defines it, with the members of this server' });
 
 export type Problem = typeof ProblemSchema.Type;
 
 export type ProblemIssue = typeof IssueSchema.Type;
 
-export type OptionalProblemMembers = Pick<Problem, 'instance' | 'errors' | 'kind' | 'because'>;
+export type OptionalProblemMembers = Pick<
+  Problem,
+  'instance' | 'errors' | 'kind' | 'because' | 'resolve_at' | 'runtime_id'
+>;
 
 const ProblemTypeSchema = Schema.Struct({ status: Schema.Int, title: Schema.String, description: Schema.String });
 

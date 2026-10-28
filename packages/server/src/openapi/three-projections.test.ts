@@ -50,6 +50,7 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'validate',
   'activate_allocation',
   'report_allocation',
+  'get_license',
 ]);
 
 function inPlaybook({ operation }: DocumentedOperation): boolean {
@@ -88,7 +89,7 @@ describe('the operations of the document and the tools of the endpoints', () => 
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(18);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(19);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

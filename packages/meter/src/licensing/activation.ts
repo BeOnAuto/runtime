@@ -9,8 +9,11 @@ import { installationOfKey, keyDigestOf } from './license-key.ts';
 import {
   activationUnavailable,
   invalidated,
+  invalidityOf,
   isLiveAt,
   licenseInvalid,
+  licenseInvalidated,
+  licenseNotRenewed,
   nowMs,
   usageFrom,
   type Licensing,
@@ -53,13 +56,14 @@ function refused(
   key: string,
   installation: string,
 ): (failure: AccountRefusal) => Effect.Effect<never, Conflict | Unavailable> {
-  return (failure) =>
-    failure.kind === 'license_invalid'
-      ? Effect.andThen(
-          invalidated(licensing, key, failure.detail),
-          Effect.fail(licenseInvalid(licensing.options, installation, failure.detail)),
-        )
-      : Effect.fail(activationUnavailable);
+  return (failure) => {
+    if (failure.kind !== 'license_invalid') return Effect.fail(activationUnavailable);
+    const invalidity = invalidityOf(failure);
+    return Effect.andThen(
+      invalidated(licensing, key, invalidity),
+      Effect.fail(licenseInvalidated(licensing.options, installation, invalidity)),
+    );
+  };
 }
 
 function entitlementFrom(
@@ -104,7 +108,15 @@ export function activated(licensing: Licensing, key: string): Effect.Effect<Lice
     }).pipe(Effect.mapError(() => meterUnavailable));
     yield* repairedBy(licensing, answer.repair, installation);
     yield* licensing.keyHeld(key);
-    return { installation, org, plan, expires_at: expiresAt, key_sha256: sha256, invalid: undefined };
+    return {
+      installation,
+      org,
+      plan,
+      issued_at: issuedAt,
+      expires_at: expiresAt,
+      key_sha256: sha256,
+      invalid: undefined,
+    };
   });
 }
 
@@ -117,20 +129,14 @@ export function standingFor(
     return activated(licensing, key);
   }
   if (license.invalid !== undefined) {
-    return Effect.fail(licenseInvalid(licensing.options, license.installation, license.invalid));
+    return Effect.fail(licenseInvalidated(licensing.options, license.installation, license.invalid));
   }
   return Effect.flatMap(nowMs, (now) =>
     isLiveAt(license.expires_at, now)
       ? Effect.succeed(license)
       : activated(licensing, key).pipe(
           Effect.catchTag('unavailable', () =>
-            Effect.fail(
-              licenseInvalid(
-                licensing.options,
-                license.installation,
-                `its entitlement expired at ${license.expires_at} and could not be refreshed`,
-              ),
-            ),
+            Effect.fail(licenseNotRenewed(licensing.options, license.installation, license.expires_at)),
           ),
         ),
   );

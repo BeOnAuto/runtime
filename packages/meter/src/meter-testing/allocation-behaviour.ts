@@ -3,14 +3,17 @@ import { expect, it } from 'vitest';
 import type { Answering } from '../testing/account-fake.ts';
 import type { Metered } from '../testing/metered.ts';
 import { runOf } from '../testing/runs.ts';
-import { allocatedOn } from './allocated.ts';
 import { allocationReportBehaviour, allocationReportRefusalBehaviour } from './allocation-report-behaviour.ts';
-import { opened, replicaOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { allocatedOn, opened, replicaOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
 const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
 
 function runsNamed(prefix: string, count: number): readonly string[] {
   return Array.from({ length: count }, (_, index) => `${prefix}-${index}`);
+}
+
+async function licensesPageOf(metered: Metered): Promise<string> {
+  return `https://studio.on.auto/licenses?installation=${String((await metered.state()).installation)}`;
 }
 
 async function identified(metered: Metered): Promise<string> {
@@ -27,10 +30,16 @@ function allocatedAdmissionBehaviour(ledgerOf: LedgerOf): void {
       await startedOnceAdmitted(metered, 'run-2'),
     ];
     const refused = await metered.admitted(runOf('run-3'));
+    const page = await licensesPageOf(metered);
 
     expect(answers).toEqual(['admitted', 'admitted', 'admitted']);
-    expect(refused.kind).toBe('credits_exhausted');
-    expect(refused.detail).toContain('has spent the 2 credits of its allocation');
+    expect(refused).toEqual({
+      kind: 'credits_exhausted',
+      detail: `This runtime has used all 2 offline credits. An owner can request more at ${page}.`,
+      because: 'none_left',
+      resolve_at: page,
+      runtime_id: String((await metered.state()).installation),
+    });
     expect([metered.account.askedToAdmit(), metered.account.activations()]).toEqual([0, []]);
   });
 
@@ -56,8 +65,13 @@ function graceBehaviour(ledgerOf: LedgerOf): void {
     const refused = await metered.admitted(runOf('run-2'));
     await metered.refreshed();
 
-    expect(refused.kind).toBe('license_invalid');
-    expect(refused.detail).toContain('was to be refreshed with Auto by 2026-11-03T12:00:00.000Z');
+    const page = await licensesPageOf(metered);
+    expect(refused).toEqual({
+      kind: 'license_invalid',
+      detail: `These offline credits stopped on 2026-11-03. An owner can request new ones at ${page}.`,
+      resolve_at: page,
+      runtime_id: String((await metered.state()).installation),
+    });
     expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
     expect((await metered.state()).allocation?.refresh_by).toBe('2026-11-11T12:00:00.000Z');
   });
@@ -99,7 +113,9 @@ function allocationRefusalBehaviour(ledgerOf: LedgerOf): void {
     metered.at(aWeekAndADayLater);
 
     expect(again.kind).toBe('allocated');
-    expect((await metered.allocated(allocation)).detail).toContain('was to be refreshed with Auto by');
+    expect((await metered.allocated(allocation)).detail).toBe(
+      `These offline credits stopped on 2026-11-03. An owner can request new ones at ${await licensesPageOf(metered)}.`,
+    );
     expect((await metered.state()).allocation?.sequence).toBe(0);
   });
 }

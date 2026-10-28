@@ -1,5 +1,5 @@
 import { fileSetting, type Environment, type FileSetting } from '@on.auto/config';
-import { isLicenseKey, SignedSchema, type Signed } from '@on.auto/meter';
+import { isLicenseKey, SignedSchema, type KeyInHand, type Signed } from '@on.auto/meter';
 import { Config, ConfigProvider, Effect, Option, Schema } from 'effect';
 
 import { asInvalidSettings, InvalidSettingsError } from '../settings/invalid-settings-error.ts';
@@ -25,7 +25,7 @@ export const studioAndLicenseVariables: readonly string[] = [
 export const defaultAccountsOrigin = 'https://billing.on.auto';
 
 export interface LicenseSettings {
-  readonly key: string | undefined;
+  readonly key: KeyInHand | undefined;
   readonly allocation: Signed | undefined;
   readonly accounts: string;
 }
@@ -93,8 +93,13 @@ export function readLicenseSettings(environment: Environment): LicenseSettings {
   }
   const file = Option.getOrElse(inFile, () => noLicenseInFile);
   const allocationText = Option.orElse(allocation, () => Option.fromNullishOr(file.allocation));
+  const fromEnvironment = Option.map(key, (given): KeyInHand => ({ key: given, source: 'environment' }));
+  const fromFile = Option.map(Option.fromNullishOr(file.key), (given): KeyInHand => ({
+    key: given,
+    source: 'configuration',
+  }));
   return {
-    key: Option.getOrUndefined(Option.orElse(key, () => Option.fromNullishOr(file.key))),
+    key: Option.getOrUndefined(Option.orElse(fromEnvironment, () => fromFile)),
     allocation: Option.getOrUndefined(Option.flatMap(allocationText, signedIn)),
     accounts,
   };

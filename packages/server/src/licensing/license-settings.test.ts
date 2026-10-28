@@ -51,16 +51,19 @@ describe('the license settings', () => {
   it('read the key from AUTO_RUNTIME_LICENSE_KEY and another account service from ACCOUNTS_ORIGIN', () => {
     expect(
       readSettingsOf({ AUTO_RUNTIME_LICENSE_KEY: key, ACCOUNTS_ORIGIN: 'http://127.0.0.1:19720' }).license,
-    ).toEqual({ key, allocation: undefined, accounts: 'http://127.0.0.1:19720' });
+    ).toEqual({ key: { key, source: 'environment' }, allocation: undefined, accounts: 'http://127.0.0.1:19720' });
   });
 
   it('read the key from license.key of the configuration file, a reference to the variable that holds it', () => {
     const path = configFile('license:\n  key: ${ACME_LICENSE_KEY}\n');
 
-    expect(readSettingsOf({ CONFIG_FILE: path, ACME_LICENSE_KEY: key }).license.key).toBe(key);
+    expect(readSettingsOf({ CONFIG_FILE: path, ACME_LICENSE_KEY: key }).license.key).toEqual({
+      key,
+      source: 'configuration',
+    });
     expect(
       readSettingsOf({ CONFIG_FILE: path, ACME_LICENSE_KEY: key, AUTO_RUNTIME_LICENSE_KEY: `${key}2` }).license.key,
-    ).toBe(`${key}2`);
+    ).toEqual({ key: `${key}2`, source: 'environment' });
   });
 });
 
@@ -74,7 +77,7 @@ describe('the allocation settings', () => {
     );
     expect(
       readSettingsOf({ CONFIG_FILE: path, ACME_LICENSE_KEY: key, ACME_ALLOCATION: JSON.stringify(allocation) }).license,
-    ).toMatchObject({ key, allocation });
+    ).toMatchObject({ key: { key, source: 'configuration' }, allocation });
     expect(
       readSettingsOf({
         CONFIG_FILE: path,

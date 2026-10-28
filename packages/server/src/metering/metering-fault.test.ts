@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { runtimeIdOf } from '../testing/accounts/licensed-server.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { tallied, tallyCreated } from '../testing/servers/tally-server.ts';
@@ -49,8 +50,12 @@ describe('a runtime whose ledger lost a run its meter counted', () => {
       body: { name: 'later', source: workflowSource('later', 'do:\n  - wait:\n      set: { waited: true }\n') },
     });
 
-    expect(refused).toMatchObject({ status: 409, body: { kind: 'metering_fault' } });
-    expect(JSON.stringify(refused.body)).toContain(`${studio}/support`);
+    const runtimeId = await runtimeIdOf(after);
+    expect(refused).toMatchObject({
+      status: 409,
+      body: { kind: 'metering_fault', resolve_at: `${studio}/support`, runtime_id: runtimeId },
+    });
+    expect(JSON.stringify(refused.body)).toContain(`see ${studio}/support (runtime id ${runtimeId})`);
     expect([edited.status, (await after.call('GET', `${alpha}/runs`)).status]).toEqual([201, 200]);
     expect((await after.call('GET', `${alpha}/events`)).status).toBe(200);
   }, 60_000);

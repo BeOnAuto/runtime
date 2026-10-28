@@ -13,7 +13,7 @@ import {
 } from '../admission/metering.ts';
 import type { Counting } from '../counting/run-starts.ts';
 import type { MeterState, Report } from '../meter-stream/meter-events.ts';
-import { invalidated, standsFor, usageFrom, type Licensing } from './licensing.ts';
+import { invalidated, invalidityOf, standsFor, usageFrom, type Licensing } from './licensing.ts';
 
 const reportUnavailable = new Unavailable({
   detail: 'This runtime could not report its actions to its account at Auto; it reports them again shortly',
@@ -23,7 +23,7 @@ const reportUnavailable = new Unavailable({
 function refused(licensing: Licensing, key: string): (failure: AccountRefusal) => Effect.Effect<boolean, Unavailable> {
   return (failure) =>
     failure.kind === 'license_invalid'
-      ? Effect.as(invalidated(licensing, key, failure.detail), false)
+      ? Effect.as(invalidated(licensing, key, invalidityOf(failure)), false)
       : Effect.fail(reportUnavailable);
 }
 

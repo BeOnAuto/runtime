@@ -8,7 +8,7 @@ function runsNamed(prefix: string, count: number): readonly string[] {
 }
 
 export function allowanceBehaviour(ledgerOf: LedgerOf): void {
-  it('admits its allowance and refuses the next as license_required, with a link naming its installation', async () => {
+  it('admits its allowance and refuses the next as license_required, resolved at the page of Studio naming its installation', async () => {
     const { metered } = await opened(ledgerOf, { allowance: 3 });
     const answers = [
       await startedOnceAdmitted(metered, 'run-1'),
@@ -16,11 +16,16 @@ export function allowanceBehaviour(ledgerOf: LedgerOf): void {
       await startedOnceAdmitted(metered, 'run-3'),
     ];
     const refused = await metered.admitted(runOf('run-4'));
-    const { installation } = await metered.state();
+    const installation = String((await metered.state()).installation);
+    const page = `https://studio.on.auto/licenses?installation=${installation}`;
 
     expect(answers).toEqual(['admitted', 'admitted', 'admitted']);
-    expect(refused.kind).toBe('license_required');
-    expect(refused.detail).toContain(`https://studio.on.auto/licenses?installation=${String(installation)}`);
+    expect(refused).toEqual({
+      kind: 'license_required',
+      detail: `This runtime has used its 3 free runs. Get a free key at ${page}, then activate it on the runtime and run this again.`,
+      resolve_at: page,
+      runtime_id: installation,
+    });
   });
 
   it('releases an admission whose run never started once its hold lapses', async () => {

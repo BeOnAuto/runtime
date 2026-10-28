@@ -32,7 +32,7 @@ export {
 } from './outcome/call-result.ts';
 export { catalogPathOf, makeCatalog, type Catalog } from './catalog/catalog.ts';
 export { CancelledKindSchema, RunCancelled, type CancelledKind } from './outcome/cancelled-run.ts';
-export { Conflict, ConflictKindSchema, type ConflictKind } from './outcome/conflict.ts';
+export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind, type Resolution } from './outcome/conflict.ts';
 export { Forbidden } from './outcome/forbidden.ts';
 export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outcome/unanswered-run.ts';
 export {

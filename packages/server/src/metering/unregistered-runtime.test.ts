@@ -1,6 +1,7 @@
 import { problemIn, withMcpSession } from '@on.auto/api/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { runtimeIdOf } from '../testing/accounts/licensed-server.ts';
 import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { tallied, tallyCreated, talliedTimes } from '../testing/servers/tally-server.ts';
@@ -23,6 +24,18 @@ const atTheEdge = workflowSource(
           - caught: { set: '\${ ({ kind: $refusal.kind, status: $refusal.status }) }' }
 `,
 );
+
+const usedUp = { state: 'unregistered', free_runs: { used: 100, of: 100 }, key_source: null };
+
+function licenseRequiredOf(runtimeId: string) {
+  const page = `${studio}/licenses?installation=${runtimeId}`;
+  return {
+    kind: 'license_required',
+    detail: `This runtime has used its 100 free runs. Get a free key at ${page}, then activate it on the runtime and run this again.`,
+    resolve_at: page,
+    runtime_id: runtimeId,
+  };
+}
 
 async function servedWithTally(): Promise<ReasoningServer> {
   const served = await servingWorkflows([], { STUDIO_ORIGIN: studio });
@@ -51,15 +64,15 @@ describe('a runtime nobody registered, after its 100 actions', () => {
     await server.stop();
   });
 
-  it('refuses the next run over HTTP as license_required, linking where Studio registers it', async () => {
+  it('refuses the next run over HTTP as license_required, resolved where Studio registers it by its id', async () => {
     const refused = await tallied(server);
+    const problem = { type: 'https://on.auto/problems/license_required', reason: 'conflict' };
 
     expect(admitted.map(({ status }) => status)).toEqual(Array.from({ length: 100 }, () => 200));
     expect(refused).toMatchObject({
       status: 409,
-      body: { type: 'https://on.auto/problems/license_required', reason: 'conflict', kind: 'license_required' },
+      body: { ...problem, ...licenseRequiredOf(await runtimeIdOf(server)) },
     });
-    expect(JSON.stringify(refused.body)).toContain(`${studio}/licenses?installation=`);
   });
 
   it('answers a run asked again under the id of one it ran, which counts nothing more', async () => {
@@ -73,17 +86,18 @@ describe('a runtime nobody registered, after its 100 actions', () => {
 
     expect({ isError: ran.isError, problem: problemIn(ran) }).toMatchObject({
       isError: true,
-      problem: { status: 409, kind: 'license_required' },
+      problem: { status: 409, ...licenseRequiredOf(await runtimeIdOf(server)) },
     });
   });
 
-  it('still reads its runs and events, and takes new definitions', async () => {
+  it('still reads its runs, its events and its license, which used its free runs, and takes new definitions', async () => {
     const created = await server.call('POST', `${alpha}/definitions/workflow`, {
       body: { name: 'later', source: workflowSource('later', 'do:\n  - wait:\n      set: { waited: true }\n') },
     });
 
     expect((await server.call('GET', `${alpha}/runs`)).status).toBe(200);
     expect((await server.call('GET', `${alpha}/events`)).status).toBe(200);
+    expect((await server.call('GET', '/v1/orgs/acme/license')).body).toMatchObject(usedUp);
     expect(created.status).toBe(201);
   });
 });

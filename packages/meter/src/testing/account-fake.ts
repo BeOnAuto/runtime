@@ -22,11 +22,18 @@ interface Registration {
   readonly org: string;
 }
 
+export type Revocation = 'key_rotated' | 'installation_revoked';
+
+interface CreditRefusal {
+  readonly because?: string;
+  readonly resolve_at?: string;
+}
+
 export interface AccountFake extends Omit<AllocationFake, 'ports'> {
   readonly ports: AccountPorts;
   readonly keyFor: (installation: string, org?: string) => string;
-  readonly revoke: (key: string) => void;
-  readonly exhaust: () => void;
+  readonly revoke: (key: string, because?: Revocation) => void;
+  readonly exhaust: (refusal?: CreditRefusal) => void;
   readonly goDown: () => void;
   readonly comeBack: () => void;
   readonly answer: (how: Answering) => void;
@@ -44,7 +51,7 @@ type Payload = Readonly<Record<string, unknown>>;
 interface FakeState {
   now: number;
   up: boolean;
-  credit: boolean;
+  exhausted: CreditRefusal | undefined;
   answering: Answering;
 }
 
@@ -52,10 +59,10 @@ interface Standing {
   readonly reached: (key: string) => Effect.Effect<Registration, AccountFailure>;
   readonly signed: (payload: Payload) => Signed;
   readonly iso: (laterMs?: number) => string;
-  readonly hasCredit: () => boolean;
+  readonly noCredit: () => AccountFailure | undefined;
   readonly repairOf: (installation: string) => Signed | null;
   readonly registered: (key: string, registration: Registration) => void;
-  readonly revoked: (key: string) => void;
+  readonly revoked: (key: string, because: Revocation | undefined) => void;
   readonly changed: (change: Readonly<Partial<FakeState>>) => void;
   readonly repairedWith: (installation: string, repair: Signed) => void;
 }
@@ -76,11 +83,29 @@ const unknownKey = new AccountFailure({
   detail: 'The key is unknown, was rotated away or its installation was revoked',
 });
 
-const noCredit = new AccountFailure({
-  status: 409,
-  kind: 'credits_exhausted',
-  detail: 'The org acme has no credits left',
-});
+const revocations: Readonly<Record<Revocation, AccountFailure>> = {
+  key_rotated: new AccountFailure({
+    status: 403,
+    kind: 'license_invalid',
+    detail: 'The key was rotated',
+    because: 'key_rotated',
+  }),
+  installation_revoked: new AccountFailure({
+    status: 403,
+    kind: 'license_invalid',
+    detail: 'The installation was removed from its org',
+    because: 'installation_revoked',
+  }),
+};
+
+function noCreditOf(refusal: CreditRefusal): AccountFailure {
+  return new AccountFailure({
+    status: 409,
+    kind: 'credits_exhausted',
+    detail: 'The org acme has no credits left',
+    ...refusal,
+  });
+}
 
 function tampered(signed: Signed): Signed {
   const text = `${Buffer.from(signed.payload, 'base64url').toString('utf8')} `;
@@ -112,7 +137,8 @@ function portsOf(standing: Standing, records: Records, allocations: AllocationFa
     admit: (key, run) =>
       Effect.flatMap(standing.reached(key), ({ installation }) => {
         records.asked();
-        if (!standing.hasCredit()) return Effect.fail(noCredit);
+        const noCredit = standing.noCredit();
+        if (noCredit !== undefined) return Effect.fail(noCredit);
         const action = `installation:${installation}/${run.org}/${run.playbook}/${run.run_id.toLowerCase()}`;
         records.charged(action);
         return Effect.succeed(
@@ -128,24 +154,27 @@ function portsOf(standing: Standing, records: Records, allocations: AllocationFa
 
 function accountStanding(): Standing {
   const registrations = new Map<string, Registration>();
+  const revoked = new Map<string, AccountFailure>();
   const repairs = new Map<string, Signed>();
-  const state: FakeState = { now: Date.parse('2026-10-27T12:00:00.000Z'), up: true, credit: true, answering: 'signed' };
+  const now = Date.parse('2026-10-27T12:00:00.000Z');
+  const state: FakeState = { now, up: true, exhausted: undefined, answering: 'signed' };
   return {
     reached: (key) =>
       Effect.suspend(() => {
         const registration = registrations.get(key);
         if (!state.up) return Effect.fail(unreachable('The account service could not be reached'));
-        return registration === undefined ? Effect.fail(unknownKey) : Effect.succeed(registration);
+        return registration === undefined ? Effect.fail(revoked.get(key) ?? unknownKey) : Effect.succeed(registration);
       }),
     signed: (payload) => answers[state.answering](payload),
     iso: (laterMs = 0) => new Date(state.now + laterMs).toISOString(),
-    hasCredit: () => state.credit,
+    noCredit: () => (state.exhausted === undefined ? undefined : noCreditOf(state.exhausted)),
     repairOf: (installation) => repairs.get(installation) ?? null,
     registered: (key, registration) => {
       registrations.set(key, registration);
     },
-    revoked: (key) => {
+    revoked: (key, because) => {
       registrations.delete(key);
+      if (because !== undefined) revoked.set(key, revocations[because]);
     },
     changed: (change) => {
       Object.assign(state, change);
@@ -197,9 +226,11 @@ export function accountFake(): AccountFake {
       standing.registered(key, { installation, org });
       return key;
     },
-    revoke: standing.revoked,
-    exhaust: () => {
-      standing.changed({ credit: false });
+    revoke: (key, because) => {
+      standing.revoked(key, because);
+    },
+    exhaust: (refusal = {}) => {
+      standing.changed({ exhausted: refusal });
     },
     goDown: () => {
       standing.changed({ up: false });

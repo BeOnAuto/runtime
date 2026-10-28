@@ -1,7 +1,7 @@
 import { RunMeter, type Meter } from '@on.auto/definitions';
 import { LedgerLog } from '@on.auto/ledger';
 import { Ledger } from '@on.auto/operations';
-import { Effect, Layer } from 'effect';
+import { Effect, Function, Layer } from 'effect';
 
 import { autoSigners, type Signers } from '../licensing/signed-answers.ts';
 import { meterAdmitting, meteringOver, type MeteredLedger } from './admitting.ts';
@@ -14,7 +14,7 @@ export function meterOver(
   authority: AdmissionAuthority,
   signers: Signers = autoSigners,
 ): Effect.Effect<Meter> {
-  return Effect.map(meteringOver(ledgered, options), (metering) =>
+  return Effect.map(meteringOver(ledgered, options, Function.constant(authority.installation)), (metering) =>
     meterAdmitting(
       metering,
       (run, counting) => admittedByTheAuthority(metering, authority, run, counting),

@@ -10,6 +10,10 @@ const PointSchema = Schema.Array(Schema.String);
 
 const FaultReasonSchema = Schema.Literals(['history_removed', 'history_rewritten', 'unreadable']);
 
+const LicenseInvalidBecauseSchema = Schema.Literals(['key_rotated', 'installation_revoked']);
+
+export const isLicenseInvalidBecause = Schema.is(LicenseInvalidBecauseSchema);
+
 const LicenseSchema = Schema.Struct({
   installation: Schema.String,
   org: Schema.String,
@@ -46,7 +50,11 @@ export const MeterEventSchema = Schema.Union([
   factOf('license_refreshed', LicenseSchema, ActedContextSchema),
   factOf(
     'license_invalidated',
-    Schema.Struct({ key_sha256: Schema.String, detail: Schema.String }),
+    Schema.Struct({
+      key_sha256: Schema.String,
+      detail: Schema.String,
+      because: Schema.optionalKey(LicenseInvalidBecauseSchema),
+    }),
     ActedContextSchema,
   ),
   factOf('usage_reported', ReportSchema, ActedContextSchema),
@@ -63,6 +71,8 @@ export type MeterEvent = typeof MeterEventSchema.Type;
 export type LicenseRecord = typeof LicenseSchema.Type;
 
 export type Report = typeof ReportSchema.Type;
+
+type LicenseInvalidBecause = typeof LicenseInvalidBecauseSchema.Type;
 
 type FaultReason = typeof FaultReasonSchema.Type;
 
@@ -83,13 +93,19 @@ export interface Fault {
   readonly detail: string;
 }
 
+export interface Invalidity {
+  readonly detail: string;
+  readonly because?: LicenseInvalidBecause;
+}
+
 export interface License {
   readonly installation: string;
   readonly org: string;
   readonly plan: string;
+  readonly issued_at: string;
   readonly expires_at: string;
   readonly key_sha256: string;
-  readonly invalid: string | undefined;
+  readonly invalid: Invalidity | undefined;
 }
 
 export interface MeterState {
@@ -114,8 +130,21 @@ export const noMeter: MeterState = {
   allocation: undefined,
 };
 
-function licensed({ installation, org, plan, expires_at: expiresAt, key_sha256: sha256 }: LicenseRecord): License {
-  return { installation, org, plan, expires_at: expiresAt, key_sha256: sha256, invalid: undefined };
+function licensed(record: LicenseRecord): License {
+  const { installation, org, plan, issued_at: issuedAt, expires_at: expiresAt, key_sha256: sha256 } = record;
+  return {
+    installation,
+    org,
+    plan,
+    issued_at: issuedAt,
+    expires_at: expiresAt,
+    key_sha256: sha256,
+    invalid: undefined,
+  };
+}
+
+function invalidityOf({ detail, because }: Extract<MeterEvent, { type: 'license_invalidated' }>['data']): Invalidity {
+  return because === undefined ? { detail } : { detail, because };
 }
 
 type LicenseEvent = Extract<MeterEvent, { type: `license_${string}` }>;
@@ -133,7 +162,7 @@ function isAllocationEvent(event: MeterEvent): event is AllocationEvent {
 function licenseAfter(license: License | undefined, event: LicenseEvent): License | undefined {
   if (event.type !== 'license_invalidated') return licensed(event.data);
   return Option.getOrUndefined(
-    Option.map(Option.fromNullishOr(license), (standing) => ({ ...standing, invalid: event.data.detail })),
+    Option.map(Option.fromNullishOr(license), (standing) => ({ ...standing, invalid: invalidityOf(event.data) })),
   );
 }
 

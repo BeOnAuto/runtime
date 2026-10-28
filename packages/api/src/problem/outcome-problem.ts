@@ -1,4 +1,4 @@
-import type { Cancelled, Failed, Rejected } from '@on.auto/operations';
+import { resolutionOf, type Cancelled, type Failed, type Rejected } from '@on.auto/operations';
 
 import type { OptionalProblemMembers, Problem } from './problem-document.ts';
 import { internalErrorProblem, problemOf } from './problem.ts';
@@ -9,11 +9,13 @@ export const serverStopping = problemOf('unavailable', 'The server is stopping')
 
 export const clientClosed = problemOf('client_closed_request', 'The client closed the request before it was answered');
 
-function optionalMembersOf({ issues, kind, because }: Rejected): OptionalProblemMembers {
+function optionalMembersOf(rejection: Rejected): OptionalProblemMembers {
+  const { issues, kind, because } = rejection;
   return {
     ...(issues === undefined ? {} : { errors: issues }),
     ...(kind === undefined ? {} : { kind }),
     ...(because === undefined ? {} : { because }),
+    ...resolutionOf(rejection),
   };
 }
 
