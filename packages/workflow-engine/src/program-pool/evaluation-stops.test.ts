@@ -22,17 +22,27 @@ const readyAtOnce = moduleOfSource(
   ].join('\n'),
 );
 
-function closingWhileUnheard(mark: string): string {
+const closing = [
+  'const [poolModule, effectModule, evaluationWorker, mark] = process.argv.slice(1);',
+  'const { programPool } = await import(poolModule);',
+  'const { Effect } = await import(effectModule);',
+  "const { existsSync } = await import('node:fs');",
+  "const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, evaluationWorker: () => new URL(evaluationWorker), environment: { READY_MARK: mark } });",
+  'void Effect.runPromise(pool.evaluations.machine.reserve);',
+  'while (!existsSync(mark)) {}',
+  'await pool.close();',
+  "process.stdout.write('closed');",
+].join('\n');
+
+function closingWhileUnheard(mark: string): readonly string[] {
   return [
-    `const { programPool } = await import(${JSON.stringify(new URL('program-pool.ts', import.meta.url).href)});`,
-    `const { Effect } = await import(${JSON.stringify(import.meta.resolve('effect'))});`,
-    "const { existsSync } = await import('node:fs');",
-    `const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, evaluationWorker: () => new URL(${JSON.stringify(readyAtOnce().href)}), environment: { READY_MARK: ${JSON.stringify(mark)} } });`,
-    'void Effect.runPromise(pool.evaluations.machine.reserve);',
-    `while (!existsSync(${JSON.stringify(mark)})) {}`,
-    'await pool.close();',
-    "process.stdout.write('closed');",
-  ].join('\n');
+    '--eval',
+    closing,
+    new URL('program-pool.ts', import.meta.url).href,
+    import.meta.resolve('effect'),
+    readyAtOnce().href,
+    mark,
+  ];
 }
 
 function aMarkToBeWritten(): string {
@@ -43,8 +53,10 @@ function aMarkToBeWritten(): string {
   return join(directory, 'ready');
 }
 
-async function endingOf(script: string): Promise<{ readonly code: number | null; readonly printed: string }> {
-  const child = spawnForTheTest(process.execPath, ['--eval', script], { stdio: ['ignore', 'pipe', 'inherit'] });
+async function endingOf(
+  nodeArguments: readonly string[],
+): Promise<{ readonly code: number | null; readonly printed: string }> {
+  const child = spawnForTheTest(process.execPath, nodeArguments, { stdio: ['ignore', 'pipe', 'inherit'] });
   const printed = { text: '' };
   child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     printed.text += chunk;

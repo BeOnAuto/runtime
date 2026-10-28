@@ -47,8 +47,9 @@ function poolReading(environment?: Readonly<Record<string, string>>): ProgramPoo
 }
 
 const server = [
-  `const { programPool } = await import(${JSON.stringify(new URL('program-pool.ts', import.meta.url).href)});`,
-  `const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, worker: () => new URL(${JSON.stringify(reading().href)}) });`,
+  'const [poolModule, readingWorker] = process.argv.slice(1);',
+  'const { programPool } = await import(poolModule);',
+  "const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, worker: () => new URL(readingWorker) });",
   "const outcome = await pool.run({ source: '.', arguments: [null], entry: 'default', moment: 0, budget: 500, memoryBytes: 67108864, stackBytes: 1048576, deadlineMs: 10000, mostOutputBytes: 1000 });",
   'await pool.close();',
   'process.stdout.write(JSON.stringify({ secret: process.env.WORKER_SECRET, preloaded: globalThis.preloaded === true, outcome }));',
@@ -85,6 +86,8 @@ describe('the flags of a worker', () => {
       `--import=${pathToFileURL(preload).href}`,
       '--eval',
       server,
+      new URL('program-pool.ts', import.meta.url).href,
+      reading().href,
     ]);
 
     expect(JSON.parse(printed)).toMatchObject({
