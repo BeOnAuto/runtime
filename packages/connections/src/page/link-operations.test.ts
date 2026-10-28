@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, billing, crm, notes } from '../testing/additions.ts';
-import { acmeViewer, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { acmeWriter, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const elevenMinutesLater = '2026-10-15T14:11:00.000Z';
 
 function reading(h: Harness, id: string, token: string, at?: string) {
-  return h.call(operationNamed(h.operations, 'read_link'), acmeViewer, { id, token }, at);
+  return h.call(operationNamed(h.operations, 'read_link'), acmeWriter, { id, token }, at);
 }
 
 function approving(h: Harness, id: string, token: string, caller = ada) {

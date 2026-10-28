@@ -49,6 +49,20 @@ export const acmeViewer: CallerIdentity = {
   permissions: ['playbook:read'],
 };
 
+export const acmeWriter: CallerIdentity = {
+  ...ada,
+  id: 'acme-writer',
+  name: 'acme-writer',
+  permissions: ['org:write'],
+};
+
+export const acmePlaybookWriter: CallerIdentity = {
+  ...ada,
+  id: 'acme-playbook-writer',
+  name: 'acme-playbook-writer',
+  permissions: ['playbook:write'],
+};
+
 export const harnessPages = { studio, runtime: () => runtimeOrigin };
 
 export const fixtureServing = {

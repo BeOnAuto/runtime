@@ -49,6 +49,20 @@ function tokenOfAnotherPerson(issuer: FakeIssuer): Promise<string> {
   });
 }
 
+function linkRoutesOf(id: string, token: string) {
+  return [
+    ['GET', `${connections}/${id}/link/${token}`, undefined],
+    ['POST', `${connections}/${id}/approve`, { token }],
+    ['POST', `${connections}/${id}/credential`, { token, value: 'Bearer notes-0f3c' }],
+    ['POST', `${connections}/${id}/consent`, { token }],
+    ['POST', `${connections}/${id}/consent/code`, { token, state: 'state', code: 'code' }],
+  ] as const;
+}
+
+function grantedOnly(issuer: FakeIssuer, ...permissions: readonly string[]): Promise<string> {
+  return accessTokenOf(issuer, publicUrl, ['user:org:read', ...permissions].join(' '));
+}
+
 describe('a connection on a runtime that signs people in', () => {
   it('links to the page with PUBLIC_URL as the server, and is approved by the person who added it alone', async () => {
     const issuer = await issuerOverHttps();
@@ -86,6 +100,38 @@ describe('a connection on a runtime that signs people in', () => {
           'A connection is added by a person, through an agent signed in as them, and a key cannot add or reconnect one',
       },
     });
+  });
+});
+
+describe('the link of a connection on a runtime that signs people in', () => {
+  it('answers its five routes 403 to a person who granted no org:write, and leaves it open to the one who did', async () => {
+    const issuer = await issuerOverHttps();
+    const served = await servingReasoning([], { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl });
+    server = served;
+    const adder = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+    const added = await served.call('POST', connections, { key: adder, body: notes });
+    const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(added.body);
+    const { token } = linkOf(connect.url);
+    const withoutOrgWrite = [
+      await grantedOnly(issuer, 'org:read'),
+      await grantedOnly(issuer, 'playbook:read'),
+      await grantedOnly(issuer, 'playbook:write'),
+    ];
+
+    const refused = await Promise.all(
+      withoutOrgWrite.flatMap((key) =>
+        linkRoutesOf(id, token).map(
+          async ([method, path, body]) => (await served.call(method, path, { key, body })).status,
+        ),
+      ),
+    );
+    const approvedByWriter = await served.call('POST', `${connections}/${id}/approve`, {
+      key: await grantedOnly(issuer, 'org:write'),
+      body: { token },
+    });
+
+    expect(refused).toEqual(Array.from({ length: 15 }, () => 403));
+    expect(approvedByWriter).toMatchObject({ status: 200, body: { status: 'connected' } });
   });
 });
 

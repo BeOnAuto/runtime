@@ -1,4 +1,4 @@
-import { allPermissions, defineHttpOperation } from '@on.auto/operations';
+import { defineHttpOperation } from '@on.auto/operations';
 import type { ConsentClient } from '@on.auto/tool-servers';
 import { Effect, Schema } from 'effect';
 
@@ -60,7 +60,7 @@ export function defineReadLink(reading: LinkReading) {
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
     body: { kind: 'none' },
-    permittedBy: allPermissions,
+    permittedBy: ['org:write'],
     inputSchema: LinkSchema,
     answer: { kind: 'json', outputSchema: LinkedSchema },
     reasons: ['not_found'],
@@ -96,7 +96,6 @@ export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/approve' },
     body: { kind: 'json' },
-    permittedBy: allPermissions,
     inputSchema: LinkSchema,
     answer: answeringTheRecord,
     reasons: ['not_found', 'forbidden', 'conflict'],
