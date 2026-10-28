@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Model settings reference
 
 This page holds the rules behind the model settings, as the operator sees them. [Set up a model provider](../self-host/models.md) shows how to configure a provider and check that it works. The [configuration reference](../self-host/configuration.md#models) lists every model setting.

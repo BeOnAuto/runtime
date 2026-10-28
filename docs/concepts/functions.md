@@ -20,9 +20,11 @@ Real work often combines types. A budget review might recall the last decisions,
 
 ## Availability
 
-Auto runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
+Hosted Auto runs reasoning, computation and recall functions, and workflows. Your agent lists the definition types its connection supports.
 
-Auto Runtime is in early development and is not ready for production use.
+The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
+
+The self-hosted runtime is in early development and is not ready for production use.
 
 These are planned and not available yet:
 
@@ -50,7 +52,6 @@ It asks a system and takes the result straight back, or it asks a person and wai
 
 Choose interaction when a person must decide or supply something, or when the playbook needs what another system holds right now. An interaction function does not interpret anything: no model reads the answer.
 
-- [Build your first workflow](../tutorials/first-workflow.md) saves an approval and answers it through the inbox.
 - [Interaction function format](../reference/interaction-format.md) describes the document, and [Terminology](terminology.md#interaction) defines request, inbox and answer.
 
 ## Prediction

@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Set up a model provider
 
 Reasoning functions call language models through the providers you configure. This guide sets up a provider, shows the settings for common deployments, and checks that the server can call a model. Which models you can call depends on your provider account.

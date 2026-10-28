@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Let people add connections
 
 A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.

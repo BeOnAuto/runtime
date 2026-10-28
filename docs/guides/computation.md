@@ -8,7 +8,7 @@ Compute figures that must be exact, such as totals, paces and projections, with 
 
 ## Before you start
 
-- Auto runs, and your agent is connected to it. The [quick start](../get-started/local.md) sets both up.
+- Your agent is connected to Auto. The [quick start](../get-started/cloud.md) sets this up.
 - You have a playbook, and you know which figures you need and where their inputs come from: your agent, a workflow step or another function's output.
 - You can read a little TypeScript, or you let your agent write and explain it. A program for a few figures is a dozen lines.
 

@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Troubleshooting
 
 Each problem below gives the symptom, its usual cause and the fix. The first four are the ones people meet when they first start the server on their own computer.

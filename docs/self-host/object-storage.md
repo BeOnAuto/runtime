@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Keep content on object storage
 
 By default, the content a playbook keeps is stored in the ledger's database. Set `CONTENT_STORE_URL` to an `s3://bucket/prefix` URL, and the server keeps that content in an S3 bucket instead. Every other record stays in the ledger.

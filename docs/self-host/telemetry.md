@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Send telemetry
 
 The ledger records what happened in a playbook. With telemetry on, the server also exports how it happened. It sends three kinds of signal over OTLP, the OpenTelemetry protocol, to any OpenTelemetry collector or backend:

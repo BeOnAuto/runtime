@@ -55,7 +55,7 @@ Auto Studio shows running work, history and operating controls. Authoring starts
 
 A playbook should do only what your team would trust it to do. Decide which actions it may take on its own, and where a person must decide. A review function can recommend a budget change without being allowed to make one.
 
-Where a person must decide, the method includes an interaction function. The workflow asks that person and waits for their answer, which they give in the playbook's inbox or, for some functions, where the request reached them. [Build your first workflow](../tutorials/first-workflow.md) adds such an approval step, and the [Interaction function format](../reference/interaction-format.md) describes how a request is delivered and answered.
+Where a person must decide, the method includes an interaction function. The workflow asks that person and waits for their answer, which they give in the playbook's inbox or, for some functions, where the request reached them. The [Interaction function format](../reference/interaction-format.md) describes how a request is delivered and answered in a runtime that supports interaction functions.
 
 These limits must hold for direct calls as well as for workflows. An approval step cannot protect an action that someone is allowed to run directly. Permissions apply to an [org](terminology.md#orgs-and-callers) and its playbooks; [Requests and access](../reference/http.md#requests-and-access) lists them.
 

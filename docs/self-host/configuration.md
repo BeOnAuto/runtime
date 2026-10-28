@@ -1,3 +1,11 @@
+---
+search: false
+head:
+  - - meta
+    - name: robots
+      content: noindex, follow
+---
+
 # Configuration reference
 
 This page lists every setting of the runtime, the configuration file, and the tool servers functions may call. The runtime reads its settings once, when it starts. Change a setting, then restart the server.

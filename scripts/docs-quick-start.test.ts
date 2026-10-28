@@ -11,7 +11,7 @@ await test('the local quick start connects an agent with one MCP entry, lets it 
   const readme = readFileSync(join(docs, '../README.md'), 'utf8');
   assert.ok(readme.includes('](https://on.auto/docs/)'));
   const guide = readFileSync(join(docs, 'get-started/local.md'), 'utf8');
-  assert.match(guide, /^# Quick start: connect your agent$/mu);
+  assert.match(guide, /^# Run Auto on your computer$/mu);
   const walkthrough = [
     '## Before you start',
     '## 1. Add Auto to your agent',

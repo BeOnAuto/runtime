@@ -2,7 +2,7 @@
 
 These repository-only guides describe the development checkout for contributors. They are excluded from the public documentation build and search. Start with the [local quick start](../get-started/local.md) to try Auto. To run and operate the runtime, follow the public [self-hosting guides](../self-host.md).
 
-Workflows run in the server itself, on the workflow engine of `@on.auto/workflow-engine` hosted in Node by `@on.auto/workflow-host`, and are kept in the ledger's database. The adapters for Auto's cloud hosting are not built yet. These guides describe the setup and the limitations of the current code.
+Workflows run in the server itself, on the workflow engine of `@on.auto/workflow-engine` hosted in Node by `@on.auto/workflow-host`, and are kept in the ledger's database. Auto's hosted runtime is maintained in the Studio repository. These guides describe the setup and the limitations of the current code.
 
 ## Run the checkout
 
