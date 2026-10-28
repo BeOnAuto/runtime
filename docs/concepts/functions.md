@@ -20,7 +20,7 @@ Real work often combines types. A budget review might recall the last decisions,
 
 ## Availability
 
-Hosted Auto runs reasoning, computation and recall functions, and workflows. Your agent lists the definition types its connection supports.
+Hosted Auto runs reasoning, computation and recall functions, workflows, and interaction functions that ask a person in Studio's inbox; an interaction that asks through a tool or calls a system is not yet available there. Your agent lists the definition types its connection supports.
 
 The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
