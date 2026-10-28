@@ -14,12 +14,19 @@ const unregistered: LicenseStatus = {
   renewed_at: null,
   key_source: null,
   offline: null,
+  fault: null,
   invalid_because: null,
 };
 
 const offline = { credits: 50, spent: 7, usable_until: '2026-11-03T12:00:00.000Z' };
 
 describe('the line that says what a runtime holds', () => {
+  it('says the fault that stops its runs, whatever else it holds', () => {
+    const fault = 'This runtime stopped starting runs because an event of its ledger can no longer be read.';
+
+    expect(licenseNoticeOf({ ...unregistered, fault })).toBe(fault);
+  });
+
   it('counts the free runs it used while it is unregistered, and names who it is licensed to once it is', () => {
     const licensed: LicenseStatus = {
       ...unregistered,

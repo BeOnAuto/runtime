@@ -31,5 +31,5 @@ const noticesByState: Readonly<Record<LicenseState, (status: LicenseStatus) => s
 };
 
 export function licenseNoticeOf(status: LicenseStatus): string | undefined {
-  return noticesByState[status.state](status);
+  return status.fault ?? noticesByState[status.state](status);
 }

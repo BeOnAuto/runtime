@@ -56,6 +56,9 @@ describe('a runtime whose ledger lost a run its meter counted', () => {
       body: { kind: 'metering_fault', resolve_at: `${studio}/support`, runtime_id: runtimeId },
     });
     expect(JSON.stringify(refused.body)).toContain(`see ${studio}/support (runtime id ${runtimeId})`);
+    expect(JSON.stringify((await after.call('GET', '/v1/orgs/acme/license')).body)).toContain(
+      '"fault":"This runtime stopped starting runs because',
+    );
     expect([edited.status, (await after.call('GET', `${alpha}/runs`)).status]).toEqual([201, 200]);
     expect((await after.call('GET', `${alpha}/events`)).status).toBe(200);
   }, 60_000);

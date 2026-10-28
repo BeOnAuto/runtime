@@ -53,6 +53,7 @@ describe('the license a runtime nobody registered holds', () => {
       renewed_at: null,
       key_source: null,
       offline: null,
+      fault: null,
       invalid_because: null,
     });
     expect(runtimeId).toMatch(uuid);
@@ -88,6 +89,7 @@ describe('the license a licensed runtime holds', () => {
       renewed_at: '2026-10-27T12:00:00.000Z',
       key_source: 'environment',
       offline: null,
+      fault: null,
       invalid_because: null,
     });
     expect(await pageOf(server)).toContain('<p class="license">Licensed to acme (free plan)</p>');
@@ -139,6 +141,7 @@ describe('the license of a runtime whose key was rotated', () => {
 
     expect((await server.call('GET', license)).body).toMatchObject({
       state: 'invalid',
+      fault: null,
       invalid_because: detailIn(refused.body).detail,
     });
   });

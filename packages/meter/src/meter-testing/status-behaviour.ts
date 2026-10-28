@@ -31,6 +31,7 @@ function unregisteredStatusBehaviour(ledgerOf: LedgerOf): void {
       ...noLicense,
       key_source: null,
       offline: null,
+      fault: null,
       invalid_because: null,
     });
     expect((await metered.state()).installation).toBe(first.runtime_id);
@@ -77,6 +78,21 @@ function countedStatusBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
+function faultStatusBehaviour(ledgerOf: LedgerOf): void {
+  it('names a standing fault in the words each new run is refused in, and no fault before it', async () => {
+    const { metered, tampering } = await opened(ledgerOf);
+    await startedOnceAdmitted(metered, 'run-1');
+    await metered.admitted(runOf('run-2'));
+    const before = await metered.status();
+    await tampering.deleted(await metered.lastCounted());
+    const refused = await metered.admitted(runOf('run-3'));
+
+    expect(before.fault).toBeNull();
+    expect(refused.kind).toBe('metering_fault');
+    expect((await metered.status()).fault).toBe(refused.detail);
+  });
+}
+
 function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
   it('reads a key it has not activated yet as invalid, by the installation the key names, and where the key came from', async () => {
     const { metered } = await keyedOn(ledgerOf, 'configuration');
@@ -88,6 +104,7 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
       ...noLicense,
       key_source: 'configuration',
       offline: null,
+      fault: null,
       invalid_because:
         'This runtime holds a key it has not activated yet. It activates it with Auto as it starts its next run; check that it can reach billing.on.auto.',
     });
@@ -109,6 +126,7 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
       renewed_at: '2026-10-27T12:00:00.000Z',
       key_source: 'environment',
       offline: null,
+      fault: null,
       invalid_because: null,
     });
   });
@@ -148,6 +166,7 @@ function invalidStatusBehaviour(ledgerOf: LedgerOf): void {
     expect(await metered.status()).toMatchObject({
       state: 'invalid',
       org: 'globex',
+      fault: null,
       invalid_because: `This runtime's key was replaced. Activate the new key an owner was shown when they rotated it, then run this again. If the key is lost, an owner can rotate it again at ${page}.`,
     });
   });
@@ -160,6 +179,7 @@ function invalidStatusBehaviour(ledgerOf: LedgerOf): void {
     expect(await metered.status()).toMatchObject({
       state: 'invalid',
       expires_at: '2026-11-03T12:00:00.000Z',
+      fault: null,
       invalid_because:
         "This runtime's license wasn't renewed by 2026-11-03. Check that it can reach billing.on.auto (it renews every day), then run this again.",
     });
@@ -177,6 +197,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
       runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f',
       key_source: null,
       offline: { credits: 5, spent: 2, usable_until: '2026-11-03T12:00:00.000Z' },
+      fault: null,
       invalid_because: null,
     });
   });
@@ -189,6 +210,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
       state: 'invalid',
       key_source: 'environment',
       offline: { credits: 5, spent: 0, usable_until: '2026-11-03T12:00:00.000Z' },
+      fault: null,
       invalid_because:
         'These offline credits stopped on 2026-11-03. An owner can request new ones at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.',
     });
@@ -198,6 +220,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
 export function statusBehaviour(ledgerOf: LedgerOf): void {
   unregisteredStatusBehaviour(ledgerOf);
   countedStatusBehaviour(ledgerOf);
+  faultStatusBehaviour(ledgerOf);
   licensedStatusBehaviour(ledgerOf);
   namedStatusBehaviour(ledgerOf);
   invalidStatusBehaviour(ledgerOf);

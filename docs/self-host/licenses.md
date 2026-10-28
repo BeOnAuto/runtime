@@ -81,7 +81,8 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
   "renewed_at": "2026-10-27T12:00:00.000Z",
   "key_source": "environment",
   "offline": null,
-  "invalid_because": null
+  "invalid_because": null,
+  "fault": null
 }
 ```
 
@@ -92,8 +93,9 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
 - `org_name` is the name of that org at Auto, as Auto signed it into the entitlement and renewed with it every day, kept on one line of at most 80 characters, its control and format characters taken out, and `null` without one or where Auto named none or a blank one.
 - `key_source` says where the key in force came from: `environment`, `configuration` or `activated`, by the command or the API; `null` without a key. A key in the environment or the configuration file wins over an activated one at each start.
 - `offline` is `{ credits, spent, usable_until }` while the runtime holds an allocation, and `null` otherwise.
+- `fault` is, while a [metering fault](#faults-and-repairs) stands, the words every new run is refused in, whatever the `state`, and `null` otherwise.
 
-Started by `npx @on.auto/runtime`, the runtime says the same in its terminal and on the page it serves at its root: `12 of 100 free runs used, then a free key from Studio` while it is unregistered, and `Licensed to Acme Corporation (free plan)` once it is licensed, with the org's id in place of its name where Auto named none.
+Started by `npx @on.auto/runtime`, the runtime says the same in its terminal and on the page it serves at its root: `12 of 100 free runs used, then a free key from Studio` while it is unregistered, and `Licensed to Acme Corporation (free plan)` once it is licensed, with the org's id in place of its name where Auto named none, and the words of its fault in place of either while one stands.
 
 ## When a run is refused
 

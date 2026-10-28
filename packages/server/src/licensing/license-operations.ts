@@ -43,10 +43,11 @@ const LicenseStatusSchema = Schema.Struct({
     'The allocation of an installation that does not reach Auto',
   ),
   invalid_because: orNull(Schema.String, 'While it is invalid, the words a run is refused in'),
+  fault: orNull(Schema.String, 'While a metering fault stands, the words every new run is refused in'),
 });
 
 const description = [
-  "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends.",
+  "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends, and a metering fault that stops its runs.",
   'Every member of an org may read it; the license covers the whole runtime, whatever org the route names.',
 ].join(' ');
 

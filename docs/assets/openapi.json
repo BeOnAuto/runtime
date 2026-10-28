@@ -5915,7 +5915,7 @@
       "get": {
         "operationId": "get_license",
         "summary": "Get license",
-        "description": "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
+        "description": "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends, and a metering fault that stops its runs. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
         "tags": [
           "license"
         ],
@@ -6078,6 +6078,17 @@
                         }
                       ],
                       "description": "While it is invalid, the words a run is refused in"
+                    },
+                    "fault": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "While a metering fault stands, the words every new run is refused in"
                     }
                   },
                   "required": [
@@ -6091,7 +6102,8 @@
                     "renewed_at",
                     "key_source",
                     "offline",
-                    "invalid_because"
+                    "invalid_because",
+                    "fault"
                   ],
                   "additionalProperties": false
                 }

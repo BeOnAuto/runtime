@@ -49,6 +49,7 @@ The production adapter of `AccountService` is `accountServiceLayer({ origin, fet
 - `key_source`: where the key in force came from, `environment`, `configuration` or `activated`, and `null` without one.
 - `offline`: `{ credits, spent, usable_until }` of a standing allocation, and `null` without one.
 - `invalid_because`: while it is `invalid`, the `detail` a run is refused in, and `null` otherwise.
+- `fault`: while a fault stands, the `detail` every new run is refused in, whatever the `state`, and `null` otherwise.
 
 A ledger that refuses to record an installation, or breaks, answers `meter_unavailable`.
 

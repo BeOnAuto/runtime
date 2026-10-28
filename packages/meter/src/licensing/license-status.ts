@@ -1,7 +1,7 @@
 import { randomUUIDv7, type Unavailable } from '@on.auto/operations';
 import { Effect, Function, Option } from 'effect';
 
-import { caughtUp, executed, meterStateOf, meterUnavailable, nowIso } from '../admission/metering.ts';
+import { caughtUp, executed, faultRefusal, meterStateOf, meterUnavailable, nowIso } from '../admission/metering.ts';
 import { standingAllocation } from '../allocations/allocation.ts';
 import type { Allocation } from '../meter-stream/allocation-events.ts';
 import type { License, MeterState } from '../meter-stream/meter-events.ts';
@@ -37,6 +37,7 @@ export interface LicenseStatus {
   readonly key_source: KeySource | null;
   readonly offline: OfflineCredits | null;
   readonly invalid_because: string | null;
+  readonly fault: string | null;
 }
 
 type Standing = Pick<LicenseStatus, 'state' | 'offline' | 'invalid_because'>;
@@ -82,6 +83,10 @@ function projectedActions(licensing: Licensing, state: MeterState): Effect.Effec
         Effect.orElseSucceed(Function.constant(kept)),
       )
     : Effect.succeed(kept);
+}
+
+function faultOf(licensing: Licensing, state: MeterState): string | null {
+  return state.fault === undefined ? null : faultRefusal(state.fault, licensing, state).detail;
 }
 
 function licenseOf({ license }: MeterState, inForce: KeyInHand | undefined): License | undefined {
@@ -134,6 +139,7 @@ export function licenseStatusOf(licensing: Licensing): Effect.Effect<LicenseStat
       free_runs: { used: Math.min(actions, allowance), of: allowance },
       ...fieldsOf(license),
       key_source: inForce?.source ?? null,
+      fault: faultOf(licensing, state),
     };
   }).pipe(Effect.catchDefect(() => Effect.fail(meterUnavailable)));
 }
