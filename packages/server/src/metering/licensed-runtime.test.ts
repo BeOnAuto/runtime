@@ -103,6 +103,58 @@ describe('a licensed runtime whose account answers that the org was deleted', ()
   });
 });
 
+const termsPage = `${studio}/licenses?installation=${installation}`;
+
+const termsRequired = {
+  type: 'https://on.auto/problems/terms_required',
+  title: 'Terms required',
+  status: 409,
+  detail: `Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at ${termsPage}; then run this again.`,
+  reason: 'conflict',
+  kind: 'terms_required',
+  resolve_at: termsPage,
+  runtime_id: installation,
+};
+
+describe('a licensed runtime whose account needs an owner of its org to accept Auto’s activation terms', () => {
+  it('refuses to activate a key as terms_required over HTTP and over MCP, never to ask again shortly, and activates it once an owner accepted', async () => {
+    const accounts = await accountsServed();
+    accounts.account.requireTerms({ resolve_at: termsPage });
+    const server = await servedBy(accounts);
+    const overHttp = await server.call('POST', '/v1/orgs/acme/license', { body: { key: accounts.key } });
+    const overMcp = await withMcpSession(
+      'current revision',
+      { url: `${server.origin}/orgs/acme/mcp`, headers: {} },
+      (session) => session.callTool('activate_license', { key: accounts.key }),
+    );
+    accounts.account.acceptTerms();
+    const accepted = await server.call('POST', '/v1/orgs/acme/license', { body: { key: accounts.key } });
+
+    expect([overHttp.status, overHttp.body, overHttp.headers.get('retry-after')]).toEqual([409, termsRequired, null]);
+    expect({ isError: overMcp.isError, problem: problemIn(overMcp) }).toEqual({
+      isError: true,
+      problem: termsRequired,
+    });
+    expect(plainTextIn(overMcp)).toBe(
+      'Could not activate the license with the key given: Auto needs an owner of this runtime’s org to accept its activation terms for self-hosted runtimes. Nothing was changed. An owner reads and accepts them in Auto Studio at the resolve_at link in the details below; then run this again. The key needs no change.',
+    );
+    expect(accepted).toMatchObject({ status: 200, body: { installation, org: 'acme', plan: 'free' } });
+  });
+
+  it('refuses a run as terms_required while the key it was started with waits on the terms, and runs it once an owner accepted', async () => {
+    const accounts = await accountsServed();
+    accounts.account.requireTerms({ resolve_at: termsPage });
+    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
+    const refused = await tallied(server);
+    accounts.account.acceptTerms();
+    const ran = await tallied(server);
+
+    expect([refused.status, refused.body]).toEqual([409, termsRequired]);
+    expect(ran.status).toBe(200);
+    expect(accounts.account.charged()).toEqual([actionOf(ran)]);
+  });
+});
+
 describe('a runtime given its license key in license.key of its configuration file', () => {
   it('activates it and admits each run by the account', async () => {
     const accounts = await accountsServed();

@@ -69,3 +69,29 @@ describe('auto-runtime license, against the runtime running on this computer', (
     );
   }, 60_000);
 });
+
+describe('auto-runtime license activate, while the account needs an owner to accept Auto’s activation terms', () => {
+  it('says where an owner accepts Auto’s activation terms while the account needs them, and activates the key once they did', async () => {
+    const home = aHome();
+    const { port, accounts } = await controlledLicensedServer(home);
+    const page = `https://studio.on.auto/licenses?installation=${installation}`;
+    accounts.account.requireTerms({ resolve_at: page });
+    const said: string[] = [];
+    const host = hostOn(port, home, (line) => {
+      said.push(line);
+    });
+    const refused = await runCommandLine(['license', 'activate', accounts.key], host);
+    accounts.account.acceptTerms();
+
+    expect([refused, said]).toEqual([
+      1,
+      [
+        `Auto Runtime did not activate the key: Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at ${page}; then run this again.`,
+      ],
+    ]);
+    expect(await runCommandLine(['license', 'activate', accounts.key], host)).toBe(0);
+    expect(said.at(-1)).toBe(
+      `Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id ${installation}.`,
+    );
+  }, 60_000);
+});
