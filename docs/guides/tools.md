@@ -94,7 +94,7 @@ Check the run's status and output. Then check its history, which the agent reads
 
 The agent can read a call's whole arguments and answer with `get_event`, unless the server's entry keeps only their sizes.
 
-## Self-hosted example: review a brief from a folder
+## Self-hosted example: review a brief from a folder {#example-review-a-brief-from-the-folder}
 
 This reasoning function reads one brief through the `files` server that [Example: a folder of briefs](../self-host/tool-servers.md#example-a-folder-of-briefs) adds, and reviews it. That server reads paths inside its `briefs` folder. `list_directory` with the path `.` lists the folder itself, one line such as `[FILE] autumn-reporting-trial.txt` for each file. `read_text_file` takes the file name alone as its `path`, and optionally `head` or `tail` to read only the first or last lines. If your model provider is not Anthropic, ask your agent to use one of your provider's models.
 
