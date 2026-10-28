@@ -9,6 +9,7 @@ import { logoHeight, logoLines, type PaintingDepth } from './logo.ts';
 export interface Ready {
   readonly version: string;
   readonly port: number;
+  readonly publicUrl: string | undefined;
   readonly readyInMs: number;
   readonly mode: AccessMode;
   readonly identityService: string | undefined;
@@ -73,15 +74,19 @@ function usagePingNotice(install: Install | undefined, depth: ColorDepth): reado
   return install?.isNew === true ? [`  ${painterFor(depth)('dim', firstStartNotice)}`, ''] : [];
 }
 
+function addressOf({ publicUrl, port }: Ready): string {
+  return publicUrl ?? `http://localhost:${port}`;
+}
+
 export function readyNoticeOf(ready: Ready, depth: ColorDepth): string {
-  const { port, readyInMs, identityService, install } = ready;
+  const { readyInMs, identityService, install } = ready;
   const paint = painterFor(depth);
   const link = linkerFor(depth);
-  const url = `http://localhost:${port}`;
+  const url = addressOf(ready);
   const mcp = `${url}/mcp`;
   const studioBase = studioBaseOf(ready.studio, url);
   const studio = studioLinkOf(ready.studio, { ownOrigin: url, openedFrom: 'terminal', installId: install?.id });
-  const studioShown = port === defaultRuntimePort ? studioBase : `${studioBase}?server=${url}`;
+  const studioShown = ready.studio.served ? studioBase : `${studioBase}?server=${url}`;
   const entry = (label: string, value: string): string => `     ${paint('dim', label.padEnd(8))} ${link(value, value)}`;
   const agent = (label: string, command: string): string => `    ${label.padEnd(13)} ${paint('dim', command)}`;
   const signIn = identityService === undefined ? [] : [entry('Sign-in', identityService)];

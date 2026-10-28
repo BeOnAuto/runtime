@@ -156,6 +156,7 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
   let stopping: Promise<void> | undefined;
   return {
     port: listening.port,
+    publicUrl: settings.publicUrl,
     mode: authenticator.mode,
     signIn: settings.signIn,
     studio: settings.studio,

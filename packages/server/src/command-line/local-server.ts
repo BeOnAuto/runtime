@@ -7,6 +7,7 @@ import { clearedLine, headerOf, readyNoticeOf, startingLine, stoppedNotice, stop
 
 interface LocalServer {
   readonly port: number;
+  readonly publicUrl: string | undefined;
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
   readonly studio: StudioSettings;
@@ -50,6 +51,7 @@ export async function servedLocally(host: LocalServerHost): Promise<void> {
       {
         version: release.version,
         port: server.port,
+        publicUrl: server.publicUrl,
         readyInMs: Math.round(host.clock() - startedAt),
         mode: server.mode,
         identityService: server.signIn?.issuer,

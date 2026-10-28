@@ -206,10 +206,13 @@ describe('the other commands of auto-runtime', () => {
 
     await expect(runCommandLine(['--help'], host)).resolves.toBe(0);
     expect(logged[0]).toMatch(/^Usage: auto-runtime \[command\]\n/u);
-    expect(logged[0]).toContain('http://localhost:5555');
     expect(logged[0]).toContain(
-      '\nOn this computer every request is trusted as you, with no sign-in.\nPUBLIC_URL=http://localhost:5555 signs people in through the Auto identity service instead.\n',
+      '  start                  Start Auto Runtime on port 5555, or the PORT you set (the default)\n',
     );
+    expect(logged[0]).toContain(
+      '\nSet PUBLIC_URL to the address people reach it at, such as https://auto.example.com, to sign them in through the Auto identity service.\nWithout PUBLIC_URL or API_KEYS, it runs in local mode: every request on this computer is trusted as you, with no sign-in.\n',
+    );
+    expect(logged[0]).not.toContain('localhost');
   });
 });
 

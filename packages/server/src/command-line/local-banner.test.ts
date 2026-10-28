@@ -12,6 +12,7 @@ const hostedStudio = { origin: 'https://studio.on.auto', served: false };
 const ready = {
   version: '0.9.1',
   port: 5555,
+  publicUrl: undefined,
   readyInMs: 640,
   mode: 'local',
   identityService: undefined,
@@ -92,22 +93,20 @@ describe('the Studio entry of the notice that the server is ready', () => {
     expect(stripVTControlCharacters(notice)).toBe(readyNoticeOf(ready, 1));
   });
 
-  it('shows the Studio host where the server serves no Studio, by its root alone or with the server', () => {
+  it('shows the Studio host with the server where the server serves no Studio, since its root alone opens Auto Cloud', () => {
     expect([
       readyNoticeOf({ ...ready, studio: hostedStudio }, 1).split('\n')[1],
       readyNoticeOf({ ...ready, port: 6000, studio: hostedStudio }, 1).split('\n')[1],
     ]).toEqual([
-      '  ➜  Studio   https://studio.on.auto/',
+      '  ➜  Studio   https://studio.on.auto/?server=http://localhost:5555',
       '  ➜  Studio   https://studio.on.auto/?server=http://localhost:6000',
     ]);
   });
 });
 
 describe('how the notice shows Studio', () => {
-  it('shows the server in the Studio address when it is not the default one', () => {
-    expect(readyNoticeOf({ ...ready, port: 6000 }, 1)).toContain(
-      '  ➜  Studio   http://localhost:6000/studio/?server=http://localhost:6000\n',
-    );
+  it('shows the Studio the server serves by its address alone on any port, since it opens the server that serves it', () => {
+    expect(readyNoticeOf({ ...ready, port: 6000 }, 1)).toContain('  ➜  Studio   http://localhost:6000/studio/\n');
   });
 
   it('sets the Studio link apart, in bold cyan, and dims the labels of the others', () => {
@@ -219,6 +218,54 @@ describe('the notice that a server that takes keys alone is ready', () => {
       '     Docs     https://on.auto/docs/',
       '',
       '  Connect your agent',
+    ]);
+  });
+});
+
+const atItsAddress = {
+  ...ready,
+  publicUrl: 'https://auto.example.com',
+  mode: 'credentials',
+  identityService: 'https://clerk.on.auto',
+  studio: hostedStudio,
+  license: undefined,
+} as const;
+
+describe('the notice that a server reached at its PUBLIC_URL is ready', () => {
+  it('gives that address for Studio, the server, MCP and the agent commands, and never localhost', () => {
+    const lines = readyNoticeOf(atItsAddress, 1).split('\n');
+
+    expect(lines).toEqual([
+      '  ✔ Ready in 640 ms',
+      '  ➜  Studio   https://studio.on.auto/?server=https://auto.example.com',
+      '     Server   https://auto.example.com',
+      '     MCP      https://auto.example.com/mcp',
+      '     Sign-in  https://clerk.on.auto',
+      '     Docs     https://on.auto/docs/',
+      '',
+      '  Connect your agent',
+      '    Claude Code   claude mcp add --transport http auto-runtime https://auto.example.com/mcp',
+      '    Codex         codex mcp add auto-runtime --url https://auto.example.com/mcp',
+      '',
+      '  Press Ctrl+C to stop.',
+      '',
+    ]);
+    expect(lines.join('\n')).not.toContain('localhost');
+  });
+
+  it('links Studio on the Studio host to that address, from this terminal', () => {
+    expect(readyNoticeOf(atItsAddress, 24)).toContain(
+      '\u001B]8;;https://studio.on.auto/?server=https%3A%2F%2Fauto.example.com&src=terminal\u001B\\https://studio.on.auto/?server=https://auto.example.com\u001B]8;;\u001B\\',
+    );
+  });
+
+  it('gives the address of a server in local mode that is given one on this computer, as a container is', () => {
+    const lines = readyNoticeOf({ ...ready, port: 5555, publicUrl: 'http://127.0.0.1:6100' }, 1).split('\n');
+
+    expect(lines.slice(1, 4)).toEqual([
+      '  ➜  Studio   http://127.0.0.1:6100/studio/',
+      '     Server   http://127.0.0.1:6100',
+      '     MCP      http://127.0.0.1:6100/mcp',
     ]);
   });
 });
