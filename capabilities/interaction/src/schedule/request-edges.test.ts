@@ -3,12 +3,14 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { DeliveryEvent } from '../facts/run-facts.ts';
+import { openRequestsName } from '../requests/open-requests.ts';
 import { answeringAnyRun } from '../testing/harness-parts.ts';
 import {
   approvalDocument,
   askedRunId,
   askedThroughChat,
   chatDelivery,
+  alpha,
   fakeTools,
   interactionHarness,
 } from '../testing/index.ts';
@@ -82,6 +84,29 @@ describe('an expiry due behind attempts', () => {
     ]);
     expect(await Effect.runPromise(playbook.due.nextDueAt(askedAt - minute))).toBeLessThanOrEqual(askedAt);
     expect(await Effect.runPromise(playbook.due.nextDueAt(askedAt + 3 * 24 * 60 * minute))).toBeNull();
+  });
+
+  it('is the next time of the endings alone, apart from the next attempt, when the lane is asked', async () => {
+    const otherRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
+    const { playbook } = await askedThroughChat();
+    await playbook.define('ask-in-inbox', approvalDocument([], 'PT1M'));
+    await playbook.ask('ask-in-inbox', { campaign: 'Spring', owner: 'ada' }, otherRunId);
+    const rows = await Effect.runPromise(
+      playbook.ledger.service.readProjectedRows(openRequestsName, alpha, {
+        where: [],
+        orderBy: [],
+        order: 'asc',
+        limit: 10,
+      }),
+    );
+    const columnOf = (key: string, column: string) => rows.find((kept) => kept.key === key)?.row[column];
+    const before = Number(columnOf(askedRunId, 'attempt_due_at')) - 1;
+
+    const lanes = await Effect.runPromise(
+      Effect.all([playbook.due.nextDueAt(before, true), playbook.due.nextDueAt(before, false)]),
+    );
+
+    expect(lanes).toEqual([columnOf(askedRunId, 'attempt_due_at'), columnOf(otherRunId, 'ending_due_at')]);
   });
 });
 

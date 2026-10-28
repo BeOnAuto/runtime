@@ -17,6 +17,6 @@ export function choreWork({ name, perform }: Chore): DueWork {
     name,
     due: (now, most, callsOut) =>
       Effect.succeed((callsOut && due.at <= now ? [{ key: name, callsOut, perform: performed }] : []).slice(0, most)),
-    nextDueAt: (after) => Effect.succeed(due.at > after ? due.at : null),
+    nextDueAt: (after, callsOut = true) => Effect.succeed(callsOut && due.at > after ? due.at : null),
   };
 }

@@ -1,3 +1,4 @@
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { until } from '../testing/until.ts';
@@ -117,5 +118,30 @@ describe('a delivery handed out while workflow timers fall due', () => {
 
     expect(looping.firedAt()).toEqual([now + 500]);
     expect(handed.at(-1)).toEqual({ key: 'handed-as-the-timer-falls-due', at: now + 500, by: 'host' });
+  });
+});
+
+describe('the next time of a due work', () => {
+  it('is that of the lane asked, the deliveries or the rest, and the soonest of both when no lane is asked', async () => {
+    const rows = fakeDueWork();
+    rows.add('delivery', 3000);
+    rows.endsAt('delivery', 5000);
+    rows.add('expiry', 2000);
+    rows.local('expiry');
+    const inFlight = fakeDueWork(0, { reportsRowsInFlight: true });
+    inFlight.add('delivery', 1000);
+    inFlight.endsAt('delivery', 4000);
+    const work = rows.work('host');
+    const reported = inFlight.work('host');
+
+    const next = await Effect.runPromise(
+      Effect.all([work.nextDueAt(1000), work.nextDueAt(1000, true), work.nextDueAt(1000, false)]),
+    );
+    const soonest = await Effect.runPromise(
+      Effect.all([reported.nextDueAt(2000, true), reported.nextDueAt(2000, false)]),
+    );
+
+    expect(next).toEqual([2000, 3000, 2000]);
+    expect(soonest).toEqual([1000, 4000]);
   });
 });

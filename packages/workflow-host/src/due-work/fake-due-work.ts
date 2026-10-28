@@ -49,8 +49,8 @@ interface RowStore {
   readonly endsAt: (key: string, at: number) => void;
   readonly done: (row: PerformedRow) => void;
   readonly dueBy: (now: number, most: number, callsOut: boolean) => readonly StoredRow[];
-  readonly nextAfter: (after: number) => number | null;
-  readonly soonest: () => number;
+  readonly nextAfter: (after: number, callsOut?: boolean) => number | null;
+  readonly soonest: (callsOut?: boolean) => number;
   readonly performed: () => readonly PerformedRow[];
 }
 
@@ -77,9 +77,11 @@ function rowStore(): RowStore {
       ? { key, attemptAt: null, endsAt: dueAt }
       : { key, attemptAt: dueAt, endsAt: endings.get(key) ?? null };
   const rows = () => [...added.values()].map((row) => rowOf(row));
-  const times = () =>
+  const times = (callsOut?: boolean) =>
     rows()
-      .flatMap(({ attemptAt, endsAt }) => [attemptAt, endsAt])
+      .flatMap(({ attemptAt, endsAt }) =>
+        callsOut === undefined ? [attemptAt, endsAt] : [callsOut ? attemptAt : endsAt],
+      )
       .filter((at) => at !== null);
   return {
     add: (key, dueAt) => {
@@ -104,11 +106,11 @@ function rowStore(): RowStore {
         .toSorted((one, other) => one.dueAt - other.dueAt)
         .slice(0, most)
         .map(({ row }) => row),
-    nextAfter: (after) => {
-      const later = times().filter((dueAt) => dueAt > after);
+    nextAfter: (after, callsOut) => {
+      const later = times(callsOut).filter((dueAt) => dueAt > after);
       return later.length === 0 ? null : Math.min(...later);
     },
-    soonest: () => Math.min(Number.POSITIVE_INFINITY, ...times()),
+    soonest: (callsOut) => Math.min(Number.POSITIVE_INFINITY, ...times(callsOut)),
     performed: () => performed,
   };
 }
@@ -209,12 +211,12 @@ export function fakeDueWork(
               itemOf(store, flown, { key, by }, { performMs, callsOut: endsAt === null || endsAt > now }),
             );
         }),
-      nextDueAt: (after) =>
+      nextDueAt: (after, callsOut) =>
         Effect.andThen(
           Effect.sleep(nextReadMs),
           read(() => {
             reads.next += 1;
-            return reportsRowsInFlight ? store.soonest() : store.nextAfter(after);
+            return reportsRowsInFlight ? store.soonest(callsOut) : store.nextAfter(after, callsOut);
           }),
         ),
     }),

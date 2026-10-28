@@ -39,6 +39,7 @@ export function conversationsDue(parts: ConversationParts): RequestsDue {
             (rows) => rows.map((kept) => itemOf(parts, kept)),
           )
         : Effect.succeed(callsNothing),
-    nextDueAt: (after) => parts.ledger.nextDueOf(conversationsName, 'due_at', after),
+    nextDueAt: (after, callsOut = true) =>
+      callsOut ? parts.ledger.nextDueOf(conversationsName, 'due_at', after) : Effect.succeed(null),
   };
 }

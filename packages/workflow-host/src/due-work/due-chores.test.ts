@@ -74,4 +74,17 @@ describe('a chore the wake-up of the host performs', () => {
     expect([underWay, between]).toEqual([{ nextDueAt: null }, { nextDueAt: 6000 }]);
     expect(performedAt).toEqual([5000, 6000]);
   });
+
+  it('answers the time it is next due among the work that calls out, and none among the rest', async () => {
+    const work = choreWork({ name: 'orphans', perform: (now) => Effect.succeed(now + 1000) });
+    await Effect.runPromise(
+      Effect.flatMap(work.due(5000, 1, true), (items) => Effect.forEach(items, (item) => item.perform(5000))),
+    );
+
+    const next = await Effect.runPromise(
+      Effect.all([work.nextDueAt(5000), work.nextDueAt(5000, true), work.nextDueAt(5000, false)]),
+    );
+
+    expect(next).toEqual([6000, 6000, null]);
+  });
 });

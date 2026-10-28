@@ -63,6 +63,9 @@ describe('the next read of the conversations', () => {
     const [row] = await conversationRows(playbook.ledger);
 
     expect(await Effect.runPromise(playbook.reads.nextDueAt(0))).toBe(row?.row['due_at']);
+    expect(
+      await Effect.runPromise(Effect.all([playbook.reads.nextDueAt(0, true), playbook.reads.nextDueAt(0, false)])),
+    ).toEqual([row?.row['due_at'], null]);
     expect(await Effect.runPromise(playbook.reads.due(Date.now() + farAhead, 16, false))).toEqual([]);
   });
 });
