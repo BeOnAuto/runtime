@@ -15,7 +15,7 @@ This page explains the license in plain language. If anything here conflicts wit
 
 Self-hosted Auto Runtime counts **actions**: a run of a workflow or a function is one action, counted once by its run id, however often it is retried or resumed. Nothing else is counted: no model calls, compute or storage. The count is kept from the runtime's own ledger.
 
-- **The first 100 actions need nothing.** An installation that nobody registered runs 100 actions. The next run is refused, with a link to register the installation.
+- **The first 100 actions need nothing.** An installation that nobody registered runs 100 actions, and says in its terminal and on its page how many of them it used. The next run is refused, with the page of Studio where an org gets its free key for the installation.
 - **A license key is free to get.** An owner of an org registers the installation in Auto Studio and gets its key; the org's Free plan includes 75 credits each month, and a new org gets 100 welcome credits. From then on each action spends one credit of the org's account at Auto. Paid plans, top-ups and Enterprise orders add credits.
 - **What still works without a key or credits.** Reading, editing and exporting playbooks, definitions, runs and events is never refused; only starting a new run is.
 - **What the runtime tells Auto.** For each action it asks to run: the installation, the org and playbook names, the run id, the definition's type, name and version, the run that called it and its trigger, and who started it. Every hour, the number of actions counted, with the point in its ledger it counted to. Never a run's inputs, outputs or anything a playbook holds.
