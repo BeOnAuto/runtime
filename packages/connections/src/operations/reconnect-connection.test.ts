@@ -1,46 +1,39 @@
-import type { CallerIdentity, Outcome, Succeeded } from '@on.auto/operations';
-import { Effect, Option } from 'effect';
+import type { CallerIdentity } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { added, crm, notes, reconnected, reconnecting, type Added } from '../testing/additions.ts';
+import { brokenCrm, connectedCrm, giving } from '../testing/crm-connections.ts';
 import { acmeReader, ada, grace, harness, operationNamed, recordedAs, type Harness } from '../testing/harness.ts';
-import { preparedOf, servedAs, sourceOver } from '../testing/served-connections.ts';
+import { servedAs, sourceOver } from '../testing/served-connections.ts';
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
-const tenMinutesOn = '2026-10-15T14:10:00.000Z';
+const aDayOn = '2026-10-16T14:00:00.000Z';
 
-const elevenMinutesLater = '2026-10-15T14:11:00.000Z';
+const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
 const keyRefused =
   'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
 
-function giving(h: Harness, { id, token }: Added, value: string, at?: string) {
-  return h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value }, at);
-}
+const replacedLink = {
+  status: 'rejected',
+  reason: 'not_found',
+  detail: 'There is no open link of this token: a newer link of the connection crm replaced it',
+};
 
 function reading(h: Harness, { id, token }: Added, at?: string) {
   return h.call(operationNamed(h.operations, 'read_link'), ada, { id, token }, at);
 }
 
-async function connectedCrm(h: Harness): Promise<string> {
-  const link = await added(h, crm);
-  await giving(h, link, 'Bearer crm-key-0f3c9a71');
-  return link.id;
-}
-
-async function brokenCrm(h: Harness): Promise<string> {
-  const id = await connectedCrm(h);
-  await Effect.runPromise((await preparedOf(sourceOver(h), id)).refused);
-  return id;
-}
-
-function openLinkRefusal(expiresAt: string) {
-  return {
-    status: 'rejected',
-    reason: 'conflict',
-    detail: `The connection crm waits for its approval through a link that lasts until ${expiresAt}, so it takes no new link before then`,
-  };
+function onEveryPageOperation(h: Harness, { id, token }: Added, at: string) {
+  const uses = [
+    ['read_link', { id, token }],
+    ['approve', { id, token }],
+    ['give_credential', { id, token, value: 'Bearer crm-key-7d2e4b19' }],
+    ['start', { id, token }],
+    ['finish', { id, token, state: 'state', code: 'code' }],
+  ] as const;
+  return Promise.all(uses.map(([name, input]) => h.call(operationNamed(h.operations, name), ada, input, at)));
 }
 
 describe('reconnecting a connection its server refused', () => {
@@ -49,19 +42,19 @@ describe('reconnecting a connection its server refused', () => {
     const id = await brokenCrm(h);
 
     const answered = await reconnecting(h, id);
-    const link = await reconnected(h, id, elevenMinutesLater);
-    const given = await giving(h, link, 'Bearer crm-key-7d2e4b19', elevenMinutesLater);
+    const link = await reconnected(h, id, aDayAndAMinuteLater);
+    const given = await giving(h, link, 'Bearer crm-key-7d2e4b19', aDayAndAMinuteLater);
 
     expect(answered).toMatchObject({
       status: 'succeeded',
-      output: { id, status: 'broken', broken: keyRefused, connect: { expires_at: tenMinutesOn } },
+      output: { id, status: 'broken', broken: keyRefused, connect: { expires_at: aDayOn } },
     });
     expect(given).toMatchObject({
       status: 'succeeded',
       output: {
         status: 'connected',
         broken: null,
-        connected_at: elevenMinutesLater,
+        connected_at: aDayAndAMinuteLater,
         connected_by: recordedAs.ada,
         credential_ends_with: '4b19',
       },
@@ -70,19 +63,26 @@ describe('reconnecting a connection its server refused', () => {
     expect((await servedAs(sourceOver(h), id)).state.status).toBe('connected');
   });
 
-  it('is refused while the link it gave is open, naming when it expires, and gives another once it ran out', async () => {
+  it('gives a new link while the one it gave is open, which replaces it, so the five operations of the page refuse the old token and take the new', async () => {
     const h = harness();
     const id = await brokenCrm(h);
     const first = await reconnected(h, id);
 
-    const refused = await reconnecting(h, id, fiveMinutesLater);
-    const latest = await reconnected(h, id, elevenMinutesLater);
+    const latest = await reconnected(h, id, fiveMinutesLater);
 
-    expect(refused).toEqual(openLinkRefusal(first.expiresAt));
-    expect(await reading(h, latest, elevenMinutesLater)).toMatchObject({
+    expect((await h.facts()).at(-1)).toMatchObject({
+      type: 'connection_link_issued',
+      data: { connection: id, expires_at: '2026-10-16T14:05:00.000Z' },
+    });
+    expect(await onEveryPageOperation(h, first, fiveMinutesLater)).toEqual(
+      Array.from({ length: 5 }, () => replacedLink),
+    );
+    expect(await reading(h, latest, fiveMinutesLater)).toMatchObject({
       output: { id, status: 'broken', link: { expires_at: latest.expiresAt } },
     });
-    expect(await reading(h, first)).toMatchObject({ reason: 'not_found' });
+    expect(await giving(h, latest, 'Bearer crm-key-7d2e4b19', fiveMinutesLater)).toMatchObject({
+      output: { id, status: 'connected', credential_ends_with: '4b19' },
+    });
   });
 });
 
@@ -116,21 +116,24 @@ describe('reconnecting a connection that is pending', () => {
     const h = harness();
     const first = await added(h, crm);
 
-    const link = await reconnected(h, first.id, elevenMinutesLater);
+    const link = await reconnected(h, first.id, aDayAndAMinuteLater);
 
-    expect(await reading(h, link, elevenMinutesLater)).toMatchObject({
+    expect(await reading(h, link, aDayAndAMinuteLater)).toMatchObject({
       output: { status: 'pending', link: { expires_at: link.expiresAt } },
     });
-    expect(await reading(h, first)).toMatchObject({ reason: 'not_found' });
+    expect(await reading(h, first, aDayAndAMinuteLater)).toEqual(replacedLink);
   });
 
-  it('is refused while its link is open, naming when it expires, and records nothing', async () => {
+  it('gives a new link while the one it was added with is open, and the page refuses that one in words that say a newer link replaced it', async () => {
     const h = harness();
-    const { id, expiresAt } = await added(h, crm);
-    const factsBefore = (await h.facts()).length;
+    const first = await added(h, crm);
 
-    expect(await reconnecting(h, id)).toEqual(openLinkRefusal(expiresAt));
-    expect((await h.facts()).length).toBe(factsBefore);
+    const link = await reconnected(h, first.id, fiveMinutesLater);
+
+    expect(await reading(h, link, fiveMinutesLater)).toMatchObject({
+      output: { status: 'pending', link: { expires_at: link.expiresAt } },
+    });
+    expect(await reading(h, first, fiveMinutesLater)).toEqual(replacedLink);
   });
 });
 
@@ -188,74 +191,10 @@ describe('who reconnects a connection', () => {
 
   it('is the local developer for any connection in local mode', async () => {
     const h = harness({ access: 'local' });
-    const { id } = await added(h, crm, { caller: localDeveloper, at: '2026-10-15T13:00:00.000Z' });
+    const { id } = await added(h, crm, { caller: localDeveloper });
 
     expect(await h.call(operationNamed(h.operations, 'reconnect_connection'), grace, { id })).toMatchObject({
       status: 'succeeded',
     });
-  });
-});
-
-function outputOf(outcome: Outcome<Succeeded>): unknown {
-  return 'output' in outcome ? outcome.output : undefined;
-}
-
-function linkingOf(h: Harness) {
-  const { registration } = operationNamed(h.operations, 'reconnect_connection');
-  return Option.getOrThrow(Option.fromNullishOr('link' in registration ? registration.link : undefined));
-}
-
-function wordsOf(h: Harness, output: unknown, id: string): string {
-  const { registration } = operationNamed(h.operations, 'reconnect_connection');
-  const words = Option.getOrThrow(
-    Option.fromNullishOr('plainLanguage' in registration ? registration.plainLanguage : undefined),
-  );
-  return words.outcome(output, { id });
-}
-
-describe('the answer after the link of a reconnection', () => {
-  it('asks an agent to have the person open the link, and answers the connection as it stands once they did', async () => {
-    const h = harness();
-    const id = await brokenCrm(h);
-    const outcome = await reconnecting(h, id);
-    const link = await reconnected(h, id, elevenMinutesLater);
-    await giving(h, link, 'Bearer crm-key-7d2e4b19', elevenMinutesLater);
-
-    const after = await h.call({ registration: linkingOf(h).answerAfter(link) }, ada, { id }, elevenMinutesLater);
-    const output = outputOf(outcome);
-
-    expect(linkingOf(h).idOf(output)).toBe(id);
-    expect(linkingOf(h).toOpen(output)?.message).toBe(
-      'Open this page to approve the connection “crm”, and give its credential where it takes one, within ten minutes.',
-    );
-    expect(after).toMatchObject({ output: { id, status: 'connected' } });
-    expect(after).not.toHaveProperty('output.connect');
-    expect(wordsOf(h, outputOf(after), id)).toBe('Connected the connection “crm”; nothing is left to open.');
-  });
-
-  it('answers no link where a later reconnection replaced the one it offered', async () => {
-    const h = harness();
-    const id = await brokenCrm(h);
-    const first = await reconnected(h, id);
-    await reconnected(h, id, elevenMinutesLater);
-
-    const after = await h.call({ registration: linkingOf(h).answerAfter(first) }, ada, { id }, elevenMinutesLater);
-
-    expect(after).toMatchObject({ output: { id, status: 'broken' } });
-    expect(after).not.toHaveProperty('output.connect');
-    expect(after).not.toHaveProperty('output.link_ran_out');
-  });
-
-  it('says of a connection that stayed connected that the link ran out and it stands as it was', async () => {
-    const h = harness();
-    const id = await connectedCrm(h);
-    const link = await reconnected(h, id);
-
-    const after = await h.call({ registration: linkingOf(h).answerAfter(link) }, ada, { id }, elevenMinutesLater);
-
-    expect(after).toMatchObject({ output: { id, status: 'connected', link_ran_out: true } });
-    expect(wordsOf(h, outputOf(after), id)).toBe(
-      'The link of the connection “crm” ran out unused, so the connection stands as it was, connected.',
-    );
   });
 });

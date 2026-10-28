@@ -4,7 +4,7 @@ import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, billing, crm, notes } from '../testing/additions.ts';
 import { acmeWriter, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
-const elevenMinutesLater = '2026-10-15T14:11:00.000Z';
+const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
 function reading(h: Harness, id: string, token: string, at?: string) {
   return h.call(operationNamed(h.operations, 'read_link'), acmeWriter, { id, token }, at);
@@ -49,7 +49,7 @@ describe('reading a link', () => {
 
     expect(await reading(h, id, 'unknown')).toEqual(noOpenLink);
     expect(await reading(h, id, other.token)).toEqual(noOpenLink);
-    expect(await reading(h, id, token, elevenMinutesLater)).toEqual(noOpenLink);
+    expect(await reading(h, id, token, aDayAndAMinuteLater)).toEqual(noOpenLink);
     expect(await reading(h, 'nowhere', token)).toMatchObject({ reason: 'not_found' });
   });
 });

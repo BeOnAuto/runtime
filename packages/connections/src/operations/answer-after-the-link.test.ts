@@ -43,7 +43,7 @@ describe('the answer to adding a connection after its link', () => {
     const h = harness();
     const link = await added(h, notes);
 
-    expect(await answeredAfterTheLink(h, link, notes, '2026-10-15T14:09:59.999Z')).toMatchObject({
+    expect(await answeredAfterTheLink(h, link, notes, '2026-10-16T13:59:59.999Z')).toMatchObject({
       status: 'succeeded',
       output: { id: link.id, status: 'pending', connect: { url: link.url, expires_at: link.expiresAt } },
     });

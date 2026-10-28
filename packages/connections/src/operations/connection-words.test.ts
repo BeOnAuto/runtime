@@ -2,7 +2,7 @@ import type { LinkToOpen, Outcome, RegisteredPlainLanguage, Succeeded } from '@o
 import { Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { added, crm, notes, statusesOf, type Added } from '../testing/additions.ts';
+import { added, crm, notes, reconnecting, statusesOf, type Added } from '../testing/additions.ts';
 import { consentFake } from '../testing/consents.ts';
 import { ada, harness, operationNamed, type Harness, loopbackPolicy } from '../testing/harness.ts';
 
@@ -50,7 +50,7 @@ async function wordsAfterTheLink(h: Harness, link: Added, at?: string): Promise<
 describe('the words of adding a connection', () => {
   it('say what was added, where the person approves it, and that the link is shown to them by a name, never as its address', async () => {
     expect(await outcomeWords(harness(), 'add_connection', notes)).toBe(
-      'Added the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+      'Added the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
     );
   });
 
@@ -58,7 +58,7 @@ describe('the words of adding a connection', () => {
     expect(
       await outcomeWords(harness(), 'add_connection', { provider: 'tracker', placeholders: { site: 'acme' } }),
     ).toBe(
-      'Added the connection “tracker”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the Tracker connection”, never as its address.',
+      'Added the connection “tracker”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the Tracker connection”, never as its address.',
     );
   });
 
@@ -66,7 +66,7 @@ describe('the words of adding a connection', () => {
     const link = await linkOf(harness());
 
     expect(link?.message).toBe(
-      'Open this page to approve the connection “crm”, and give its credential where it takes one, within ten minutes.',
+      'Open this page to approve the connection “crm”, and give its credential where it takes one, within 24 hours.',
     );
     expect(link?.url).toMatch(/^https:\/\/studio\.on\.auto\/connect\?server=http%3A%2F%2Flocalhost%3A5555&org=acme&/u);
   });
@@ -82,10 +82,10 @@ describe('the words of adding an MCP server given by hand that signs people in i
     const { host } = new URL(fake.origin);
 
     expect(wordsOf(h, 'add_connection').outcome(output, byHand)).toBe(
-      `Added the connection “files”. The person who added it approves it, and signs in at ${host}, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.`,
+      `Added the connection “files”. The person who added it approves it, and signs in at ${host}, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.`,
     );
     expect(linkingOf(h).toOpen(output)?.message).toBe(
-      `Open this page to approve the connection “files”, and sign in at ${host}, within ten minutes.`,
+      `Open this page to approve the connection “files”, and sign in at ${host}, within 24 hours.`,
     );
   });
 });
@@ -106,6 +106,16 @@ describe('the words of the answer after the link of a connection', () => {
     expect(await wordsAfterTheLink(h, link)).toBe(await outcomeWords(harness(), 'add_connection', notes));
     expect(await wordsAfterTheLink(h, link, link.expiresAt)).toBe(
       'The connection “notes” is pending, and its link is used up or expired, so nothing is left to open: reconnect it for a new link.',
+    );
+  });
+
+  it('say a newer link replaced the one offered, which the person opens, where the connection was reconnected since', async () => {
+    const h = harness();
+    const link = await added(h, notes);
+    await reconnecting(h, link.id);
+
+    expect(await wordsAfterTheLink(h, link)).toBe(
+      'The connection “notes” is pending, and a newer link, still open, replaced the one offered: the person who added it opens the newest, and reconnecting it would replace that one too.',
     );
   });
 
@@ -157,12 +167,12 @@ describe('the words of removing a connection', () => {
 });
 
 describe('the words of reconnecting a connection', () => {
-  it('say a new link was given to it, and where the person approves it, as the words of adding it say', async () => {
+  it('say a new link was given to it, that the link before it stops working, and where the person approves it, as the words of adding it say', async () => {
     const h = harness();
-    const { id } = await added(h, notes, { at: '2026-10-15T13:00:00.000Z' });
+    const { id } = await added(h, notes);
 
     expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
-      'Gave a new link to the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+      'Gave a new link to the connection “notes”; the link before it stops working. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
     );
   });
 });

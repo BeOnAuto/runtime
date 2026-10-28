@@ -23,6 +23,16 @@ function connectionNotFound(id: string): NotFound {
 
 const noOpenLink = new NotFound({ detail: 'There is no open link of this token: it is unknown, used up or expired' });
 
+function replacedLink(name: string): NotFound {
+  return new NotFound({
+    detail: `There is no open link of this token: a newer link of the connection ${name} replaced it`,
+  });
+}
+
+function unusableLinkOf({ connection, replacedLinks }: KeptConnection, tokenSha256: string): NotFound {
+  return replacedLinks.has(tokenSha256) ? replacedLink(connection.name) : noOpenLink;
+}
+
 export function keptConnectionOf(registry: Registry, id: string): Result.Result<KeptConnection, NotFound> {
   const kept = registry.get(id);
   return kept === undefined ? Result.fail(connectionNotFound(id)) : Result.succeed(kept);
@@ -30,10 +40,6 @@ export function keptConnectionOf(registry: Registry, id: string): Result.Result<
 
 export function findConnection(registry: Registry, id: string): Effect.Effect<KeptConnection, NotFound> {
   return Effect.fromResult(keptConnectionOf(registry, id));
-}
-
-export function openLinkOf({ link }: KeptConnection, at: string): OpenLink | undefined {
-  return link !== undefined && link.expires_at > at ? link : undefined;
 }
 
 function isOfTheToken(kept: KeptConnection, tokenSha256: string): kept is KeptWithLink {
@@ -66,7 +72,7 @@ function boundConnectionOf(
     keptConnectionOf(registry, connection),
     (kept): Result.Result<KeptWithLink, NotFound | Forbidden> => {
       if (!isUsable(kept, tokenSha256)) {
-        return Result.fail(noOpenLink);
+        return Result.fail(unusableLinkOf(kept, tokenSha256));
       }
       const refusal = bindingRefusalOf(kept, bindsPerson, by);
       return refusal === undefined ? Result.succeed(kept) : Result.fail(refusal);

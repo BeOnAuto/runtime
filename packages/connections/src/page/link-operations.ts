@@ -55,8 +55,8 @@ export function defineReadLink(reading: LinkReading) {
     title: 'Read link',
     description: [
       "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
-      'A link is open for ten minutes from when add_connection or reconnect_connection gave it, until the connection is approved.',
-      'A token that is unknown, used up or expired is answered as not found.',
+      'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
+      'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
     body: { kind: 'none' },

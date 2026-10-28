@@ -51,7 +51,7 @@ describe('a connection added by a provider', () => {
         entry: { url: 'https://acme.tracker.example.com/mcp' },
         credential: { kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer' },
         status: 'pending',
-        connect: { expires_at: '2026-10-15T14:10:00.000Z' },
+        connect: { expires_at: '2026-10-16T14:00:00.000Z' },
       },
     });
     expect((await h.facts())[0]?.data).toMatchObject({

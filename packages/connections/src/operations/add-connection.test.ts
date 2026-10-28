@@ -7,7 +7,7 @@ import { added, adding, billing, crm, crmWithTenant, issuesIn, notes, statusesOf
 import { acmeReader, ada, harness, operationNamed, crmPolicy } from '../testing/harness.ts';
 
 describe('the answer to adding a connection', () => {
-  it('is the connection pending, added by the caller, and the time its link expires, ten minutes on', async () => {
+  it('is the connection pending, added by the caller, and the time its link expires, 24 hours on', async () => {
     expect(await adding(harness({ policy: crmPolicy }), crmWithTenant)).toMatchObject({
       status: 'succeeded',
       output: {
@@ -26,7 +26,7 @@ describe('the answer to adding a connection', () => {
         connected_at: null,
         connected_by: null,
         broken: null,
-        connect: { expires_at: '2026-10-15T14:10:00.000Z' },
+        connect: { expires_at: '2026-10-16T14:00:00.000Z' },
       },
     });
   });
@@ -59,7 +59,7 @@ describe('the facts of adding a connection', () => {
     expect(facts[1]?.data).toEqual({
       connection: id,
       token_sha256: createHash('sha256').update(token).digest('hex'),
-      expires_at: '2026-10-15T14:10:00.000Z',
+      expires_at: '2026-10-16T14:00:00.000Z',
     });
     expect(JSON.stringify(facts)).not.toContain(token);
   });
@@ -185,7 +185,7 @@ describe('the description of adding a connection', () => {
         "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
         'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
         'An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server.',
-        "It answers pending with a link to Studio's page, where the person approves it within ten minutes.",
+        "It answers pending with a link to Studio's page, where the person approves it within 24 hours.",
         'Nothing is granted by this call and no credential passes through it.',
       ].join(' '),
     );

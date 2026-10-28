@@ -87,16 +87,16 @@ describe('the scope of a finish', () => {
     });
   });
 
-  it('is bound to its start and not to the minutes of the link, and closes the link', async () => {
+  it('is bound to its start and not to the 24 hours of the link, and closes the link', async () => {
     const fake = await served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
-    const consented = await consentedOf(h, link, '2026-10-15T14:05:00.000Z');
+    const consented = await consentedOf(h, link, '2026-10-16T13:55:00.000Z');
 
-    const late = await finishing(h, link, consented, '2026-10-15T14:12:00.000Z');
+    const late = await finishing(h, link, consented, '2026-10-16T14:02:00.000Z');
 
     expect(late).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
-    expect(await finishing(h, link, consented, '2026-10-15T14:13:00.000Z')).toMatchObject({ reason: 'not_found' });
+    expect(await finishing(h, link, consented, '2026-10-16T14:03:00.000Z')).toMatchObject({ reason: 'not_found' });
   });
 });
 

@@ -22,7 +22,6 @@ import {
   keptConnectionOf,
   linkedConnectionOf,
   noOpenConsent,
-  openLinkOf,
   stateIssueOf,
   type KeptWithLink,
 } from './registry-lookup.ts';
@@ -224,22 +223,16 @@ function unsetVariableOf(kept: KeptConnection, variablesSet: ReadonlySet<string>
 
 function reconnectionRefusalOf(
   kept: KeptConnection,
-  { bindsPerson, variablesSet, by, at }: ConnectionReconnection & CommandMetadata,
+  { bindsPerson, variablesSet, by }: ConnectionReconnection & CommandMetadata,
 ): Rejection<RegistryRefusal> | undefined {
   const { name, status } = kept.connection;
   const binding = bindingRefusalOf(kept, bindsPerson, by);
   if (binding !== undefined) {
     return binding;
   }
-  if (status === 'removed') {
-    return new Conflict({ detail: `The connection ${name} is removed, so it is added again rather than reconnected` });
-  }
-  const open = openLinkOf(kept, at);
-  return open === undefined
-    ? unsetVariableOf(kept, variablesSet)
-    : new Conflict({
-        detail: `The connection ${name} waits for its approval through a link that lasts until ${open.expires_at}, so it takes no new link before then`,
-      });
+  return status === 'removed'
+    ? new Conflict({ detail: `The connection ${name} is removed, so it is added again rather than reconnected` })
+    : unsetVariableOf(kept, variablesSet);
 }
 
 function reconnectedOf(kept: KeptConnection, { connection, link, connected_by }: ConnectionReconnection): Decision {

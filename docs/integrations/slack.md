@@ -27,7 +27,7 @@ Acting as a Slack app's bot instead is the `slack-api` provider, connected with 
 
    Your agent may ask which playbook the connection is for. Name the playbooks that may use it, or say that every playbook of your org may. A connection that names no playbook is for every playbook of the org.
 
-2. Your agent asks you to open a page of Studio, or gives you its link. The link works for ten minutes. On an Auto that signs people in, only you can use it, signed in as yourself.
+2. Your agent asks you to open a page of Studio, or gives you its link. The link works for 24 hours. On an Auto that signs people in, only you can use it, signed in as yourself.
 3. Check what the page says you are connecting, and press Continue.
 4. Slack asks you to sign in, if you are not signed in already, and shows the workspace you are connecting; you can switch to another there. Check that it is the workspace you mean, and allow access.
 5. Slack sends you back to Studio, which finishes the connection and shows Slack as connected. Your agent sees it connected too.

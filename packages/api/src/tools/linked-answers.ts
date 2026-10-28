@@ -7,18 +7,22 @@ import {
   type InputRequiredResult,
 } from '@modelcontextprotocol/server';
 import type { LinkToOpen, OfferedLink, RegisteredPlainLanguage } from '@on.auto/operations';
-import { Option, Redacted, Schema } from 'effect';
+import { Duration, Option, Redacted, Schema } from 'effect';
 
 import { orgCallOf, type OrgCall } from '../hand-off/caller-hand-off.ts';
 import { callbackFor, type CalledTool, type CallServing, type Dispatch, type ToolContext } from './tool-callback.ts';
 
-interface StateCodec {
-  mint(payload: Readonly<Record<string, unknown>>, context?: ToolContext): Promise<string>;
+interface StateVerifier {
   verify(state: string, context: ToolContext): Promise<unknown>;
 }
 
+interface StateMinter {
+  mint(payload: Readonly<Record<string, unknown>>, context?: ToolContext): Promise<string>;
+}
+
 export interface LinkedAnswers {
-  readonly states: StateCodec;
+  readonly states: StateVerifier;
+  readonly mintingFor: (linkLastsMs: number) => StateMinter;
 }
 
 export interface AnsweringServing extends CallServing {
@@ -29,6 +33,7 @@ export interface ToolLink {
   readonly toOpen: (output: unknown) => LinkToOpen | undefined;
   readonly idOf: (output: unknown) => string;
   readonly dispatchAfter: (offered: OfferedLink) => Dispatch;
+  readonly linkLastsMs: number;
 }
 
 interface LinkingTool extends CalledTool {
@@ -83,20 +88,33 @@ export interface RetryStateKeys {
   readonly previous?: RetryStateKey | undefined;
 }
 
-function codecOf(key: RetryStateKey): StateCodec {
-  return createRequestStateCodec({ key: Redacted.value(key), bind: callerAndOrgOf });
+const answeredAfterTheLinkMs = Duration.toMillis(Duration.minutes(10));
+
+function codecOptionsOf(key: RetryStateKey) {
+  return { key: Redacted.value(key), bind: callerAndOrgOf };
 }
 
-function eitherOf(current: StateCodec, previous: StateCodec): StateCodec {
+function verifierOf(key: RetryStateKey): StateVerifier {
+  return createRequestStateCodec(codecOptionsOf(key));
+}
+
+function retrySecondsOf(linkLastsMs: number): number {
+  return Math.ceil((linkLastsMs + answeredAfterTheLinkMs) / 1000);
+}
+
+function eitherOf(current: StateVerifier, previous: StateVerifier): StateVerifier {
   return {
-    mint: (payload, context) => current.mint(payload, context),
     verify: (state, context) => current.verify(state, context).catch(() => previous.verify(state, context)),
   };
 }
 
 export function linkedAnswers({ current, previous }: RetryStateKeys): LinkedAnswers {
-  const signing = codecOf(current);
-  return { states: previous === undefined ? signing : eitherOf(signing, codecOf(previous)) };
+  const verifying = verifierOf(current);
+  return {
+    states: previous === undefined ? verifying : eitherOf(verifying, verifierOf(previous)),
+    mintingFor: (linkLastsMs) =>
+      createRequestStateCodec({ ...codecOptionsOf(current), ttlSeconds: retrySecondsOf(linkLastsMs) }),
+  };
 }
 
 function offeredLinkFor({ tool, caller, org }: LinkOwner, state: unknown): OfferedLink | undefined {
@@ -159,10 +177,9 @@ function askingToOpen(serving: AnsweringServing, call: OrgCall, tool: LinkingToo
       ? answer
       : inputRequired({
           inputRequests: { [theLink]: inputRequired.elicitUrl({ message: toOpen.message, url: toOpen.url }) },
-          requestState: await serving.linkedAnswers.states.mint(
-            { ...owner, id: link.idOf(output), url: toOpen.url },
-            context,
-          ),
+          requestState: await serving.linkedAnswers
+            .mintingFor(link.linkLastsMs)
+            .mint({ ...owner, id: link.idOf(output), url: toOpen.url }, context),
         });
   };
 }

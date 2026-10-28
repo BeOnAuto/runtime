@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import type { TestResponse } from '../testing/servers/http-client.ts';
 import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
@@ -42,15 +43,21 @@ async function serving(environment: Readonly<Record<string, string>> = {}): Prom
   return server;
 }
 
-async function added(served: ReasoningServer, body: unknown = crm) {
-  const answer = await served.call('POST', connections, { body });
-  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
+function linkedIn({ body }: TestResponse) {
+  const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(body);
   const page = new URL(connect.url);
   const { token } = Schema.decodeUnknownSync(Schema.Struct({ token: Schema.String }))(
     Object.fromEntries(page.searchParams),
   );
-  return { answer, id, page, token, expiresAt: connect.expires_at };
+  return { id, page, token, expiresAt: connect.expires_at };
 }
+
+async function added(served: ReasoningServer, body: unknown = crm) {
+  const answer = await served.call('POST', connections, { body });
+  return { answer, ...linkedIn(answer) };
+}
+
+const aDayInMilliseconds = 24 * 60 * 60 * 1000;
 
 describe('adding a connection over HTTP in local mode', () => {
   it("answers 201 with the record and a link to the page of the Studio the server serves, under the server's own address, naming the connection and its token alone", async () => {
@@ -82,6 +89,30 @@ describe('adding a connection over HTTP in local mode', () => {
       { id, status: 'pending', link: { expires_at: expiresAt } },
     ]);
     expect((await served.call('GET', `${connections}/${id}/link/unknown`)).status).toBe(404);
+  });
+});
+
+describe('reconnecting a connection over HTTP while its link is open', () => {
+  it('answers 200 with a new link of 24 hours, which replaces the open one: the old token is not found, in words that say so', async () => {
+    const served = await serving();
+    const first = await added(served);
+    const before = Date.now();
+
+    const answer = await served.call('POST', `${connections}/${first.id}/link`);
+    const latest = linkedIn(answer);
+    const [old, current] = [
+      await served.call('GET', `${connections}/${first.id}/link/${first.token}`),
+      await served.call('GET', `${connections}/${first.id}/link/${latest.token}`),
+    ];
+
+    expect(answer).toMatchObject({ status: 200, body: { id: first.id, status: 'pending' } });
+    expect(Date.parse(latest.expiresAt) - before).toBeGreaterThanOrEqual(aDayInMilliseconds);
+    expect(Date.parse(latest.expiresAt) - Date.now()).toBeLessThanOrEqual(aDayInMilliseconds);
+    expect(detailOf(old)).toEqual([
+      404,
+      'There is no open link of this token: a newer link of the connection crm replaced it',
+    ]);
+    expect(current).toMatchObject({ status: 200, body: { id: first.id, link: { expires_at: latest.expiresAt } } });
   });
 });
 

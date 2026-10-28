@@ -83,14 +83,14 @@ describe('add_connection over MCP', () => {
       {
         mode: 'url',
         message:
-          'Open this page to approve the connection “notes-linked”, and give its credential where it takes one, within ten minutes.',
+          'Open this page to approve the connection “notes-linked”, and give its credential where it takes one, within 24 hours.',
         url,
       },
     ]);
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=[\da-f-]{36}&token=[\w-]{43}$/u);
     expect(answer.structuredContent).toMatchObject({ name: 'notes-linked', status: 'pending' });
     expect(plainTextIn(answer)).toBe(
-      'Added the connection “notes-linked”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+      'Added the connection “notes-linked”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
     );
   });
 
@@ -104,7 +104,7 @@ describe('add_connection over MCP', () => {
     expect([formsAlone.elicited, legacy.elicited]).toEqual([[], []]);
     expect(urls.filter((url) => /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=/u.test(url))).toHaveLength(2);
     expect(plainTextIn(legacy.answer)).toBe(
-      'Added the connection “notes-legacy”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within ten minutes; shown to them as a link named “Approve the connection”, never as its address.',
+      'Added the connection “notes-legacy”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
     );
   });
 });

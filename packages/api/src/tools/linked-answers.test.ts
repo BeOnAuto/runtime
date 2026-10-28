@@ -1,7 +1,7 @@
 import { authenticatorFor } from '@on.auto/identity';
 import { defineCommand, type OfferedLink, type Outcome } from '@on.auto/operations';
 import { Context, Effect, Redacted, Schema } from 'effect';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import {
@@ -24,6 +24,8 @@ import { linkedAnswers, toolCallbackOf, type AnsweringServing } from './linked-a
 const opened = { times: 0 };
 
 const usedUp: string[] = [];
+
+const pageLastsMs = 60 * 60 * 1000;
 
 function pageOf(made: number): string {
   return `https://studio.example/open?page=${String(made)}`;
@@ -57,6 +59,7 @@ const openPage = defineCommand('org', {
     idOf: ({ id }) => id,
     read: ({ id, url }) =>
       Effect.sync(() => (usedUp.includes(url) ? { id, again: true } : { id, page: url, again: true })),
+    linkLastsMs: pageLastsMs,
   },
 });
 
@@ -149,6 +152,7 @@ const words = {
       ({ id, url }: OfferedLink) =>
       () =>
         Effect.succeed<Outcome>({ status: 'succeeded', output: { by: 'the read', id, url } }),
+    linkLastsMs: pageLastsMs,
   },
 } as const;
 
@@ -256,5 +260,28 @@ describe('the retry of a tool across a rotation of the key', () => {
       structuredContent: { again: true },
     });
     await expect(retriedWith(keyed(listening.origin), openingThePage, after)).rejects.toThrow(refusedState);
+  });
+});
+
+const askedAt = Date.UTC(2026, 9, 15, 14);
+
+const tenMinutesMs = 10 * 60 * 1000;
+
+describe('the retry of a tool as long after it asked as its link lasts', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('is answered until ten minutes after the link offered ends, and refused a second later', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(askedAt);
+    const state = await stateAskedBy(keyed(listening.origin), openingThePage);
+
+    vi.setSystemTime(askedAt + pageLastsMs + tenMinutesMs);
+    const atTheEnd = await retriedWith(keyed(listening.origin), openingThePage, state);
+    vi.setSystemTime(askedAt + pageLastsMs + tenMinutesMs + 1000);
+
+    expect(atTheEnd).toMatchObject({ structuredContent: { again: true } });
+    await expect(retriedWith(keyed(listening.origin), openingThePage, state)).rejects.toThrow(refusedState);
   });
 });

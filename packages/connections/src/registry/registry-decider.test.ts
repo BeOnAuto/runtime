@@ -37,7 +37,7 @@ describe('giving a credential to a connection that takes none', () => {
   it('is refused, though the link is open', () => {
     const linkIssued: ConnectionEvent = {
       type: 'connection_link_issued',
-      data: { connection: 'crm-id', token_sha256: 'a1b2', expires_at: '2026-10-15T14:10:00.000Z' },
+      data: { connection: 'crm-id', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
     };
     const giving: ConnectionCommand = {
       type: 'give',
@@ -131,7 +131,7 @@ describe('adding a connection to an org that holds the most it may', () => {
       entry: { url: 'https://wiki.example.com/mcp' },
       credential: { kind: 'none' },
       added_by: { id: 'person:ada', name: 'Ada Lovelace' },
-      link: { token_sha256: 'c3d4', expires_at: '2026-10-15T14:10:00.000Z' },
+      link: { token_sha256: 'c3d4', expires_at: '2026-10-16T14:00:00.000Z' },
       ...acted,
     };
     const removedOne: ConnectionEvent = { type: 'connection_removed', data: { connection: 'id-0' } };

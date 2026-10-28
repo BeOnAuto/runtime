@@ -49,7 +49,7 @@ describe('an MCP server given by hand that signs people in itself', () => {
 
     expect(outcome).toMatchObject({
       status: 'succeeded',
-      output: { provider: null, status: 'pending', credential, connect: { expires_at: '2026-10-15T14:10:00.000Z' } },
+      output: { provider: null, status: 'pending', credential, connect: { expires_at: '2026-10-16T14:00:00.000Z' } },
     });
     expect(fact).toMatchObject({ type: 'connection_added', data: { credential } });
     expect(fake.heard().map(({ path }) => path)).not.toContain('/register');

@@ -1395,7 +1395,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server. It answers pending with a link to Studio's page, where the person approves it within ten minutes. Nothing is granted by this call and no credential passes through it.",
+        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server. It answers pending with a link to Studio's page, where the person approves it within 24 hours. Nothing is granted by this call and no credential passes through it.",
         "tags": [
           "connections"
         ],
@@ -1886,6 +1886,13 @@
                         true
                       ],
                       "description": "Answered after the link: the link offered ran out unused, so the connection stands as it was"
+                    },
+                    "link_replaced": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ],
+                      "description": "Answered after the link: a newer link, still open, replaced the link offered, so the person who added the connection opens the newest"
                     }
                   },
                   "required": [
@@ -3167,7 +3174,7 @@
       "post": {
         "operationId": "reconnect_connection",
         "summary": "Reconnect connection",
-        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, rather than removing it and adding it again. It answers the connection with the link, which the person who added it opens within ten minutes, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
+        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working, and nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, rather than removing it and adding it again. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
         "tags": [
           "connections"
         ],
@@ -3532,6 +3539,13 @@
                         true
                       ],
                       "description": "Answered after the link: the link offered ran out unused, so the connection stands as it was"
+                    },
+                    "link_replaced": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ],
+                      "description": "Answered after the link: a newer link, still open, replaced the link offered, so the person who added the connection opens the newest"
                     }
                   },
                   "required": [
@@ -3607,7 +3621,7 @@
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for ten minutes from when add_connection or reconnect_connection gave it, until the connection is approved. A token that is unknown, used up or expired is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A token that is unknown, used up, expired or replaced is answered as not found.",
         "tags": [
           "connections"
         ],

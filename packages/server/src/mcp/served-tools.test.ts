@@ -140,7 +140,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toHaveLength(454);
   });
 
-  it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, say an MCP server given by hand that signs people in takes authorization alone, and end it with what the call does not grant, at 576 characters", () => {
+  it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, say an MCP server given by hand that signs people in takes authorization alone, and end it with what the call does not grant, at 573 characters", () => {
     const adding = descriptionOf('add_connection');
 
     expect(adding).toMatch(
@@ -150,7 +150,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(adding).toMatch(
       / An MCP server given by hand that signs people in itself takes a credential of kind authorization alone, the runtime finding its authorization server\. /u,
     );
-    expect(adding).toHaveLength(576);
+    expect(adding).toHaveLength(573);
   });
 });
 
