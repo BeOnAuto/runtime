@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.2](https://github.com/BeOnAuto/runtime/compare/v0.35.1...v0.35.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* **connections:** the connect page's five routes take org:write alone ([#357](https://github.com/BeOnAuto/runtime/issues/357)) ([c7dab23](https://github.com/BeOnAuto/runtime/commit/c7dab23f07875311da5421a36d153adf267948f4))
+
 ## [0.35.1](https://github.com/BeOnAuto/runtime/compare/v0.35.0...v0.35.1) (2026-10-28)
 
 
