@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.0](https://github.com/BeOnAuto/runtime/compare/v0.35.2...v0.36.0) (2026-10-28)
+
+
+### Features
+
+* **meter:** a closed account refuses a run as account_closed ([#375](https://github.com/BeOnAuto/runtime/issues/375)) ([fed7e8e](https://github.com/BeOnAuto/runtime/commit/fed7e8e684d13b3ff50ccab49217cbcb46fccc53))
+
 ## [0.35.2](https://github.com/BeOnAuto/runtime/compare/v0.35.1...v0.35.2) (2026-10-28)
 
 
