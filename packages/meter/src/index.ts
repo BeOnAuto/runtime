@@ -12,6 +12,7 @@ export {
   type SignedReport,
   type Activation,
   type InstallationUsage,
+  type ReportedUsage,
   type Usage,
 } from './accounts/account-service.ts';
 export { accountServiceLayer, type AccountsAt } from './accounts/fetched-account-service.ts';

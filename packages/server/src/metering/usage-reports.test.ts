@@ -35,7 +35,7 @@ describe('a licensed runtime', () => {
     const sentBeforeTheStop = accounts.account.reportsSent();
     await server.stop();
 
-    expect([reports.at(-1)?.actions, reports.at(-1)?.through?.length]).toEqual([2, 1]);
+    expect([reports.at(-1)?.actions, typeof reports.at(-1)?.last]).toEqual([2, 'string']);
     expect(accounts.account.reportsSent()).toBe(sentBeforeTheStop + 1);
   }, 60_000);
 });

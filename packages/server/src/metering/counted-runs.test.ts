@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { nestedRunId } from '@on.auto/definitions';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Effect, Schema } from 'effect';
@@ -31,7 +33,7 @@ async function historyOf(server: ReasoningServer, runId: string): Promise<readon
 }
 
 function actionOf(runId: string): string {
-  return `installation:${installation}/acme/alpha/${runId.toLowerCase()}`;
+  return `installation:${installation}/${createHash('sha256').update(`acme/alpha/${runId.toLowerCase()}`).digest('hex')}`;
 }
 
 describe('a workflow of a licensed runtime that calls a workflow that calls a function', () => {

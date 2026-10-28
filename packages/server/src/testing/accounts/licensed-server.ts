@@ -1,4 +1,4 @@
-import { accountFake, accountServerOver, testSigners, type AccountFake } from '@on.auto/meter/testing';
+import { accountFake, accountServerOver, testSigners, type AccountFake, type Received } from '@on.auto/meter/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { Effect, Schema } from 'effect';
 import { onTestFinished } from 'vitest';
@@ -16,6 +16,7 @@ export interface Accounts {
   readonly origin: string;
   readonly key: string;
   readonly reportsAsked: () => number;
+  readonly received: () => readonly Received[];
 }
 
 function withItsReportsCounted(account: AccountFake, counted: () => void): AccountFake {
@@ -41,7 +42,13 @@ export async function accountsServed(): Promise<Accounts> {
     }),
   );
   onTestFinished(() => served.close());
-  return { account, origin: served.origin, key: account.keyFor(installation), reportsAsked: () => asked.reports };
+  return {
+    account,
+    origin: served.origin,
+    key: account.keyFor(installation),
+    reportsAsked: () => asked.reports,
+    received: served.received,
+  };
 }
 
 export async function servedBy(

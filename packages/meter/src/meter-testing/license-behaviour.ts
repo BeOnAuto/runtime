@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { expect, it } from 'vitest';
 
 import type { Answering } from '../testing/account-fake.ts';
@@ -16,6 +18,10 @@ const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
 
 const page = `https://studio.on.auto/licenses?installation=${installation}`;
 
+function chargedAs(where: string): string {
+  return `installation:${installation}/${createHash('sha256').update(where).digest('hex')}`;
+}
+
 function activationBehaviour(ledgerOf: LedgerOf): void {
   it('activates a key, recording the entitlement Auto signed, and admits each new action by the account from then on', async () => {
     const { metered } = await opened(ledgerOf, { allowance: 1 });
@@ -24,10 +30,7 @@ function activationBehaviour(ledgerOf: LedgerOf): void {
     expect(await metered.activated(key)).toEqual({ kind: 'activated', detail: '' });
     expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
     expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect(metered.account.charged()).toEqual([
-      `installation:${installation}/acme/alpha/run-1`,
-      `installation:${installation}/acme/alpha/run-2`,
-    ]);
+    expect(metered.account.charged()).toEqual([chargedAs('acme/alpha/run-1'), chargedAs('acme/alpha/run-2')]);
     expect(await metered.state()).toMatchObject({
       installation,
       license: {
@@ -41,7 +44,7 @@ function activationBehaviour(ledgerOf: LedgerOf): void {
     });
   });
 
-  it('sends the count it projected, with the point and id of its checkpoint, as it activates', async () => {
+  it('sends the count it projected, with the id of the last event its checkpoint counted, as it activates', async () => {
     const { metered } = await opened(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
     await startedOnceAdmitted(metered, 'run-2');
@@ -49,9 +52,7 @@ function activationBehaviour(ledgerOf: LedgerOf): void {
     await metered.activated(metered.account.keyFor(identified));
     const { checkpoint } = await metered.state();
 
-    expect(metered.account.activations()).toEqual([
-      { installation: identified, actions: 2, through: checkpoint?.through, last: checkpoint?.last },
-    ]);
+    expect(metered.account.activations()).toEqual([{ installation: identified, actions: 2, last: checkpoint?.last }]);
   });
 }
 
@@ -62,7 +63,7 @@ function keyBehaviour(ledgerOf: LedgerOf): void {
     const restarted = await restartedOf(metered);
 
     expect((await restarted.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect(metered.account.activations()).toEqual([{ installation, actions: 0, through: null, last: null }]);
+    expect(metered.account.activations()).toEqual([{ installation, actions: 0, last: null }]);
     expect(metered.account.askedToAdmit()).toBe(2);
   });
 
@@ -242,7 +243,7 @@ function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
     const askedBeforeTheStart = metered.account.askedToAdmit();
     await metered.admitted(runOf('run-1'));
 
-    expect(metered.account.charged()).toEqual([`installation:${installation}/acme/alpha/run-1`]);
+    expect(metered.account.charged()).toEqual([chargedAs('acme/alpha/run-1')]);
     expect([askedBeforeTheStart, metered.account.askedToAdmit()]).toEqual([3, 3]);
   });
 

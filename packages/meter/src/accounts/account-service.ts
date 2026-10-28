@@ -1,4 +1,3 @@
-import type { MeteredRun } from '@on.auto/definitions';
 import { Context, type Effect } from 'effect';
 
 import type { Signed } from '../licensing/signed-answers.ts';
@@ -11,7 +10,12 @@ export interface Usage {
   readonly last: string | null;
 }
 
-export interface InstallationUsage extends Usage {
+export interface ReportedUsage {
+  readonly actions: number;
+  readonly last: string | null;
+}
+
+export interface InstallationUsage extends ReportedUsage {
   readonly installation: string;
 }
 
@@ -27,8 +31,8 @@ export interface SignedReport {
 
 export interface AccountPorts {
   readonly activate: (key: string, usage: InstallationUsage) => Effect.Effect<Activation, AccountFailure>;
-  readonly admit: (key: string, run: MeteredRun) => Effect.Effect<Signed, AccountFailure>;
-  readonly report: (key: string, usage: Usage) => Effect.Effect<void, AccountFailure>;
+  readonly admit: (key: string, action: string) => Effect.Effect<Signed, AccountFailure>;
+  readonly report: (key: string, usage: ReportedUsage) => Effect.Effect<void, AccountFailure>;
   readonly refreshAllocation: (key: string, allocation: string) => Effect.Effect<Signed, AccountFailure>;
   readonly reportAllocation: (key: string, report: SignedReport) => Effect.Effect<string, AccountFailure>;
 }

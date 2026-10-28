@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Effect } from 'effect';
 
 import { AccountFailure, unreachable, type AccountRefusal } from '../accounts/account-failure.ts';
-import type { AccountPorts, InstallationUsage, Usage } from '../accounts/account-service.ts';
+import type { AccountPorts, InstallationUsage, ReportedUsage } from '../accounts/account-service.ts';
 import type { Signed } from '../licensing/signed-answers.ts';
 import { allocationFake, type AllocationFake } from './allocation-fake.ts';
 import { signedByAnotherKey, signedByTheTestKey } from './test-signing.ts';
@@ -49,7 +49,7 @@ export interface AccountFake extends Omit<AllocationFake, 'ports'> {
   readonly charged: () => readonly string[];
   readonly askedToAdmit: () => number;
   readonly activations: () => readonly InstallationUsage[];
-  readonly reports: () => readonly Usage[];
+  readonly reports: () => readonly ReportedUsage[];
   readonly reportsSent: () => number;
 }
 
@@ -81,7 +81,7 @@ interface Records {
   readonly activated: (usage: InstallationUsage) => void;
   readonly asked: () => void;
   readonly charged: (action: string) => void;
-  readonly reported: (usage: Usage) => void;
+  readonly reported: (usage: ReportedUsage) => void;
   readonly read: Pick<AccountFake, 'charged' | 'askedToAdmit' | 'activations' | 'reports' | 'reportsSent'>;
 }
 
@@ -150,12 +150,12 @@ function portsOf(standing: Standing, records: Records, allocations: AllocationFa
           repair: standing.repairOf(installation),
         });
       }),
-    admit: (key, run) =>
+    admit: (key, asked) =>
       Effect.flatMap(standing.reached(key), ({ installation }) => {
         records.asked();
         const refusal = standing.refusal();
         if (refusal !== undefined) return Effect.fail(refusal);
-        const action = `installation:${installation}/${run.org}/${run.playbook}/${run.run_id.toLowerCase()}`;
+        const action = `installation:${installation}/${asked}`;
         records.charged(action);
         return Effect.succeed(
           standing.signed({ v: 1, kind: 'admission', installation, action, admitted_at: standing.iso() }),
@@ -214,10 +214,10 @@ function accountRecords(): Records {
   const charged = new Set<string>();
   const asked = { admissions: 0, reports: 0 };
   const activations: InstallationUsage[] = [];
-  const reports = new Map<string | null, Usage>();
+  const reports = new Map<string | null, ReportedUsage>();
   return {
-    activated: (usage) => {
-      activations.push(usage);
+    activated: ({ installation, actions, last }) => {
+      activations.push({ installation, actions, last });
     },
     asked: () => {
       asked.admissions += 1;
@@ -225,9 +225,9 @@ function accountRecords(): Records {
     charged: (action) => {
       charged.add(action);
     },
-    reported: (usage) => {
+    reported: ({ actions, last }) => {
       asked.reports += 1;
-      reports.set(usage.last, reports.get(usage.last) ?? usage);
+      reports.set(last, reports.get(last) ?? { actions, last });
     },
     read: {
       charged: () => [...charged],

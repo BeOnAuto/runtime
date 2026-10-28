@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -11,7 +12,9 @@ import { runIdIn } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 function actionOf(response: { readonly body: unknown }): string {
-  return `installation:${installation}/acme/alpha/${runIdIn(response.body).toLowerCase()}`;
+  return `installation:${installation}/${createHash('sha256')
+    .update(`acme/alpha/${runIdIn(response.body).toLowerCase()}`)
+    .digest('hex')}`;
 }
 
 describe('a runtime given its license key in AUTO_RUNTIME_LICENSE_KEY', () => {

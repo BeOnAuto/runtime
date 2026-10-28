@@ -23,14 +23,14 @@ async function forgedTo(actions: number, metered: Metered, tampering: Tampering)
 }
 
 export function reportBehaviour(ledgerOf: LedgerOf): void {
-  it('reports the count it projected with the point and id of its checkpoint, and records it once taken', async () => {
+  it('reports the count it projected with the id of its checkpoint’s last event, and records it, with its point, once taken', async () => {
     const { metered } = await licensedOn(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
     await startedOnceAdmitted(metered, 'run-2');
 
     expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
     const { checkpoint, reported } = await metered.state();
-    expect(metered.account.reports()).toEqual([{ actions: 2, through: checkpoint?.through, last: checkpoint?.last }]);
+    expect(metered.account.reports()).toEqual([{ actions: 2, last: checkpoint?.last }]);
     expect(reported).toEqual({ actions: 2, through: checkpoint?.through, last: checkpoint?.last });
   });
 

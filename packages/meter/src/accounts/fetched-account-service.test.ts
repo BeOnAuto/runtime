@@ -1,6 +1,7 @@
 import { Effect, Function, Option } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { actionDigestOf } from '../admission/action-digest.ts';
 import { allocationIn } from '../licensing/signed-answers.ts';
 import { accountFake } from '../testing/account-fake.ts';
 import { accountServerOver } from '../testing/account-server.ts';
@@ -10,7 +11,13 @@ import { accountServiceAt } from './fetched-account-service.ts';
 
 const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e';
 
-const usage = { actions: 2, through: ['7'], last: 'event-7' };
+const usage = { actions: 2, last: 'event-7' };
+
+const counted = { ...usage, through: ['7'] };
+
+const run1 = actionDigestOf(runOf('run-1'));
+
+const run2 = actionDigestOf(runOf('run-2'));
 
 async function served() {
   const fake = accountFake();
@@ -27,7 +34,7 @@ function outcomeOf<A, E>(work: Effect.Effect<A, E>): Promise<A | E> {
 describe('the account service over HTTP', () => {
   it('activates with the key as a bearer and the projected count, and answers the signed entitlement', async () => {
     const { fake, account, key } = await served();
-    const activation = await outcomeOf(account.activate(key, { installation, ...usage }));
+    const activation = await outcomeOf(account.activate(key, { installation, ...counted }));
 
     expect(activation).toMatchObject({ entitlement: { kid: 'test-2026-10' }, repair: null });
     expect(fake.activations()).toEqual([{ installation, ...usage }]);
@@ -35,12 +42,70 @@ describe('the account service over HTTP', () => {
 
   it('asks it to admit a run and answers its signed admission, and reports a count, which it takes', async () => {
     const { fake, account, key } = await served();
-    const admission = await outcomeOf(account.admit(key, runOf('run-1')));
-    const reported = await outcomeOf(account.report(key, usage));
+    const admission = await outcomeOf(account.admit(key, run1));
+    const reported = await outcomeOf(account.report(key, counted));
 
     expect([admission, reported]).toMatchObject([{ kid: 'test-2026-10' }, undefined]);
-    expect(fake.charged()).toEqual([`installation:${installation}/acme/alpha/run-1`]);
+    expect(fake.charged()).toEqual([`installation:${installation}/${run1}`]);
     expect(fake.reports()).toEqual([usage]);
+  });
+});
+
+describe('what the account service is sent over HTTP', () => {
+  it('sends each call the fields it names and no other, leaving out the point of the ledger its count reached', async () => {
+    const { fake, server, account, key } = await served();
+    const signed = fake.allocationFor(installation, 5);
+    const { id } = Option.getOrThrow(allocationIn(signed, testSigners));
+    const report = { allocation: id, installation, sequence: 1, spent: 2, at: '2026-10-27T12:00:00.000Z' };
+    await outcomeOf(account.activate(key, { installation, ...counted }));
+    await outcomeOf(account.admit(key, run1));
+    await outcomeOf(account.report(key, counted));
+    await outcomeOf(account.refreshAllocation(key, id));
+    await outcomeOf(account.reportAllocation(key, { report, signature: 'its-signature' }));
+
+    expect(server.received()).toEqual([
+      { path: '/v1/installations/activate', authorization: `Bearer ${key}`, body: { installation, ...usage } },
+      { path: '/v1/installations/actions', authorization: `Bearer ${key}`, body: { action: run1 } },
+      { path: '/v1/installations/reports', authorization: `Bearer ${key}`, body: usage },
+      { path: '/v1/installations/allocations/refresh', authorization: `Bearer ${key}`, body: { allocation: id } },
+      {
+        path: '/v1/installations/allocations/report',
+        authorization: `Bearer ${key}`,
+        body: { report, signature: 'its-signature' },
+      },
+    ]);
+  });
+});
+
+describe('what the account service is sent over HTTP, whatever it is handed', () => {
+  it('leaves out whatever else the value handed to a call holds', async () => {
+    const { server, account, key } = await served();
+    const widenedUsage = { ...counted, prompt: 'Summarize the payroll of Ada Lovelace', started_by: 'person:ada' };
+    const widenedActivation = { installation, ...widenedUsage, input: { iban: 'GB33BUKB20201555555555' } };
+    const report = { allocation: 'allocation-1', installation, sequence: 1, spent: 2, at: '2026-10-27T12:00:00Z' };
+    const widenedReport = { report: { ...report, definition_name: 'payroll' }, signature: 's', output: 'paid' };
+    await outcomeOf(account.activate(key, widenedActivation));
+    await outcomeOf(account.report(key, widenedUsage));
+    await outcomeOf(account.reportAllocation(key, widenedReport));
+
+    expect(server.received().map(({ body }) => body)).toEqual([
+      { installation, ...usage },
+      usage,
+      { report, signature: 's' },
+    ]);
+  });
+
+  it('sends no admission whose action is anything but the SHA-256 of where the run ran, and asks nothing', async () => {
+    const { server, account, key } = await served();
+    const named = await outcomeOf(account.admit(key, 'acme/alpha/run-1'));
+
+    expect(named).toMatchObject({
+      _tag: 'account_failure',
+      status: 0,
+      kind: 'unreachable',
+      detail: 'The runtime sends the account service only the fields its call names',
+    });
+    expect(server.received()).toEqual([]);
   });
 });
 
@@ -49,7 +114,7 @@ describe('the refusals of the account service over HTTP', () => {
     const { fake, account, key } = await served();
     fake.exhaust();
 
-    expect(await outcomeOf(account.admit(key, runOf('run-1')))).toMatchObject({
+    expect(await outcomeOf(account.admit(key, run1))).toMatchObject({
       _tag: 'account_failure',
       status: 409,
       kind: 'credits_exhausted',
@@ -60,7 +125,7 @@ describe('the refusals of the account service over HTTP', () => {
   it('answers the case of the refusal and where a person resolves it, where the account gives them', async () => {
     const { fake, account, key } = await served();
     fake.exhaust({ because: 'free_month_used', resolve_at: 'https://studio.on.auto/billing?org=acme' });
-    const exhausted = await outcomeOf(account.admit(key, runOf('run-1')));
+    const exhausted = await outcomeOf(account.admit(key, run1));
     fake.revoke(key, 'key_rotated');
 
     expect(exhausted).toMatchObject({
@@ -68,7 +133,7 @@ describe('the refusals of the account service over HTTP', () => {
       because: 'free_month_used',
       resolve_at: 'https://studio.on.auto/billing?org=acme',
     });
-    expect(await outcomeOf(account.admit(key, runOf('run-2')))).toMatchObject({
+    expect(await outcomeOf(account.admit(key, run2))).toMatchObject({
       status: 403,
       kind: 'license_invalid',
       detail: 'The key was rotated',

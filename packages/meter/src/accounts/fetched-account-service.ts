@@ -2,6 +2,13 @@ import { Effect, Layer, Option, Schema } from 'effect';
 
 import { SignedSchema } from '../licensing/signed-answers.ts';
 import { AccountFailure, unreachable } from './account-failure.ts';
+import {
+  ActivationRequestSchema,
+  AdmissionRequestSchema,
+  AllocationRefreshRequestSchema,
+  AllocationReportRequestSchema,
+  UsageRequestSchema,
+} from './account-requests.ts';
 import { AccountService, type AccountPorts } from './account-service.ts';
 
 interface AccountRequest {
@@ -44,19 +51,46 @@ const refusalIn = Schema.decodeUnknownOption(Schema.fromJsonString(RefusalSchema
 
 const unworded: typeof RefusalSchema.Type = {};
 
-function asked(at: AccountsAt, path: string, key: string, body: object): Effect.Effect<Answer, AccountFailure> {
-  return Effect.tryPromise({
-    try: async (signal) => {
-      const response = await at.fetch(`${at.origin}${path}`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.any([signal, AbortSignal.timeout(accountsAnswerWithinMs)]),
-      });
-      return { status: response.status, text: await response.text() };
-    },
-    catch: (cause) => unreachable(`The account service at ${at.origin} could not be asked: ${String(cause)}`),
-  });
+type Request<S extends Schema.Top> = (body: S['Type']) => Effect.Effect<string, AccountFailure>;
+
+function requestOf<S extends Schema.Codec<unknown, unknown>>(schema: S): Request<S> {
+  const encoded = Schema.encodeEffect(Schema.fromJsonString(schema));
+  return (body) =>
+    encoded(body).pipe(
+      Effect.mapError(() => unreachable('The runtime sends the account service only the fields its call names')),
+    );
+}
+
+const activationRequest = requestOf(ActivationRequestSchema);
+
+const admissionRequest = requestOf(AdmissionRequestSchema);
+
+const usageRequest = requestOf(UsageRequestSchema);
+
+const allocationRefreshRequest = requestOf(AllocationRefreshRequestSchema);
+
+const allocationReportRequest = requestOf(AllocationReportRequestSchema);
+
+function asked(
+  at: AccountsAt,
+  path: string,
+  key: string,
+  request: Effect.Effect<string, AccountFailure>,
+): Effect.Effect<Answer, AccountFailure> {
+  return Effect.flatMap(request, (body) =>
+    Effect.tryPromise({
+      try: async (signal) => {
+        const response = await at.fetch(`${at.origin}${path}`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+          body,
+          signal: AbortSignal.any([signal, AbortSignal.timeout(accountsAnswerWithinMs)]),
+        });
+        return { status: response.status, text: await response.text() };
+      },
+      catch: (cause) => unreachable(`The account service at ${at.origin} could not be asked: ${String(cause)}`),
+    }),
+  );
 }
 
 function refusalOf({ status, text }: Answer): AccountFailure {
@@ -95,21 +129,22 @@ const allocationTakenIn = answerIn(AllocationTakenSchema);
 
 export function accountServiceAt(at: AccountsAt): AccountPorts {
   return {
-    activate: (key, usage) => Effect.flatMap(asked(at, '/v1/installations/activate', key, usage), activationIn),
-    admit: (key, run) =>
-      asked(at, '/v1/installations/actions', key, { run }).pipe(
+    activate: (key, usage) =>
+      Effect.flatMap(asked(at, '/v1/installations/activate', key, activationRequest(usage)), activationIn),
+    admit: (key, action) =>
+      asked(at, '/v1/installations/actions', key, admissionRequest({ action })).pipe(
         Effect.flatMap(admittedIn),
         Effect.map(({ admission }) => admission),
       ),
     report: (key, usage) =>
-      asked(at, '/v1/installations/reports', key, usage).pipe(Effect.flatMap(takenIn), Effect.asVoid),
+      asked(at, '/v1/installations/reports', key, usageRequest(usage)).pipe(Effect.flatMap(takenIn), Effect.asVoid),
     refreshAllocation: (key, id) =>
-      asked(at, '/v1/installations/allocations/refresh', key, { allocation: id }).pipe(
+      asked(at, '/v1/installations/allocations/refresh', key, allocationRefreshRequest({ allocation: id })).pipe(
         Effect.flatMap(allocationIn),
         Effect.map(({ allocation }) => allocation),
       ),
     reportAllocation: (key, report) =>
-      asked(at, '/v1/installations/allocations/report', key, report).pipe(
+      asked(at, '/v1/installations/allocations/report', key, allocationReportRequest(report)).pipe(
         Effect.flatMap(allocationTakenIn),
         Effect.map(({ taken }) => taken),
       ),

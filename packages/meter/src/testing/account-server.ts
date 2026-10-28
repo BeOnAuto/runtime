@@ -1,25 +1,27 @@
 import { once } from 'node:events';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { StartingTriggerSchema } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
 import type { AccountFailure, AccountRefusal } from '../accounts/account-failure.ts';
 import type { AccountFake } from './account-fake.ts';
 
+export interface Received {
+  readonly path: string;
+  readonly authorization: string | undefined;
+  readonly body: unknown;
+}
+
 export interface AccountServer {
   readonly origin: string;
+  readonly received: () => readonly Received[];
   readonly garble: () => void;
   readonly close: () => Promise<void>;
 }
 
 const portOf = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
-const UsageSchema = Schema.Struct({
-  actions: Schema.Number,
-  through: Schema.NullOr(Schema.Array(Schema.String)),
-  last: Schema.NullOr(Schema.String),
-});
+const UsageSchema = Schema.Struct({ actions: Schema.Number, last: Schema.NullOr(Schema.String) });
 
 const usageIn = Schema.decodeUnknownOption(Schema.fromJsonString(UsageSchema));
 
@@ -27,24 +29,9 @@ const installationUsageIn = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Struct({ ...UsageSchema.fields, installation: Schema.String })),
 );
 
-const runIn = Schema.decodeUnknownOption(
-  Schema.fromJsonString(
-    Schema.Struct({
-      run: Schema.Struct({
-        org: Schema.String,
-        playbook: Schema.String,
-        run_id: Schema.String,
-        definition_type: Schema.String,
-        definition_name: Schema.String,
-        definition_version: Schema.Number,
-        correlation_id: Schema.String,
-        called_by: Schema.NullOr(Schema.String),
-        trigger: Schema.NullOr(StartingTriggerSchema),
-        started_by: Schema.String,
-      }),
-    }),
-  ),
-);
+const admissionIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ action: Schema.String })));
+
+const jsonIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 
 const refreshIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ allocation: Schema.String })));
 
@@ -123,9 +110,9 @@ function answerTo(fake: AccountFake, path: string, key: string, text: string): P
     });
   }
   if (path === '/v1/installations/actions') {
-    return Option.match(runIn(text), {
+    return Option.match(admissionIn(text), {
       onNone: () => Promise.resolve(unread),
-      onSome: ({ run }) => answered(ports.admit(key, run), (admission) => ({ admission })),
+      onSome: ({ action }) => answered(ports.admit(key, action), (admission) => ({ admission })),
     });
   }
   if (path === '/v1/installations/reports') {
@@ -137,32 +124,51 @@ function answerTo(fake: AccountFake, path: string, key: string, text: string): P
   return allocationAnswerTo(fake, path, key, text);
 }
 
+interface Serving {
+  readonly garbled: () => boolean;
+  readonly took: (received: Received) => void;
+}
+
 async function respond(
   fake: AccountFake,
-  garbled: () => boolean,
+  serving: Serving,
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
-  const key = String(request.headers.authorization).replace(/^Bearer /u, '');
-  const answer = await answerTo(fake, String(request.url), key, await bodyOf(request));
+  const { authorization } = request.headers;
+  const key = String(authorization).replace(/^Bearer /u, '');
+  const path = String(request.url);
+  const text = await bodyOf(request);
+  serving.took({ path, authorization, body: Option.getOrUndefined(jsonIn(text)) });
+  const answer = await answerTo(fake, path, key, text);
   if (answer === 'dropped') {
     response.destroy();
     return;
   }
-  const text = answer.body === undefined ? '' : JSON.stringify(answer.body);
-  response.writeHead(answer.status, { 'content-type': 'application/json' }).end(garbled() ? 'garbled' : text);
+  const written = answer.body === undefined ? '' : JSON.stringify(answer.body);
+  response
+    .writeHead(answer.status, { 'content-type': 'application/json' })
+    .end(serving.garbled() ? 'garbled' : written);
 }
 
 export async function accountServerOver(fake: AccountFake): Promise<AccountServer> {
   const garbled = { now: false };
+  const received: Received[] = [];
+  const serving: Serving = {
+    garbled: () => garbled.now,
+    took: (taken) => {
+      received.push(taken);
+    },
+  };
   const server = createServer((request, response) => {
-    void respond(fake, () => garbled.now, request, response);
+    void respond(fake, serving, request, response);
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const { port } = portOf(server.address());
   return {
     origin: `http://127.0.0.1:${port}`,
+    received: () => [...received],
     garble: () => {
       garbled.now = true;
     },
