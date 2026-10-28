@@ -1,0 +1,12 @@
+name: buffer
+title: Buffer
+description: Read the channels, posts, ideas and post metrics of every Buffer organization the person who connects belongs to, and schedule or publish posts and save ideas, as that person, through Buffer's MCP server.
+website: https://developers.buffer.com/guides/integrations/mcp.html
+type: mcp
+url: https://mcp.buffer.com/mcp
+credentials:
+  - kind: authorization
+    issuer: https://auth.buffer.com
+    scope: posts:read ideas:read account:read insights:read posts:write ideas:write
+    clients: [dynamic]
+    description: Sign in to Buffer and allow access to your organizations and channels.

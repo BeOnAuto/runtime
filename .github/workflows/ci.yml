@@ -361,7 +361,7 @@ jobs:
             " "$1"
           }
           started_as first
-          added="$(asked --request POST --data '{"name":"crm","type":"mcp","entry":{"url":"https://crm.example.com/mcp"},"credential":{"kind":"secret","name":"X-Api-Key","in":"header"}}' "$connections")"
+          added="$(asked --request POST --data '{"name":"crm","type":"openapi","entry":{"document":"https://crm.example.com/openapi.json"},"credential":{"kind":"secret","name":"X-Api-Key","in":"header"}}' "$connections")"
           id="$(printf '%s' "$added" | jq --raw-output .id)"
           given="$(asked --request POST --data "$(printf '%s' "$added" | jq --compact-output --arg value "$value" '{token: (.connect.url | capture("[?&]token=(?<token>[^&]+)").token), value: $value}')" "$connections/$id/credential")"
           test "$(printf '%s' "$given" | jq --raw-output .status)" = connected

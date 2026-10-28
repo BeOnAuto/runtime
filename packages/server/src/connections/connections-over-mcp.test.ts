@@ -9,26 +9,31 @@ import {
 } from '@on.auto/api/testing';
 import { localDeveloper } from '@on.auto/identity/testing';
 import { sha256Of } from '@on.auto/operations';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
-import { startServer } from '../lifecycle/lifecycle.ts';
 import { ownKeyFactsIn, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 let server: ReasoningServer;
 
+let notesServer: FakeMcpServer;
+
 beforeAll(async () => {
   server = await servingReasoning([]);
+  notesServer = await serveFakeMcp();
 });
 
 afterAll(async () => {
   await server.stop();
+  await notesServer.close();
 });
 
-const notes = { type: 'mcp', entry: { url: 'https://notes.example.com/mcp' }, credential: { kind: 'none' } };
+function notes() {
+  return { type: 'mcp', entry: { url: notesServer.url }, credential: { kind: 'none' } };
+}
 
 const AddedSchema = Schema.Struct({ connect: Schema.Struct({ url: Schema.String }) });
 
@@ -36,7 +41,7 @@ const PageSchema = Schema.Struct({ connection: Schema.String, token: Schema.Stri
 
 function adding(name: string, opening: Partial<LinkOpening> = {}) {
   const connection = { url: `${server.origin}/mcp`, headers: {} };
-  return calledOpeningLinks(connection, { name: 'add_connection', arguments: { ...notes, name } }, opening);
+  return calledOpeningLinks(connection, { name: 'add_connection', arguments: { ...notes(), name } }, opening);
 }
 
 function linkOn(url: string) {
@@ -165,7 +170,7 @@ function onMcpOf({ origin }: ReasoningServer) {
 }
 
 function addingNotes(name: string) {
-  return { name: 'add_connection', arguments: { ...notes, name } };
+  return { name: 'add_connection', arguments: { ...notes(), name } };
 }
 
 const sharing = { SECRETS_KEY: secretsKey.toString('base64') };
@@ -229,16 +234,7 @@ describe('a server whose secrets key cannot read the key the runtime keeps for i
     await first.stop();
     const anotherKey = Buffer.alloc(32, 9);
 
-    const started = startServer(
-      {
-        HOST: '127.0.0.1',
-        PORT: '0',
-        LEDGER_FILE: ledger.fileName,
-        PREDICTION_CACHE_DIR: ledger.cacheDirectory,
-        SECRETS_KEY: anotherKey.toString('base64'),
-      },
-      compositionRoot,
-    );
+    const started = servingReasoning([], { SECRETS_KEY: anotherKey.toString('base64') }, undefined, { ledger });
 
     await expect(started).rejects.toThrow(
       `The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${sha256Of(secretsKey).slice(0, 16)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key`,

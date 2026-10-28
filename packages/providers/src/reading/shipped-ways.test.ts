@@ -38,6 +38,7 @@ const hostsOfTheWays = [
     ],
   ],
   [[['mcp.atlassian.com', 'auth.atlassian.com']]],
+  [[['mcp.buffer.com', 'auth.buffer.com']]],
   [[['dfareporting.googleapis.com', google]]],
   [[['displayvideo.googleapis.com', google]]],
   [[['doubleclickbidmanager.googleapis.com', google]]],

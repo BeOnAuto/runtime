@@ -208,6 +208,21 @@ function issuerRefusalOf(url: string, { issuer, refusal }: RefusedAtTheIssuer): 
     : refusedKindOf(`${named} ${issuerWordsOf(refusal)}`);
 }
 
+export function takesConsentOf(url: string, issuer: string): InvalidInput {
+  return refusedKindOf(
+    `The server at ${url} takes consent at the authorization server ${issuer}, which it names itself: leave the credential out, or give the kind authorization alone`,
+  );
+}
+
+export function credentialUnnamedOf(url: string): InvalidInput {
+  return invalidAddition([
+    {
+      pointer: '/credential',
+      detail: `Expected credential: the server at ${url} names no way of its own to authenticate, since it names no authorization server; say how it takes its credential: a secret in a header, or none`,
+    },
+  ]);
+}
+
 export function wayRefusalOf(url: string, refusal: WayRefusal): WayRefused {
   if (refusal.refused === 'host') {
     return new Forbidden({ detail: refusal.rule });

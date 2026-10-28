@@ -22,12 +22,12 @@ interface Connecting {
   readonly link: Added;
 }
 
-async function throughAuto(fetch: ConsentClientOptions['fetch'] = globalThis.fetch): Promise<Connecting> {
+async function throughAuto(consenting: Partial<ConsentClientOptions> = {}): Promise<Connecting> {
   const serving = await servedThroughAuto();
   closing.push(serving.close);
   const h = consentHarnessAt(serving.fake, {
     policy: loopbackAndCrmPolicy,
-    consenting: { autoClients: autoClientsOf(serving.service), fetch },
+    consenting: { autoClients: autoClientsOf(serving.service), ...consenting },
     pages: { studio: { origin: 'https://studio.example.com', served: false }, runtime: () => 'http://localhost:5555' },
   });
   return { serving, h, link: await added(h, { provider: 'files' }) };
@@ -113,7 +113,7 @@ describe('the finish of a consent through Auto’s consent service', () => {
   });
 
   it('records the client the service redeemed with, which the handoff names, over the one the start recorded', async () => {
-    const connecting = await throughAuto(listingAnotherClient);
+    const connecting = await throughAuto({ fetch: listingAnotherClient });
 
     const finished = await finishedWith(connecting.h, connecting.link, await returnedOf(connecting));
     const started = (await connecting.h.facts()).find(({ type }) => type === 'connection_consent_started');

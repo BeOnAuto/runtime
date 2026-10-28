@@ -1,21 +1,36 @@
 import { localDeveloper } from '@on.auto/identity/testing';
+import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { keptSecretOf, secretIdOf, secretsKey } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import type { TestResponse } from '../testing/servers/http-client.ts';
-import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
+import { connectionsAllowing, connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 const connections = '/v1/orgs/local/connections';
 
-const crm = {
-  name: 'crm',
-  type: 'mcp',
-  entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
-  credential: { kind: 'secret', name: 'Authorization', in: 'header' },
-};
+let crmServer: FakeMcpServer;
+
+beforeAll(async () => {
+  crmServer = await serveFakeMcp({ bearer: 'crm-0f3c' });
+});
+
+afterAll(async () => {
+  await crmServer.close();
+});
+
+const crmCredential = { kind: 'secret', name: 'Authorization', in: 'header' };
+
+function crm() {
+  return {
+    name: 'crm',
+    type: 'mcp',
+    entry: { url: crmServer.url, headers: { 'X-Tenant': 'acme-eu' } },
+    credential: crmCredential,
+  };
+}
 
 const DetailSchema = Schema.Struct({ detail: Schema.String });
 
@@ -37,7 +52,7 @@ async function serving(environment: Readonly<Record<string, string>> = {}): Prom
   server = await servingReasoning([], {
     LEDGER_FILE: ledger.fileName,
     SECRETS_KEY: secretsKey.toString('base64'),
-    ...connectionsAllowing(['crm.example.com']),
+    ...connectionsOnLoopback,
     ...environment,
   });
   return server;
@@ -52,7 +67,7 @@ function linkedIn({ body }: TestResponse) {
   return { id, page, token, expiresAt: connect.expires_at };
 }
 
-async function added(served: ReasoningServer, body: unknown = crm) {
+async function added(served: ReasoningServer, body: unknown = crm()) {
   const answer = await served.call('POST', connections, { body });
   return { answer, ...linkedIn(answer) };
 }
@@ -136,7 +151,7 @@ describe('giving the credential of a connection over HTTP', () => {
     expect(given).toMatchObject({ status: 200, body: { id, status: 'connected', credential_ends_with: '0f3c' } });
     expect(keptBefore).toEqual({ value: 'Bearer crm-0f3c', endsWith: '0f3c' });
     expect([read.body, listed.body]).toMatchObject([
-      { credential: crm.credential, credential_ends_with: '0f3c' },
+      { credential: crmCredential, credential_ends_with: '0f3c' },
       { connections: [{ credential_ends_with: '0f3c' }] },
     ]);
     expect(again.status).toBe(404);
@@ -146,7 +161,7 @@ describe('giving the credential of a connection over HTTP', () => {
 
   it('approves one that takes no credential to give', async () => {
     const served = await serving();
-    const { id, token } = await added(served, { ...crm, credential: { kind: 'none' } });
+    const { id, token } = await added(served, { ...crm(), credential: { kind: 'none' } });
 
     expect(await served.call('POST', `${connections}/${id}/approve`, { body: { token } })).toMatchObject({
       status: 200,
@@ -158,13 +173,13 @@ describe('giving the credential of a connection over HTTP', () => {
 describe('the rules of the runtime over HTTP', () => {
   it('answers 403 with the sentence of a rule the policy holds, and 409 for the name of an entry of the configuration', async () => {
     const served = await serving({
-      ...connectionsAllowing(['crm.example.com'], { credential_kinds: ['none'] }),
+      ...connectionsAllowing(['127.0.0.1'], { credential_kinds: ['none'] }),
       TOOL_SERVERS: JSON.stringify({ wiki: { url: 'http://127.0.0.1:9/mcp', org: 'local' } }),
     });
 
-    const refused = await served.call('POST', connections, { body: crm });
+    const refused = await served.call('POST', connections, { body: crm() });
     const taken = await served.call('POST', connections, {
-      body: { ...crm, name: 'wiki', credential: { kind: 'none' } },
+      body: { ...crm(), name: 'wiki', credential: { kind: 'none' } },
     });
 
     expect(refused).toMatchObject({
@@ -199,7 +214,7 @@ function detailOf({ status, body }: { readonly status: number; readonly body: un
 }
 
 describe('the hosts of a runtime whose operator names none, over HTTP', () => {
-  it('answers 403 for a server at a private, link-local or cloud metadata address, and 201 at a public one', async () => {
+  it('answers 403 for a server at a private, link-local or cloud metadata address', async () => {
     const served = await serving({ CONNECTIONS: '' });
 
     const refused = await Promise.all(
@@ -209,39 +224,24 @@ describe('the hosts of a runtime whose operator names none, over HTTP', () => {
     expect(refused.map((answer) => detailOf(answer))).toEqual(
       refusedAddresses.map(([, host, kind]) => [403, refusalFor(host, kind)]),
     );
-    expect(await served.call('POST', connections, { body: mcpServerAt('https://8.8.8.8/mcp') })).toMatchObject({
-      status: 201,
-    });
   });
 
-  it('answers 201 for a server on loopback, since this runtime is local', async () => {
+  it('answers 201 for a server on loopback, headers or not, since this runtime is local', async () => {
     const served = await serving({ CONNECTIONS: '' });
 
-    expect(await served.call('POST', connections, { body: mcpServerAt('http://127.0.0.1:8443/mcp') })).toMatchObject({
-      status: 201,
-    });
-  });
-
-  it('answers 201 for headers to a public host', async () => {
-    const served = await serving({ CONNECTIONS: '' });
-
-    expect(await served.call('POST', connections, { body: crm })).toMatchObject({ status: 201 });
+    expect([
+      await served.call('POST', connections, { body: mcpServerAt(crmServer.url) }),
+      await served.call('POST', connections, { body: crm() }),
+    ]).toMatchObject([{ status: 201 }, { status: 201 }]);
   });
 
   it('answers 403 for headers to a server at an address its operator did not name', async () => {
     const served = await serving({ CONNECTIONS: '' });
-    const intranet = { ...crm, entry: { ...crm.entry, url: 'https://10.0.0.5/mcp' } };
+    const intranet = { ...crm(), entry: { ...crm().entry, url: 'https://10.0.0.5/mcp' } };
 
     expect(detailOf(await served.call('POST', connections, { body: intranet }))).toEqual([
       403,
       refusalFor('10.0.0.5', 'a private address'),
     ]);
-  });
-
-  it('takes a server at a private address its operator names, headers or not', async () => {
-    const served = await serving(connectionsAllowing(['10.0.0.5']));
-    const intranet = { ...crm, entry: { ...crm.entry, url: 'https://10.0.0.5/mcp' } };
-
-    expect(await served.call('POST', connections, { body: intranet })).toMatchObject({ status: 201 });
   });
 });

@@ -103,6 +103,7 @@ const addressesOfTheShipped = [
   ['amazon-ads', 'https://{api_host}'],
   ['amazon-ads-mcp', 'https://{mcp_host}/mcp'],
   ['atlassian', 'https://mcp.atlassian.com/v2/mcp?tools=all'],
+  ['buffer', 'https://mcp.buffer.com/mcp'],
   ['campaign-manager-360', 'https://dfareporting.googleapis.com/dfareporting/v5'],
   ['display-video-360', 'https://displayvideo.googleapis.com'],
   ['display-video-360-reports', 'https://doubleclickbidmanager.googleapis.com/v2'],
@@ -145,6 +146,7 @@ describe('the shipped providers', () => {
         ...googleProviders,
         ...microsoftAmazonAndAdobe,
         'atlassian',
+        'buffer',
         'github',
         'hubspot',
         'linear',
@@ -157,7 +159,7 @@ describe('the shipped providers', () => {
         'zoom',
       ].toSorted(),
     );
-    expect(names).toHaveLength(36);
+    expect(names).toHaveLength(37);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -188,6 +190,7 @@ describe('the ways of the shipped providers', () => {
       ['amazon-ads', ['authorization'], []],
       ['amazon-ads-mcp', ['authorization'], []],
       ['atlassian', ['authorization'], []],
+      ['buffer', ['authorization'], []],
       ['campaign-manager-360', ['authorization'], []],
       ['display-video-360', ['authorization'], []],
       ['display-video-360-reports', ['authorization'], []],

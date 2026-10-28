@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { adding, billing, crmWithTenant, notes } from '../testing/additions.ts';
+import { serversTakingASecret } from '../testing/harness-services.ts';
 import { harness } from '../testing/harness.ts';
 import { connectionPolicyOf } from './connection-policy.ts';
 
@@ -9,6 +10,8 @@ function mcpAt(url: string) {
 }
 
 const namedByTheOperator = ', unless its operator names the host in connections.allowed_hosts';
+
+const answering = { consenting: { fetch: serversTakingASecret } };
 
 function refusedFor(host: string, reached: string, unless = namedByTheOperator) {
   return {
@@ -95,7 +98,7 @@ describe('a server of a connection on an address the operator names or the runti
 
 describe('a server of a connection on a local runtime', () => {
   it('is taken on loopback on a local runtime, and refused at a private address', async () => {
-    const h = harness({ policy: { ...connectionPolicyOf({}), loopbackAllowed: true } });
+    const h = harness({ ...answering, policy: { ...connectionPolicyOf({}), loopbackAllowed: true } });
 
     expect([
       (await adding(h, mcpAt('https://127.0.0.1:8443/mcp'))).status,
@@ -116,8 +119,14 @@ describe('a server of a connection on a local runtime', () => {
   });
 
   it('is taken where the operator names its host, exactly or under a *. pattern', async () => {
-    const exact = harness({ policy: connectionPolicyOf({ allowed_hosts: ['10.1.2.3', '127.0.0.1', '[::1]'] }) });
-    const under = harness({ policy: connectionPolicyOf({ allowed_hosts: ['*.corp.example', 'localhost'] }) });
+    const exact = harness({
+      ...answering,
+      policy: connectionPolicyOf({ allowed_hosts: ['10.1.2.3', '127.0.0.1', '[::1]'] }),
+    });
+    const under = harness({
+      ...answering,
+      policy: connectionPolicyOf({ allowed_hosts: ['*.corp.example', 'localhost'] }),
+    });
 
     expect([
       (await adding(exact, mcpAt('https://10.1.2.3/mcp'))).status,

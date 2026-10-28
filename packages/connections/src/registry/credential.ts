@@ -224,7 +224,7 @@ function consentIssuesOfTheKind(credential: CredentialFields): readonly FieldIss
 
 const credentialledHow = 'How the server is credentialled, never its value, which the person gives on the page';
 
-export const credentialDescription = `${credentialledHow}; an MCP server given by hand that signs people in itself takes kind authorization alone, the runtime finding its authorization server`;
+export const credentialDescription = `${credentialledHow}; leave it out for an MCP server given by hand, which says how it authenticates, and name a kind only for one that names none`;
 
 export function credentialFieldIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return [

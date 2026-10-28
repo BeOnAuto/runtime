@@ -123,7 +123,7 @@ describe('the input of a connection added by a provider', () => {
       { pointer: '/name', detail: 'Expected name, which a server given by hand takes, or provider' },
       { pointer: '/type', detail: 'Expected type, which a server given by hand takes, or provider' },
       { pointer: '/entry', detail: 'Expected entry, which a server given by hand takes, or provider' },
-      { pointer: '/credential', detail: 'Expected credential, which a server given by hand takes, or provider' },
+      { pointer: '/credential', detail: 'Expected credential, which an HTTP API given by hand takes, or provider' },
       { pointer: '/placeholders', detail: 'Expected no placeholders without provider' },
     ]);
   });
