@@ -23,6 +23,21 @@ describe('the keys the runtime trusts', () => {
     const signed = signedByTheTestKey(entitlement);
 
     expect(Option.isNone(entitlementIn(signed, autoSigners))).toBe(true);
-    expect(entitlementIn(signed, testSigners)).toEqual(Option.some(entitlement));
+    expect(entitlementIn(signed, testSigners)).toEqual(Option.some({ ...entitlement, org_name: null }));
+  });
+});
+
+function nameSignedAs(orgName: unknown): string | null | undefined {
+  return Option.getOrUndefined(entitlementIn(signedByTheTestKey({ ...entitlement, org_name: orgName }), testSigners))
+    ?.org_name;
+}
+
+describe('the entitlement Auto signs', () => {
+  it('names its org on one line, and names none where its name is blank or null', () => {
+    expect([nameSignedAs(' Acme\n\tCorporation '), nameSignedAs(' \u200B '), nameSignedAs(null)]).toEqual([
+      'Acme Corporation',
+      null,
+      null,
+    ]);
   });
 });

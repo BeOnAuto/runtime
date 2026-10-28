@@ -118,6 +118,46 @@ function refreshBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
+function orgNameBehaviour(ledgerOf: LedgerOf): void {
+  it('keeps the name of its org that Auto signed into its entitlement, and takes the name again as it renews', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.orgNamed('globex', 'Globex Corporation');
+    await metered.activated(metered.account.keyFor(installation, 'globex'));
+    const named = (await metered.state()).license?.org_name;
+    metered.account.orgNamed('globex', 'Globex');
+    await metered.refreshed();
+
+    expect([named, (await metered.state()).license?.org_name]).toEqual(['Globex Corporation', 'Globex']);
+  });
+
+  it('keeps no name of its org where Auto signed none, as an account service before names', async () => {
+    const { metered } = await licensedOn(ledgerOf);
+    await metered.admitted(runOf('run-1'));
+
+    expect((await metered.state()).license).toMatchObject({ org: 'acme', org_name: null });
+  });
+
+  it('keeps the name of its org on one line of at most 80 characters, and no name where Auto signed a blank one', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.orgNamed('globex', `Globex\n\u001B[31mCorporation\u202E ${'x'.repeat(100)}`);
+    await metered.activated(metered.account.keyFor(installation, 'globex'));
+    const named = (await metered.state()).license?.org_name;
+    metered.account.orgNamed('globex', ' \n\t\u200B ');
+    await metered.refreshed();
+
+    expect(named).toBe(`Globex [31mCorporation ${'x'.repeat(57)}`);
+    expect((await metered.state()).license?.org_name).toBeNull();
+  });
+
+  it('takes an entitlement that carries more than it knows, as a later account service may sign', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.answer('with more than it knows');
+
+    expect(await metered.activated(metered.account.keyFor(installation))).toEqual({ kind: 'activated', detail: '' });
+    expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
+  });
+}
+
 const notAuto: readonly (readonly [string, Answering, string])[] = [
   ['signed by another key under the kid of Auto’s', 'by another key', 'not signed by Auto'],
   ['signed by a key Auto does not hold', 'by an unknown key', 'not signed by Auto'],
@@ -235,6 +275,7 @@ export function licensesBehaviour(ledgerOf: LedgerOf): void {
   activationBehaviour(ledgerOf);
   keyBehaviour(ledgerOf);
   refreshBehaviour(ledgerOf);
+  orgNameBehaviour(ledgerOf);
   invalidLicenseBehaviour(ledgerOf);
   revocationBehaviour(ledgerOf);
   revocationCaseBehaviour(ledgerOf);

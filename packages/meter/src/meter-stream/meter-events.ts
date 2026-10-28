@@ -17,6 +17,7 @@ export const isLicenseInvalidBecause = Schema.is(LicenseInvalidBecauseSchema);
 const LicenseSchema = Schema.Struct({
   installation: Schema.String,
   org: Schema.String,
+  org_name: Schema.optionalKey(Schema.String),
   plan: Schema.String,
   issued_at: Schema.String,
   expires_at: Schema.String,
@@ -101,6 +102,7 @@ export interface Invalidity {
 export interface License {
   readonly installation: string;
   readonly org: string;
+  readonly org_name: string | null;
   readonly plan: string;
   readonly issued_at: string;
   readonly expires_at: string;
@@ -135,6 +137,7 @@ function licensed(record: LicenseRecord): License {
   return {
     installation,
     org,
+    org_name: record.org_name ?? null,
     plan,
     issued_at: issuedAt,
     expires_at: expiresAt,

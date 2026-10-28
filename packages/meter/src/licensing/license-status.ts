@@ -30,6 +30,7 @@ export interface LicenseStatus {
   readonly runtime_id: string;
   readonly free_runs: { readonly used: number; readonly of: number };
   readonly org: string | null;
+  readonly org_name: string | null;
   readonly plan: string | null;
   readonly expires_at: string | null;
   readonly renewed_at: string | null;
@@ -40,7 +41,7 @@ export interface LicenseStatus {
 
 type Standing = Pick<LicenseStatus, 'state' | 'offline' | 'invalid_because'>;
 
-type LicenseFields = Pick<LicenseStatus, 'org' | 'plan' | 'expires_at' | 'renewed_at'>;
+type LicenseFields = Pick<LicenseStatus, 'org' | 'org_name' | 'plan' | 'expires_at' | 'renewed_at'>;
 
 interface Reading {
   readonly licensing: Licensing;
@@ -55,7 +56,7 @@ const notYetActivated =
 
 const unregistered: Standing = { state: 'unregistered', offline: null, invalid_because: null };
 
-const noLicense: LicenseFields = { org: null, plan: null, expires_at: null, renewed_at: null };
+const noLicense: LicenseFields = { org: null, org_name: null, plan: null, expires_at: null, renewed_at: null };
 
 function invalidBecause(why: string, offline: OfflineCredits | null = null): Standing {
   return { state: 'invalid', offline, invalid_because: why };
@@ -89,8 +90,8 @@ function licenseOf({ license }: MeterState, inForce: KeyInHand | undefined): Lic
 
 function fieldsOf(license: License | undefined): LicenseFields {
   if (license === undefined) return noLicense;
-  const { org, plan, expires_at: expiresAt, issued_at: issuedAt } = license;
-  return { org, plan, expires_at: expiresAt, renewed_at: issuedAt };
+  const { org, org_name: orgName, plan, expires_at: expiresAt, issued_at: issuedAt } = license;
+  return { org, org_name: orgName, plan, expires_at: expiresAt, renewed_at: issuedAt };
 }
 
 function offlineStanding({ licensing, actions, now }: Reading, allocation: Allocation): Standing {

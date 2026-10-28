@@ -13,6 +13,7 @@ import { autoSigners, type Signed, type Signers } from './signed-answers.ts';
 export interface LicenseStanding {
   readonly installation: string;
   readonly org: string;
+  readonly org_name: string | null;
   readonly plan: string;
   readonly expires_at: string;
 }
@@ -39,12 +40,16 @@ export class RuntimeLicense extends Context.Service<RuntimeLicense, LicensePorts
 export function licensePortsOf(licensing: Licensing): LicensePorts {
   return {
     activate: (key) =>
-      Effect.map(activated(licensing, key), ({ installation, org, plan, expires_at: expiresAt }) => ({
-        installation,
-        org,
-        plan,
-        expires_at: expiresAt,
-      })),
+      Effect.map(
+        activated(licensing, key),
+        ({ installation, org, org_name: orgName, plan, expires_at: expiresAt }) => ({
+          installation,
+          org,
+          org_name: orgName,
+          plan,
+          expires_at: expiresAt,
+        }),
+      ),
     held: licensing.keyHeld,
     refreshed: refreshedDaily(licensing),
     reported: reportedHourly(licensing),

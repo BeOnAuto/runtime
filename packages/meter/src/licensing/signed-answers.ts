@@ -2,6 +2,8 @@ import { createPublicKey, verify } from 'node:crypto';
 
 import { Option, Schema } from 'effect';
 
+import { shownOrgName } from './org-name.ts';
+
 export const SignedSchema = Schema.Struct({ payload: Schema.String, signature: Schema.String, kid: Schema.String });
 
 export type Signed = typeof SignedSchema.Type;
@@ -15,6 +17,7 @@ const EntitlementSchema = Schema.Struct({
   kind: Schema.Literal('entitlement'),
   installation: Schema.String,
   org: Schema.String,
+  org_name: Schema.optionalKey(Schema.NullOr(Schema.String)),
   plan: Schema.String,
   issued_at: Schema.String,
   expires_at: Schema.String,
@@ -47,7 +50,7 @@ const AllocationSchema = Schema.Struct({
   refresh_by: Schema.String,
 });
 
-export type Entitlement = typeof EntitlementSchema.Type;
+export type Entitlement = Omit<typeof EntitlementSchema.Type, 'org_name'> & { readonly org_name: string | null };
 
 export type AllocationPayload = typeof AllocationSchema.Type;
 
@@ -70,7 +73,14 @@ function payloadOf<S extends Schema.Codec<unknown, unknown>>(
     isSignedBy(signers, signed) ? decoded(Buffer.from(signed.payload, 'base64url').toString('utf8')) : Option.none();
 }
 
-export const entitlementIn = payloadOf(EntitlementSchema);
+const entitlementPayloadIn = payloadOf(EntitlementSchema);
+
+export function entitlementIn(signed: Signed, signers: Signers): Option.Option<Entitlement> {
+  return Option.map(entitlementPayloadIn(signed, signers), (entitlement) => ({
+    ...entitlement,
+    org_name: shownOrgName(entitlement.org_name),
+  }));
+}
 
 export const admissionIn = payloadOf(AdmissionSchema);
 

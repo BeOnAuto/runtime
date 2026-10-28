@@ -22,7 +22,11 @@ const LicenseStatusSchema = Schema.Struct({
     used: Schema.Int.annotate({ description: 'The runs it has counted, at most the free runs it may make' }),
     of: Schema.Int.annotate({ description: 'The runs it may make before it is registered' }),
   }),
-  org: orNull(Schema.String, 'The org at Auto its license is of'),
+  org: orNull(Schema.String, 'The id of the org at Auto its license is of'),
+  org_name: orNull(
+    Schema.String,
+    'The name of that org at Auto, as Auto signed it into the entitlement, or null where Auto named none',
+  ),
   plan: orNull(Schema.String, 'The plan of that org'),
   expires_at: orNull(Schema.String, 'When the entitlement Auto signed ends, unless the runtime renews it'),
   renewed_at: orNull(Schema.String, 'When Auto last signed its entitlement'),
@@ -42,7 +46,7 @@ const LicenseStatusSchema = Schema.Struct({
 });
 
 const description = [
-  'Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license, where its key came from and the offline credits it spends.',
+  "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends.",
   'Every member of an org may read it; the license covers the whole runtime, whatever org the route names.',
 ].join(' ');
 
