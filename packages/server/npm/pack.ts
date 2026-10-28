@@ -13,7 +13,6 @@ import { importedSubpaths } from './subpath-check.ts';
 const repository = fileURLToPath(new URL('../../../', import.meta.url));
 const distribution = join(repository, 'dist');
 const output = join(distribution, 'npm');
-const workspaceGroups: readonly string[] = ['packages', 'capabilities'];
 const developmentSources = join(repository, 'packages', 'server', 'src', 'development');
 const testHelperImports: readonly string[] = [
   '@modelcontextprotocol/sdk',
@@ -57,7 +56,7 @@ function json(value: unknown): string {
 }
 
 const workspace: ReadonlyMap<string, WorkspacePackage> = new Map(
-  workspaceGroups.flatMap((group) =>
+  ['packages', 'capabilities'].flatMap((group) =>
     readdirSync(join(repository, group))
       .map((name) => join(group, name))
       .filter((directory) => existsSync(join(repository, directory, 'package.json')))
@@ -212,6 +211,7 @@ const extras = [
   'auto-runtime.schema.json',
   'auto-runtime.example.yaml',
   'docs/concepts/terminology.md',
+  'docs/contributing/voice.md',
   ...readdirSync(join(repository, 'docs', 'reference'))
     .filter((name) => name.endsWith('-format.md'))
     .map((name) => `docs/reference/${name}`),

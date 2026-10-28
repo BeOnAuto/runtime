@@ -21,7 +21,7 @@ export interface Meter {
 export class RunMeter extends Context.Service<RunMeter, Meter>()('@on.auto/definitions/RunMeter') {}
 
 const unmetered = new Conflict({
-  detail: 'This runtime was composed without its meter, so it starts no run; reinstall it as it is released',
+  detail: 'This runtime is missing its usage meter and cannot start runs. Reinstall the official Auto Runtime package.',
   kind: 'metering_fault',
 });
 

@@ -190,7 +190,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
       key_source: 'environment',
       offline: { credits: 5, spent: 0, usable_until: '2026-11-03T12:00:00.000Z' },
       invalid_because:
-        'These offline credits stopped on 2026-11-03. An owner can request new ones at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.',
+        'This offline allocation expired on 2026-11-03. The account holder or an organization admin can request a new allocation at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.',
     });
   });
 }

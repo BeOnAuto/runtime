@@ -176,14 +176,14 @@ function everyArgument(): readonly Argument[] {
 }
 
 describe('the arguments of the tools of /mcp', () => {
-  it('each have a description under 300 characters, the longest the overview of a definition at 291', () => {
+  it('each have a description under 300 characters, the longest the overview of a definition at 270', () => {
     expect(everyArgument().length).toBeGreaterThan(60);
     expect(
       everyArgument()
         .filter((argument) => isUndescribedOrLong(argument))
         .map(({ where }) => where),
     ).toEqual([]);
-    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(291);
+    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(270);
   });
 
   it('each give their constraints as keywords, but an argument that takes any JSON value', () => {

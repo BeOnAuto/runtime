@@ -11,7 +11,7 @@ export const guideToolName = 'get_guide';
 
 export const guideToolDescription = [
   "Reads one of the playbook's guides: what its words mean, how each kind of definition is written, with its format, examples and bounds, and how the common tasks are done.",
-  'A format guide is read before a definition of that type is written, and a recipe before the task it names.',
+  'Read a format guide before writing that type of definition, the voice guide before writing an overview, and a recipe before its task.',
   '`guide` names one of them, and the answer is its whole text in Markdown.',
 ].join(' ');
 
@@ -31,7 +31,7 @@ function descriptionFollowing(recipes: Followed): string {
 }
 
 export const guideArgumentDescription =
-  'The guide to read: the terminology, the format of a definition type, or a recipe for a common task';
+  'The guide to read: terminology, Auto voice, a definition format, or a recipe for a common task';
 
 const strictly: SchemaAST.ParseOptions = { onExcessProperty: 'error', errors: 'all' };
 

@@ -33,7 +33,7 @@ export interface Licensing extends Metering {
 
 export const accountUnavailable = new Unavailable({
   detail:
-    'This runtime could not ask its account at Auto to admit the run, so the run was not started; ask again shortly',
+    "The run could not start because the runtime could not contact Auto to check the account's credits. Try again shortly.",
   kind: 'meter_unavailable',
 });
 
@@ -76,7 +76,7 @@ function invalidDetailOf({ detail, because }: Invalidity, page: string): string 
   if (because === 'installation_revoked') {
     return `This runtime was removed from its org. To use it again, an owner can register it again at ${page}, then activate the new key and run this again.`;
   }
-  return `This runtime's license does not stand: ${detail}. Activate a key of this installation, which an owner of its org registers at ${page}`;
+  return `This runtime's license is invalid: ${detail}. Activate a license key for this installation. The account holder or an organization admin can register it at ${page}.`;
 }
 
 function refusedLicense(
@@ -120,7 +120,8 @@ export function offlineCreditsStopped(options: MeterOptions, installation: strin
   return refusedLicense(
     options,
     installation,
-    (page) => `These offline credits stopped on ${dayOf(refreshBy)}. An owner can request new ones at ${page}.`,
+    (page) =>
+      `This offline allocation expired on ${dayOf(refreshBy)}. The account holder or an organization admin can request a new allocation at ${page}.`,
   );
 }
 

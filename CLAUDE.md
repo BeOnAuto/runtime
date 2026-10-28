@@ -52,3 +52,11 @@ Run one package's gate with `pnpm turbo run lint typecheck test --filter @on.aut
 - Commits are conventional with a scope named after a package or capability folder (`feat(server): ...`, `docs(reasoning): ...`); `global`, `deps`, `ci` and `release` are the other scopes.
 - `pnpm check` must pass before you finish. Fixing a problem is a change, so rerun it.
 - When something fails, assume your change broke it. What is on `main` passed the same gate.
+
+## User-visible text
+
+Before changing user-visible text, read [Auto voice](docs/contributing/voice.md) and [Playbook terminology](docs/concepts/terminology.md). Apply them to labels, help text, empty states, validation, dialogs, errors, notifications, accessibility text, emails and generated overviews.
+
+Check the code path before changing a claim. Preserve permissions, timing, recovery limits and uncertainty. Keep user-authored content and historic run records unchanged unless the task explicitly includes them. Run a humanizer pass and review the complete affected states. Include substantive before-and-after wording in the pull request.
+
+For documentation, also follow [the documentation contribution guide](docs/contributing/documentation.md). Keep voice rules in the canonical guide instead of copying them into other repositories.

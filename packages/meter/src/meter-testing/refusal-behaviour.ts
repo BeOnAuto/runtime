@@ -143,12 +143,12 @@ export function keptWordingBehaviour(ledgerOf: LedgerOf): void {
     expect(notAKey).toEqual({
       kind: 'license_invalid',
       detail:
-        "This runtime's license does not stand: its key is not a license key of Studio, which reads alk.<org>.<installation>.<secret>. Activate a key of this installation, which an owner of its org registers at https://studio.on.auto/licenses",
+        "This runtime's license is invalid: its key is not a license key of Studio, which reads alk.<org>.<installation>.<secret>. Activate a license key for this installation. The account holder or an organization admin can register it at https://studio.on.auto/licenses.",
       resolve_at: 'https://studio.on.auto/licenses',
     });
     expect(unknown).toEqual({
       kind: 'license_invalid',
-      detail: `This runtime's license does not stand: The key is unknown, was rotated away or its installation was revoked. Activate a key of this installation, which an owner of its org registers at ${page}`,
+      detail: `This runtime's license is invalid: The key is unknown, was rotated away or its installation was revoked. Activate a license key for this installation. The account holder or an organization admin can register it at ${page}.`,
       resolve_at: page,
       runtime_id: installation,
     });

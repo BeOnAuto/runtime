@@ -33,7 +33,7 @@ export interface Metering {
 }
 
 export const meterUnavailable = new Unavailable({
-  detail: 'This runtime could not read its ledger to meter the run, so the run was not started; ask again shortly',
+  detail: 'The run could not start because the runtime could not read its ledger. Try again shortly.',
   kind: 'meter_unavailable',
 });
 
