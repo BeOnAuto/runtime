@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.33.0](https://github.com/BeOnAuto/runtime/compare/v0.32.1...v0.33.0) (2026-10-28)
+
+
+### Features
+
+* **meter:** a meter its host's authority admits takes the repair that authority hands it ([#360](https://github.com/BeOnAuto/runtime/issues/360)) ([68a5b73](https://github.com/BeOnAuto/runtime/commit/68a5b73a2a8e6b2fd6fb13aded2900ceb334da0c))
+
 ## [0.32.1](https://github.com/BeOnAuto/runtime/compare/v0.32.0...v0.32.1) (2026-10-27)
 
 
