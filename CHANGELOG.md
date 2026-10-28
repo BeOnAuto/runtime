@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.1](https://github.com/BeOnAuto/runtime/compare/v0.35.0...v0.35.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **identity:** an access token without a name claim is named by its subject ([#370](https://github.com/BeOnAuto/runtime/issues/370)) ([a519941](https://github.com/BeOnAuto/runtime/commit/a5199415ac0b0cab7cf44d9c1e1cb5c4275611fc))
+
 ## [0.35.0](https://github.com/BeOnAuto/runtime/compare/v0.34.1...v0.35.0) (2026-10-28)
 
 
