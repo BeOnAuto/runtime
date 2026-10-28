@@ -77,6 +77,27 @@ function recordedHost(): Recorded {
   };
 }
 
+const startingCommands: readonly (readonly string[])[] = [
+  [],
+  ['start'],
+  ['start', '--background', '--instance', '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a'],
+];
+
+const flagsThatWouldTurnTheMeterOff = [
+  '--no-meter',
+  '--meter=off',
+  '--unmetered',
+  '--no-metering',
+  '--metering=false',
+  '--no-license',
+  '--unlicensed',
+  '--license=off',
+];
+
+const namingTheMeter = /\bmeter(?:s|ed|ing)?\b/iu;
+
+const aFlagOfTheMeterOrTheLicense = /--[\w-]*(?:meter|licen[cs]e)/iu;
+
 const startedSettings = {
   HOST: '127.0.0.1',
   LOG_FORMAT: 'console',
@@ -215,6 +236,24 @@ describe('what the auto-runtime command refuses', () => {
     await expect(runCommandLine(['mcp', '--port', '6000'], host)).resolves.toBe(1);
     await expect(runCommandLine(['status', '--json'], host)).resolves.toBe(1);
     expect(relayed).toEqual([]);
+  });
+
+  it('has no flag that turns the meter off: its help and its key command name none, and it refuses one after every command that starts the runtime', async () => {
+    const help = recordedHost();
+    await runCommandLine(['--help'], help.host);
+    await runCommandLine(['key', '--help'], help.host);
+    const { host, started } = recordedHost();
+    const codes = await Promise.all(
+      startingCommands.flatMap((command) =>
+        flagsThatWouldTurnTheMeterOff.map((flag) => runCommandLine([...command, flag], host)),
+      ),
+    );
+    const shown = [...help.logged, ...help.errors].join('\n');
+
+    expect([namingTheMeter.test(shown), aFlagOfTheMeterOrTheLicense.test(shown)]).toEqual([false, false]);
+    expect(shown).toContain('--org');
+    expect(new Set(codes)).toEqual(new Set([1]));
+    expect(started).toEqual([]);
   });
 
   it('refuses a name that only an object has', async () => {

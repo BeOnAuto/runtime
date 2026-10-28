@@ -24,4 +24,4 @@ export {
 } from './licensing/runtime-license.ts';
 export { ledgerMeter, selfHostedMeterOver, type SelfHostedMeter } from './licensing/self-hosted-meter.ts';
 export { autoSigners, SignedSchema, type Signed, type Signers } from './licensing/signed-answers.ts';
-export { METER_STREAM } from './meter-stream/meter-events.ts';
+export { METER_STREAM, type Fault } from './meter-stream/meter-events.ts';
