@@ -87,6 +87,12 @@ const BaselineScoredSchema = Schema.Struct({
 
 const NotWalkedSchema = Schema.Struct({ baseline: BaselineSchema, because: Schema.Literal('too_short') });
 
+const FittedSchema = Schema.Struct({
+  runtime: Schema.NullOr(RuntimeSchema),
+  candidates: Schema.Array(Schema.String),
+  detail: Schema.optionalKey(Schema.String),
+});
+
 const BuildWorkSchema = Schema.Union([
   Schema.Struct({ type: Schema.Literal('dataset_assembled'), data: AssembledSchema }),
   Schema.Struct({ type: Schema.Literal('candidate_uploaded'), data: UploadedSchema }),
@@ -95,6 +101,7 @@ const BuildWorkSchema = Schema.Union([
   Schema.Struct({ type: Schema.Literal('candidate_disqualified'), data: DisqualifiedSchema }),
   Schema.Struct({ type: Schema.Literal('baseline_scored'), data: BaselineScoredSchema }),
   Schema.Struct({ type: Schema.Literal('baseline_not_walked'), data: NotWalkedSchema }),
+  Schema.Struct({ type: Schema.Literal('candidates_fitted'), data: FittedSchema }),
 ]);
 
 export type BuildWork = typeof BuildWorkSchema.Type;
@@ -109,6 +116,7 @@ export const buildFactSchemas = {
   candidate_disqualified: factOf('candidate_disqualified', DisqualifiedSchema, RunContextSchema),
   baseline_scored: factOf('baseline_scored', BaselineScoredSchema, RunContextSchema),
   baseline_not_walked: factOf('baseline_not_walked', NotWalkedSchema, RunContextSchema),
+  candidates_fitted: factOf('candidates_fitted', FittedSchema, RunContextSchema),
 };
 
 const decodeWork = Schema.decodeUnknownOption(BuildWorkSchema);

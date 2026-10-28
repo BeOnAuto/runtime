@@ -2,7 +2,7 @@ import type { RecordedRun } from '@on.auto/definitions';
 import { Effect } from 'effect';
 
 import { routesOf } from '../build/build-request.ts';
-import type { BuildRecord } from '../builds/build-state.ts';
+import type { RequestRecord } from '../builds/build-state.ts';
 import { buildAnswerIssues } from '../checks/build-answers.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { TrainerAnswer } from '../scoring/version-card.ts';
@@ -26,7 +26,7 @@ function endedChild(performing: Performing, through: string, { run }: RecordedRu
     : unanswered(performing, through, `it ended ${run.status}`, 'undelivered');
 }
 
-function requested(performing: Performing, through: string, record: BuildRecord) {
+function requested(performing: Performing, through: string, record: RequestRecord) {
   const { build } = performing;
   return Effect.gen(function* () {
     const started = yield* startedChild(
@@ -59,10 +59,10 @@ function requested(performing: Performing, through: string, record: BuildRecord)
 export function throughAChild(
   performing: Performing,
   document: PredictionFunctionDefinitionDocument,
-  record: BuildRecord,
+  record: RequestRecord,
   scoring: (answer: TrainerAnswer) => Effect.Effect<void>,
 ): Effect.Effect<void> {
-  const through = String(document.source.through);
+  const through = String(document.source?.through);
   return Effect.flatMap(childRunOf(performing.ports.ledger, performing.build.address, requestReference), (child) => {
     if (child === undefined) {
       return requested(performing, through, record);

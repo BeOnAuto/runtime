@@ -5,7 +5,7 @@ import type { Schema } from 'effect';
 
 import { childIdOf, requestReference } from '../build-work/child-runs.ts';
 import { predictionBounds } from '../capability/prediction-bounds.ts';
-import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
+import type { BuildSource } from '../document/prediction-document.ts';
 import type { Assembled } from '../facts/build-facts.ts';
 import { candidateFilesOf } from '../runtimes/format-words.ts';
 import type { KeptBrief } from './build-brief.ts';
@@ -17,7 +17,7 @@ export const mostNoteBytes = 8192;
 export interface Requesting {
   readonly run: { readonly org: string; readonly playbook: string; readonly id: string };
   readonly name: string;
-  readonly document: PredictionFunctionDefinitionDocument;
+  readonly source: BuildSource;
   readonly assembled: Assembled;
   readonly brief: KeptBrief;
   readonly requestedAt: number;
@@ -65,8 +65,8 @@ function messageOf(requesting: Requesting, expiresAt: string): string {
 }
 
 export function buildRecordOf(requesting: Requesting): Schema.JsonObject {
-  const { run, document, assembled, brief, requestedAt } = requesting;
-  const expiresAt = new Date(requestedAt + document.source.expiresMs).toISOString();
+  const { run, source, assembled, brief, requestedAt } = requesting;
+  const expiresAt = new Date(requestedAt + source.expiresMs).toISOString();
   const build = {
     brief_sha256: brief.sha256,
     brief_bytes: brief.bytes,
@@ -75,15 +75,19 @@ export function buildRecordOf(requesting: Requesting): Schema.JsonObject {
     routes: { ...routesOf(run) },
     formats: [...brief.formats],
   };
-  if (document.source.through !== undefined) {
+  if (source.through !== undefined) {
     return { waiting_for: { run: childIdOf(run.id, requestReference) }, expires_at: expiresAt, build };
   }
   return {
-    to: document.source.to,
+    to: source.to,
     message: messageOf(requesting, expiresAt),
     answer_schema: buildAnswerSchema,
     expires_at: expiresAt,
     requested_at: new Date(requestedAt).toISOString(),
     build,
   };
+}
+
+export function trainerlessRecordOf({ training_sha256, training_bytes }: Assembled): Schema.JsonObject {
+  return { trainer: null, build: { training_sha256, training_bytes } };
 }

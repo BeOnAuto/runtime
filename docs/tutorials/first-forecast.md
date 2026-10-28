@@ -27,7 +27,7 @@ A runtime in [local mode](../self-host/security.md#local-mode), which is how Aut
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) is installed. It runs a Python script with the packages the script needs. If it is missing, ask your agent to install it. The first time the training script runs, uv downloads Python and the packages the script needs (scikit-learn and onnx) into an environment of its own.
 - `curl` and `shasum` are available, as they are on macOS. On Linux, your agent uses `sha256sum` in place of `shasum -a 256`.
 
-The runtime does not train models. A trainer fits one outside the playbook, exports it as an ONNX file (a standard file format for models) and uploads it. [The trainer's path](../reference/prediction-format.md#the-trainer-s-path) sets out each step.
+Until a model version is active, a function answers from the runtime's default forecast, and a build of a function that names no trainer fits [the runtime's own models](../reference/prediction-format.md#the-runtime-s-own-models) itself. This example trains a model of its own instead: a trainer fits one outside the playbook, exports it as an ONNX file (a standard file format for models) and uploads it. [The trainer's path](../reference/prediction-format.md#the-trainer-s-path) sets out each step.
 
 ## 1. Start a second runtime in local mode
 
@@ -260,7 +260,7 @@ Use the auto-forecast connection. In the "Forecasts" playbook, save this predict
 
 The agent saves it with `create_definition`. A function's name is lowercase words joined by hyphens, so the agent saves it under a name like `weekly-signups`; if it chose another, it uses that one in later steps. The playbook derives what the function takes. A question is `{ series, horizon }`, with a horizon of 1 or 4, and a build is `{ build: {} }`.
 
-The agent reports the function saved at version 1 of its document. That number counts the saves of the document, as for any definition. It is not a model: the function has none yet, so it cannot forecast. Asked a question now, it is refused `no_active_version`. A build makes the first model, which the playbook numbers as model version 1, and that model version must be active before the function forecasts. Steps 5 to 7 do that.
+The agent reports the function saved at version 1 of its document. That number counts the saves of the document, as for any definition. It is not a model. The function has no model version yet, and it already forecasts: asked for north's sign-ups one week ahead now, it answers from the runtime's default forecast, the last week's 206 sign-ups, between about 197 and 215, and its run's record says `default_forecast: true` and names no version. A build makes the first model, which the playbook numbers as model version 1, and that model version answers once it is active. Steps 5 to 7 do that.
 
 ## 5. Start a build
 
@@ -365,7 +365,7 @@ save_model(
 )
 
 with open("candidate.onnx", "rb") as file:
-    print(json.dumps(json.loads(call("POST", f"{BUILD}/candidates", file.read()))))
+    print(json.dumps(json.loads(call("POST", f"{BUILD}/candidates?format=onnx", file.read()))))
 ```
 
 :::
@@ -377,7 +377,7 @@ You do not need to read the script to follow along. In short, the script:
 3. Fits a scikit-learn linear regression of each of the next 4 weeks on the last 4. It pools the regions and fits no intercept, so one model suits regions of any size.
 4. Sets the low and the high 1.64 standard deviations of its training errors either side of the likely value. Errors on new weeks run larger than on the weeks a model was fitted to, and a candidate's interval must hold at least 70% of the held-back weeks.
 5. Writes the model as ONNX in [the signature of a candidate](../reference/prediction-format.md#the-signature-of-a-candidate). Its one input, `y`, is the last 4 weeks, `[1, 4]`. Its one output, `q`, is the 10th, 50th and 90th percentile of each of the next 4 weeks, `[1, 4, 3]`. It sets opset 13 and IR version 7, since the onnx package otherwise writes an IR version the runtime does not load.
-6. Uploads `candidate.onnx` to the build in the format `onnx`, the one the brief lists, and prints the runtime's response.
+6. Uploads `candidate.onnx` to the build, naming its format, `onnx`, one of the two the brief lists beside `series`, and prints the runtime's response.
 
 The script calls `http://localhost:5556` and the playbook `forecasts` in the org `local`. The environment variables `AUTO_URL` and `AUTO_PLAYBOOK` change those, and `AUTO_KEY` sends a key with each call.
 
@@ -444,7 +444,7 @@ The figures from here on are those of one run, as an illustration: uv installs t
 
 A lower `mase` is a smaller error, so the model beat `persistence` at both horizons. The card also records a `coverage` of 0.787879 and a `p_better` against `persistence` of 1, above the 0.7 and 0.9 a candidate needs by default. [How a candidate is scored](../reference/prediction-format.md#how-a-candidate-is-scored) explains what each figure measures. All three describe the 8 held-back weeks, not how the model will do on the weeks to come.
 
-The function's rule is `activate: automatic`, so model version 1 is already active, and the function can now forecast. The models stream holds a `version_activated` event, and `get_definition` shows model version 1 under `standing.models.active`. The document is still at its version 1 too; the two counts are separate. A function whose `activate` names an interaction function waits for a person to approve each model version. To make a model version active by hand, or to roll back, see [Activating a version](../reference/prediction-format.md#activating-a-version).
+The function's rule is `activate: automatic`, so model version 1 is already active, and it now answers the function's questions in place of the default forecast. The models stream holds a `version_activated` event, and `get_definition` shows model version 1 under `standing.models.active`. The document is still at its version 1 too; the two counts are separate. A function whose `activate` names an interaction function waits for a person to approve each model version. To make a model version active by hand, or to roll back, see [Activating a version](../reference/prediction-format.md#activating-a-version).
 
 ## 8. Ask for a forecast
 
@@ -530,7 +530,6 @@ Last, ask your agent to delete the `auto-forecast` directory, or delete it yours
 - **The candidate is refused with "The model's outputs are … and the playbook feeds [q]".** The model's inputs or outputs are not the signature the function feeds. This function feeds `y` and reads `q`.
 - **The build succeeds with `version: null`.** No candidate won. Each candidate's `verdict` says why: `coverage_below_floor` when its interval held too few of the held-back weeks, or `not_better` when it did not beat `persistence`. Change the model and start a new build. A function builds at most 4 times a day unless the server's `PREDICTION_BUILDS_PER_DAY` allows more.
 - **Starting a build is refused `build_in_flight`.** An earlier build still waits for its trainer. Answer its request, or cancel it with `cancel_run`.
-- **A question is refused `no_active_version`.** No build has made a model version active yet.
 - **A question is refused `invalid_input` at `/input/series`.** The data holds no such region. The regions are `north`, `south` and `west`.
 
 [How a run ends](../reference/prediction-format.md#how-a-run-ends) lists every refusal.

@@ -95,6 +95,7 @@ jobs:
               - playbooks
               - prediction-contract
               - prediction-onnx
+              - prediction-series
               - providers
               - reasoning
               - recall
@@ -870,7 +871,7 @@ jobs:
           test "$(head --lines 1 training.csv | tr --delete '\r')" = series,period,visits
           for model in visits-mean visits-allocating; do
             test "$(call "$model.json" --header 'content-type: application/octet-stream' \
-              --data-binary "@packages/prediction-onnx/candidates/$model.onnx" "$playbook/runs/$build/build/candidates")" = 200
+              --data-binary "@packages/prediction-onnx/candidates/$model.onnx" "$playbook/runs/$build/build/candidates?format=onnx")" = 200
           done
           candidate="$(jq --raw-output .candidate visits-mean.json)"
           test "$candidate" = "$(sha256sum packages/prediction-onnx/candidates/visits-mean.onnx | cut --delimiter ' ' --fields 1)"

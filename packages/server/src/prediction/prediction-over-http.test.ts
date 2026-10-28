@@ -1,9 +1,9 @@
 import { weeklyOrders } from '@on.auto/prediction/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { release } from '../composition/release.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { until } from '../testing/waiting/until.ts';
-import { standingWhen } from './build-calls.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -12,6 +12,12 @@ afterEach(async () => {
 });
 
 const question = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';
+
+const byTheDefaultForecast: unknown = expect.objectContaining({
+  version: null,
+  default_forecast: true,
+  runtime: { name: 'series', version: release.version },
+});
 
 const build = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72';
 
@@ -82,10 +88,11 @@ describe('a prediction function saved over HTTP', () => {
 });
 
 describe('a run of a prediction function over HTTP before a version is built', () => {
-  it('refuses a question after its start, since no version is active, and takes a build, which finishes later as it waits for its trainer', async () => {
+  it('answers a question from the default forecast of the runtime’s own models, since no version is active, and takes a build, which finishes later as it waits for its trainer', async () => {
     const server = await serving();
     await saved(server, 'weekly-orders');
-    await standingWhen(server, 'weekly-orders', { dataset: { phase: 'live' } });
+    await published(server, 'o-1', { placed_at: '2026-10-06T10:00:00Z', region: 'north', total: 30, promotion: 1 });
+    await standingUntil(server, 1, 0);
     const run = `${alpha}/definitions/prediction/weekly-orders/run`;
 
     const asked = await server.call('POST', run, {
@@ -95,12 +102,12 @@ describe('a run of a prediction function over HTTP before a version is built', (
     const histories = await Promise.all([historyOf(server, question), historyOf(server, build)]);
 
     expect([asked.status, asked.body]).toEqual([
-      409,
-      expect.objectContaining({ reason: 'conflict', kind: 'no_active_version' }),
+      200,
+      expect.objectContaining({ status: 'succeeded', record: byTheDefaultForecast }),
     ]);
     expect([built.status, built.body]).toEqual([200, expect.objectContaining({ status: 'started', run_id: build })]);
     expect(histories.map(({ body }) => body)).toMatchObject([
-      { events: [{ type: 'run_started', data: { input: { series: 'north' } } }, { type: 'run_rejected' }] },
+      { events: [{ type: 'run_started', data: { input: { series: 'north' } } }, { type: 'run_succeeded' }] },
       {
         events: [{ type: 'run_started', data: { finishes_later: true } }, { type: 'dataset_assembled' }],
       },

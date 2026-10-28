@@ -43,6 +43,13 @@ export {
   type ProcessRequest,
 } from './process-pool/process-pool.ts';
 export type { ProcessValue, TypedArray } from './process-pool/process-values.ts';
+export {
+  inlinePool,
+  type InlinePool,
+  type InlinePoolSettings,
+  type InlineRequest,
+} from './process-pool/inline-pool.ts';
+export type { ProcessHandler, ProcessHandlers } from './process-pool/process-loop.ts';
 export type {
   FoldPage,
   FoldStall,

@@ -19,11 +19,6 @@ export interface Answering {
   readonly document: PredictionFunctionDefinitionDocument;
 }
 
-const noActiveVersion = new Conflict({
-  detail: 'The function has no active version yet; ask for a build with the input { build: {} }',
-  kind: 'no_active_version',
-});
-
 function changed(version: number, what: string): Conflict {
   return new Conflict({
     detail: `The ${what} changed since version ${version} was built, so its model no longer fits the rows; ask for a build`,
@@ -57,12 +52,12 @@ function sameSignature(answering: Answering, builtOn: number): Effect.Effect<boo
       );
 }
 
-export function activeVersionOf(answering: Answering): Effect.Effect<ActiveVersion, Conflict> {
+export function activeVersionOf(answering: Answering): Effect.Effect<ActiveVersion | null, Conflict> {
   return Effect.gen(function* () {
     const row = yield* readModelsRow(answering);
     const { active, active_file_sha256: file, active_file_format: format } = row;
     if (active === null || file === null || format === null || row.active_definition_version === null) {
-      return yield* Effect.fail(noActiveVersion);
+      return null;
     }
     if (row.active_data_sha256 !== answering.document.dataSha256) {
       return yield* Effect.fail(changed(active, 'data part'));

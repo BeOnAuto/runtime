@@ -24,7 +24,8 @@ const PredictionSchema = Schema.Struct({
 });
 
 const RecordSchema = Schema.Struct({
-  version: Schema.optionalKey(Schema.Number),
+  version: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  default_forecast: Schema.optionalKey(Schema.Boolean),
   total_to: Schema.optionalKey(Schema.String),
 });
 
@@ -58,8 +59,11 @@ function totalWords(point: PredictedPoint, unit: string, { total_to: to }: Recor
   return `${figure(point.value)} ${unit} by the end of ${to ?? point.at} ${rangeWords(point, unit)}`;
 }
 
-function versionWords({ version }: Recorded): string {
-  return version === undefined ? '' : `, from version ${version} of its model`;
+function versionWords({ version, default_forecast: byDefault }: Recorded): string {
+  if (byDefault === true) {
+    return ', from the default forecast, since no version of its model is active';
+  }
+  return version === undefined || version === null ? '' : `, from version ${version} of its model`;
 }
 
 function predictionWords({ unit, origin, lines }: typeof PredictionSchema.Type, record: unknown): string {
@@ -77,8 +81,8 @@ function buildWords({ version, winner, candidates }: typeof BuildSchema.Type): s
     return `The build made version ${version} of its model from ${scored}, won by ${winner.slice(0, 12)}.`;
   }
   return candidates.length === 0
-    ? 'The build kept no version, since no candidate was uploaded before its answer.'
-    : `The build kept no version: none of its ${scored} beat the baselines on the held-back periods.`;
+    ? 'The build kept no version, since it had no candidate, uploaded or fitted, to score.'
+    : `The build kept no version: none of its ${scored} passed its scoring on the held-back periods.`;
 }
 
 export function describeOutput(output: Schema.Json, record?: Schema.JsonObject): string {

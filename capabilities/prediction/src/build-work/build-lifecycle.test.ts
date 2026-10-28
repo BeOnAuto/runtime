@@ -120,7 +120,7 @@ describe('a build of a prediction function performed by the due work of the host
 
 describe('a build whose trainer answers while the due work of the host performs it', () => {
   it('stays due when its trainer answers after a step read it waiting and before the step writes its rest', async () => {
-    const playbook = buildPlaybook();
+    const playbook = buildPlaybook({ runtimes: [] });
     await savedFunction(playbook);
     const build = await askedBuild(playbook);
     const { ports } = playbook.test;

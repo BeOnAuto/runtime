@@ -57,9 +57,9 @@ export async function sentCandidate(
   server: ReasoningServer,
   build: string,
   bytes: Readonly<Uint8Array>,
-  format?: string,
+  format: string | null = 'onnx',
 ): Promise<Answer> {
-  const query = format === undefined ? '' : `?format=${format}`;
+  const query = format === null ? '' : `?format=${format}`;
   const response = await fetch(`${server.origin}${buildRoute(build, 'candidates')}${query}`, {
     method: 'POST',
     headers: { 'content-type': 'application/octet-stream' },

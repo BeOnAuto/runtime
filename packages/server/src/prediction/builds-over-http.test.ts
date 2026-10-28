@@ -38,7 +38,7 @@ const refusedAtFormat = {
     errors: [
       {
         pointer: '/format',
-        detail: 'The format graph is not one this server executes for this function, which takes onnx',
+        detail: 'The format graph is not one this server executes for this function, which takes onnx or series',
       },
     ],
   },
@@ -63,6 +63,7 @@ describe('a build of a prediction function over HTTP', { timeout: testTimeoutMs 
     const uploaded = await sentCandidate(server, build, candidate);
     const again = await sentCandidate(server, build, candidate, 'onnx');
     const elsewise = await sentCandidate(server, build, candidate, 'graph');
+    const unnamed = await sentCandidate(server, build, candidate, null);
     const answered = await server.call('POST', `${alpha}/runs/${build}/answer`, {
       body: { answer: { candidates: [digestOf(candidate)] } },
     });
@@ -70,7 +71,7 @@ describe('a build of a prediction function over HTTP', { timeout: testTimeoutMs 
 
     expect([brief.status, brief.type, rows.status, rows.type]).toEqual([200, 'text/markdown', 200, 'text/csv']);
     expect(brief.text).toBe(
-      'Fit a model of the daily visits of each of 2 stores.\n\n## Candidates\n\nEach upload of a candidate takes a file in the format onnx.\n',
+      'Fit a model of the daily visits of each of 2 stores.\n\n## Candidates\n\nEach upload of a candidate takes a file in one of the formats onnx or series, naming its format with ?format=.\n',
     );
     expect(rows.text.split('\r\n').slice(0, 2)).toEqual(['series,period,visits', 'north,2026-09-16,11']);
     expect(listed.body).toMatchObject({
@@ -81,6 +82,10 @@ describe('a build of a prediction function over HTTP', { timeout: testTimeoutMs 
       { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'onnx', signature } },
     ]);
     expect(elsewise).toMatchObject(refusedAtFormat);
+    expect(unnamed).toMatchObject({
+      status: 422,
+      body: { errors: [{ pointer: '/format', detail: 'Name the format of the candidate, one of onnx or series' }] },
+    });
     expect(answered.status).toBe(200);
     expect(ended).toMatchObject({
       status: 'succeeded',

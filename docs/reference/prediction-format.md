@@ -13,14 +13,14 @@ Its document says:
 
 ## How a prediction function learns
 
-The function's model is a file in a format a [model runtime](model-runtimes.md) of the server executes, such as ONNX. Someone fits the model outside the playbook, and the playbook judges it. The function is the definition; it does not change when its model does. A model goes through these stages:
+The function's model is a file in a format a [model runtime](model-runtimes.md) of the server executes: one of [the runtime's own models](#the-runtime-s-own-models), in the format `series`, or one a trainer fits outside the playbook, such as an ONNX file. Either way the playbook judges it. The function is the definition; it does not change when its model does. Until a version is active, the function answers from the runtime's default forecast, so it answers from the moment it is saved. A model goes through these stages:
 
 1. The playbook keeps a **dataset** for the function: one row for each series and period. It builds the rows from its history once the function is saved, or someone uploads them.
 2. A **build** is a run that asks for a new version. It writes the training rows from the dataset. It renders the **brief**, the text in the document's body that a trainer reads first.
-3. The **trainer** is whoever fits the model: a person, or an agent with an environment that runs code. It reads the brief and the rows and fits models. It uploads each model as a **candidate**, a file in a format the build's brief lists.
+3. The **trainer** is whoever fits the model: a person, or an agent with an environment that runs code. It reads the brief and the rows and fits models. It uploads each model as a **candidate**, a file in a format the build's brief lists. A function that names no trainer, or whose trainer uploads none, has the runtime fit its own models as the candidates.
 4. The playbook scores each candidate on periods the trainer never saw, against simple baselines. The winner becomes the function's next version, with a **card** that records how it was built and how it scored.
 5. A later version first runs as a **shadow** beside the current one for some periods. It replaces the current one only when it predicts as well. A person may also have to approve it.
-6. The **active version** makes the predictions. A question is a run that asks for one series, and answers its last observed periods and the periods ahead.
+6. The **active version** makes the predictions, and the **default forecast** before one is active. A question is a run that asks for one series, and answers its last observed periods and the periods ahead.
 
 ## A function document
 
@@ -74,35 +74,36 @@ Before you write one, settle these with the person:
 - The `given` features: the ones a question supplies for the periods ahead, such as a promotion that is already planned.
 - The rules: what the trainer must follow and the model's card must state, one line each.
 - Whether a person approves each version. `evaluation.activate` is `automatic` when a version that passes activates on its own. Otherwise it names the interaction function that asks a person to approve.
-- Who trains. By default the build waits in the playbook's inbox for the party `source.to` names (`trainer` when left out). `source.through` instead names an interaction function that sends the build where the trainer works.
-- How long a build waits for its trainer: `source.expires`, from one minute to 30 days.
+- Who trains. By default the build waits in the playbook's inbox for the party `source.to` names (`trainer` when left out). `source.through` instead names an interaction function that sends the build where the trainer works. A document without `source` names no trainer: its build fits [the runtime's own models](#what-a-build-does-without-a-trainer).
+- How long a build waits for its trainer: `source.expires`, from one minute to 30 days, when it names one.
 - Whether the playbook has enough history. The window must hold the holdout plus two seasons. With no season named, it must hold the holdout plus twice the longest horizon. So weekly periods with a season of 52 need at least the holdout plus 104 weeks. A playbook without that history can upload its rows; see [An uploaded dataset](#an-uploaded-dataset).
 
 ## Fields
 
-| Field                       | Meaning                                                                                                                                    |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `description`               | Optional; what the function predicts, 1 to 1,000 characters                                                                                |
-| `predicts.target`           | Required; the name of the quantity, which names its column in the dataset                                                                  |
-| `predicts.period`           | Required; `day`, `week`, `month`, `quarter` or `year`                                                                                      |
-| `predicts.season`           | Optional; the length of a season in periods, 2 to 366, such as 52 for weeks over a year                                                    |
-| `predicts.horizons`         | Required unless `accumulates` is named; the periods ahead a question may ask, 1 to 8 whole numbers from 1 to 52, each once                 |
-| `predicts.accumulates`      | Optional, in place of `horizons`; `week`, `month`, `quarter` or `year`, longer than `period`; see [below](#a-total-to-the-end-of-a-period) |
-| `predicts.unit`             | Required; text of 1 to 64 characters for the card and the answer, such as `orders`                                                         |
-| `predicts.history`          | Optional; how many observed periods a question's answer shows, 0 to 500 and at most the window; twice the longest horizon by default       |
-| `data`                      | Required; a projection of the playbook's history or an uploaded `dataset`, with `window` either way; see [The dataset](#the-dataset)       |
-| `data.window`               | Required; the periods of history a model is trained on, at most 1,000                                                                      |
-| `evaluation.holdout`        | Required; the last periods of the window, held back from the trainer and used to score candidates                                          |
-| `evaluation.metric`         | Optional; `mase` (the default), `winkler` or `quantile`                                                                                    |
-| `evaluation.coverage_floor` | Optional; 0.5 to 0.99, 0.7 by default: the least share of truths a candidate's interval must hold                                          |
-| `evaluation.baselines`      | Optional; the baselines a candidate must beat, `persistence` or `seasonal-naive` or both, each named once                                  |
-| `evaluation.confidence`     | Optional; 0.5 to 0.99, 0.9 by default: how sure the playbook must be that a candidate beats a baseline                                     |
-| `evaluation.shadow_periods` | Optional; 0 to 52, 0 by default: how many periods a new version runs beside the active one before it replaces it                           |
-| `evaluation.activate`       | Required; `automatic`, or `{ approved: <interaction function> }` to have a person approve each version                                     |
-| `source.expires`            | Required; how long a build waits for its trainer, an ISO 8601 duration from one minute to 30 days, such as `P7D`                           |
-| `source.to`                 | Optional; the party a build's request goes to in the inbox, text of 1 to 256 characters, `trainer` by default                              |
-| `source.through`            | Optional; an interaction function that sends the build to its trainer in place of the inbox, so never beside `to`                          |
-| `rules`                     | Optional; at most 32 lines in words, each at most 256 bytes                                                                                |
+| Field                       | Meaning                                                                                                                                                           |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`               | Optional; what the function predicts, 1 to 1,000 characters                                                                                                       |
+| `predicts.target`           | Required; the name of the quantity, which names its column in the dataset                                                                                         |
+| `predicts.period`           | Required; `day`, `week`, `month`, `quarter` or `year`                                                                                                             |
+| `predicts.season`           | Optional; the length of a season in periods, 2 to 366, such as 52 for weeks over a year                                                                           |
+| `predicts.horizons`         | Required unless `accumulates` is named; the periods ahead a question may ask, 1 to 8 whole numbers from 1 to 52, each once                                        |
+| `predicts.accumulates`      | Optional, in place of `horizons`; `week`, `month`, `quarter` or `year`, longer than `period`; see [below](#a-total-to-the-end-of-a-period)                        |
+| `predicts.unit`             | Required; text of 1 to 64 characters for the card and the answer, such as `orders`                                                                                |
+| `predicts.history`          | Optional; how many observed periods a question's answer shows, 0 to 500 and at most the window; twice the longest horizon by default                              |
+| `data`                      | Required; a projection of the playbook's history or an uploaded `dataset`, with `window` either way; see [The dataset](#the-dataset)                              |
+| `data.window`               | Required; the periods of history a model is trained on, at most 1,000                                                                                             |
+| `evaluation.holdout`        | Required; the last periods of the window, held back from the trainer and used to score candidates                                                                 |
+| `evaluation.metric`         | Optional; `mase` (the default), `winkler` or `quantile`                                                                                                           |
+| `evaluation.coverage_floor` | Optional; 0.5 to 0.99, 0.7 by default: the least share of truths a candidate's interval must hold                                                                 |
+| `evaluation.baselines`      | Optional; the baselines a candidate must beat, `persistence` or `seasonal-naive` or both, each named once                                                         |
+| `evaluation.confidence`     | Optional; 0.5 to 0.99, 0.9 by default: how sure the playbook must be that a candidate beats a baseline                                                            |
+| `evaluation.shadow_periods` | Optional; 0 to 52, 0 by default: how many periods a new version runs beside the active one before it replaces it                                                  |
+| `evaluation.activate`       | Required; `automatic`, or `{ approved: <interaction function> }` to have a person approve each version                                                            |
+| `source`                    | Optional; where a build's request goes and how long it waits; without it, a build fits the runtime's own models, as [below](#what-a-build-does-without-a-trainer) |
+| `source.expires`            | Required with `source`; how long a build waits for its trainer, an ISO 8601 duration from one minute to 30 days, such as `P7D`                                    |
+| `source.to`                 | Optional; the party a build's request goes to in the inbox, text of 1 to 256 characters, `trainer` by default                                                     |
+| `source.through`            | Optional; an interaction function that sends the build to its trainer in place of the inbox, so never beside `to`                                                 |
+| `rules`                     | Optional; at most 32 lines in words, each at most 256 bytes                                                                                                       |
 
 - `evaluation.baselines` is `persistence` when left out, with `seasonal-naive` beside it when a season is named.
 - The names of the target and the features are 1 to 64 lowercase letters, digits and underscores, starting with a letter. None may be `series` or `period`, which every row has. No feature may have the target's name.
@@ -137,7 +138,7 @@ A question's output is the **prediction**, a [series](output-shapes.md#series) o
 - Each `at` and the `origin` are in the ISO 8601 form of the grain: `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM`, `YYYY-Qn` or `YYYY`.
 - `value` is the 50th percentile, `low` the 10th and `high` the 90th.
 - The observed periods are the last of the window the model reads, so the answer reads nothing more.
-- The run's record holds `version`, the version of the model that predicted, `runtime`, the model runtime that answered, and `coverage`, 0.8, the share of truths `low` and `high` are meant to hold.
+- The run's record holds `version`, the version of the model that predicted, `runtime`, the model runtime that answered, and `coverage`, 0.8, the share of truths `low` and `high` are meant to hold. Before a version is active, `version` is null and `default_forecast` is true.
 
 `get_definition` shows the [series shape](output-shapes.md#what-a-saved-definition-shows) as the function's `output_schema`, and `series` as its `details.shape`, as for a reasoning function that declares `output.shape: series`. A build's output is `{ version, winner, candidates }`. `version` and `winner` are null when no candidate beat the baselines.
 
@@ -327,6 +328,7 @@ A build can be refused as it starts. Its run then records only that it started a
 - `unavailable`, `model_process_busy`: every model process a build may hold stayed taken for the 30 seconds the build waits to check its baselines. Asking again shortly may succeed.
 - `unavailable`, `model_process_failed`, with `because` `baseline_check`: the model process that checks the baselines ended before it answered. Asking for the build again may succeed.
 - `conflict`, `unworkable`: the brief renders past 64 KiB over this dataset.
+- `unavailable`, `model_process_failed`, with `because` `no_model_runtime`: the function names no trainer, and no model runtime of the server fits its own models. The release's `series` runtime does.
 
 Of these refusals:
 
@@ -334,11 +336,12 @@ Of these refusals:
 - The server scores at most `PREDICTION_BUILDS_AT_ONCE` builds at once. A build that waits for its trainer or an approval is not counted.
 - A build whose version is in its shadow, or awaits its approval, has ended its run, so it is not in flight.
 - A build refused for its dataset, its baselines or its brief takes none of the day's builds.
+- A build of a function that names no trainer is not refused `baseline_perfect`, since its own candidates include that baseline, and renders no brief.
 - Before it writes anything, the build reads the builds in flight and the builds of the day from the function's models stream. It claims its place on that stream once its rows and its brief are written.
 - Two builds asked at the same moment are decided one after the other, and the second is refused at its claim. The rows and the brief it wrote stay kept under their digests, though no record names them.
 - The builds the server is scoring, and the playbook's open requests, are counted before the build is decided. So builds asked at the same moment may pass those two bounds, by up to their number.
 
-Otherwise the build writes the two files of [The rows a build reads](#the-rows-a-build-reads) and scores each baseline it names over the scoring rows, as [How a candidate is scored](#how-a-candidate-is-scored) does, in a model process it waits up to 30 seconds for. A candidate must beat each walked baseline, and no score is below 0. So when a walked baseline scores 0 on `evaluation.metric` wherever that metric is defined, and is defined somewhere, the build is refused `baseline_perfect` before it renders its brief. This happens when the periods held back never move: `persistence` then predicts each one exactly, and its `mase` is 0. When no series moved during the training periods, `mase`, which scales each error by that movement, scores no period held back, so no candidate could be judged against a walked baseline, and the build is refused `unscorable`. A series with nothing held back is left out, and a build whose baselines walk no series goes ahead, judged by its coverage alone; `winkler` and `quantile` judge such series. Either way, a build can be asked again once the series moves. Otherwise the build renders the brief over the two files, closes it with a section `## Candidates` that names the formats the server's model runtimes execute for the function, and asks its trainer:
+Otherwise the build writes the two files of [The rows a build reads](#the-rows-a-build-reads) and scores each baseline it names over the scoring rows, as [How a candidate is scored](#how-a-candidate-is-scored) does, in a model process it waits up to 30 seconds for. A candidate must beat each walked baseline, and no score is below 0. So when a walked baseline scores 0 on `evaluation.metric` wherever that metric is defined, and is defined somewhere, the build is refused `baseline_perfect` before it renders its brief. This happens when the periods held back never move: `persistence` then predicts each one exactly, and its `mase` is 0. When no series moved during the training periods, `mase`, which scales each error by that movement, scores no period held back, so no candidate could be judged against a walked baseline, and the build is refused `unscorable`. A series with nothing held back is left out, and a build whose baselines walk no series goes ahead, judged by its coverage alone; `winkler` and `quantile` judge such series. Either way, a build can be asked again once the series moves. Otherwise the build renders the brief over the two files, closes it with a section `## Candidates` that names the formats the server's model runtimes execute for the function, such as `onnx` and `series`, and asks its trainer, or, when the function names none, fits its own candidates as [What a build does without a trainer](#what-a-build-does-without-a-trainer) says:
 
 - With `source.to`, the default, the build is a request in the playbook's inbox. `list_interactions` lists it for its party. Its message, within 8 KiB, names the build's run id, its three routes, the formats an upload takes and the opening of the brief. Its answer is `{ candidates, recipe?, limitations? }`.
 - With `source.through`, the build starts that interaction function with the input `{ build: { run_id, function, brief_sha256, routes, formats, expires_at } }`. That function's request is the one the inbox lists, and its answer is the build's.
@@ -404,7 +407,8 @@ The routes are relative to `/v1/orgs/{org}/playbooks/{playbook}` and served over
 
 - a run the playbook does not hold is refused `not_found`;
 - a run that is no build is refused `conflict` with the kind `not_a_build`;
-- a build that took its answer or ended is refused `conflict` with the kind `build_ended`.
+- a build that took its answer or ended is refused `conflict` with the kind `build_ended`;
+- a build of a function that names no trainer is refused `conflict` with the kind `no_trainer`.
 
 A candidate is the model's file, sent as `application/octet-stream` with its `Content-Length`, its format in the query, `?format=onnx`:
 
@@ -424,7 +428,7 @@ An answer that comes through the function of `source.through` is checked the sam
 
 ### The signature of a candidate
 
-A candidate takes the target, and the features the function names, over the periods up to an origin. It returns the 10th, 50th and 90th percentiles of each step ahead. The runtime of a candidate's format checks it against what the function feeds. In ONNX, the release's format, they are tensors:
+A candidate takes the target, and the features the function names, over the periods up to an origin. It returns the 10th, 50th and 90th percentiles of each step ahead. The runtime of a candidate's format checks it against what the function feeds. A candidate in the format `series` is a recipe, whose signature is the recipe itself; see [A recipe](#a-recipe). In ONNX, the release's other format, they are tensors:
 
 | Tensor  | Shape       | Type    | What it is                                                                                                       |
 | ------- | ----------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -464,6 +468,8 @@ A candidate is disqualified when:
 
 Of the others, the one with the lowest mean of `metric` over the horizons wins.
 
+The candidates a build fits itself are scored the same way, against the same baselines, by the same `confidence`. [What a build does without a trainer](#what-a-build-does-without-a-trainer) has the rest.
+
 With `accumulates`, the quantity scored is the total to the end of the enclosing period:
 
 - `persistence` is the run-rate: the mean of the enclosing period's periods so far, times the periods left;
@@ -474,7 +480,7 @@ With `accumulates`, the quantity scored is the total to the end of the enclosing
 
 A build keeps a winner that beats the baselines as the function's next version. The version's card holds, within 4 KiB:
 
-- the build, and who trained it;
+- the build, and who trained it, the playbook itself for the candidates it fitted;
 - the dataset's digests and figures;
 - the file's digest, size, `format` and `signature`, and the `runtime` that scored it;
 - the features;
@@ -513,6 +519,39 @@ A version that passes activates when `activate` is `automatic`. With `{ approved
 - `not_found` for a version the function did not build;
 - `conflict` with the kind `already_active` for the active one.
 
+## The runtime's own models
+
+The runtime has models of its own, in the format `series`: JSON recipes, a name and its attributes, that its `series` runtime executes in the server's own process. They answer before anyone has built, and they are the candidates of a build without a trainer. [Model runtimes](model-runtimes.md#the-runtime-s-own-models) has their arithmetic.
+
+### A recipe
+
+```json
+{
+  "recipe": "seasonal-naive",
+  "attributes": { "answers": { "steps": 2 }, "season": 7, "interval": { "method": "residual" } }
+}
+```
+
+`answers` is `{ steps }`, the longest horizon, or `{ total: { grain, accumulates } }`. `interval` is `residual`, `conformal` or `none`. A recipe is its own signature, takes at most 16 KiB and reads the target alone, and the linear recipe the calendar too. Where a series' history does not allow it, it answers as a simpler recipe, down to persistence. A residual interval puts the low and the high 1.2816 × σ × its constant either side of the likely value, σ the root mean square of the recipe's one-step errors over the window; a conformal one is the 10th and 90th percentiles of the model's errors at the last `holdout` origins of the training rows.
+
+| Recipe                          | It forecasts                                                                                                                                                                                  | Interval                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `persistence`                   | The last value                                                                                                                                                                                | Residual, √h                        |
+| `mean`                          | The mean of the values                                                                                                                                                                        | Residual, √(1 + 1/T)                |
+| `drift`                         | The line from the first value through the last                                                                                                                                                | Residual, √(h(1 + h/(T − 1)))       |
+| `seasonal-naive`                | The value a season earlier                                                                                                                                                                    | Residual, √(k + 1), k whole seasons |
+| `level-adjusted-seasonal-naive` | The seasonal naive × the level r, the mean of the last season ÷ that of the season before, once for each season it reaches back: ŷ(T+h) = ŷ(T+h−m) × r, given two seasons and the steps asked | Residual, as the seasonal naive     |
+| `run-rate`                      | A total: the mean of the enclosing period so far × the periods left                                                                                                                           | Residual, the drift's               |
+| `linear`                        | A regularised linear model over lags and calendar marks                                                                                                                                       | Conformal                           |
+
+### The default forecast
+
+A function with no active version answers from the level-adjusted seasonal naive with a season, and persistence, or the run-rate for a total, without one. Its record names the runtime `series`, holds `version: null` and says `default_forecast: true`; nothing is activated.
+
+### What a build does without a trainer
+
+A function with no `source` names no trainer. Its build fits these recipes from the training rows, uploads each as a `series` candidate as a trainer's upload is, and records `candidates_fitted`; so does a build whose trainer answers none. It fits no `persistence` and no `seasonal-naive`, nor, for a total, the run-rate, since those are the baselines every candidate is scored against. The others are scored as a trainer's are, against `evaluation.baselines` by `evaluation.confidence`, so every winner beats the baselines, and the winner activates by the same rules, trained by the playbook. When none beats them, the build keeps no version, each candidate `not_better` or disqualified for another reason, and the function goes on answering from the default forecast.
+
 ## A question
 
 A question is `{ series, horizon?, given?, marks? }`, or `{ series, given?, marks? }` with `accumulates`. The active version predicts from the series' last window:
@@ -520,7 +559,7 @@ A question is `{ series, horizon?, given?, marks? }`, or `{ series, given?, mark
 - over a projection, the dataset's rows up to the last closed period at its checkpoint;
 - over an uploaded dataset, the rows up to its last period. A model process reads them from the upload, so the server parses none of it.
 
-The model process that holds the version's file returns the prediction within 10 seconds. The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds the `version`, the `coverage`, the `origin`, the `dataset_checkpoint` and the `duration_ms`. A question can also be refused, for example before a version is active; [How a run ends](#how-a-run-ends) lists each case.
+The active version answers it, or, before one is active, [the default forecast](#the-default-forecast). The model process that holds the version's file returns the prediction within 10 seconds; a model of the format `series` answers in the server's own process within the same 10 seconds. The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds the `version`, null for the default forecast, `default_forecast` when it answered, the `runtime`, the `coverage`, the `origin`, the `dataset_checkpoint` and the `duration_ms`. A question can also be refused; [How a run ends](#how-a-run-ends) lists each case.
 
 For example, `{ "series": "north", "given": { "promotion": 1 } }` asks `weekly-orders` for both its horizons, and its answer shows the 8 weeks observed before them:
 
@@ -558,19 +597,19 @@ For example, `{ "series": "north", "given": { "promotion": 1 } }` asks `weekly-o
 
 A question ends within its call and cannot be cancelled while it runs:
 
-| Ending                                                             | When                                                                                                                                     |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `succeeded`                                                        | The prediction is its output                                                                                                             |
-| `invalid_input`                                                    | The input is neither a question the function takes nor `{ build: {} }`, or the series is not in the dataset's window, at `/input/series` |
-| `conflict`, kind `no_active_version`                               | No version is active yet                                                                                                                 |
-| `conflict`, kind `data_changed`                                    | The data part, `horizons`, the `given` features or `accumulates` changed after the active version's model was built for them             |
-| `unavailable`, kind `dataset_not_ready`                            | The dataset is waiting or rebuilding; with `because` `stalled`, it stalled                                                               |
-| `unavailable`, kind `model_process_busy`                           | Every model process is taken                                                                                                             |
-| `unavailable`, kind `model_process_failed`                         | The model process ended before it returned, such as when it ran out of time or memory                                                    |
-| `unavailable`, kind `model_process_failed`, because `not_finite`   | The model returned a number that is not finite, or a shape its signature does not give; asking again does not change it                  |
-| `unavailable`, kind `model_process_failed`, because `not_in_order` | The model returned a low above its likely value or a high below it, which no series holds; asking again does not change it               |
-| `unavailable`, because `no_model_runtime`                          | Of the kind `model_process_failed`: no runtime of the server executes the active version's format                                        |
-| `failed`                                                           | The runtime itself broke down                                                                                                            |
+| Ending                                                             | When                                                                                                                                         |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `succeeded`                                                        | The prediction is its output                                                                                                                 |
+| `invalid_input`                                                    | The input is neither a question the function takes nor `{ build: {} }`, or the series is not in the dataset's window, at `/input/series`     |
+| `conflict`, kind `no_active_version`                               | No version is active, and no model runtime of the server answers a function with none; the release's `series` runtime answers every function |
+| `conflict`, kind `data_changed`                                    | The data part, `horizons`, the `given` features or `accumulates` changed after the active version's model was built for them                 |
+| `unavailable`, kind `dataset_not_ready`                            | The dataset is waiting or rebuilding; with `because` `stalled`, it stalled                                                                   |
+| `unavailable`, kind `model_process_busy`                           | Every model process is taken                                                                                                                 |
+| `unavailable`, kind `model_process_failed`                         | The model process ended before it returned, such as when it ran out of time or memory                                                        |
+| `unavailable`, kind `model_process_failed`, because `not_finite`   | The model returned a number that is not finite, or a shape its signature does not give; asking again does not change it                      |
+| `unavailable`, kind `model_process_failed`, because `not_in_order` | The model returned a low above its likely value or a high below it, which no series holds; asking again does not change it                   |
+| `unavailable`, because `no_model_runtime`                          | Of the kind `model_process_failed`: no runtime of the server executes the active version's format                                            |
+| `failed`                                                           | The runtime itself broke down                                                                                                                |
 
 A build finishes later, so `run_definition` returns it `started` and `get_run` shows how it ended:
 
@@ -588,6 +627,7 @@ A build's history shows:
 
 - `dataset_assembled`, with the digests and the figures of its two files;
 - each candidate taken or refused, as `candidate_uploaded` or `candidate_refused`;
+- the candidates a build fitted itself, as `candidates_fitted`;
 - an inbox build's answer, as `request_answered`;
 - each candidate's score, as `candidate_scored` or `candidate_disqualified`, and each baseline, as `baseline_scored` or `baseline_not_walked`;
 - the run's end.
@@ -633,6 +673,8 @@ The data and the runs are bounded so:
 | Candidates of a build   | 8, each a file of at most 64 MiB with its `Content-Length`                                                                                             | The upload is refused           |
 | A candidate's check     | 30 seconds to load in a model process                                                                                                                  | The upload is refused           |
 | A candidate's scoring   | 10 minutes in a model process                                                                                                                          | The candidate is disqualified   |
+| A recipe of `series`    | 16 KiB                                                                                                                                                 | The recipe is refused           |
+| A build's own fit       | 30 seconds                                                                                                                                             | The build fits no candidate     |
 | A recipe, a limitation  | 8 KiB of text each                                                                                                                                     | The answer is refused           |
 | A version's card        | 4 KiB as JSON                                                                                                                                          | Its features are kept apart     |
 
@@ -645,7 +687,7 @@ A workflow calls a prediction function as it calls any function, with `call: run
 - A build's output is `{ version, winner, candidates }`, so the next task can branch on `version`. It is null when no candidate won.
 - A task whose input holds an expression, as the one below does, waits as long as a build. What it asks is known only when it runs.
 
-This workflow forecasts a region's orders for next week from `weekly-orders`, given whether a promotion is planned. The task's output is the series the function answers, and a workflow that needs one number reads the likely value of the first predicted point, `lines[1].points[0].value`. While the function has no active version, the workflow returns no forecast:
+This workflow forecasts a region's orders for next week from `weekly-orders`, given whether a promotion is planned. The task's output is the series the function answers, and a workflow that needs one number reads the likely value of the first predicted point, `lines[1].points[0].value`. While the function's data has changed since its active version was built, the workflow returns no forecast:
 
 ```yaml
 document:
@@ -653,7 +695,7 @@ document:
   namespace: orders
   name: next-week-orders
   version: '1.0.0'
-  summary: Forecasts a region's orders for next week, or returns none while no version is active.
+  summary: Forecasts a region's orders for next week, or returns none while its data has changed since its version was built.
 input:
   schema:
     document:
@@ -679,19 +721,19 @@ do:
       catch:
         errors:
           with: { status: 409 }
-        when: '${ $error.kind == "no_active_version" }'
+        when: '${ $error.kind == "data_changed" }'
         do:
           - none: { set: { forecast: null } }
 ```
 
-`run_definition` of `next-week-orders` takes an input such as `{"region": "north", "promotion": 1}`. Before `weekly-orders` has an active version, its question is refused `conflict` with the kind `no_active_version`. The `catch` takes that, and the run succeeds with `{"forecast": null}`. Once a version is active, the run succeeds with `{"forecast": <the likely value>}`, such as `{"forecast": 138.5}`. To keep the range too, read the whole point, `lines[1].points[0]`, which holds its `at`, `value`, `low` and `high`. Any other refusal ends the workflow's run, as below.
+`run_definition` of `next-week-orders` takes an input such as `{"region": "north", "promotion": 1}`. Before `weekly-orders` has an active version, the default forecast answers its question, so the run succeeds with `{"forecast": <the likely value>}` from the start, and once a version is active, that version answers, such as `{"forecast": 138.5}`. After an edit to the function's data part, its horizons, its `given` features or `accumulates`, its question is refused `conflict` with the kind `data_changed` until a build makes a version for it. The `catch` takes that, and the run succeeds with `{"forecast": null}`. To keep the range too, read the whole point, `lines[1].points[0]`, which holds its `at`, `value`, `low` and `high`. Any other refusal ends the workflow's run, as below.
 
 A run that does not succeed raises the error of its rejection:
 
 - A build nobody answered raises the [problem type](http.md#responses-and-errors) `https://on.auto/problems/unanswered`, status 410, with the kind `expired`. Only a `catch` that names that type or status 410, or catches every error, takes it. So a workflow handles an unanswered build only on purpose.
 - A refusal raises status 503 for `unavailable` and 409 for `conflict`, with its `kind` and `because`.
 - `model_process_busy`, and a dataset still being built, pass with time. So a retry on status 503 suits a build as it suits a question.
-- These do not change when tried again: `builds_full` with `because` `builds_of_the_day`, a `stalled` dataset, a `not_finite` or `not_in_order` result, and `no_model_runtime`. Neither do `no_active_version` and `data_changed`, until a build makes a version. So leave 409 out of a retry policy, and read `$error.because` in a `when` to leave out the rest.
+- These do not change when tried again: `builds_full` with `because` `builds_of_the_day`, a `stalled` dataset, a `not_finite` or `not_in_order` result, and `no_model_runtime`. Neither does `data_changed`, until a build makes a version. So leave 409 out of a retry policy, and read `$error.because` in a `when` to leave out the rest.
 
 A workflow on a [schedule](workflow-format.md#triggers) can ask for a build on that schedule, within the builds a function may ask for in a day.
 
@@ -703,6 +745,6 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 ## Availability
 
-Prediction functions are available in every runtime. The runtime keeps the datasets, scores the candidates and predicts, running each model in a model process of the server, through the [model runtime](model-runtimes.md) of its format. A trainer fits its models outside it. See [Functions and availability](../concepts/functions.md#availability).
+Prediction functions are available in every runtime. The runtime keeps the datasets, scores the candidates and predicts, running each model through the [model runtime](model-runtimes.md) of its format: its own models in the server's own process, and a trainer's ONNX models in model processes of the server. A trainer fits its models outside it, and the runtime fits its own. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

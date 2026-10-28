@@ -27,7 +27,7 @@ function stopped(server: SpawnedServer): Promise<unknown> {
 
 async function put(port: number, path: string, type: string, body: string | Readonly<Uint8Array>): Promise<number> {
   const response = await fetch(`http://127.0.0.1:${port}${alpha}${path}`, {
-    method: path.endsWith('candidates') ? 'POST' : 'PUT',
+    method: path.includes('/candidates') ? 'POST' : 'PUT',
     headers: { 'content-type': type },
     body: typeof body === 'string' ? body : new Uint8Array(body),
   });
@@ -53,7 +53,12 @@ describe('a build asked of a server that does not hold the lease of the due work
     const build = runIdIn(
       (await requestTo(port, 'POST', '/alpha/definitions/prediction/daily-visits/run', { input: { build: {} } })).body,
     );
-    const uploaded = await put(port, `/runs/${build}/build/candidates`, 'application/octet-stream', candidate);
+    const uploaded = await put(
+      port,
+      `/runs/${build}/build/candidates?format=onnx`,
+      'application/octet-stream',
+      candidate,
+    );
     await requestTo(port, 'POST', `/alpha/runs/${build}/answer`, { answer: { candidates: [digestOf(candidate)] } });
 
     expect([kept, uploaded]).toEqual([200, 200]);

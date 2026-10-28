@@ -4,7 +4,7 @@ import { Effect, Option } from 'effect';
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { BuiltVersion } from '../models/model-state.ts';
-import type { ExecutingRuntime } from '../runtimes/model-runtimes.ts';
+import { readsTheCalendar, type ExecutingRuntime } from '../runtimes/model-runtimes.ts';
 import { remainingOfTheOrigins, scoringGridOf, type ScoringGrid } from '../scoring/scoring-grid.ts';
 import { featureNamesOf, givenIndexesOf } from '../scoring/scoring-inputs.ts';
 import type { ShadowRows } from './shadow-rows.ts';
@@ -42,6 +42,7 @@ export function shadowWalk(
           features: featureNamesOf(document).length,
           given: givenIndexesOf(document),
           remaining: remainingOfTheOrigins(grid),
+          first: readsTheCalendar(executing.runtime) ? grid.first : null,
         },
       ),
   );

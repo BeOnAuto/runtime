@@ -20,7 +20,7 @@ describe('the manifest of an extension', () => {
     const manifest = { name: '@example/models', version: '2.0.0', provides: [providedModelRuntime(runtime)] };
 
     expect(Option.getOrThrow(decoded(manifest)).provides).toEqual([
-      { point: 'prediction/model-runtime', contract: 1, implementation: runtime },
+      { point: 'prediction/model-runtime', contract: 2, implementation: runtime },
     ]);
   });
 
@@ -33,7 +33,7 @@ describe('the manifest of an extension', () => {
 });
 
 describe('the contract of a model runtime', () => {
-  it('is version 1, the one version this release accepts', () => {
-    expect([modelRuntimeContract, acceptedModelRuntimeContracts]).toEqual([1, { least: 1, most: 1 }]);
+  it('is version 2, and this release accepts it and version 1 before it', () => {
+    expect([modelRuntimeContract, acceptedModelRuntimeContracts]).toEqual([2, { least: 1, most: 2 }]);
   });
 });

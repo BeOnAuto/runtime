@@ -57,7 +57,16 @@ function keptTypes(): KeptTypes {
   };
 }
 
-const heldWalk = { rows: '/held.csv', window: 3, holdout: 1, steps: 1, features: 0, given: [], remaining: null };
+const heldWalk = {
+  rows: '/held.csv',
+  window: 3,
+  holdout: 1,
+  steps: 1,
+  features: 0,
+  given: [],
+  remaining: null,
+  first: null,
+};
 
 function heldBy(playbook: BuildPlaybook, model: string) {
   return Effect.runFork(
@@ -156,7 +165,7 @@ describe('a build whose series did not move while trained', () => {
 describe('a build whose baselines cannot be checked', () => {
   it('is refused as unavailable while every model process a build may hold is busy', async () => {
     const scripted = scriptedModels();
-    const deadlines = { check: 60_000, run: 10_000, walk: 60_000, baselines: 300 };
+    const deadlines = { check: 60_000, run: 10_000, walk: 60_000, baselines: 300, fit: 30_000 };
     const playbook = buildPlaybook({ module: scripted.module, deadlines, processes: 3, longJobs: 2 });
     await savedFunction(playbook, { rows: still });
     scripted.next('sleeps');

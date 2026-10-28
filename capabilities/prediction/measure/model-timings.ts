@@ -22,7 +22,7 @@ export interface Timed {
   readonly gradeMs: number;
 }
 
-const question = { y: Float32Array.of(10, 12, 11), x: null, given: null, h: null, features: 0, givens: 0 };
+const question = { y: Float32Array.of(10, 12, 11), x: null, given: null, h: null, at: null, features: 0, givens: 0 };
 
 const evaluation: Evaluation = {
   holdout: 8,
@@ -49,6 +49,7 @@ function walkedInTurn(models: ModelProcesses, files: MeasuredFiles): Promise<rea
     features: 0,
     given: [],
     remaining: null,
+    first: null,
   };
   return candidates.reduce<Promise<readonly number[]>>(async (before, candidate) => {
     const done = await before;
@@ -70,6 +71,7 @@ async function scoredOnce(models: ModelProcesses, files: MeasuredFiles): Promise
     features: 0,
     given: [],
     remaining: null,
+    first: null,
   };
   const outcome = await Effect.runPromise(models.walk(files.runtime, { sha256: 'scored', path: files.mean }, walk));
   if (outcome.ended !== 'answered') {
@@ -129,6 +131,7 @@ export async function modelTimings(files: MeasuredFiles): Promise<Timed> {
       features: 0,
       given: [],
       remaining: null,
+      first: null,
     }),
   );
   const shadowWalkMs = millisecondsOf(shadowed);
@@ -163,7 +166,7 @@ export async function questionTimings(files: MeasuredFiles): Promise<QuestionTim
     models.run(
       files.runtime,
       { sha256: 'mean', path: files.mean },
-      { y: Float32Array.from(y), x: null, given: null, h: null, features: 0, givens: 0 },
+      { y: Float32Array.from(y), x: null, given: null, h: null, at: null, features: 0, givens: 0 },
     ),
   );
   const runMs = millisecondsOf(read);

@@ -76,7 +76,7 @@ function installed(fixtures: readonly Fixture[]): {
 }
 
 function configured(...packages: readonly string[]): readonly ListedExtension[] {
-  return packages.map((name) => ({ package: name, provenance: 'configured' }));
+  return packages.map((name) => ({ package: name, provenance: 'configured', ofTheRelease: false }));
 }
 
 const points = [modelRuntimePoint];
@@ -122,9 +122,9 @@ describe('the extensions a runtime loads', () => {
         [{ package: '@on.auto/prediction-onnx' }, { package: '@on.auto/other' }],
       ),
     ).toEqual([
-      { package: '@acme/models', provenance: 'configured' },
-      { package: '@on.auto/prediction-onnx', integrity: 'sha512-x', provenance: 'configured' },
-      { package: '@on.auto/other', provenance: 'release' },
+      { package: '@acme/models', provenance: 'configured', ofTheRelease: false },
+      { package: '@on.auto/prediction-onnx', integrity: 'sha512-x', provenance: 'configured', ofTheRelease: true },
+      { package: '@on.auto/other', provenance: 'release', ofTheRelease: true },
     ]);
   });
 });
@@ -133,8 +133,8 @@ describe('an extension a runtime refuses, so that it does not start', () => {
   it.each<readonly [string, string, string]>([
     [
       'built against a contract outside the range the runtime accepts',
-      manifestSource('@acme/models', [provisionSource('acme-runtime', ['acme'], 2)]),
-      'The extension @acme/models is refused: it provides prediction/model-runtime built against contract 2, and this runtime accepts contracts 1 to 1',
+      manifestSource('@acme/models', [provisionSource('acme-runtime', ['acme'], 3)]),
+      'The extension @acme/models is refused: it provides prediction/model-runtime built against contract 3, and this runtime accepts contracts 1 to 2',
     ],
     [
       'that exports no manifest',
@@ -175,6 +175,35 @@ describe('an extension a runtime refuses, so that it does not start', () => {
   });
 });
 
+describe("a model runtime bound inline, into the server's own process", () => {
+  const inlineManifest = manifestSource('@acme/models', [
+    provisionSource('acme-runtime', ['acme'], 2).replace("kind: 'process'", "kind: 'inline'"),
+  ]);
+
+  it("refuses a listed extension that provides one, by name, since an extension's runtime runs in a model process", async () => {
+    const { packages } = installed([{ name: '@acme/models', module: inlineManifest }]);
+
+    await expect(loadedExtensions(configured('@acme/models'), points, packages)).rejects.toThrow(
+      "The extension @acme/models is refused: it binds the model runtime acme-runtime inline, into the server's own process, which only the release's own extensions may: an extension's runtime runs in a model process, so its binding is a process",
+    );
+  });
+
+  it('loads one the release provides itself, listed by the settings or not', async () => {
+    const { packages } = installed([{ name: '@acme/models', module: inlineManifest }]);
+    const ofTheRelease = { package: '@acme/models', ofTheRelease: true };
+
+    const loaded = await Promise.all([
+      loadedExtensions([{ ...ofTheRelease, provenance: 'release' }], points, packages),
+      loadedExtensions([{ ...ofTheRelease, provenance: 'configured' }], points, packages),
+    ]);
+
+    expect(loaded.map(({ provided }) => provided(modelRuntimePoint).map(({ binding }) => binding.kind))).toEqual([
+      ['inline'],
+      ['inline'],
+    ]);
+  });
+});
+
 describe('an extension a runtime refuses before it reads its manifest', () => {
   it('names a package that could not be imported', async () => {
     const { packages } = installed([]);
@@ -193,14 +222,18 @@ describe('the integrity of an extension', () => {
     const other = `sha512-${'B'.repeat(86)}==`;
 
     const loaded = await loadedExtensions(
-      [{ package: '@acme/models', integrity, provenance: 'configured' }],
+      [{ package: '@acme/models', integrity, provenance: 'configured', ofTheRelease: false }],
       points,
       packages,
     );
 
     expect(loaded.extensions.map(({ name }) => name)).toEqual(['@acme/models']);
     await expect(
-      loadedExtensions([{ package: '@acme/models', integrity: other, provenance: 'configured' }], points, packages),
+      loadedExtensions(
+        [{ package: '@acme/models', integrity: other, provenance: 'configured', ofTheRelease: false }],
+        points,
+        packages,
+      ),
     ).rejects.toThrow(
       `The extension @acme/models is refused: its installed files have the integrity ${integrity}, and the setting names ${other}; install the package the setting names, or name the integrity of the one installed`,
     );
@@ -211,7 +244,7 @@ describe('the integrity of an extension', () => {
 
     await expect(
       loadedExtensions(
-        [{ package: '@acme/missing', integrity: 'sha512-x', provenance: 'configured' }],
+        [{ package: '@acme/missing', integrity: 'sha512-x', provenance: 'configured', ofTheRelease: false }],
         points,
         packages,
       ),

@@ -48,3 +48,31 @@ describe('a page served as a guide', () => {
     );
   });
 });
+
+describe('a table of a page served as a guide', () => {
+  it('loses the padding that aligns the columns of its tables, outside its code', () => {
+    const tables = [
+      '| Field   | Meaning      |',
+      '| ------- | ------------ |',
+      '| `name`  | Its name     |',
+      '',
+      '```text',
+      '| kept    | as written   |',
+      '```',
+      '',
+    ].join('\n');
+
+    expect(withoutSiteMarkup(tables)).toBe(
+      [
+        '| Field | Meaning |',
+        '| --- | --- |',
+        '| `name` | Its name |',
+        '',
+        '```text',
+        '| kept    | as written   |',
+        '```',
+        '',
+      ].join('\n'),
+    );
+  });
+});

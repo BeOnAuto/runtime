@@ -61,12 +61,21 @@ function questions(settingsOf: SettingsOf): void {
 
 function busy(settingsOf: SettingsOf): void {
   it('is told every model process is busy while builds hold every one', async () => {
-    const deadlines = { check: 30_000, run: 300, walk: 60_000, baselines: 30_000 };
+    const deadlines = { check: 30_000, run: 300, walk: 60_000, baselines: 30_000, fit: 30_000 };
     const projected = await projectedSales(settingsOf, { ...visits, deadlines, processes: 2, longJobs: 2 });
     await builtFrom(projected.playbook, ['visits-mean']);
     projected.scripted.next('sleeps');
     const { models } = projected.playbook.test.ports;
-    const walk = { rows: '/held.csv', window: 3, holdout: 1, steps: 1, features: 0, given: [], remaining: null };
+    const walk = {
+      rows: '/held.csv',
+      window: 3,
+      holdout: 1,
+      steps: 1,
+      features: 0,
+      given: [],
+      remaining: null,
+      first: null,
+    };
     for (const held of ['first', 'second']) {
       void Effect.runPromise(models.walk(scriptedRuntime, { sha256: held, path: `/${held}.scripted` }, walk));
     }

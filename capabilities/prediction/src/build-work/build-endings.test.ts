@@ -136,10 +136,11 @@ describe('a build after its server restarts', () => {
 
 describe('a build that two performs end at once', () => {
   it('is settled by one of them, the other taking the settlement as done', async () => {
-    const playbook = buildPlaybook();
+    const playbook = buildPlaybook({ runtimes: [] });
     await savedFunction(playbook);
     const build = await askedBuild(playbook);
     await answered(playbook, build, { candidates: [] });
+    await performedOnce(playbook.due, Date.now());
     await performedOnce(playbook.due, Date.now());
     const other = buildsDue({ ports: playbook.test.ports, runs: playbook.startChild });
     await Promise.all([performedOnce(playbook.due, Date.now()), performedOnce([other], Date.now())]);

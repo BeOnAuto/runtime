@@ -15,7 +15,7 @@ function fileOf(name: CandidateName) {
   return { sha256: name, path: candidateFile(name) };
 }
 
-const question = { y: Float32Array.of(10, 12), x: null, given: null, h: null, features: 0, givens: 0 };
+const question = { y: Float32Array.of(10, 12), x: null, given: null, h: null, at: null, features: 0, givens: 0 };
 
 function rowsFile(): string {
   const path = join(scratchDirectory(), 'scoring.csv');
@@ -23,7 +23,7 @@ function rowsFile(): string {
   return path;
 }
 
-const walk = { window: 2, holdout: 1, steps: 2, features: 0, given: [], remaining: null };
+const walk = { window: 2, holdout: 1, steps: 2, features: 0, given: [], remaining: null, first: null };
 
 const ofAnyLength: unknown = expect.any(Number);
 
@@ -56,13 +56,13 @@ describe('the model processes of a server', () => {
   it('end a job past its deadline, which is by default 30 s for a check, 10 s for a question and 10 minutes for a walk', async () => {
     const models = modelProcesses({
       pool: closedAfterTheTest(3),
-      deadlines: { check: 1, run: 1, walk: 1, baselines: 30_000 },
+      deadlines: { check: 1, run: 1, walk: 1, baselines: 30_000, fit: 30_000 },
     });
 
     expect(await Effect.runPromise(models.check(scriptedRuntime, fileOf('visits-mean'), fed))).toMatchObject({
       ended: 'timed_out',
     });
-    expect(modelDeadlines).toEqual({ check: 30_000, run: 10_000, walk: 600_000, baselines: 30_000 });
+    expect(modelDeadlines).toEqual({ check: 30_000, run: 10_000, walk: 600_000, baselines: 30_000, fit: 30_000 });
   });
 });
 

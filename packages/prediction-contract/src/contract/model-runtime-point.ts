@@ -1,6 +1,6 @@
 export const modelRuntimePoint = 'prediction/model-runtime';
 
-export const modelRuntimeContract = 1;
+export const modelRuntimeContract = 2;
 
 export interface ContractRange {
   readonly least: number;

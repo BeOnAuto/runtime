@@ -19,6 +19,7 @@ export const ConflictKindSchema = Schema.Literals([
   'unscorable',
   'not_a_build',
   'build_ended',
+  'no_trainer',
   'already_active',
   'connections_full',
   'credits_exhausted',

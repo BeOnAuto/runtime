@@ -1,8 +1,18 @@
-import type { FedShape, ModelFeeds } from '@on.auto/prediction-contract';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import type { FedShape, FittedModel, FunctionShape, ModelFeeds } from '@on.auto/prediction-contract';
 import { describe, expect, it } from 'vitest';
 
+import { scratchDirectory } from '../testing/scratch.ts';
 import { candidateFile, type CandidateName } from './scripted-candidates.ts';
-import { loadModel } from './scripted-recipes.ts';
+import { defaultModel, fitModels, loadModel } from './scripted-recipes.ts';
+
+function candidateFileOf(recipe: object): string {
+  const path = join(scratchDirectory(), 'period.scripted');
+  writeFileSync(path, JSON.stringify(recipe));
+  return path;
+}
 
 const visitsFed: FedShape = { features: 0, given: 0, horizon: 2, totals: false };
 
@@ -55,6 +65,45 @@ describe('a scripted recipe, the model of the test runtime', () => {
 
   it('is no model when its file is not a recipe', async () => {
     await expect(loaded('not-a-model')).rejects.toThrow('JSON');
+  });
+});
+
+const steps: FunctionShape = { fed: visitsFed, grain: 'day', season: null, accumulates: null, holdout: 8 };
+
+const total: FunctionShape = { ...steps, fed: { ...visitsFed, horizon: 7, totals: true }, accumulates: 'week' };
+
+function recipesOf(models: readonly FittedModel[]): readonly unknown[] {
+  return models.map(({ bytes }): unknown => JSON.parse(new TextDecoder().decode(bytes)));
+}
+
+describe('the models the scripted runtime fits itself', () => {
+  it('are a last value and a mean of the steps the function asks for, its default a last value with a wider spread', async () => {
+    expect(recipesOf([...(await fitModels(steps, { first: 0, series: [] })), defaultModel(steps)])).toEqual([
+      { recipe: 'last', steps: 2, low: 1, high: 1, features: 0, given: 0, totals: false },
+      { recipe: 'mean', steps: 2, low: 2, high: 2, features: 0, given: 0, totals: false },
+      { recipe: 'last', steps: 2, low: 3, high: 3, features: 0, given: 0, totals: false },
+    ]);
+  });
+
+  it('are run-rates of a total, with a spread that grows with the model’s', async () => {
+    expect(recipesOf(await fitModels(total, { first: 0, series: [] }))).toEqual([
+      { recipe: 'run-rate', steps: 1, low: 0.9, high: 1.1, features: 0, given: 0, totals: true },
+      { recipe: 'run-rate', steps: 1, low: 0.8, high: 1.2, features: 0, given: 0, totals: true },
+    ]);
+  });
+});
+
+describe('the period a scripted recipe is fed', () => {
+  it('is its answer, for a recipe that answers the period of its origin', async () => {
+    const period = await loadModel(
+      candidateFileOf({ recipe: 'period', steps: 1, low: 0, high: 0, features: 0, given: 0, totals: false }),
+      1,
+    );
+
+    expect(await period.run({ ...fedOf([1]), at: { data: BigInt64Array.of(42n), dims: [1] } })).toEqual({
+      q: Float32Array.of(42, 42, 42),
+      dims: [1, 1, 3],
+    });
   });
 });
 

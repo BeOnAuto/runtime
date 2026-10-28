@@ -104,8 +104,18 @@ describe('the routes a trainer calls under API keys', () => {
     const [read, refused, readOnly, written] = [
       await sent(buildRoute(build, 'brief'), { method: 'GET', key: reader.key }),
       await sent(buildRoute(build, 'rows'), { method: 'GET', key: outsider.key }),
-      await sent(buildRoute(build, 'candidates'), { method: 'POST', key: reader.key, type: octets, body: candidate }),
-      await sent(buildRoute(build, 'candidates'), { method: 'POST', key: admin.key, type: octets, body: candidate }),
+      await sent(`${buildRoute(build, 'candidates')}?format=onnx`, {
+        method: 'POST',
+        key: reader.key,
+        type: octets,
+        body: candidate,
+      }),
+      await sent(`${buildRoute(build, 'candidates')}?format=onnx`, {
+        method: 'POST',
+        key: admin.key,
+        type: octets,
+        body: candidate,
+      }),
     ];
 
     expect([read.status, read.text.split('\n', 1)]).toEqual([

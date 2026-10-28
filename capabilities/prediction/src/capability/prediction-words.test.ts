@@ -35,6 +35,12 @@ describe('the words of what a run of a prediction function answers', () => {
     );
   });
 
+  it('say that the default forecast answered when no version of the model is active', () => {
+    expect(describeOutput(prediction, { version: null, default_forecast: true, coverage: 0.8 })).toBe(
+      'From 2026-W41, it predicts 120.5 orders in 2026-W42 (96 to 1,250 orders) and 131 orders in 2026-W45 (100 to 160 orders), each range holding the truth eight times in ten, from the default forecast, since no version of its model is active.',
+    );
+  });
+
   it('say a total by the end of the period it sums to, in its unit, from the period the record names', () => {
     const total = { name: 'total', points: [{ at: '2026-11-01', value: 78, low: 70, high: 85 }] };
     const answer = { ...prediction, unit: 'visits', origin: '2026-10-25', lines: [observed, total] };
@@ -47,7 +53,9 @@ describe('the words of what a run of a prediction function answers', () => {
       'From 2026-10-25, it predicts 78 visits by the end of 2026-11-01 (70 to 85 visits), its range holding the truth eight times in ten.',
     ]);
   });
+});
 
+describe('the words of what a build of a prediction function answers', () => {
   it('say what a build kept, and that it kept nothing when no candidate won or none was uploaded', () => {
     const sha256 = 'ab'.repeat(32);
 
@@ -55,10 +63,10 @@ describe('the words of what a run of a prediction function answers', () => {
       'The build made version 2 of its model from one candidate, won by abababababab.',
     );
     expect(describeOutput({ version: null, winner: null, candidates: [{}, {}] })).toBe(
-      'The build kept no version: none of its 2 candidates beat the baselines on the held-back periods.',
+      'The build kept no version: none of its 2 candidates passed its scoring on the held-back periods.',
     );
     expect(describeOutput({ version: null, winner: null, candidates: [] })).toBe(
-      'The build kept no version, since no candidate was uploaded before its answer.',
+      'The build kept no version, since it had no candidate, uploaded or fitted, to score.',
     );
   });
 
