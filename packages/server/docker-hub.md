@@ -59,4 +59,6 @@ Every tag is published for `linux/amd64` and `linux/arm64`, built in GitHub Acti
 
 Source-available under the [Elastic License 2.0](https://github.com/BeOnAuto/runtime/blob/main/LICENSE).
 
+An installation starts 100 runs before it is registered. After them, it needs a free license key from Auto Studio, and each new run spends a credit of your org's account at Auto, which the runtime asks Auto's account service to admit as the run starts, so a licensed runtime refuses new runs while it cannot reach `https://billing.on.auto`. Reading, editing and cancelling always go on. [LICENSING.md](https://github.com/BeOnAuto/runtime/blob/main/LICENSING.md) explains the terms, what the runtime tells Auto and how an installation runs offline.
+
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.on.auto/a.png?x-pxid=0d7debcd-ffc1-4bad-8a19-78a38c6bcd57&page=dockerhub-description" alt="" width="1" height="1" />
