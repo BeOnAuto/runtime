@@ -86,7 +86,7 @@ A token that fails any rule is refused `401` with `invalid_token`, and so is an 
 | A session without `o` that holds an `org_id`                                            | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim`                                                                           |
 | A session whose `o` is no object, or holds no `id` that is an org id other than `local` | `The token was refused: its o.id claim is not an org id other than local`                                                                         |
 | A token that names no org, whose `sub` is not an org id other than `local`              | `The token was refused: its sub claim is not an org id other than local`                                                                          |
-| A token without `name`                                                                  | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its name claim`                                                                        |
+| A session without `name`                                                                | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its name claim`                                                                        |
 | A token whose `name` is empty, longer than 256 bytes or holds a control character       | `The token was refused: its name is not a non-empty string of at most 256 bytes without control characters, unpaired surrogates or noncharacters` |
 | An access token for another resource                                                    | Ends `on its aud claim`                                                                                                                           |
 | A session given to a page at an origin the runtime does not allow, or naming no origin  | Ends `on its azp claim`                                                                                                                           |
@@ -170,7 +170,7 @@ API keys cover what sign-in does not: a machine, a pipeline or a trainer's agent
 
 ## The name recorded for a signed-in person
 
-A signed-in person acts under the id `person:<subject>`, where the subject is the token's `sub`, unchanged, and the name the token's `name` claim gives. The id lets a reader of the facts tell a person from a key.
+A signed-in person acts under the id `person:<subject>`, where the subject is the token's `sub`, unchanged, and the name the token's `name` claim gives, or the subject where an access token holds no `name`, as an identity service may issue one. The id lets a reader of the facts tell a person from a key.
 
 - The id is the `by` of every fact the person records, including the activation of a prediction function version they ask for.
 - The id and the name, as `{ id, name }`, are the `created_by` of a playbook and a definition they create, the `added_by` and the `connected_by` of a connection they add and connect, the `started_by` of a run they start, the `answered_by` of a request they answer, and the `trained_by`, `approved_by` and `refused_by` of a version of a prediction function they train, approve or refuse.
