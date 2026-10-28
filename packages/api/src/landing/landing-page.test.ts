@@ -46,6 +46,24 @@ describe('the root of the server, opened in a browser', () => {
   });
 });
 
+describe('what the page at the root of the server says of its license', () => {
+  it('says the line of its license it is given, as it stands at each opening', async () => {
+    const said = { line: '12 of 100 free runs used, then a free key from Studio' };
+    const { handler } = createTestHandler({ licenseNotice: () => Promise.resolve(said.line) });
+
+    const before = await (await open(handler)).text();
+    said.line = 'Licensed to acme (team plan)';
+    const after = await (await open(handler)).text();
+
+    expect(before).toContain('<p class="license">12 of 100 free runs used, then a free key from Studio</p>');
+    expect(after).toContain('<p class="license">Licensed to acme (team plan)</p>');
+  });
+
+  it('says nothing of a license where it is given no line', async () => {
+    expect(await (await open(createTestHandler().handler)).text()).not.toContain('class="license"');
+  });
+});
+
 describe('the studio the page at the root of the server opens', () => {
   it('opens the studio on this server, from this page', async () => {
     const page = await (await open(createTestHandler().handler)).text();
