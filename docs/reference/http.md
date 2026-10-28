@@ -44,7 +44,7 @@ The server builds the document when it starts, from its operations: the same ope
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`. Its summary is its title. Its tag names the resource it acts on.
 - Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five prediction routes, the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `activate_allocation` and `report_allocation`.
-- Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body. The two uploads take a CSV dataset or a candidate's bytes as the body, and the document gives their maximum size.
+- Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body. The two uploads take a CSV dataset or a candidate's bytes as the body, and the document gives their maximum size; an upload takes the rest of its input, such as the `format` of a candidate, in the query string.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
 - The server URL is the relative `/v1`, so the document stays valid behind any host.
@@ -300,13 +300,13 @@ Prediction functions use the operations of reasoning functions, with `prediction
 
 Five routes are served only over HTTP; no MCP endpoint offers them as tools. They are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation          | Method and route                               | Permission       | Body                                                                            | Returns                                                  |
-| ------------------ | ---------------------------------------------- | ---------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `upload_dataset`   | `PUT /datasets/{sha256}`                       | `playbook:write` | `text/csv` with `Content-Length`, at most 64 MiB                                | `{ dataset, bytes, rows, series, columns, period, ... }` |
-| `read_build_brief` | `GET /runs/{run_id}/build/brief`               | `playbook:read`  | None                                                                            | The brief, `text/markdown`                               |
-| `read_build_rows`  | `GET /runs/{run_id}/build/rows`                | `playbook:read`  | None                                                                            | The training rows, `text/csv`, streamed                  |
-| `upload_candidate` | `POST /runs/{run_id}/build/candidates`         | `playbook:write` | An ONNX model, `application/octet-stream` with `Content-Length`, at most 64 MiB | `{ candidate, bytes, opset }`                            |
-| `activate_version` | `POST /definitions/prediction/{name}/activate` | `playbook:write` | `{ version }`                                                                   | `{ function, version, rule, activated_at }`              |
+| Operation          | Method and route                               | Permission       | Body                                                                                                                       | Returns                                                  |
+| ------------------ | ---------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `upload_dataset`   | `PUT /datasets/{sha256}`                       | `playbook:write` | `text/csv` with `Content-Length`, at most 64 MiB                                                                           | `{ dataset, bytes, rows, series, columns, period, ... }` |
+| `read_build_brief` | `GET /runs/{run_id}/build/brief`               | `playbook:read`  | None                                                                                                                       | The brief, `text/markdown`                               |
+| `read_build_rows`  | `GET /runs/{run_id}/build/rows`                | `playbook:read`  | None                                                                                                                       | The training rows, `text/csv`, streamed                  |
+| `upload_candidate` | `POST /runs/{run_id}/build/candidates`         | `playbook:write` | A model in a format the brief lists, named by `?format=`, `application/octet-stream` with `Content-Length`, at most 64 MiB | `{ candidate, bytes, format, signature }`                |
+| `activate_version` | `POST /definitions/prediction/{name}/activate` | `playbook:write` | `{ version }`                                                                                                              | `{ function, version, rule, activated_at }`              |
 
 - A body sent without its `Content-Length` gets `411`. A body whose `Content-Length` is larger than the route accepts gets `413`, before the body is read.
 - The build itself is answered through `answer_interaction`, with `{ candidates }`: the SHA-256 of each candidate, as `upload_candidate` returned it.
@@ -321,8 +321,9 @@ The three build routes work only on a build that is waiting for its answer:
 
 `upload_candidate` refuses a candidate as `invalid_input` when:
 
-- the runtime cannot load it;
-- its signature does not match what the function feeds it, or its opset is older than 13;
+- its `format` is not one a [model runtime](model-runtimes.md) of the server executes for the function, at `/format`, naming the formats it takes, or it names none where the brief lists several; this is refused before the body is read;
+- the model runtime of its format cannot load it;
+- that runtime finds its signature does not match what the function feeds it;
 - the build already has the 8 candidates it accepts.
 
 While every model process available to builds is busy, it returns `unavailable` with the kind `model_process_busy` and a `Retry-After`. The check shares those processes with the builds' scoring, and never takes one a question needs.
@@ -1324,7 +1325,7 @@ A `500` response contains an incident reference: its `instance` and the `x-reque
 `Retry-After` comes only with an `unavailable` response that a retry of the same request may resolve. It never comes:
 
 - with the kinds `tools_unfinished`, `tool_not_offered` or `model_not_offered`;
-- with `because` set to `builds_of_the_day`, `stalled`, `not_finite` or `not_in_order`, which no wait resolves;
+- with `because` set to `builds_of_the_day`, `stalled`, `not_finite`, `not_in_order` or `no_model_runtime`, which no wait resolves;
 - with `cancelled`.
 
 ### Models and tools a function may not use

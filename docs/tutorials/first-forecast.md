@@ -377,7 +377,7 @@ You do not need to read the script to follow along. In short, the script:
 3. Fits a scikit-learn linear regression of each of the next 4 weeks on the last 4. It pools the regions and fits no intercept, so one model suits regions of any size.
 4. Sets the low and the high 1.64 standard deviations of its training errors either side of the likely value. Errors on new weeks run larger than on the weeks a model was fitted to, and a candidate's interval must hold at least 70% of the held-back weeks.
 5. Writes the model as ONNX in [the signature of a candidate](../reference/prediction-format.md#the-signature-of-a-candidate). Its one input, `y`, is the last 4 weeks, `[1, 4]`. Its one output, `q`, is the 10th, 50th and 90th percentile of each of the next 4 weeks, `[1, 4, 3]`. It sets opset 13 and IR version 7, since the onnx package otherwise writes an IR version the runtime does not load.
-6. Uploads `candidate.onnx` to the build and prints the runtime's response.
+6. Uploads `candidate.onnx` to the build in the format `onnx`, the one the brief lists, and prints the runtime's response.
 
 The script calls `http://localhost:5556` and the playbook `forecasts` in the org `local`. The environment variables `AUTO_URL` and `AUTO_PLAYBOOK` change those, and `AUTO_KEY` sends a key with each call.
 
@@ -393,7 +393,16 @@ recipe that says how the model was trained.
 The agent takes the run id from step 5, or finds the request with `list_interactions` for the party `trainer`. If the playbook's id is not `forecasts`, it sets `AUTO_PLAYBOOK` when it runs the script. The script prints the brief, then the upload's response:
 
 ```json
-{ "candidate": "16c1fbe6753e90dc130cd5b2ce2ef0efa32ae00e4486320c66271986938b406d", "bytes": 471, "opset": 13 }
+{
+  "candidate": "16c1fbe6753e90dc130cd5b2ce2ef0efa32ae00e4486320c66271986938b406d",
+  "bytes": 471,
+  "format": "onnx",
+  "signature": {
+    "opset": 13,
+    "inputs": [{ "name": "y", "type": "float32", "shape": [1, 4] }],
+    "outputs": [{ "name": "q", "type": "float32", "shape": [1, 4, 3] }]
+  }
+}
 ```
 
 The agent answers the request with `answer_interaction`, under the build's run id:

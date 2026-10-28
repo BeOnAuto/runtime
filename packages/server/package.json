@@ -44,6 +44,8 @@
     "@on.auto/outbound": "workspace:*",
     "@on.auto/playbooks": "workspace:*",
     "@on.auto/prediction": "workspace:*",
+    "@on.auto/prediction-contract": "workspace:*",
+    "@on.auto/prediction-onnx": "workspace:*",
     "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",
     "@on.auto/recall": "workspace:*",

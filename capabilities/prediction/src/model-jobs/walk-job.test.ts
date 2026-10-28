@@ -1,7 +1,7 @@
+import type { LoadedModel, ModelFeeds } from '@on.auto/prediction-contract';
 import { describe, expect, it } from 'vitest';
 
 import type { SeriesRows } from '../files/series-rows.ts';
-import type { LoadedModel, ModelFeeds } from './model-sessions.ts';
 import { walked } from './walk-job.ts';
 
 interface Fed {
@@ -22,15 +22,15 @@ function fedOf(feeds: ModelFeeds): Fed {
 
 function lastValueModel(steps: (feeds: ModelFeeds) => number, heard: (fed: Fed) => void = () => {}): LoadedModel {
   return {
+    signature: {},
     length: undefined,
-    inputs: [],
-    outputs: [],
+    issueFor: () => null,
     run: (feeds) => {
       heard(fedOf(feeds));
       const last = Number(feeds['y']?.data.at(-1));
       const answered = steps(feeds);
       return Promise.resolve({
-        data: Float32Array.from({ length: answered * 3 }, (_, index) => last + (index % 3) - 1),
+        q: Float32Array.from({ length: answered * 3 }, (_, index) => last + (index % 3) - 1),
         dims: [1, answered, 3],
       });
     },
@@ -60,6 +60,7 @@ function rowsOf(features: number): readonly SeriesRows[] {
 const rows = rowsOf(0);
 
 const walk = {
+  runtime: 'file:///runtime.ts',
   model: 'm',
   threads: 1,
   rows: 'r',
@@ -120,6 +121,12 @@ describe('a walk of a model that takes given features or predicts a total', () =
       { names: ['y', 'x', 'given', 'h'], y: [10, 11, 12], given: [1, Number.NaN, Number.NaN], h: 3n },
       { names: ['y', 'x', 'given', 'h'], y: [10, 11, 12, 13], given: [Number.NaN], h: 1n },
     ]);
+  });
+
+  it('answers badly when its runtime says the model answered badly', async () => {
+    const badly: LoadedModel = { ...lastValueModel(() => 2), run: () => Promise.resolve({ badly: 'No q' }) };
+
+    expect(await walked(badly, walk, rows)).toEqual({ badly: 'No q' });
   });
 
   it('answers badly when the model answers q of another shape', async () => {

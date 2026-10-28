@@ -222,6 +222,15 @@ describe('the input of a command', () => {
 });
 
 describe('the input of a command that streams its body', () => {
+  it('takes its fields beside the path in its query', () => {
+    expect(operationNamed('keep_blob').operation.parameters).toContainEqual({
+      name: 'label',
+      in: 'query',
+      required: false,
+      schema: { type: 'string' },
+    });
+  });
+
   it('is a body of its media type, of at most its bytes with their length, required', () => {
     expect(
       [operationNamed('keep_blob'), operationNamed('keep_rows')].map(({ operation }) => operation.requestBody),

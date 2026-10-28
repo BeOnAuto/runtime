@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-
+import { firstLineOf, type LoadedModel, type LoadModel } from '@on.auto/prediction-contract';
 import type { ProcessHandlers, ProcessValue } from '@on.auto/workflow-engine/process-loop';
 import { Schema } from 'effect';
 
@@ -13,8 +12,7 @@ import {
   WalkJobSchema,
   WindowJobSchema,
 } from './model-feeds.ts';
-import { AnsweredBadly, firstLineOf, loadWithOnnxRuntime, type LoadedModel, type LoadModel } from './model-sessions.ts';
-import { opsetOf } from './onnx-opset.ts';
+import { importedRuntime, type RuntimeLoaders } from './runtime-modules.ts';
 import { walked } from './walk-job.ts';
 import { seriesWindowIn } from './window-job.ts';
 
@@ -28,7 +26,15 @@ const decodeWindow = Schema.decodeUnknownSync(WindowJobSchema);
 
 const decodeBaselines = Schema.decodeUnknownSync(BaselinesJobSchema);
 
-type Sessions = (path: string, threads: number) => Promise<LoadedModel>;
+interface ModelOfARuntime {
+  readonly model: string;
+  readonly threads: number;
+}
+
+interface Sessions {
+  readonly loaderOf: RuntimeLoaders;
+  readonly sessionOf: (runtime: string, load: LoadModel, asked: ModelOfARuntime) => Promise<LoadedModel>;
+}
 
 class AnsweredNotFinite extends Error {
   override toString(): string {
@@ -36,65 +42,65 @@ class AnsweredNotFinite extends Error {
   }
 }
 
-function sessionsOf(load: LoadModel): Sessions {
+function sessionsOf(loaderOf: RuntimeLoaders): Sessions {
   const loaded = new Map<string, Promise<LoadedModel>>();
-  return (path, threads) => {
-    const known = loaded.get(path);
-    if (known !== undefined) {
-      return known;
-    }
-    const loading = load(path, threads);
-    loaded.set(path, loading);
-    loading.catch(() => loaded.delete(path));
-    return loading;
+  return {
+    loaderOf,
+    sessionOf: (runtime, load, { model, threads }) => {
+      const key = JSON.stringify([runtime, model]);
+      const known = loaded.get(key);
+      if (known !== undefined) {
+        return known;
+      }
+      const loading = load(model, threads);
+      loaded.set(key, loading);
+      loading.catch(() => loaded.delete(key));
+      return loading;
+    },
   };
 }
 
-async function badlyOr(answering: () => Promise<ProcessValue>): Promise<ProcessValue> {
-  try {
-    return await answering();
-  } catch (error) {
-    if (error instanceof AnsweredBadly) {
-      return { badly: error.message };
-    }
-    throw error;
-  }
+async function loadedFor(
+  sessions: Sessions,
+  asked: ModelOfARuntime & { readonly runtime: string },
+): Promise<LoadedModel> {
+  return sessions.sessionOf(asked.runtime, await sessions.loaderOf(asked.runtime), asked);
 }
 
 async function checked(sessions: Sessions, payload: ProcessValue): Promise<ProcessValue> {
-  const { model, threads } = decodeCheck(payload);
+  const job = decodeCheck(payload);
+  const load = await sessions.loaderOf(job.runtime);
   try {
-    const { inputs, outputs } = await sessions(model, threads);
-    return { loaded: true, inputs, outputs, opset: opsetOf(readFileSync(model)) };
+    const { signature, issueFor } = await sessions.sessionOf(job.runtime, load, job);
+    return { loaded: true, signature, issue: issueFor(job.fed) };
   } catch (error) {
     return { loaded: false, detail: firstLineOf(error) };
   }
 }
 
-export function modelJobs(load: LoadModel = loadWithOnnxRuntime): ProcessHandlers {
-  const sessions = sessionsOf(load);
+async function answered(sessions: Sessions, payload: ProcessValue): Promise<ProcessValue> {
+  const job = decodeRun(payload);
+  const model = await loadedFor(sessions, job);
+  const answer = await model.run(feedsOf(job, model.length));
+  if ('badly' in answer) {
+    return { badly: answer.badly };
+  }
+  if (!answer.q.every((value) => Number.isFinite(value))) {
+    throw new AnsweredNotFinite('The model answered a number that is not finite');
+  }
+  return { q: answer.q, dims: answer.dims };
+}
+
+export function modelJobs(loaders: RuntimeLoaders = importedRuntime): ProcessHandlers {
+  const sessions = sessionsOf(loaders);
   return {
     check: (payload) => checked(sessions, payload),
-    run: (payload) =>
-      badlyOr(async () => {
-        const job = decodeRun(payload);
-        const model = await sessions(job.model, job.threads);
-        const answer = await model.run(feedsOf(job, model.length));
-        if (!answer.data.every((value) => Number.isFinite(value))) {
-          throw new AnsweredNotFinite('The model answered a number that is not finite');
-        }
-        return { q: answer.data, dims: answer.dims };
-      }),
+    run: (payload) => answered(sessions, payload),
     window: (payload) => seriesWindowIn(decodeWindow(payload)),
     baselines: async (payload) => ({ ...(await perfectBaselineIn(decodeBaselines(payload))) }),
-    walk: (payload) =>
-      badlyOr(async () => {
-        const job = decodeWalk(payload);
-        return walked(
-          await sessions(job.model, job.threads),
-          job,
-          await seriesRowsIn(job.rows, { features: job.features }),
-        );
-      }),
+    walk: async (payload) => {
+      const job = decodeWalk(payload);
+      return walked(await loadedFor(sessions, job), job, await seriesRowsIn(job.rows, { features: job.features }));
+    },
   };
 }

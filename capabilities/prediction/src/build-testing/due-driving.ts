@@ -1,43 +1,5 @@
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-
 import type { DueWork } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
-
-export type CandidateName =
-  | 'visits-last'
-  | 'visits-wide'
-  | 'visits-narrow'
-  | 'visits-even'
-  | 'visits-mean'
-  | 'visits-observed-mean'
-  | 'visits-week'
-  | 'visits-many-features'
-  | 'visits-steady'
-  | 'visits-not-a-number'
-  | 'visits-extra-input'
-  | 'visits-opset-12'
-  | 'visits-whole-numbers'
-  | 'visits-allocating'
-  | 'visits-hostile'
-  | 'visits-sibling'
-  | 'visits-cousin'
-  | 'visits-sequence'
-  | 'orders-last'
-  | 'totals-run-rate'
-  | 'not-a-model';
-
-export function candidateUrl(name: CandidateName): URL {
-  return new URL(`../../candidates/${name}.onnx`, import.meta.url);
-}
-
-export function candidateBytes(name: CandidateName): Readonly<Uint8Array> {
-  return readFileSync(candidateUrl(name));
-}
-
-export function candidateSha256(name: CandidateName): string {
-  return createHash('sha256').update(candidateBytes(name)).digest('hex');
-}
 
 export function performedOnce(works: readonly DueWork[], now: number): Promise<number> {
   return Effect.runPromise(

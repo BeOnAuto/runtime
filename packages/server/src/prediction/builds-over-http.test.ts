@@ -25,6 +25,25 @@ const testTimeoutMs = 90_000;
 
 const mebibyte = 1_048_576;
 
+const signature = {
+  opset: 13,
+  inputs: [{ name: 'y', type: 'float32', shape: [1, 'L'] }],
+  outputs: [{ name: 'q', type: 'float32', shape: [1, 2, 3] }],
+};
+
+const refusedAtFormat = {
+  status: 422,
+  body: {
+    reason: 'invalid_input',
+    errors: [
+      {
+        pointer: '/format',
+        detail: 'The format graph is not one this server executes for this function, which takes onnx',
+      },
+    ],
+  },
+};
+
 async function serving(environment: Readonly<Record<string, string>> = {}): Promise<ReasoningServer> {
   const server = await servingReasoning([], { WORKFLOW_SWEEP_INTERVAL: 'PT0.05S', ...environment });
   closing.push(server.stop);
@@ -42,22 +61,26 @@ describe('a build of a prediction function over HTTP', { timeout: testTimeoutMs 
     const listed = await server.call('GET', `${alpha}/interactions?to=trainer`);
     const candidate = candidateFile('visits-mean');
     const uploaded = await sentCandidate(server, build, candidate);
-    const again = await sentCandidate(server, build, candidate);
+    const again = await sentCandidate(server, build, candidate, 'onnx');
+    const elsewise = await sentCandidate(server, build, candidate, 'graph');
     const answered = await server.call('POST', `${alpha}/runs/${build}/answer`, {
       body: { answer: { candidates: [digestOf(candidate)] } },
     });
     const ended = await endedRun(server, build);
 
     expect([brief.status, brief.type, rows.status, rows.type]).toEqual([200, 'text/markdown', 200, 'text/csv']);
-    expect(brief.text).toBe('Fit a model of the daily visits of each of 2 stores.');
+    expect(brief.text).toBe(
+      'Fit a model of the daily visits of each of 2 stores.\n\n## Candidates\n\nEach upload of a candidate takes a file in the format onnx.\n',
+    );
     expect(rows.text.split('\r\n').slice(0, 2)).toEqual(['series,period,visits', 'north,2026-09-16,11']);
     expect(listed.body).toMatchObject({
       interactions: [{ run_id: build, type: 'prediction', function: 'daily-visits' }],
     });
     expect([uploaded, again]).toEqual([
-      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, opset: 13 } },
-      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, opset: 13 } },
+      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'onnx', signature } },
+      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'onnx', signature } },
     ]);
+    expect(elsewise).toMatchObject(refusedAtFormat);
     expect(answered.status).toBe(200);
     expect(ended).toMatchObject({
       status: 'succeeded',
@@ -88,7 +111,10 @@ describe('the version a build over HTTP builds', { timeout: testTimeoutMs }, () 
     expect(standing).toMatchObject({ standing: { dataset: { kind: 'uploaded' } } });
     expect(asked).toMatchObject({
       status: 200,
-      body: { status: 'succeeded', record: { version: 1, coverage: 0.8, origin: '2026-10-09' } },
+      body: {
+        status: 'succeeded',
+        record: { version: 1, runtime: { name: 'onnxruntime-node' }, coverage: 0.8, origin: '2026-10-09' },
+      },
     });
     expect(asked.body).toHaveProperty('output', {
       unit: 'visits',

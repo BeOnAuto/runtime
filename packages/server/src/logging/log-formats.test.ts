@@ -100,6 +100,9 @@ describe('the server with LOG_FORMAT=pretty', () => {
       expect.stringMatching(
         /^INFO {2}Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the server made at this start, and 0 sealed under the previous key were sealed again under it secrets_kid=[\da-f]{16} secrets_resealed=0 secrets_key_from=start$/u,
       ),
+      expect.stringMatching(
+        /^INFO {2}Extensions loaded, in their order of precedence: @on\.auto\/prediction-onnx [\d.]+, of the release, filling prediction\/model-runtime extensions=/u,
+      ),
       expect.stringMatching(/^WARN {2}No model provider is configured, .* providers=\[\{"provider":"anthropic",/u),
       "INFO  Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window most_input_tokens=2000000",
       `INFO  Prediction functions run in this server: a playbook keeps at most 32 active, each builds at most 4 times a day, and model processes may run at most 4 at once, at most 2 of them for the builds being scored, with 1,280 MiB of data each, which nothing bounds, since prlimit is not on the path, reading the files of their models from ${cacheDirectory} most_functions=32 model_processes=4 model_process_memory_mib=1280 model_process_builds=2 builds_per_day=4 model_cache_directory=${cacheDirectory} model_process_limiter=null`,

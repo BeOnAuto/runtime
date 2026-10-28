@@ -1,5 +1,6 @@
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -50,6 +51,9 @@ function installation(version = '0.6.0'): Installation {
   written(join(installed, 'effect', 'package.json'), '{"name":"effect","version":"hoisted"}');
   written(join(installed, 'pg', 'package.json'), '{"name":"pg"}');
   written(join(installed, '@aws-sdk', 'client-s3', 'package.json'), '{"name":"@aws-sdk/client-s3"}');
+  written(join(installed, '@on.auto', 'ledger', 'package.json'), '{"name":"@on.auto/ledger","version":"beside"}');
+  written(join(installed, '@on.auto', 'models', 'package.json'), '{"name":"@on.auto/models"}');
+  written(join(installed, '@acme', 'models', 'package.json'), '{"name":"@acme/models"}');
   written(join(installed, '.bin', 'auto-runtime'), '');
   written(join(installed, '.package-lock.json'), '{}');
   return { root, installed, packageRoot, cache: join(root, 'cache') };
@@ -158,7 +162,18 @@ describe('installing a release out of node_modules', () => {
     );
   });
 
-  it('links the workspace packages to their copies, and not the package itself', () => {
+  it('links a package installed beside the runtime that is none of its own, such as an extension, so the runtime imports it by name', () => {
+    const { installed, packageRoot, cache } = installation();
+
+    const release = installedRelease(packageRoot, cache);
+
+    expect([
+      readlinkSync(join(release, 'node_modules', '@on.auto', 'models')),
+      readlinkSync(join(release, 'node_modules', '@acme', 'models')),
+    ]).toEqual([join(installed, '@on.auto', 'models'), join(installed, '@acme', 'models')]);
+  });
+
+  it('links the workspace packages to their copies, never a package of the same name beside it, and not the package itself', () => {
     const { packageRoot, cache } = installation();
 
     const release = installedRelease(packageRoot, cache);
@@ -187,6 +202,29 @@ describe('installing a release again', () => {
 
     expect(existsSync(join(release, 'kept'))).toBe(false);
     expect(existsSync(join(release, '.installed'))).toBe(true);
+  });
+
+  it('links a package installed beside the runtime after its first launch, so the next launch imports it by name', () => {
+    const { installed, packageRoot, cache } = installation();
+    const release = installedRelease(packageRoot, cache);
+    written(join(installed, '@acme', 'later-models', 'package.json'), '{"name":"@acme/later-models"}');
+
+    expect(installedRelease(packageRoot, cache)).toBe(release);
+    expect(readlinkSync(join(release, 'node_modules', '@acme', 'later-models'))).toBe(
+      join(installed, '@acme', 'later-models'),
+    );
+  });
+
+  it('leaves a link that points where Node would find the package, and points one that no longer does there again', () => {
+    const { installed, packageRoot, cache } = installation();
+    const release = installedRelease(packageRoot, cache);
+    const kept = lstatSync(join(release, 'node_modules', 'pg')).ino;
+    rmSync(join(packageRoot, 'node_modules', 'effect'), { recursive: true });
+
+    installedRelease(packageRoot, cache);
+
+    expect(lstatSync(join(release, 'node_modules', 'pg')).ino).toBe(kept);
+    expect(readlinkSync(join(release, 'node_modules', 'effect'))).toBe(join(installed, 'effect'));
   });
 
   it('installs each version of the package apart', () => {

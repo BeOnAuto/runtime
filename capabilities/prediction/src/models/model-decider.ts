@@ -22,7 +22,10 @@ interface Acted {
 
 type Built = Omit<ModelFactOf<'version_built'>['data'], 'version'>;
 
-type Activation = Omit<ModelFactOf<'version_activated'>['data'], 'data_sha256' | 'file_sha256' | 'definition_version'>;
+type Activation = Omit<
+  ModelFactOf<'version_activated'>['data'],
+  'data_sha256' | 'file_sha256' | 'file_format' | 'definition_version'
+>;
 
 export type ModelCommand = Acted &
   (
@@ -69,6 +72,7 @@ function activated(state: ModelsState, { name, data }: Extract<ModelCommand, { r
         definition_version: found.definitionVersion,
         data_sha256: found.dataSha256,
         file_sha256: found.fileSha256,
+        file_format: found.fileFormat,
       },
     });
   }
@@ -87,6 +91,7 @@ function activated(state: ModelsState, { name, data }: Extract<ModelCommand, { r
         rule: 'requested',
         data_sha256: found.dataSha256,
         file_sha256: found.fileSha256,
+        file_format: found.fileFormat,
         ...unsettled,
       },
     },

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbook.ts';
 import { activeVisitsOn, asked } from '../build-testing/built-versions.ts';
 import { scriptedModels, type ScriptedModels } from '../build-testing/scripted-models.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { uploadedDailyVisits } from '../testing/daily-documents.ts';
 import { dailyRows, steadyVisits } from '../testing/daily-rows.ts';
 import type { PortOptions } from '../testing/prediction-ports.ts';
@@ -129,7 +130,7 @@ describe('a question whose model processes are all taken', () => {
     scripted.next('sleeps');
     const { models } = playbook.test.ports;
     for (const held of ['first', 'second', 'third']) {
-      void Effect.runPromise(models.walk({ sha256: held, path: `/${held}.onnx` }, heldWalk));
+      void Effect.runPromise(models.walk(scriptedRuntime, { sha256: held, path: `/${held}.scripted` }, heldWalk));
     }
     await scripted.untilSleeping(['walk', 'walk', 'walk']);
 

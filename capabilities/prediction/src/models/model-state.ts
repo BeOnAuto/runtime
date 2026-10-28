@@ -6,6 +6,7 @@ export interface BuiltVersion {
   readonly dataSha256: string;
   readonly definitionVersion: number;
   readonly fileSha256: string;
+  readonly fileFormat: string;
   readonly builtAt: number;
   readonly card: ModelFactOf<'version_built'>['data'];
 }
@@ -52,6 +53,7 @@ function builtOf({ data, context }: Extract<RecordedModelFact, { readonly type: 
     dataSha256: data.dataset.data_sha256,
     definitionVersion: context.definitionVersion,
     fileSha256: data.file.sha256,
+    fileFormat: data.file.format,
     builtAt: Date.parse(context.at),
     card: data,
   };

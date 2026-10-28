@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SettingsOf } from '../dataset-testing/dataset-stores.ts';
 import { periodForm, periodOfDay } from '../periods/grains.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { asked, buildAsked, builtFrom, modelFactsOf } from './built-versions.ts';
 import { performedUntilQuiet } from './due-driving.ts';
 import { orders, tenthVisits, totals, visits } from './projected-fixtures.ts';
@@ -67,7 +68,7 @@ function busy(settingsOf: SettingsOf): void {
     const { models } = projected.playbook.test.ports;
     const walk = { rows: '/held.csv', window: 3, holdout: 1, steps: 1, features: 0, given: [], remaining: null };
     for (const held of ['first', 'second']) {
-      void Effect.runPromise(models.walk({ sha256: held, path: `/${held}.onnx` }, walk));
+      void Effect.runPromise(models.walk(scriptedRuntime, { sha256: held, path: `/${held}.scripted` }, walk));
     }
     await projected.scripted.untilSleeping(['walk', 'walk']);
 

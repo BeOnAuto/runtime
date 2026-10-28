@@ -61,8 +61,13 @@ function bodyFieldsOf({ operation }: DocumentedOperation): Fields {
   return { properties, required };
 }
 
+function takesItsBodyAsJson({ operation }: DocumentedOperation): boolean {
+  const { content } = Schema.decodeUnknownSync(BodySchema)(operation.requestBody ?? { content: {} });
+  return Object.hasOwn(content, 'application/json');
+}
+
 function documentedFieldsOf(described: DocumentedOperation): Fields {
-  return ['get', 'delete'].includes(described.method) ? queriedFieldsOf(described) : bodyFieldsOf(described);
+  return takesItsBodyAsJson(described) ? bodyFieldsOf(described) : queriedFieldsOf(described);
 }
 
 function documentedOf({ scope, name }: RouteRegistration): readonly DocumentedOperation[] {

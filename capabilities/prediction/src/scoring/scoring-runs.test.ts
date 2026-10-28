@@ -5,22 +5,11 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbook.ts';
-import {
-  answered,
-  askedBuild,
-  builtFrom,
-  runOf,
-  savedFunction,
-  uploaded,
-  workOf,
-} from '../build-testing/built-versions.ts';
-import {
-  candidateSha256,
-  performedOnce,
-  performedUntilQuiet,
-  type CandidateName,
-} from '../build-testing/due-driving.ts';
+import { answered, askedBuild, builtFrom, runOf, savedFunction, workOf } from '../build-testing/built-versions.ts';
+import { performedOnce, performedUntilQuiet } from '../build-testing/due-driving.ts';
 import { scriptedModels, type Script } from '../build-testing/scripted-models.ts';
+import { candidateSha256, type CandidateName, uploaded } from '../runtime-testing/scripted-candidates.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 
 const testTimeoutMs = 90_000;
 
@@ -35,6 +24,8 @@ async function answeredWith(playbook: BuildPlaybook, names: readonly CandidateNa
   await answered(playbook, build, { candidates: names.map((name) => candidateSha256(name)) });
   return build;
 }
+
+const heldFed = { features: 0, given: 0, horizon: 2, totals: false };
 
 describe('the scoring of the candidates of a build', { timeout: testTimeoutMs }, () => {
   it('walks each candidate in a model process, scores the baselines, and builds the version of the best that beats them', async () => {
@@ -63,9 +54,15 @@ describe('the scoring of the candidates of a build', { timeout: testTimeoutMs },
       'candidate_scored',
       'baseline_scored',
     ]);
-    expect(work[4]?.data).toMatchObject({ coverage: 1, against: [{ baseline: 'persistence', p_better: 1 }] });
+    expect(work[4]?.data).toMatchObject({
+      runtime: { name: 'scripted-runtime', version: '1.0.0' },
+      coverage: 1,
+      against: [{ baseline: 'persistence', p_better: 1 }],
+    });
   });
+});
 
+describe('the scoring of candidates none of which wins', { timeout: testTimeoutMs }, () => {
   it('builds no version when no candidate beats the baselines, naming why each lost', async () => {
     const playbook = buildPlaybook();
     await savedFunction(playbook);
@@ -157,6 +154,28 @@ describe('a candidate whose file is no longer in the cache of the model processe
   });
 });
 
+describe(
+  'a candidate whose format no model runtime of the server executes any more',
+  { timeout: testTimeoutMs },
+  () => {
+    it('is disqualified as not loaded, naming its format', async () => {
+      const runtimes = [scriptedRuntime];
+      const playbook = buildPlaybook({ runtimes });
+      const build = await answeredWith(playbook, ['visits-mean']);
+      runtimes.splice(0);
+      await performedOnce(playbook.due, Date.now());
+
+      expect((await workOf(playbook, build)).at(-1)).toMatchObject({
+        type: 'candidate_disqualified',
+        data: {
+          because: 'not_loaded',
+          detail: 'No model runtime this server has installed executes the format scripted of the candidate',
+        },
+      });
+    });
+  },
+);
+
 describe('a candidate scored while every model process is taken', { timeout: testTimeoutMs }, () => {
   it('waits a minute and is scored once a process is free', async () => {
     const scripted = scriptedModels();
@@ -168,7 +187,7 @@ describe('a candidate scored while every model process is taken', { timeout: tes
     const { models } = playbook.test.ports;
     scripted.next('held');
     const held = ['first', 'second'].map((sha256) =>
-      Effect.runPromiseExit(models.check({ sha256, path: `/${sha256}.onnx` })),
+      Effect.runPromiseExit(models.check(scriptedRuntime, { sha256, path: `/${sha256}.scripted` }, heldFed)),
     );
     await scripted.untilSleeping(['check', 'check']);
     await performedOnce(playbook.due, Date.now());

@@ -3,16 +3,9 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook } from '../build-testing/build-playbook.ts';
-import {
-  answered,
-  askedBuild,
-  buildAsked,
-  runOf,
-  savedFunction,
-  uploaded,
-  visitsRows,
-} from '../build-testing/built-versions.ts';
-import { candidateSha256, performedUntilQuiet } from '../build-testing/due-driving.ts';
+import { answered, askedBuild, buildAsked, runOf, savedFunction, visitsRows } from '../build-testing/built-versions.ts';
+import { performedUntilQuiet } from '../build-testing/due-driving.ts';
+import { candidateSha256, uploaded } from '../runtime-testing/scripted-candidates.ts';
 import { dailyVisitsWith, uploadedDailyVisits } from '../testing/daily-documents.ts';
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
@@ -53,7 +46,7 @@ const routes = (build: string) => {
 };
 
 describe('a build of a prediction function', () => {
-  it('assembles its dataset, keeps its brief and waits for its trainer with a request that names its routes', async () => {
+  it('assembles its dataset, keeps its brief and waits for its trainer with a request that names its routes and the formats its candidates take', async () => {
     const playbook = buildPlaybook();
     await savedFunction(playbook);
     const build = await askedBuild(playbook);
@@ -70,10 +63,11 @@ describe('a build of a prediction function', () => {
           requested_at: anInstant,
           build: {
             brief_sha256: aDigest,
-            brief_bytes: 52,
+            brief_bytes: 133,
             training_sha256: aDigest,
             training_bytes: someBytes,
             routes: routes(build),
+            formats: ['scripted'],
           },
         },
       },
@@ -82,6 +76,9 @@ describe('a build of a prediction function', () => {
       `Build ${build} of the prediction function daily-visits waits for its trainer`,
     );
     expect(JSON.stringify(run)).toContain('Fit a model of the daily visits of each of 2 stores.');
+    expect(JSON.stringify(run)).toContain(
+      `Upload each candidate model with POST ${routes(build).candidates}, which takes a file in the format scripted, then answer`,
+    );
   });
 
   it('is refused while another build of the function is in flight, naming it', async () => {

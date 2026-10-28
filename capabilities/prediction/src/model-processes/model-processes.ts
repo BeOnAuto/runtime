@@ -1,5 +1,6 @@
 import { availableParallelism } from 'node:os';
 
+import { CandidateSignatureSchema, type FedShape, type ModelRuntime } from '@on.auto/prediction-contract';
 import {
   pooledJob,
   type ModuleAddress,
@@ -10,7 +11,6 @@ import {
 import { Effect, Option, Schema } from 'effect';
 
 import { BaselineSchema } from '../document/evaluation-names.ts';
-import { TensorSchema } from '../facts/build-facts.ts';
 import type { BaselinesJob, Fed, WalkJob, WindowJob } from '../model-jobs/model-feeds.ts';
 
 export interface ModelDeadlines {
@@ -33,9 +33,8 @@ const Doubles = Schema.declare((value: unknown): value is Readonly<Float64Array>
 const SignatureSchema = Schema.Union([
   Schema.Struct({
     loaded: Schema.Literal(true),
-    inputs: Schema.Array(TensorSchema),
-    outputs: Schema.Array(TensorSchema),
-    opset: Schema.Int,
+    signature: CandidateSignatureSchema,
+    issue: Schema.NullOr(Schema.String),
   }),
   Schema.Struct({ loaded: Schema.Literal(false), detail: Schema.String }),
 ]);
@@ -71,21 +70,21 @@ export type ModelOutcome<Answer> = { readonly milliseconds: number } & (
   | { readonly ended: Interrupted }
 );
 
-interface ModelFile {
+export interface ModelFile {
   readonly sha256: string;
   readonly path: string;
 }
 
-type Walk = Omit<WalkJob, 'model' | 'threads'>;
+type Walk = Omit<WalkJob, 'runtime' | 'model' | 'threads'>;
 
 type Window = Omit<WindowJob, 'rows'>;
 
 type Baselines = Omit<BaselinesJob, 'rows'>;
 
 export interface ModelProcesses {
-  readonly check: (model: ModelFile) => Effect.Effect<ModelOutcome<Signature>>;
-  readonly run: (model: ModelFile, question: Fed) => Effect.Effect<ModelOutcome<QuestionAnswer>>;
-  readonly walk: (model: ModelFile, walk: Walk) => Effect.Effect<ModelOutcome<WalkAnswer>>;
+  readonly check: (runtime: ModelRuntime, model: ModelFile, fed: FedShape) => Effect.Effect<ModelOutcome<Signature>>;
+  readonly run: (runtime: ModelRuntime, model: ModelFile, question: Fed) => Effect.Effect<ModelOutcome<QuestionAnswer>>;
+  readonly walk: (runtime: ModelRuntime, model: ModelFile, walk: Walk) => Effect.Effect<ModelOutcome<WalkAnswer>>;
   readonly window: (rows: ModelFile, window: Window) => Effect.Effect<ModelOutcome<WindowAnswer>>;
   readonly baselines: (rows: ModelFile, baselines: Baselines) => Effect.Effect<ModelOutcome<BaselinesAnswer>>;
 }
@@ -122,8 +121,23 @@ function outcomeOf<Answer>(
 
 type JobKind = keyof ModelDeadlines | 'window';
 
+interface Asked {
+  readonly key: string;
+  readonly kind: JobKind;
+  readonly payload: { readonly [name: string]: ProcessValue };
+}
+
 export function threadsOf(processes: number, cores = availableParallelism()): number {
   return Math.max(1, Math.floor(cores / processes));
+}
+
+function modelJob(kind: JobKind, runtime: ModelRuntime, model: ModelFile, payload: Asked['payload']): Asked {
+  const address = runtime.binding.module().href;
+  return {
+    key: JSON.stringify([address, model.sha256]),
+    kind,
+    payload: { ...payload, runtime: address, model: model.path },
+  };
 }
 
 export function modelProcesses({
@@ -133,9 +147,7 @@ export function modelProcesses({
 }: ModelProcessSettings): ModelProcesses {
   const threads = threadsOf(pool.processes);
   const asked = <Answer>(
-    key: string,
-    kind: JobKind,
-    payload: { readonly [name: string]: ProcessValue },
+    { key, kind, payload }: Asked,
     decode: (answer: unknown) => Option.Option<Answer>,
   ): Effect.Effect<ModelOutcome<Answer>> =>
     Effect.map(
@@ -155,18 +167,20 @@ export function modelProcesses({
       (outcome) => outcomeOf(outcome, decode),
     );
   return {
-    check: (model) => asked(model.sha256, 'check', { model: model.path }, Schema.decodeUnknownOption(SignatureSchema)),
-    run: (model, question) =>
-      asked(model.sha256, 'run', { ...question, model: model.path }, Schema.decodeUnknownOption(QuestionAnswerSchema)),
-    walk: (model, walk) =>
-      asked(model.sha256, 'walk', { ...walk, model: model.path }, Schema.decodeUnknownOption(WalkAnswerSchema)),
+    check: (runtime, model, fed) =>
+      asked(modelJob('check', runtime, model, { fed: { ...fed } }), Schema.decodeUnknownOption(SignatureSchema)),
+    run: (runtime, model, question) =>
+      asked(modelJob('run', runtime, model, { ...question }), Schema.decodeUnknownOption(QuestionAnswerSchema)),
+    walk: (runtime, model, walk) =>
+      asked(modelJob('walk', runtime, model, { ...walk }), Schema.decodeUnknownOption(WalkAnswerSchema)),
     window: (rows, window) =>
-      asked(rows.sha256, 'window', { ...window, rows: rows.path }, Schema.decodeUnknownOption(WindowAnswerSchema)),
+      asked(
+        { key: rows.sha256, kind: 'window', payload: { ...window, rows: rows.path } },
+        Schema.decodeUnknownOption(WindowAnswerSchema),
+      ),
     baselines: (rows, baselines) =>
       asked(
-        rows.sha256,
-        'baselines',
-        { ...baselines, rows: rows.path },
+        { key: rows.sha256, kind: 'baselines', payload: { ...baselines, rows: rows.path } },
         Schema.decodeUnknownOption(BaselinesAnswerSchema),
       ),
   };

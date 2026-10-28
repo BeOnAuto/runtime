@@ -34,6 +34,7 @@ const BuildRecordSchema = Schema.Struct({
     brief_bytes: Schema.Int,
     training_sha256: Schema.String,
     training_bytes: Schema.Int,
+    formats: Schema.Array(Schema.String),
   }),
   waiting_for: Schema.optionalKey(Schema.Struct({ run: Schema.String })),
 });

@@ -3,15 +3,8 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbook.ts';
-import {
-  answered,
-  askedBuild,
-  builtFrom,
-  modelFactsOf,
-  savedFunction,
-  uploaded,
-} from '../build-testing/built-versions.ts';
-import { candidateSha256 } from '../build-testing/due-driving.ts';
+import { answered, askedBuild, builtFrom, modelFactsOf, savedFunction } from '../build-testing/built-versions.ts';
+import { candidateSha256, uploaded } from '../runtime-testing/scripted-candidates.ts';
 import { uploadedDailyVisits } from '../testing/daily-documents.ts';
 import { dailyRows, steadyVisits } from '../testing/daily-rows.ts';
 

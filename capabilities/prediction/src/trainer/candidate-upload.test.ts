@@ -3,20 +3,27 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbook.ts';
-import { askedBuild, savedFunction, uploaded, workOf } from '../build-testing/built-versions.ts';
-import { candidateBytes, candidateSha256, type CandidateName } from '../build-testing/due-driving.ts';
+import { askedBuild, savedFunction, workOf } from '../build-testing/built-versions.ts';
+import { weeklyOrderRows } from '../build-testing/uploaded-rows.ts';
+import {
+  candidateBytes,
+  candidateSha256,
+  uploaded,
+  type CandidateName,
+} from '../runtime-testing/scripted-candidates.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
+import { uploadedWeeklyOrders } from '../testing/weekly-orders.ts';
 import { uploadCandidate } from './candidate-upload.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const someDetail: unknown = expect.any(String);
-
 const notLoaded: unknown = expect.stringMatching(/^The file is not a model the runtime loads: /u);
 
-const namesOtherInputs: unknown = expect.stringMatching(/^wrong_signature: The model's inputs are \[y, extra\]/u);
+const namesOtherInputs = 'wrong_signature: The recipe takes the inputs extra, which the playbook does not feed';
 
-function sent(playbook: BuildPlaybook, build: string, name: CandidateName) {
-  return playbook.send(uploadCandidate(playbook.test.ports), { run_id: build }, candidateBytes(name));
+function sent(playbook: BuildPlaybook, build: string, name: CandidateName, format?: string) {
+  const input = format === undefined ? { run_id: build } : { run_id: build, format };
+  return playbook.send(uploadCandidate(playbook.test.ports), input, candidateBytes(name));
 }
 
 async function waitingBuild(playbook: BuildPlaybook): Promise<string> {
@@ -25,21 +32,26 @@ async function waitingBuild(playbook: BuildPlaybook): Promise<string> {
 }
 
 describe('a candidate a trainer uploads to a build', () => {
-  it('is checked and answered with its digest, its bytes and its opset, the same bytes again alike and recorded once', async () => {
+  it('is checked by the runtime of its format and answered with its digest, its bytes, its format and the signature the runtime gives, the same bytes again alike and recorded once', async () => {
     const playbook = buildPlaybook();
     const build = await waitingBuild(playbook);
+    const signature = { recipe: 'mean', steps: 2, low: 2, high: 2, features: 0, given: 0, totals: false };
+    const kept = { sha256: candidateSha256('visits-mean'), bytes: candidateBytes('visits-mean').length };
     const answer = {
       status: 'succeeded',
-      output: { candidate: candidateSha256('visits-mean'), bytes: candidateBytes('visits-mean').length, opset: 13 },
+      output: { candidate: kept.sha256, bytes: kept.bytes, format: 'scripted', signature },
     };
 
-    expect([await sent(playbook, build, 'visits-mean'), await sent(playbook, build, 'visits-mean')]).toEqual([
-      answer,
-      answer,
-    ]);
-    expect((await workOf(playbook, build)).map(({ type }) => type)).toEqual([
-      'dataset_assembled',
-      'candidate_uploaded',
+    expect([
+      await sent(playbook, build, 'visits-mean'),
+      await sent(playbook, build, 'visits-mean', 'scripted'),
+    ]).toEqual([answer, answer]);
+    expect(await workOf(playbook, build)).toMatchObject([
+      { type: 'dataset_assembled' },
+      {
+        type: 'candidate_uploaded',
+        data: { ...kept, format: 'scripted', runtime: { name: 'scripted-runtime', version: '1.0.0' }, signature },
+      },
     ]);
   });
 });
@@ -84,61 +96,74 @@ describe('a candidate recorded but not staged, as when its server stops between 
   });
 });
 
-describe('a candidate whose data names a file outside its own', () => {
-  it('reads none of another model the server keeps, by its digest beside it or in the folder of that model', async () => {
-    const playbook = buildPlaybook();
-    const build = await waitingBuild(playbook);
-    await uploaded(playbook, build, ['visits-mean']);
-
-    expect([await sent(playbook, build, 'visits-sibling'), await sent(playbook, build, 'visits-cousin')]).toMatchObject(
-      [
-        { status: 'rejected', reason: 'invalid_input', detail: notLoaded },
-        { status: 'rejected', reason: 'invalid_input', detail: notLoaded },
-      ],
-    );
-    expect((await workOf(playbook, build)).map(({ data }) => data['because'])).toEqual([
-      undefined,
-      undefined,
-      'failed_to_load',
-      'failed_to_load',
-    ]);
-  });
-});
-
 describe('a candidate a build does not take', () => {
-  it('is refused when the runtime does not load it, when it is not in the signature the function feeds, or when it is older than opset 13', async () => {
+  it('is refused when the runtime of its format does not load it, or when it is not in the signature the function feeds', async () => {
     const playbook = buildPlaybook();
     const build = await waitingBuild(playbook);
 
     expect([
       await sent(playbook, build, 'not-a-model'),
       await sent(playbook, build, 'visits-extra-input'),
-      await sent(playbook, build, 'visits-opset-12'),
-      await sent(playbook, build, 'visits-hostile'),
     ]).toMatchObject([
-      {
-        status: 'rejected',
-        reason: 'invalid_input',
-        detail: notLoaded,
-      },
-      {
-        status: 'rejected',
-        reason: 'invalid_input',
-        issues: [{ pointer: '', detail: namesOtherInputs }],
-      },
-      {
-        status: 'rejected',
-        reason: 'invalid_input',
-        detail: "The model's opset is 12, and the playbook takes 13 or later",
-      },
-      { status: 'rejected', reason: 'invalid_input', detail: someDetail },
+      { status: 'rejected', reason: 'invalid_input', detail: notLoaded },
+      { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '', detail: namesOtherInputs }] },
     ]);
     expect((await workOf(playbook, build)).map(({ data }) => data['because'])).toEqual([
       undefined,
       'failed_to_load',
       'wrong_signature',
-      'wrong_signature',
-      'failed_to_load',
+    ]);
+  });
+});
+
+const another = { ...scriptedRuntime, name: 'another-runtime', formats: ['another'] };
+
+const withoutFeatures = {
+  ...scriptedRuntime,
+  name: 'plain-runtime',
+  capabilities: { ...scriptedRuntime.capabilities, features: false },
+};
+
+function atFormat(detail: string) {
+  return { status: 'rejected', reason: 'invalid_input', detail, issues: [{ pointer: '/format', detail }] };
+}
+
+describe('the format of a candidate', () => {
+  it('is refused at /format, unread and unrecorded, when no runtime of the server executes it for the function, naming the formats it takes', async () => {
+    const playbook = buildPlaybook({ runtimes: [scriptedRuntime, another] });
+    const build = await waitingBuild(playbook);
+
+    expect([
+      await sent(playbook, build, 'visits-mean', 'graph'),
+      await sent(playbook, build, 'visits-mean'),
+    ]).toMatchObject([
+      atFormat('The format graph is not one this server executes for this function, which takes scripted or another'),
+      atFormat('Name the format of the candidate, one of scripted or another'),
+    ]);
+    expect((await workOf(playbook, build)).map(({ type }) => type)).toEqual(['dataset_assembled']);
+  });
+
+  it('is refused when no runtime the server installed executes a candidate the function feeds, its features among them', async () => {
+    const none = buildPlaybook({ runtimes: [] });
+    const plain = buildPlaybook({ runtimes: [withoutFeatures] });
+    const noneBuild = await waitingBuild(none);
+    await savedFunction(plain, {
+      name: 'weekly-orders',
+      rows: weeklyOrderRows,
+      source: uploadedWeeklyOrders(weeklyOrderRows.sha256).replace(
+        '  holdout: 12',
+        '  holdout: 12\n  baselines: [seasonal-naive]',
+      ),
+    });
+    const plainBuild = await askedBuild(plain, 'weekly-orders');
+    const refused = 'No model runtime this server has installed executes a candidate for this function';
+
+    expect([
+      await sent(none, noneBuild, 'visits-mean'),
+      await sent(plain, plainBuild, 'orders-last', 'scripted'),
+    ]).toMatchObject([
+      { status: 'rejected', reason: 'invalid_input', detail: refused },
+      { status: 'rejected', reason: 'invalid_input', detail: refused },
     ]);
   });
 });

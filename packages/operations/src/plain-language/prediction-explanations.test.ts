@@ -54,6 +54,10 @@ const ofPrediction: ReadonlyArray<readonly [ExplainedRejection, string]> = [
     { reason: 'unavailable', kind: 'model_process_failed', because: 'baseline_check' },
     'the process that checks the build’s baselines ended before it answered',
   ],
+  [
+    { reason: 'unavailable', kind: 'model_process_failed', because: 'no_model_runtime' },
+    'no model runtime this server has installed executes the format of the active version’s model',
+  ],
 ];
 
 const aSentence: unknown = expect.stringMatching(/\.$/u);

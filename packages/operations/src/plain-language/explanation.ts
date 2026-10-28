@@ -174,6 +174,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   not_finite: 'because the model answered something other than finite numbers',
   not_in_order: 'because the model answered a low above its likely value or a high below it',
   baseline_check: 'because the process that checks a build’s baselines ended before it answered',
+  no_model_runtime: 'because no model runtime this server has installed executes the format of the model',
   ...creditBecauses,
 };
 
@@ -210,6 +211,11 @@ const explanationByKindAndBecause: Readonly<
     baseline_check: {
       why: 'the process that checks the build’s baselines ended before it answered',
       remedy: 'Nothing needs to change: asking for the build again starts a new process to check them.',
+    },
+    no_model_runtime: {
+      why: 'no model runtime this server has installed executes the format of the active version’s model',
+      remedy:
+        'This can be put right on the server: install the extension that executes that format, or ask for a build in a format the server executes.',
     },
   },
   tools_called: {

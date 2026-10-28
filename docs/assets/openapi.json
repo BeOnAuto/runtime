@@ -8750,6 +8750,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -8839,6 +8840,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -9199,6 +9201,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -9288,6 +9291,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -9663,6 +9667,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -9752,6 +9757,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -10194,6 +10200,7 @@
                                 "not_finite",
                                 "not_in_order",
                                 "baseline_check",
+                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -13560,7 +13567,7 @@
       "post": {
         "operationId": "upload_candidate",
         "summary": "Upload candidate",
-        "description": "Uploads a candidate model to a build of a prediction function that waits for its trainer: an ONNX file in the signature the guide prediction-function gives, at most 64 MiB, with its Content-Length. The file is checked in a model process, and refused when the runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates. The answer is the SHA-256 the answer to the build names; the same bytes again answer the same.",
+        "description": "Uploads a candidate model to a build of a prediction function that waits for its trainer: a file in a format the brief of the build lists, named by format, at most 64 MiB, with its Content-Length. The file is checked in a model process by the model runtime of its format, and refused when that runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates; a format the server does not execute for the function is refused at format. The answer is the SHA-256 the answer to the build names; the same bytes again answer the same.",
         "tags": [
           "prediction"
         ],
@@ -13580,6 +13587,15 @@
               "description": "The run's id, a UUID in any case, kept in lowercase",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The format of the candidate, one the brief of the build lists; the one format it lists when it lists one"
             }
           }
         ],
@@ -13607,14 +13623,20 @@
                     "bytes": {
                       "type": "integer"
                     },
-                    "opset": {
-                      "type": "integer"
+                    "format": {
+                      "type": "string",
+                      "description": "The format of the candidate, as the upload named it"
+                    },
+                    "signature": {
+                      "type": "object",
+                      "description": "The signature of the candidate as the model runtime of its format answered it"
                     }
                   },
                   "required": [
                     "candidate",
                     "bytes",
-                    "opset"
+                    "format",
+                    "signature"
                   ],
                   "additionalProperties": false
                 }
@@ -14311,6 +14333,7 @@
               "not_finite",
               "not_in_order",
               "baseline_check",
+              "no_model_runtime",
               "none_left",
               "free_daily_limit",
               "free_month_used",

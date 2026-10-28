@@ -2,17 +2,29 @@ import { textToKeep } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { aMinute, restingUntil, type Performing } from '../build-work/build-performing.ts';
+import type { ModelOutcome, WalkAnswer } from '../model-processes/model-processes.ts';
 import { executed } from '../models/model-commands.ts';
+import { executingRuntimeOf } from '../runtimes/model-runtimes.ts';
 import { predictionsText } from './shadow-records.ts';
 import { shadowRowsOf, type ShadowRows } from './shadow-rows.ts';
 import { shadowWalk, type Predicting } from './shadow-walk.ts';
+
+const notExecuted: ModelOutcome<WalkAnswer> = {
+  ended: 'crashed',
+  detail: 'No model runtime this server has installed executes the format of the version',
+  milliseconds: 0,
+};
 
 function predictedOn(performing: Performing, predicting: Predicting, rows: ShadowRows): Effect.Effect<void> {
   const { ports, build, now } = performing;
   const { org, playbook, id } = build.address;
   const { document, challenger, of, origin } = predicting;
+  const executing = executingRuntimeOf(ports.runtimes, { sha256: of.fileSha256, format: of.fileFormat });
   return Effect.gen(function* () {
-    const outcome = yield* shadowWalk(ports, { org, playbook }, predicting, rows);
+    const outcome =
+      executing === undefined
+        ? notExecuted
+        : yield* shadowWalk(ports, { org, playbook }, predicting, { executing, rows });
     if (outcome.ended === 'busy' || outcome.ended === 'closing' || outcome.ended === 'cancelled') {
       return yield* restingUntil(performing, now + aMinute);
     }
@@ -29,6 +41,7 @@ function predictedOn(performing: Performing, predicting: Predicting, rows: Shado
         version: challenger.version,
         of: of.version,
         build: id,
+        runtime: executing === undefined ? null : { ...executing.named },
         origin: origin.form,
         count,
         missing,

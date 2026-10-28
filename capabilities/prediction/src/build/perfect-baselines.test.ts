@@ -6,6 +6,7 @@ import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbo
 import { asked, askedBuild, buildAsked, runOf, savedFunction, workOf } from '../build-testing/built-versions.ts';
 import { scriptedModels } from '../build-testing/scripted-models.ts';
 import type { ModelProcesses } from '../model-processes/model-processes.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { dailyRows, steadyVisits } from '../testing/daily-rows.ts';
 
 const runIds = ['0199a3c4-7d2e-7c1a-9b3f-555555555561', '0199a3c4-7d2e-7c1a-9b3f-555555555562'];
@@ -59,7 +60,9 @@ function keptTypes(): KeptTypes {
 const heldWalk = { rows: '/held.csv', window: 3, holdout: 1, steps: 1, features: 0, given: [], remaining: null };
 
 function heldBy(playbook: BuildPlaybook, model: string) {
-  return Effect.runFork(playbook.test.ports.models.walk({ sha256: model, path: `/${model}.onnx` }, heldWalk));
+  return Effect.runFork(
+    playbook.test.ports.models.walk(scriptedRuntime, { sha256: model, path: `/${model}.scripted` }, heldWalk),
+  );
 }
 
 interface CheckedBaselines {

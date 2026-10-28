@@ -47,7 +47,11 @@ export function buildRun(
     yield* claimable(claiming);
     const files = yield* buildFilesOf(ports, playbook, document, now);
     const assembled = assembledOf(files);
-    const brief = yield* keptBrief(ports.ledger.content, playbook, document, { name: definition.name, files });
+    const brief = yield* keptBrief(ports.ledger.content, playbook, document, {
+      name: definition.name,
+      files,
+      runtimes: ports.runtimes,
+    });
     yield* claimedBuild(claiming);
     yield* record(
       { org, playbook: playbookId, id },

@@ -10,13 +10,22 @@ const otherRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f';
 const questionRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70';
 
 describe('the reads of a build that waits for its trainer', () => {
-  it('answer its brief as Markdown and its training rows as CSV, the held-back periods left out', async () => {
+  it('answer its brief as Markdown, closed by the formats its candidates take, and its training rows as CSV, the held-back periods left out', async () => {
     const playbook = buildPlaybook();
     await savedFunction(playbook);
     const build = await askedBuild(playbook);
     const rows = String(await readOf(playbook, readBuildRows, build)).split('\r\n');
 
-    expect(await readOf(playbook, readBuildBrief, build)).toBe('Fit a model of the daily visits of each of 2 stores.');
+    expect(await readOf(playbook, readBuildBrief, build)).toBe(
+      [
+        'Fit a model of the daily visits of each of 2 stores.',
+        '',
+        '## Candidates',
+        '',
+        'Each upload of a candidate takes a file in the format scripted.',
+        '',
+      ].join('\n'),
+    );
     expect([rows[0], rows[1], rows.length]).toEqual(['series,period,visits', 'north,2026-09-16,11', 2 * 16 + 2]);
   });
 });

@@ -18,7 +18,7 @@ export interface ServedPrediction {
 export async function predictionServedBy(
   runtime: AppRuntime<DispatcherServices>,
   { prediction, interaction }: Pick<Settings, 'prediction' | 'interaction'>,
-  store: WorkflowStore,
+  { store, runtimes }: { readonly store: WorkflowStore; readonly runtimes: PredictionPorts['runtimes'] },
 ): Promise<ServedPrediction> {
   const { mostFunctions, processes, processMemoryMebibytes, buildsAtOnce, buildsPerDay, cacheDirectory } = prediction;
   const { pool, ports: models } = await servedModels(prediction);
@@ -38,6 +38,7 @@ export async function predictionServedBy(
     ports: {
       ledger,
       database: store.database,
+      runtimes,
       ...models,
       bounds: { buildsPerDay, buildsAtOnce, mostOpenRequests: interaction.mostOpenRequests },
       openRequests: (playbook) =>

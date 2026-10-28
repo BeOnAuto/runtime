@@ -169,17 +169,32 @@ describe('an operation served over HTTP alone, refusing what it was sent', () =>
     expect(answer).toMatchObject({ status, body: { detail } });
   });
 
-  it('refuses a body sent to a command that takes none, and a query string on any command', async () => {
+  it('refuses a body sent to a command that takes none, and a query string on a command whose body is JSON', async () => {
     const { handler } = await withBlobs();
 
     const withBody = await call(handler, `${blobs}/clear`, { method: 'POST', headers: asJson, body: '{}' });
-    const withQuery = await call(handler, `${blobs}/b1?size=1`, { method: 'POST', headers: asAdmin });
+    const withQuery = await call(handler, `${blobs}/b1/rename?size=1`, { method: 'POST', headers: asJson, body: '{}' });
 
     expect([withBody.status, withBody.body]).toEqual([
       400,
       expect.objectContaining({ reason: 'bad_request', detail: 'This operation takes no body' }),
     ]);
     expect(withQuery.status).toBe(400);
+  });
+});
+
+describe('an operation served over HTTP alone, taking fields beside its streamed body', () => {
+  it('takes the other fields of a command whose body streams from its query string, and refuses one it does not take at its pointer', async () => {
+    const { handler, origin } = await listeningWithBlobs();
+    const sent = { method: 'POST', headers: { ...asOctets, 'content-length': '1' }, body: 'x' };
+
+    const labelled = await exchanged(origin, `${blobs}/b1?label=kept`, sent);
+    const unknown = await call(handler, `${blobs}/b1?size=1`, sent);
+    const twice = await call(handler, `${blobs}/b1?name=b2`, sent);
+
+    expect([labelled.status, labelled.body]).toEqual([200, 'kept']);
+    expect(unknown).toMatchObject({ status: 422, body: { reason: 'invalid_input', errors: [{ pointer: '/size' }] } });
+    expect(twice).toMatchObject({ status: 400, body: { detail: 'The field name is given in more than one place' } });
   });
 });
 

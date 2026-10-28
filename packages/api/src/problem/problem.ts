@@ -50,6 +50,7 @@ const notResolvedByWaiting: ReadonlySet<RejectionBecause> = new Set<RejectionBec
   'stalled',
   'not_finite',
   'not_in_order',
+  'no_model_runtime',
 ]);
 
 function isWorthRetrying({ reason, kind, because }: Problem): boolean {

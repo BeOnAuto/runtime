@@ -1,5 +1,16 @@
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -69,17 +80,6 @@ function packagesIn(folder: string): readonly string[] {
   );
 }
 
-function visibleDependencies(packageRoot: string): ReadonlyMap<string, string> {
-  const farthestFirst = modulesFolders(packageRoot).toReversed();
-  return new Map(
-    farthestFirst.flatMap((folder) =>
-      packagesIn(folder)
-        .filter((name) => !name.startsWith('@on.auto/'))
-        .map((name): [string, string] => [name, join(folder, name)]),
-    ),
-  );
-}
-
 function workspacePackages(release: string): ReadonlyMap<string, string> {
   return new Map(
     workspaceGroups.flatMap((group) =>
@@ -91,11 +91,35 @@ function workspacePackages(release: string): ReadonlyMap<string, string> {
   );
 }
 
+function packagesOfTheRelease(packageRoot: string): ReadonlySet<string> {
+  const manifest: unknown = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  return new Set([...workspacePackages(packageRoot).keys(), String(Reflect.get(new Object(manifest), 'name'))]);
+}
+
+function visibleDependencies(packageRoot: string): ReadonlyMap<string, string> {
+  const farthestFirst = modulesFolders(packageRoot).toReversed();
+  const ofTheRelease = packagesOfTheRelease(packageRoot);
+  return new Map(
+    farthestFirst.flatMap((folder) =>
+      packagesIn(folder)
+        .filter((name) => !ofTheRelease.has(name))
+        .map((name): [string, string] => [name, join(folder, name)]),
+    ),
+  );
+}
+
+function pointsTo(link: string, target: string): boolean {
+  return lstatSync(link, { throwIfNoEntry: false })?.isSymbolicLink() === true && readlinkSync(link) === target;
+}
+
 export function linked(release: string, links: ReadonlyMap<string, string>): void {
   for (const [name, target] of links) {
     const link = join(release, 'node_modules', name);
-    mkdirSync(dirname(link), { recursive: true });
-    symlinkSync(target, link);
+    if (!pointsTo(link, target)) {
+      mkdirSync(dirname(link), { recursive: true });
+      rmSync(link, { force: true });
+      symlinkSync(target, link);
+    }
   }
 }
 
@@ -116,10 +140,10 @@ export function installedRelease(packageDirectory: string, cacheRoot: string): s
       recursive: true,
       filter: (source) => source !== join(packageRoot, 'node_modules'),
     });
-    linked(release, visibleDependencies(packageRoot));
     linked(release, workspacePackages(release));
     writeFileSync(join(release, installedMarker), '');
   }
+  linked(release, visibleDependencies(packageRoot));
   return release;
 }
 

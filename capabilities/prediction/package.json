@@ -13,18 +13,17 @@
     "typecheck": "tsc",
     "test": "vitest run --coverage",
     "measure": "node measure.ts",
-    "candidates": "node candidates/build-candidates.ts",
     "measure:models": "node measure-models.ts"
   },
   "dependencies": {
     "@on.auto/definitions": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",
+    "@on.auto/prediction-contract": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",
     "@on.auto/workflow-host": "workspace:*",
     "effect": "catalog:",
-    "liquidjs": "10.30.0",
-    "onnxruntime-node": "1.30.0"
+    "liquidjs": "10.30.0"
   },
   "devDependencies": {
     "@on.auto/interaction": "workspace:*",

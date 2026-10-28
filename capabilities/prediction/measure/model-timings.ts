@@ -53,7 +53,7 @@ function walkedInTurn(models: ModelProcesses, files: MeasuredFiles): Promise<rea
   return candidates.reduce<Promise<readonly number[]>>(async (before, candidate) => {
     const done = await before;
     const started = performance.now();
-    const outcome = await Effect.runPromise(models.walk({ sha256: candidate, path: files.mean }, walk));
+    const outcome = await Effect.runPromise(models.walk(files.runtime, { sha256: candidate, path: files.mean }, walk));
     if (outcome.ended !== 'answered') {
       throw new Error(`The walk of ${candidate} ended ${outcome.ended}`);
     }
@@ -71,7 +71,7 @@ async function scoredOnce(models: ModelProcesses, files: MeasuredFiles): Promise
     given: [],
     remaining: null,
   };
-  const outcome = await Effect.runPromise(models.walk({ sha256: 'scored', path: files.mean }, walk));
+  const outcome = await Effect.runPromise(models.walk(files.runtime, { sha256: 'scored', path: files.mean }, walk));
   if (outcome.ended !== 'answered') {
     throw new Error(`The walk ended ${outcome.ended}`);
   }
@@ -103,19 +103,25 @@ export async function modelTimings(files: MeasuredFiles): Promise<Timed> {
   const models = modelProcesses({ pool });
   const mean = { sha256: 'mean', path: files.mean };
   const checked = performance.now();
-  await Effect.runPromise(models.check({ sha256: 'cold', path: files.mean }));
+  await Effect.runPromise(
+    models.check(
+      files.runtime,
+      { sha256: 'cold', path: files.mean },
+      { features: 0, given: 0, horizon: 2, totals: false },
+    ),
+  );
   const coldCheckMs = millisecondsOf(checked);
   const ranCold = performance.now();
-  await Effect.runPromise(models.run(mean, question));
+  await Effect.runPromise(models.run(files.runtime, mean, question));
   const coldRunMs = millisecondsOf(ranCold);
   const ranWarm = performance.now();
-  await Effect.runPromise(models.run(mean, question));
+  await Effect.runPromise(models.run(files.runtime, mean, question));
   const warmRunMs = millisecondsOf(ranWarm);
   const walksMs = await walkedInTurn(models, files);
   const verdictMs = await scoredOnce(models, files);
   const shadowed = performance.now();
   await Effect.runPromise(
-    models.walk(mean, {
+    models.walk(files.runtime, mean, {
       rows: files.rows,
       window: daysMeasured,
       holdout: 1,
@@ -155,6 +161,7 @@ export async function questionTimings(files: MeasuredFiles): Promise<QuestionTim
   const { y } = window.answer;
   await Effect.runPromise(
     models.run(
+      files.runtime,
       { sha256: 'mean', path: files.mean },
       { y: Float32Array.from(y), x: null, given: null, h: null, features: 0, givens: 0 },
     ),

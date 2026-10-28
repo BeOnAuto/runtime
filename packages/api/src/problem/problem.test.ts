@@ -118,12 +118,13 @@ describe('the retry of a refusal of a prediction function', () => {
     ]).toEqual(['5', '5', '5', '5']);
   });
 
-  it('asks for no retry of a prediction function whose builds of the day are spent, whose dataset stalled or whose model answers what it cannot', () => {
+  it('asks for no retry of a prediction function whose builds of the day are spent, whose dataset stalled, whose model answers what it cannot or whose model no runtime executes', () => {
     expect([
       retryAfterOf({ kind: 'builds_full', because: 'builds_of_the_day' }),
       retryAfterOf({ kind: 'dataset_not_ready', because: 'stalled' }),
       retryAfterOf({ kind: 'model_process_failed', because: 'not_finite' }),
-    ]).toEqual([null, null, null]);
+      retryAfterOf({ kind: 'model_process_failed', because: 'no_model_runtime' }),
+    ]).toEqual([null, null, null, null]);
   });
 });
 

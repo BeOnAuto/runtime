@@ -24,7 +24,7 @@ const disqualifiedWords: Readonly<Record<BuildWorkOf<'candidate_disqualified'>['
   out_of_memory: 'it needed more memory than a model process has',
   crashed: 'its model process ended before it answered',
   not_loaded: 'its file could not be loaded',
-  answered_badly: 'it answered a tensor of the wrong shape or a number that is not finite',
+  answered_badly: 'it answered in the wrong shape or with a number that is not finite',
   coverage_below_floor: 'its interval held fewer truths than the floor',
   not_better: 'it did not beat every baseline with the confidence asked',
 };
@@ -38,8 +38,8 @@ const buildWords = {
     holdout,
   }: BuildWorkOf<'dataset_assembled'>['data']) =>
     `The dataset was read into the build's two files: ${figure(rows)} rows of ${figure(series)} series from ${first} to ${last}, the last ${figure(holdout)} periods held back from the trainer`,
-  candidate_uploaded: ({ sha256, bytes, opset }: BuildWorkOf<'candidate_uploaded'>['data']) =>
-    `Candidate ${shortOf(sha256)} was uploaded, ${figure(bytes)} bytes in opset ${opset}`,
+  candidate_uploaded: ({ sha256, bytes, format, runtime }: BuildWorkOf<'candidate_uploaded'>['data']) =>
+    `Candidate ${shortOf(sha256)} was uploaded, ${figure(bytes)} bytes in the format ${format}, which ${runtime.name} ${runtime.version} checked`,
   candidate_refused: ({ sha256, because }: BuildWorkOf<'candidate_refused'>['data']) =>
     `Candidate ${shortOf(sha256)} was refused: ${refusedWords[because]}`,
   candidate_scored: ({ sha256, scores, coverage }: BuildWorkOf<'candidate_scored'>['data']) =>

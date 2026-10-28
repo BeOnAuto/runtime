@@ -19,6 +19,7 @@ const challenged: ProjectedRow = {
   active: 1,
   active_data_sha256: null,
   active_file_sha256: null,
+  active_file_format: null,
   active_definition_version: 1,
   latest: 3,
   versions: 3,

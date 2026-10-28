@@ -1,5 +1,10 @@
 import type { AppRuntime } from '@on.auto/api';
-import { defineRunDefinition, type Capability } from '@on.auto/definitions';
+import {
+  defineRunDefinition,
+  type Capability,
+  type ExtensionPoint,
+  type ImplementationsProvided,
+} from '@on.auto/definitions';
 import { makeDispatcher, type DispatcherServices, type HttpRegistration } from '@on.auto/operations';
 import {
   activateVersion,
@@ -7,6 +12,7 @@ import {
   datasetFolder,
   datasetsPortOn,
   makePredictionFunctionAdapter,
+  modelRuntimePoint,
   readBuildBrief,
   readBuildRows,
   uploadCandidate,
@@ -30,6 +36,8 @@ export interface ServedPredictionFunctions extends ServedPrediction {
   readonly dueWorkFor: (capabilities: readonly Capability[]) => DueWork;
 }
 
+export const predictionExtensionPoints: readonly ExtensionPoint[] = [modelRuntimePoint];
+
 export function datasetsFolderOf(pool: ProgramPool): SomeFolder {
   return someFolder(
     datasetFolder({ filters: pool.evaluations.filters, triesBeforeStall: recallBounds.overtimesBeforeStall }),
@@ -40,9 +48,10 @@ export async function predictionFunctionsServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Pick<Settings, 'prediction' | 'interaction'>,
   pool: ProgramPool,
-  store: WorkflowStore,
+  { store, provided }: { readonly store: WorkflowStore; readonly provided: ImplementationsProvided },
 ): Promise<ServedPredictionFunctions> {
-  const { ports, withProcessesClosed } = await predictionServedBy(runtime, settings, store);
+  const runtimes = provided(modelRuntimePoint);
+  const { ports, withProcessesClosed } = await predictionServedBy(runtime, settings, { store, runtimes });
   return {
     ports,
     withProcessesClosed,

@@ -29,6 +29,7 @@ export const RejectionBecauseSchema = Schema.Literals([
   'not_finite',
   'not_in_order',
   'baseline_check',
+  'no_model_runtime',
   'none_left',
   'free_daily_limit',
   'free_month_used',

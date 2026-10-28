@@ -33,7 +33,8 @@ function mib(bytes: number): string {
   return `${(bytes / mebibyte).toFixed(0)} MiB`;
 }
 
-const files = measuredFiles();
+const [module = '', mean = '', large = ''] = process.argv.slice(2);
+const files = measuredFiles(module, mean, large);
 try {
   write(`Node ${process.version}, ${cpus().length} cores`);
   const timed = await modelTimings(files);
@@ -46,14 +47,13 @@ try {
   write(`the scores, the baseline and the bootstrap of one walk computed by the server: ${ms(timed.verdictMs)}`);
   write(`the shadow's walk of one version at one close over ${seriesMeasured} series: ${ms(timed.shadowWalkMs)}`);
   write(`the shadow's grade of one period over ${seriesMeasured} series: ${ms(timed.gradeMs)}`);
-  execFileSync(process.execPath, [fileURLToPath(new URL('./measure/large-model.ts', import.meta.url)), files.large]);
   execFileSync(process.execPath, [fileURLToPath(new URL('./measure/large-rows.ts', import.meta.url)), files.widest]);
   const largeBytes = statSync(files.large).size;
   const widestBytes = statSync(files.widest).size;
   const memory = Schema.decodeUnknownSync(MemorySchema)(
     execFileSync(
       process.execPath,
-      [fileURLToPath(new URL('./measure/session-memory.ts', import.meta.url)), files.large, files.widest],
+      [fileURLToPath(new URL('./measure/session-memory.ts', import.meta.url)), module, files.large, files.widest],
       { encoding: 'utf8' },
     ),
   );

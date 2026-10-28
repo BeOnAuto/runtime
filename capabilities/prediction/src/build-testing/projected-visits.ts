@@ -33,6 +33,7 @@ export interface Sales {
   readonly processes?: number;
   readonly longJobs?: number;
   readonly events?: readonly Schema.JsonObject[];
+  readonly runtimes?: NonNullable<Parameters<typeof buildPlaybook>[0]>['runtimes'];
 }
 
 function eventOf(type: string, store: string, at: number, value: number | null): Schema.JsonObject {
@@ -84,6 +85,7 @@ export async function projectedSales(settingsOf: SettingsOf, sales: Sales): Prom
     module: scripted.module,
     ...(sales.deadlines === undefined ? {} : { deadlines: sales.deadlines }),
     ...(sales.processes === undefined ? {} : { processes: sales.processes, longJobs: sales.longJobs }),
+    ...(sales.runtimes === undefined ? {} : { runtimes: sales.runtimes }),
   });
   expect(
     await playbook.call(playbook.operations.create, { type: 'prediction', name: sales.name, source: sales.source }),

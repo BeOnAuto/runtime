@@ -19,6 +19,7 @@ const ModelsRowSchema = Schema.Struct({
   active: Schema.NullOr(Schema.Int),
   active_data_sha256: Schema.NullOr(Schema.String),
   active_file_sha256: Schema.NullOr(Schema.String),
+  active_file_format: Schema.NullOr(Schema.String),
   active_definition_version: Schema.NullOr(Schema.Int),
   latest: Schema.NullOr(Schema.Int),
   versions: Schema.Int,
@@ -35,6 +36,7 @@ const noModelsRow: ModelsRow = {
   active: null,
   active_data_sha256: null,
   active_file_sha256: null,
+  active_file_format: null,
   active_definition_version: null,
   latest: null,
   versions: 0,
@@ -95,14 +97,15 @@ function changed(row: ModelsRow, fact: RecordedVersionFact): ModelsRow {
     };
   }
   if (fact.type === 'version_activated') {
-    const { version, data_sha256: dataSha256, file_sha256: fileSha256, definition_version: built } = fact.data;
+    const { version, data_sha256: dataSha256, file_sha256: fileSha256, file_format: fileFormat } = fact.data;
     return withoutChallenger(
       {
         ...row,
         active: version,
         active_data_sha256: dataSha256,
         active_file_sha256: fileSha256,
-        active_definition_version: built,
+        active_file_format: fileFormat,
+        active_definition_version: fact.data.definition_version,
       },
       version,
     );
@@ -125,6 +128,7 @@ export const predictionModels: KeyedProjection = {
     { name: 'active', kind: 'integer' },
     { name: 'active_data_sha256', kind: 'text' },
     { name: 'active_file_sha256', kind: 'text' },
+    { name: 'active_file_format', kind: 'text' },
     { name: 'active_definition_version', kind: 'integer' },
     { name: 'latest', kind: 'integer' },
     { name: 'versions', kind: 'integer' },

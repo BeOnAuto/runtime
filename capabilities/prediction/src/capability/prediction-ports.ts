@@ -10,12 +10,13 @@ import type {
   StreamReader,
   StreamWriter,
 } from '@on.auto/operations';
+import type { ModelRuntime } from '@on.auto/prediction-contract';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import type { HostDatabase } from '@on.auto/workflow-host';
 import type { Effect, Schema } from 'effect';
 
 import type { DatasetsPort } from '../dataset/datasets-port.ts';
-import type { FileCache } from '../model-cache/model-files.ts';
+import type { FileCache, NamedFileCache } from '../model-cache/model-files.ts';
 import type { ParsedRows } from '../model-cache/parsed-rows.ts';
 import type { ModelProcesses } from '../model-processes/model-processes.ts';
 import type { ScoringPermits } from '../model-processes/scoring-permits.ts';
@@ -47,7 +48,7 @@ export type StartChild = (start: ChildStart) => Effect.Effect<ChildStarted>;
 
 export interface ModelCaches {
   readonly models: FileCache;
-  readonly rows: FileCache;
+  readonly rows: NamedFileCache;
   readonly parsed: ParsedRows;
 }
 
@@ -60,6 +61,7 @@ export interface BuildBounds {
 export interface PredictionPorts {
   readonly ledger: PredictionLedger;
   readonly database: Pick<HostDatabase, 'readConsistently'>;
+  readonly runtimes: readonly ModelRuntime[];
   readonly models: ModelProcesses;
   readonly caches: ModelCaches;
   readonly permits: ScoringPermits;

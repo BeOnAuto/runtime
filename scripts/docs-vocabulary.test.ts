@@ -41,7 +41,7 @@ const internalTermsTest = 'packages/operations/src/plain-language/internal-terms
 
 const reasoningReference = 'docs/engineering/reference/reasoning-format.md';
 
-const modelSessions = 'capabilities/prediction/src/model-jobs/model-sessions.ts';
+const modelSessions = 'packages/prediction-onnx/src/sessions/model-sessions.ts';
 
 const providerDocuments = 'packages/providers/src/entries/documents';
 

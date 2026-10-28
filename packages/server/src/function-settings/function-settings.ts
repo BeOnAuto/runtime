@@ -2,6 +2,7 @@ import type { Environment, FileUse } from '@on.auto/config';
 import type { ProviderResolver } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
+import { extensionVariables, readExtensionSettings, type ExtensionEntry } from '../extensions/extension-settings.ts';
 import { computationVariables, readComputationSettings, type ComputationSettings } from './computation-settings.ts';
 import { interactionVariables, readInteractionSettings, type InteractionSettings } from './interaction-settings.ts';
 import { predictionVariables, readPredictionSettings, type PredictionSettings } from './prediction-settings.ts';
@@ -13,6 +14,7 @@ export interface FunctionSettings extends ReasoningSettings {
   readonly recall: RecallSettings;
   readonly interaction: InteractionSettings;
   readonly prediction: PredictionSettings;
+  readonly extensions: readonly ExtensionEntry[];
 }
 
 export const functionVariables: readonly string[] = [
@@ -21,6 +23,7 @@ export const functionVariables: readonly string[] = [
   ...recallVariables,
   ...interactionVariables,
   ...predictionVariables,
+  ...extensionVariables,
 ];
 
 export function readFunctionSettings(
@@ -38,5 +41,6 @@ export function readFunctionSettings(
     recall: Effect.runSync(readRecallSettings(environment)),
     interaction: Effect.runSync(readInteractionSettings(environment)),
     prediction: Effect.runSync(readPredictionSettings(environment)),
+    extensions: readExtensionSettings(environment),
   };
 }

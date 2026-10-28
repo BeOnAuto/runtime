@@ -135,11 +135,11 @@ describe('the prediction function settings of builds at once', () => {
 });
 
 describe('the least memory of a model process', () => {
-  it('is the data under which the image proves, as its user, with every build, that a model process loads its own entry, which the image copies in', () => {
+  it('is the data under which the image proves, as its user, with every build, that a model process loads the model runtime of the release, which the image copies in', () => {
     const { floor, entry, user, copied } = proofIn(dockerfile);
 
     expect([entry, user, copied, existsSync(new URL(`../../../../${entry}`, import.meta.url))]).toEqual([
-      'capabilities/prediction/src/model-jobs/model-process.ts',
+      'packages/prediction-onnx/src/sessions/model-sessions.ts',
       'USER node',
       true,
       true,

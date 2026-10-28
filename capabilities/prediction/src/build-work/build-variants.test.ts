@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook } from '../build-testing/build-playbook.ts';
 import { asked, builtFrom, runOf, savedFunction, workOf } from '../build-testing/built-versions.ts';
-import { candidateSha256 } from '../build-testing/due-driving.ts';
 import { weekdaysAndWeekends, weeklyOrderRows as weeklyRows } from '../build-testing/uploaded-rows.ts';
+import { candidateSha256 } from '../runtime-testing/scripted-candidates.ts';
 import { uploadedDailyTotals } from '../testing/daily-documents.ts';
 import { uploadedWeeklyOrders } from '../testing/weekly-orders.ts';
 

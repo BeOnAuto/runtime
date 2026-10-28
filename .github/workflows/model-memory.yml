@@ -39,13 +39,15 @@ jobs:
         run: |
           docker run --rm --entrypoint sh \
             --volume "$PWD/capabilities/prediction/measure:/app/capabilities/prediction/measure:ro" \
-            --volume "$PWD/capabilities/prediction/candidates:/app/capabilities/prediction/candidates:ro" \
+            --volume "$PWD/packages/prediction-onnx/measure:/app/packages/prediction-onnx/measure:ro" \
+            --volume "$PWD/packages/prediction-onnx/candidates:/app/packages/prediction-onnx/candidates:ro" \
             onauto/runtime:ci -c '
-              node capabilities/prediction/measure/large-model.ts /tmp/large.onnx
+              node packages/prediction-onnx/measure/large-model.ts /tmp/large.onnx
               node capabilities/prediction/measure/large-rows.ts /tmp/rows.csv
               loads() {
                 prlimit --core=0 --data=$(($1 * 1048576)) node capabilities/prediction/measure/session-memory.ts \
-                  /tmp/large.onnx /tmp/rows.csv > /tmp/memory.json 2> /dev/null
+                  packages/prediction-onnx/src/sessions/model-sessions.ts /tmp/large.onnx /tmp/rows.csv \
+                  > /tmp/memory.json 2> /dev/null
               }
               loads 1280 || exit 1
               cat /tmp/memory.json

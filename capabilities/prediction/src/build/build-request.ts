@@ -7,6 +7,7 @@ import { childIdOf, requestReference } from '../build-work/child-runs.ts';
 import { predictionBounds } from '../capability/prediction-bounds.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { Assembled } from '../facts/build-facts.ts';
+import { candidateFilesOf } from '../runtimes/format-words.ts';
 import type { KeptBrief } from './build-brief.ts';
 
 const mostMessageBytes = 8192;
@@ -55,7 +56,7 @@ function messageOf(requesting: Requesting, expiresAt: string): string {
   const opening = [
     `Build ${run.id} of the prediction function ${name} waits for its trainer until ${expiresAt}.`,
     `Read the brief with GET ${routes.brief} and the training rows with GET ${routes.rows}.`,
-    `Upload each candidate model, ONNX in the signature the guide prediction-function gives, with POST ${routes.candidates}, then answer this request with { "candidates": [the SHA-256 of each] }.`,
+    `Upload each candidate model with POST ${routes.candidates}, which takes ${candidateFilesOf(brief.formats)}, then answer this request with { "candidates": [the SHA-256 of each] }.`,
     '',
     '',
   ].join('\n');
@@ -72,6 +73,7 @@ export function buildRecordOf(requesting: Requesting): Schema.JsonObject {
     training_sha256: assembled.training_sha256,
     training_bytes: assembled.training_bytes,
     routes: { ...routesOf(run) },
+    formats: [...brief.formats],
   };
   if (document.source.through !== undefined) {
     return { waiting_for: { run: childIdOf(run.id, requestReference) }, expires_at: expiresAt, build };

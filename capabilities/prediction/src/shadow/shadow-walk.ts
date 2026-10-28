@@ -4,6 +4,7 @@ import { Effect, Option } from 'effect';
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { BuiltVersion } from '../models/model-state.ts';
+import type { ExecutingRuntime } from '../runtimes/model-runtimes.ts';
 import { remainingOfTheOrigins, scoringGridOf, type ScoringGrid } from '../scoring/scoring-grid.ts';
 import { featureNamesOf, givenIndexesOf } from '../scoring/scoring-inputs.ts';
 import type { ShadowRows } from './shadow-rows.ts';
@@ -24,13 +25,14 @@ export function shadowWalk(
   ports: PredictionPorts,
   playbook: PlaybookAddress,
   { document, of }: Predicting,
-  rows: ShadowRows,
+  { executing, rows }: { readonly executing: ExecutingRuntime; readonly rows: ShadowRows },
 ) {
   const grid = shadowGridOf(document, rows);
   return Effect.flatMap(
-    ports.caches.models.pathOf(of.fileSha256, () => ports.ledger.content.get(playbook, of.fileSha256)),
+    ports.caches.models.pathOf(executing.file, () => ports.ledger.content.get(playbook, of.fileSha256)),
     (kept) =>
       ports.models.walk(
+        executing.runtime,
         { sha256: of.fileSha256, path: Option.getOrThrow(Option.fromNullishOr(kept)) },
         {
           rows: rows.path,

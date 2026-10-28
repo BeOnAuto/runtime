@@ -1,6 +1,7 @@
+import type { LoadedModel } from '@on.auto/prediction-contract';
+
 import type { SeriesRows } from '../files/series-rows.ts';
 import { feedsOf, type WalkJob } from './model-feeds.ts';
-import type { LoadedModel } from './model-sessions.ts';
 
 export type WalkAnswer =
   | { readonly series: readonly string[]; readonly q: readonly Readonly<Float32Array>[] }
@@ -54,10 +55,13 @@ async function answersFrom({ model, walk, rows }: Walking, step: number, answers
       model.length,
     ),
   );
+  if ('badly' in answer) {
+    return answer.badly;
+  }
   if (answer.dims.join(',') !== `1,${answered},${percentiles}`) {
     return `The model answered q of the shape [${answer.dims.join(', ')}] where [1, ${answered}, ${percentiles}] was expected`;
   }
-  return answersFrom({ model, walk, rows }, step + 1, [...answers, answer.data]);
+  return answersFrom({ model, walk, rows }, step + 1, [...answers, answer.q]);
 }
 
 async function walkedSeries(

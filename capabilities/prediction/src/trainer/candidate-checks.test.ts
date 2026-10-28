@@ -6,8 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 import { buildPlaybook, type BuildPlaybook } from '../build-testing/build-playbook.ts';
 import { askedBuild, savedFunction, workOf } from '../build-testing/built-versions.ts';
-import { candidateBytes, candidateSha256, type CandidateName } from '../build-testing/due-driving.ts';
 import { scriptedModels } from '../build-testing/scripted-models.ts';
+import { candidateBytes, candidateSha256, type CandidateName } from '../runtime-testing/scripted-candidates.ts';
+import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
 import { uploadCandidate } from './candidate-upload.ts';
 
 const endedWhileLoading: unknown = expect.stringMatching(/^The model process ended while it loaded the file: /u);
@@ -75,8 +76,8 @@ describe('a candidate uploaded while every model process is taken', () => {
     const build = await waitingBuild(playbook);
     scripted.next('sleeps');
     const { models } = playbook.test.ports;
-    void Effect.runPromise(models.run({ sha256: 'held', path: '/held.onnx' }, question));
-    void Effect.runPromise(models.run({ sha256: 'held', path: '/held.onnx' }, question));
+    void Effect.runPromise(models.run(scriptedRuntime, { sha256: 'held', path: '/held.scripted' }, question));
+    void Effect.runPromise(models.run(scriptedRuntime, { sha256: 'held', path: '/held.scripted' }, question));
     await scripted.untilSleeping(['run', 'run']);
 
     expect(await sent(playbook, build, 'visits-mean')).toMatchObject({
