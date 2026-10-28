@@ -133,6 +133,18 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Fix.** For `org_deleted`, an owner of the org restores it at `resolve_at`, which says until when it can be, and asks for the run again. For `org_purged`, the org's runs never run again; asking again changes nothing.
 
+## A run or an activation is refused as `terms_required` {#terms-required}
+
+Auto's account service does not ask for this today. This section says what a runtime does if Auto's account service requires its activation terms for self-hosted runtimes.
+
+**Symptom.** An activation of the license, by `auto-runtime license activate`, `activate_license` or `POST /v1/orgs/{org}/license`, or a run whose key has to activate or renew first, is answered `409` with the kind `terms_required`: `Auto needs an owner of this runtime's org to accept its activation terms for self-hosted runtimes before this runtime's key activates or renews. An owner reads and accepts them at <resolve_at>; then run this again.`, with that page in `resolve_at` and the runtime's id in `runtime_id`. The daily renewal logs the same words as a warning, after `The license of this runtime could not be refreshed:`, and so does the refresh of an offline installation's allocation, after `This runtime could not refresh its allocation with Auto:`.
+
+**Cause.** Auto's account service refuses to activate or renew a key while no owner of the runtime's org has accepted the current version of Auto's activation terms for self-hosted runtimes. Nothing else is refused: a license still within its seven days admits runs until it expires, and an allocation admits runs until its `refresh_by`.
+
+**Fix.** An owner of the org reads and accepts the terms at `resolve_at`, Studio's page for this runtime; then run the command or the run again. The key stays: the runtime records nothing against it and does not forget a key it was started with or keeps, so the next run, start or daily renewal activates it without anything else changing. A key given to `auto-runtime license activate` or `activate_license` is kept only once it activates, so give it again after the owner accepted.
+
+A runtime of version 0.36.0 or earlier does not know `terms_required`. It answers an activation refused this way as `meter_unavailable`, `This runtime could not reach its account at Auto to activate its license; try again shortly`, and a run that renews an expired license as `license_invalid`, saying the license wasn't renewed by a date. It keeps its key all the same, so the same fix works: once an owner accepted, the activation or the run goes through.
+
 ## Every run is refused as `metering_fault` {#metering-fault}
 
 **Symptom.** Every new run is answered `409` with the kind `metering_fault`: `This runtime stopped starting runs because`, what the runtime found, then `We need to repair it; see https://studio.on.auto/support (runtime id …). Reading, editing and exporting still work.`, with Studio's support page in `resolve_at` and the runtime's id in `runtime_id`.

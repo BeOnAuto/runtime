@@ -8790,6 +8790,7 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
+                                "terms_required",
                                 "metering_fault"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
@@ -9239,6 +9240,7 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
+                                "terms_required",
                                 "metering_fault"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
@@ -9703,6 +9705,7 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
+                                "terms_required",
                                 "metering_fault"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
@@ -10140,6 +10143,7 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
+                                "terms_required",
                                 "metering_fault",
                                 "requested",
                                 "deadline",
@@ -14046,7 +14050,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/rebuilding, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed, https://on.auto/problems/metering_fault"
+            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/rebuilding, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed, https://on.auto/problems/terms_required, https://on.auto/problems/metering_fault"
           },
           "title": {
             "type": "string",
@@ -14245,6 +14249,7 @@
               "license_required",
               "license_invalid",
               "account_closed",
+              "terms_required",
               "metering_fault",
               "model_not_offered",
               "tool_not_offered",

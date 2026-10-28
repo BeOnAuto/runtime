@@ -338,6 +338,7 @@ A run of the function that does not succeed raises an error the workflow can cat
 | Rejected with `conflict` of the kind `license_required`    | `https://on.auto/problems/license_required`  | 409    |
 | Rejected with `conflict` of the kind `license_invalid`     | `https://on.auto/problems/license_invalid`   | 409    |
 | Rejected with `conflict` of the kind `account_closed`      | `https://on.auto/problems/account_closed`    | 409    |
+| Rejected with `conflict` of the kind `terms_required`      | `https://on.auto/problems/terms_required`    | 409    |
 | Rejected with `conflict` of the kind `metering_fault`      | `https://on.auto/problems/metering_fault`    | 409    |
 | Rejected with `unavailable`                                | `communication`                              | 503    |
 | Rejected with `unavailable` of the kind `tools_unfinished` | `https://on.auto/problems/tools_unfinished`  | 503    |
