@@ -1,6 +1,7 @@
 import { jsonBytesOf, type JsonObject } from '../dsl/json.ts';
 import { raised } from '../dsl/raised-error.ts';
 import type { CallKey } from '../executor/call-key.ts';
+import type { InboxState } from '../inbox/inbox-state.ts';
 import type { ReceivedEvent } from '../inbox/received-event.ts';
 import type { DslError } from '../machine/dsl-error.ts';
 import {
@@ -11,7 +12,7 @@ import {
   mostWaitingEventBytes,
   mostWaitingEvents,
 } from '../machine/limits.ts';
-import type { EmittedEvents, InboxState } from '../machine/run-state.ts';
+import type { EmittedEvents } from '../machine/run-state.ts';
 import type { Journal } from './run-tables.ts';
 
 export interface EmissionTable {

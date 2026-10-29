@@ -7,7 +7,7 @@ import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
-import { composedWithTheLedgerOver, type ServedParts } from './served-parts.ts';
+import { composedWithTheParts, type ServedParts } from './served-parts.ts';
 import { patientWorkerPool } from './worker-pools.ts';
 
 export interface ReasoningServer {
@@ -46,6 +46,7 @@ export async function servingReasoning(
     admit,
     ledger: shared,
     signers,
+    meter,
   }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const ledger = shared ?? temporaryLedger();
@@ -65,7 +66,7 @@ export async function servingReasoning(
   );
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), ...environment },
-    ledgerOver === undefined ? composition : composedWithTheLedgerOver(composition, ledgerOver),
+    composedWithTheParts(composition, { ledgerOver, meter }),
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,

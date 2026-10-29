@@ -1,4 +1,6 @@
 import { problemIn, withMcpSession } from '@on.auto/api/testing';
+import type { HostClock } from '@on.auto/workflow-host';
+import { movedClock } from '@on.auto/workflow-host/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runtimeIdOf } from '../testing/accounts/licensed-server.ts';
@@ -6,6 +8,7 @@ import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { tallied, tallyCreated, talliedTimes } from '../testing/servers/tally-server.ts';
 import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
+import { until } from '../testing/waiting/until.ts';
 
 const studio = 'https://studio.example.com';
 
@@ -47,8 +50,8 @@ function licenseRequiredOf(runtimeId: string) {
   };
 }
 
-async function servedWithTally(): Promise<ReasoningServer> {
-  const served = await servingWorkflows([], { STUDIO_ORIGIN: studio });
+async function servedWithTally(clock?: HostClock): Promise<ReasoningServer> {
+  const served = await servingWorkflows([], { STUDIO_ORIGIN: studio }, undefined, clock);
   await tallyCreated(served);
   return served;
 }
@@ -113,14 +116,22 @@ describe('a runtime nobody registered, after its 100 free runs and the 15 of the
 });
 
 describe('a workflow of a runtime nobody registered, started at its 114th run of a day', () => {
-  it('has its first call admitted as the 115th, and its next refused, which it catches', async () => {
-    const server = await servedWithTally();
+  it('has its first call admitted as the 115th, waits at its next for a license, saying where to get a key, and reaches its catch 24 hours on', async () => {
+    const clock = movedClock(Date.now());
+    const server = await servedWithTally(clock);
     try {
       await talliedTimes(server, 113);
       await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'edge', source: atTheEdge } });
       const started = await server.call('POST', `${alpha}/definitions/workflow/edge/run`, { body: { input: {} } });
-      const settled = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
+      const run = runIdIn(started.body);
+      const history = await until(
+        () => server.call('GET', `${alpha}/runs/${run}/history?limit=100`),
+        ({ body }) => JSON.stringify(body).includes('waits for a license'),
+      );
+      clock.moveTo(clock.now() + 24 * 60 * 60_000);
+      const settled = await settledRun(server, `${alpha}/runs/${run}`);
 
+      expect(JSON.stringify(history.body)).toContain(licenseRequiredOf(await runtimeIdOf(server)).resolve_at);
       expect(settled).toMatchObject({
         body: { status: 'succeeded', output: { kind: 'license_required', status: 409 } },
       });

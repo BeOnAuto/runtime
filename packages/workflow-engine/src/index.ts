@@ -145,7 +145,6 @@ export {
   type EmittedEvents,
   type FrameBody,
   type HeldValue,
-  type InboxState,
   type ListCursor,
   type MachineState,
   type RunOutcome,
@@ -154,8 +153,8 @@ export {
   type TryPhase,
   type ValueId,
   type Variables,
-  type WaitingEvent,
 } from './machine/run-state.ts';
+export type { InboxState, WaitingEvent } from './inbox/inbox-state.ts';
 export {
   RunLogEventSchema,
   eventBytesOf,

@@ -155,6 +155,8 @@ Activating a key can be refused too: as `license_invalid` for a key that is not 
 
 A run asked again under the run id of one that already started is never refused, and counts nothing more. Reading runs and events, editing definitions and exporting go on whatever the license says.
 
+A workflow is not stopped by these refusals at once. When a step calls a function or a workflow the runtime refuses as `license_required`, `license_invalid`, `credits_exhausted` or `meter_unavailable`, the step waits, says in the run's history what it waits for and where to put it right, and asks again: after a minute, then twice as long each time up to an hour, for 24 hours. Once the free rate lifts, a key is activated or the runtime takes credits at its next report, the workflow goes on from that step, and the steps before it are neither run nor counted again. [When the runtime will not start the run for now](../reference/workflow-format.md#when-the-runtime-will-not-start-the-run-for-now) gives the details.
+
 ## Offline runtimes
 
 A runtime that never reaches Auto, behind an air gap or a network that lets nothing out, cannot report to its org. For it, an operator of Auto issues offline credits: credits moved out of the org's account for that runtime alone, which it spends itself, signed by Auto like every answer the runtime takes, and usable for 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. Ask for them through [Studio's support page](https://studio.on.auto/support), naming the runtime id.

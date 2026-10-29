@@ -96,7 +96,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000306",
@@ -460,7 +460,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 5806
+          "value": 5807
         }
       ],
       "outputs": [
@@ -520,7 +520,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000306\",\"/do/0/both/fork/branches/0/left\",1]",
@@ -612,7 +612,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 7338
+          "value": 7340
         }
       ],
       "outputs": [
@@ -625,7 +625,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000306\",\"/do/0/both/fork/branches/1/right\",1]",
@@ -729,7 +729,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 9060
+          "value": 9063
         }
       ],
       "outputs": [

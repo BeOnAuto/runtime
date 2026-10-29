@@ -53,7 +53,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000300",
@@ -255,7 +255,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 2662
+          "value": 2663
         }
       ],
       "outputs": [
@@ -279,7 +279,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "cancel_requested",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000300",
@@ -345,7 +345,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 3847
+          "value": 3849
         }
       ],
       "outputs": [

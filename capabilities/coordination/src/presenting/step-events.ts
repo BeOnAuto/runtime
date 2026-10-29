@@ -37,7 +37,23 @@ function errorShown(error: Step['error']): ErrorShown {
   };
 }
 
-function dataOf({ name, reference, run, times, outcome, error, waits_for: waitsFor, child }: Step): Schema.JsonObject {
+function refusalShown(refusal: Step['refusal']): Readonly<Record<string, string>> {
+  if (refusal === undefined) {
+    return {};
+  }
+  const { kind, because, detail, resolve_at: resolveAt, retry_at: retryAt, until } = refusal;
+  return {
+    detail,
+    ...(kind === undefined ? {} : { kind }),
+    ...(because === undefined ? {} : { because }),
+    ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+    retry_at: new Date(retryAt).toISOString(),
+    until: new Date(until).toISOString(),
+  };
+}
+
+function dataOf(step: Step): Schema.JsonObject {
+  const { name, reference, run, times, outcome, error, waits_for: waitsFor, child } = step;
   const shown = {
     name,
     reference: cutAtCodePoint(reference, mostReferenceBytes),
@@ -45,6 +61,7 @@ function dataOf({ name, reference, run, times, outcome, error, waits_for: waitsF
     times,
     ...(waitsFor === undefined ? {} : { waits_for: waitsFor }),
     ...(child === undefined ? {} : { run_id: child }),
+    ...refusalShown(step.refusal),
   };
   return publicTypes[outcome] === 'step_failed' ? { ...shown, outcome, ...errorShown(error) } : shown;
 }

@@ -129,7 +129,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
@@ -524,7 +524,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 5798
+          "value": 5799
         }
       ],
       "outputs": [
@@ -573,7 +573,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"/do/0/race/fork/branches/0/first\",1]",
@@ -666,7 +666,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 7689
+          "value": 7691
         }
       ],
       "outputs": [
@@ -679,7 +679,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "timer_fired",
         "key": "3",
@@ -841,7 +841,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 11318
+          "value": 11321
         }
       ],
       "outputs": [
@@ -871,7 +871,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"/do/0/race/fork/branches/1/later/do/1/again\",1]",
@@ -1001,7 +1001,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 14221
+          "value": 14225
         }
       ],
       "outputs": [

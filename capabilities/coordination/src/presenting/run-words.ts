@@ -99,7 +99,36 @@ const waits: Readonly<Record<NonNullable<Step['waits_for']>, string>> = {
   call: 'waits for a function it called',
   timer: 'waits for its time',
   event: 'waits for an event',
+  admission: 'waits for credits or a license',
 };
+
+const awaited: ReadonlyMap<string, string> = new Map([
+  ['credits_exhausted', 'waits for credits'],
+  ['license_required', 'waits for a license'],
+  ['license_invalid', 'waits for its license to be put right'],
+  ['meter_unavailable', 'waits until its account at Auto can be asked for credits'],
+]);
+
+type StepRefusal = NonNullable<Step['refusal']>;
+
+function sinceWhy(refusal: StepRefusal): string {
+  const said = whyNot(refusal);
+  return said === '' ? '' : `, since ${said}`;
+}
+
+function whereToPutItRight({ resolve_at: resolveAt }: StepRefusal): string {
+  return resolveAt === undefined ? '' : `; it can be put right at ${resolveAt}`;
+}
+
+function timeOf(instant: number): string {
+  return new Date(instant).toISOString();
+}
+
+function waitingInWords(refusal: StepRefusal): string {
+  const waiting = awaited.get(refusal.kind ?? '') ?? waits.admission;
+  const tries = `It tries again at ${timeOf(refusal.retry_at)}, and stops waiting at ${timeOf(refusal.until)}.`;
+  return `${waiting}${sinceWhy(refusal)}${whereToPutItRight(refusal)}. ${tries}`;
+}
 
 const outcomes: Readonly<Record<Exclude<Step['outcome'], 'waiting'>, string>> = {
   started: 'started',
@@ -117,5 +146,5 @@ function movedInWords({ outcome, waits_for: waitsFor }: Step): string {
 export function stepSummaryOf(entry: Step): string {
   const name = entry.name.replaceAll(notLettersOrDigits, ' ').trim();
   const which = name === '' ? 'A step' : `The step ${quoted(name)}`;
-  return `${which} ${movedInWords(entry)}.`;
+  return entry.refusal === undefined ? `${which} ${movedInWords(entry)}.` : `${which} ${waitingInWords(entry.refusal)}`;
 }

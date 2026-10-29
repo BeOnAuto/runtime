@@ -71,7 +71,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000305",
@@ -281,7 +281,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 2774
+          "value": 2775
         }
       ],
       "outputs": [
@@ -310,7 +310,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "event_received",
         "key": "e1",
@@ -360,14 +360,14 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 3377
+          "value": 3379
         }
       ],
       "outputs": []
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "event_received",
         "key": "e2",
@@ -464,7 +464,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 4869
+          "value": 4872
         }
       ],
       "outputs": [

@@ -6,7 +6,7 @@ import type { DefinitionRunResult, EndedRunResult } from './function-run.ts';
 
 export function definitionRunResultOf(outcome: Outcome): DefinitionRunResult {
   if (outcome.status === 'rejected') {
-    const { reason, detail, issues, kind, because } = outcome;
+    const { reason, detail, issues, kind, because, resolve_at: resolveAt } = outcome;
     return {
       status: 'rejected',
       reason,
@@ -14,6 +14,7 @@ export function definitionRunResultOf(outcome: Outcome): DefinitionRunResult {
       ...(issues === undefined ? {} : { issues }),
       ...(kind === undefined ? {} : { kind }),
       ...(because === undefined ? {} : { because }),
+      ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
     };
   }
   if (outcome.status === 'failed') {

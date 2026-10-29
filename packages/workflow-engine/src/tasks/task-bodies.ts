@@ -8,7 +8,7 @@ import {
   type Machine,
   type Signal,
 } from '../runner/advance.ts';
-import { cancelCall, resumeCall, startCall } from './call-task.ts';
+import { cancelAdmission, cancelCall, resumeAdmission, resumeCall, startCall } from './call-task.ts';
 import { startEmit } from './emit-task.ts';
 import { cancelFor, resumeFor, startFor } from './for-task.ts';
 import { cancelFork, resumeFork, startFork } from './fork-task.ts';
@@ -69,6 +69,9 @@ export function resumeBody(invocation: Invocation, body: FrameBody, signal: Sign
   if (body.kind === 'wait') {
     return resumeWait(invocation, body, signal);
   }
+  if (body.kind === 'admission') {
+    return resumeAdmission(invocation, body, signal);
+  }
   return body.kind === 'call' ? resumeCall(invocation, body, signal) : resumeListen(invocation, body, signal);
 }
 
@@ -90,6 +93,8 @@ export function cancelBody(
     cancelWait(machine, body);
   } else if (body.kind === 'call') {
     cancelCall(machine, body, reason);
+  } else if (body.kind === 'admission') {
+    cancelAdmission(machine, body);
   } else {
     cancelListen(machine, frame);
   }

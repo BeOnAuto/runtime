@@ -1,7 +1,8 @@
 import { Schema } from 'effect';
 
 import { CallKeySchema, type CallKey } from '../executor/call-key.ts';
-import { ReceivedEventSchema, type ReceivedEvent } from '../inbox/received-event.ts';
+import { RefusedCallsSchema, type RefusedCalls } from '../executor/refused-calls.ts';
+import { InboxStateSchema, type InboxState } from '../inbox/inbox-state.ts';
 import { StepCauseSchema, type StepCause } from '../steps/step-entry.ts';
 import { TimerPurposeSchema, type TimerPurpose } from '../timers/timer-id.ts';
 import { DslErrorSchema, type DslError } from './dsl-error.ts';
@@ -59,6 +60,15 @@ export type FrameBody =
       readonly arguments: ValueId;
       readonly label: string;
       readonly deadline: string;
+      readonly refused?: RefusedCalls;
+    }
+  | {
+      readonly kind: 'admission';
+      readonly function: string;
+      readonly arguments: ValueId;
+      readonly label: string;
+      readonly timer: string;
+      readonly refused: RefusedCalls;
     }
   | { readonly kind: 'listen'; readonly consumed: readonly (ValueId | null)[]; readonly waited: number };
 
@@ -94,20 +104,6 @@ export interface ArmedTimer {
   readonly reference: string;
   readonly armedAt: number;
   readonly dueAt: number;
-}
-
-export interface WaitingEvent {
-  readonly event: ReceivedEvent;
-  readonly bytes: number;
-}
-
-export interface InboxState {
-  readonly waiting: readonly WaitingEvent[];
-  readonly waitingBytes: number;
-  readonly receivedIds: readonly string[];
-  readonly offeredIds: readonly string[];
-  readonly received: number;
-  readonly receivedBytes: number;
 }
 
 export interface EmittedEvents {
@@ -197,6 +193,15 @@ const FrameBodySchema: Schema.Codec<FrameBody> = Schema.Union([
     arguments: ValueIdSchema,
     label: Schema.String,
     deadline: Schema.String,
+    refused: Schema.optionalKey(RefusedCallsSchema),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal('admission'),
+    function: Schema.NonEmptyString,
+    arguments: ValueIdSchema,
+    label: Schema.String,
+    timer: Schema.String,
+    refused: RefusedCallsSchema,
   }),
   Schema.Struct({
     kind: Schema.Literal('listen'),
@@ -252,14 +257,7 @@ export const RunStateSchema: Schema.Codec<RunState> = Schema.Struct({
   calls: Schema.Record(Schema.String, CallKeySchema),
   listeners: Schema.Record(Schema.String, CallKeySchema),
   emitted: Schema.Struct({ count: IntSchema, bytes: IntSchema }),
-  inbox: Schema.Struct({
-    waiting: Schema.Array(Schema.Struct({ event: ReceivedEventSchema, bytes: IntSchema })),
-    waitingBytes: IntSchema,
-    receivedIds: Schema.Array(Schema.String),
-    offeredIds: Schema.Array(Schema.String),
-    received: IntSchema,
-    receivedBytes: IntSchema,
-  }),
+  inbox: InboxStateSchema,
   heldBytes: IntSchema,
   historyBytes: IntSchema,
   stepsWithoutWaiting: IntSchema,

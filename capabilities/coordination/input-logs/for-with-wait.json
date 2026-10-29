@@ -73,7 +73,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000303",
@@ -366,7 +366,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 3582
+          "value": 3583
         }
       ],
       "outputs": [
@@ -390,7 +390,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "timer_fired",
         "key": "2",
@@ -590,7 +590,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 6640
+          "value": 6642
         }
       ],
       "outputs": [
@@ -606,7 +606,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "timer_fired",
         "key": "3",
@@ -736,7 +736,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 8389
+          "value": 8392
         }
       ],
       "outputs": [

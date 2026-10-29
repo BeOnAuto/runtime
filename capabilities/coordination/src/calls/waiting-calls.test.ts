@@ -135,7 +135,19 @@ describe('the ending of a run a step waits for', () => {
       { status: 'rejected', reason: 'invalid_input', detail: 'ticket: expected text.', issues: refusedTicket },
     ]);
   });
+});
 
+describe('the ending of a run a step waits for, out of credits', () => {
+  it('answers the step with the rejection of a run that ended out of credits as one to raise, never one to wait out', () => {
+    const outOfCredits = { reason: 'conflict', kind: 'credits_exhausted', detail: 'The step stopped' } as const;
+
+    expect(
+      callResultOfEnding({ type: 'run_rejected', data: { rejection: outOfCredits }, context: ofTheChild }),
+    ).toEqual({ status: 'rejected', ...outOfCredits });
+  });
+});
+
+describe('the ending of a run a step waits for, that broke down', () => {
   it('answers the step with a failure that names the incident of a run that broke down, when it has one', () => {
     expect([
       callResultOfEnding({ type: 'run_failed', data: { incident: 'i-1' }, context: ofTheChild }),

@@ -11,6 +11,7 @@ import {
   type StepCause,
   type StepKey,
   type StepOutcome,
+  type StepRefusal,
   type WaitsFor,
 } from './step-entry.ts';
 
@@ -21,6 +22,7 @@ interface StepEntry {
   readonly error?: DslError;
   readonly waitsFor?: WaitsFor;
   readonly child?: string;
+  readonly refusal?: StepRefusal;
   readonly times?: number;
 }
 
@@ -51,6 +53,25 @@ function errorShown(error: DslError | undefined): Pick<Step, 'error'> {
   return { error: { type, ...(title === undefined ? {} : { title: textCutAt(title, mostTitleBytes) }) } };
 }
 
+function refusalShown(refusal: StepRefusal | undefined): Pick<Step, 'refusal'> {
+  if (refusal === undefined) {
+    return {};
+  }
+  const { kind, because, detail, resolve_at: resolveAt, retry_at, until } = refusal;
+  return {
+    refusal: {
+      ...(kind === undefined ? {} : { kind: textCutAt(kind, mostNameBytes) }),
+      ...(because === undefined ? {} : { because: textCutAt(because, mostNameBytes) }),
+      detail: textCutAt(detail, mostTitleBytes),
+      ...(resolveAt === undefined || textCutAt(resolveAt, mostTitleBytes) !== resolveAt
+        ? {}
+        : { resolve_at: resolveAt }),
+      retry_at,
+      until,
+    },
+  };
+}
+
 function stepOf({ reference, run }: Pick<StepKey, 'reference' | 'run'>): string {
   return JSON.stringify([reference, run]);
 }
@@ -63,12 +84,19 @@ function causedAnew(step: Step, cause: StepCause): Step {
   return { ...step, caused_by: cause };
 }
 
-function latestEntryOf({ reference, run, body }: TaskFrame): StepKey {
+function waitedOf(body: TaskFrame['body']): number {
   if (body.kind === 'listen') {
-    return { reference, run, outcome: 'waiting', times: body.waited };
+    return body.waited;
   }
-  const waits = body.kind === 'call' || body.kind === 'wait';
-  return { reference, run, outcome: waits ? 'waiting' : 'started', times: 1 };
+  if (body.kind === 'admission') {
+    return body.refused.waited;
+  }
+  return body.kind === 'call' ? (body.refused?.waited ?? 1) : 1;
+}
+
+function latestEntryOf({ reference, run, body }: TaskFrame): StepKey {
+  const waits = body.kind === 'listen' || body.kind === 'admission' || body.kind === 'call' || body.kind === 'wait';
+  return { reference, run, outcome: waits ? 'waiting' : 'started', times: waitedOf(body) };
 }
 
 export function stepJournalOf(): StepJournal {
@@ -83,7 +111,7 @@ export function stepJournalOf(): StepJournal {
   };
   return {
     record: (entry) => {
-      const { reference, run, outcome, waitsFor, child } = entry;
+      const { reference, run, outcome, waitsFor, child, refusal } = entry;
       const key = { reference, run, outcome, times: entry.times ?? 1 };
       const place = placeOfStep.get(stepOf(key));
       const step = {
@@ -93,6 +121,7 @@ export function stepJournalOf(): StepJournal {
         ...errorShown(entry.error),
         ...(waitsFor === undefined ? {} : { waits_for: waitsFor }),
         ...(child === undefined ? {} : { child }),
+        ...refusalShown(refusal),
       };
       const placed = place ?? { step };
       placed.step = step;

@@ -35,6 +35,7 @@ export type EndedRunResult =
       readonly issues?: readonly Issue[];
       readonly kind?: RejectionKind;
       readonly because?: RejectionBecause;
+      readonly resolve_at?: string;
     }
   | { readonly status: 'failed'; readonly detail: string };
 
