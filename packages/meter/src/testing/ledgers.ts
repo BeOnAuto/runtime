@@ -30,7 +30,6 @@ export interface Tampering {
   readonly idsOf: (stream: string) => Promise<readonly string[]>;
   readonly edited: (id: string, change: (data: Readonly<Record<string, unknown>>) => unknown) => Promise<void>;
   readonly deleted: (id: string) => Promise<void>;
-  readonly renamed: (id: string, to: string) => Promise<void>;
   readonly streamDeleted: (stream: string) => Promise<void>;
   readonly garbled: (id: string) => Promise<void>;
   readonly lastPosition: () => Promise<number>;
@@ -53,9 +52,6 @@ export function tamperingOn(at: LedgerAt): Tampering {
     },
     deleted: async (id) => {
       await at.rows('DELETE FROM emt_messages WHERE message_id = ?', [id]);
-    },
-    renamed: async (id, to) => {
-      await at.rows('UPDATE emt_messages SET message_id = ? WHERE message_id = ?', [to, id]);
     },
     garbled: async (id) => {
       await at.rows("UPDATE emt_messages SET message_data = '{not json' WHERE message_id = ?", [id]);

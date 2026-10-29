@@ -1,110 +1,130 @@
 import { expect, it } from 'vitest';
 
-import { digestOf } from '../counting/checkpoint-digest.ts';
-import type { Tampering } from '../testing/ledgers.ts';
-import type { Metered } from '../testing/metered.ts';
 import { runOf } from '../testing/runs.ts';
-import { checkpointOf, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import {
+  admittedEach,
+  licensedInstallation,
+  licensedOn,
+  opened,
+  restartedAfter,
+  runsNamed,
+  startedOnceAdmitted,
+  type LedgerOf,
+} from './opened.ts';
 
-const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
+const installation = licensedInstallation;
 
-async function licensedOn(ledgerOf: LedgerOf) {
-  const { metered, ...rest } = await opened(ledgerOf);
-  const key = metered.account.keyFor(installation);
-  await metered.activated(key);
-  return { ...rest, metered, key };
-}
-
-async function forgedTo(actions: number, metered: Metered, tampering: Tampering): Promise<void> {
-  const { through, last } = { through: [], last: '', ...(await checkpointOf(metered)) };
-  const forged = { actions, through, last };
-  const [id = ''] = (await tampering.idsOf('meter')).toReversed();
-  await tampering.edited(id, (data) => ({ ...data, ...forged, digest: digestOf(forged) }));
-}
-
-export function reportBehaviour(ledgerOf: LedgerOf): void {
-  it('reports the count it projected with the point and id of its checkpoint, and records it once taken', async () => {
+function takenReportBehaviour(ledgerOf: LedgerOf): void {
+  it('reports the runs it admitted and those it admitted against its license, and takes the license Auto answers', async () => {
     const { metered } = await licensedOn(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
-    await startedOnceAdmitted(metered, 'run-2');
+    await admittedEach(metered, ['run-1', 'run-2']);
+    metered.account.at('2026-10-27T13:00:00.000Z');
+    metered.at('2026-10-27T13:00:00.000Z');
 
     expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
-    const { checkpoint, reported } = await metered.state();
-    expect(metered.account.reports()).toEqual([{ actions: 2, through: checkpoint?.through, last: checkpoint?.last }]);
-    expect(reported).toEqual({ actions: 2, through: checkpoint?.through, last: checkpoint?.last });
+    expect(metered.account.reports()).toEqual([{ actions: 2, licensed: 2 }]);
+    expect(await metered.state()).toMatchObject({
+      reported: { actions: 2, licensed: 2 },
+      license: {
+        issued_at: '2026-10-27T13:00:00.000Z',
+        charged_through: 2,
+        admits_through: 1000,
+        credits: { available: 998, owed: 0, overage_cap: 0 },
+        licensed_reported: 2,
+        taken_at: '2026-10-27T13:00:00.000Z',
+      },
+    });
   });
 
-  it('reports again each time it is asked, the count at the head of its ledger', async () => {
+  it('keeps its last license and admits on it while Auto cannot be reached, and reports again after', async () => {
     const { metered } = await licensedOn(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
-    await metered.reported();
-    await startedOnceAdmitted(metered, 'run-2');
-    await metered.reported();
-    const [first, second] = metered.account.reports();
-
-    expect([first?.actions, second?.actions]).toEqual([1, 2]);
-    expect(second?.last).not.toBe(first?.last);
-  });
-
-  it('is asked again until the account takes it, and sends a report taken but not recorded again', async () => {
-    const { metered } = await licensedOn(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
     metered.account.goDown();
     const unreached = await metered.reported();
+    const admitted = await startedOnceAdmitted(metered, 'run-1');
     metered.account.comeBack();
+
+    expect([unreached.kind, admitted]).toEqual(['meter_unavailable', 'admitted']);
+    expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
+    expect(metered.account.reports()).toEqual([{ actions: 1, licensed: 1 }]);
+  });
+
+  it('answers meter_unavailable when it cannot record the license a report brought, and reports again', async () => {
+    const { metered } = await licensedOn(ledgerOf);
     metered.executesFail('conflict');
     const unrecorded = await metered.reported();
     metered.executesFail('nothing');
 
-    expect([unreached.kind, unrecorded.kind]).toEqual(['meter_unavailable', 'meter_unavailable']);
+    expect(unrecorded.kind).toBe('meter_unavailable');
     expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
-    expect([metered.account.reports().length, metered.account.reportsSent()]).toEqual([1, 2]);
-    expect((await metered.state()).reported?.actions).toBe(1);
+    expect(metered.account.reportsSent()).toBe(2);
   });
 }
 
-export function reportVerificationBehaviour(ledgerOf: LedgerOf): void {
-  it('verifies its count against the whole ledger before every report, and reports what the ledger holds', async () => {
-    const { metered, tampering } = await licensedOn(ledgerOf);
+function keyedReportBehaviour(ledgerOf: LedgerOf): void {
+  it('activates its key at a report while it holds no license for it, saying so when Auto refuses the key', async () => {
+    const { metered } = await opened(ledgerOf);
+    const key = metered.account.keyFor(installation);
+    metered.account.revoke(key, 'key_rotated');
+    const keyed = await restartedAfter(metered, () => Promise.resolve(), { key });
+
+    expect(await keyed.reported()).toEqual({ kind: 'reported', detail: '' });
+    expect(keyed.warnings().at(-1)).toContain(
+      "This runtime could not activate its key with Auto: This runtime's key was replaced.",
+    );
+    expect((await keyed.state()).refused).toMatchObject({ because: 'key_rotated' });
+  });
+
+  it('reports nothing, and calls Auto for nothing, without a key', async () => {
+    const { metered } = await opened(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
-    await startedOnceAdmitted(metered, 'run-2');
-    await metered.admitted(runOf('run-3'));
-    await forgedTo(0, metered, tampering);
+
+    expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
+    expect(await metered.reportDue()).toBe(false);
+    expect([metered.account.reportsSent(), metered.account.activations()]).toEqual([0, []]);
+  });
+}
+
+export function reportBehaviour(ledgerOf: LedgerOf): void {
+  takenReportBehaviour(ledgerOf);
+  keyedReportBehaviour(ledgerOf);
+}
+
+export function earlyReportBehaviour(ledgerOf: LedgerOf): void {
+  it('is due early once it has used half of what its license left it, and no longer once a report renews it', async () => {
+    const { metered } = await licensedOn(ledgerOf, {}, (account) => {
+      account.fund('acme', { available: 10 });
+    });
+    await admittedEach(metered, runsNamed('run', 4));
+    const beforeHalf = await metered.reportDue();
+    await startedOnceAdmitted(metered, 'run-4');
+    const atHalf = await metered.reportDue();
     await metered.reported();
 
-    expect(metered.account.reports().map(({ actions }) => actions)).toEqual([2]);
-    expect(metered.warnings()).toContain("The meter's count of 0 actions was edited; its ledger holds 2");
+    expect([beforeHalf, atHalf, await metered.reportDue()]).toEqual([false, true, false]);
+    expect((await metered.state()).license).toMatchObject({ licensed_reported: 5, admits_through: 10 });
   });
 
-  it('reports nothing without a key, nor once its key was revoked, which it records', async () => {
-    const { metered, key } = await licensedOn(ledgerOf);
-    const unlicensed = await opened(ledgerOf);
-    await startedOnceAdmitted(unlicensed.metered, 'run-1');
-    await startedOnceAdmitted(metered, 'run-1');
-    metered.account.revoke(key);
+  it('is not due early while its license leaves it nothing, nor while it is limited', async () => {
+    const { metered } = await licensedOn(ledgerOf, {}, (account) => {
+      account.fund('acme', { available: 0 });
+    });
 
-    expect([await metered.reported(), await unlicensed.metered.reported()]).toEqual([
-      { kind: 'reported', detail: '' },
-      { kind: 'reported', detail: '' },
-    ]);
-    expect((await metered.state()).license?.invalid?.detail).toContain('revoked');
-    expect(await metered.reported()).toEqual({ kind: 'reported', detail: '' });
-    expect(metered.account.reportsSent() + unlicensed.metered.account.reportsSent()).toBe(0);
+    expect(await metered.reportDue()).toBe(false);
   });
+}
 
-  it('reports nothing while a fault stands, or when it finds one as it verifies its count, and starts no run after', async () => {
+export function restoredReportBehaviour(ledgerOf: LedgerOf): void {
+  it('reports the lower count of a ledger restored from an older copy, which Auto charges nothing for, and goes on', async () => {
     const { metered, tampering, key } = await licensedOn(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
-    await metered.admitted(runOf('run-2'));
-    await tampering.deleted(await metered.lastCounted());
-    const found = await metered.reported();
-    const restarted = await restartedOf(metered, { key });
+    const copied = await tampering.lastPosition();
+    await admittedEach(metered, ['run-2', 'run-3']);
+    await metered.reported();
+    const restored = await restartedAfter(metered, () => tampering.restoredTo(copied), { key });
+    await restored.reported();
 
-    expect([found, await restarted.reported()]).toEqual([
-      { kind: 'reported', detail: '' },
-      { kind: 'reported', detail: '' },
-    ]);
-    expect(metered.account.reportsSent()).toBe(0);
-    expect((await restarted.admitted(runOf('run-3'))).kind).toBe('metering_fault');
+    expect(restored.account.wentBackwards()).toEqual([{ installation, licensed: 1, charged_through: 3 }]);
+    expect(restored.account.chargedThrough(installation)).toBe(3);
+    expect((await restored.admitted(runOf('run-4'))).kind).toBe('admitted');
   });
 }

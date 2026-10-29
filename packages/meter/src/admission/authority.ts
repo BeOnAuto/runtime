@@ -1,19 +1,14 @@
 import type { MeteredRun } from '@on.auto/definitions';
 import {
   Conflict,
+  Unavailable,
   type AccountClosedBecause,
   type ConflictKind,
   type RejectionBecause,
-  type Unavailable,
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { Counting } from '../counting/run-starts.ts';
-import { accountUnavailable } from '../licensing/licensing.ts';
-import { repairedBy } from '../licensing/repairs.ts';
-import type { Signed, Signers } from '../licensing/signed-answers.ts';
-import type { Fault } from '../meter-stream/meter-events.ts';
-import { actionOf, checkpointed, type Metering } from './metering.ts';
+import { actionOf } from './metering.ts';
 
 interface Refusal {
   readonly admitted: false;
@@ -35,6 +30,16 @@ type AuthorityRefusal = CreditOrLicenseRefusal | AccountClosedRefusal;
 
 export type AuthorityAnswer = { readonly admitted: true } | AuthorityRefusal;
 
+export interface AdmissionAuthority {
+  readonly admit: (run: MeteredRun, action: string) => Promise<AuthorityAnswer>;
+}
+
+const authorityUnavailable = new Unavailable({
+  detail:
+    'This runtime could not ask its account at Auto to admit the run, so the run was not started; ask again shortly',
+  kind: 'meter_unavailable',
+});
+
 function refusalOf({ kind, detail, because, resolve_at: resolveAt }: AuthorityRefusal): Conflict {
   return new Conflict({
     detail,
@@ -44,31 +49,11 @@ function refusalOf({ kind, detail, because, resolve_at: resolveAt }: AuthorityRe
   });
 }
 
-export interface AdmissionAuthority {
-  readonly installation: string;
-  readonly admit: (run: MeteredRun, action: string) => Promise<AuthorityAnswer>;
-  readonly repairFor: (fault: Fault) => Promise<Signed | null>;
-}
-
 export function admittedByTheAuthority(
-  metering: Metering,
   authority: AdmissionAuthority,
   run: MeteredRun,
-  counting: Counting,
 ): Effect.Effect<void, Conflict | Unavailable> {
-  return Effect.tryPromise({ try: () => authority.admit(run, actionOf(run)), catch: () => accountUnavailable }).pipe(
-    Effect.flatMap((answer) => (answer.admitted ? checkpointed(metering, counting) : Effect.fail(refusalOf(answer)))),
+  return Effect.tryPromise({ try: () => authority.admit(run, actionOf(run)), catch: () => authorityUnavailable }).pipe(
+    Effect.flatMap((answer) => (answer.admitted ? Effect.void : Effect.fail(refusalOf(answer)))),
   );
-}
-
-export function repairTakenFrom(
-  metering: Metering,
-  authority: AdmissionAuthority,
-  signers: Signers,
-): (fault: Fault) => Effect.Effect<void> {
-  return (fault) =>
-    Effect.tryPromise(() => authority.repairFor(fault)).pipe(
-      Effect.flatMap((signed) => repairedBy({ ...metering, signers }, signed, authority.installation)),
-      Effect.ignore,
-    );
 }

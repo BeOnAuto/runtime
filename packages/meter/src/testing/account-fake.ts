@@ -2,115 +2,52 @@ import { randomUUID } from 'node:crypto';
 
 import { Effect } from 'effect';
 
-import { AccountFailure, unreachable, type AccountRefusal } from '../accounts/account-failure.ts';
+import { AccountFailure, unreachable } from '../accounts/account-failure.ts';
 import type { AccountPorts, InstallationUsage, Usage } from '../accounts/account-service.ts';
 import type { Signed } from '../licensing/signed-answers.ts';
+import { spendableOf, standingOf, type Books, type Policy } from './account-books.ts';
+import {
+  accountKeeping,
+  type Answering,
+  type Keeping,
+  type Registration,
+  type Revocation,
+  type WentBackwards,
+} from './account-keeping.ts';
 import { allocationFake, type AllocationFake } from './allocation-fake.ts';
 import { signedByAnotherKey, signedByTheTestKey } from './test-signing.ts';
 
-export type Answering =
-  | 'signed'
-  | 'by another key'
-  | 'by an unknown key'
-  | 'for another installation'
-  | 'for another action'
-  | 'tampered'
-  | 'expired'
-  | 'with more than it knows';
+export type { Answering, Revocation, WentBackwards } from './account-keeping.ts';
 
-interface Registration {
-  readonly installation: string;
-  readonly org: string;
-}
-
-export type Revocation = 'key_rotated' | 'installation_revoked';
-
-interface CreditRefusal {
+interface ClosedAccount {
+  readonly detail: string;
   readonly because?: string;
   readonly resolve_at?: string;
-}
-
-interface ClosedAccount extends CreditRefusal {
-  readonly detail: string;
 }
 
 export interface AccountFake extends Omit<AllocationFake, 'ports'> {
   readonly ports: AccountPorts;
   readonly keyFor: (installation: string, org?: string) => string;
   readonly orgNamed: (org: string, name: string) => void;
+  readonly fund: (org: string, books: Partial<Books>) => void;
+  readonly booksOf: (org: string) => Books;
+  readonly policy: (policy: Partial<Policy>) => void;
   readonly revoke: (key: string, because?: Revocation) => void;
-  readonly exhaust: (refusal?: CreditRefusal) => void;
   readonly close: (closed: ClosedAccount) => void;
   readonly goDown: () => void;
   readonly comeBack: () => void;
   readonly answer: (how: Answering) => void;
-  readonly repairFor: (installation: string, how?: Answering) => void;
   readonly at: (moment: string) => void;
-  readonly charged: () => readonly string[];
-  readonly askedToAdmit: () => number;
+  readonly chargedThrough: (installation: string) => number;
   readonly activations: () => readonly InstallationUsage[];
   readonly reports: () => readonly Usage[];
   readonly reportsSent: () => number;
+  readonly wentBackwards: () => readonly WentBackwards[];
 }
 
 type Payload = Readonly<Record<string, unknown>>;
 
-interface FakeState {
-  now: number;
-  up: boolean;
-  refusing: AccountRefusal | undefined;
-  answering: Answering;
-}
-
-interface Standing {
-  readonly reached: (key: string) => Effect.Effect<Registration, AccountFailure>;
-  readonly nameOf: (org: string) => Payload;
-  readonly signed: (payload: Payload) => Signed;
-  readonly iso: (laterMs?: number) => string;
-  readonly refusal: () => AccountFailure | undefined;
-  readonly closed: () => AccountFailure | undefined;
-  readonly repairOf: (installation: string) => Signed | null;
-  readonly registered: (key: string, registration: Registration) => void;
-  readonly named: (org: string, name: string) => void;
-  readonly revoked: (key: string, because: Revocation | undefined) => void;
-  readonly changed: (change: Readonly<Partial<FakeState>>) => void;
-  readonly repairedWith: (installation: string, repair: Signed) => void;
-}
-
-interface Records {
-  readonly activated: (usage: InstallationUsage) => void;
-  readonly asked: () => void;
-  readonly charged: (action: string) => void;
-  readonly reported: (usage: Usage) => void;
-  readonly read: Pick<AccountFake, 'charged' | 'askedToAdmit' | 'activations' | 'reports' | 'reportsSent'>;
-}
-
-const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-
-const unknownKey = new AccountFailure({
-  status: 403,
-  kind: 'license_invalid',
-  detail: 'The key is unknown, was rotated away or its installation was revoked',
-});
-
-const revocations: Readonly<Record<Revocation, AccountFailure>> = {
-  key_rotated: new AccountFailure({
-    status: 403,
-    kind: 'license_invalid',
-    detail: 'The key was rotated',
-    because: 'key_rotated',
-  }),
-  installation_revoked: new AccountFailure({
-    status: 403,
-    kind: 'license_invalid',
-    detail: 'The installation was removed from its org',
-    because: 'installation_revoked',
-  }),
-};
-
-function noCreditOf(refusal: CreditRefusal): AccountRefusal {
-  return { status: 409, kind: 'credits_exhausted', detail: 'The org acme has no credits left', ...refusal };
-}
+const dayMs = 86_400_000;
 
 function tampered(signed: Signed): Signed {
   const text = `${Buffer.from(signed.payload, 'base64url').toString('utf8')} `;
@@ -122,163 +59,121 @@ const answers: Readonly<Record<Answering, (payload: Payload) => Signed>> = {
   'by another key': (payload) => signedByAnotherKey()(payload),
   'by an unknown key': (payload) => signedByAnotherKey('rogue-2026-10')(payload),
   'for another installation': (payload) => signedByTheTestKey({ ...payload, installation: 'another-installation' }),
-  'for another action': (payload) => signedByTheTestKey({ ...payload, action: 'installation:another/acme/alpha/run' }),
   tampered: (payload) => tampered(signedByTheTestKey(payload)),
-  expired: (payload) => signedByTheTestKey({ ...payload, expires_at: payload['issued_at'] }),
+  'of another version': (payload) => signedByTheTestKey({ ...payload, v: 1, kind: 'entitlement' }),
   'with more than it knows': (payload) => signedByTheTestKey({ ...payload, seats: 5, region: 'eu' }),
 };
 
-function portsOf(standing: Standing, records: Records, allocations: AllocationFake): AccountPorts {
+function isoOf(keeping: Keeping, laterMs = 0): string {
+  return new Date(keeping.settings().now + laterMs).toISOString();
+}
+
+function licenseOf(keeping: Keeping, { installation, org }: Registration, licensed: number): Signed {
+  const books = keeping.booksOf(org);
+  const chargedThrough = keeping.chargedThrough(installation);
+  const name = keeping.nameOf(org);
+  const { policy, answering } = keeping.settings();
+  return answers[answering]({
+    v: 2,
+    kind: 'license',
+    installation,
+    org,
+    ...(name === undefined ? {} : { org_name: name }),
+    plan: books.plan,
+    policy: policy.version,
+    issued_at: isoOf(keeping),
+    warn_at: isoOf(keeping, policy.warn_after_days * dayMs),
+    limit_at: isoOf(keeping, policy.limit_after_days * dayMs),
+    charged_through: chargedThrough,
+    admits_through: Math.max(chargedThrough, licensed) + spendableOf(books),
+    standing: standingOf(books),
+    credits: { available: books.available, owed: books.owed, overage_cap: books.overage_cap },
+    fallback: { per_day: policy.per_day, per_month: policy.per_month },
+  });
+}
+
+function reachedBy(keeping: Keeping): (key: string) => Effect.Effect<Registration, AccountFailure> {
+  return (key) =>
+    Effect.suspend(() => {
+      const { up, closed } = keeping.settings();
+      if (!up) return Effect.fail(unreachable('The account service could not be reached'));
+      const registration = keeping.registered(key);
+      if (registration === undefined) return Effect.fail(keeping.refusalOf(key));
+      return closed === undefined ? Effect.succeed(registration) : Effect.fail(new AccountFailure(closed));
+    });
+}
+
+function portsOf(keeping: Keeping, allocations: AllocationFake['ports']): AccountPorts {
+  const reached = reachedBy(keeping);
+  const licensedFor = (registration: Registration, { licensed }: Usage, reporting: boolean): Signed => {
+    keeping.charge(registration, licensed, reporting);
+    return licenseOf(keeping, registration, licensed);
+  };
   return {
-    ...allocations.ports,
+    ...allocations,
     activate: (key, usage) =>
-      Effect.flatMap(standing.reached(key), ({ installation, org }) => {
-        const closed = standing.closed();
-        if (closed !== undefined) return Effect.fail(closed);
-        records.activated(usage);
-        const entitlement = {
-          v: 1,
-          kind: 'entitlement',
-          installation,
-          org,
-          ...standing.nameOf(org),
-          plan: 'free',
-          issued_at: standing.iso(),
-        };
-        return Effect.succeed({
-          entitlement: standing.signed({ ...entitlement, expires_at: standing.iso(sevenDaysMs) }),
-          repair: standing.repairOf(installation),
-        });
-      }),
-    admit: (key, run) =>
-      Effect.flatMap(standing.reached(key), ({ installation }) => {
-        records.asked();
-        const refusal = standing.refusal();
-        if (refusal !== undefined) return Effect.fail(refusal);
-        const action = `installation:${installation}/${run.org}/${run.playbook}/${run.run_id.toLowerCase()}`;
-        records.charged(action);
-        return Effect.succeed(
-          standing.signed({ v: 1, kind: 'admission', installation, action, admitted_at: standing.iso() }),
-        );
+      Effect.map(reached(key), (registration) => {
+        keeping.activated(usage);
+        return licensedFor(registration, usage, false);
       }),
     report: (key, usage) =>
-      Effect.map(standing.reached(key), () => {
-        records.reported(usage);
-      }),
-  };
-}
-
-function accountStanding(): Standing {
-  const registrations = new Map<string, Registration>();
-  const revoked = new Map<string, AccountFailure>();
-  const repairs = new Map<string, Signed>();
-  const names = new Map<string, string>();
-  const now = Date.parse('2026-10-27T12:00:00.000Z');
-  const state: FakeState = { now, up: true, refusing: undefined, answering: 'signed' };
-  return {
-    reached: (key) =>
       Effect.suspend(() => {
-        const registration = registrations.get(key);
-        if (!state.up) return Effect.fail(unreachable('The account service could not be reached'));
-        return registration === undefined ? Effect.fail(revoked.get(key) ?? unknownKey) : Effect.succeed(registration);
+        keeping.reportSent();
+        return Effect.map(reached(key), (registration) => {
+          keeping.reported(usage);
+          return licensedFor(registration, usage, true);
+        });
       }),
-    nameOf: (org) => {
-      const name = names.get(org);
-      return name === undefined ? {} : { org_name: name };
-    },
-    signed: (payload) => answers[state.answering](payload),
-    iso: (laterMs = 0) => new Date(state.now + laterMs).toISOString(),
-    refusal: () => (state.refusing === undefined ? undefined : new AccountFailure(state.refusing)),
-    closed: () => (state.refusing?.kind === 'account_closed' ? new AccountFailure(state.refusing) : undefined),
-    repairOf: (installation) => repairs.get(installation) ?? null,
-    registered: (key, registration) => {
-      registrations.set(key, registration);
-    },
-    named: (org, name) => {
-      names.set(org, name);
-    },
-    revoked: (key, because) => {
-      registrations.delete(key);
-      if (because !== undefined) revoked.set(key, revocations[because]);
-    },
-    changed: (change) => {
-      Object.assign(state, change);
-    },
-    repairedWith: (installation, repair) => {
-      repairs.set(installation, repair);
-    },
   };
 }
 
-function accountRecords(): Records {
-  const charged = new Set<string>();
-  const asked = { admissions: 0, reports: 0 };
-  const activations: InstallationUsage[] = [];
-  const reports = new Map<string | null, Usage>();
+type Controls = Omit<AccountFake, 'ports' | keyof Omit<AllocationFake, 'ports'>>;
+
+function controlsOf(keeping: Keeping): Controls {
   return {
-    activated: (usage) => {
-      activations.push(usage);
+    keyFor: (installation, org = 'acme') => {
+      const key = `alk.${org}.${installation}.${randomUUID().replaceAll('-', '')}`;
+      keeping.register(key, { installation, org });
+      return key;
     },
-    asked: () => {
-      asked.admissions += 1;
+    orgNamed: keeping.name,
+    fund: keeping.fund,
+    booksOf: keeping.booksOf,
+    policy: (policy) => {
+      keeping.changed({ policy: { ...keeping.settings().policy, ...policy } });
     },
-    charged: (action) => {
-      charged.add(action);
+    revoke: (key, because) => {
+      keeping.revoke(key, because);
     },
-    reported: (usage) => {
-      asked.reports += 1;
-      reports.set(usage.last, reports.get(usage.last) ?? usage);
+    close: (closed) => {
+      keeping.changed({ closed: { status: 410, kind: 'account_closed', ...closed } });
     },
-    read: {
-      charged: () => [...charged],
-      askedToAdmit: () => asked.admissions,
-      activations: () => [...activations],
-      reports: () => [...reports.values()],
-      reportsSent: () => asked.reports,
+    goDown: () => {
+      keeping.changed({ up: false });
     },
+    comeBack: () => {
+      keeping.changed({ up: true });
+    },
+    answer: (how) => {
+      keeping.changed({ answering: how });
+    },
+    at: (moment) => {
+      keeping.changed({ now: Date.parse(moment) });
+    },
+    chargedThrough: keeping.chargedThrough,
+    activations: keeping.activations,
+    reports: keeping.reports,
+    reportsSent: keeping.reportsSent,
+    wentBackwards: keeping.wentBackwards,
   };
 }
 
 export function accountFake(): AccountFake {
-  const standing = accountStanding();
-  const records = accountRecords();
-  const { ports, ...allocations } = allocationFake(standing);
-  return {
-    ports: portsOf(standing, records, { ports, ...allocations }),
-    ...allocations,
-    keyFor: (installation, org = 'acme') => {
-      const key = `alk.${org}.${installation}.${randomUUID().replaceAll('-', '')}`;
-      standing.registered(key, { installation, org });
-      return key;
-    },
-    orgNamed: (org, name) => {
-      standing.named(org, name);
-    },
-    revoke: (key, because) => {
-      standing.revoked(key, because);
-    },
-    exhaust: (refusal = {}) => {
-      standing.changed({ refusing: noCreditOf(refusal) });
-    },
-    close: (closed) => {
-      standing.changed({ refusing: { status: 409, kind: 'account_closed', ...closed } });
-    },
-    goDown: () => {
-      standing.changed({ up: false });
-    },
-    comeBack: () => {
-      standing.changed({ up: true });
-    },
-    answer: (how) => {
-      standing.changed({ answering: how });
-    },
-    repairFor: (installation, how = 'signed') => {
-      const repair = { v: 1, kind: 'repair', installation, id: randomUUID(), reason: 'Restored from a backup' };
-      standing.repairedWith(installation, answers[how]({ ...repair, issued_at: standing.iso() }));
-    },
-    at: (moment) => {
-      standing.changed({ now: Date.parse(moment) });
-    },
-    ...records.read,
-  };
+  const keeping = accountKeeping();
+  const { ports, ...allocations } = allocationFake({
+    reached: reachedBy(keeping),
+    iso: (laterMs) => isoOf(keeping, laterMs),
+    signed: (payload) => answers[keeping.settings().answering](payload),
+  });
+  return { ports: portsOf(keeping, ports), ...allocations, ...controlsOf(keeping) };
 }

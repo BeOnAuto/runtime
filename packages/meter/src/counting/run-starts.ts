@@ -1,6 +1,10 @@
 import type { LoggedEvent, LogPorts } from '@on.auto/ledger';
 
-import type { Counted } from './checkpoint-digest.ts';
+export interface Counted {
+  readonly actions: number;
+  readonly through: readonly string[] | undefined;
+  readonly last: string | undefined;
+}
 
 export interface Counting extends Counted {
   readonly hasStarted: (stream: string) => boolean;

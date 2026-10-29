@@ -1,35 +1,7 @@
-import type { LogPorts } from '@on.auto/ledger';
 import { Conflict, type Ledger } from '@on.auto/operations';
 import { Effect, Logger, type Layer } from 'effect';
 
 export type Failing = 'conflict' | 'defect' | 'nothing';
-
-interface WatchedLog {
-  readonly log: (log: LogPorts) => LogPorts;
-  readonly eventsRead: () => number;
-  readonly readsFail: () => void;
-}
-
-export function watchedLog(): WatchedLog {
-  const watched = { events: 0, failing: false };
-  const unless = <A>(read: () => Promise<A>) =>
-    watched.failing ? Promise.reject(new Error('The ledger cannot be reached')) : read();
-  return {
-    log: (log) => ({
-      ...log,
-      at: (point) => unless(() => log.at(point)),
-      after: async (point, most) => {
-        const page = await unless(() => log.after(point, most));
-        watched.events += page.events.length;
-        return page;
-      },
-    }),
-    eventsRead: () => watched.events,
-    readsFail: () => {
-      watched.failing = true;
-    },
-  };
-}
 
 interface FailingLedger {
   readonly ledger: (ledger: Ledger['Service']) => Ledger['Service'];

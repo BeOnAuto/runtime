@@ -1,74 +1,85 @@
-import { Effect, Function, Option } from 'effect';
+import { Effect, Function, Option, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { allocationIn } from '../licensing/signed-answers.ts';
+import { allocationIn, licenseIn, SignedSchema } from '../licensing/signed-answers.ts';
 import { accountFake } from '../testing/account-fake.ts';
 import { accountServerOver } from '../testing/account-server.ts';
-import { runOf } from '../testing/runs.ts';
 import { testSigners } from '../testing/test-signing.ts';
-import { accountServiceAt } from './fetched-account-service.ts';
+import { accountServiceAt, type AccountsAt } from './fetched-account-service.ts';
 
 const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e';
 
-const usage = { actions: 2, through: ['7'], last: 'event-7' };
+const usage = { actions: 3, licensed: 2 };
+
+interface Sent {
+  readonly address: string;
+  readonly authorization: string | undefined;
+  readonly body: string;
+}
 
 async function served() {
   const fake = accountFake();
   const server = await accountServerOver(fake);
   onTestFinished(() => server.close());
-  const account = accountServiceAt({ origin: server.origin, fetch });
-  return { fake, server, account, key: fake.keyFor(installation) };
+  const sent: Sent[] = [];
+  const recording: AccountsAt['fetch'] = (address, request) => {
+    sent.push({ address, authorization: request.headers['authorization'], body: request.body });
+    return fetch(address, request);
+  };
+  const account = accountServiceAt({ origin: server.origin, fetch: recording });
+  return { fake, server, account, key: fake.keyFor(installation), sent: () => [...sent] };
 }
 
 function outcomeOf<A, E>(work: Effect.Effect<A, E>): Promise<A | E> {
   return Effect.runPromise(work.pipe(Effect.match({ onFailure: Function.identity, onSuccess: Function.identity })));
 }
 
+const signedIn = Schema.decodeUnknownOption(SignedSchema);
+
+function licenseOf(answer: unknown) {
+  return Option.getOrUndefined(Option.flatMap(signedIn(answer), (signed) => licenseIn(signed, testSigners)));
+}
+
 describe('the account service over HTTP', () => {
-  it('activates with the key as a bearer and the projected count, and answers the signed entitlement', async () => {
-    const { fake, account, key } = await served();
+  it('activates with the key as a bearer, the runtime, its runs and its licensed runs, and answers the signed license', async () => {
+    const { fake, account, key, server, sent } = await served();
     const activation = await outcomeOf(account.activate(key, { installation, ...usage }));
 
-    expect(activation).toMatchObject({ entitlement: { kid: 'test-2026-10' }, repair: null });
+    expect(sent()).toEqual([
+      {
+        address: `${server.origin}/v1/installations/activate`,
+        authorization: `Bearer ${key}`,
+        body: JSON.stringify({ installation, actions: 3, licensed: 2 }),
+      },
+    ]);
+    expect(activation).toMatchObject({ kid: 'test-2026-10' });
+    expect(licenseOf(activation)).toMatchObject({ v: 2, kind: 'license', installation, charged_through: 2 });
     expect(fake.activations()).toEqual([{ installation, ...usage }]);
   });
 
-  it('asks it to admit a run and answers its signed admission, and reports a count, which it takes', async () => {
-    const { fake, account, key } = await served();
-    const admission = await outcomeOf(account.admit(key, runOf('run-1')));
+  it('reports its runs and its licensed runs, and answers the license Auto signed for the report', async () => {
+    const { fake, account, key, server, sent } = await served();
     const reported = await outcomeOf(account.report(key, usage));
 
-    expect([admission, reported]).toMatchObject([{ kid: 'test-2026-10' }, undefined]);
-    expect(fake.charged()).toEqual([`installation:${installation}/acme/alpha/run-1`]);
+    expect(sent()).toEqual([
+      {
+        address: `${server.origin}/v1/installations/reports`,
+        authorization: `Bearer ${key}`,
+        body: JSON.stringify({ actions: 3, licensed: 2 }),
+      },
+    ]);
+    expect(licenseOf(reported)).toMatchObject({ charged_through: 2, admits_through: 1000 });
     expect(fake.reports()).toEqual([usage]);
   });
 });
 
 describe('the refusals of the account service over HTTP', () => {
-  it('answers the refusal of the account with its status, kind and words', async () => {
+  it('answers the refusal of a key with its status, kind, words and case', async () => {
     const { fake, account, key } = await served();
-    fake.exhaust();
-
-    expect(await outcomeOf(account.admit(key, runOf('run-1')))).toMatchObject({
-      _tag: 'account_failure',
-      status: 409,
-      kind: 'credits_exhausted',
-      detail: 'The org acme has no credits left',
-    });
-  });
-
-  it('answers the case of the refusal and where a person resolves it, where the account gives them', async () => {
-    const { fake, account, key } = await served();
-    fake.exhaust({ because: 'free_month_used', resolve_at: 'https://studio.on.auto/billing?org=acme' });
-    const exhausted = await outcomeOf(account.admit(key, runOf('run-1')));
     fake.revoke(key, 'key_rotated');
 
-    expect(exhausted).toMatchObject({
-      kind: 'credits_exhausted',
-      because: 'free_month_used',
-      resolve_at: 'https://studio.on.auto/billing?org=acme',
-    });
-    expect(await outcomeOf(account.admit(key, runOf('run-2')))).toMatchObject({
+    expect(await outcomeOf(account.report(key, usage))).toMatchObject({
+      _tag: 'account_failure',
       status: 403,
       kind: 'license_invalid',
       detail: 'The key was rotated',
@@ -76,9 +87,26 @@ describe('the refusals of the account service over HTTP', () => {
     });
   });
 
-  it('answers a refusal without words with its status alone', async () => {
+  it('answers a closed account with its status, case and where a person resolves it', async () => {
+    const { fake, account, key } = await served();
+    fake.close({
+      detail: 'The org acme was deleted',
+      because: 'org_deleted',
+      resolve_at: 'https://studio.on.auto/support',
+    });
+
+    expect(await outcomeOf(account.activate(key, { installation, ...usage }))).toMatchObject({
+      status: 410,
+      kind: 'account_closed',
+      because: 'org_deleted',
+      resolve_at: 'https://studio.on.auto/support',
+    });
+  });
+
+  it('answers a refusal without words with its status alone, as per-run admission now is', async () => {
     const { server, key } = await served();
     const elsewhere = accountServiceAt({ origin: `${server.origin}/elsewhere`, fetch });
+    const admission = await fetch(`${server.origin}/v1/installations/actions`, { method: 'POST', body: '{}' });
 
     expect(await outcomeOf(elsewhere.report(key, usage))).toMatchObject({
       _tag: 'account_failure',
@@ -86,6 +114,7 @@ describe('the refusals of the account service over HTTP', () => {
       kind: 'unknown',
       detail: 'The account service answered 404',
     });
+    expect(admission.status).toBe(404);
   });
 });
 
@@ -105,7 +134,7 @@ describe('the account service over HTTP that does not answer', () => {
     });
   });
 
-  it.each(['activate', 'actions', 'reports', 'allocations/refresh', 'allocations/report'])(
+  it.each(['activate', 'reports', 'allocations/refresh', 'allocations/report'])(
     'refuses a body it cannot read at %s as invalid input',
     async (path) => {
       const { server } = await served();
@@ -117,6 +146,16 @@ describe('the account service over HTTP that does not answer', () => {
       ]);
     },
   );
+
+  it('listens on the port it is given, as a stand-in for billing.on.auto beside a runtime', async () => {
+    const free = await accountServerOver(accountFake());
+    const port = Number(new URL(free.origin).port);
+    await free.close();
+    const pinned = await accountServerOver(accountFake(), port);
+    onTestFinished(() => pinned.close());
+
+    expect(pinned.origin).toBe(`http://127.0.0.1:${port}`);
+  });
 });
 
 describe('the allocation calls over HTTP', () => {

@@ -1,4 +1,4 @@
-import { LedgerLog } from '@on.auto/ledger';
+import type { LedgerLog } from '@on.auto/ledger';
 import { Ledger } from '@on.auto/operations';
 import { DateTime, Effect, Layer, ManagedRuntime } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -8,15 +8,13 @@ import { meterDecider } from '../meter-stream/meter-decider.ts';
 import { METER_STREAM, type MeterState } from '../meter-stream/meter-events.ts';
 import type { LedgerAt } from './ledgers.ts';
 import { FIRST_MOMENT } from './runs.ts';
-import { capturedWarnings, failingLedger, watchedLog, type Failing } from './watched-ledger.ts';
+import { capturedWarnings, failingLedger, type Failing } from './watched-ledger.ts';
 
 export interface MeterRuntime {
   readonly timed: <A, E>(work: Effect.Effect<A, E, Ledger | LedgerLog>) => Promise<A>;
   readonly onTheLedger: <A, E>(work: (ledger: Ledger['Service']) => Effect.Effect<A, E>) => Promise<A>;
-  readonly ledgered: Effect.Effect<MeteredLedger, never, Ledger | LedgerLog>;
+  readonly ledgered: Effect.Effect<MeteredLedger, never, Ledger>;
   readonly state: () => Promise<MeterState>;
-  readonly eventsRead: () => number;
-  readonly readsFail: () => void;
   readonly executesFail: (failure: Failing) => void;
   readonly warnings: () => readonly string[];
   readonly at: (moment: string) => void;
@@ -26,7 +24,6 @@ export interface MeterRuntime {
 export function meterRuntimeOn(at: LedgerAt): MeterRuntime {
   const warnings = capturedWarnings();
   const runtime = ManagedRuntime.make(Layer.mergeAll(at.layer(), TestClock.layer(), warnings.layer));
-  const watched = watchedLog();
   const failing = failingLedger();
   const moment = { now: FIRST_MOMENT };
   const timed = <A, E>(work: Effect.Effect<A, E, Ledger | LedgerLog>) =>
@@ -38,12 +35,8 @@ export function meterRuntimeOn(at: LedgerAt): MeterRuntime {
   return {
     timed,
     onTheLedger,
-    ledgered: Effect.gen(function* () {
-      return { ledger: failing.ledger(yield* Ledger), log: watched.log(yield* LedgerLog) };
-    }),
+    ledgered: Effect.map(Effect.service(Ledger), (ledger) => ({ ledger: failing.ledger(ledger) })),
     state: async () => (await onTheLedger((ledger) => ledger.load(METER_STREAM, meterDecider))).state,
-    eventsRead: watched.eventsRead,
-    readsFail: watched.readsFail,
     executesFail: failing.executesFail,
     warnings: warnings.lines,
     at: (when) => {

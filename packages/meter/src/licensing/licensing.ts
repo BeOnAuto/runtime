@@ -1,18 +1,12 @@
-import {
-  AccountClosedBecauseSchema,
-  Conflict,
-  CreditsExhaustedBecauseSchema,
-  Unavailable,
-  type ConflictKind,
-  type RejectionBecause,
-} from '@on.auto/operations';
+import { AccountClosedBecauseSchema, Conflict, Unavailable } from '@on.auto/operations';
 import { Clock, Effect, Schema } from 'effect';
 
 import type { AccountRefusal } from '../accounts/account-failure.ts';
 import type { AccountPorts, Usage } from '../accounts/account-service.ts';
 import { executed, licensesPageOf, nowIso, type MeterOptions, type Metering } from '../admission/metering.ts';
-import type { Counted } from '../counting/checkpoint-digest.ts';
-import { isLicenseInvalidBecause, type Invalidity, type MeterState } from '../meter-stream/meter-events.ts';
+import { isLicenseInvalidBecause, type Invalidity } from '../meter-stream/license-events.ts';
+import type { MeterState } from '../meter-stream/meter-events.ts';
+import { dayOf } from '../standing/utc-periods.ts';
 import { keyDigestOf } from './license-key.ts';
 import type { Signers } from './signed-answers.ts';
 
@@ -31,42 +25,20 @@ export interface Licensing extends Metering {
   readonly keyHeld: (key: string) => Effect.Effect<void>;
 }
 
-export const accountUnavailable = new Unavailable({
-  detail:
-    "The run could not start because the runtime could not contact Auto to check the account's credits. Try again shortly.",
-  kind: 'meter_unavailable',
-});
-
 export const activationUnavailable = new Unavailable({
   detail: 'This runtime could not reach its account at Auto to activate its license; try again shortly',
   kind: 'meter_unavailable',
 });
 
-type RefusedAsAnswered = Extract<ConflictKind, 'credits_exhausted' | 'account_closed'>;
+const isAccountClosedBecause = Schema.is(AccountClosedBecauseSchema);
 
-const becausesOf: Readonly<Record<RefusedAsAnswered, (because: unknown) => because is RejectionBecause>> = {
-  credits_exhausted: Schema.is(CreditsExhaustedBecauseSchema),
-  account_closed: Schema.is(AccountClosedBecauseSchema),
-};
-
-export function isRefusedAsAnswered(kind: string): kind is RefusedAsAnswered {
-  return Object.hasOwn(becausesOf, kind);
-}
-
-export function refusedAsAnswered(
-  kind: RefusedAsAnswered,
-  { detail, because, resolve_at: resolveAt }: AccountRefusal,
-): Conflict {
+export function accountClosed({ detail, because, resolve_at: resolveAt }: AccountRefusal): Conflict {
   return new Conflict({
     detail,
-    kind,
-    ...(becausesOf[kind](because) ? { because } : {}),
+    kind: 'account_closed',
+    ...(isAccountClosedBecause(because) ? { because } : {}),
     ...(resolveAt !== undefined && URL.canParse(resolveAt) ? { resolve_at: resolveAt } : {}),
   });
-}
-
-function dayOf(moment: string): string {
-  return moment.slice(0, 10);
 }
 
 function invalidDetailOf({ detail, because }: Invalidity, page: string): string {
@@ -76,7 +48,7 @@ function invalidDetailOf({ detail, because }: Invalidity, page: string): string 
   if (because === 'installation_revoked') {
     return `This runtime was removed from its org. To use it again, an owner can register it again at ${page}, then activate the new key and run this again.`;
   }
-  return `This runtime's license is invalid: ${detail}. Activate a license key for this installation. The account holder or an organization admin can register it at ${page}.`;
+  return `This runtime's license does not stand: ${detail}. Activate a key of this runtime, which an owner of its org registers at ${page}`;
 }
 
 function refusedLicense(
@@ -89,7 +61,7 @@ function refusedLicense(
   return new Conflict({
     detail: detailAt(page),
     kind: 'license_invalid',
-    ...(because === undefined ? {} : { because }),
+    ...(because === 'key_rotated' || because === 'installation_revoked' ? { because } : {}),
     resolve_at: page,
     ...(installation === undefined ? {} : { runtime_id: installation }),
   });
@@ -107,21 +79,11 @@ export function licenseInvalid(options: MeterOptions, installation: string | und
   return licenseInvalidated(options, installation, { detail: why });
 }
 
-export function licenseNotRenewed(options: MeterOptions, installation: string, expiresAt: string): Conflict {
-  return refusedLicense(
-    options,
-    installation,
-    () =>
-      `This runtime's license wasn't renewed by ${dayOf(expiresAt)}. Check that it can reach billing.on.auto (it renews every day), then run this again.`,
-  );
-}
-
 export function offlineCreditsStopped(options: MeterOptions, installation: string, refreshBy: string): Conflict {
   return refusedLicense(
     options,
     installation,
-    (page) =>
-      `This offline allocation expired on ${dayOf(refreshBy)}. The account holder or an organization admin can request a new allocation at ${page}.`,
+    (page) => `These offline credits stopped on ${dayOf(refreshBy)}. An owner can request new ones at ${page}.`,
   );
 }
 
@@ -129,12 +91,8 @@ export function invalidityOf({ detail, because }: AccountRefusal): Invalidity {
   return isLicenseInvalidBecause(because) ? { detail, because } : { detail };
 }
 
-export function usageFrom(counted: Partial<Counted> | undefined): Usage {
-  return { actions: counted?.actions ?? 0, through: counted?.through ?? null, last: counted?.last ?? null };
-}
-
-export function standsFor({ license }: MeterState, key: string): boolean {
-  return license?.key_sha256 === keyDigestOf(key) && license.invalid === undefined;
+export function usageFrom({ admitted }: MeterState): Usage {
+  return { actions: admitted.actions, licensed: admitted.licensed };
 }
 
 export const nowMs = Clock.currentTimeMillis;

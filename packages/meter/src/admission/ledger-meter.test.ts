@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { accountServiceLayer } from '../accounts/fetched-account-service.ts';
 import { ledgerMeter } from '../licensing/self-hosted-meter.ts';
 import { meterBehaviour } from '../meter-testing/meter-behaviour.ts';
-import { opened, startedOnceAdmitted } from '../meter-testing/opened.ts';
+import { opened } from '../meter-testing/opened.ts';
 import { postgresqlLedger, sqliteLedger } from '../testing/ledgers.ts';
 import { runOf } from '../testing/runs.ts';
 import { meterDefaults } from './metering.ts';
@@ -23,11 +23,11 @@ describe.skipIf(server === '')('with PostgreSQL', () => {
 });
 
 describe('the meter of every runtime', () => {
-  it('admits 100 actions before a license, holds an admission ten minutes, verifies every 1,000 and links Auto’s Studio', () => {
+  it('admits 100 first runs without a key, then 15 a UTC day and 75 a UTC month, holds an admission ten minutes and links Auto’s Studio', () => {
     expect(meterDefaults).toEqual({
       allowance: 100,
+      freeRate: { per_day: 15, per_month: 75 },
       holdMs: 600_000,
-      verifyEvery: 1000,
       studio: 'https://studio.on.auto',
     });
   });
@@ -57,15 +57,14 @@ describe('the meter of every runtime', () => {
     expect((await metered.admitted(runOf('run-1'))).kind).toBe('meter_unavailable');
   });
 
-  it('faults when an event after its checkpoint can no longer be read, rather than skip it', async () => {
+  it('never stops for an event of the history of its runs that can no longer be read', async () => {
     const { metered, tampering } = await opened(onSQLite);
-    await startedOnceAdmitted(metered, 'run-1');
-    await metered.admitted(runOf('run-2'));
-    await metered.started('run-2');
-    const [started = ''] = await tampering.idsOf('playbook/acme/alpha/runs/run-2');
+    await metered.admitted(runOf('run-1'));
+    await metered.started('run-1');
+    const [started = ''] = await tampering.idsOf('playbook/acme/alpha/runs/run-1');
     await tampering.garbled(started);
 
-    expect((await metered.admitted(runOf('run-3'))).kind).toBe('metering_fault');
-    expect(await metered.state()).toMatchObject({ fault: { reason: 'unreadable' } });
+    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
+    expect((await metered.state()).admitted.actions).toBe(2);
   });
 });

@@ -2,116 +2,94 @@ import { expect, it } from 'vitest';
 
 import type { Answering } from '../testing/account-fake.ts';
 import { runOf } from '../testing/runs.ts';
-import { licensedInstallation, licensedOn, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 import {
-  closedAccountBehaviour,
-  creditCaseBehaviour,
-  keptWordingBehaviour,
-  revocationCaseBehaviour,
-} from './refusal-behaviour.ts';
+  admittedEach,
+  licensedInstallation,
+  licensedOn,
+  opened,
+  restartedAfter,
+  restartedOf,
+  runsNamed,
+  startedOnceAdmitted,
+  type LedgerOf,
+} from './opened.ts';
+import { closedAccountBehaviour, fallbackWordsBehaviour, keptWordingBehaviour } from './refusal-behaviour.ts';
 
 const installation = licensedInstallation;
 
-const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
-
-const page = `https://studio.on.auto/licenses?installation=${installation}`;
-
 function activationBehaviour(ledgerOf: LedgerOf): void {
-  it('activates a key, recording the entitlement Auto signed, and admits each new action by the account from then on', async () => {
-    const { metered } = await opened(ledgerOf, { allowance: 1 });
+  it('activates a key with its count, records the license Auto signed, and admits each run locally against it', async () => {
+    const { metered } = await opened(ledgerOf);
     const key = metered.account.keyFor(installation, 'globex');
 
     expect(await metered.activated(key)).toEqual({ kind: 'activated', detail: '' });
-    expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
-    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect(metered.account.charged()).toEqual([
-      `installation:${installation}/acme/alpha/run-1`,
-      `installation:${installation}/acme/alpha/run-2`,
-    ]);
+    expect(await admittedEach(metered, ['run-1', 'run-2'])).toEqual(['admitted', 'admitted']);
+    expect(metered.account.activations()).toEqual([{ installation, actions: 0, licensed: 0 }]);
+    expect(metered.account.reportsSent()).toBe(0);
     expect(await metered.state()).toMatchObject({
       installation,
+      admitted: { actions: 2, licensed: 2, first_runs: 0 },
       license: {
         installation,
         org: 'globex',
         plan: 'free',
-        expires_at: '2026-11-03T12:00:00.000Z',
-        invalid: undefined,
+        policy: '2026-10-28',
+        issued_at: '2026-10-27T12:00:00.000Z',
+        warn_at: '2026-11-10T12:00:00.000Z',
+        limit_at: '2026-11-24T12:00:00.000Z',
+        charged_through: 0,
+        admits_through: 1000,
+        standing: 'ok',
+        credits: { available: 1000, owed: 0, overage_cap: 0 },
+        fallback: { per_day: 15, per_month: 75 },
+        licensed_reported: 0,
+        taken_at: '2026-10-27T12:00:00.000Z',
       },
-      holds: [],
     });
   });
 
-  it('sends the count it projected, with the point and id of its checkpoint, as it activates', async () => {
+  it('activates the key it was given as it starts at its first report, running its first runs until then', async () => {
     const { metered } = await opened(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
-    await startedOnceAdmitted(metered, 'run-2');
-    const { installation: identified = '' } = await metered.state();
-    await metered.activated(metered.account.keyFor(identified));
-    const { checkpoint } = await metered.state();
+    const key = metered.account.keyFor(installation);
+    const keyed = await restartedOf(metered, { key });
+    await startedOnceAdmitted(keyed, 'run-1');
+    await keyed.reported();
+    await startedOnceAdmitted(keyed, 'run-2');
 
-    expect(metered.account.activations()).toEqual([
-      { installation: identified, actions: 2, through: checkpoint?.through, last: checkpoint?.last },
-    ]);
+    expect(keyed.account.activations()).toEqual([{ installation, actions: 1, licensed: 0 }]);
+    expect((await keyed.state()).admitted).toMatchObject({ actions: 2, first_runs: 1, licensed: 1 });
   });
 }
 
-function keyBehaviour(ledgerOf: LedgerOf): void {
-  it('activates a key given as it starts at its first admission, and asks again for no entitlement while one stands', async () => {
-    const { metered } = await licensedOn(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
-    const restarted = await restartedOf(metered);
-
-    expect((await restarted.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect(metered.account.activations()).toEqual([{ installation, actions: 0, through: null, last: null }]);
-    expect(metered.account.askedToAdmit()).toBe(2);
-  });
-
-  it('admits by the account with a key it was handed again after a restart, as one kept in its secrets', async () => {
+function keptLicenseBehaviour(ledgerOf: LedgerOf): void {
+  it('keeps its license through a restart, admitting against it with no call to Auto, and with a key handed to it again', async () => {
     const { metered, key } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    const restarted = await restartedOf(metered, { key: undefined, allowance: 0 });
+    await startedOnceAdmitted(metered, 'run-1');
+    const restarted = await restartedOf(metered, { key: undefined });
     await restarted.held(key);
-
-    expect((await restarted.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect(metered.account.charged()).toHaveLength(2);
-  });
-}
-
-function refreshBehaviour(ledgerOf: LedgerOf): void {
-  it('refreshes its entitlement when asked, and refreshes nothing without a key', async () => {
-    const { metered } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    const unlicensed = await opened(ledgerOf);
-
-    expect([await metered.refreshed(), await unlicensed.metered.refreshed()]).toEqual([
-      { kind: 'refreshed', detail: '' },
-      { kind: 'refreshed', detail: '' },
-    ]);
-    expect(metered.account.activations()).toHaveLength(2);
-    expect(unlicensed.metered.account.activations()).toEqual([]);
-  });
-
-  it('refreshes an expired entitlement as it admits, and refuses as license_invalid when it cannot', async () => {
-    const { metered } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    metered.at(aWeekAndADayLater);
-    metered.account.at(aWeekAndADayLater);
     metered.account.goDown();
-    const refused = await metered.admitted(runOf('run-2'));
-    metered.account.comeBack();
 
-    expect(refused).toEqual({
-      kind: 'license_invalid',
-      detail:
-        "This runtime's license wasn't renewed by 2026-11-03. Check that it can reach billing.on.auto (it renews every day), then run this again.",
-      resolve_at: page,
-      runtime_id: installation,
-    });
-    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect((await metered.state()).license?.expires_at).toBe('2026-11-11T12:00:00.000Z');
+    expect(await startedOnceAdmitted(restarted, 'run-2')).toBe('admitted');
+    expect((await restarted.state()).admitted.licensed).toBe(2);
+    expect(metered.account.activations()).toHaveLength(1);
   });
 
-  it('refuses as meter_unavailable while the account cannot be reached, or its entitlement cannot be recorded', async () => {
+  it('takes as the floor of its licensed count what Auto charged already, so a wiped ledger with the same key gains nothing', async () => {
+    const { metered, tampering, key } = await licensedOn(ledgerOf);
+    await admittedEach(metered, runsNamed('run', 3));
+    await metered.reported();
+    const wiped = await restartedAfter(metered, () => tampering.streamDeleted('meter'), { key });
+    await wiped.reported();
+    await startedOnceAdmitted(wiped, 'later');
+    await wiped.reported();
+
+    expect(wiped.account.activations().at(-1)).toEqual({ installation, actions: 0, licensed: 0 });
+    expect((await wiped.state()).admitted).toMatchObject({ actions: 4, licensed: 4, first_runs: 0 });
+    expect(wiped.account.chargedThrough(installation)).toBe(4);
+    expect(wiped.account.wentBackwards()).toEqual([]);
+  });
+
+  it('refuses as meter_unavailable an activation while Auto cannot be reached, or its license cannot be recorded', async () => {
     const { metered } = await opened(ledgerOf);
     const key = metered.account.keyFor(installation);
     metered.account.goDown();
@@ -123,56 +101,143 @@ function refreshBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-function orgNameBehaviour(ledgerOf: LedgerOf): void {
-  it('keeps the name of its org that Auto signed into its entitlement, and takes the name again as it renews', async () => {
+function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
+  it('admits while its licensed count is below what the license admits through, then at the free rate, charging none of those', async () => {
     const { metered } = await opened(ledgerOf);
-    metered.account.orgNamed('globex', 'Globex Corporation');
-    await metered.activated(metered.account.keyFor(installation, 'globex'));
-    const named = (await metered.state()).license?.org_name;
-    metered.account.orgNamed('globex', 'Globex');
-    await metered.refreshed();
+    metered.account.fund('acme', { available: 2 });
+    metered.account.policy({ per_day: 1, per_month: 5 });
+    const key = metered.account.keyFor(installation);
+    await metered.activated(key);
+    const admitted = await admittedEach(metered, runsNamed('run', 3));
+    const refused = await metered.admitted(runOf('run-3'));
+    await metered.reported();
 
-    expect([named, (await metered.state()).license?.org_name]).toEqual(['Globex Corporation', 'Globex']);
+    expect(admitted).toEqual(['admitted', 'admitted', 'admitted']);
+    expect(refused).toMatchObject({ kind: 'credits_exhausted', because: 'free_daily_limit' });
+    expect((await metered.state()).admitted).toMatchObject({ actions: 3, licensed: 2, first_runs: 0 });
+    expect(metered.account.reports()).toEqual([{ actions: 3, licensed: 2 }]);
+    expect(metered.account.chargedThrough(installation)).toBe(2);
   });
 
-  it('keeps no name of its org where Auto signed none, as an account service before names', async () => {
+  it('takes the free rate its license carries, and runs no first runs again once it has held a license', async () => {
+    const { metered, key } = await licensedOn(ledgerOf);
+    metered.account.policy({ per_day: 2, per_month: 2 });
+    metered.account.fund('acme', { available: 0 });
+    await metered.reported();
+    const keyless = await restartedOf(metered, { key: undefined });
+    const free = await admittedEach(keyless, ['run-1', 'run-2']);
+    const refused = await keyless.admitted(runOf('run-3'));
+
+    expect(free).toEqual(['admitted', 'admitted']);
+    expect(refused).toMatchObject({ kind: 'license_required', because: 'free_month_used' });
+    expect(refused.detail).toMatch(
+      /^This runtime holds no key, so it runs at the free rate of 2 runs a UTC day and 2 a UTC month\./u,
+    );
+    expect(key).toContain(installation);
+  });
+}
+
+function timeBehaviour(ledgerOf: LedgerOf): void {
+  it('admits on its license after the day Auto warns from, and at the free rate from the day it limits from', async () => {
+    const { metered } = await licensedOn(ledgerOf, {}, (account) => {
+      account.policy({ per_day: 0, per_month: 0 });
+    });
+    metered.account.goDown();
+    metered.at('2026-11-23T12:00:00.000Z');
+    const warned = await startedOnceAdmitted(metered, 'run-1');
+    metered.at('2026-11-24T12:00:00.000Z');
+    const limited = await metered.admitted(runOf('run-2'));
+
+    expect(warned).toBe('admitted');
+    expect(limited).toMatchObject({ kind: 'license_invalid', because: 'free_month_used' });
+    expect((await metered.state()).admitted.licensed).toBe(1);
+  });
+
+  it('goes back to its license once Auto answers its report with credits again', async () => {
+    const { metered } = await licensedOn(ledgerOf, {}, (account) => {
+      account.policy({ per_day: 0, per_month: 0 });
+      account.fund('acme', { available: 0 });
+    });
+    const limited = await metered.admitted(runOf('run-1'));
+    metered.account.fund('acme', { available: 10 });
+    await metered.reported();
+
+    expect(limited.kind).toBe('credits_exhausted');
+    expect(await startedOnceAdmitted(metered, 'run-1')).toBe('admitted');
+  });
+}
+
+function keyChangeBehaviour(ledgerOf: LedgerOf): void {
+  it('falls back to the free rate, never stopping, once a report says its key was rotated, until a new key is activated', async () => {
+    const { metered, key } = await licensedOn(ledgerOf);
+    metered.account.revoke(key, 'key_rotated');
+    await metered.reported();
+    const fallen = await startedOnceAdmitted(metered, 'run-1');
+    await metered.reported();
+    const rotated = metered.account.keyFor(installation);
+
+    expect(fallen).toBe('admitted');
+    expect((await metered.state()).admitted).toMatchObject({ licensed: 0, actions: 1 });
+    expect((await metered.state()).refused).toMatchObject({ because: 'key_rotated' });
+    expect(metered.account.reportsSent()).toBe(2);
+    expect(await metered.activated(rotated)).toEqual({ kind: 'activated', detail: '' });
+    expect(await startedOnceAdmitted(metered, 'run-2')).toBe('admitted');
+    expect((await metered.state()).admitted.licensed).toBe(1);
+  });
+
+  it('falls back to the free rate once a report says its org was closed, and keeps no stop for it', async () => {
     const { metered } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
+    metered.account.close({ detail: 'The org acme was deleted for good', because: 'org_purged' });
+    await metered.reported();
 
-    expect((await metered.state()).license).toMatchObject({ org: 'acme', org_name: null });
+    expect(await startedOnceAdmitted(metered, 'run-1')).toBe('admitted');
+    expect((await metered.state()).refused).toMatchObject({ because: 'org_purged' });
   });
 
-  it('keeps the name of its org on one line of at most 80 characters, and no name where Auto signed a blank one', async () => {
+  it('refuses a key that is for another runtime without asking, linking where this one is registered', async () => {
     const { metered } = await opened(ledgerOf);
-    metered.account.orgNamed('globex', `Globex\n\u001B[31mCorporation\u202E ${'x'.repeat(100)}`);
+    await metered.admitted(runOf('run-1'));
+    const { installation: identified = '' } = await metered.state();
+    const refused = await metered.activated(metered.account.keyFor(installation));
+
+    expect(refused.kind).toBe('license_invalid');
+    expect(refused.detail).toContain(`its key is for the runtime ${installation}, and this runtime is ${identified}`);
+    expect(refused.detail).toContain(`https://studio.on.auto/licenses?installation=${identified}`);
+    expect(metered.account.activations()).toEqual([]);
+  });
+}
+
+function orgNameBehaviour(ledgerOf: LedgerOf): void {
+  it('keeps the name of its org that Auto signed into its license, on one line, and takes it again at each report', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.account.orgNamed('globex', `Globex\n\u001B[31mCorporation‮ ${'x'.repeat(100)}`);
     await metered.activated(metered.account.keyFor(installation, 'globex'));
     const named = (await metered.state()).license?.org_name;
-    metered.account.orgNamed('globex', ' \n\t\u200B ');
-    await metered.refreshed();
+    metered.account.orgNamed('globex', ' \n\t​ ');
+    await metered.reported();
 
     expect(named).toBe(`Globex [31mCorporation ${'x'.repeat(57)}`);
     expect((await metered.state()).license?.org_name).toBeNull();
   });
 
-  it('takes an entitlement that carries more than it knows, as a later account service may sign', async () => {
+  it('takes a license that carries more than it knows, as a later account service may sign', async () => {
     const { metered } = await opened(ledgerOf);
     metered.account.answer('with more than it knows');
 
     expect(await metered.activated(metered.account.keyFor(installation))).toEqual({ kind: 'activated', detail: '' });
-    expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
   });
 }
 
 const notAuto: readonly (readonly [string, Answering, string])[] = [
-  ['signed by another key under the kid of Auto’s', 'by another key', 'not signed by Auto'],
-  ['signed by a key Auto does not hold', 'by an unknown key', 'not signed by Auto'],
-  ['tampered with after it was signed', 'tampered', 'not signed by Auto'],
-  ['for another installation', 'for another installation', 'for the installation another-installation'],
-  ['expired', 'expired', 'expired at 2026-10-27T12:00:00.000Z'],
+  ['signed by another key under the kid of Auto’s', 'by another key', 'not one Auto signed'],
+  ['signed by a key Auto does not hold', 'by an unknown key', 'not one Auto signed'],
+  ['tampered with after it was signed', 'tampered', 'not one Auto signed'],
+  ['of an earlier version, as the entitlement was', 'of another version', 'not one Auto signed'],
+  ['for another runtime', 'for another installation', 'its license is for the runtime another-installation'],
 ];
 
 function invalidLicenseBehaviour(ledgerOf: LedgerOf): void {
-  it.each(notAuto)('refuses an entitlement %s as license_invalid, and records no license', async (_, how, why) => {
+  it.each(notAuto)('refuses a license %s as license_invalid, and records none', async (_, how, why) => {
     const { metered } = await opened(ledgerOf);
     metered.account.answer(how);
     const refused = await metered.activated(metered.account.keyFor(installation));
@@ -182,110 +247,25 @@ function invalidLicenseBehaviour(ledgerOf: LedgerOf): void {
     expect((await metered.state()).license).toBeUndefined();
   });
 
-  it('refuses a run as license_invalid when the key it was given at its start brings no entitlement of Auto', async () => {
-    const { metered } = await opened(ledgerOf);
-    metered.account.answer('by an unknown key');
-    const restarted = await restartedOf(metered, { key: metered.account.keyFor(installation) });
-
-    expect((await restarted.admitted(runOf('run-1'))).kind).toBe('license_invalid');
-  });
-
-  it('refuses a key that registers another installation without asking, linking where this one is registered', async () => {
-    const { metered } = await opened(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    const { installation: identified = '' } = await metered.state();
-    const refused = await metered.activated(metered.account.keyFor(installation));
-
-    expect(refused.kind).toBe('license_invalid');
-    expect(refused.detail).toContain(
-      `registers the installation ${installation}, and this runtime is the installation`,
-    );
-    expect(refused.detail).toContain(`https://studio.on.auto/licenses?installation=${identified}`);
-    expect(metered.account.activations()).toEqual([]);
-  });
-}
-
-function revocationBehaviour(ledgerOf: LedgerOf): void {
-  it('refuses new runs as license_invalid once its key is revoked, without asking again, until another key is activated', async () => {
-    const { metered, key } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    metered.account.revoke(key);
-    const refused = await metered.admitted(runOf('run-2'));
-    const askedBefore = metered.account.askedToAdmit();
-    const again = await metered.admitted(runOf('run-3'));
-    const rotated = metered.account.keyFor(installation);
-
-    expect([refused.kind, again.kind]).toEqual(['license_invalid', 'license_invalid']);
-    expect(metered.account.askedToAdmit()).toBe(askedBefore);
-    expect((await metered.state()).license?.invalid?.detail).toContain('revoked');
-    expect((await metered.activated(rotated)).kind).toBe('activated');
-    expect((await metered.admitted(runOf('run-3'))).kind).toBe('admitted');
-  });
-
-  it('records that its license no longer stands when the account refuses to refresh it, and says so', async () => {
-    const { metered, key } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    metered.account.revoke(key);
-
-    expect(await metered.refreshed()).toEqual({ kind: 'refreshed', detail: '' });
-    expect((await metered.state()).license?.invalid?.detail).toContain('revoked');
-    expect(metered.warnings().at(-1)).toContain('The license of this runtime could not be refreshed');
-  });
-}
-
-function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
-  it('is charged once per run id however often it is asked, and a run already started is admitted without asking', async () => {
+  it('keeps its last license when a report is answered with one Auto did not sign, and says why', async () => {
     const { metered } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    await metered.admitted(runOf('RUN-1'));
-    await startedOnceAdmitted(metered, 'run-1');
-    const askedBeforeTheStart = metered.account.askedToAdmit();
-    await metered.admitted(runOf('run-1'));
+    metered.account.fund('acme', { available: 0 });
+    metered.account.answer('tampered');
 
-    expect(metered.account.charged()).toEqual([`installation:${installation}/acme/alpha/run-1`]);
-    expect([askedBeforeTheStart, metered.account.askedToAdmit()]).toEqual([3, 3]);
-  });
-
-  it('refuses as credits_exhausted in the words of the account when the org has no credit left', async () => {
-    const { metered } = await licensedOn(ledgerOf);
-    metered.account.exhaust();
-
-    expect(await metered.admitted(runOf('run-1'))).toEqual({
-      kind: 'credits_exhausted',
-      detail: 'The org acme has no credits left',
-    });
-  });
-
-  it.each<Answering>(['tampered', 'for another action', 'for another installation'])(
-    'refuses as meter_unavailable an admission %s',
-    async (how) => {
-      const { metered } = await licensedOn(ledgerOf);
-      await metered.admitted(runOf('run-1'));
-      metered.account.answer(how);
-
-      expect((await metered.admitted(runOf('run-2'))).kind).toBe('meter_unavailable');
-    },
-  );
-
-  it('refuses as meter_unavailable while the account cannot be asked', async () => {
-    const { metered } = await licensedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    metered.account.goDown();
-
-    expect((await metered.admitted(runOf('run-2'))).kind).toBe('meter_unavailable');
+    expect(await metered.reported()).toMatchObject({ kind: 'meter_unavailable' });
+    expect((await metered.state()).license).toMatchObject({ admits_through: 1000, standing: 'ok' });
   });
 }
 
 export function licensesBehaviour(ledgerOf: LedgerOf): void {
   activationBehaviour(ledgerOf);
-  keyBehaviour(ledgerOf);
-  refreshBehaviour(ledgerOf);
+  keptLicenseBehaviour(ledgerOf);
+  licensedAdmissionBehaviour(ledgerOf);
+  timeBehaviour(ledgerOf);
+  keyChangeBehaviour(ledgerOf);
   orgNameBehaviour(ledgerOf);
   invalidLicenseBehaviour(ledgerOf);
-  revocationBehaviour(ledgerOf);
-  revocationCaseBehaviour(ledgerOf);
-  licensedAdmissionBehaviour(ledgerOf);
-  creditCaseBehaviour(ledgerOf);
+  fallbackWordsBehaviour(ledgerOf);
   closedAccountBehaviour(ledgerOf);
   keptWordingBehaviour(ledgerOf);
 }

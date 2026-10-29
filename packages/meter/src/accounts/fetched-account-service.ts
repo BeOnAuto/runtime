@@ -23,11 +23,7 @@ interface Answer {
 
 const accountsAnswerWithinMs = 10_000;
 
-const ActivationSchema = Schema.Struct({ entitlement: SignedSchema, repair: Schema.NullOr(SignedSchema) });
-
-const AdmittedSchema = Schema.Struct({ admission: SignedSchema });
-
-const TakenSchema = Schema.Struct({ taken: Schema.Literal(true) });
+const LicensedSchema = Schema.Struct({ license: SignedSchema });
 
 const AllocationSchema = Schema.Struct({ allocation: SignedSchema });
 
@@ -83,11 +79,7 @@ function answerIn<S extends Schema.Codec<unknown, unknown>>(
   };
 }
 
-const activationIn = answerIn(ActivationSchema);
-
-const admittedIn = answerIn(AdmittedSchema);
-
-const takenIn = answerIn(TakenSchema);
+const licensedIn = answerIn(LicensedSchema);
 
 const allocationIn = answerIn(AllocationSchema);
 
@@ -95,14 +87,16 @@ const allocationTakenIn = answerIn(AllocationTakenSchema);
 
 export function accountServiceAt(at: AccountsAt): AccountPorts {
   return {
-    activate: (key, usage) => Effect.flatMap(asked(at, '/v1/installations/activate', key, usage), activationIn),
-    admit: (key, run) =>
-      asked(at, '/v1/installations/actions', key, { run }).pipe(
-        Effect.flatMap(admittedIn),
-        Effect.map(({ admission }) => admission),
+    activate: (key, usage) =>
+      asked(at, '/v1/installations/activate', key, usage).pipe(
+        Effect.flatMap(licensedIn),
+        Effect.map(({ license }) => license),
       ),
     report: (key, usage) =>
-      asked(at, '/v1/installations/reports', key, usage).pipe(Effect.flatMap(takenIn), Effect.asVoid),
+      asked(at, '/v1/installations/reports', key, usage).pipe(
+        Effect.flatMap(licensedIn),
+        Effect.map(({ license }) => license),
+      ),
     refreshAllocation: (key, id) =>
       asked(at, '/v1/installations/allocations/refresh', key, { allocation: id }).pipe(
         Effect.flatMap(allocationIn),

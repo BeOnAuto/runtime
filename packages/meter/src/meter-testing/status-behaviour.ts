@@ -1,73 +1,83 @@
 import { expect, it } from 'vitest';
 
-import { runOf } from '../testing/runs.ts';
-import { allocatedOn, opened, restartedOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { limitedStatusBehaviour } from './limited-status-behaviour.ts';
+import { admittedEach, licensedInstallation, licensedOn, opened, type LedgerOf } from './opened.ts';
 
-const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+const installation = licensedInstallation;
 
-const page = `https://studio.on.auto/licenses?installation=${installation}`;
+const billing = 'https://studio.on.auto/?settings=billing&org=acme';
 
-const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
+const noLicense = {
+  org: null,
+  org_name: null,
+  plan: null,
+  standing: null,
+  credits: null,
+  issued_at: null,
+  warn_at: null,
+  limit_at: null,
+  last_report_at: null,
+};
 
-const noLicense = { org: null, org_name: null, plan: null, expires_at: null, renewed_at: null };
+const firstLicense = {
+  org: 'acme',
+  org_name: null,
+  plan: 'free',
+  standing: 'ok',
+  credits: { available: 1000, owed: 0, overage_cap: 0 },
+  issued_at: '2026-10-27T12:00:00.000Z',
+  warn_at: '2026-11-10T12:00:00.000Z',
+  limit_at: '2026-11-24T12:00:00.000Z',
+  last_report_at: '2026-10-27T12:00:00.000Z',
+};
 
-async function keyedOn(ledgerOf: LedgerOf, keySource: 'environment' | 'configuration' = 'environment') {
-  const { metered, ...rest } = await opened(ledgerOf);
-  const key = metered.account.keyFor(installation, 'globex');
-  return { ...rest, metered: await restartedOf(metered, { key, keySource }), key };
-}
-
-function unregisteredStatusBehaviour(ledgerOf: LedgerOf): void {
-  it('reads unregistered with no run used, identifying its installation once, which its first admission keeps', async () => {
+function keylessStatusBehaviour(ledgerOf: LedgerOf): void {
+  it('reads unregistered with its free runs, identifying its runtime once, which its first admission keeps', async () => {
     const { metered } = await opened(ledgerOf);
     const first = await metered.status();
-    const again = await metered.status();
-    await metered.admitted(runOf('run-1'));
+    await admittedEach(metered, ['run-1', 'run-2']);
+    const runtime = first.runtime_id;
+    const free = `https://studio.on.auto/licenses?installation=${runtime}`;
 
-    expect(first).toEqual({
+    expect(await metered.status()).toEqual({
       state: 'unregistered',
-      runtime_id: again.runtime_id,
-      free_runs: { used: 0, of: 100 },
+      limited_because: null,
+      runtime_id: runtime,
+      free_runs: { used: 2, of: 100 },
       ...noLicense,
+      licensed: 0,
+      runs_left: null,
+      fallback: null,
       key_source: null,
       offline: null,
       invalid_because: null,
+      summary: `2 of 100 free runs used, then the free rate of 15 runs a UTC day and 75 a UTC month without a key. Get a free key at ${free}.`,
     });
-    expect((await metered.state()).installation).toBe(first.runtime_id);
+    expect((await metered.state()).installation).toBe(runtime);
+  });
+
+  it('reads the free rate it runs at once its first runs are used, and when it lifts once reached', async () => {
+    const { metered } = await opened(ledgerOf, { allowance: 2, freeRate: { per_day: 2, per_month: 4 } });
+    await admittedEach(metered, ['run-1', 'run-2', 'run-3']);
+    const running = await metered.status();
+    await admittedEach(metered, ['run-4']);
+    const reached = await metered.status();
+    const free = `https://studio.on.auto/licenses?installation=${reached.runtime_id}`;
+
+    expect(running).toMatchObject({
+      state: 'unregistered',
+      free_runs: { used: 2, of: 2 },
+      fallback: { per_day: 2, per_month: 4, used_today: 1, used_this_month: 1, lifts_at: null },
+    });
+    expect(reached).toMatchObject({
+      fallback: { used_today: 2, used_this_month: 2, lifts_at: '2026-10-28T00:00:00.000Z' },
+      summary: `This runtime has used its 2 free runs, and without a key it runs at the free rate of 2 runs a UTC day and 4 a UTC month. It has used 2 of today's 2 and 2 of this month's 4. It can run again from 2026-10-28 00:00 UTC. To run more, get a free key at ${free}, then activate it on the runtime.`,
+    });
   });
 }
 
-function countedStatusBehaviour(ledgerOf: LedgerOf): void {
-  it('counts the free runs it used from its ledger, at most its allowance', async () => {
-    const { metered } = await opened(ledgerOf, { allowance: 2 });
-    await startedOnceAdmitted(metered, 'run-1');
-    const afterOne = await metered.status();
-    await startedOnceAdmitted(metered, 'run-2');
-    await metered.started('run-3');
-
-    expect([afterOne.free_runs, (await metered.status()).free_runs]).toEqual([
-      { used: 1, of: 2 },
-      { used: 2, of: 2 },
-    ]);
-  });
-
-  it('counts what it last checkpointed while its ledger cannot be read, or while a fault stands', async () => {
-    const { metered, tampering } = await opened(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
-    await metered.admitted(runOf('run-2'));
-    await metered.started('run-2');
-    const restarted = await restartedOf(metered);
-    restarted.readsFail();
-    const unread = await restarted.status();
-    const faulting = await restartedOf(restarted);
-    await faulting.admitted(runOf('run-3'));
-    await tampering.deleted(await faulting.lastCounted());
-    await faulting.admitted(runOf('run-4'));
-
-    expect([unread.free_runs.used, (await faulting.status()).free_runs.used]).toEqual([2, 2]);
-  });
-
-  it('refuses as meter_unavailable when it cannot record the installation it identifies', async () => {
+function unreadStatusBehaviour(ledgerOf: LedgerOf): void {
+  it('refuses as meter_unavailable when it cannot record the runtime it identifies', async () => {
     const { metered } = await opened(ledgerOf);
     metered.executesFail('conflict');
     const lost = await metered.refusedStatus();
@@ -78,38 +88,37 @@ function countedStatusBehaviour(ledgerOf: LedgerOf): void {
 }
 
 function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
-  it('reads a key it has not activated yet as invalid, by the installation the key names, and where the key came from', async () => {
-    const { metered } = await keyedOn(ledgerOf, 'configuration');
-
-    expect(await metered.status()).toEqual({
-      state: 'invalid',
-      runtime_id: installation,
-      free_runs: { used: 0, of: 100 },
-      ...noLicense,
-      key_source: 'configuration',
-      offline: null,
-      invalid_because:
-        'This runtime holds a key it has not activated yet. It activates it with Auto as it starts its next run; check that it can reach billing.on.auto.',
-    });
-    expect((await metered.state()).installation).toBeUndefined();
-  });
-
-  it('reads licensed once its key is activated, with the org, the plan and when Auto renewed and ends it', async () => {
-    const { metered } = await keyedOn(ledgerOf);
-    await startedOnceAdmitted(metered, 'run-1');
+  it('reads licensed with the runs it has left, its license and where its key came from', async () => {
+    const { metered } = await licensedOn(ledgerOf, { keySource: 'configuration' });
+    await admittedEach(metered, ['run-1']);
 
     expect(await metered.status()).toEqual({
       state: 'licensed',
+      limited_because: null,
       runtime_id: installation,
-      free_runs: { used: 1, of: 100 },
-      org: 'globex',
-      org_name: null,
-      plan: 'free',
-      expires_at: '2026-11-03T12:00:00.000Z',
-      renewed_at: '2026-10-27T12:00:00.000Z',
-      key_source: 'environment',
+      free_runs: null,
+      ...firstLicense,
+      licensed: 1,
+      runs_left: 999,
+      fallback: null,
+      key_source: 'configuration',
       offline: null,
       invalid_because: null,
+      summary: 'Licensed to acme (free plan): 999 runs left.',
+    });
+  });
+
+  it('reads out of touch from the day Auto warns from, saying until when it runs on its license', async () => {
+    const { metered } = await licensedOn(ledgerOf);
+    metered.account.orgNamed('acme', 'Acme Corporation');
+    await metered.reported();
+    metered.at('2026-11-10T12:00:00.000Z');
+
+    expect(await metered.status()).toMatchObject({
+      state: 'out_of_touch',
+      org_name: 'Acme Corporation',
+      summary:
+        "Licensed to Acme Corporation (free plan): 1000 runs left. It hasn't reached Auto since 2026-10-27; unless it reaches billing.on.auto, it runs at the free rate from 2026-11-24.",
     });
   });
 
@@ -121,85 +130,43 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-function namedStatusBehaviour(ledgerOf: LedgerOf): void {
-  it('reads the name of its org that Auto signed, through a restart', async () => {
-    const { metered } = await opened(ledgerOf);
-    metered.account.orgNamed('globex', 'Globex Corporation');
-    const key = metered.account.keyFor(installation, 'globex');
-    await metered.activated(key);
-    const restarted = await restartedOf(metered, { key: undefined });
-    await restarted.held(key);
+const standings = [
+  [
+    'low',
+    { available: 100 },
+    `Licensed to acme (free plan): 100 runs left. Its org's credits are low; an owner can add credits at ${billing}.`,
+  ],
+  [
+    'empty',
+    { plan: 'team', available: 0, overage_cap: 600 },
+    `Licensed to acme (team plan): 600 runs left. Its org has no credits left, so its runs go into overage, which its next credits repay; an owner can add credits at ${billing}.`,
+  ],
+  [
+    'overage',
+    { plan: 'team', available: 0, owed: 30, overage_cap: 600 },
+    'Licensed to acme (team plan): 570 runs left. It is in overage: the org owes 30 of at most 600 credits, which its next credits repay.',
+  ],
+  [
+    'near_cap',
+    { plan: 'team', available: 0, owed: 500, overage_cap: 600 },
+    `Licensed to acme (team plan): 100 runs left. It is near its overage cap: the org owes 500 of at most 600 credits, which its next credits repay; an owner can add credits at ${billing}.`,
+  ],
+] as const;
 
-    expect(await restarted.status()).toMatchObject({
-      state: 'licensed',
-      org: 'globex',
-      org_name: 'Globex Corporation',
+function standingStatusBehaviour(ledgerOf: LedgerOf): void {
+  it.each(standings)('says so in its words while its org is %s', async (standing, books, summary) => {
+    const { metered } = await licensedOn(ledgerOf, {}, (account) => {
+      account.fund('acme', books);
     });
-  });
-}
 
-function invalidStatusBehaviour(ledgerOf: LedgerOf): void {
-  it('reads invalid in the words of the refusal once the account says its key was rotated', async () => {
-    const { metered, key } = await keyedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    metered.account.revoke(key, 'key_rotated');
-    await metered.admitted(runOf('run-2'));
-
-    expect(await metered.status()).toMatchObject({
-      state: 'invalid',
-      org: 'globex',
-      invalid_because: `This runtime's key was replaced. Activate the new key an owner was shown when they rotated it, then run this again. If the key is lost, an owner can rotate it again at ${page}.`,
-    });
-  });
-
-  it('reads invalid once its entitlement is past its end, saying it was not renewed', async () => {
-    const { metered } = await keyedOn(ledgerOf);
-    await metered.admitted(runOf('run-1'));
-    metered.at(aWeekAndADayLater);
-
-    expect(await metered.status()).toMatchObject({
-      state: 'invalid',
-      expires_at: '2026-11-03T12:00:00.000Z',
-      invalid_because:
-        "This runtime's license wasn't renewed by 2026-11-03. Check that it can reach billing.on.auto (it renews every day), then run this again.",
-    });
-  });
-}
-
-function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
-  it('reads offline with the credits of its allocation, what it spent of them and until when they may be used', async () => {
-    const { metered } = await allocatedOn(ledgerOf, 5, false);
-    await startedOnceAdmitted(metered, 'run-1');
-    await startedOnceAdmitted(metered, 'run-2');
-
-    expect(await metered.status()).toMatchObject({
-      state: 'offline',
-      runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f',
-      key_source: null,
-      offline: { credits: 5, spent: 2, usable_until: '2026-11-03T12:00:00.000Z' },
-      invalid_because: null,
-    });
-  });
-
-  it('reads invalid once its offline credits stopped, still giving them', async () => {
-    const { metered } = await allocatedOn(ledgerOf, 5);
-    metered.at(aWeekAndADayLater);
-
-    expect(await metered.status()).toMatchObject({
-      state: 'invalid',
-      key_source: 'environment',
-      offline: { credits: 5, spent: 0, usable_until: '2026-11-03T12:00:00.000Z' },
-      invalid_because:
-        'This offline allocation expired on 2026-11-03. The account holder or an organization admin can request a new allocation at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.',
-    });
+    expect(await metered.status()).toMatchObject({ standing, summary });
   });
 }
 
 export function statusBehaviour(ledgerOf: LedgerOf): void {
-  unregisteredStatusBehaviour(ledgerOf);
-  countedStatusBehaviour(ledgerOf);
+  keylessStatusBehaviour(ledgerOf);
+  unreadStatusBehaviour(ledgerOf);
   licensedStatusBehaviour(ledgerOf);
-  namedStatusBehaviour(ledgerOf);
-  invalidStatusBehaviour(ledgerOf);
-  offlineStatusBehaviour(ledgerOf);
+  standingStatusBehaviour(ledgerOf);
+  limitedStatusBehaviour(ledgerOf);
 }

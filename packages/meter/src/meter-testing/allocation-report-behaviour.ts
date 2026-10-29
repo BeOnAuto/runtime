@@ -65,17 +65,6 @@ export function allocationReportBehaviour(ledgerOf: LedgerOf): void {
 }
 
 export function allocationReportRefusalBehaviour(ledgerOf: LedgerOf): void {
-  it('reports what its checkpoint counted while a fault stands', async () => {
-    const { metered, tampering, key } = await allocatedOn(ledgerOf, 5);
-    await startedOnceAdmitted(metered, 'run-1');
-    await metered.admitted(runOf('run-2'));
-    const counted = await metered.lastCounted();
-    const faulted = await restartedAfter(metered, () => tampering.deleted(counted), { key });
-
-    expect((await faulted.admitted(runOf('run-3'))).kind).toBe('metering_fault');
-    expect((await faulted.madeReport()).report).toMatchObject({ sequence: 1, spent: 1 });
-  });
-
   it('answers meter_unavailable when it cannot record an allocation or a report', async () => {
     const { metered, allocation } = await allocatedOn(ledgerOf, 5);
     metered.executesFail('conflict');
@@ -91,10 +80,10 @@ export function allocationReportRefusalBehaviour(ledgerOf: LedgerOf): void {
     const keyless = await allocatedOn(ledgerOf, 5, false);
     const { metered: keyed } = await allocatedOn(ledgerOf, 5);
 
-    expect((await metered.refusedReport()).detail).toContain('holds no allocation to report on');
+    expect((await metered.refusedReport()).detail).toContain('holds no offline credits to report on');
     expect((await keyless.metered.refusedReport()).detail).toContain('holds no license key to sign its report with');
     expect((await keyed.refusedReport('another')).detail).toMatch(
-      /^This runtime holds the allocation [0-9a-f-]+, not another$/u,
+      /^This runtime holds the offline credits [0-9a-f-]+, not another$/u,
     );
   });
 

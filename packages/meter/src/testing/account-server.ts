@@ -1,7 +1,6 @@
 import { once } from 'node:events';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { StartingTriggerSchema } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
 import type { AccountFailure, AccountRefusal } from '../accounts/account-failure.ts';
@@ -15,35 +14,12 @@ export interface AccountServer {
 
 const portOf = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
-const UsageSchema = Schema.Struct({
-  actions: Schema.Number,
-  through: Schema.NullOr(Schema.Array(Schema.String)),
-  last: Schema.NullOr(Schema.String),
-});
+const UsageSchema = Schema.Struct({ actions: Schema.Int, licensed: Schema.Int });
 
 const usageIn = Schema.decodeUnknownOption(Schema.fromJsonString(UsageSchema));
 
 const installationUsageIn = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ ...UsageSchema.fields, installation: Schema.String })),
-);
-
-const runIn = Schema.decodeUnknownOption(
-  Schema.fromJsonString(
-    Schema.Struct({
-      run: Schema.Struct({
-        org: Schema.String,
-        playbook: Schema.String,
-        run_id: Schema.String,
-        definition_type: Schema.String,
-        definition_name: Schema.String,
-        definition_version: Schema.Number,
-        correlation_id: Schema.String,
-        called_by: Schema.NullOr(Schema.String),
-        trigger: Schema.NullOr(StartingTriggerSchema),
-        started_by: Schema.String,
-      }),
-    }),
-  ),
+  Schema.fromJsonString(Schema.Struct({ installation: Schema.String, ...UsageSchema.fields })),
 );
 
 const refreshIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ allocation: Schema.String })));
@@ -119,19 +95,13 @@ function answerTo(fake: AccountFake, path: string, key: string, text: string): P
   if (path === '/v1/installations/activate') {
     return Option.match(installationUsageIn(text), {
       onNone: () => Promise.resolve(unread),
-      onSome: (usage) => answered(ports.activate(key, usage), (activation) => activation),
-    });
-  }
-  if (path === '/v1/installations/actions') {
-    return Option.match(runIn(text), {
-      onNone: () => Promise.resolve(unread),
-      onSome: ({ run }) => answered(ports.admit(key, run), (admission) => ({ admission })),
+      onSome: (usage) => answered(ports.activate(key, usage), (license) => ({ license })),
     });
   }
   if (path === '/v1/installations/reports') {
     return Option.match(usageIn(text), {
       onNone: () => Promise.resolve(unread),
-      onSome: (usage) => answered(ports.report(key, usage), () => ({ taken: true })),
+      onSome: (usage) => answered(ports.report(key, usage), (license) => ({ license })),
     });
   }
   return allocationAnswerTo(fake, path, key, text);
@@ -153,16 +123,15 @@ async function respond(
   response.writeHead(answer.status, { 'content-type': 'application/json' }).end(garbled() ? 'garbled' : text);
 }
 
-export async function accountServerOver(fake: AccountFake): Promise<AccountServer> {
+export async function accountServerOver(fake: AccountFake, port = 0): Promise<AccountServer> {
   const garbled = { now: false };
   const server = createServer((request, response) => {
     void respond(fake, () => garbled.now, request, response);
   });
-  server.listen(0, '127.0.0.1');
+  server.listen(port, '127.0.0.1');
   await once(server, 'listening');
-  const { port } = portOf(server.address());
   return {
-    origin: `http://127.0.0.1:${port}`,
+    origin: `http://127.0.0.1:${portOf(server.address()).port}`,
     garble: () => {
       garbled.now = true;
     },
