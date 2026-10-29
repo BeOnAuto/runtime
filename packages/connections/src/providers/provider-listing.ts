@@ -15,7 +15,7 @@ import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { hostRefusalOf } from '../policy/policy-rules.ts';
-import { consentUnsetUp, isConsentUnsetUp } from './consent-offered.ts';
+import { consentUnsetUpOf } from './consent-offered.ts';
 import { listedWayOf, type ListedPlaceholder, type ListedProvider, type ListedWay } from './listed-providers.ts';
 
 export interface Listing {
@@ -96,9 +96,8 @@ function placeholdersOf({ entry }: Provider): readonly ListedPlaceholder[] {
 }
 
 function wayOfferingOf(way: CredentialWay, offering: Offering, { entry }: Provider, listing: Listing): Offering {
-  return offering.offered && isConsentUnsetUp(way, listing.consent)
-    ? { offered: false, because: consentUnsetUp(entry.name) }
-    : offering;
+  const unsetUp = offering.offered ? consentUnsetUpOf(entry.name, way, listing.consent) : undefined;
+  return unsetUp === undefined ? offering : { offered: false, because: unsetUp.detail };
 }
 
 export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Listing): boolean {

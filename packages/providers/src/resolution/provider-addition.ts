@@ -1,7 +1,7 @@
 import { alternatives, type Issue } from '@on.auto/operations';
 import { Option, Result } from 'effect';
 
-import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
+import { asksTheSameScopes, type CredentialWay, type WayKind } from '../entry/credential-ways.ts';
 import { isRequired, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { wayAddresses, type WayAddress, type WayAddresses } from '../entry/templates.ts';
@@ -11,6 +11,7 @@ export interface GivenToProvider {
   readonly name?: string | undefined;
   readonly placeholders?: Readonly<Record<string, string>> | undefined;
   readonly kind?: string | undefined;
+  readonly scope?: string | undefined;
   readonly canBeGiven?: ((way: CredentialWay) => boolean) | undefined;
   readonly playbooks?: readonly string[] | undefined;
   readonly allowed?: readonly string[] | undefined;
@@ -55,23 +56,55 @@ function everyWay(): boolean {
   return true;
 }
 
+function kindsOf(credentials: readonly CredentialWay[]): string {
+  return alternatives([...new Set(credentials.map((offered) => offered.kind))]);
+}
+
+function scopesAskedBy(ways: readonly CredentialWay[]): string {
+  return alternatives([...new Set(ways.map((offered) => `one that asks ${offered.scope ?? 'no scope'}`))]);
+}
+
+function kindRefusalOf(name: string, kind: string, credentials: readonly CredentialWay[]): readonly Issue[] {
+  return [
+    {
+      pointer: '/credential/kind',
+      detail: `The provider ${name} takes no ${kind} credential; it takes ${kindsOf(credentials)}`,
+    },
+  ];
+}
+
+function scopeRefusalOf(
+  name: string,
+  { kind, scope }: GivenToProvider,
+  ways: readonly CredentialWay[],
+): readonly Issue[] {
+  const credential = kind === undefined ? 'credential' : `${kind} credential`;
+  return [
+    {
+      pointer: '/credential/scope',
+      detail: `The provider ${name} takes no ${credential} that asks ${String(scope)}; it takes ${scopesAskedBy(ways)}`,
+    },
+  ];
+}
+
 function wayOf(
   { name, credentials }: ProviderEntry,
-  { kind, canBeGiven = everyWay }: GivenToProvider,
+  given: GivenToProvider,
 ): Result.Result<CredentialWay, readonly Issue[]> {
-  const [first] = credentials;
-  const way =
-    kind === undefined
-      ? (credentials.find((offered) => canBeGiven(offered)) ?? first)
-      : credentials.find((offered) => offered.kind === kind);
-  return way === undefined
-    ? Result.fail([
-        {
-          pointer: '/credential/kind',
-          detail: `The provider ${name} takes no ${String(kind)} credential; it takes ${alternatives(credentials.map((offered) => offered.kind))}`,
-        },
-      ])
-    : Result.succeed(way);
+  const { kind, scope, canBeGiven = everyWay } = given;
+  const ofTheKind = kind === undefined ? credentials : credentials.filter((offered) => offered.kind === kind);
+  const named =
+    scope === undefined ? ofTheKind : ofTheKind.filter((offered) => asksTheSameScopes(offered.scope, scope));
+  const [first] = named;
+  const way = named.find((offered) => canBeGiven(offered)) ?? first;
+  if (way !== undefined) {
+    return Result.succeed(way);
+  }
+  return Result.fail(
+    kind !== undefined && ofTheKind.length === 0
+      ? kindRefusalOf(name, kind, credentials)
+      : scopeRefusalOf(name, given, ofTheKind),
+  );
 }
 
 function placedAddressesOf(way: CredentialWay, values: Values): Partial<Record<WayAddress, string>> {

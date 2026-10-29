@@ -96,6 +96,11 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   },
 };
 
+export function asksAScope(kind: WayKind): boolean {
+  const { required, optional } = fieldsOfEachKind[kind];
+  return [...required, ...optional].includes('scope');
+}
+
 const parametersTheRequestSets: ReadonlySet<string> = new Set([
   'response_type',
   'response_mode',
@@ -200,6 +205,10 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
 
 export function scopesIn(scope: string | undefined): readonly string[] {
   return scope === undefined ? [] : scope.split(' ');
+}
+
+export function asksTheSameScopes(one: string | undefined, other: string | undefined): boolean {
+  return new Set(scopesIn(one)).symmetricDifference(new Set(scopesIn(other))).size === 0;
 }
 
 function wordsIssuesOf({ scope, says = {} }: CredentialWayFields): readonly WayIssue[] {

@@ -56,7 +56,8 @@ const AddedCredentialSchema = Schema.Struct({
   ),
   scope: Schema.optionalKey(
     scope.schema.annotate({
-      description: 'For client_credentials, the scopes, separated by spaces; none when left out',
+      description:
+        'For client_credentials, the scopes, separated by spaces, none when left out; with provider, the scope of the way to take, as list_providers lists it',
     }),
   ),
 }).annotate({ description: credentialDescription });
@@ -84,7 +85,7 @@ const credentialOfAnApiByHand = 'Expected credential, which an HTTP API given by
 
 const serverFields = ['url', 'document', 'base_url', 'headers', 'query_params', 'request_id'] as const;
 
-const placementFields = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope'] as const;
+const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer'] as const;
 
 function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): readonly ModeIssue[] {
   return [
@@ -92,11 +93,11 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
     ...serverFields
       .filter((field) => entry[field] !== undefined)
       .map((field) => ({ path: ['entry', field], issue: givenByTheProvider(field) })),
-    ...placementFields
+    ...placedByTheProvider
       .filter((field) => credential?.[field] !== undefined)
       .map((field) => ({
         path: ['credential', field],
-        issue: `Expected no ${field}: the provider gives the credential but its kind`,
+        issue: `Expected no ${field}: the provider gives the credential but its kind and its scope`,
       })),
     ...(credential?.client_id === undefined
       ? []
@@ -112,7 +113,7 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
 const consentOfAnApiByHand =
   'Expected another kind: an HTTP API given by hand takes no consent, since its document names no authorization server; name a provider, as search lists it, in provider';
 
-const givenBesideTheKind = [...placementFields, 'client_id'] as const;
+const givenBesideTheKind = [...placedByTheProvider, 'scope', 'client_id'] as const;
 
 type AddedCredential = NonNullable<AdditionGiven['credential']>;
 

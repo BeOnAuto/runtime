@@ -64,9 +64,9 @@ function examplesOf({ entry }: Provider): readonly Given[] {
 }
 
 function additionsOf(provider: Provider): readonly ProviderAddition[] {
-  return provider.entry.credentials.flatMap(({ kind }) =>
+  return provider.entry.credentials.flatMap(({ kind, scope }) =>
     examplesOf(provider).map((placeholders) =>
-      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind })),
+      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind, scope })),
     ),
   );
 }

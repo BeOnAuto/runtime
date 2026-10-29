@@ -100,7 +100,7 @@ describe('a connection added by hand', () => {
 });
 
 describe('the input of a connection added by a provider', () => {
-  it('refuses the server and every field of the credential but its kind, and the client id the person gives on the page', async () => {
+  it('refuses the server and every field of the credential but its kind and its scope, and the client id the person gives on the page', async () => {
     const given = {
       ...acmeTracker,
       type: 'mcp',
@@ -112,8 +112,14 @@ describe('the input of a connection added by a provider', () => {
       { pointer: '/type', detail: 'Expected no type: the provider gives it' },
       { pointer: '/entry/url', detail: 'Expected no url: the provider gives the server' },
       { pointer: '/entry/headers', detail: 'Expected no headers: the provider gives the server' },
-      { pointer: '/credential/name', detail: 'Expected no name: the provider gives the credential but its kind' },
-      { pointer: '/credential/in', detail: 'Expected no in: the provider gives the credential but its kind' },
+      {
+        pointer: '/credential/name',
+        detail: 'Expected no name: the provider gives the credential but its kind and its scope',
+      },
+      {
+        pointer: '/credential/in',
+        detail: 'Expected no in: the provider gives the credential but its kind and its scope',
+      },
       { pointer: '/credential/client_id', detail: 'Expected no client_id: the person gives the client id on the page' },
     ]);
   });

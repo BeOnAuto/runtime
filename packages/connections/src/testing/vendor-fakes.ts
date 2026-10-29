@@ -41,6 +41,7 @@ export interface AtTheVendor {
 export interface ProviderAsked {
   readonly provider: string;
   readonly placeholders: Readonly<Record<string, string>>;
+  readonly scope: string | undefined;
 }
 
 export interface ConsentedAtTheVendor {
@@ -149,10 +150,11 @@ function authorizedAtTheFake(asked: Readonly<URL>, { fake, vendor }: TheVendor):
 
 export async function consentedAtTheVendor(
   h: Harness,
-  { provider, placeholders }: ProviderAsked,
+  { provider, placeholders, scope }: ProviderAsked,
   theVendor: TheVendor,
 ): Promise<ConsentedAtTheVendor> {
-  const link = await added(h, { provider, placeholders, credential: { kind: 'authorization' } });
+  const credential = { kind: 'authorization', ...(scope === undefined ? {} : { scope }) };
+  const link = await added(h, { provider, placeholders, credential });
   const asked = new URL((await startedAt(h, link)).url);
   const finished = await finishing(h, link, await consentedAt(authorizedAtTheFake(asked, theVendor)));
   return { asked, finished };

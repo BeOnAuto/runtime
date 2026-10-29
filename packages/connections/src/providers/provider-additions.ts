@@ -21,7 +21,7 @@ import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Credential } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
-import { consentUnsetUp, isConsentUnsetUp } from './consent-offered.ts';
+import { consentUnsetUpOf } from './consent-offered.ts';
 import { isOfferedWay, type Listing } from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
@@ -67,6 +67,7 @@ function givenToProvider(
       name,
       placeholders,
       kind: credential?.kind,
+      scope: credential?.scope,
       canBeGiven: (way) => isOfferedWay(named, way, listing),
       playbooks: entry.playbooks,
       allowed: entry.allowed,
@@ -127,10 +128,16 @@ interface Checked {
   readonly consent: Consent;
 }
 
-function consentIssuesOf({ provider, credential }: GivenAddition, consent: Consent): readonly Issue[] {
-  return isConsentUnsetUp(credential, consent)
-    ? [{ pointer: '/credential/kind', detail: consentUnsetUp(String(provider)) }]
-    : [];
+function consentIssuesOf(
+  { provider, credential }: GivenAddition,
+  { given, consent }: Pick<Checked, 'given' | 'consent'>,
+): readonly Issue[] {
+  const unsetUp = consentUnsetUpOf(String(provider), credential, consent);
+  if (unsetUp === undefined) {
+    return [];
+  }
+  const namedByItsScope = unsetUp.scopeUncovered && given.credential?.scope !== undefined;
+  return [{ pointer: namedByItsScope ? '/credential/scope' : '/credential/kind', detail: unsetUp.detail }];
 }
 
 function providerIssuesOf(addition: GivenAddition, { given, checking, consent }: Checked): readonly Issue[] {
@@ -141,7 +148,7 @@ function providerIssuesOf(addition: GivenAddition, { given, checking, consent }:
   if (credential.length > 0) {
     return placedIssuesOf(credential, given);
   }
-  const unsetUp = consentIssuesOf(addition, consent);
+  const unsetUp = consentIssuesOf(addition, { given, consent });
   return unsetUp.length > 0 ? unsetUp : placedIssuesOf(additionIssuesOf(addition, checking), given);
 }
 
