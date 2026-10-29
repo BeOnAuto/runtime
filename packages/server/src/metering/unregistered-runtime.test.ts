@@ -25,13 +25,23 @@ const atTheEdge = workflowSource(
 `,
 );
 
-const usedUp = { state: 'unregistered', free_runs: { used: 100, of: 100 }, key_source: null };
+const usedUp = {
+  state: 'unregistered',
+  free_runs: { used: 100, of: 100 },
+  fallback: { per_day: 15, per_month: 75, used_today: 15, used_this_month: 15 },
+  key_source: null,
+};
+
+function tomorrowOf(now: Date): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)).toISOString().slice(0, 10);
+}
 
 function licenseRequiredOf(runtimeId: string) {
   const page = `${studio}/licenses?installation=${runtimeId}`;
   return {
     kind: 'license_required',
-    detail: `This runtime has used its 100 free runs. Get a free key at ${page}, then activate it on the runtime and run this again.`,
+    detail: `This runtime has used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15 free runs and can run again at 00:00 UTC on ${tomorrowOf(new Date())}. To run more, get a free key at ${page}, then activate it on the runtime.`,
+    because: 'free_daily_limit',
     resolve_at: page,
     runtime_id: runtimeId,
   };
@@ -51,24 +61,24 @@ function talliedOverMcp(served: ReasoningServer) {
   );
 }
 
-describe('a runtime nobody registered, after its 100 actions', () => {
+describe('a runtime nobody registered, after its 100 free runs and the 15 of the day', () => {
   let server: ReasoningServer;
   let admitted: readonly TestResponse[];
 
   beforeAll(async () => {
     server = await servedWithTally();
-    admitted = await talliedTimes(server, 100);
-  }, 60_000);
+    admitted = await talliedTimes(server, 115);
+  }, 120_000);
 
   afterAll(async () => {
     await server.stop();
   });
 
-  it('refuses the next run over HTTP as license_required, resolved where Studio registers it by its id', async () => {
+  it('refuses the next run over HTTP as license_required, saying when it can run again and where Studio registers it', async () => {
     const refused = await tallied(server);
     const problem = { type: 'https://on.auto/problems/license_required', reason: 'conflict' };
 
-    expect(admitted.map(({ status }) => status)).toEqual(Array.from({ length: 100 }, () => 200));
+    expect(admitted.map(({ status }) => status)).toEqual(Array.from({ length: 115 }, () => 200));
     expect(refused).toMatchObject({
       status: 409,
       body: { ...problem, ...licenseRequiredOf(await runtimeIdOf(server)) },
@@ -90,7 +100,7 @@ describe('a runtime nobody registered, after its 100 actions', () => {
     });
   });
 
-  it('still reads its runs, its events and its license, which used its free runs, and takes new definitions', async () => {
+  it('still reads its runs, its events and its license, which used its free runs for the day, and takes new definitions', async () => {
     const created = await server.call('POST', `${alpha}/definitions/workflow`, {
       body: { name: 'later', source: workflowSource('later', 'do:\n  - wait:\n      set: { waited: true }\n') },
     });
@@ -102,11 +112,11 @@ describe('a runtime nobody registered, after its 100 actions', () => {
   });
 });
 
-describe('a workflow of a runtime nobody registered, started at its 99th action', () => {
-  it('has its first call admitted as the 100th, and its next refused, which it catches', async () => {
+describe('a workflow of a runtime nobody registered, started at its 114th run of a day', () => {
+  it('has its first call admitted as the 115th, and its next refused, which it catches', async () => {
     const server = await servedWithTally();
     try {
-      await talliedTimes(server, 98);
+      await talliedTimes(server, 113);
       await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'edge', source: atTheEdge } });
       const started = await server.call('POST', `${alpha}/definitions/workflow/edge/run`, { body: { input: {} } });
       const settled = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
@@ -117,5 +127,5 @@ describe('a workflow of a runtime nobody registered, started at its 99th action'
     } finally {
       await server.stop();
     }
-  }, 60_000);
+  }, 120_000);
 });

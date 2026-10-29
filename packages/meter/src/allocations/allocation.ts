@@ -2,7 +2,6 @@ import type { Conflict, Unavailable } from '@on.auto/operations';
 import { Effect, Function, Option } from 'effect';
 
 import { executed, meterStateOf, meterUnavailable, nowIso } from '../admission/metering.ts';
-import { usageOf } from '../licensing/activation.ts';
 import { isLiveAt, licenseInvalid, nowMs, offlineCreditsStopped, type Licensing } from '../licensing/licensing.ts';
 import { allocationIn, type AllocationPayload, type Signed } from '../licensing/signed-answers.ts';
 import type { Allocation } from '../meter-stream/allocation-events.ts';
@@ -22,15 +21,13 @@ export function standingAllocation({ allocation }: MeterState): Allocation | und
   );
 }
 
-function standingOf(allocation: Allocation, actions: number): AllocationStanding {
+export function spentOf(allocation: Pick<Allocation, 'actions'>, { admitted }: MeterState): number {
+  return Math.max(0, admitted.actions - allocation.actions);
+}
+
+function standingOf(allocation: Allocation, state: MeterState): AllocationStanding {
   const { id, installation, credits, refresh_by: refreshBy } = allocation;
-  return {
-    allocation: id,
-    installation,
-    credits,
-    spent: Math.max(0, actions - allocation.actions),
-    refresh_by: refreshBy,
-  };
+  return { allocation: id, installation, credits, spent: spentOf(allocation, state), refresh_by: refreshBy };
 }
 
 function allocationVerified(
@@ -41,9 +38,9 @@ function allocationVerified(
   return Effect.gen(function* () {
     const invalid = (why: string) => licenseInvalid(licensing.options, installation, why);
     const allocation = Option.getOrUndefined(allocationIn(signed, licensing.signers));
-    if (allocation === undefined) return yield* invalid('its allocation is not signed by Auto');
+    if (allocation === undefined) return yield* invalid('its offline credits are not ones Auto signed');
     if (installation !== undefined && allocation.installation !== installation) {
-      return yield* invalid(`its allocation is for the installation ${allocation.installation}`);
+      return yield* invalid(`its offline credits are for the runtime ${allocation.installation}`);
     }
     if (!isLiveAt(allocation.refresh_by, yield* nowMs)) {
       return yield* offlineCreditsStopped(licensing.options, allocation.installation, allocation.refresh_by);
@@ -65,8 +62,14 @@ export function allocated(
       issued_at: issuedAt,
       refresh_by: refreshBy,
     } = yield* allocationVerified(licensing, signed, state.installation);
-    const { actions } = yield* usageOf(licensing, state);
-    const record = { id, installation, credits, issued_at: issuedAt, refresh_by: refreshBy, actions };
+    const record = {
+      id,
+      installation,
+      credits,
+      issued_at: issuedAt,
+      refresh_by: refreshBy,
+      actions: state.admitted.actions,
+    };
     const after = yield* executed(licensing, {
       type: 'allocate',
       allocation: { ...record, allocation: signed },
@@ -78,9 +81,9 @@ export function allocated(
       return yield* licenseInvalid(
         licensing.options,
         installation,
-        `its allocation ${id} was withdrawn: ${standing.withdrawn}`,
+        `its offline credits ${id} were withdrawn: ${standing.withdrawn}`,
       );
     }
-    return standingOf(standing, actions);
+    return standingOf(standing, after);
   });
 }

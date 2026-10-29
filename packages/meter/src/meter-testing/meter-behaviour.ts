@@ -1,33 +1,31 @@
 import { describe } from 'vitest';
 
 import { allocationsBehaviour } from './allocation-behaviour.ts';
-import { allowanceBehaviour, concurrencyBehaviour } from './allowance-behaviour.ts';
-import { checkpointBehaviour, verificationBehaviour } from './checkpoint-behaviour.ts';
-import { countingBehaviour, recountingBehaviour } from './counting-behaviour.ts';
-import { faultsBehaviour, rebuildingBehaviour } from './fault-behaviour.ts';
+import {
+  allowanceBehaviour,
+  concurrencyBehaviour,
+  defaultAllowanceBehaviour,
+  laggingClockBehaviour,
+} from './allowance-behaviour.ts';
+import { countingBehaviour, historyBehaviour, startedRunsBehaviour } from './counting-behaviour.ts';
 import { licensesBehaviour } from './license-behaviour.ts';
 import type { LedgerOf } from './opened.ts';
-import { reportBehaviour, reportVerificationBehaviour } from './report-behaviour.ts';
+import { earlyReportBehaviour, reportBehaviour, restoredReportBehaviour } from './report-behaviour.ts';
 import { statusBehaviour } from './status-behaviour.ts';
 
 export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
   describe(`the meter on ${name}`, () => {
     describe('counting', () => {
       countingBehaviour(ledgerOf);
-      recountingBehaviour(ledgerOf);
+      startedRunsBehaviour(ledgerOf);
     });
-    describe('its checkpoint', () => {
-      checkpointBehaviour(ledgerOf);
-      verificationBehaviour(ledgerOf);
+    describe('the history of its runs', () => {
+      historyBehaviour(ledgerOf);
     });
-    describe('rebuilding', () => {
-      rebuildingBehaviour(ledgerOf);
-    });
-    describe('faults', () => {
-      faultsBehaviour(ledgerOf);
-    });
-    describe('allowances', () => {
+    describe('its free runs', () => {
       allowanceBehaviour(ledgerOf);
+      laggingClockBehaviour(ledgerOf);
+      defaultAllowanceBehaviour(ledgerOf);
       concurrencyBehaviour(ledgerOf);
     });
     describe('licenses', () => {
@@ -38,7 +36,8 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
     });
     describe('reports', () => {
       reportBehaviour(ledgerOf);
-      reportVerificationBehaviour(ledgerOf);
+      earlyReportBehaviour(ledgerOf);
+      restoredReportBehaviour(ledgerOf);
     });
     describe('its license status', () => {
       statusBehaviour(ledgerOf);

@@ -26,7 +26,7 @@ const refusals: readonly (readonly [string, Readonly<Record<string, string>>, st
     { AUTO_RUNTIME_ALLOCATION: '{"payload":"x"}' },
     'AUTO_RUNTIME_ALLOCATION',
   ],
-  ['a key that is not one of Studio', { AUTO_RUNTIME_LICENSE_KEY: 'ak_one_two' }, 'alk.<org>.<installation>.<secret>'],
+  ['a key that is not one of Studio', { AUTO_RUNTIME_LICENSE_KEY: 'ak_one_two' }, 'alk.<org>.<runtime id>.<secret>'],
   [
     'an account service that is no origin',
     { ACCOUNTS_ORIGIN: 'https://accounts.example.com/v1' },
@@ -93,7 +93,7 @@ describe('the allocation settings', () => {
       'license.key: Looks like a credential, which this file never holds',
     );
     expect(() => readSettingsOf({ CONFIG_FILE: configFile('license:\n  key: ${KEY}\n'), KEY: 'ak_one_two' })).toThrow(
-      'license.key: Expected the key Studio gave as it registered this installation, alk.<org>.<installation>.<secret>',
+      'license.key: Expected the key Studio gave as an owner registered this runtime, alk.<org>.<runtime id>.<secret>',
     );
   });
 

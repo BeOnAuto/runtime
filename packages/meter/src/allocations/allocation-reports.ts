@@ -2,34 +2,23 @@ import { Conflict, type Unavailable } from '@on.auto/operations';
 import { Effect, Function, Option } from 'effect';
 
 import type { SignedReport } from '../accounts/account-service.ts';
-import { caughtUp, executed, meterStateOf, meterUnavailable, nowIso, verified } from '../admission/metering.ts';
-import { usageFrom, type Licensing } from '../licensing/licensing.ts';
+import { executed, meterStateOf, meterUnavailable, nowIso } from '../admission/metering.ts';
+import type { Licensing } from '../licensing/licensing.ts';
 import { reported } from '../licensing/reports.ts';
-import type { MeterState } from '../meter-stream/meter-events.ts';
-import { standingAllocation } from './allocation.ts';
+import { spentOf, standingAllocation } from './allocation.ts';
 import { reportSignatureOf } from './report-signature.ts';
 
 const noKeyToSignWith = new Conflict({
   detail:
-    'This runtime holds no license key to sign its report with: give it the key of its installation in AUTO_RUNTIME_LICENSE_KEY, or in license.key of its configuration file',
+    'This runtime holds no license key to sign its report with: give it its key in AUTO_RUNTIME_LICENSE_KEY, or in license.key of its configuration file',
 });
 
 const nothingToReport = new Conflict({
-  detail: 'This runtime holds no allocation to report on: an operator of Auto issues one for its installation',
+  detail: 'This runtime holds no offline credits to report on: an operator of Auto issues them for it',
 });
 
 interface Worded {
   readonly detail: string;
-}
-
-function actionsToReport(licensing: Licensing, state: MeterState): Effect.Effect<number> {
-  const kept = usageFrom(state.checkpoint).actions;
-  return state.fault === undefined
-    ? Effect.flatMap(caughtUp(licensing, state), (counting) => verified(licensing, counting)).pipe(
-        Effect.map(({ actions }) => actions),
-        Effect.orElseSucceed(Function.constant(kept)),
-      )
-    : Effect.succeed(kept);
 }
 
 function allocationReportMade(
@@ -42,9 +31,9 @@ function allocationReportMade(
     const allocation = standingAllocation(state);
     if (allocation === undefined) return yield* nothingToReport;
     if (of !== undefined && of !== allocation.id) {
-      return yield* new Conflict({ detail: `This runtime holds the allocation ${allocation.id}, not ${of}` });
+      return yield* new Conflict({ detail: `This runtime holds the offline credits ${allocation.id}, not ${of}` });
     }
-    const spent = Math.max(0, (yield* actionsToReport(licensing, state)) - allocation.actions);
+    const spent = spentOf(allocation, state);
     const at = yield* nowIso;
     const after = yield* executed(licensing, { type: 'report_allocation', spent, at }).pipe(
       Effect.mapError(() => meterUnavailable),

@@ -99,47 +99,52 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 ## A run is refused as `license_required` {#license-required}
 
-**Symptom.** A run is answered `409` with the kind `license_required`: `This runtime has used its 100 free runs. Get a free key at …, then activate it on the runtime and run this again.`
+**Symptom.** A run is answered `409` with the kind `license_required`, its limit in `because`, `free_daily_limit` or `free_month_used`: `This runtime has used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15 free runs and can run again at 00:00 UTC on …. To run more, get a free key at …, then activate it on the runtime.`
 
-**Cause.** A runtime runs 100 actions before it is registered, and this one holds no license.
+**Cause.** A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month, and this one has used the day's or the month's.
 
-**Fix.** Open the refusal's `resolve_at` while signed in to Studio as an owner of the org, register the installation its `runtime_id` names, and activate the key Studio shows once. [Register and license a runtime](licenses.md) gives the four ways to activate it.
+**Fix.** Wait until the time the `detail` gives, or open the refusal's `resolve_at` while signed in to Studio as an owner of the org, register the runtime its `runtime_id` names, and activate the key Studio shows once. [Licenses](licenses.md#activate-the-key) gives the four ways to activate it. A workflow whose call was refused waits at that step and asks again.
 
-## A run is refused as `license_invalid` {#license-invalid}
+## A runtime with a key runs at the free rate {#limited}
 
-**Symptom.** A run, or an activation, is answered `409` with the kind `license_invalid`, its `resolve_at` the installation's page in Studio and its `runtime_id` the runtime's id. Its `detail` says which case it is, and `GET /v1/orgs/{org}/license` answers the same words in `invalid_because`.
+**Symptom.** `GET /v1/orgs/{org}/license` reads `state: "limited"`, and the runtime says so as it starts; once it has used the free rate, a run is answered `409` with the kind `credits_exhausted` or `license_invalid`, its limit in `because`, `free_daily_limit` or `free_month_used`, and its `detail` beginning with why it runs at the free rate.
+
+**Cause and fix**, by the license's `limited_because` and the refusal's first words:
+
+- `credits`, `This runtime's organization has no credits left`: the org is on the Free plan and has used its credits. An owner adds credits at `resolve_at`, Billing in Studio; the runtime takes them at its next report, within the hour.
+- `cap`, `This runtime's organization has reached its overage cap`: the org owes as much overage as its plan allows. An owner adds credits at `resolve_at`, which repay what is owed first; the runtime takes them at its next report.
+- `out_of_touch`, `This runtime hasn't reached Auto since` a date: the runtime has not reached `billing.on.auto` for 28 days since its last license. Check its egress; it goes back to its org's credits at its next report.
+- `key_rotated`, `This runtime's key was replaced`: an owner rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, an owner rotates it again at `resolve_at`.
+- `key_revoked`, `This runtime was removed from its org` or `Auto no longer accepts this runtime's key`: an owner removed the runtime. An owner registers it again at `resolve_at`; activate the new key.
+- `org_closed`, `This runtime's organization at Auto is closed`: the org was deleted. An owner can restore it, for a limited time only, and the runtime goes back to its credits at its next report; otherwise activate a key of another org.
+- `not_activated`, `This runtime has a key it hasn't activated with Auto yet`: the runtime has not reached Auto since it was given the key. Check its egress; it activates the key at its next report, within the hour.
+
+## Activating a key, or a run on offline credits, is refused as `license_invalid` {#license-invalid}
+
+**Symptom.** An activation, or a run of a runtime on offline credits, is answered `409` with the kind `license_invalid`, its `resolve_at` the runtime's page in Studio and its `runtime_id` the runtime's id. Its `detail` says which case it is.
 
 **Cause and fix.**
 
-- `This runtime's key was replaced.`, with `because: "key_rotated"`: an owner rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, an owner rotates it again at `resolve_at`.
-- `This runtime was removed from its org.`, with `because: "installation_revoked"`: an owner revoked the installation. An owner registers it again at `resolve_at`; activate the new key.
-- `This runtime's license wasn't renewed by` a date: an entitlement lasts seven days and is renewed every day, and this one could not be for a week. It renews as soon as the runtime reaches `billing.on.auto`; check the runtime's egress.
-- `These offline credits stopped on` a date: an offline installation's allocation has seven days of grace from its last refresh. An owner requests new credits at `resolve_at`, or the runtime refreshes it with Auto.
-- `This runtime's license does not stand`, followed by why: a key for another installation is refused before the runtime asks Auto, so register this runtime's installation, which `runtime_id` names, rather than reuse another's key; an entitlement not signed by Auto is refused whatever key brought it.
+- `This runtime's key was replaced.`, with `because: "key_rotated"`: the key was rotated. Activate the new key an owner was shown, or have an owner rotate it again at `resolve_at`.
+- `This runtime was removed from its org.`, with `because: "installation_revoked"`: an owner registers the runtime again at `resolve_at`; activate the new key.
+- `This offline allocation expired on` a date: offline credits last 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. An owner requests new credits at `resolve_at`, or the runtime refreshes them with Auto.
+- `This runtime's license is invalid`, followed by why: a key for another runtime is refused before the runtime asks Auto, so register this runtime, which `runtime_id` names, rather than reuse another's key; a license not signed by Auto is refused whatever key brought it.
 
-## A run is refused as `credits_exhausted` {#credits-exhausted}
+## A run on offline credits is refused as `credits_exhausted` {#credits-exhausted}
 
-**Symptom.** A run is answered `409` with the kind `credits_exhausted`, in the words of the org's account, its case in `because`, `none_left`, `free_daily_limit` or `free_month_used`, and where an owner gets more in `resolve_at`; or, on an offline installation, `This runtime has used all … offline credits`, with `because: "none_left"`.
+**Symptom.** A run is answered `409` with the kind `credits_exhausted` and `because: "none_left"`: `This runtime has used all … offline credits`.
 
-**Cause.** The org's account at Auto has no credit left for the action, or an [offline installation](licenses.md#offline-installations) has spent the credits of its allocation. A run asked again under the id of a run that already started is not charged again, and is not refused.
+**Cause.** A [runtime on offline credits](licenses.md#offline-runtimes) has spent them. A run asked again under the id of a run that already started counts nothing more, and is not refused.
 
-**Fix.** An owner of the org gets more credits at `resolve_at`, in Studio, with a plan or a top-up, or, for an offline installation, requests more there. Ask for the run again once they are added.
+**Fix.** An owner of the org requests more offline credits at `resolve_at`.
 
-## A run is refused as `account_closed` {#account-closed}
+## Activating a key is refused as `account_closed` {#account-closed}
 
-**Symptom.** A run, or an activation of the license, is answered `409` with the kind `account_closed`, in the words of the org's account, its case in `because`, `org_deleted` or `org_purged`, and, where the account gives one, the page to restore the org in `resolve_at`.
+**Symptom.** An activation of the license is answered `409` with the kind `account_closed`, in the words of the org's account, its case in `because`, `org_deleted` or `org_purged`, and, where the account gives one, the page to restore the org in `resolve_at`.
 
 **Cause.** The org's account at Auto is closed. With `org_deleted`, the org was deleted and can still be restored, but only for a limited time; after it, the org is purged. With `org_purged`, it was, and cannot be restored.
 
-**Fix.** For `org_deleted`, an owner of the org restores it at `resolve_at`, which says until when it can be, and asks for the run again. For `org_purged`, the org's runs never run again; asking again changes nothing.
-
-## Every run is refused as `metering_fault` {#metering-fault}
-
-**Symptom.** Every new run is answered `409` with the kind `metering_fault`: `This runtime stopped starting runs because`, what the runtime found, then `We need to repair it; see https://studio.on.auto/support (runtime id …). Reading, editing and exporting still work.`, with Studio's support page in `resolve_at` and the runtime's id in `runtime_id`.
-
-**Cause.** The runtime found its ledger changed under the count it keeps: an event it counted is gone, another stands where it counted its last, or an event can no longer be read. Restoring an older backup of the ledger under a newer count, or editing the ledger's database by hand, does this.
-
-**Fix.** Reach Auto at [Studio's support page](https://studio.on.auto/support) with the runtime id and what changed the ledger. Auto issues a repair for that installation, which the runtime takes when it next renews its license, at its start or within a day; a restart takes it at once. See [Faults and repairs](licenses.md#faults-and-repairs).
+**Fix.** For `org_deleted`, an owner of the org restores it at `resolve_at`, which says until when it can be. For `org_purged`, register the runtime with another org and activate its key. Meanwhile the runtime runs at the free rate.
 
 ## Error responses
 

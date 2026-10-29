@@ -110,7 +110,7 @@ describe('the events of a run of a reasoning function that calls a tool, with te
       ].map((type) => [type, traceId]),
     );
     expect(logged.map(({ eventName, traceId: logTrace }) => [eventName, logTrace])).toEqual([
-      ...['installation_identified', 'actions_counted', 'action_admitted'].map((type) => [type, traceId]),
+      ...['installation_identified', 'action_admitted'].map((type) => [type, traceId]),
       ...history.map(([type, trace]) => [type, trace]),
     ]);
   });

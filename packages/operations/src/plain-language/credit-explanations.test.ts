@@ -6,9 +6,29 @@ import { mostRefusalCharacters } from './word-bounds.ts';
 
 const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
   [
-    'a runtime that used its free runs',
+    'a runtime without a key that used its free runs for now',
     { reason: 'conflict', kind: 'license_required' },
-    'Could not run the workflow “tally”: this runtime has used its free runs. Get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime and run this again.',
+    'Could not run the workflow “tally”: this runtime has no license key and has used its free runs for now. The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
+  ],
+  [
+    'a runtime without a key that used its free runs for the day',
+    { reason: 'conflict', kind: 'license_required', because: 'free_daily_limit' },
+    'Could not run the workflow “tally”: this runtime has no license key and has used its free runs for the day. The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
+  ],
+  [
+    'a runtime without a key that used its free runs for the month',
+    { reason: 'conflict', kind: 'license_required', because: 'free_month_used' },
+    'Could not run the workflow “tally”: this runtime has no license key and has used its free runs for the month. The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
+  ],
+  [
+    "a runtime at the free rate for the day while its license can't be used",
+    { reason: 'conflict', kind: 'license_invalid', because: 'free_daily_limit' },
+    "Could not run the workflow “tally”: this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the day. The details below explain why and when it can run again. The account holder or an organization admin can fix it in Auto Studio at the resolve_at link.",
+  ],
+  [
+    "a runtime at the free rate for the month while its license can't be used",
+    { reason: 'conflict', kind: 'license_invalid', because: 'free_month_used' },
+    "Could not run the workflow “tally”: this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the month. The details below explain why and when it can run again. The account holder or an organization admin can fix it in Auto Studio at the resolve_at link.",
   ],
   [
     'a license that no longer stands',
@@ -39,11 +59,6 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
     'an account closed since its org was deleted for good',
     { reason: 'conflict', kind: 'account_closed', because: 'org_purged' },
     'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted for good. The org can no longer be restored, so none of its runs will run again; the details below say more.',
-  ],
-  [
-    'a meter that no longer agrees with its ledger',
-    { reason: 'conflict', kind: 'metering_fault' },
-    'Could not run the workflow “tally”: this runtime stopped starting runs, since what it counted no longer agrees with its ledger. Auto needs to repair it: the details below give its runtime id and link to Auto’s support at resolve_at. Reading, editing and exporting still work.',
   ],
   [
     'an account with no credits left, which names no case',
@@ -81,16 +96,16 @@ describe('the words of a refusal of the meter', () => {
 
   it('give why of the case beside the kind where the case belongs to another kind', () => {
     expect(explanationOf({ reason: 'conflict', kind: 'license_required', because: 'none_left' }).why).toBe(
-      'this runtime has used its free runs, because the account has no credits left',
+      'this runtime has no license key and has used its free runs for now, because the account has no credits left',
     );
     expect(
       [
-        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'free_daily_limit' }),
-        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'free_month_used' }),
-        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'key_rotated' }),
-        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'installation_revoked' }),
-        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'org_deleted' }),
-        explanationOf({ reason: 'conflict', kind: 'metering_fault', because: 'org_purged' }),
+        explanationOf({ reason: 'conflict', kind: 'account_closed', because: 'free_daily_limit' }),
+        explanationOf({ reason: 'conflict', kind: 'account_closed', because: 'free_month_used' }),
+        explanationOf({ reason: 'conflict', kind: 'account_closed', because: 'key_rotated' }),
+        explanationOf({ reason: 'conflict', kind: 'account_closed', because: 'installation_revoked' }),
+        explanationOf({ reason: 'conflict', kind: 'license_required', because: 'org_deleted' }),
+        explanationOf({ reason: 'conflict', kind: 'license_required', because: 'org_purged' }),
       ].map(({ why }) => why.slice(why.indexOf(', because') + 2)),
     ).toEqual([
       'because its free runs for the day are used',

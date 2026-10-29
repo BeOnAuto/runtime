@@ -21,6 +21,7 @@ interface Held {
   readonly credits: number;
   readonly issued_at: string;
   readonly refresh_by: string;
+  readonly days: number;
   readonly status: 'open' | 'closed';
   readonly sequence: number;
   readonly spent: number;
@@ -38,12 +39,12 @@ interface TakenReport extends SignedReport {
 
 export interface AllocationFake {
   readonly ports: Pick<AccountPorts, 'refreshAllocation' | 'reportAllocation'>;
-  readonly allocationFor: (installation: string, credits: number) => Signed;
+  readonly allocationFor: (installation: string, credits: number, days?: 30 | 90) => Signed;
   readonly closeAllocation: (id: string) => void;
   readonly allocationReports: () => readonly TakenReport[];
 }
 
-const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+const dayMs = 86_400_000;
 
 function payloadOf({ installation, id, credits, issued_at: issuedAt, refresh_by: refreshBy }: Held): Payload {
   return { v: 1, kind: 'allocation', installation, id, credits, issued_at: issuedAt, refresh_by: refreshBy };
@@ -76,7 +77,7 @@ function refreshing(reaching: Reaching, books: Books): AccountPorts['refreshAllo
           }),
         );
       }
-      const refreshed = { ...allocation, refresh_by: reaching.iso(sevenDaysMs) };
+      const refreshed = { ...allocation, refresh_by: reaching.iso(allocation.days * dayMs) };
       books.kept(refreshed);
       return Effect.succeed(reaching.signed(payloadOf(refreshed)));
     });
@@ -112,13 +113,14 @@ export function allocationFake(reaching: Reaching): AllocationFake {
   };
   return {
     ports: { refreshAllocation: refreshing(reaching, books), reportAllocation: reporting(reaching, books) },
-    allocationFor: (installation, credits) => {
+    allocationFor: (installation, credits, days = 30) => {
       const allocation: Held = {
         id: randomUUID(),
         installation,
         credits,
         issued_at: reaching.iso(),
-        refresh_by: reaching.iso(sevenDaysMs),
+        refresh_by: reaching.iso(days * dayMs),
+        days,
         status: 'open',
         sequence: 0,
         spent: 0,

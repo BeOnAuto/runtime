@@ -3,30 +3,17 @@ import { Caller, defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { KeptLicenseKey } from './kept-license-key.ts';
-import { licensedToOf } from './license-notice.ts';
 import { LicenseKey } from './license-settings.ts';
+import { LicenseStatusSchema } from './license-status-schema.ts';
 
 const ActivationSchema = Schema.Struct({ key: LicenseKey });
 
-const LicenseSchema = Schema.Struct({
-  installation: Schema.String,
-  org: Schema.String,
-  org_name: Schema.NullOr(Schema.String),
-  plan: Schema.String,
-  expires_at: Schema.String,
-});
-
 const description = [
-  'Activates the license of this runtime with the key Studio gave as an owner of the org registered its installation, alk.<org>.<installation>.<secret>.',
-  'The license covers the whole runtime, every org of it: from then on each new action is admitted against the credit of the account of the org at Auto, and the 100 actions a runtime runs before it is registered no longer count.',
-  'It answers the installation, the org at Auto, its plan and when the entitlement Auto signed expires; the runtime refreshes it every day, and keeps the key in its secret store so it stands after a restart.',
-  'A key Auto does not know, or one for another installation, is refused as a conflict of the kind license_invalid.',
+  'Activates the license of this runtime with the key Studio gave as an owner of the org registered it, alk.<org>.<runtime id>.<secret>.',
+  'The license covers the whole runtime, every org of it: from then on it starts runs on the credits of the org at Auto, without asking Auto for each, and reports the runs it started every hour, and sooner once it has used half of what its license left it.',
+  'It answers where the runtime stands, as get_license does, and keeps the key in its secret store so it stands after a restart.',
+  'A key Auto does not know, one that was replaced or one for another runtime is refused as a conflict of the kind license_invalid, and a key of a closed org as account_closed.',
 ].join(' ');
-
-function orgInWords(org: string, orgName: string | null): string {
-  const named = licensedToOf(org, orgName);
-  return named === org ? org : `${named} (${org})`;
-}
 
 export function defineActivateLicense(license: Pick<LicensePorts, 'activate'>, kept: KeptLicenseKey) {
   return defineCommand('org', {
@@ -37,18 +24,17 @@ export function defineActivateLicense(license: Pick<LicensePorts, 'activate'>, k
     reachesOutside: true,
     repeatable: true,
     inputSchema: ActivationSchema,
-    outputSchema: LicenseSchema,
+    outputSchema: LicenseStatusSchema,
     reasons: ['invalid_input', 'conflict', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ key }) {
-      const standing = yield* license.activate(key);
+      const status = yield* license.activate(key);
       yield* kept.keep(key, (yield* Caller).id);
-      return standing;
+      return status;
     }),
     plainLanguage: {
       task: 'activate the license of this runtime',
       attempt: () => 'activate the license with the key given',
-      outcome: ({ org, org_name: orgName, plan, expires_at: expiresAt }) =>
-        `This runtime is licensed to the org ${orgInWords(org, orgName)} on the plan ${plan} until ${expiresAt}, and renews its license every day.`,
+      outcome: ({ summary }) => summary,
     },
   });
 }

@@ -6,6 +6,7 @@ import { onTestFinished } from 'vitest';
 import { servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
 import { tallyCreated } from '../servers/tally-server.ts';
+import { until } from '../waiting/until.ts';
 
 export const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -62,8 +63,28 @@ export async function servedBy(
   return { ...server, stop };
 }
 
-const runtimeIdIn = Schema.decodeUnknownSync(Schema.Struct({ runtime_id: Schema.String }));
+const standingIn = Schema.decodeUnknownSync(
+  Schema.Struct({ runtime_id: Schema.String, state: Schema.String, licensed: Schema.Number }),
+);
+
+export async function standingOf(server: Pick<ReasoningServer, 'call'>) {
+  return standingIn((await server.call('GET', '/v1/orgs/acme/license')).body);
+}
 
 export async function runtimeIdOf(server: Pick<ReasoningServer, 'call'>): Promise<string> {
-  return runtimeIdIn((await server.call('GET', '/v1/orgs/acme/license')).body).runtime_id;
+  return (await standingOf(server)).runtime_id;
+}
+
+export async function licensedServedBy(
+  accounts: Accounts,
+  environment: Readonly<Record<string, string>> = {},
+  parts: ServedParts = {},
+  replies: readonly ScriptedReplies[] = [],
+): Promise<ReasoningServer> {
+  const server = await servedBy(accounts, environment, parts, replies);
+  await until(
+    () => standingOf(server),
+    ({ state }) => state === 'licensed',
+  );
+  return server;
 }

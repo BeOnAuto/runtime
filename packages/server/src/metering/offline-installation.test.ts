@@ -50,12 +50,12 @@ describe('a runtime given an allocation in AUTO_RUNTIME_ALLOCATION, which never 
       body: {
         kind: 'credits_exhausted',
         because: 'none_left',
-        detail: `This runtime has used all 2 offline credits. An owner can request more at ${studio}/licenses?installation=${installation}.`,
+        detail: `This runtime has used all 2 offline credits. The account holder or an organization admin can request more at ${studio}/licenses?installation=${installation}.`,
         resolve_at: `${studio}/licenses?installation=${installation}`,
         runtime_id: installation,
       },
     });
-    expect(accounts.account.askedToAdmit()).toBe(0);
+    expect([accounts.account.activations(), accounts.account.reportsSent()]).toEqual([[], 0]);
   });
 });
 
@@ -76,7 +76,6 @@ describe('a runtime given an allocation in license.allocation of its configurati
     expect([made.status, fields.spent, fields.installation]).toEqual([200, 1, installation]);
     expect(fields.sequence).toBeGreaterThan(0);
     expect(signature).toBe(signatureOf(accounts.key, [fields.allocation, installation, fields.sequence, 1, fields.at]));
-    expect(accounts.account.askedToAdmit()).toBe(0);
   });
 });
 

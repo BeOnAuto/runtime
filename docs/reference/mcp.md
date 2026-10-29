@@ -217,7 +217,7 @@ A connection is a tool server that a person adds to the org through their agent,
 
 ### License
 
-`activate_license` activates the license of the whole runtime with the key Studio gives, `alk.<org>.<installation>.<secret>`, the HTTP operation `POST /license`. It is listed on `/mcp` and the org endpoint to a caller who may change the org, and answers the installation, the org at Auto, its plan and when its entitlement expires. A key Auto does not know, or one for another installation, is refused as `license_invalid`. [License](http.md#license) gives the rest, and [Register and license a runtime](../self-host/licenses.md) the other ways to give a runtime its key.
+`activate_license` activates the license of the whole runtime with the key Studio gives, `alk.<org>.<runtime id>.<secret>`, the HTTP operation `POST /license`. It is listed on `/mcp` and the org endpoint to a caller who may change the org, and answers where the runtime stands, as `GET /license` does, saying it in words. A key Auto does not know, or one for another runtime, is refused as `license_invalid`. [License](http.md#license) gives the rest, and [Licenses](../self-host/licenses.md) the other ways to give a runtime its key.
 
 ## Guides and prompts
 
@@ -407,7 +407,7 @@ An operation failure is a tool result with `isError: true` and no `structuredCon
 - The first text block explains the failure in words.
 - The second contains the JSON problem document. Its `reason` and `detail` distinguish invalid input, permission failures, conflicts and unavailable dependencies.
 - Invalid arguments are `invalid_input`, with a pointer at each field, so an agent can correct them. An input that the input schema of the function or workflow it runs refused has the kind `input_schema`.
-- A run the runtime's meter refuses, as `license_required`, `license_invalid`, `credits_exhausted`, `account_closed` or `metering_fault`, has the problem's `resolve_at`, the page where a person resolves it, which the first block points the agent to, and `runtime_id`, the runtime's id, as [The refusals of the meter](http.md#the-refusals-of-the-meter) sets out.
+- A run the runtime's meter refuses, as `license_required`, `license_invalid`, `credits_exhausted` or `account_closed`, has the problem's `resolve_at`, the page where a person resolves it, which the first block points the agent to, and `runtime_id`, the runtime's id, as [The refusals of the meter](http.md#the-refusals-of-the-meter) sets out.
 
 Some failures come before a tool runs, outside any tool result:
 

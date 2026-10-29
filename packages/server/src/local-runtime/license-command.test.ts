@@ -46,45 +46,32 @@ async function ranWith(args: readonly string[], answer: () => Promise<Response>)
   return { code, logged, errors, sent };
 }
 
-const licensed = { installation: '0199a3c4', org: 'acme', plan: 'free', expires_at: '2026-11-03T12:00:00.000Z' };
+const runtimeId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-describe('auto-runtime license activate, for an org Auto names', () => {
-  it('says the name of the org it is licensed to where the runtime gives one, and its id where it gives none', async () => {
-    const named = await ranWith(['activate', key], () =>
-      Promise.resolve(Response.json({ ...licensed, org_name: 'Acme Corporation' })),
-    );
-    const unnamed = await ranWith(['activate', key], () =>
-      Promise.resolve(Response.json({ ...licensed, org_name: null })),
-    );
-    const blank = await ranWith(['activate', key], () =>
-      Promise.resolve(Response.json({ ...licensed, org_name: '  ' })),
-    );
-    const unruly = await ranWith(['activate', key], () =>
-      Promise.resolve(Response.json({ ...licensed, org_name: '\u001B[2JAcme\r\nCorporation\u202E' })),
-    );
-
-    expect([named.logged, unnamed.logged, blank.logged, unruly.logged]).toEqual([
-      ['Licensed to Acme Corporation (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
-      ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
-      ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
-      ['Licensed to [2JAcme Corporation (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
-    ]);
-  });
-});
+const licensed = { runtime_id: runtimeId, state: 'licensed', summary: 'Licensed to acme (free plan): 1000 runs left.' };
 
 describe('auto-runtime license activate', () => {
-  it('sends the key to the runtime running on this computer and says what it is licensed to', async () => {
+  it('sends the key to the runtime running on this computer and says where it stands, in its words, with its id', async () => {
     const asked = await ranWith(['activate', key], () => Promise.resolve(Response.json(licensed)));
 
     expect(asked).toEqual({
       code: 0,
-      logged: ['Licensed to acme (free plan) until 2026-11-03; renews daily. Runtime id 0199a3c4.'],
+      logged: [`Licensed to acme (free plan): 1000 runs left. Runtime id ${runtimeId}.`],
       errors: [],
       sent: [
         ['http://127.0.0.1:5555/runtime', undefined],
         ['http://127.0.0.1:5555/v1/orgs/local/license', JSON.stringify({ key })],
       ],
     });
+  });
+
+  it('says it on one line, whatever control characters the words of the runtime carry', async () => {
+    const unruly = { ...licensed, summary: '\u001B[2JLicensed to Acme\r\nCorporation\u202E (team plan): 9 runs left.' };
+    const asked = await ranWith(['activate', key], () => Promise.resolve(Response.json(unruly)));
+
+    expect(asked.logged).toEqual([
+      `[2JLicensed to Acme Corporation (team plan): 9 runs left. Runtime id ${runtimeId}.`,
+    ]);
   });
 
   it.each([

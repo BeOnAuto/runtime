@@ -4,13 +4,11 @@ import type { Answering } from '../testing/account-fake.ts';
 import type { Metered } from '../testing/metered.ts';
 import { runOf } from '../testing/runs.ts';
 import { allocationReportBehaviour, allocationReportRefusalBehaviour } from './allocation-report-behaviour.ts';
-import { allocatedOn, opened, replicaOf, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { allocatedOn, opened, replicaOf, runsNamed, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
-const aWeekAndADayLater = '2026-11-04T12:00:00.000Z';
+const aMonthAndADayLater = '2026-11-27T12:00:00.000Z';
 
-function runsNamed(prefix: string, count: number): readonly string[] {
-  return Array.from({ length: count }, (_, index) => `${prefix}-${index}`);
-}
+const keyWithoutCredits = 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.c2VjcmV0';
 
 async function licensesPageOf(metered: Metered): Promise<string> {
   return `https://studio.on.auto/licenses?installation=${String((await metered.state()).installation)}`;
@@ -22,7 +20,7 @@ async function identified(metered: Metered): Promise<string> {
 }
 
 function allocatedAdmissionBehaviour(ledgerOf: LedgerOf): void {
-  it('admits each new action against its allocation without asking Auto, up to its credits, then refuses as credits_exhausted', async () => {
+  it('admits each new run against its allocation without asking Auto, up to its credits, then refuses as credits_exhausted', async () => {
     const { metered } = await allocatedOn(ledgerOf, 2, false);
     const answers = [
       await startedOnceAdmitted(metered, 'run-1'),
@@ -35,12 +33,13 @@ function allocatedAdmissionBehaviour(ledgerOf: LedgerOf): void {
     expect(answers).toEqual(['admitted', 'admitted', 'admitted']);
     expect(refused).toEqual({
       kind: 'credits_exhausted',
-      detail: `This runtime has used all 2 offline credits. An owner can request more at ${page}.`,
+      detail: `This runtime has used all 2 offline credits. The account holder or an organization admin can request more at ${page}.`,
       because: 'none_left',
       resolve_at: page,
       runtime_id: String((await metered.state()).installation),
     });
-    expect([metered.account.askedToAdmit(), metered.account.activations()]).toEqual([0, []]);
+    expect([metered.account.reportsSent(), metered.account.activations()]).toEqual([0, []]);
+    expect((await metered.state()).admitted).toMatchObject({ actions: 2, licensed: 0, first_runs: 0 });
   });
 
   it('counts against its allocation only what was run after it was received', async () => {
@@ -57,23 +56,34 @@ function allocatedAdmissionBehaviour(ledgerOf: LedgerOf): void {
 }
 
 function graceBehaviour(ledgerOf: LedgerOf): void {
-  it('refuses as license_invalid once its grace has passed, and a refresh with Auto extends it', async () => {
+  it('refuses as license_invalid once the 30 days it was signed for have passed, and a refresh with Auto extends it', async () => {
     const { metered } = await allocatedOn(ledgerOf, 5);
     await startedOnceAdmitted(metered, 'run-1');
-    metered.at(aWeekAndADayLater);
-    metered.account.at(aWeekAndADayLater);
+    metered.at(aMonthAndADayLater);
+    metered.account.at(aMonthAndADayLater);
     const refused = await metered.admitted(runOf('run-2'));
     await metered.refreshed();
 
     const page = await licensesPageOf(metered);
     expect(refused).toEqual({
       kind: 'license_invalid',
-      detail: `This offline allocation expired on 2026-11-03. The account holder or an organization admin can request a new allocation at ${page}.`,
+      detail: `This offline allocation expired on 2026-11-26. The account holder or an organization admin can request a new allocation at ${page}.`,
       resolve_at: page,
       runtime_id: String((await metered.state()).installation),
     });
     expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect((await metered.state()).allocation?.refresh_by).toBe('2026-11-11T12:00:00.000Z');
+    expect((await metered.state()).allocation?.refresh_by).toBe('2026-12-27T12:00:00.000Z');
+  });
+
+  it('takes the 90 days an allocation was signed for, and keeps them as it is refreshed', async () => {
+    const { metered } = await allocatedOn(ledgerOf, 5, true, 90);
+    metered.at(aMonthAndADayLater);
+    metered.account.at(aMonthAndADayLater);
+    const admitted = await startedOnceAdmitted(metered, 'run-1');
+    await metered.refreshed();
+
+    expect(admitted).toBe('admitted');
+    expect((await metered.state()).allocation?.refresh_by).toBe('2027-02-25T12:00:00.000Z');
   });
 
   it('admits exactly its credits of the actions asked at once on two replicas of one ledger', async () => {
@@ -90,9 +100,9 @@ function graceBehaviour(ledgerOf: LedgerOf): void {
 }
 
 const notAuto: readonly (readonly [string, Answering, string])[] = [
-  ['signed by another key under the kid of Auto’s', 'by another key', 'not signed by Auto'],
-  ['tampered with after it was signed', 'tampered', 'not signed by Auto'],
-  ['for another installation', 'for another installation', 'for the installation another-installation'],
+  ['signed by another key under the kid of Auto’s', 'by another key', 'not ones Auto signed'],
+  ['tampered with after it was signed', 'tampered', 'not ones Auto signed'],
+  ['for another runtime', 'for another installation', 'are for the runtime another-installation'],
 ];
 
 function allocationRefusalBehaviour(ledgerOf: LedgerOf): void {
@@ -110,18 +120,18 @@ function allocationRefusalBehaviour(ledgerOf: LedgerOf): void {
   it('refuses an allocation whose grace has passed, and takes one again only once', async () => {
     const { metered, allocation } = await allocatedOn(ledgerOf, 5);
     const again = await metered.allocated(allocation);
-    metered.at(aWeekAndADayLater);
+    metered.at(aMonthAndADayLater);
 
     expect(again.kind).toBe('allocated');
     expect((await metered.allocated(allocation)).detail).toBe(
-      `This offline allocation expired on 2026-11-03. The account holder or an organization admin can request a new allocation at ${await licensesPageOf(metered)}.`,
+      `This offline allocation expired on 2026-11-26. The account holder or an organization admin can request a new allocation at ${await licensesPageOf(metered)}.`,
     );
     expect((await metered.state()).allocation?.sequence).toBe(0);
   });
 }
 
 function withdrawalBehaviour(ledgerOf: LedgerOf): void {
-  it('gives an allocation Auto closed up as it refreshes, and asks the account to admit from then on', async () => {
+  it('gives an allocation Auto closed up as it refreshes, and admits by its key or its free runs from then on', async () => {
     const { metered, allocation } = await allocatedOn(ledgerOf, 5);
     const id = String((await metered.state()).allocation?.id);
     metered.account.closeAllocation(id);
@@ -129,8 +139,19 @@ function withdrawalBehaviour(ledgerOf: LedgerOf): void {
 
     expect((await metered.state()).allocation?.withdrawn).toBe('The allocation is closed');
     expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
-    expect(metered.account.askedToAdmit()).toBe(1);
-    expect((await metered.allocated(allocation)).detail).toContain(`its allocation ${id} was withdrawn`);
+    expect((await metered.state()).admitted).toMatchObject({ first_runs: 1 });
+    expect((await metered.allocated(allocation)).detail).toContain(`its offline credits ${id} were withdrawn`);
+  });
+
+  it('refreshes no offline credits where it holds none, or holds no key to ask with', async () => {
+    const { metered } = await opened(ledgerOf, { key: keyWithoutCredits });
+    const { metered: keyless } = await opened(ledgerOf);
+
+    expect([await metered.refreshed(), await keyless.refreshed()]).toEqual([
+      { kind: 'refreshed', detail: '' },
+      { kind: 'refreshed', detail: '' },
+    ]);
+    expect([...metered.warnings(), ...keyless.warnings()]).toEqual([]);
   });
 
   it('keeps its allocation, saying so, while Auto cannot be reached or answers another', async () => {

@@ -1,37 +1,48 @@
 import type { Conflict, Decided } from '@on.auto/operations';
 
-import type { Counting } from '../counting/run-starts.ts';
-import type { Signed } from '../licensing/signed-answers.ts';
+import type { Fallback } from '../licensing/signed-answers.ts';
+import type { FreeRateLimit, FreeRateUse } from './admission-events.ts';
 import type { AllocationRecord } from './allocation-events.ts';
-import type { Fault, Invalidity, LicenseRecord, MeterEvent, Report } from './meter-events.ts';
+import type { Invalidity, LicenseRecord } from './license-events.ts';
+import type { Footing } from './local-admission.ts';
+import type { MeterEvent, Report } from './meter-events.ts';
+
+export interface OfflineRule {
+  readonly kind: 'offline';
+  readonly through: number;
+  readonly refusal: (installation: string) => Conflict;
+}
+
+export interface FreeRateReached {
+  readonly installation: string;
+  readonly footing: Exclude<Footing, { readonly kind: 'licensed' }>;
+  readonly limit: FreeRateLimit;
+  readonly rate: Fallback;
+  readonly use: FreeRateUse;
+  readonly licensedEver: boolean;
+  readonly at: string;
+}
+
+export interface LocalRule {
+  readonly kind: 'local';
+  readonly key_sha256: string | undefined;
+  readonly allowance: number;
+  readonly free_rate: Fallback;
+  readonly refusal: (reached: FreeRateReached) => Conflict;
+}
 
 export interface Admitting {
   readonly type: 'admit';
   readonly run: string;
-  readonly counting: Counting;
-  readonly allowance: number;
   readonly at: string;
   readonly until: string;
   readonly installation: string;
-  readonly kind: 'license_required' | 'credits_exhausted';
-  readonly refusal: (installation: string) => Conflict;
+  readonly rule: OfflineRule | LocalRule;
 }
 
 interface Identifying {
   readonly type: 'identify';
   readonly installation: string;
-  readonly at: string;
-}
-
-interface Checkpointing {
-  readonly type: 'count';
-  readonly counting: Counting;
-  readonly at: string;
-}
-
-interface Faulting {
-  readonly type: 'fault';
-  readonly fault: Fault;
   readonly at: string;
 }
 
@@ -51,16 +62,7 @@ export interface Invalidating {
 export interface Reporting {
   readonly type: 'report';
   readonly report: Report;
-  readonly at: string;
-}
-
-export interface Repairing {
-  readonly type: 'repair';
-  readonly id: string;
-  readonly reason: string;
-  readonly issued_at: string;
-  readonly repair: Signed;
-  readonly counting: Counting;
+  readonly license: LicenseRecord;
   readonly at: string;
 }
 
@@ -93,15 +95,6 @@ export interface AllocationReporting {
 
 export type AllocationCommand = Allocating | AllocationRefreshing | AllocationWithdrawing | AllocationReporting;
 
-export type MeterCommand =
-  | Admitting
-  | Identifying
-  | Checkpointing
-  | Faulting
-  | Licensing
-  | Invalidating
-  | Reporting
-  | Repairing
-  | AllocationCommand;
+export type MeterCommand = Admitting | Identifying | Licensing | Invalidating | Reporting | AllocationCommand;
 
 export type DecidedEvent = Decided<MeterEvent>;

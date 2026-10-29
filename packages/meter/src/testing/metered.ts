@@ -16,10 +16,7 @@ export interface MeteredOptions extends Partial<MeterOptions> {
   readonly account?: AccountFake;
 }
 
-export interface Metered extends Pick<
-  MeterRuntime,
-  'eventsRead' | 'readsFail' | 'executesFail' | 'warnings' | 'at' | 'state'
-> {
+export interface Metered extends Pick<MeterRuntime, 'executesFail' | 'warnings' | 'at' | 'state'> {
   readonly meter: Meter;
   readonly license: LicensePorts;
   readonly account: AccountFake;
@@ -33,9 +30,9 @@ export interface Metered extends Pick<
   readonly refusedReport: (of?: string) => Promise<Answer>;
   readonly refreshed: () => Promise<Answer>;
   readonly reported: () => Promise<Answer>;
+  readonly reportDue: () => Promise<boolean>;
   readonly started: (run: string, playbook?: string, org?: string) => Promise<void>;
   readonly noted: (stream: string, count: number) => Promise<void>;
-  readonly lastCounted: () => Promise<string>;
   readonly restarted: (options: MeteredOptions, meanwhile: () => Promise<void>) => Promise<Metered>;
   readonly dispose: () => Promise<void>;
 }
@@ -43,7 +40,7 @@ export interface Metered extends Pick<
 export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Promise<Metered> {
   const { key, keySource = 'environment', account = accountFake(), ...meterOptions } = options;
   const metering = meterRuntimeOn(at);
-  const { timed, onTheLedger, state } = metering;
+  const { timed, onTheLedger } = metering;
   const { meter, license } = await timed(
     Effect.flatMap(metering.ledgered, (ledgered) =>
       selfHostedMeterOver(
@@ -66,15 +63,15 @@ export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Pro
     status: () => timed(license.status),
     refusedStatus: () => timed(answerOf(license.status, 'read')),
     refusedReport: (of) => timed(answerOf(license.allocationReport(of), 'made')),
-    refreshed: () => timed(answerOf(license.refreshed, 'refreshed')),
+    refreshed: () => timed(answerOf(license.allocationRefreshed, 'refreshed')),
     reported: () => timed(answerOf(license.reported, 'reported')),
+    reportDue: () => timed(license.reportDue),
     started: async (run, playbook, org) => {
       await onTheLedger((ledger) => ledger.execute(runStreamOf(run, playbook, org), starts, null));
     },
     noted: async (stream, count) => {
       await onTheLedger((ledger) => ledger.execute(stream, appending('noted', count), null));
     },
-    lastCounted: async () => String((await state()).checkpoint?.last),
     restarted: async (again, meanwhile) => {
       await metering.dispose();
       await meanwhile();

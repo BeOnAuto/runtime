@@ -1,8 +1,9 @@
+import { Function } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { tamperingOn, type LedgerAt } from '../testing/ledgers.ts';
 import { meteredOn, type Metered, type MeteredOptions } from '../testing/metered.ts';
-import { runOf } from '../testing/runs.ts';
+import { inTurn, runOf } from '../testing/runs.ts';
 
 export type LedgerOf = () => Promise<LedgerAt>;
 
@@ -40,20 +41,20 @@ export async function startedOnceAdmitted(metered: Metered, run: string, playboo
   return answer.kind;
 }
 
-export async function checkpointOf(metered: Metered) {
-  return (await metered.state()).checkpoint;
+export function runsNamed(prefix: string, count: number): readonly string[] {
+  return Array.from({ length: count }, (_, index) => `${prefix}-${index}`);
 }
 
-export async function actionsOf(metered: Metered): Promise<number> {
-  return Number((await metered.state()).checkpoint?.actions);
+export function admittedEach(metered: Metered, runs: readonly string[]): Promise<readonly string[]> {
+  return inTurn(runs, (run) => startedOnceAdmitted(metered, run));
 }
 
 const allocatedInstallation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f';
 
-export async function allocatedOn(ledgerOf: LedgerOf, credits: number, withAKey = true) {
+export async function allocatedOn(ledgerOf: LedgerOf, credits: number, withAKey = true, days?: 30 | 90) {
   const { metered, ...rest } = await opened(ledgerOf);
   const key = metered.account.keyFor(allocatedInstallation);
-  const allocation = metered.account.allocationFor(allocatedInstallation, credits);
+  const allocation = metered.account.allocationFor(allocatedInstallation, credits, days);
   const given = await restartedOf(metered, withAKey ? { key } : {});
   await given.allocated(allocation);
   return { ...rest, metered: given, key, allocation };
@@ -61,9 +62,15 @@ export async function allocatedOn(ledgerOf: LedgerOf, credits: number, withAKey 
 
 export const licensedInstallation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-export async function licensedOn(ledgerOf: LedgerOf) {
-  const { metered, ...rest } = await opened(ledgerOf);
+export async function licensedOn(
+  ledgerOf: LedgerOf,
+  options: MeteredOptions = {},
+  prepared: (account: Metered['account']) => void = Function.constVoid,
+) {
+  const { metered, ...rest } = await opened(ledgerOf, options);
+  prepared(metered.account);
   const key = metered.account.keyFor(licensedInstallation);
   const licensed = await restartedOf(metered, { key });
+  await licensed.reported();
   return { ...rest, metered: licensed, key };
 }

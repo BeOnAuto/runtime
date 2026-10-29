@@ -2,7 +2,7 @@ import { Unavailable } from '@on.auto/operations';
 import { Effect, Layer, Logger } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { askAgainAfterMs, licenseChores, refreshEveryMs, reportEveryMs } from './license-chores.ts';
+import { askAgainAfterMs, licenseChores, lookEveryMs, refreshEveryMs, reportEveryMs } from './license-chores.ts';
 
 type Chore = ReturnType<typeof licenseChores>[number];
 
@@ -12,33 +12,76 @@ async function nextDueOf(chore: Chore, now: number, logging: Layer.Layer<never> 
   return Effect.runPromise(chore.nextDueAt(now));
 }
 
-describe('the chores of a license', () => {
-  it('refresh the entitlement every day and report every hour, from when each was done', async () => {
-    const [refresh, report] = licenseChores({ refreshed: Effect.void, reported: Effect.void });
+interface Counted {
+  readonly reports: () => number;
+  readonly reported: Effect.Effect<void, Unavailable>;
+}
 
-    expect(await Promise.all([nextDueOf(refresh, 1000), nextDueOf(report, 1000)])).toEqual([
-      1000 + refreshEveryMs,
-      1000 + reportEveryMs,
-    ]);
+function countedReports(failing = false): Counted {
+  const made = { reports: 0 };
+  return {
+    reports: () => made.reports,
+    reported: Effect.suspend(() => {
+      made.reports += 1;
+      return failing
+        ? Effect.fail(new Unavailable({ detail: 'The account service could not be reached' }))
+        : Effect.void;
+    }),
+  };
+}
+
+describe('the chores of a license', () => {
+  it('refresh offline credits every day, and report at once, then every hour, looking every minute for an early report', async () => {
+    const counted = countedReports();
+    const [refresh, report] = licenseChores({
+      allocationRefreshed: Effect.void,
+      reported: counted.reported,
+      reportDue: Effect.succeed(false),
+    });
+
+    expect(await nextDueOf(refresh, 1000)).toBe(1000 + refreshEveryMs);
+    expect(await nextDueOf(report, 1000)).toBe(1000 + lookEveryMs);
+    expect(await nextDueOf(report, 1000 + reportEveryMs - 1)).toBe(1000 + reportEveryMs);
+    expect(await nextDueOf(report, 1000 + reportEveryMs)).toBe(1000 + reportEveryMs + lookEveryMs);
+    expect(counted.reports()).toBe(2);
+  });
+});
+
+describe('the report of a license', () => {
+  it('is made early once one is due, at most once a minute', async () => {
+    const counted = countedReports();
+    const [, report] = licenseChores({
+      allocationRefreshed: Effect.void,
+      reported: counted.reported,
+      reportDue: Effect.succeed(true),
+    });
+    await nextDueOf(report, 0);
+    await nextDueOf(report, lookEveryMs - 1);
+    await nextDueOf(report, lookEveryMs);
+
+    expect(counted.reports()).toBe(2);
   });
 
-  it('ask again in 15 minutes when the account could not be asked, and say so', async () => {
+  it('is asked again in 15 minutes when the account could not be asked, early or not, which it says', async () => {
     const lines: string[] = [];
     const logging = Logger.layer([
       Logger.make(({ message }: { readonly message: unknown }) => {
         lines.push(String(message));
       }),
     ]);
-    const failing = Effect.fail(new Unavailable({ detail: 'The account service could not be reached' }));
-    const [refresh, report] = licenseChores({ refreshed: failing, reported: failing });
+    const counted = countedReports(true);
+    const [, report] = licenseChores({
+      allocationRefreshed: Effect.void,
+      reported: counted.reported,
+      reportDue: Effect.succeed(true),
+    });
 
-    expect([await nextDueOf(refresh, 1000, logging), await nextDueOf(report, 1000, logging)]).toEqual([
-      1000 + askAgainAfterMs,
-      1000 + askAgainAfterMs,
-    ]);
-    expect(lines).toEqual([
-      'The license of this runtime could not be refreshed: The account service could not be reached; it asks again in 15 minutes',
-      'This runtime could not report its actions to Auto: The account service could not be reached; it asks again in 15 minutes',
-    ]);
+    expect(await nextDueOf(report, 1000, logging)).toBe(1000 + lookEveryMs);
+    await nextDueOf(report, 1000 + askAgainAfterMs - 1, logging);
+    await nextDueOf(report, 1000 + askAgainAfterMs, logging);
+    expect(counted.reports()).toBe(2);
+    expect(lines.at(0)).toBe(
+      'This runtime could not report its runs to Auto: The account service could not be reached; it asks again in 15 minutes',
+    );
   });
 });

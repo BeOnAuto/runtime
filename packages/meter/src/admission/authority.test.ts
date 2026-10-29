@@ -2,6 +2,7 @@ import { RunMeter } from '@on.auto/definitions';
 import { Effect, Layer, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { noMeter } from '../meter-stream/meter-events.ts';
 import { admitting, authorityAnswering, cloudMetered } from '../meter-testing/cloud-metered.ts';
 import { closedAccounts } from '../meter-testing/refusal-behaviour.ts';
 import { sqliteLedger } from '../testing/ledgers.ts';
@@ -10,7 +11,7 @@ import type { AuthorityAnswer } from './authority.ts';
 import { ledgerMeterAdmittedBy } from './ledger-meter.ts';
 
 describe('a meter whose authority admits each action, as Auto’s hosting does through its account', () => {
-  it('asks the authority for every new action by org, playbook and run id, with no allowance, and keeps its count', async () => {
+  it('asks the authority for every new run by org, playbook and run id, with no allowance, and records nothing of its own', async () => {
     const asking = authorityAnswering(admitting);
     const metered = await cloudMetered(asking);
     await metered.admitted('run-1');
@@ -19,7 +20,19 @@ describe('a meter whose authority admits each action, as Auto’s hosting does t
     await metered.admitted('run-2');
 
     expect(asking.asked()).toEqual(['acme/alpha/run-1', 'acme/alpha/run-2']);
-    expect(await metered.state()).toMatchObject({ checkpoint: { actions: 1 }, holds: [], installation: undefined });
+    expect(await metered.state()).toEqual(noMeter);
+  });
+
+  it('goes on asking its authority whatever happens to the history of its runs, and never stops for it', async () => {
+    const asking = authorityAnswering(admitting);
+    const metered = await cloudMetered(asking);
+    await metered.admitted('run-1');
+    await metered.started('run-1');
+    await metered.tampering.streamDeleted('playbook/acme/alpha/runs/run-1');
+
+    expect(await metered.admitted('run-1')).toEqual({ kind: 'admitted', detail: '' });
+    expect(await metered.admitted('run-2')).toEqual({ kind: 'admitted', detail: '' });
+    expect(asking.asked()).toEqual(['acme/alpha/run-1', 'acme/alpha/run-1', 'acme/alpha/run-2']);
   });
 
   it('refuses in the kind and words of the authority, and as meter_unavailable when it cannot be asked', async () => {

@@ -1,191 +1,95 @@
 import { ActedContextSchema, factOf } from '@on.auto/operations';
-import { Option, Schema } from 'effect';
+import { Schema } from 'effect';
 
-import { SignedSchema } from '../licensing/signed-answers.ts';
+import {
+  admittedAfter,
+  AdmittedSchema,
+  flooredAt,
+  heldAfter,
+  noneAdmitted,
+  type Admitted,
+  type Hold,
+} from './admission-events.ts';
 import { allocationAfter, AllocationEventSchema, type Allocation } from './allocation-events.ts';
+import {
+  heldLicenseOf,
+  InvalidatedSchema,
+  keyRefusedOf,
+  LicenseRecordSchema,
+  type HeldLicense,
+  type KeyRefused,
+} from './license-events.ts';
 
 export const METER_STREAM = 'meter';
 
-const PointSchema = Schema.Array(Schema.String);
-
-const FaultReasonSchema = Schema.Literals(['history_removed', 'history_rewritten', 'unreadable']);
-
-const LicenseInvalidBecauseSchema = Schema.Literals(['key_rotated', 'installation_revoked']);
-
-export const isLicenseInvalidBecause = Schema.is(LicenseInvalidBecauseSchema);
-
-const LicenseSchema = Schema.Struct({
-  installation: Schema.String,
-  org: Schema.String,
-  org_name: Schema.optionalKey(Schema.String),
-  plan: Schema.String,
-  issued_at: Schema.String,
-  expires_at: Schema.String,
-  key_sha256: Schema.String,
-  entitlement: SignedSchema,
-});
-
-const ReportSchema = Schema.Struct({
-  actions: Schema.Int,
-  through: Schema.NullOr(PointSchema),
-  last: Schema.NullOr(Schema.String),
-});
+const ReportSchema = Schema.Struct({ actions: Schema.Int, licensed: Schema.Int });
 
 export const MeterEventSchema = Schema.Union([
   factOf('installation_identified', Schema.Struct({ installation: Schema.String }), ActedContextSchema),
-  factOf(
-    'actions_counted',
-    Schema.Struct({
-      actions: Schema.Int,
-      through: PointSchema,
-      last: Schema.String,
-      digest: Schema.String,
-      started: Schema.Array(Schema.String),
-      lapsed: Schema.Array(Schema.String),
-    }),
-    ActedContextSchema,
-  ),
-  factOf('action_admitted', Schema.Struct({ run: Schema.String, until: Schema.String }), ActedContextSchema),
-  factOf('metering_faulted', Schema.Struct({ reason: FaultReasonSchema, detail: Schema.String }), ActedContextSchema),
-  factOf('license_activated', LicenseSchema, ActedContextSchema),
-  factOf('license_refreshed', LicenseSchema, ActedContextSchema),
-  factOf(
-    'license_invalidated',
-    Schema.Struct({
-      key_sha256: Schema.String,
-      detail: Schema.String,
-      because: Schema.optionalKey(LicenseInvalidBecauseSchema),
-    }),
-    ActedContextSchema,
-  ),
+  factOf('action_admitted', AdmittedSchema, ActedContextSchema),
+  factOf('license_activated', LicenseRecordSchema, ActedContextSchema),
+  factOf('license_renewed', LicenseRecordSchema, ActedContextSchema),
+  factOf('license_invalidated', InvalidatedSchema, ActedContextSchema),
   factOf('usage_reported', ReportSchema, ActedContextSchema),
-  factOf(
-    'metering_repaired',
-    Schema.Struct({ id: Schema.String, reason: Schema.String, issued_at: Schema.String, repair: SignedSchema }),
-    ActedContextSchema,
-  ),
   AllocationEventSchema,
 ]);
 
 export type MeterEvent = typeof MeterEventSchema.Type;
 
-export type LicenseRecord = typeof LicenseSchema.Type;
-
 export type Report = typeof ReportSchema.Type;
-
-type LicenseInvalidBecause = typeof LicenseInvalidBecauseSchema.Type;
-
-type FaultReason = typeof FaultReasonSchema.Type;
-
-interface Checkpoint {
-  readonly actions: number;
-  readonly through: readonly string[];
-  readonly last: string;
-  readonly digest: string;
-}
-
-interface Hold {
-  readonly run: string;
-  readonly until: string;
-}
-
-export interface Fault {
-  readonly reason: FaultReason;
-  readonly detail: string;
-}
-
-export interface Invalidity {
-  readonly detail: string;
-  readonly because?: LicenseInvalidBecause;
-}
-
-export interface License {
-  readonly installation: string;
-  readonly org: string;
-  readonly org_name: string | null;
-  readonly plan: string;
-  readonly issued_at: string;
-  readonly expires_at: string;
-  readonly key_sha256: string;
-  readonly invalid: Invalidity | undefined;
-}
 
 export interface MeterState {
   readonly installation: string | undefined;
-  readonly checkpoint: Checkpoint | undefined;
-  readonly holds: readonly Hold[];
-  readonly fault: Fault | undefined;
-  readonly license: License | undefined;
+  readonly admitted: Admitted;
+  readonly recent: readonly Hold[];
+  readonly license: HeldLicense | undefined;
+  readonly refused: KeyRefused | undefined;
   readonly reported: Report | undefined;
-  readonly repairs: readonly string[];
   readonly allocation: Allocation | undefined;
 }
 
 export const noMeter: MeterState = {
   installation: undefined,
-  checkpoint: undefined,
-  holds: [],
-  fault: undefined,
+  admitted: noneAdmitted,
+  recent: [],
   license: undefined,
+  refused: undefined,
   reported: undefined,
-  repairs: [],
   allocation: undefined,
 };
 
-function licensed(record: LicenseRecord): License {
-  const { installation, org, plan, issued_at: issuedAt, expires_at: expiresAt, key_sha256: sha256 } = record;
-  return {
-    installation,
-    org,
-    org_name: record.org_name ?? null,
-    plan,
-    issued_at: issuedAt,
-    expires_at: expiresAt,
-    key_sha256: sha256,
-    invalid: undefined,
-  };
-}
-
-function invalidityOf({ detail, because }: Extract<MeterEvent, { type: 'license_invalidated' }>['data']): Invalidity {
-  return because === undefined ? { detail } : { detail, because };
-}
-
-type LicenseEvent = Extract<MeterEvent, { type: `license_${string}` }>;
-
 type AllocationEvent = Extract<MeterEvent, { type: `allocation_${string}` }>;
-
-function isLicenseEvent(event: MeterEvent): event is LicenseEvent {
-  return event.type.startsWith('license_');
-}
 
 function isAllocationEvent(event: MeterEvent): event is AllocationEvent {
   return event.type.startsWith('allocation_');
 }
 
-function licenseAfter(license: License | undefined, event: LicenseEvent): License | undefined {
-  if (event.type !== 'license_invalidated') return licensed(event.data);
-  return Option.getOrUndefined(
-    Option.map(Option.fromNullishOr(license), (standing) => ({ ...standing, invalid: invalidityOf(event.data) })),
-  );
-}
+type AdmissionEvent = Extract<MeterEvent, { type: 'action_admitted' }>;
 
-function counted(state: MeterState, data: Extract<MeterEvent, { type: 'actions_counted' }>['data']): MeterState {
-  const { actions, through, last, digest, started, lapsed } = data;
-  const gone = new Set([...started, ...lapsed]);
+function admittedBy(state: MeterState, { data: { run, until, basis }, context: { at } }: AdmissionEvent): MeterState {
   return {
     ...state,
-    checkpoint: { actions, through, last, digest },
-    holds: state.holds.filter(({ run }) => !gone.has(run)),
+    admitted: admittedAfter(state.admitted, basis, at),
+    recent: heldAfter(state.recent, { run, until }, at),
+  };
+}
+
+type LicenseEvent = Extract<MeterEvent, { type: 'license_activated' | 'license_renewed' }>;
+
+function licensedBy(state: MeterState, { data, context: { at } }: LicenseEvent): MeterState {
+  return {
+    ...state,
+    admitted: flooredAt(state.admitted, data.charged_through),
+    license: heldLicenseOf(data, at),
+    refused: undefined,
   };
 }
 
 export function evolveMeter(state: MeterState, event: MeterEvent): MeterState {
   if (isAllocationEvent(event)) return { ...state, allocation: allocationAfter(state.allocation, event) };
-  if (isLicenseEvent(event)) return { ...state, license: licenseAfter(state.license, event) };
   if (event.type === 'installation_identified') return { ...state, installation: event.data.installation };
-  if (event.type === 'actions_counted') return counted(state, event.data);
-  if (event.type === 'action_admitted') return { ...state, holds: [...state.holds, event.data] };
-  if (event.type === 'metering_faulted') return { ...state, fault: event.data };
+  if (event.type === 'action_admitted') return admittedBy(state, event);
+  if (event.type === 'license_invalidated') return { ...state, refused: keyRefusedOf(event.data) };
   if (event.type === 'usage_reported') return { ...state, reported: event.data };
-  return { ...state, fault: undefined, checkpoint: undefined, repairs: [...state.repairs, event.data.id] };
+  return licensedBy(state, event);
 }

@@ -1,38 +1,17 @@
 import { RunMeter, type Meter } from '@on.auto/definitions';
-import { LedgerLog } from '@on.auto/ledger';
 import { Ledger } from '@on.auto/operations';
-import { Effect, Function, Layer } from 'effect';
+import { Effect, Layer } from 'effect';
 
-import { autoSigners, type Signers } from '../licensing/signed-answers.ts';
-import { meterAdmitting, meteringOver, type MeteredLedger } from './admitting.ts';
-import { admittedByTheAuthority, repairTakenFrom, type AdmissionAuthority } from './authority.ts';
-import { meterDefaults, type MeterOptions } from './metering.ts';
+import { meterAdmitting, type MeteredLedger } from './admitting.ts';
+import { admittedByTheAuthority, type AdmissionAuthority } from './authority.ts';
 
-export function meterOver(
-  ledgered: MeteredLedger,
-  options: MeterOptions,
-  authority: AdmissionAuthority,
-  signers: Signers = autoSigners,
-): Effect.Effect<Meter> {
-  return Effect.map(meteringOver(ledgered, options, Function.constant(authority.installation)), (metering) =>
-    meterAdmitting(
-      metering,
-      (run, counting) => admittedByTheAuthority(metering, authority, run, counting),
-      repairTakenFrom(metering, authority, signers),
-    ),
-  );
+export function meterOver(ledgered: MeteredLedger, authority: AdmissionAuthority): Meter {
+  return meterAdmitting(ledgered, (run) => admittedByTheAuthority(authority, run));
 }
 
-export function ledgerMeterAdmittedBy(
-  authority: AdmissionAuthority,
-  options: MeterOptions = meterDefaults,
-  signers: Signers = autoSigners,
-): Layer.Layer<RunMeter, never, Ledger | LedgerLog> {
+export function ledgerMeterAdmittedBy(authority: AdmissionAuthority): Layer.Layer<RunMeter, never, Ledger> {
   return Layer.effect(
     RunMeter,
-    Effect.gen(function* () {
-      const ledgered = { ledger: yield* Ledger, log: yield* LedgerLog };
-      return RunMeter.of(yield* meterOver(ledgered, options, authority, signers));
-    }),
+    Effect.map(Effect.service(Ledger), (ledger) => RunMeter.of(meterOver({ ledger }, authority))),
   );
 }

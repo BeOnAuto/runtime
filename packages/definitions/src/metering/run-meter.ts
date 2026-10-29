@@ -22,7 +22,6 @@ export class RunMeter extends Context.Service<RunMeter, Meter>()('@on.auto/defin
 
 const unmetered = new Conflict({
   detail: 'This runtime is missing its usage meter and cannot start runs. Reinstall the official Auto Runtime package.',
-  kind: 'metering_fault',
 });
 
 export const admittedByTheMeter = Effect.fnUntraced(function* (run: MeteredRun) {
