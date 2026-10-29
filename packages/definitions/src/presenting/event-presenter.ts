@@ -1,4 +1,4 @@
-import { strictRecordedDecoder, type Presenter, type Recorded } from '@on.auto/operations';
+import { strictRecordedDecoder, type ChangesNamed, type Presenter, type Recorded } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 export interface Account {
@@ -11,6 +11,7 @@ export interface EventPresenting<Event extends Recorded> {
   readonly eventSchema: Schema.ConstraintCodec<Event, unknown>;
   readonly types: readonly Event['type'][];
   readonly account: (event: Event, subject: string) => Account;
+  readonly changes: ChangesNamed;
 }
 
 export function eventPresenter<Event extends Recorded>({
@@ -18,6 +19,7 @@ export function eventPresenter<Event extends Recorded>({
   eventSchema,
   types,
   account,
+  changes,
 }: EventPresenting<Event>): Presenter {
   const decode = strictRecordedDecoder(eventSchema);
   const subjectStart = streamKind.length + 1;
@@ -28,5 +30,6 @@ export function eventPresenter<Event extends Recorded>({
       const event = decode(recorded);
       return [{ type: event.type, ...account(event, recorded.stream.slice(subjectStart)) }];
     },
+    changes,
   };
 }

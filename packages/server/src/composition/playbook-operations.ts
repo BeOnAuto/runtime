@@ -5,7 +5,7 @@ import {
   type Capability,
 } from '@on.auto/definitions';
 import type { RouteRegistration } from '@on.auto/operations';
-import { defineGetEvent, defineListPlaybookEvents } from '@on.auto/playbooks';
+import { defineGetEvent, defineListPlaybookChanges, defineListPlaybookEvents } from '@on.auto/playbooks';
 
 import type { ComposedFacts } from './composed-facts.ts';
 
@@ -21,6 +21,7 @@ export function playbookOperationsServing(
   return [
     ...makeDefinitionOperations(capabilities, facts, presenters),
     defineListPlaybookEvents(presenters),
+    defineListPlaybookChanges(presenters),
     defineGetEvent(presenters),
     definePublishEvent(names),
   ];

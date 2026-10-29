@@ -1,4 +1,4 @@
-import { ServedAsTool, makeDispatcher, messageIdOf, type Presenter } from '@on.auto/operations';
+import { ServedAsTool, changingNothing, makeDispatcher, messageIdOf, type Presenter } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -17,6 +17,7 @@ const calls: Presenter = {
     const answered = { text, result: text.repeat(70_000), output: text.repeat(1_048_576) };
     return [{ type: 'call_answered', summary: 'A tool answered.', data: answered }];
   },
+  changes: changingNothing(['added']),
 };
 
 const steps: Presenter = {
@@ -29,6 +30,7 @@ const steps: Presenter = {
       { type: 'run_stepped', summary: 'A run stepped.', data: { text: `${text}1` }, part: { number: 1, causedBy: 0 } },
     ];
   },
+  changes: changingNothing(['moved']),
 };
 
 const getEvent = defineGetEvent([presenterOf('notes', { added: 'note_added' }), calls, steps]);

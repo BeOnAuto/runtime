@@ -1,5 +1,6 @@
 import type { Schema } from 'effect';
 
+import type { ChangesNamed } from '../changes/change-naming.ts';
 import type { RecordedFact } from './recorded-read.ts';
 
 export interface PresentedPart {
@@ -20,4 +21,5 @@ export interface Presenter {
   readonly streamKind: string;
   readonly publicNames: Readonly<Record<string, readonly string[]>>;
   readonly present: (recorded: RecordedFact, content: KeptContent) => readonly PresentedFact[];
+  readonly changes: ChangesNamed;
 }

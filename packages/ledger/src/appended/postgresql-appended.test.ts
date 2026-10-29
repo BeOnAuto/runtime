@@ -38,9 +38,13 @@ describe('a read on PostgreSQL of the streams appended to after a point', () => 
     const now = await readAppended(undefined, 100);
     const appended = await readAppended(now.through, 100);
 
-    expect(now).toEqual({ streams: [], through: ['50', '0'], more: false });
+    expect(now).toEqual({ streams: [], latest: new Map(), through: ['50', '0'], more: false });
     expect(appended).toEqual({
       streams: ['playbook/acme/alpha/events/', 'org/acme/playbooks'],
+      latest: new Map([
+        ['playbook/acme/alpha/events/', ['60', '7']],
+        ['org/acme/playbooks', ['61', '3']],
+      ]),
       through: ['90', '0'],
       more: false,
     });

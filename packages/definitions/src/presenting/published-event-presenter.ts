@@ -1,4 +1,4 @@
-import type { Presenter } from '@on.auto/operations';
+import { changingEvents, type Presenter } from '@on.auto/operations';
 
 import { EventPublishedSchema, type RecordedEventPublished } from '../events/published-events.ts';
 import { eventEmitted, eventPublished } from '../plain-language/event-words.ts';
@@ -33,4 +33,5 @@ export const publishedEventPresenter: Presenter = eventPresenter<RecordedEventPu
   eventSchema: EventPublishedSchema,
   types: ['event_published'],
   account: accountOf,
+  changes: changingEvents(['event_published']),
 });

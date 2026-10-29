@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PlaybookReader, keptContentOf, sha256Of, textToKeep, type RecordedEvent } from '../index.ts';
 import {
+  playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,
   playbookBoundRecordedReader,
   playbookBoundRunOutcomesReader,
@@ -58,6 +59,7 @@ function keptOf(records: readonly RecordedEvent[], mostBytes: number, digests: r
           ...prefixedReader(service, 'playbook/acme/alpha/'),
           ...prefixedAges(service, 'playbook/acme/alpha/'),
           ...playbookBoundRecordedReader(service, playbook),
+          ...playbookBoundAppendedFactsReader(service, playbook),
           ...playbookBoundRunOutcomesReader(service, playbook),
           ...playbookBoundProjectionReader(service, playbook),
           readContent: (sha256) => service.content.get(playbook, sha256),

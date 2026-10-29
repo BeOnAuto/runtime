@@ -55,6 +55,10 @@ const ranUntilCancelled =
 
 const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
   input_schema: explanationByReason.invalid_input,
+  cursor_not_held: {
+    why: 'the cursor given is not one this server holds',
+    remedy: 'Asking again without it starts from now, with a cursor this server holds.',
+  },
   taken: { why: 'that name is already taken', remedy: 'A different name will work.' },
   retired: {
     why: 'it has been retired',

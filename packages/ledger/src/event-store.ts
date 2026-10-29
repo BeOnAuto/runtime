@@ -45,10 +45,11 @@ export interface AppendObserver {
 export interface AppendListeners {
   readonly observer?: AppendObserver | undefined;
   readonly appended?: StreamSignal | undefined;
+  readonly watchFailed?: ((failure: unknown) => void) | undefined;
 }
 
-export function listenersOf({ observer, appended }: AppendListeners): AppendListeners {
-  return { observer, appended };
+export function listenersOf({ observer, appended, watchFailed }: AppendListeners): AppendListeners {
+  return { observer, appended, watchFailed };
 }
 
 export interface RecordedStream {
@@ -113,6 +114,37 @@ export interface AppendedStreams {
   readonly more: boolean;
 }
 
+export interface LatestAppends extends AppendedStreams {
+  readonly latest: ReadonlyMap<string, RecordedPoint>;
+}
+
+export type ReadLatestAppends = (after: RecordedPoint | undefined, most: number) => Promise<LatestAppends>;
+
+export type FactScope =
+  | { readonly kind: 'playbook'; readonly playbookKey: string }
+  | { readonly kind: 'streams'; readonly streams: readonly string[] };
+
+export interface FactPlace {
+  readonly point: RecordedPoint;
+  readonly id: string;
+}
+
+export interface AppendedFactsAsked {
+  readonly after?: FactPlace | null;
+  readonly most: number;
+  readonly dataOf: readonly string[];
+}
+
+export type StoredAppendedFacts =
+  | { readonly held: false }
+  | {
+      readonly held: true;
+      readonly facts: readonly StoredRecord[];
+      readonly last: FactPlace | null;
+      readonly through: RecordedPoint;
+      readonly more: boolean;
+    };
+
 export interface RecordedStore {
   readonly pointLength: number;
   readonly readRecorded: (
@@ -121,6 +153,7 @@ export interface RecordedStore {
     page: StoredPageRequest,
   ) => Promise<StoredPage>;
   readonly readAppended: (after: RecordedPoint | undefined, most: number) => Promise<AppendedStreams>;
+  readonly readAppendedFacts: (scope: FactScope, asked: AppendedFactsAsked) => Promise<StoredAppendedFacts>;
   readonly readRecordedEvent: (playbookKey: string, id: string) => Promise<StoredRecord | undefined>;
 }
 
@@ -137,7 +170,15 @@ export interface StreamAgesStore {
   readonly ageOfLastAppend: (stream: string) => Promise<number>;
 }
 
-export interface LedgerStreams extends Streams, RecordedStore, DefinitionStreamsStore, StreamAgesStore {}
+export type AppendWaited = 'appended' | 'ended';
+
+export interface AppendWaitsStore {
+  readonly waitForAppend: (scope: FactScope, after: RecordedPoint, signal: AbortSignal) => Promise<AppendWaited>;
+  readonly endWaits: () => void;
+}
+
+export interface LedgerStreams
+  extends Streams, RecordedStore, DefinitionStreamsStore, StreamAgesStore, AppendWaitsStore {}
 
 export interface EventStore extends StreamStore, LedgerStreams {}
 

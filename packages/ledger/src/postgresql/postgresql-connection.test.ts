@@ -1,3 +1,4 @@
+import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { ConnectionPorts } from '../connection/ledger-connection.ts';
@@ -25,6 +26,9 @@ const streams: LedgerStreams = {
   readRecorded: () => Promise.resolve({ records: [] }),
   readRecordedEvent: (_, id) => Promise.resolve(new Map<string, StoredRecord>().get(id)),
   readAppended: () => Promise.resolve({ streams: [], through: ['0', '0'], more: false }),
+  readAppendedFacts: () => Promise.resolve({ held: false }),
+  waitForAppend: () => Promise.resolve('ended'),
+  endWaits: Function.constVoid,
   definitionStreams: () => Promise.resolve([]),
   ageOfLastAppend: () => Promise.resolve(Number.POSITIVE_INFINITY),
 };

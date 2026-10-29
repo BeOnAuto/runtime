@@ -99,6 +99,7 @@ export function bounds(scope: ExaminationScope): SQL {
   return SQL.concat(
     beyond(scope),
     scope.from === undefined ? SQL.EMPTY : SQL` AND global_position >= ${positionOf(scope.from)}`,
+    scope.to === undefined ? SQL.EMPTY : SQL` AND global_position <= ${positionOf(scope.to)}`,
   );
 }
 

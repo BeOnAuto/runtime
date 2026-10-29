@@ -5,6 +5,7 @@ import { Caller } from '../caller/caller.ts';
 import { PlaybookContext } from '../caller/playbook-context.ts';
 import { PlaybookLifecycle } from '../caller/playbook-lifecycle.ts';
 import {
+  playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,
   playbookBoundRecordedReader,
   playbookBoundRunOutcomesReader,
@@ -35,6 +36,7 @@ export function playbookServicesOf(
       ...prefixedReader(ledger, prefix),
       ...prefixedAges(ledger, prefix),
       ...playbookBoundRecordedReader(ledger, { org, playbook }),
+      ...playbookBoundAppendedFactsReader(ledger, { org, playbook }),
       ...playbookBoundRunOutcomesReader(ledger, { org, playbook }),
       ...playbookBoundProjectionReader(ledger, { org, playbook }),
       readContent: (sha256) => ledger.content.get({ org, playbook }, sha256),

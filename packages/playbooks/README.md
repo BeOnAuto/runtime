@@ -58,6 +58,17 @@ It reads the playbook's whole partition of the ledger (`PlaybookReader.readRecor
 
 The feed cannot show the playbook's own creation, update and retirement: they are recorded in the org's `playbooks` stream, outside the playbook's partition, and `get_playbook` reads them. A retired playbook stays readable, since the dispatcher runs every query on it.
 
+## What changed
+
+`defineListOrgChanges(namings)` makes `list_org_changes`, an org query at `GET /changes` relative to the org, under `org:read` or `playbook:read` as `list_playbooks` is, and `defineListPlaybookChanges(presenters)` makes `list_playbook_changes`, a playbook query at `GET /changes` relative to the playbook, under `playbook:read`; both are defined with `defineHttpOperation` and so served over HTTP alone. They take the catalogue of the facts as parameters, as `list_playbook_events` takes its presenters: the namings of the org's streams, `playbookChanges` of this package for the `playbooks` stream, which names the playbook of each fact by its data, and those of other packages, such as `connectionChanges` of `@on.auto/connections`; and the presenters of the playbook's stream kinds, each of which says what its facts change. The server passes both.
+
+| Input   | What it does                                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------------------- |
+| `since` | The `cursor` of the answer before; left out, the answer is the cursor of now and no changes                   |
+| `wait`  | 0 to 25 seconds, 25 when left out: how long the runtime holds the request while nothing changed after `since` |
+
+Each reads at most 1,000 facts of its scope after `since` (`PlaybookReader.readAppendedFacts`, or `OrgReader.readAppendedFacts` over the streams its namings name, with the data of the types they name), names the changes each makes through the catalogue, keeps those its caller may read, each resource once in the order it first changed, and answers `{ cursor, changes, more }`; `playbookChanges` names a playbook only to a caller that may access it, so a key limited to some playbooks learns nothing of the others. An answer that lists nothing and says no `more` gives back the cursor it was given. When nothing it read names a change its caller may read and it read everything, it waits for the next append to its scope, `waitForAppend`, until the deadline `wait` sets by Effect's `Clock`, and reads again from the cursor of what it read when the wait answers `appended`; when it answers `ended`, at the deadline or when the server stops, it answers what it has, no changes and the cursor it was given. It stops before the fact whose resources would pass 200, the cursor then that of the fact before it, and says `more`; it says `more` too when it read 1,000 facts and more follow. A cursor the ledger does not hold is `invalid_input` of the kind `cursor_not_held` at `/since`, whose detail says to ask again without `since`.
+
 ## Storage
 
 The full set of an org's playbooks is the org's playbook registry. It lives in one stream, named `playbooks` relative to the org. Its facts carry a `type`, the playbook id, who recorded it (`by`) and when (`at`):
@@ -78,4 +89,4 @@ The dispatcher applies the status to every playbook-scoped operation. A retired 
 
 ## Source
 
-`src/index.ts` is the only entry point. `src/registry` holds the org's playbook registry: a playbook, the facts and commands of the `playbooks` stream, the registry's decider and its rules, the stream's name, and `ledgerPlaybookRegistry`. `src/operations` holds the five operations and how they load the registry and record in it. `src/feed` holds `list_playbook_events`. `src/testing` holds what the tests share. `operations` depends on `registry`, never the other way round.
+`src/index.ts` is the only entry point. `src/registry` holds the org's playbook registry: a playbook, the facts and commands of the `playbooks` stream, the registry's decider and its rules, the stream's name, and `ledgerPlaybookRegistry`. `src/operations` holds the five operations and how they load the registry and record in it. `src/feed` holds `list_playbook_events`. `src/changes` holds `list_org_changes` and `list_playbook_changes`, and `src/registry` the naming of the changes of the `playbooks` stream. `src/testing` holds what the tests share. `operations` depends on `registry`, never the other way round.

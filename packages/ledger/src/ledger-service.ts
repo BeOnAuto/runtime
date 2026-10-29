@@ -15,6 +15,7 @@ import {
 } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
+import { appendedFactsReaderOf } from './appended/appended-reader.ts';
 import { eventAppenderOf } from './event-appender.ts';
 import type { LedgerStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
@@ -109,6 +110,7 @@ export function makeLedger(store: LedgerStore): Ledger['Service'] {
     ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     readRecorded: recordedReaderOf(store),
     readRecordedEvent: recordedEventReaderOf(store),
+    ...appendedFactsReaderOf(store),
     readRunOutcomes: runOutcomesReaderOf(store),
     readProjectedRows: store.readProjectedRows,
     countProjectedRows: store.countProjectedRows,

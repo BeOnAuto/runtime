@@ -2,6 +2,7 @@ import { Schema } from 'effect';
 
 import { CancelledKindSchema } from './cancelled-run.ts';
 import { ConflictKindSchema } from './conflict.ts';
+import { InvalidInputKindSchema } from './invalid-input.ts';
 import { IssueSchema } from './issue.ts';
 import { RejectionBecauseSchema } from './rejection-because.ts';
 import { UnansweredKindSchema } from './unanswered-run.ts';
@@ -18,6 +19,7 @@ export const SettlementSchema = Schema.Union([
   Schema.Struct({
     ...rejected,
     reason: Schema.Literal('invalid_input'),
+    kind: Schema.optionalKey(InvalidInputKindSchema),
     issues: Schema.optionalKey(Schema.Array(IssueSchema)),
   }),
   Schema.Struct({

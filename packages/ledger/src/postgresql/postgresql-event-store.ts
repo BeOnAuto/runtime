@@ -44,12 +44,14 @@ export function postgresqlStoreOn(
   );
   const query: Query = async (text, values) =>
     (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
+  const recorded = postgresqlRecordedStoreOn(query, pool, listeners);
   return {
     ...store,
-    ...postgresqlRecordedStoreOn(query, pool),
+    ...recorded,
     ...projections.readerOn({ query: formattedFor(query), command: formattedFor(query) }),
     ...postgresqlReadsOn(kept, query),
     close: async () => {
+      recorded.endWaits();
       await store.close();
       await pool.end();
     },

@@ -11,3 +11,5 @@ export { updatePlaybook } from './operations/update-playbook.ts';
 export { PlaybookSchema, type Playbook } from './registry/playbook.ts';
 export { playbookCreatedOf } from './registry/created-playbooks.ts';
 export { playbooksStreamOfOrg } from './registry/playbooks-stream.ts';
+export { defineListOrgChanges, defineListPlaybookChanges } from './changes/list-changes.ts';
+export { playbookChanges } from './registry/playbook-changes.ts';

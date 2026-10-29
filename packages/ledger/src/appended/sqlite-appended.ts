@@ -1,9 +1,17 @@
 import { SQL, type SQLExecutor } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
-import type { AppendedStreams, RecordedStore, StreamAgesStore } from '../event-store.ts';
+import type {
+  AppendListeners,
+  AppendWaitsStore,
+  LatestAppends,
+  ReadLatestAppends,
+  RecordedStore,
+  StreamAgesStore,
+} from '../event-store.ts';
 import { kindKeyOfStream } from '../recorded/sqlite-indexes.ts';
 import { sqliteStreamAges } from '../stream-ages/sqlite-stream-ages.ts';
+import { appendWatchOf } from './append-watch.ts';
 
 const defaultPartition = 'emt:default';
 
@@ -13,17 +21,21 @@ const AppendedRows = Schema.Array(Schema.Struct({ name: Schema.String, read: Sch
 
 const slashesOfAKind = 4;
 
-async function newestPoint(execute: SQLExecutor): Promise<AppendedStreams> {
+async function newestPoint(execute: SQLExecutor): Promise<LatestAppends> {
   const { rows } = await execute.query(SQL`SELECT coalesce(max(global_position), 0) AS position FROM emt_messages`);
   const [newest] = Schema.decodeUnknownSync(NewestRow)(rows);
-  return { streams: [], through: [String(newest.position)], more: false };
+  return { streams: [], latest: new Map(), through: [String(newest.position)], more: false };
 }
 
-export function sqliteAppended(execute: SQLExecutor): Pick<RecordedStore, 'readAppended'> & StreamAgesStore {
-  return { readAppended: appendedAfter(execute), ...sqliteStreamAges(execute) };
+export function sqliteAppended(
+  execute: SQLExecutor,
+  listeners: AppendListeners = {},
+): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & AppendWaitsStore {
+  const readAppended = appendedAfter(execute);
+  return { readAppended, ...appendWatchOf(readAppended, listeners), ...sqliteStreamAges(execute) };
 }
 
-function appendedAfter(execute: SQLExecutor): RecordedStore['readAppended'] {
+function appendedAfter(execute: SQLExecutor): ReadLatestAppends {
   return async (after, most) => {
     if (after === undefined) {
       return newestPoint(execute);
@@ -44,6 +56,11 @@ function appendedAfter(execute: SQLExecutor): RecordedStore['readAppended'] {
     const groups = Schema.decodeUnknownSync(AppendedRows)(rows);
     const through = groups.reduce((latest, { position }) => Math.max(latest, position), Number(after[0]));
     const read = groups.reduce((sum, group) => sum + group.read, 0);
-    return { streams: groups.map(({ name }) => name), through: [String(through)], more: read >= most };
+    return {
+      streams: groups.map(({ name }) => name),
+      latest: new Map(groups.map(({ name, position }) => [name, [String(position)]])),
+      through: [String(through)],
+      more: read >= most,
+    };
   };
 }

@@ -14,6 +14,7 @@ export {
 export { registeredClientSecrets } from './registered-clients/registered-clients.ts';
 export type { RuntimeAccess } from './policy/policy-rules.ts';
 export { ConnectionSchema, type Connection } from './registry/connection.ts';
+export { connectionChanges } from './registry/connection-changes.ts';
 export { byTheRuntime, connectionsStream, connectionsStreamOfOrg } from './registry/registry-decider.ts';
 export { makeConnectionSource } from './serving/connection-source.ts';
 export { clientRegistrationsStream, makeClientRegistrations } from './registrations/client-registrations.ts';

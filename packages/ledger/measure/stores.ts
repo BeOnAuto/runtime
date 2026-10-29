@@ -4,7 +4,7 @@ import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3'
 import { Function } from 'effect';
 import { Client } from 'pg';
 
-import type { LedgerStore } from '../src/event-store.ts';
+import type { AppendListeners, LedgerStore } from '../src/event-store.ts';
 import { plainPoolsOn, postgresqlEventStore } from '../src/postgresql/postgresql-ledger.ts';
 import { sqliteEventStore } from '../src/sqlite-event-store.ts';
 import type { modestConnections } from '../src/sqlite3.ts';
@@ -15,7 +15,7 @@ const postgresqlServer = process.env['LEDGER_MEASURE_POSTGRESQL_URL'] ?? '';
 export interface MeasuredStore {
   readonly name: string;
   readonly statement: (text: string) => Promise<readonly Readonly<Record<string, unknown>>[]>;
-  readonly opened: () => Promise<LedgerStore>;
+  readonly opened: (listeners?: AppendListeners) => Promise<LedgerStore>;
   readonly dropped: () => Promise<void>;
 }
 
@@ -52,12 +52,16 @@ export interface MeasuredOn {
 
 async function sqliteStore({ sqliteConnections }: MeasuredOn): Promise<MeasuredStore> {
   const { fileName, remove } = temporaryDatabase();
-  const open = (): LedgerStore =>
-    sqliteEventStore(() => ({
-      driver: sqlite3EventStoreDriver,
-      fileName,
-      ...(sqliteConnections === undefined ? {} : { connectionOptions: sqliteConnections }),
-    }));
+  const open = (listeners: AppendListeners = {}): LedgerStore =>
+    sqliteEventStore(
+      () => ({
+        driver: sqlite3EventStoreDriver,
+        fileName,
+        ...(sqliteConnections === undefined ? {} : { connectionOptions: sqliteConnections }),
+      }),
+      {},
+      listeners,
+    );
   await (await openedOf(open)).close();
   return {
     name: 'SQLite',
@@ -69,7 +73,7 @@ async function sqliteStore({ sqliteConnections }: MeasuredOn): Promise<MeasuredS
         database.close();
       }
     },
-    opened: () => openedOf(open),
+    opened: (listeners) => openedOf(() => open(listeners)),
     dropped: () => {
       remove();
       return Promise.resolve();
@@ -84,15 +88,15 @@ async function postgresqlStore(): Promise<MeasuredStore> {
   await administration.query(`CREATE DATABASE ${name}`);
   const url = new URL(postgresqlServer);
   url.pathname = `/${name}`;
-  const open = (): LedgerStore =>
-    postgresqlEventStore({ pools: plainPoolsOn(url.href), reportLostConnection: Function.constVoid });
+  const open = (listeners: AppendListeners = {}): LedgerStore =>
+    postgresqlEventStore({ pools: plainPoolsOn(url.href), reportLostConnection: Function.constVoid, ...listeners });
   await (await openedOf(open)).close();
   const client = new Client({ connectionString: url.href });
   await client.connect();
   return {
     name: 'PostgreSQL',
     statement: async (text) => (await client.query<Readonly<Record<string, unknown>>>(text)).rows,
-    opened: () => openedOf(open),
+    opened: (listeners) => openedOf(() => open(listeners)),
     dropped: async () => {
       await client.end();
       await administration.query(`DROP DATABASE ${name} WITH (FORCE)`);

@@ -59,6 +59,24 @@ export function ledgerConnectionIn(runtime: AppRuntime<LedgerConnection>): Promi
   return Effect.runPromise(inRuntime(runtime, Effect.service(LedgerConnection)));
 }
 
+export interface Served {
+  readonly stopWork: () => Promise<void>;
+}
+
+export async function withHeldRequestsEndedFirst<Serving extends Served>(
+  runtime: AppRuntime<LedgerChores>,
+  serving: Serving,
+): Promise<Serving> {
+  const { endWaits } = await Effect.runPromise(inRuntime(runtime, Effect.service(LedgerChores)));
+  return {
+    ...serving,
+    stopWork: async () => {
+      await Effect.runPromise(endWaits);
+      await serving.stopWork();
+    },
+  };
+}
+
 export async function orphansSweptIn(runtime: AppRuntime<LedgerChores>): Promise<DueWork> {
   const { sweepOrphans } = await Effect.runPromise(inRuntime(runtime, Effect.service(LedgerChores)));
   return choreWork({ name: 'orphaned content', perform: sweepOrphans });

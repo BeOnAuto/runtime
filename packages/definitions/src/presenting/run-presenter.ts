@@ -180,7 +180,7 @@ function shownNamesOf(declared: readonly DeclaredFact[]): Readonly<Record<string
   return Object.fromEntries(shown.map((type) => [type, [type]]));
 }
 
-export function runPresenter(words: DefinitionWords, declared: readonly DeclaredFact[]): Presenter {
+export function runPresenter(words: DefinitionWords, declared: readonly DeclaredFact[]): Omit<Presenter, 'changes'> {
   const present = presentedBy(words, declared);
   return {
     streamKind: 'runs',
