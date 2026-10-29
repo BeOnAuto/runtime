@@ -20,7 +20,7 @@ Self-hosted Auto Runtime counts **runs**: a run of a workflow or a function coun
 - **What still works without a key or credits.** Reading, editing and exporting playbooks, definitions, runs and events is never refused; only starting a new run past the free rate is.
 - **What the runtime tells Auto.** With a key, as it activates the key and then every hour: the runtime's id, the number of runs it admitted and the number it admitted on its license. Never a run's id, definition, inputs or outputs, or anything a playbook holds. Without a key, nothing.
 
-Auto Runtime enforces a license from 0.27.0, released on 27 October 2026, and the free rate, with licenses it admits runs against itself, from the release after 0.41.0. Earlier releases limit nothing. [Licenses](docs/self-host/licenses.md) says how to register, activate a key and run a runtime offline.
+Auto Runtime enforces a license from 0.27.0, released on 27 October 2026. Earlier releases limit nothing. [Licenses](docs/self-host/licenses.md) says how to register, activate a key and run a runtime offline.
 
 For Enterprise terms, contact us through [on.auto](https://on.auto).
 
