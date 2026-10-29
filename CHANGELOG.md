@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.43.0](https://github.com/BeOnAuto/runtime/compare/v0.42.1...v0.43.0) (2026-10-29)
+
+
+### Features
+
+* **meter:** self-hosted licensing v5, local admission against a signed license ([#400](https://github.com/BeOnAuto/runtime/issues/400)) ([883d782](https://github.com/BeOnAuto/runtime/commit/883d7824af240cc05ec2f69e5a093558f29f5fee))
+* **workflow-engine:** a call the meter refuses for credits or a license waits at its step ([#399](https://github.com/BeOnAuto/runtime/issues/399)) ([8128f8f](https://github.com/BeOnAuto/runtime/commit/8128f8f274f459dc238c73d7f225d368617679e1))
+
 ## [0.42.1](https://github.com/BeOnAuto/runtime/compare/v0.42.0...v0.42.1) (2026-10-29)
 
 
