@@ -18,6 +18,7 @@ interface Component extends Standalone {
 export interface Components {
   readonly written: Readonly<Record<string, Schema.Json>>;
   readonly standalone: ReadonlyMap<string, Component>;
+  readonly definitions: Readonly<Record<string, Schema.Json>>;
 }
 
 interface Definitions {
@@ -59,7 +60,10 @@ export function componentsOf({ version, document }: ReadDocument): Deriving<Comp
     ]),
   );
   const problems = [...standalone.values()].flatMap((each) => each.problems);
-  return problems.length > 0 ? Result.fail(problems) : Result.succeed({ written, standalone });
+  const definitions = Object.fromEntries(
+    [...standalone].map(([name, { schema }]: readonly [string, Component]) => [name, schema]),
+  );
+  return problems.length > 0 ? Result.fail(problems) : Result.succeed({ written, standalone, definitions });
 }
 
 export function oversizedBecause({ schema, definitionBytes }: InputSchema): string | undefined {

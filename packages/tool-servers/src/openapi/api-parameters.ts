@@ -2,14 +2,25 @@ import { JsonPointer, Predicate, Result, type Schema } from 'effect';
 
 import type {
   ApiDocument,
+  ApiResponse,
   DocumentProblem,
   Operation,
   Parameter,
   ParameterOrReference,
   PathItem,
+  ReadDocument,
   RequestBody,
   RequestBodyOrReference,
+  ResponseOrReference,
 } from './api-document.ts';
+import { standaloneOf, translatedSchema } from './schema-translation.ts';
+
+export interface AnswerSchemas {
+  readonly schemas: readonly Schema.Json[];
+  readonly components: Readonly<Record<string, Schema.Json>>;
+}
+
+export const unschemedAnswers: AnswerSchemas = { schemas: [], components: {} };
 
 export interface Placed<A> {
   readonly value: A;
@@ -34,9 +45,15 @@ const mostReferenceHops = 8;
 
 const jsonMediaType = /^application\/(?:[\w.-]+\+)?json$/u;
 
+const successStatus = /^2(?:\d\d|XX)$/u;
+
+function isJson(mediaType: string): boolean {
+  return jsonMediaType.test(mediaType.split(';', 1).join('').trim().toLowerCase());
+}
+
 function componentOf<A>(
   reference: string,
-  kind: 'parameters' | 'requestBodies',
+  kind: 'parameters' | 'requestBodies' | 'responses',
   entries: Readonly<Record<string, A>> | undefined,
 ): A | undefined {
   const prefix = `#/components/${kind}/`;
@@ -119,9 +136,7 @@ export function parametersOf(
 
 function bodyIn(body: Placed<RequestBody>): BodyOf {
   const entries = Object.entries(body.value.content);
-  const json = entries.find(([mediaType]: readonly [string, unknown]) =>
-    jsonMediaType.test(mediaType.split(';', 1).join('').trim().toLowerCase()),
-  );
+  const json = entries.find(([mediaType]: readonly [string, unknown]) => isJson(mediaType));
   if (json !== undefined) {
     const [mediaType, { schema = {} }] = json;
     const pointer = `${body.pointer}/content/${JsonPointer.escapeToken(mediaType)}/schema`;
@@ -142,4 +157,38 @@ export function bodyOf(document: ApiDocument, operation: Placed<Operation>): Res
     ),
     bodyIn,
   );
+}
+
+function responseAt(document: ApiDocument, written: ResponseOrReference, pointer: string): readonly ApiResponse[] {
+  const followedResponse = followed(written, pointer, (reference) =>
+    componentOf(reference, 'responses', document.components?.responses),
+  );
+  return Result.isSuccess(followedResponse) ? [followedResponse.success.value] : [];
+}
+
+function answerSchemasOf(document: ApiDocument, operation: Placed<Operation>): readonly Schema.Json[] {
+  return Object.entries(operation.value.responses ?? {})
+    .filter(([status]: readonly [string, ResponseOrReference]) => successStatus.test(status))
+    .flatMap(([status, written]: readonly [string, ResponseOrReference]) =>
+      responseAt(document, written, `${operation.pointer}/responses/${status}`),
+    )
+    .flatMap(({ content = {} }) =>
+      Object.entries(content).flatMap(
+        ([mediaType, { schema }]: readonly [string, { readonly schema?: Schema.Json }]) =>
+          isJson(mediaType) && schema !== undefined ? [schema] : [],
+      ),
+    );
+}
+
+export function answersOf(
+  { version, document }: ReadDocument,
+  operation: Placed<Operation>,
+  definitions: AnswerSchemas['components'],
+): AnswerSchemas {
+  return {
+    schemas: answerSchemasOf(document, operation).map(
+      (schema) => standaloneOf(translatedSchema(schema, version), operation.pointer).schema,
+    ),
+    components: definitions,
+  };
 }

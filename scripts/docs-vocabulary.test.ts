@@ -49,6 +49,8 @@ const googleAdsDocument = `${providerDocuments}/google-ads.openapi.json`;
 
 const analyticsDocument = `${providerDocuments}/google-analytics.openapi.json`;
 
+const sheetsDocument = `${providerDocuments}/google-sheets.openapi.json`;
+
 const allowances: readonly Allowance[] = [
   {
     text: 'https://open-workflow-specification.org/spec/1.0.0/errors',
@@ -117,6 +119,31 @@ const allowances: readonly Allowance[] = [
   { text: 'A primitive filter', in: [analyticsDocument, `${providerDocuments}/google-analytics-admin.openapi.json`] },
   { text: 'inferenceClassification', in: [`${providerDocuments}/outlook.openapi.json`] },
   ...['CohortSpec', 'cohortSpec'].map((vendorText) => ({ text: vendorText, in: [analyticsDocument] })),
+  ...[
+    'ChartSpec',
+    'SlicerSpec',
+    'SortSpec',
+    'sortSpecs',
+    'sort spec',
+    'FilterSpec',
+    'filterSpecs',
+    'filter_specs',
+    'DataSourceSpec',
+    'DatasourceSpec',
+    'QuerySpec',
+    'querySpec',
+    'TableSpec',
+    'tableSpec',
+    '"spec"',
+    'OBJECT_SPEC_INVALID',
+    'ExecutionStatus',
+    'DATA_EXECUTION_',
+    'EXECUTION_NOT_FOUND',
+    'QUERY_EXECUTION_COMPLETED',
+    'data execution',
+    'an execution',
+    'execution status',
+  ].map((vendorText) => ({ text: vendorText, in: [sheetsDocument] })),
   { text: 'execution-denied', in: ['capabilities/reasoning/src/tools/final-step.test.ts'] },
   ...['primitives?', 'executions?', 'inference', 'orchestration', 'recollection'].map((term) => ({
     text: String.raw`/\b${term}\b/iu`,

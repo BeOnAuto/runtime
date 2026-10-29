@@ -1,9 +1,9 @@
 name: google-docs
 title: Google Docs
-description: Read Google Docs documents and update their content, through Google's Docs MCP server.
-website: https://developers.google.com/workspace/docs/api/guides/configure-mcp-server
-type: mcp
-url: https://docsmcp.googleapis.com/mcp/v1
+description: Read Google Docs documents and update their content.
+website: https://developers.google.com/workspace/docs/api/reference/rest
+type: openapi
+document: documents/google-docs.openapi.json
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com

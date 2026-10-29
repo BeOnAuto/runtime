@@ -1,9 +1,9 @@
 name: google-sheets
 title: Google Sheets
-description: Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change spreadsheets, through Google's Sheets MCP server.
-website: https://developers.google.com/workspace/sheets/api/guides/configure-mcp-server
-type: mcp
-url: https://sheetsmcp.googleapis.com/mcp/v1
+description: Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change their sheets, ranges and properties.
+website: https://developers.google.com/workspace/sheets/api/reference/rest
+type: openapi
+document: documents/google-sheets.openapi.json
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
