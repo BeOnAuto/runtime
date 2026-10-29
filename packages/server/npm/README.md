@@ -20,11 +20,11 @@ People sign in through the Auto identity service. When it is ready, it prints th
 
 <!-- x-release-please-start-version -->
 
-Add Auto Runtime to your agent as an MCP server that runs `npx -y @on.auto/runtime@0.45.0 mcp`, the release this README comes with, such as:
+Add Auto Runtime to your agent as an MCP server that runs `npx -y @on.auto/runtime@0.46.0 mcp`, the release this README comes with, such as:
 
 ```bash
-claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.45.0 mcp
-codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.45.0 mcp
+claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.46.0 mcp
+codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.46.0 mcp
 ```
 
 <!-- x-release-please-end -->

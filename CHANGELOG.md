@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.46.0](https://github.com/BeOnAuto/runtime/compare/v0.45.0...v0.46.0) (2026-10-29)
+
+
+### Features
+
+* **api:** a client learns of changes by asking and waiting, not by polling ([#411](https://github.com/BeOnAuto/runtime/issues/411)) ([73a76a3](https://github.com/BeOnAuto/runtime/commit/73a76a303a1d939d548cb185aa3d023458beacc9))
+* **prediction-contract:** the contract is a package of its own on npm ([#417](https://github.com/BeOnAuto/runtime/issues/417)) ([5fac5f1](https://github.com/BeOnAuto/runtime/commit/5fac5f18cf40a491bc3c7fb48afe015217e9b668))
+* **prediction:** the ONNX runtime leaves the repository as an extension of its own ([#418](https://github.com/BeOnAuto/runtime/issues/418)) ([452c89d](https://github.com/BeOnAuto/runtime/commit/452c89d7b9fcf2076eee414ada6b51e81bdbe1e3))
+* **providers:** the bot provider is slack-bot, titled Slack Bot ([#416](https://github.com/BeOnAuto/runtime/issues/416)) ([b668ee3](https://github.com/BeOnAuto/runtime/commit/b668ee391503e0e7f6bbbccdd2617b1e74c2f3a3))
+
+
+### Bug Fixes
+
+* **tool-servers:** the byte-string decoder names both of its options ([#415](https://github.com/BeOnAuto/runtime/issues/415)) ([2620e68](https://github.com/BeOnAuto/runtime/commit/2620e688145dd3e23959ad6692048223f93d2dba))
+
 ## [0.45.0](https://github.com/BeOnAuto/runtime/compare/v0.44.0...v0.45.0) (2026-10-29)
 
 
