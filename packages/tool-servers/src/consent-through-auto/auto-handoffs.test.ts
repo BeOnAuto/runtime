@@ -92,6 +92,17 @@ describe('the finish of a consent through Auto’s consent service', () => {
   });
 });
 
+describe('the tokens Auto’s consent service hands on', () => {
+  it('are kept as a bearer token where they name no token_type', async () => {
+    const serving = await throughAuto({ namesTokenType: false });
+    const client = consentClientThrough(serving);
+
+    const done = await finished(client, await handedOffAt(serving, client));
+
+    expect(tokensKeptBy(done).token_type).toBe('Bearer');
+  });
+});
+
 describe('the handoff of a finish through Auto’s consent service', () => {
   it('is taken once, and refused for another verifier and once its ten minutes are over', async () => {
     const serving = await throughAuto();

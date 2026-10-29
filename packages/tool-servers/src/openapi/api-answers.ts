@@ -5,7 +5,7 @@ import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { fileTextOf, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
 import { AnsweredStatus } from './answered-status.ts';
-import { unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
+import { headersCarriedBy, unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
 import { decodedAnswer } from './byte-strings.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
 import { ScopeLacking, scopeLackingIn } from './scope-lacking.ts';
@@ -89,6 +89,20 @@ function shownAnswer(status: number, mediaType: string | undefined, text: string
   return json === undefined ? textAnswer(text) : jsonAnswer(text, json.parsed, answers);
 }
 
+type Carried = Readonly<Record<string, string>>;
+
+function withHeaders(answer: Answer, headers: Carried): Answer {
+  if (Object.keys(headers).length === 0) {
+    return answer;
+  }
+  const body = answer.structuredContent === undefined ? answer.content[0]?.text : answer.structuredContent;
+  const structuredContent = body === undefined || body === null ? { headers } : { headers, body };
+  return {
+    content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+    structuredContent,
+  };
+}
+
 function settled(answer: Answer, observed: Observed): CallSettled {
   const { content, structuredContent } = answer;
   const kept = structuredContent === undefined ? { content } : { content, structuredContent };
@@ -112,17 +126,18 @@ interface Shown {
   readonly mediaType: string | undefined;
   readonly text: string;
   readonly answers: AnswerSchemas;
+  readonly carried: Carried;
 }
 
 function shownOrRefused(
   response: Readonly<Response>,
-  { mediaType, text, answers }: Shown,
+  { mediaType, text, answers, carried }: Shown,
   observed: Observed,
 ): CallSettled {
   const { error, scope } = extractWWWAuthenticateParams(response);
   const lacking = scopeLackingIn({ status: response.status, body: text, error, scope });
   return lacking === undefined
-    ? settled(shownAnswer(response.status, mediaType, text, answers), observed)
+    ? settled(withHeaders(shownAnswer(response.status, mediaType, text, answers), carried), observed)
     : { error: new ScopeLacking(lacking), observed };
 }
 
@@ -144,16 +159,17 @@ export async function settledOf(
     return unreadSettled(response, answering);
   }
   const mediaType = mediaTypeOf(response);
+  const carried = headersCarriedBy(response.status, response.headers, answers);
   let tooLarge = false;
   try {
     if (isAFile(response, mediaType)) {
       const text = await fileTextOf(response, file);
-      return settled(textAnswer(text), observedOf(response, answering, false));
+      return settled(withHeaders(textAnswer(text), carried), observedOf(response, answering, false));
     }
     const text = await shownTextOf(response, () => {
       tooLarge = true;
     });
-    return shownOrRefused(response, { mediaType, text, answers }, observedOf(response, answering, false));
+    return shownOrRefused(response, { mediaType, text, answers, carried }, observedOf(response, answering, false));
   } catch (error) {
     return { error, observed: observedOf(response, answering, tooLarge || error instanceof DocumentTooLarge) };
   }

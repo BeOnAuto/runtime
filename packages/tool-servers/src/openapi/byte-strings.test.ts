@@ -18,6 +18,7 @@ function base64url(text: string): string {
 
 const gmailAnswers: AnswerSchemas = {
   schemas: [{ $ref: '#/$defs/Message' }],
+  headers: {},
   components: {
     Message: {
       type: 'object',
@@ -66,6 +67,7 @@ function messageOf(text: string, image: string, belled: string) {
 
 const envelopeAnswers: AnswerSchemas = {
   schemas: [{ $ref: '#/$defs/Envelope' }],
+  headers: {},
   components: {
     Envelope: {
       type: 'object',
@@ -83,6 +85,12 @@ const envelopeAnswers: AnswerSchemas = {
   },
 };
 
+const byteListAnswers: AnswerSchemas = {
+  schemas: [{ type: 'array', items: { type: 'string', format: 'byte' } }],
+  components: {},
+  headers: {},
+};
+
 describe('an answer of an HTTP API whose document marks a string format byte', () => {
   it('shows a Gmail message with the body of each part decoded where its bytes are text, and the rest as it came', async () => {
     const sent = messageOf(base64url(greeting), pngHeader, base64url('\u0007ring'));
@@ -98,12 +106,8 @@ describe('an answer of an HTTP API whose document marks a string format byte', (
 
   it('decodes the standard alphabet as the URL-safe one, and leaves a string of another length or of both alphabets', async () => {
     const standard = Buffer.from('é?>').toString('base64');
-    const answers: AnswerSchemas = {
-      schemas: [{ type: 'array', items: { type: 'string', format: 'byte' } }],
-      components: {},
-    };
 
-    const settled = await settledOf(Response.json([standard, 'aGVsbG8=x', 'ab+_', '']), answering, answers);
+    const settled = await settledOf(Response.json([standard, 'aGVsbG8=x', 'ab+_', '']), answering, byteListAnswers);
 
     expect(resultOf(settled)).toMatchObject({ structuredContent: ['é?>', 'aGVsbG8=x', 'ab+_', ''] });
   });

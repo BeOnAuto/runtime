@@ -4,7 +4,7 @@ import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/serv
 import { consentedAt, registeredAt, type ClientRegistration, type Consented } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 
-import type { Added } from './additions.ts';
+import { reconnected, type Added } from './additions.ts';
 import { ada, harness, operationNamed, type Harness, type HarnessOptions, loopbackPolicy } from './harness.ts';
 
 export const studioReturn = 'https://studio.on.auto/connect-return';
@@ -78,6 +78,10 @@ export function finishing(
   at?: string,
 ): Promise<Outcome<Succeeded>> {
   return h.call(operationNamed(h.operations, 'finish'), ada, { id, token, code, state, iss }, at);
+}
+
+export async function reconnectionStartedAt(h: Harness, id: string, at?: string): Promise<ConsentAt> {
+  return startedAt(h, await reconnected(h, id, at), at);
 }
 
 export async function consentedOf(h: Harness, link: Added, at?: string): Promise<Consented> {

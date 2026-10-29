@@ -39,6 +39,8 @@ function problem(status: number, detail: string): Response {
   });
 }
 
+const noteHeaders = { 'x-note-id': 'note-1', 'x-trace': 'trace-1' };
+
 const routes: ReadonlyMap<string, Route> = new Map<string, Route>([
   [
     'GET /search',
@@ -53,7 +55,9 @@ const routes: ReadonlyMap<string, Route> = new Map<string, Route>([
   ['GET /rows', (_request, url) => Response.json({ tags: url.searchParams.getAll('tag') })],
   ['GET /sessions', (request) => Response.json({ session: request.headers.get('x-session') })],
   ['GET /photo', () => new Response(pixel, { headers: { 'content-type': 'image/png' } })],
-  ['GET /notes', () => new Response('', { status: 200 })],
+  ['GET /notes', () => new Response('', { status: 200, headers: noteHeaders })],
+  ['PUT /notes', () => Response.json({ saved: true }, { headers: noteHeaders })],
+  ['POST /notes', () => new Response(null, { status: 201, headers: noteHeaders })],
 ]);
 
 function noSuchRoute(request: Readonly<Request>): Response {

@@ -22,6 +22,7 @@ export interface ClientRegistration {
   readonly challengeMethods?: readonly string[];
   readonly grantedScope?: string;
   readonly issuesRefreshTokens?: boolean;
+  readonly namesTokenType?: boolean;
   readonly publishesMetadata?: boolean;
   readonly endpointHost?: string;
   readonly takesBasicSecrets?: boolean;

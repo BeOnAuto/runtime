@@ -18,9 +18,10 @@ import { standaloneOf, translatedSchema } from './schema-translation.ts';
 export interface AnswerSchemas {
   readonly schemas: readonly Schema.Json[];
   readonly components: Readonly<Record<string, Schema.Json>>;
+  readonly headers: Readonly<Record<string, readonly string[]>>;
 }
 
-export const unschemedAnswers: AnswerSchemas = { schemas: [], components: {} };
+export const unschemedAnswers: AnswerSchemas = { schemas: [], components: {}, headers: {} };
 
 export interface Placed<A> {
   readonly value: A;
@@ -166,18 +167,67 @@ function responseAt(document: ApiDocument, written: ResponseOrReference, pointer
   return Result.isSuccess(followedResponse) ? [followedResponse.success.value] : [];
 }
 
-function answerSchemasOf(document: ApiDocument, operation: Placed<Operation>): readonly Schema.Json[] {
+type SuccessResponse = readonly [string, ApiResponse];
+
+function successResponsesOf(document: ApiDocument, operation: Placed<Operation>): readonly SuccessResponse[] {
   return Object.entries(operation.value.responses ?? {})
     .filter(([status]: readonly [string, ResponseOrReference]) => successStatus.test(status))
     .flatMap(([status, written]: readonly [string, ResponseOrReference]) =>
-      responseAt(document, written, `${operation.pointer}/responses/${status}`),
-    )
-    .flatMap(({ content = {} }) =>
-      Object.entries(content).flatMap(
-        ([mediaType, { schema }]: readonly [string, { readonly schema?: Schema.Json }]) =>
-          isJson(mediaType) && schema !== undefined ? [schema] : [],
-      ),
+      responseAt(document, written, `${operation.pointer}/responses/${status}`).map((response): SuccessResponse => [
+        status,
+        response,
+      ]),
     );
+}
+
+function answerSchemasOf(responses: readonly SuccessResponse[]): readonly Schema.Json[] {
+  return responses.flatMap(([, { content = {} }]: SuccessResponse) =>
+    Object.entries(content).flatMap(([mediaType, { schema }]: readonly [string, { readonly schema?: Schema.Json }]) =>
+      isJson(mediaType) && schema !== undefined ? [schema] : [],
+    ),
+  );
+}
+
+const headersNeverCarried: ReadonlySet<string> = new Set([
+  'authorization',
+  'content-type',
+  'proxy-authenticate',
+  'set-cookie',
+  'www-authenticate',
+]);
+
+const headerToken = /^[!#$%&'*+.^_`|~\w-]+$/u;
+
+function isCarried(name: string): boolean {
+  return headerToken.test(name) && !headersNeverCarried.has(name.toLowerCase());
+}
+
+function describedHeadersOf(document: ApiDocument, operation: Placed<Operation>): AnswerSchemas['headers'] {
+  return Object.fromEntries(
+    Object.entries(operation.value.responses ?? {})
+      .filter(([status]: readonly [string, ResponseOrReference]) => successStatus.test(status))
+      .map(([status, written]: readonly [string, ResponseOrReference]) => {
+        const [described] = responseAt(document, written, `${operation.pointer}/responses/${status}`);
+        return [status, Object.keys(described?.headers ?? {}).filter((name) => isCarried(name))];
+      }),
+  );
+}
+
+const statusRange = 'XX';
+
+export function headersCarriedBy(
+  status: number,
+  answered: Readonly<Headers>,
+  { headers }: AnswerSchemas,
+): Readonly<Record<string, string>> {
+  const written = String(status);
+  const named = headers[written] ?? headers[`${written.slice(0, 1)}${statusRange}`] ?? [];
+  return Object.fromEntries(
+    named.flatMap((name) => {
+      const value = answered.get(name);
+      return value === null ? [] : [[name, value]];
+    }),
+  );
 }
 
 export function answersOf(
@@ -185,10 +235,12 @@ export function answersOf(
   operation: Placed<Operation>,
   definitions: AnswerSchemas['components'],
 ): AnswerSchemas {
+  const responses = successResponsesOf(document, operation);
   return {
-    schemas: answerSchemasOf(document, operation).map(
+    schemas: answerSchemasOf(responses).map(
       (schema) => standaloneOf(translatedSchema(schema, version), operation.pointer).schema,
     ),
     components: definitions,
+    headers: describedHeadersOf(document, operation),
   };
 }
