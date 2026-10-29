@@ -41,13 +41,13 @@ const internalTermsTest = 'packages/operations/src/plain-language/internal-terms
 
 const reasoningReference = 'docs/engineering/reference/reasoning-format.md';
 
-const modelSessions = 'packages/prediction-onnx/src/sessions/model-sessions.ts';
-
 const providerDocuments = 'packages/providers/src/entries/documents';
 
 const googleAdsDocument = `${providerDocuments}/google-ads.openapi.json`;
 
 const analyticsDocument = `${providerDocuments}/google-analytics.openapi.json`;
+
+const sheetsDocument = `${providerDocuments}/google-sheets.openapi.json`;
 
 const allowances: readonly Allowance[] = [
   {
@@ -94,8 +94,6 @@ const allowances: readonly Allowance[] = [
     ],
   },
   { text: 'application inference profile', in: ['docs/self-host/models.md'] },
-  { text: 'InferenceSession', in: [modelSessions] },
-  { text: 'executionMode', in: [modelSessions] },
   { text: '(.execution // {})', in: ['.github/turbo/show-run-summary.sh'] },
   {
     text: 'toolSpec',
@@ -117,6 +115,31 @@ const allowances: readonly Allowance[] = [
   { text: 'A primitive filter', in: [analyticsDocument, `${providerDocuments}/google-analytics-admin.openapi.json`] },
   { text: 'inferenceClassification', in: [`${providerDocuments}/outlook.openapi.json`] },
   ...['CohortSpec', 'cohortSpec'].map((vendorText) => ({ text: vendorText, in: [analyticsDocument] })),
+  ...[
+    'ChartSpec',
+    'SlicerSpec',
+    'SortSpec',
+    'sortSpecs',
+    'sort spec',
+    'FilterSpec',
+    'filterSpecs',
+    'filter_specs',
+    'DataSourceSpec',
+    'DatasourceSpec',
+    'QuerySpec',
+    'querySpec',
+    'TableSpec',
+    'tableSpec',
+    '"spec"',
+    'OBJECT_SPEC_INVALID',
+    'ExecutionStatus',
+    'DATA_EXECUTION_',
+    'EXECUTION_NOT_FOUND',
+    'QUERY_EXECUTION_COMPLETED',
+    'data execution',
+    'an execution',
+    'execution status',
+  ].map((vendorText) => ({ text: vendorText, in: [sheetsDocument] })),
   { text: 'execution-denied', in: ['capabilities/reasoning/src/tools/final-step.test.ts'] },
   ...['primitives?', 'executions?', 'inference', 'orchestration', 'recollection'].map((term) => ({
     text: String.raw`/\b${term}\b/iu`,

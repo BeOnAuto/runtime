@@ -1,4 +1,4 @@
-import { quoted, type KeptContent, type PresentedFact, type Presenter } from '@on.auto/operations';
+import { changingEvents, quoted, type KeptContent, type PresentedFact, type Presenter } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
@@ -126,4 +126,5 @@ export const conversationCallPresenter: Presenter = {
     reading_failed: ['reading_failed'],
   },
   present: ({ type, data, context }, content) => [factOf(decodeConversationCall({ type, data, context }), content)],
+  changes: changingEvents(['telling_started', 'telling_succeeded', 'telling_failed', 'replies_read', 'reading_failed']),
 };

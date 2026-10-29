@@ -18,6 +18,7 @@ import {
 } from '../index.ts';
 import { memoryProjections, type AppendedFact, type MemoryProjections } from '../projections/memory-projections.ts';
 import { memoryRunOutcomes, type MemoryRunOutcomes } from '../run-outcomes/memory-run-outcomes.ts';
+import { memoryAppendedReader } from './memory-appended.ts';
 import { memoryRecordedReader, type MemoryRecord } from './memory-recorded.ts';
 
 export interface MemoryLedger {
@@ -145,12 +146,14 @@ export function memoryLedger(
   projections: readonly KeyedProjection[] = [],
 ): MemoryLedger {
   const log: MemoryRecord[] = [];
+  const appends = memoryAppendedReader(log);
   const kept: Kept = {
     streams: new Map(),
     appendedAt: new Map(),
     log,
     logged: (records) => {
       log.push(...records);
+      appends.appended();
     },
     outcomes: memoryRunOutcomes(runOutcomes),
     projected: memoryProjections(projections),
@@ -163,6 +166,8 @@ export function memoryLedger(
     execute: executedOn(kept),
     readRecorded: recordedReader.readRecorded,
     readRecordedEvent: recordedReader.readRecordedEvent,
+    readAppendedFacts: appends.reader.readAppendedFacts,
+    waitForAppend: appends.reader.waitForAppend,
     readRunOutcomes: kept.outcomes.readRunOutcomes,
     readProjectedRows: projected.readProjectedRows,
     countProjectedRows: projected.countProjectedRows,

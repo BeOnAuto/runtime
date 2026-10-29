@@ -1,4 +1,5 @@
-import type { Presenter } from '@on.auto/operations';
+import { runChanged, runChangedBy } from '@on.auto/definitions';
+import { changingOne, type Presenter } from '@on.auto/operations';
 import {
   RunLogEventSchema,
   type EarlierStep,
@@ -77,4 +78,5 @@ export const runPresenter: Presenter = {
     const record = { type: 'workflow_input_applied', summary: summaryOf(event), data: dataOf(event, runId) };
     return [record, ...stepFactsOf(event)];
   },
+  changes: changingOne(runChanged, ['input_applied'], runChangedBy),
 };

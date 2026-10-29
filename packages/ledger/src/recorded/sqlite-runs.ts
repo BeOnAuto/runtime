@@ -43,7 +43,7 @@ function firstMessagesOfRuns(scope: ExaminationScope, runs: RunsSelected): SQL {
         ${correlationOfMessage} AS correlation, octet_length(message_data) AS size,
         ${ofTheDefinitionAsked(runs)} AS of_the_definition
       FROM emt_messages
-      WHERE ${kindKeyOfStream} = ${`${scope.playbookKey}runs/`} AND stream_position = 1
+      WHERE ${kindKeyOfStream} = ${`${runs.playbookKey}runs/`} AND stream_position = 1
         AND partition = ${defaultPartition} AND is_archived = FALSE${bounds(scope)}${notOfTypes('message_type', runs.notBeginningWith ?? [])}
       ORDER BY global_position ${direction(scope)}
       LIMIT ${scope.examineAtMost + 1}

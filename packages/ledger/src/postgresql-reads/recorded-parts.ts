@@ -91,15 +91,17 @@ function beyond(bind: Bind, { order, after, at }: ExaminationScope): string {
 }
 
 export function bounds(bind: Bind, scope: ExaminationScope): string {
-  const { from } = scope;
+  const { from, to } = scope;
   const after = beyond(bind, scope);
-  return from === undefined ? after : `${after} AND (transaction_id, global_position) >= ${pointAt(bind, from)}`;
+  const since = from === undefined ? '' : ` AND (transaction_id, global_position) >= ${pointAt(bind, from)}`;
+  const until = to === undefined ? '' : ` AND (transaction_id, global_position) <= ${pointAt(bind, to)}`;
+  return `${after}${since}${until}`;
 }
 
 type BelowTheHorizon = (bind: Bind) => string;
 
-export async function horizonOf(query: Query, { order }: ExaminationScope): Promise<BelowTheHorizon> {
-  if (order !== 'asc') {
+export async function horizonOf(query: Query, { order, to }: ExaminationScope): Promise<BelowTheHorizon> {
+  if (order !== 'asc' || to !== undefined) {
     return () => '';
   }
   const elsewhere = await writesOpenElsewhere(query);

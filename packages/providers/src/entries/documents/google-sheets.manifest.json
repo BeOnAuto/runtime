@@ -1,0 +1,57 @@
+{
+  "type": "discovery",
+  "discovery": "https://sheets.googleapis.com/$discovery/rest?version=v4",
+  "revision": "20261021",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "sheets.spreadsheets.get",
+    "sheets.spreadsheets.values.get",
+    "sheets.spreadsheets.values.update",
+    "sheets.spreadsheets.values.append",
+    "sheets.spreadsheets.values.batchUpdate",
+    "sheets.spreadsheets.batchUpdate"
+  ],
+  "cuts": [
+    {
+      "schema": "Request",
+      "keeps": [
+        "insertDimension",
+        "appendDimension",
+        "deleteDimension",
+        "moveDimension",
+        "autoResizeDimensions",
+        "insertRange",
+        "deleteRange",
+        "mergeCells",
+        "unmergeCells",
+        "copyPaste",
+        "cutPaste",
+        "sortRange",
+        "findReplace",
+        "addSheet",
+        "duplicateSheet",
+        "deleteSheet",
+        "updateSheetProperties",
+        "updateSpreadsheetProperties"
+      ],
+      "holds": "the requests that insert, append, delete, move and resize rows and columns, insert, delete, merge, unmerge, copy, cut and sort ranges, find and replace values, add, duplicate and delete sheets, and change the properties of sheets and of the spreadsheet"
+    }
+  ],
+  "required": [
+    {
+      "method": "sheets.spreadsheets.values.update",
+      "parameters": ["valueInputOption"],
+      "because": "The description of the method says the caller must specify a valueInputOption"
+    },
+    {
+      "method": "sheets.spreadsheets.values.append",
+      "parameters": ["valueInputOption"],
+      "because": "The description of the method says the caller must specify a valueInputOption"
+    },
+    {
+      "schema": "BatchUpdateValuesRequest",
+      "properties": ["valueInputOption"],
+      "because": "The description of sheets.spreadsheets.values.batchUpdate says the caller must specify a valueInputOption"
+    }
+  ]
+}

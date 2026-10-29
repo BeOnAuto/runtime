@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PlaybookReader, PlaybookWriter, InvalidInput, NotFound, defineCommand, defineQuery } from '../index.ts';
 import {
+  playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,
   playbookBoundRecordedReader,
   playbookBoundRunOutcomesReader,
@@ -207,6 +208,7 @@ function readerOf({ service }: MemoryLedger): PlaybookReader['Service'] {
   return {
     ...service,
     ...playbookBoundRecordedReader(service, alpha),
+    ...playbookBoundAppendedFactsReader(service, alpha),
     ...playbookBoundRunOutcomesReader(service, alpha),
     ...playbookBoundProjectionReader(service, alpha),
     readContent: (sha256) => service.content.get(alpha, sha256),

@@ -2,6 +2,14 @@
 
 The contract between the prediction capability, [`@on.auto/prediction`](../../capabilities/prediction/README.md), and the model runtimes that execute the models of prediction functions, with the manifest an extension exports to provide one. It holds schemas and types, over `effect` alone, so a model runtime depends on nothing else of the runtime and the capability never learns a format's name. User documentation is [Model runtimes](../../docs/reference/model-runtimes.md); update it alongside the contract.
 
+## The package
+
+This package is the contract an implementation is built against, on npm with a version line of its own. Release-please releases it as the component `prediction-contract`, tagged `prediction-contract-v<version>`, with its own `CHANGELOG.md`, from 1.0.0, and only a commit that touches this folder raises it; the `contract-package` job of `.github/workflows/release.yml` publishes each version through npm trusted publishing and skips one already on npm. Its version is the package's and the contract's version is the integer below: a release that changes the package raises the first, and an addition to the contract raises the second. The runtime's own package carries its own copy of it, as it carries every package of the server, and its license is the repository's, Elastic-2.0.
+
+An implementation names it as a peer dependency, `"@on.auto/prediction-contract": "^1"`, imports its schemas and types, and writes into its manifest the contract's version it was built against, the integer, itself: `providedModelRuntime` writes `modelRuntimeContract` of the copy installed beside the implementation, which `^1` may resolve to a later one, so only the release's own runtimes, shipped with the release's copy, use it. Its schemas need `effect` as they run, so `effect` is a dependency of the package, and an implementation that imports only its types loads none of it. The contract's declarations use `effect`'s, which need TypeScript's `esnext.disposable` library, which a `target` of `esnext` includes, as do the types of Node, `@types/node`, which reference it.
+
+The repository imports the package's `src/index.ts`, as `exports` names it. What is published is JavaScript with declaration files, since Node does not strip types from a file under `node_modules`: `build` runs `tsc` with `tsconfig.build.json`, which writes `dist` from `src` without its tests, its imports ending in `.js` and no source maps, and `publishConfig.exports`, which pnpm writes into the published manifest, names `dist/index.d.ts` for types and `dist/index.js` for the rest. `prepublishOnly` runs `build`, so every publish, the release workflow's and one by hand, ships the `dist` it has just written.
+
 ## The point and its version
 
 `modelRuntimePoint` is the name of the point a model runtime fills, `prediction/model-runtime`. `modelRuntimeContract` is the version of the contract, an integer, 2, which `providedModelRuntime` writes into what a manifest provides, and `acceptedModelRuntimeContracts`, a `ContractRange` `{ least, most }`, the versions a runtime of this release accepts, 1 to 2, which the capability declares as its point's.
@@ -12,7 +20,7 @@ Version 2 added, by that rule: the binding `inline`, for the release's own exten
 
 ## The manifest
 
-`ExtensionManifestSchema` is the manifest an extension's main entry exports as `manifest`, an `ExtensionManifest`: its `name`, 1 to 214 characters, the package's own, its `version`, 1 to 64, and `provides`, each a `Provision` of a `point`, the `contract` the provision was built against, a whole number, and its `implementation`, which the point's own schema checks. `providedModelRuntime(runtime)` is the `ModelRuntimeProvision` of a model runtime, its point `prediction/model-runtime` and its contract this one's.
+`ExtensionManifestSchema` is the manifest an extension's main entry exports as `manifest`, an `ExtensionManifest`: its `name`, 1 to 214 characters, the package's own, its `version`, 1 to 64, and `provides`, each a `Provision` of a `point`, the `contract` the provision was built against, a whole number, and its `implementation`, which the point's own schema checks. `providedModelRuntime(runtime)` is the `ModelRuntimeProvision` of a model runtime, its point `prediction/model-runtime` and its contract the `modelRuntimeContract` of the copy of this package it is imported from, not the version a runtime was built against: it is for the release's own runtimes, `@on.auto/prediction-onnx` and `@on.auto/prediction-series`, which ship with the release's copy, and an implementation outside the repository writes its contract itself.
 
 ## A model runtime
 

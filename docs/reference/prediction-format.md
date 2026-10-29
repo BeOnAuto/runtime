@@ -13,7 +13,7 @@ Its document says:
 
 ## How a prediction function learns
 
-The function's model is a file in a format a [model runtime](model-runtimes.md) of the server executes: one of [the runtime's own models](#the-runtime-s-own-models), in the format `series`, or one a trainer fits outside the playbook, such as an ONNX file. Either way the playbook judges it. The function is the definition; it does not change when its model does. Until a version is active, the function answers from the runtime's default forecast, so it answers from the moment it is saved. A model goes through these stages:
+The function's model is a file in a format a [model runtime](model-runtimes.md) of the server executes: one of [the runtime's own models](#the-runtime-s-own-models), in the format `series`, which every server executes, or one a trainer fits outside the playbook, in `series` or in a format an extension's model runtime adds. Either way the playbook judges it. The function is the definition; it does not change when its model does. Until a version is active, the function answers from the runtime's default forecast, so it answers from the moment it is saved. A model goes through these stages:
 
 1. The playbook keeps a **dataset** for the function: one row for each series and period. It builds the rows from its history once the function is saved, or someone uploads them.
 2. A **build** is a run that asks for a new version. It writes the training rows from the dataset. It renders the **brief**, the text in the document's body that a trainer reads first.
@@ -160,7 +160,7 @@ Such a question is `{ series, given?, marks? }`, with no horizon. Its `given` ho
 - its `value`, `low` and `high` are the total from the period after the origin to that one;
 - the run's record names the enclosing period as `total_to`, such as `2026-W42`, and the run's words say the total by its end, such as "78 visits by the end of 2026-W42".
 
-The dataset and its files are the same as for horizons. The trainer fits a model of the total. [The signature](#the-signature-of-a-candidate) feeds the model the number of periods it sums, as `h`. The brief reads the enclosing period as `dataset.accumulates`.
+The dataset and its files are the same as for horizons. The trainer fits a model of the total, which is fed the number of periods it sums, as [the signature of a candidate](#the-signature-of-a-candidate) says. The brief reads the enclosing period as `dataset.accumulates`.
 
 ## The dataset
 
@@ -341,7 +341,7 @@ Of these refusals:
 - Two builds asked at the same moment are decided one after the other, and the second is refused at its claim. The rows and the brief it wrote stay kept under their digests, though no record names them.
 - The builds the server is scoring, and the playbook's open requests, are counted before the build is decided. So builds asked at the same moment may pass those two bounds, by up to their number.
 
-Otherwise the build writes the two files of [The rows a build reads](#the-rows-a-build-reads) and scores each baseline it names over the scoring rows, as [How a candidate is scored](#how-a-candidate-is-scored) does, in a model process it waits up to 30 seconds for. A candidate must beat each walked baseline, and no score is below 0. So when a walked baseline scores 0 on `evaluation.metric` wherever that metric is defined, and is defined somewhere, the build is refused `baseline_perfect` before it renders its brief. This happens when the periods held back never move: `persistence` then predicts each one exactly, and its `mase` is 0. When no series moved during the training periods, `mase`, which scales each error by that movement, scores no period held back, so no candidate could be judged against a walked baseline, and the build is refused `unscorable`. A series with nothing held back is left out, and a build whose baselines walk no series goes ahead, judged by its coverage alone; `winkler` and `quantile` judge such series. Either way, a build can be asked again once the series moves. Otherwise the build renders the brief over the two files, closes it with a section `## Candidates` that names the formats the server's model runtimes execute for the function, such as `onnx` and `series`, and asks its trainer, or, when the function names none, fits its own candidates as [What a build does without a trainer](#what-a-build-does-without-a-trainer) says:
+Otherwise the build writes the two files of [The rows a build reads](#the-rows-a-build-reads) and scores each baseline it names over the scoring rows, as [How a candidate is scored](#how-a-candidate-is-scored) does, in a model process it waits up to 30 seconds for. A candidate must beat each walked baseline, and no score is below 0. So when a walked baseline scores 0 on `evaluation.metric` wherever that metric is defined, and is defined somewhere, the build is refused `baseline_perfect` before it renders its brief. This happens when the periods held back never move: `persistence` then predicts each one exactly, and its `mase` is 0. When no series moved during the training periods, `mase`, which scales each error by that movement, scores no period held back, so no candidate could be judged against a walked baseline, and the build is refused `unscorable`. A series with nothing held back is left out, and a build whose baselines walk no series goes ahead, judged by its coverage alone; `winkler` and `quantile` judge such series. Either way, a build can be asked again once the series moves. Otherwise the build renders the brief over the two files, closes it with a section `## Candidates` that names the formats the server's model runtimes execute for the function, such as `series`, and asks its trainer, or, when the function names none, fits its own candidates as [What a build does without a trainer](#what-a-build-does-without-a-trainer) says:
 
 - With `source.to`, the default, the build is a request in the playbook's inbox. `list_interactions` lists it for its party. Its message, within 8 KiB, names the build's run id, its three routes, the formats an upload takes and the opening of the brief. Its answer is `{ candidates, recipe?, limitations? }`.
 - With `source.through`, the build starts that interaction function with the input `{ build: { run_id, function, brief_sha256, routes, formats, expires_at } }`. That function's request is the one the inbox lists, and its answer is the build's.
@@ -391,7 +391,7 @@ A trainer is whoever fits the model: a person, or any agent with an environment 
 1. Find the build. `list_interactions` with `to` set to the function's party lists its request; the party is `trainer` unless `source.to` names another. The request's `run_id` is the build's. Its message names the three routes below and how to answer. With `source.through`, the message of that function's request carries the build's `run_id` and routes; see [Sending a build through an interaction function](#sending-a-build-through-an-interaction-function).
 2. Read the brief and the training rows over the routes below, sending the key as `Authorization: Bearer <key>`.
 3. Fit a model to the rows, as the brief and the rules say.
-4. Export it in a format the brief lists, in [the signature of a candidate](#the-signature-of-a-candidate), within 64 MiB.
+4. Write it in a format the brief lists, in [the signature of a candidate](#the-signature-of-a-candidate), within 64 MiB: `series`, which every server executes, as [a recipe](#a-recipe), or a format a model runtime of the server's extensions adds.
 5. Upload each candidate, at most 8, and keep the SHA-256 each upload returns as `candidate`.
 6. Answer the request, under the `run_id` that `list_interactions` gave, through the tool `answer_interaction`, or over HTTP alone with `POST /v1/orgs/{org}/playbooks/{playbook}/runs/{run_id}/answer` and the same key. The answer is `{ "candidates": [<the SHA-256 of each>] }`, with `recipe` and `limitations` in words beside them if the trainer wrote them. Over HTTP, the body is `{ "answer": { "candidates": [...] } }`.
 
@@ -410,7 +410,7 @@ The routes are relative to `/v1/orgs/{org}/playbooks/{playbook}` and served over
 - a build that took its answer or ended is refused `conflict` with the kind `build_ended`;
 - a build of a function that names no trainer is refused `conflict` with the kind `no_trainer`.
 
-A candidate is the model's file, sent as `application/octet-stream` with its `Content-Length`, its format in the query, `?format=onnx`:
+A candidate is the model's file, sent as `application/octet-stream` with its `Content-Length`, its format in the query, such as `?format=series`:
 
 - A body without a `Content-Length` is refused with 411, and one past 64 MiB with 413, before the body is read.
 - `format`, one the brief lists, may be left out when it lists one; another is refused `invalid_input` at `/format` before the body is read.
@@ -428,26 +428,20 @@ An answer that comes through the function of `source.through` is checked the sam
 
 ### The signature of a candidate
 
-A candidate takes the target, and the features the function names, over the periods up to an origin. It returns the 10th, 50th and 90th percentiles of each step ahead. The runtime of a candidate's format checks it against what the function feeds. A candidate in the format `series` is a recipe, whose signature is the recipe itself; see [A recipe](#a-recipe). In ONNX, the release's other format, they are tensors:
+A candidate is fed, at each origin:
 
-| Tensor  | Shape       | Type    | What it is                                                                                                       |
-| ------- | ----------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| `y`     | `[1, L]`    | float32 | The target over `L` periods up to the origin; `NaN` where a period was not observed                              |
-| `x`     | `[1, L, F]` | float32 | The features over the same periods, in the document's order, present when the function names features            |
-| `given` | `[1, H, G]` | float32 | The `given` features for the `H` periods ahead, in the document's order, present when the function names `given` |
-| `h`     | `[1]`       | int64   | With `accumulates`, how many periods the total sums                                                              |
-| `q`     | `[1, H, 3]` | float32 | The output: the 10th, 50th and 90th percentile of each step ahead; with `accumulates`, `[1, 1, 3]`               |
+- the target over the periods up to the origin, `NaN` where a period was not observed;
+- the features over the same periods, in the document's order, when the function names features;
+- the `given` features for the periods ahead, in the document's order, when the function names `given`;
+- with `accumulates`, how many periods the total sums.
 
-- The leading axis of every tensor is 1 or dynamic.
-- `L` may be dynamic, and the playbook feeds the whole window. Or it is fixed, and the playbook feeds the last `L` periods, `NaN` before the first.
-- `H` is the longest horizon, fixed or dynamic. With `accumulates`, it is the periods to the end of the enclosing period, so dynamic.
-- With `accumulates`, `q` holds the one total.
-- The model takes no other input and returns no other output. Its opset is 13 or later.
-- Its IR version is one this release's ONNX Runtime loads: 13 or earlier. Recent `onnx` packages write IR version 14 by default, which is refused as `failed_to_load`. Set the model's IR version when you export it.
+It answers the 10th, 50th and 90th percentiles of each step ahead up to the longest horizon, or of the one total with `accumulates`. A candidate that takes a fixed number of periods is fed the last ones, `NaN` before the first; one that takes any number is fed the whole window.
+
+The runtime of the candidate's format reads its signature from the file, which the playbook records as given, and checks it against what the function feeds: how many features and `given` features, the longest horizon, and whether it asks for a total. A candidate the runtime cannot load is refused `failed_to_load`, and one whose signature does not take what the function feeds `wrong_signature`, each with the runtime's words. A candidate in the format `series` is a recipe, whose signature is the recipe itself; see [A recipe](#a-recipe). A model runtime an extension adds says what the signature of its format is; [Model runtimes](model-runtimes.md#the-module-of-a-binding) sets out what every runtime is fed and answers.
 
 ### How a candidate is scored
 
-The playbook walks each candidate over the scoring rows, one at a time, in a model process, by the runtime of its format. Each held-back period is an origin. At each origin, it feeds the series up to that origin and reads the steps ahead that the holdout holds. It scores each horizon over every series:
+The playbook walks each candidate over the scoring rows, one at a time, by the runtime of its format: in a model process, or in the server's own process for a runtime bound inline, as `series` is. Each held-back period is an origin. At each origin, it feeds the series up to that origin and reads the steps ahead that the holdout holds. It scores each horizon over every series:
 
 - `mase`: the mean absolute error, scaled by the error of the naive forecast over the training periods (one period to the next, or one season when a season is named);
 - `winkler`: the width of the interval from the 10th to the 90th percentile, plus ten times how far a truth falls outside it;
@@ -461,8 +455,8 @@ For each baseline, it estimates `p_better`: how sure it is that the candidate is
 A candidate is disqualified when:
 
 - no runtime of the server executes its format, as `not_loaded`;
-- its model process takes longer than 10 minutes, runs out of memory or ends;
-- it returns a tensor of another shape, a number that is not finite, or, at any origin, a 10th percentile above its 50th or a 90th below it, which a question would refuse;
+- its walk takes longer than 10 minutes or runs out of memory, or its model process ends;
+- it returns an answer of another shape, a number that is not finite, or, at any origin, a 10th percentile above its 50th or a 90th below it, which a question would refuse;
 - its interval holds fewer truths than `coverage_floor`;
 - it does not beat every walked baseline with the `confidence` asked.
 
@@ -559,7 +553,7 @@ A question is `{ series, horizon?, given?, marks? }`, or `{ series, given?, mark
 - over a projection, the dataset's rows up to the last closed period at its checkpoint;
 - over an uploaded dataset, the rows up to its last period. A model process reads them from the upload, so the server parses none of it.
 
-The active version answers it, or, before one is active, [the default forecast](#the-default-forecast). The model process that holds the version's file returns the prediction within 10 seconds; a model of the format `series` answers in the server's own process within the same 10 seconds. The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds the `version`, null for the default forecast, `default_forecast` when it answered, the `runtime`, the `coverage`, the `origin`, the `dataset_checkpoint` and the `duration_ms`. A question can also be refused; [How a run ends](#how-a-run-ends) lists each case.
+The active version answers it, or, before one is active, [the default forecast](#the-default-forecast). The model process that holds the version's file returns the prediction within 10 seconds; a model of the format `series` answers in the server's own process within the same 10 seconds. The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds the `version`, null for the default forecast, `default_forecast` when it answered, the `runtime`, the `coverage`, `decimals`, the `origin`, the `dataset_checkpoint` and the `duration_ms`. `decimals` is the most decimals a value the series observed in the window carries, at most 2: the run's words write each figure to it, so a series of whole numbers is said in whole numbers, while the output keeps every figure as the model answered it. A question can also be refused; [How a run ends](#how-a-run-ends) lists each case.
 
 For example, `{ "series": "north", "given": { "promotion": 1 } }` asks `weekly-orders` for both its horizons, and its answer shows the 8 weeks observed before them:
 
@@ -745,6 +739,6 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 ## Availability
 
-Prediction functions are available in every runtime. The runtime keeps the datasets, scores the candidates and predicts, running each model through the [model runtime](model-runtimes.md) of its format: its own models in the server's own process, and a trainer's ONNX models in model processes of the server. A trainer fits its models outside it, and the runtime fits its own. See [Functions and availability](../concepts/functions.md#availability).
+Prediction functions are available in every runtime. The runtime keeps the datasets, scores the candidates and predicts, running each model through the [model runtime](model-runtimes.md) of its format: its own models, in the format `series`, in the server's own process, and the models of a runtime an extension adds in model processes of the server. A trainer fits its models outside it, and the runtime fits its own. ONNX models are executed by the ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

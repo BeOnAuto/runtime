@@ -1,5 +1,4 @@
 import { modelRuntimePoint } from '@on.auto/prediction';
-import { manifest as onnx } from '@on.auto/prediction-onnx';
 import { manifest as series } from '@on.auto/prediction-series';
 import { describe, expect, it } from 'vitest';
 
@@ -15,20 +14,19 @@ interface Pinned {
 }
 
 describe('the extensions of the release', () => {
-  it('are loaded as the settings list one would be, last, marked as the release’s, each filling prediction/model-runtime for a format of its own', async () => {
+  it('are loaded as the settings list one would be, last, marked as the release’s, filling prediction/model-runtime for the format of the runtime’s own models', async () => {
     const loaded = await loadedExtensions(listedExtensions([], releaseExtensions), [modelRuntimePoint]);
 
-    expect(loaded.extensions).toEqual(
-      [onnx, series].map(({ name }) => ({
-        package: name,
+    expect(loaded.extensions).toEqual([
+      {
+        package: series.name,
         provenance: 'release',
-        name,
+        name: series.name,
         version: release.version,
         provides: [{ point: 'prediction/model-runtime', contract: 2 }],
-      })),
-    );
+      },
+    ]);
     expect(loaded.provided(modelRuntimePoint).map(({ name, formats }) => [name, formats])).toEqual([
-      ['onnxruntime-node', ['onnx']],
       ['series', ['series']],
     ]);
   });
@@ -50,9 +48,8 @@ describe('the extensions of the release', () => {
     );
 
     expect(pinned.map((each: Pinned) => each.directory)).toEqual([
-      expect.stringMatching(/\/packages\/prediction-onnx$/u),
       expect.stringMatching(/\/packages\/prediction-series$/u),
     ]);
-    expect(loaded.extensions.map(({ provenance }) => provenance)).toEqual(['configured', 'configured']);
+    expect(loaded.extensions.map(({ provenance }) => provenance)).toEqual(['configured']);
   });
 });

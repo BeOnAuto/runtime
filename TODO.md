@@ -33,6 +33,7 @@ Setup work that couldn't be finished yet, and why.
 ## Releases
 
 - [ ] **Add the trusted publisher of `@on.auto/runtime` on npm.** npm sets a trusted publisher in a package's settings, which exist once its first version is published, so 0.6.0 was published from a maintainer's machine. On npmjs.com, under the package's **Settings**, add GitHub Actions with the repository `BeOnAuto/runtime` and the workflow `release.yml`, so the release workflow's `package` job publishes every later version with provenance and no token.
+- [ ] **Publish `@on.auto/prediction-contract` once by hand and add its trusted publisher on npm.** `npm trust` takes only a package already on the registry, so the release workflow's `contract-package` job cannot publish its first version, `1.0.0`. Once release-please has tagged `prediction-contract-v1.0.0`, publish that version from the tag on a maintainer's machine, signed in to npm with two-factor authentication: install with `pnpm install --frozen-lockfile`, then publish with `pnpm --filter @on.auto/prediction-contract publish --no-provenance`, since provenance needs a CI provider; the package's `prepublishOnly` builds the `dist` it publishes. Then, on npmjs.com, under the package's **Settings**, add GitHub Actions with the repository `BeOnAuto/runtime` and the workflow `release.yml`, so the `contract-package` job publishes every later version with provenance and no token.
 
 ## Local databases
 

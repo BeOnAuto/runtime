@@ -74,7 +74,11 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
         return { error: new AddressOutsideBase(), observed: unobserved };
       }
       try {
-        return await settledOf(await sent(request.success, { endpoint, opening, signal }), answering);
+        return await settledOf(
+          await sent(request.success, { endpoint, opening, signal }),
+          answering,
+          operation.answers,
+        );
       } catch (error) {
         return { error, observed: unobserved };
       }

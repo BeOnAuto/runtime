@@ -263,3 +263,38 @@ describe('the parameters and the bodies an HTTP API keeps among its components',
     ]);
   });
 });
+
+describe('the answers of an operation of an HTTP API', () => {
+  it('are the JSON schemas of its successful responses, followed where a response refers to one, translated as its inputs are', () => {
+    const responses = {
+      '200': {
+        content: {
+          'application/json; charset=utf-8': { schema: { $ref: '#/components/schemas/Message' } },
+          'text/plain': { schema: { type: 'string' } },
+          'application/json+other': {},
+        },
+      },
+      '2XX': { $ref: '#/components/responses/Listed' },
+      '201': { $ref: '#/components/responses/Absent' },
+      '204': {},
+      '404': { content: { 'application/json': { schema: { type: 'object' } } } },
+      default: { content: { 'application/json': { schema: { type: 'object' } } } },
+    };
+    const listed = { type: 'array', items: { $ref: '#/components/schemas/Message' } };
+    const components = {
+      schemas: { Message: { type: 'object', properties: { raw: { type: 'string', format: 'byte', nullable: true } } } },
+      responses: { Listed: { content: { 'application/problem+json': { schema: listed } } } },
+    };
+    const document = {
+      ...documentOf({ '/messages/{id}': { get: { operationId: 'getMessage', responses } } }, { components }),
+      openapi: '3.0.3',
+    };
+
+    const [operation] = toolsOf(document).operations;
+
+    expect(operation?.answers).toEqual({
+      schemas: [{ $ref: '#/$defs/Message' }, { type: 'array', items: { $ref: '#/$defs/Message' } }],
+      components: { Message: { type: 'object', properties: { raw: { type: ['string', 'null'], format: 'byte' } } } },
+    });
+  });
+});

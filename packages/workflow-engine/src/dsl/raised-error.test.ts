@@ -1,3 +1,4 @@
+import { problemTypeOf } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { callErrorOf, errorAsJson, errorType, reasonOfStatus, settlementOf } from './raised-error.ts';
@@ -231,6 +232,16 @@ describe('the settlement of a workflow that ended otherwise', () => {
         kind: 'raised',
         error: { type: errorType('runtime'), status: 409, instance: '/', kind: 'stalled' },
       }),
+      settlementOf({
+        kind: 'raised',
+        error: {
+          type: problemTypeOf('cursor_not_held'),
+          status: 422,
+          instance: '/',
+          title: 'No',
+          kind: 'cursor_not_held',
+        },
+      }),
     ]).toEqual([
       { status: 'rejected', reason: 'unavailable', detail: 'No.' },
       { status: 'rejected', reason: 'unavailable', detail: 'No.' },
@@ -239,6 +250,7 @@ describe('the settlement of a workflow that ended otherwise', () => {
         reason: 'invalid_input',
         detail: 'https://open-workflow-specification.org/spec/1.0.0/errors/runtime.',
       },
+      { status: 'rejected', reason: 'invalid_input', detail: 'No.', kind: 'cursor_not_held' },
     ]);
   });
 });

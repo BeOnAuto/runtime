@@ -1,4 +1,4 @@
-import type { Presenter } from '@on.auto/operations';
+import { changingEvents, type Presenter } from '@on.auto/operations';
 
 import {
   ReactionRefusedSchema,
@@ -22,4 +22,5 @@ export const reactionRefusedPresenter: Presenter = eventPresenter<RecordedReacti
   eventSchema: ReactionRefusedSchema,
   types: ['reaction_refused'],
   account: accountOf,
+  changes: changingEvents(['reaction_refused']),
 });

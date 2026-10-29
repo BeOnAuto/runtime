@@ -81,7 +81,7 @@ function parametersAsked(
   return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
 }
 
-async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, registered: boolean) {
+async function consentOf({ name, placeholders, issuer, scope, vendor }: WayOfConsent, registered: boolean) {
   const theVendor = required(vendor);
   const fake = await servedAsTheVendor(theVendor);
   closing.push(fake.close);
@@ -91,7 +91,7 @@ async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, r
   });
   const { asked, finished } = await consentedAtTheVendor(
     h,
-    { provider: name, placeholders },
+    { provider: name, placeholders, scope },
     { fake, vendor: theVendor },
   );
   const facts = await h.facts();
@@ -144,6 +144,7 @@ const providersTakingConsent = [
   'google-analytics',
   'google-analytics-admin',
   'google-docs',
+  'google-drive',
   'google-drive',
   'google-search-console',
   'google-sheets',

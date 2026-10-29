@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.45.0](https://github.com/BeOnAuto/runtime/compare/v0.44.0...v0.45.0) (2026-10-29)
+
+
+### Features
+
+* **providers:** the Google Workspace providers connect by their API documents ([#409](https://github.com/BeOnAuto/runtime/issues/409)) ([85cf279](https://github.com/BeOnAuto/runtime/commit/85cf2795392be4bb639ac9e6b07d950095956187))
+
+## [0.44.0](https://github.com/BeOnAuto/runtime/compare/v0.43.1...v0.44.0) (2026-10-29)
+
+
+### Features
+
+* **providers:** google-drive offers a second way that reads the whole Drive ([#408](https://github.com/BeOnAuto/runtime/issues/408)) ([957fb09](https://github.com/BeOnAuto/runtime/commit/957fb09ee9761c01067e1ab9116549938e1ade65))
+
+## [0.43.1](https://github.com/BeOnAuto/runtime/compare/v0.43.0...v0.43.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **meter:** plain words for the free rate and credits, with when the limit lifts ([#405](https://github.com/BeOnAuto/runtime/issues/405)) ([c9c0844](https://github.com/BeOnAuto/runtime/commit/c9c0844455d2ba7dd1e97434d74f862c39f0fdd2))
+
 ## [0.43.0](https://github.com/BeOnAuto/runtime/compare/v0.42.1...v0.43.0) (2026-10-29)
 
 

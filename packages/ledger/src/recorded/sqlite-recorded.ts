@@ -5,6 +5,8 @@ import { sqliteAppended } from '../appended/sqlite-appended.ts';
 import { sqliteContentOn } from '../content/content-store.ts';
 import { sqliteDefinitionStreams } from '../definitions/sqlite-definition-streams.ts';
 import type {
+  AppendListeners,
+  AppendWaitsStore,
   DefinitionStreamsStore,
   LedgerStore,
   RecordedStore,
@@ -12,6 +14,8 @@ import type {
   TransactionalPool,
 } from '../event-store.ts';
 import {
+  appendedFactsOver,
+  nowOf,
   pointKey,
   recordOf,
   recordedReadingOver,
@@ -50,11 +54,11 @@ function recordsWhere(where: SQL, scope: ExaminationScope): SQL {
 
 function recordsIn(selected: RecordsSelected, scope: ExaminationScope): SQL {
   if (selected.kind === 'playbook') {
-    return recordsWhere(SQL`${playbookKeyOfStream} = ${scope.playbookKey}`, scope);
+    return recordsWhere(SQL`${playbookKeyOfStream} = ${selected.playbookKey}`, scope);
   }
   if (selected.kind === 'correlated') {
     return recordsWhere(
-      SQL`${playbookKeyOfStream} = ${scope.playbookKey} AND ${correlationOfMessage} = ${selected.correlation}`,
+      SQL`${playbookKeyOfStream} = ${selected.playbookKey} AND ${correlationOfMessage} = ${selected.correlation}`,
       scope,
     );
   }
@@ -135,23 +139,34 @@ function recordWithId(execute: SQLExecutor): RecordedStore['readRecordedEvent'] 
   };
 }
 
-export function sqliteRecordedStore(execute: SQLExecutor): RecordedStore & DefinitionStreamsStore & StreamAgesStore {
+export function sqliteRecordedStore(
+  execute: SQLExecutor,
+  listeners: AppendListeners = {},
+): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore {
+  const appended = sqliteAppended(execute, listeners);
+  const statements: RecordedStatements = {
+    firstPointSince: firstPointSince(execute),
+    examineRecords: examineRecords(execute),
+    examineRuns: examineRuns(execute),
+    dataAt: dataAt(execute),
+  };
   return {
     ...sqliteDefinitionStreams(execute),
-    ...sqliteAppended(execute),
+    ...appended,
     pointLength: 1,
     readRecordedEvent: recordWithId(execute),
-    readRecorded: recordedReadingOver({
-      firstPointSince: firstPointSince(execute),
-      examineRecords: examineRecords(execute),
-      examineRuns: examineRuns(execute),
-      dataAt: dataAt(execute),
-    }),
+    readRecorded: recordedReadingOver(statements),
+    readAppendedFacts: appendedFactsOver(statements, nowOf(appended.readAppended)),
   };
 }
 
 export function sqliteRecordedStoreOn(
   pool: TransactionalPool<SQLExecutor>,
-): RecordedStore & DefinitionStreamsStore & StreamAgesStore & Pick<LedgerStore, 'content' | 'sweepContent'> {
-  return { ...sqliteRecordedStore(pool.execute), ...sqliteContentOn(pool) };
+  listeners: AppendListeners,
+): RecordedStore &
+  DefinitionStreamsStore &
+  StreamAgesStore &
+  AppendWaitsStore &
+  Pick<LedgerStore, 'content' | 'sweepContent'> {
+  return { ...sqliteRecordedStore(pool.execute, listeners), ...sqliteContentOn(pool) };
 }

@@ -8,7 +8,7 @@ import type { SpawnedServer } from '../testing/processes/spawned-server.ts';
 import { requestTo, settledOver, workflowProcess } from '../testing/processes/workflow-process.ts';
 import { cacheBeside, temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { runIdIn } from '../testing/servers/workflow-server.ts';
-import { candidateFile, digestOf, visits } from './build-calls.ts';
+import { candidateBytes, digestOf, visits } from './build-calls.ts';
 
 const alpha = '/v1/orgs/acme/playbooks/alpha';
 
@@ -43,7 +43,7 @@ describe('a build asked of a server that does not hold the lease of the due work
     const standby = workflowProcess(file, { PREDICTION_CACHE_DIR: caches.standby });
     const port = await standby.port;
     await requestTo(port, 'POST', '', { playbook: 'alpha', name: 'Alpha' });
-    const candidate = candidateFile('visits-mean');
+    const candidate = candidateBytes('visits-mean');
 
     const kept = await put(port, `/datasets/${visits.sha256}`, 'text/csv', visits.text);
     await requestTo(port, 'POST', '/alpha/definitions/prediction', {
@@ -55,7 +55,7 @@ describe('a build asked of a server that does not hold the lease of the due work
     );
     const uploaded = await put(
       port,
-      `/runs/${build}/build/candidates?format=onnx`,
+      `/runs/${build}/build/candidates?format=series`,
       'application/octet-stream',
       candidate,
     );
@@ -69,7 +69,7 @@ describe('a build asked of a server that does not hold the lease of the due work
     expect(await settledOver(holding, `/alpha/runs/${build}`)).toMatchObject({ status: 'succeeded' });
     expect(
       [caches.standby, caches.holder].map((cache) =>
-        existsSync(join(cache, 'models', digestOf(candidate), 'model.onnx')),
+        existsSync(join(cache, 'models', digestOf(candidate), 'model.series')),
       ),
     ).toEqual([true, true]);
     expect([await stopped(standby), await stopped(holder)]).toEqual([0, 0]);

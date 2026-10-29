@@ -38,7 +38,7 @@ const microsoftGraph = 'https://graph.microsoft.com/v1.0';
 
 const googleScopes = 'https://www.googleapis.com/auth/';
 
-const restrictedByGoogle = ['gmail.readonly'];
+const restrictedByGoogle = ['drive.readonly', 'gmail.readonly'];
 
 const googleProviders = [
   'campaign-manager-360',
@@ -58,6 +58,8 @@ const googleProviders = [
   'youtube-analytics',
   'youtube-management',
 ];
+
+const googleWaysOfConsent = [...googleProviders, 'google-drive'].toSorted();
 
 const microsoftAmazonAndAdobe = [
   'adobe-analytics',
@@ -108,15 +110,15 @@ const addressesOfTheShipped = [
   ['display-video-360', 'https://displayvideo.googleapis.com'],
   ['display-video-360-reports', 'https://doubleclickbidmanager.googleapis.com/v2'],
   ['github', 'https://api.githubcopilot.com/mcp/'],
-  ['gmail', 'https://gmailmcp.googleapis.com/mcp/v1'],
+  ['gmail', 'https://gmail.googleapis.com'],
   ['google-ads', 'https://googleads.googleapis.com'],
   ['google-analytics', 'https://analyticsdata.googleapis.com'],
   ['google-analytics-admin', 'https://analyticsadmin.googleapis.com'],
-  ['google-docs', 'https://docsmcp.googleapis.com/mcp/v1'],
-  ['google-drive', 'https://drivemcp.googleapis.com/mcp/v1'],
+  ['google-docs', 'https://docs.googleapis.com'],
+  ['google-drive', 'https://www.googleapis.com/drive/v3'],
   ['google-search-console', 'https://searchconsole.googleapis.com'],
-  ['google-sheets', 'https://sheetsmcp.googleapis.com/mcp/v1'],
-  ['google-slides', 'https://slidesmcp.googleapis.com/mcp/v1'],
+  ['google-sheets', 'https://sheets.googleapis.com'],
+  ['google-slides', 'https://slides.googleapis.com'],
   ['hubspot', 'https://mcp.hubspot.com'],
   ['linear', 'https://mcp.linear.app/mcp'],
   ['microsoft-advertising', 'https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta'],
@@ -128,7 +130,7 @@ const addressesOfTheShipped = [
   ['profound', 'https://mcp.tryprofound.com/mcp'],
   ['search-ads-360', 'https://searchads360.googleapis.com'],
   ['slack', 'https://mcp.slack.com/mcp'],
-  ['slack-api', 'https://slack.com/api'],
+  ['slack-bot', 'https://slack.com/api'],
   ['stripe', 'https://mcp.stripe.com'],
   ['work-iq', 'https://workiq.svc.cloud.microsoft/mcp'],
   ['youtube', 'https://youtube.googleapis.com'],
@@ -154,7 +156,7 @@ describe('the shipped providers', () => {
         'posthog',
         'profound',
         'slack',
-        'slack-api',
+        'slack-bot',
         'stripe',
         'zoom',
       ].toSorted(),
@@ -200,7 +202,7 @@ describe('the ways of the shipped providers', () => {
       ['google-analytics', ['authorization'], []],
       ['google-analytics-admin', ['authorization'], []],
       ['google-docs', ['authorization'], []],
-      ['google-drive', ['authorization'], []],
+      ['google-drive', ['authorization', 'authorization'], []],
       ['google-search-console', ['authorization'], []],
       ['google-sheets', ['authorization'], []],
       ['google-slides', ['authorization'], []],
@@ -215,7 +217,7 @@ describe('the ways of the shipped providers', () => {
       ['profound', ['authorization', 'secret'], []],
       ['search-ads-360', ['authorization'], []],
       ['slack', ['authorization'], []],
-      ['slack-api', ['secret'], []],
+      ['slack-bot', ['secret'], []],
       ['stripe', ['authorization'], []],
       ['work-iq', ['authorization'], []],
       ['youtube', ['authorization'], []],
@@ -249,11 +251,11 @@ describe('the servers of the shipped providers', () => {
 });
 
 describe('the shipped providers of Google', () => {
-  it('ask Google for an offline access and a consent prompt, through a client whoever runs the runtime registers', () => {
+  it('ask Google, in every way of consent, for an offline access and a consent prompt, through a client whoever runs the runtime registers', () => {
     const atGoogle = shipped.providers.filter((provider) => signsInAtGoogle(provider));
 
     expect(atGoogle.flatMap((provider) => waysOfConsentOf(provider))).toEqual(
-      googleProviders.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
+      googleWaysOfConsent.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
     );
   });
 
@@ -275,7 +277,7 @@ describe('the shipped providers of Google', () => {
       ['google-analytics', []],
       ['google-analytics-admin', []],
       ['google-docs', []],
-      ['google-drive', []],
+      ['google-drive', ['drive.readonly']],
       ['google-search-console', []],
       ['google-sheets', []],
       ['google-slides', []],

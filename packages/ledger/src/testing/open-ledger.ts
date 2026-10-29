@@ -15,6 +15,7 @@ export interface OpenConnection extends OpenLedger {
 
 export interface OpenChores extends OpenLedger {
   readonly sweptAt: (now: number) => Promise<number>;
+  readonly waitsEnded: () => Promise<void>;
 }
 
 export async function openLedgerWith(layer: Layer.Layer<Ledger>): Promise<OpenLedger> {
@@ -34,7 +35,12 @@ export async function openConnectionWith(layer: Layer.Layer<Ledger | LedgerConne
 export async function openChoresWith(layer: Layer.Layer<Ledger | LedgerChores>): Promise<OpenChores> {
   const runtime = ManagedRuntime.make(layer);
   const [ledger, chores] = await runtime.runPromise(Effect.all([Effect.service(Ledger), Effect.service(LedgerChores)]));
-  return { ledger, sweptAt: (now) => runtime.runPromise(chores.sweepOrphans(now)), dispose: () => runtime.dispose() };
+  return {
+    ledger,
+    sweptAt: (now) => runtime.runPromise(chores.sweepOrphans(now)),
+    waitsEnded: () => runtime.runPromise(chores.endWaits),
+    dispose: () => runtime.dispose(),
+  };
 }
 
 export function outcomeOf<A, E>(effect: Effect.Effect<A, E>): Promise<Result.Result<A, E>> {

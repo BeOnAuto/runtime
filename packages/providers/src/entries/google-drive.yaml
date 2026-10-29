@@ -1,9 +1,9 @@
 name: google-drive
 title: Google Drive
-description: Search and list the Google Drive files the person opens with Auto or Auto creates, not all of their Drive, read their metadata, sharing and content, download them, and create and copy files, through Google's Drive MCP server.
-website: https://developers.google.com/workspace/drive/api/guides/configure-mcp-server
-type: mcp
-url: https://drivemcp.googleapis.com/mcp/v1
+description: Search and list Google Drive files, read their metadata and sharing, export Docs, Sheets and Slides files as text, and create empty files and copy files. The first way reaches only files Auto creates; the second reads every file, through drive.readonly, which Google restricts, and creates none.
+website: https://developers.google.com/workspace/drive/api/reference/rest/v3
+type: openapi
+document: documents/google-drive.openapi.json
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
@@ -15,3 +15,13 @@ credentials:
       prompt: consent
     clients: [registered]
     description: Sign in to Google and allow Google Drive.
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/drive.readonly
+    says:
+      https://www.googleapis.com/auth/drive.readonly: See and download every file of the person's Google Drive.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow all of Google Drive to be read.

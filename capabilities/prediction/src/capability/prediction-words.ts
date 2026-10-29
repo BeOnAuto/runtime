@@ -2,7 +2,7 @@ import { outputInWords } from '@on.auto/definitions';
 import { listed } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
-import { figure } from './figures.ts';
+import { mostObservedDecimals, observedFigure } from './figures.ts';
 
 const PredictedPointSchema = Schema.Struct({
   at: Schema.String,
@@ -27,6 +27,7 @@ const RecordSchema = Schema.Struct({
   version: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   default_forecast: Schema.optionalKey(Schema.Boolean),
   total_to: Schema.optionalKey(Schema.String),
+  decimals: Schema.optionalKey(Schema.Int),
 });
 
 const BuildSchema = Schema.Struct({
@@ -47,16 +48,17 @@ type PredictedPoint = typeof PredictedPointSchema.Type;
 
 type Recorded = typeof RecordSchema.Type;
 
-function rangeWords({ low, high }: PredictedPoint, unit: string): string {
-  return `(${figure(low)} to ${figure(high)} ${unit})`;
+function rangeWords({ low, high }: PredictedPoint, unit: string, decimals: number): string {
+  return `(${observedFigure(low, decimals)} to ${observedFigure(high, decimals)} ${unit})`;
 }
 
-function pointWords(point: PredictedPoint, unit: string): string {
-  return `${figure(point.value)} ${unit} in ${point.at} ${rangeWords(point, unit)}`;
+function pointWords(point: PredictedPoint, unit: string, decimals: number): string {
+  return `${observedFigure(point.value, decimals)} ${unit} in ${point.at} ${rangeWords(point, unit, decimals)}`;
 }
 
-function totalWords(point: PredictedPoint, unit: string, { total_to: to }: Recorded): string {
-  return `${figure(point.value)} ${unit} by the end of ${to ?? point.at} ${rangeWords(point, unit)}`;
+function totalWords(point: PredictedPoint, unit: string, recorded: Recorded, decimals: number): string {
+  const to = recorded.total_to ?? point.at;
+  return `${observedFigure(point.value, decimals)} ${unit} by the end of ${to} ${rangeWords(point, unit, decimals)}`;
 }
 
 function versionWords({ version, default_forecast: byDefault }: Recorded): string {
@@ -68,9 +70,12 @@ function versionWords({ version, default_forecast: byDefault }: Recorded): strin
 
 function predictionWords({ unit, origin, lines }: typeof PredictionSchema.Type, record: unknown): string {
   const [, { name, points }] = lines;
-  const recorded = Option.getOrElse(decodeRecord(record), () => ({}));
+  const recorded = Option.getOrElse(decodeRecord(record), (): Recorded => ({}));
+  const decimals = recorded.decimals ?? mostObservedDecimals;
   const said =
-    name === 'total' ? totalWords(points[0], unit, recorded) : listed(points.map((point) => pointWords(point, unit)));
+    name === 'total'
+      ? totalWords(points[0], unit, recorded, decimals)
+      : listed(points.map((point) => pointWords(point, unit, decimals)));
   const each = points.length === 1 ? 'its range holding' : 'each range holding';
   return `From ${origin}, it predicts ${said}, ${each} the truth eight times in ten${versionWords(recorded)}.`;
 }

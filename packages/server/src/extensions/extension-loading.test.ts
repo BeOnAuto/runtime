@@ -86,9 +86,9 @@ describe('the extensions a runtime loads', () => {
     const { packages } = installed([
       {
         name: '@acme/models',
-        module: manifestSource('@acme/models', [provisionSource('acme-runtime', ['acme', 'onnx'])]),
+        module: manifestSource('@acme/models', [provisionSource('acme-runtime', ['acme', 'graph'])]),
       },
-      { name: 'other-models', module: manifestSource('other-models', [provisionSource('other-runtime', ['onnx'])]) },
+      { name: 'other-models', module: manifestSource('other-models', [provisionSource('other-runtime', ['graph'])]) },
     ]);
 
     const loaded = await loadedExtensions(configured('@acme/models', 'other-models'), points, packages);
@@ -110,20 +110,20 @@ describe('the extensions a runtime loads', () => {
       },
     ]);
     expect(loaded.provided(modelRuntimePoint).map(({ name, formats }) => [name, formats])).toEqual([
-      ['acme-runtime', ['acme', 'onnx']],
-      ['other-runtime', ['onnx']],
+      ['acme-runtime', ['acme', 'graph']],
+      ['other-runtime', ['graph']],
     ]);
   });
 
   it('list the packages the settings name first, then those of the release that the settings do not name', () => {
     expect(
       listedExtensions(
-        [{ package: '@acme/models' }, { package: '@on.auto/prediction-onnx', integrity: 'sha512-x' }],
-        [{ package: '@on.auto/prediction-onnx' }, { package: '@on.auto/other' }],
+        [{ package: '@acme/models' }, { package: '@on.auto/prediction-series', integrity: 'sha512-x' }],
+        [{ package: '@on.auto/prediction-series' }, { package: '@on.auto/other' }],
       ),
     ).toEqual([
       { package: '@acme/models', provenance: 'configured', ofTheRelease: false },
-      { package: '@on.auto/prediction-onnx', integrity: 'sha512-x', provenance: 'configured', ofTheRelease: true },
+      { package: '@on.auto/prediction-series', integrity: 'sha512-x', provenance: 'configured', ofTheRelease: true },
       { package: '@on.auto/other', provenance: 'release', ofTheRelease: true },
     ]);
   });

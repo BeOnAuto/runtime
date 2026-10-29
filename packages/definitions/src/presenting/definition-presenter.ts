@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import type { Presenter } from '@on.auto/operations';
+import { changingOne, type Presenter } from '@on.auto/operations';
 
 import { firstCharacters } from '../plain-language/characters.ts';
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
@@ -11,8 +11,15 @@ import {
   type RecordedDefinitionEvent,
 } from '../registry/definition-events.ts';
 import { jsonBytesOf } from '../runs/recorded-size.ts';
+import { definitionChanged, definitionChangedBy } from './changed-resources.ts';
 import { mostDescriptionCharacters } from './event-data.ts';
 import { eventPresenter, type Account } from './event-presenter.ts';
+
+const definitionEventTypes: readonly RecordedDefinitionEvent['type'][] = [
+  'definition_created',
+  'definition_updated',
+  'definition_retired',
+];
 
 function contentShown({
   source,
@@ -50,7 +57,8 @@ export function definitionPresenter(words: DefinitionWords): Presenter {
   return eventPresenter<RecordedDefinitionEvent>({
     streamKind: 'definitions',
     eventSchema: DefinitionEventSchema,
-    types: ['definition_created', 'definition_updated', 'definition_retired'],
+    types: definitionEventTypes,
     account: (event, definitionType) => accountOf(words, event, definitionType),
+    changes: changingOne(definitionChanged, definitionEventTypes, definitionChangedBy),
   });
 }

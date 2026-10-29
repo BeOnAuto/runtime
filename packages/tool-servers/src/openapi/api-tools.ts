@@ -12,7 +12,16 @@ import {
   type PathItem,
   type ReadDocument,
 } from './api-document.ts';
-import { bodyOf, collected, parametersOf, type BodyOf, type JsonBody, type Placed } from './api-parameters.ts';
+import {
+  answersOf,
+  bodyOf,
+  collected,
+  parametersOf,
+  type AnswerSchemas,
+  type BodyOf,
+  type JsonBody,
+  type Placed,
+} from './api-parameters.ts';
 import { keepsItsSegments } from './api-requests.ts';
 import { documentBounds } from './document-reading.ts';
 import { bytesOf, componentsOf, inputSchemaOf, oversizedBecause, type Components } from './input-schemas.ts';
@@ -39,6 +48,7 @@ export interface ApiOperation {
   readonly inputs: readonly ApiInput[];
   readonly body: Pick<JsonBody, 'mediaType' | 'required'> | null;
   readonly credentials: readonly Placement[];
+  readonly answers: AnswerSchemas;
 }
 
 export interface LeftOutOperation {
@@ -74,10 +84,9 @@ interface Context {
   readonly presented: Presented;
 }
 
-interface Sent {
+interface Sent extends Pick<ApiOperation, 'credentials' | 'answers'> {
   readonly parameters: readonly Placed<Parameter>[];
   readonly body: BodyOf;
-  readonly credentials: readonly Placement[];
 }
 
 const outsideToolNames = /[^A-Za-z0-9_.-]/gu;
@@ -141,7 +150,8 @@ function namedOperation({ method, path, operation }: Located): string {
   return given === undefined ? route : `${given} (${route})`;
 }
 
-function offeredOf(located: Located, inputSchema: Schema.JsonObject, { parameters, body, credentials }: Sent): Offered {
+function offeredOf(located: Located, inputSchema: Schema.JsonObject, sent: Sent): Offered {
+  const { parameters, body, credentials, answers } = sent;
   const description = descriptionOf(located.operation.value);
   const tool: ListedTool = {
     name: toolNameOf(located),
@@ -157,6 +167,7 @@ function offeredOf(located: Located, inputSchema: Schema.JsonObject, { parameter
       inputs: inputsOf(parameters),
       body: body.kind === 'json' ? { mediaType: body.body.mediaType, required: body.body.required } : null,
       credentials,
+      answers,
     },
     pointer: located.operation.pointer,
   };
@@ -188,7 +199,8 @@ function derivedAt(read: ReadDocument, { components, presented }: Context, locat
   if (requirement.kind === 'unmet') {
     return Result.succeed(leftOut(located, requirement.because));
   }
-  const sent: Sent = { parameters: parameters.success, body: body.success, credentials: requirement.placements };
+  const answers = answersOf(read, located.operation, components.definitions);
+  const sent = { parameters: parameters.success, body: body.success, credentials: requirement.placements, answers };
   return Result.map(inputSchemaOf(read.version, components, parameters.success, body.success), (inputSchema) => {
     const oversized = oversizedBecause(inputSchema);
     return oversized === undefined

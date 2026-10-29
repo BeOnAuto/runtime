@@ -27,6 +27,7 @@ function storeHolding(record: StoredRecord): RecordedStore {
     pointLength: 1,
     readRecorded: () => Promise.resolve({ records: [] }),
     readAppended: () => Promise.resolve({ streams: [], through: ['21'], more: false }),
+    readAppendedFacts: () => Promise.resolve({ held: false }),
     readRecordedEvent: (_playbookKey, id) => Promise.resolve(id === record.id ? record : undefined),
   };
 }

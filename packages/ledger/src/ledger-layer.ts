@@ -43,7 +43,12 @@ export function ledgerLayerOver(
       return Context.make(Ledger, ledger).pipe(
         Context.add(LedgerConnection, opened.connection),
         Context.add(LedgerLog, store.log),
-        Context.add(LedgerChores, { sweepOrphans: (now: number) => sweeping.withPermit(orphansSwept(now)) }),
+        Context.add(LedgerChores, {
+          sweepOrphans: (now: number) => sweeping.withPermit(orphansSwept(now)),
+          endWaits: Effect.sync(() => {
+            store.endWaits();
+          }),
+        }),
       );
     }),
   );

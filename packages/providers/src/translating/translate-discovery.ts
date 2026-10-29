@@ -11,6 +11,7 @@ import {
   type Json,
   type JsonObject,
 } from './discovery-document.ts';
+import { discoveryParametersChanged, type ParameterChanges } from './discovery-parameters.ts';
 import {
   authorizationServerOf,
   requirementsOf,
@@ -168,11 +169,16 @@ function requestBodyOf({ request }: DiscoveryMethod): { readonly requestBody?: J
   return request === undefined ? {} : { requestBody: { required: true, content: jsonContentOf(request.$ref) } };
 }
 
-function responsesOf({ response }: DiscoveryMethod): JsonObject {
+function unnamedAnswerOf({ supportsMediaDownload }: DiscoveryMethod): string {
+  return supportsMediaDownload === true ? 'The media the method downloads' : 'An empty body';
+}
+
+function responsesOf(method: DiscoveryMethod): JsonObject {
+  const { response } = method;
   return {
     '2XX':
       response === undefined
-        ? { description: 'An empty body' }
+        ? { description: unnamedAnswerOf(method) }
         : { description: response.$ref, content: jsonContentOf(response.$ref) },
   };
 }
@@ -262,7 +268,7 @@ export function curatedDocumentOf(
   };
 }
 
-export interface DiscoveryTranslation {
+export interface DiscoveryTranslation extends ParameterChanges {
   readonly methods: readonly string[];
   readonly cuts?: readonly Cut[];
 }
@@ -275,9 +281,10 @@ export interface TranslatedDiscovery {
 export function translatedDiscoveryOf(
   read: unknown,
   metadata: unknown,
-  { methods, cuts = [] }: DiscoveryTranslation,
+  { methods, cuts = [], ...changes }: DiscoveryTranslation,
 ): TranslatedDiscovery {
   const discovery = discoveryDocumentOf(read);
-  const document = curatedDocumentOf(discoveryCut(discovery, cuts), authorizationServerOf(metadata), methods);
+  const prepared = discoveryParametersChanged(discoveryCut(discovery, cuts), changes);
+  const document = curatedDocumentOf(prepared, authorizationServerOf(metadata), methods);
   return { document, revision: discovery.revision };
 }

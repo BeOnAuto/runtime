@@ -1,6 +1,7 @@
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { changingNothing } from '../changes/change-naming.ts';
 import { cursorOfParts, cursorWithin } from './cursor-parts.ts';
 import { eventsPageOf, type EventPaging, type EventsPage } from './event-paging.ts';
 import { nothingKept } from './kept-content.ts';
@@ -47,7 +48,12 @@ function pagingOf(paging: Omit<EventPaging, 'showing'>): EventPaging {
 }
 
 const presentation = presentationOf([
-  { streamKind: 'run-logs', publicNames: { moved: ['moved', 'stepped'] }, present: eventsOf },
+  {
+    streamKind: 'run-logs',
+    publicNames: { moved: ['moved', 'stepped'] },
+    present: eventsOf,
+    changes: changingNothing(['moved']),
+  },
 ]);
 
 function pageOf(records: readonly RecordedEvent[], nextCursor: string | null = null): RecordedPage {

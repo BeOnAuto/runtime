@@ -4,7 +4,13 @@ import { describe, onTestFinished } from 'vitest';
 import { sqliteLayout, sqliteLedgerOpened } from './index.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
 import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
-import { keptSecretsBehaviour, ledgerBehaviour, logBehaviour, type LedgerEntry } from './testing/index.ts';
+import {
+  appendedFactsOnStoresBehaviour,
+  keptSecretsBehaviour,
+  ledgerBehaviour,
+  logBehaviour,
+  type LedgerEntry,
+} from './testing/index.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
 
 const openedOn: LedgerEntry['openedOn'] = (fileName) =>
@@ -40,5 +46,6 @@ const onSQLite: LedgerEntry = {
 describe('The ledger on SQLite', () => {
   ledgerBehaviour(onSQLite);
   logBehaviour(onSQLite);
+  appendedFactsOnStoresBehaviour(onSQLite);
   keptSecretsBehaviour({ ...onSQLite, secretRowsOn: (fileName) => sqliteSecretRows({ fileName }) });
 });

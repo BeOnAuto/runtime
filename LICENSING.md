@@ -4,6 +4,10 @@ Auto Runtime is **source-available** under the [Elastic License 2.0](LICENSE) (E
 
 This page explains the license in plain language. If anything here conflicts with [LICENSE](LICENSE), the license wins.
 
+## What the public edition includes
+
+This repository, the npm package `@on.auto/runtime` and the image `onauto/runtime` are the public edition of Auto Runtime, and everything in them is under ELv2. Its prediction functions execute the runtime's own models, and the models of any model runtime an operator installs and lists as an extension. An extension built outside this repository carries its own license. The first licensed separately is the ONNX model runtime, `@on.auto/prediction-onnx`, which executes ONNX models and is not part of this repository.
+
 ## What you can do for free
 
 - Read, build and modify the source.

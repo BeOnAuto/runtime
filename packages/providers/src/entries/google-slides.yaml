@@ -1,15 +1,14 @@
 name: google-slides
 title: Google Slides
-description: Read Google Slides presentations and update them, through Google's Slides MCP server.
-website: https://developers.google.com/workspace/slides/api/guides/configure-mcp-server
-type: mcp
-url: https://slidesmcp.googleapis.com/mcp/v1
+description: Read Google Slides presentations and update them.
+website: https://developers.google.com/workspace/slides/api/reference/rest
+type: openapi
+document: documents/google-slides.openapi.json
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/presentations.readonly https://www.googleapis.com/auth/presentations
+    scope: https://www.googleapis.com/auth/presentations.readonly https://www.googleapis.com/auth/presentations
     says:
-      https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
       https://www.googleapis.com/auth/presentations.readonly: See all Google Slides presentations.
       https://www.googleapis.com/auth/presentations: See, change, create and delete all Google Slides presentations.
     parameters:

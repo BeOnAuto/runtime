@@ -94,7 +94,6 @@ jobs:
               - outbound
               - playbooks
               - prediction-contract
-              - prediction-onnx
               - prediction-series
               - providers
               - reasoning
@@ -495,40 +494,15 @@ jobs:
           test "$(docker logs telemetry 2>&1 | grep --count 'Telemetry is on, exported over OTLP')" = 1
           docker stop telemetry
           test "$(docker inspect telemetry --format '{{.State.ExitCode}}')" = 0
-      - name: Measure what the model runtime adds to the image
+      - name: Measure the image
         timeout-minutes: 2
         run: |
           image="$(docker image inspect onauto/runtime:ci --format '{{.Size}}')"
-          runtime="$(docker run --rm --entrypoint sh onauto/runtime:ci -c \
-            'du --summarize --bytes node_modules/.pnpm/onnxruntime-* | awk "{ total += \$1 } END { print total }"')"
-          test "$runtime" -gt 0
           {
             echo "### The image on linux/${{ matrix.architecture }}"
             echo "| Part | MiB |"
             echo "| --- | --- |"
             echo "| The whole image | $((image / 1048576)) |"
-            echo "| The model runtime, onnxruntime-node and onnxruntime-common | $((runtime / 1048576)) |"
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Load a 64 MiB model and walk the widest rows under the default data of a model process
-        timeout-minutes: 5
-        run: |
-          docker run --rm --entrypoint sh \
-            --volume "$PWD/capabilities/prediction/measure:/app/capabilities/prediction/measure:ro" \
-            --volume "$PWD/packages/prediction-onnx/measure:/app/packages/prediction-onnx/measure:ro" \
-            --volume "$PWD/packages/prediction-onnx/candidates:/app/packages/prediction-onnx/candidates:ro" \
-            onauto/runtime:ci -c '
-              node packages/prediction-onnx/measure/large-model.ts /tmp/large.onnx
-              node capabilities/prediction/measure/large-rows.ts /tmp/rows.csv
-              prlimit --core=0 --data=1342177280 node capabilities/prediction/measure/session-memory.ts \
-                packages/prediction-onnx/src/sessions/model-sessions.ts /tmp/large.onnx /tmp/rows.csv' > session.json
-          test "$(jq --raw-output .series session.json)" = 1000
-          {
-            echo "### A 64 MiB model walking the widest rows on linux/${{ matrix.architecture }}, under 1280 MiB of data"
-            echo "| What | Figure |"
-            echo "| --- | --- |"
-            echo "| Threads | $(jq --raw-output .threads session.json) |"
-            echo "| The walk of 1000 series, ms | $(jq --raw-output '.walkMs | floor' session.json) |"
-            echo "| Resident at the peak, MiB | $(jq --raw-output '.peak / 1048576 | floor' session.json) |"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep a playbook on a volume across a restart
         run: |
@@ -869,15 +843,13 @@ jobs:
           grep --quiet 'Fit a model of the daily visits of each of 2 stores.' brief.md
           test "$(call training.csv "$playbook/runs/$build/build/rows")" = 200
           test "$(head --lines 1 training.csv | tr --delete '\r')" = series,period,visits
-          for model in visits-mean visits-allocating; do
-            test "$(call "$model.json" --header 'content-type: application/octet-stream' \
-              --data-binary "@packages/prediction-onnx/candidates/$model.onnx" "$playbook/runs/$build/build/candidates?format=onnx")" = 200
-          done
+          printf '%s' '{"recipe":"mean","attributes":{"answers":{"steps":2},"interval":{"method":"residual"}}}' > visits-mean.series
+          test "$(call visits-mean.json --header 'content-type: application/octet-stream' \
+            --data-binary @visits-mean.series "$playbook/runs/$build/build/candidates?format=series")" = 200
           candidate="$(jq --raw-output .candidate visits-mean.json)"
-          test "$candidate" = "$(sha256sum packages/prediction-onnx/candidates/visits-mean.onnx | cut --delimiter ' ' --fields 1)"
-          allocating="$(jq --raw-output .candidate visits-allocating.json)"
-          answer="$(jq --null-input --arg candidate "$candidate" --arg allocating "$allocating" \
-            '{answer: {candidates: [$candidate, $allocating]}}')"
+          test "$candidate" = "$(sha256sum visits-mean.series | cut --delimiter ' ' --fields 1)"
+          test "$(jq --raw-output '[.format, .signature.recipe] | join(" ")' visits-mean.json)" = 'series mean'
+          answer="$(jq --null-input --arg candidate "$candidate" '{answer: {candidates: [$candidate]}}')"
           test "$(call answered.json "${json[@]}" --data "$answer" "$playbook/runs/$build/answer")" = 200
           for attempt in $(seq 1 60); do
             test "$(call built.json "$playbook/runs/$build")" = 200
@@ -886,13 +858,6 @@ jobs:
           done
           test "$(jq --compact-output '[.status, .output.version, .output.winner]' built.json)" = \
             "[\"succeeded\",1,\"$candidate\"]"
-          verdict="$(jq --raw-output '.output.candidates[1].verdict' built.json)"
-          echo "The candidate that allocates without bound: $verdict" >> "$GITHUB_STEP_SUMMARY"
-          case "$verdict" in
-            out_of_memory | crashed) ;;
-            *) false ;;
-          esac
-          test "$(curl --silent --fail http://127.0.0.1:5555/health)" = '{"status":"ok"}'
           for attempt in $(seq 1 30); do
             test "$(call function.json "$playbook/definitions/prediction/daily-visits")" = 200
             test "$(jq --raw-output '.standing.models.active.version // empty' function.json)" = 1 && break
@@ -901,8 +866,8 @@ jobs:
           test "$(jq --raw-output .standing.models.active.version function.json)" = 1
           test "$(call question.json "${json[@]}" --data '{"input":{"series":"north","horizon":1}}' \
             "$playbook/definitions/prediction/daily-visits/run")" = 200
-          test "$(jq --compact-output '[.status, (.output.lines[] | select(.name == "predicted") | .points[0] | .value, .low, .high), .record.version, .output_shape]' question.json)" = \
-            '["succeeded",11,9,13,1,"series"]'
+          test "$(jq --compact-output '[.status, (.output.lines[] | select(.name == "predicted") | .points[0] | .value, (.low | floor), (.high | ceil)), .record.version, .record.runtime.name, .output_shape]' question.json)" = \
+            '["succeeded",11,9,13,1,"series","series"]'
           docker stop prediction
           test "$(docker inspect prediction --format '{{.State.ExitCode}}')" = 0
       - name: Run workflows across a restart, and read the steps of a run and their causes

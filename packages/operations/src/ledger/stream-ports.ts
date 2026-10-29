@@ -4,7 +4,12 @@ import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { Conflict } from '../outcome/conflict.ts';
 import type { InvalidInput } from '../outcome/invalid-input.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
+import type { CursorNotHeld } from '../reading/cursor-not-held.ts';
 import type {
+  AppendedFacts,
+  AppendedFactsRequest,
+  AppendWaited,
+  AppendedScope,
   InvalidCursor,
   RecordedFact,
   RecordedPage,
@@ -65,4 +70,25 @@ export interface PlaybookRunOutcomesReader {
     window: RunOutcomeWindow,
     selection: RunOutcomeSelection,
   ) => Effect.Effect<readonly RunOutcomeGroup[]>;
+}
+
+export interface AppendedFactsReader {
+  readonly readAppendedFacts: (
+    scope: AppendedScope,
+    request: AppendedFactsRequest,
+  ) => Effect.Effect<AppendedFacts, CursorNotHeld>;
+  readonly waitForAppend: (scope: AppendedScope, after: string, deadline: number) => Effect.Effect<AppendWaited>;
+}
+
+export interface PlaybookAppendedFactsReader {
+  readonly readAppendedFacts: (request: AppendedFactsRequest) => Effect.Effect<AppendedFacts, CursorNotHeld>;
+  readonly waitForAppend: (after: string, deadline: number) => Effect.Effect<AppendWaited>;
+}
+
+export interface OrgAppendedFactsReader {
+  readonly readAppendedFacts: (
+    streams: readonly string[],
+    request: AppendedFactsRequest,
+  ) => Effect.Effect<AppendedFacts, CursorNotHeld>;
+  readonly waitForAppend: (streams: readonly string[], after: string, deadline: number) => Effect.Effect<AppendWaited>;
 }

@@ -1,5 +1,18 @@
-import { declaredFact, runFactsOf, type CapabilityFacts, type DeclaredFact } from '@on.auto/definitions';
-import { strictRecordedDecoder, type KeptContent, type PresentedFact, type Presenter } from '@on.auto/operations';
+import {
+  declaredFact,
+  definitionChanged,
+  definitionChangedBy,
+  runFactsOf,
+  type CapabilityFacts,
+  type DeclaredFact,
+} from '@on.auto/definitions';
+import {
+  changingOne,
+  strictRecordedDecoder,
+  type KeptContent,
+  type PresentedFact,
+  type Presenter,
+} from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import { buildFactSchemas, type BuildWork } from './build-facts.ts';
@@ -40,6 +53,7 @@ const modelsPresenter: Presenter = {
   streamKind: modelsStreamKind,
   publicNames: Object.fromEntries(modelFactTypes.map((type) => [type, [type]])),
   present: (recorded, content) => [presentedModel(decodeModelFact(recorded), content)],
+  changes: changingOne(definitionChanged, modelFactTypes, definitionChangedBy),
 };
 
 export const predictionFacts: CapabilityFacts = { onRuns: declaredOnRuns, streams: [modelsPresenter] };

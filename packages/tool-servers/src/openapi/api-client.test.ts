@@ -25,7 +25,15 @@ async function elsewhere(): Promise<FakeApiServer> {
 }
 
 function searchAt(path: string): ApiOperation {
-  return { tool: { name: 'search', inputSchema: {} }, method: 'get', path, inputs: [], body: null, credentials: [] };
+  return {
+    tool: { name: 'search', inputSchema: {} },
+    method: 'get',
+    path,
+    inputs: [],
+    body: null,
+    credentials: [],
+    answers: { schemas: [], components: {} },
+  };
 }
 
 function calledAt(baseUrl: string, path: string): Promise<CallSettled> {

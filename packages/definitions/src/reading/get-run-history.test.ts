@@ -1,4 +1,11 @@
-import { ActedOnRunContextSchema, factOf, type Decided, type Decider, type Presenter } from '@on.auto/operations';
+import {
+  ActedOnRunContextSchema,
+  changingNothing,
+  factOf,
+  type Decided,
+  type Decider,
+  type Presenter,
+} from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -43,6 +50,7 @@ const runLogPresenter: Presenter = {
   streamKind: 'run-logs',
   publicNames: { input_applied: ['input_applied'], state_patched: [] },
   present: ({ data }) => [{ type: 'input_applied', summary: 'An input was applied.', data: decodeKey(data) }],
+  changes: changingNothing(['input_applied', 'state_patched']),
 };
 
 async function playbookWithRun(presenters: readonly Presenter[] = makeDefinitionPresenters([echo])) {

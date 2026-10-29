@@ -41,7 +41,7 @@ Auto Runtime
 
 Tool servers are how a playbook's functions reach other services, such as a CRM or a chat tool. They are set up once, by whoever runs Auto, and can serve several playbooks. [Give a function tools](../guides/tools.md) explains how a function uses them.
 
-Auto Runtime runs playbooks, and Auto Studio inspects and manages them. Your agent is a separate client. [Functions](functions.md) describes the five function types and when to choose each, and [Workflows and runs](workflows.md) describes how workflows coordinate them.
+Auto Runtime runs playbooks, and Auto Studio inspects and manages them. Your agent is a separate client. A client learns of changes by asking what changed and waiting for the answer, rather than polling ([Changes](../reference/http.md#changes)). [Functions](functions.md) describes the five function types and when to choose each, and [Workflows and runs](workflows.md) describes how workflows coordinate them.
 
 ## The agent and the playbook
 

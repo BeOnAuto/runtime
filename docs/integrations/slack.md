@@ -14,7 +14,7 @@ Connect your Slack account to Auto, so that the functions in your playbooks can 
 
 You connect as yourself, through Slack's MCP server. The connection has your access to the workspace: it reads the channels, conversations and people you can see, and a message it sends is from you. The connection belongs to your org, so a function in a playbook it is for acts in Slack as you, whoever in your org runs it.
 
-Acting as a Slack app's bot instead is the `slack-api` provider, connected with the bot token of a Slack app installed in your workspace, as [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) lists. This page is about connecting as yourself.
+This page is about the `slack` provider, which acts as you, the person who connects. The `slack-bot` provider acts instead as the bot of a Slack app installed in your workspace, and connects with that app's bot token, as [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) lists.
 
 ## Add Slack
 

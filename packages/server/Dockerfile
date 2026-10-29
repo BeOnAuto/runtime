@@ -21,7 +21,6 @@ COPY packages/object-storage/package.json packages/object-storage/
 COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
 COPY packages/prediction-contract/package.json packages/prediction-contract/
-COPY packages/prediction-onnx/package.json packages/prediction-onnx/
 COPY packages/prediction-series/package.json packages/prediction-series/
 COPY packages/providers/package.json packages/providers/
 COPY packages/secrets/package.json packages/secrets/
@@ -35,16 +34,6 @@ COPY capabilities/prediction/package.json capabilities/prediction/
 COPY capabilities/reasoning/package.json capabilities/reasoning/
 COPY capabilities/recall/package.json capabilities/recall/
 RUN pnpm install --frozen-lockfile --prod --no-optional --ignore-scripts --filter @on.auto/server...
-ARG TARGETARCH
-RUN case "$TARGETARCH" in \
-    amd64) kept=x64 ;; \
-    arm64) kept=arm64 ;; \
-    *) echo "TARGETARCH is amd64 or arm64, not $TARGETARCH" >&2 && exit 1 ;; \
-  esac \
-  && for binding in node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/napi-v*; do \
-    find "$binding" -mindepth 1 -maxdepth 1 ! -name linux -exec rm -rf {} + \
-    && find "$binding/linux" -mindepth 1 -maxdepth 1 ! -name "$kept" -exec rm -rf {} + ; \
-  done
 RUN --network=none npm_config_build_from_source=sqlite3 npm_config_nodedir=/usr/local \
   pnpm rebuild --filter @on.auto/server... sqlite3 \
   && find node_modules/.pnpm -path '*/node_modules/sqlite3/build/Release/*' -prune ! -name node_sqlite3.node \
@@ -79,7 +68,6 @@ COPY packages/object-storage/src packages/object-storage/src
 COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src
 COPY packages/prediction-contract/src packages/prediction-contract/src
-COPY packages/prediction-onnx/src packages/prediction-onnx/src
 COPY packages/prediction-series/src packages/prediction-series/src
 COPY packages/providers/src packages/providers/src
 COPY packages/secrets/src packages/secrets/src
@@ -99,7 +87,7 @@ RUN apt-get update \
   && install --directory --owner=node --group=node /data \
   && ln --symbolic /data /app/data
 USER node
-RUN prlimit --core=0 --data=805306368 node --input-type=module --eval "await import('/app/packages/prediction-onnx/src/sessions/model-sessions.ts')"
+RUN prlimit --core=0 --data=805306368 node --input-type=module --eval "await import('/app/capabilities/prediction/src/model-jobs/model-process.ts')"
 VOLUME /data
 EXPOSE 5555
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

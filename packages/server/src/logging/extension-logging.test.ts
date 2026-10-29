@@ -15,9 +15,9 @@ describe('the log of the extensions a server loaded', () => {
           provides: [{ point: 'prediction/model-runtime', contract: 1 }],
         },
         {
-          package: '@on.auto/prediction-onnx',
+          package: '@on.auto/prediction-series',
           provenance: 'release',
-          name: '@on.auto/prediction-onnx',
+          name: '@on.auto/prediction-series',
           version: '0.36.0',
           provides: [{ point: 'prediction/model-runtime', contract: 1 }],
         },
@@ -25,10 +25,10 @@ describe('the log of the extensions a server loaded', () => {
     );
 
     expect(line).toContain(
-      '"message":"Extensions loaded, in their order of precedence: @acme/models 2.0.0, listed in the settings, filling prediction/model-runtime; @on.auto/prediction-onnx 0.36.0, of the release, filling prediction/model-runtime","level":"INFO"',
+      '"message":"Extensions loaded, in their order of precedence: @acme/models 2.0.0, listed in the settings, filling prediction/model-runtime; @on.auto/prediction-series 0.36.0, of the release, filling prediction/model-runtime","level":"INFO"',
     );
     expect(line).toContain(
-      '"annotations":{"extensions":[{"package":"@acme/models","version":"2.0.0","provenance":"configured","provides":["prediction/model-runtime@1"]},{"package":"@on.auto/prediction-onnx","version":"0.36.0","provenance":"release","provides":["prediction/model-runtime@1"]}]}',
+      '"annotations":{"extensions":[{"package":"@acme/models","version":"2.0.0","provenance":"configured","provides":["prediction/model-runtime@1"]},{"package":"@on.auto/prediction-series","version":"0.36.0","provenance":"release","provides":["prediction/model-runtime@1"]}]}',
     );
   });
 
