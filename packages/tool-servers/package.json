@@ -20,6 +20,7 @@
   "dependencies": {
     "@modelcontextprotocol/client": "2.3.1",
     "@on.auto/config": "workspace:*",
+    "@on.auto/documents": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/outbound": "workspace:*",
@@ -29,6 +30,7 @@
     "@modelcontextprotocol/server": "2.3.1",
     "@on.auto/ledger": "workspace:*",
     "@on.auto/secrets": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

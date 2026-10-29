@@ -73,7 +73,9 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       dueWork: [...functions.parts.dueWork, ...license.dueWork],
       ...(clock === undefined ? {} : { clock }),
     };
-    const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
+    const served = stores.withSecretsClosed(
+      registry.processes.withDocumentsClosed(functions.closing(await serveWorkflows(runtime, parts))),
+    );
     const closing = await withHeldRequestsEndedFirst(
       runtime,
       license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] }),

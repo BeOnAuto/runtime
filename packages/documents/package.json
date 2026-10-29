@@ -1,0 +1,27 @@
+{
+  "name": "@on.auto/documents",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@on.auto/workflow-engine": "workspace:*",
+    "effect": "catalog:",
+    "mammoth": "1.13.0",
+    "unpdf": "1.9.1"
+  },
+  "devDependencies": {
+    "@on.auto/operations": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

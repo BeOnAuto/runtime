@@ -8,7 +8,7 @@ import { logPredictionFunctions } from '../logging/prediction-logging.ts';
 import type { ServedClosing } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
-import { servedModels } from './served-models.ts';
+import { servedModels, type ServedModels } from './served-models.ts';
 
 export interface ServedPrediction {
   readonly ports: PredictionPorts;
@@ -19,15 +19,16 @@ export interface PredictionServing {
   readonly store: WorkflowStore;
   readonly runtimes: PredictionPorts['runtimes'];
   readonly features: PredictionPorts['features'];
+  readonly modelProcesses: ServedModels['pool'];
 }
 
 export async function predictionServedBy(
   runtime: AppRuntime<DispatcherServices>,
   { prediction, interaction }: Pick<Settings, 'prediction' | 'interaction'>,
-  { store, runtimes, features }: PredictionServing,
+  { store, runtimes, features, modelProcesses }: PredictionServing,
 ): Promise<ServedPrediction> {
   const { mostFunctions, processes, processMemoryMebibytes, buildsAtOnce, buildsPerDay, cacheDirectory } = prediction;
-  const { pool, inline, ports: models } = await servedModels(prediction);
+  const { pool, inline, ports: models } = await servedModels(prediction, modelProcesses);
   await runtime.run(
     logPredictionFunctions({
       mostFunctions,

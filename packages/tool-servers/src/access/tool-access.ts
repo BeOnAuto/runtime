@@ -19,6 +19,7 @@ export interface ToolAccessOptions {
   readonly reportLeftOut?: Describing['reportLeftOut'];
   readonly fetch?: LinkOptions['fetch'];
   readonly now?: () => number;
+  readonly documents?: LinkOptions['documents'];
   readonly timing?: LinkOptions['timing'];
   readonly traceMeta?: LinkOptions['traceMeta'];
 }

@@ -76,6 +76,13 @@ function otherPaths(): DocumentFields {
     '/denied': { get: { operationId: 'denied', summary: 'Answers as a policy that denies a field.' } },
     '/photo': { get: { operationId: 'photo' } },
     '/notes': { get: { operationId: 'notes', security: [] } },
+    '/files/{fileName}': {
+      get: {
+        operationId: 'file',
+        summary: 'Answers the file of a name.',
+        parameters: [{ name: 'fileName', in: 'path', required: true, schema: { type: 'string' } }],
+      },
+    },
     '/sessions': {
       get: {
         operationId: 'sessionState',
@@ -136,4 +143,5 @@ export const fakeApiToolNames = [
   'denied',
   'photo',
   'notes',
+  'file',
 ];
