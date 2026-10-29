@@ -1,7 +1,7 @@
 import { exchangeAuthorization, startAuthorization } from '@modelcontextprotocol/client';
 import { DateTime, Effect, Redacted } from 'effect';
 
-import { answeredTokensOf, keptOf, keptValueOf } from '../consent-tokens/kept-tokens.ts';
+import { answeredTokensOf, keptOf, keptValueOf, tokenAnswersReadAsBearer } from '../consent-tokens/kept-tokens.ts';
 import { libraryClientOf, type Requests, type ServerSource } from './acting-clients.ts';
 import type {
   CodeFinishAsked,
@@ -89,7 +89,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
           authorizationCode: asked.code,
           codeVerifier: Redacted.value(asked.verifier),
           redirectUri: asked.returnAddress,
-          fetchFn: observed.fetch,
+          fetchFn: tokenAnswersReadAsBearer(observed.fetch),
           ...(asked.iss === undefined ? {} : { iss: asked.iss }),
           ...(resource === undefined ? {} : { resource }),
           ...(client.authentication === undefined ? {} : { addClientAuthentication: client.authentication }),

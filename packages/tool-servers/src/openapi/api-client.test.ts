@@ -32,7 +32,7 @@ function searchAt(path: string): ApiOperation {
     inputs: [],
     body: null,
     credentials: [],
-    answers: { schemas: [], components: {} },
+    answers: { schemas: [], components: {}, headers: {} },
   };
 }
 

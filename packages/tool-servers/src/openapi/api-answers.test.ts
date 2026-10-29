@@ -1,3 +1,4 @@
+import { documentsReadInProcess } from '@on.auto/documents/testing';
 import { describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
@@ -60,6 +61,16 @@ describe('an answer of an HTTP API that is shown', () => {
 });
 
 describe('an answer of an HTTP API that is not shown as it is', () => {
+  it('of no media type and an empty body, as a 201 that says nothing more, is no content and no document', async () => {
+    const empty = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        controller.close();
+      },
+    });
+
+    expect(await resultsOf(new Response(empty, { status: 201 }))).toEqual([{ content: [] }]);
+  });
+
   it('of an error other than 401, 429 and 5xx is an error result carrying its body, of any type and never read as a document, or its status when it has none', async () => {
     expect(
       await resultsOf(
@@ -71,6 +82,43 @@ describe('an answer of an HTTP API that is not shown as it is', () => {
       { content: [{ type: 'text', text: '{"title":"Not Found"}' }], isError: true },
       { content: [{ type: 'text', text: '<p>Gone</p>' }], isError: true },
       { content: [{ type: 'text', text: 'The tool server answered HTTP 409' }], isError: true },
+    ]);
+  });
+});
+
+const describingAnId = { schemas: [], components: {}, headers: { '2XX': ['X-Id'] } };
+
+const readInProcess = {
+  named: undefined,
+  read: (given: Parameters<typeof documentsReadInProcess>[0], textBytes: number) =>
+    documentsReadInProcess(given, { deadlineMs: 30_000, signal: undefined, textBytes }),
+};
+
+describe('the headers an operation describes for its successful answers', () => {
+  it('are carried beside a body or a document’s text, alone where the body is empty, by the range of statuses they are described for, and nothing where the answer holds none', async () => {
+    const answered = { 'x-id': 'id-1' };
+    const savedDocument = '[The answer, text/plain, 6 bytes]\nSaved.';
+    const settled = await Promise.all([
+      settledOf(
+        new Response('Saved.', { headers: { ...answered, 'content-type': 'text/plain' } }),
+        answering,
+        describingAnId,
+        readInProcess,
+      ),
+      settledOf(new Response(null, { status: 201, headers: answered }), answering, describingAnId),
+      settledOf(Response.json({ saved: true }), answering, describingAnId),
+    ]);
+
+    expect(settled.map((each) => resultOf(each))).toEqual([
+      {
+        content: [{ type: 'text', text: JSON.stringify({ headers: { 'X-Id': 'id-1' }, body: savedDocument }) }],
+        structuredContent: { headers: { 'X-Id': 'id-1' }, body: savedDocument },
+      },
+      {
+        content: [{ type: 'text', text: '{"headers":{"X-Id":"id-1"}}' }],
+        structuredContent: { headers: { 'X-Id': 'id-1' } },
+      },
+      { content: [{ type: 'text', text: '{"saved":true}' }], structuredContent: { saved: true } },
     ]);
   });
 });

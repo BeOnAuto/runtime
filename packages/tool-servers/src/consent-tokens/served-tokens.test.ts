@@ -93,6 +93,17 @@ describe('the tokens of a connection connected by consent', () => {
     expect(renewed).not.toBe(first.access_token);
     expect(fake.tokenRequests()).toBe(2);
   });
+
+  it('are renewed into a bearer token where the token answer names no token_type', async () => {
+    const { fake, clock, row, source, first } = await servingAt({ namesTokenType: false });
+
+    clock.setTo(anHourLess.minute);
+    const renewed = await source.token();
+
+    expect(renewed).not.toBe(first.access_token);
+    expect(row.kept()).toMatchObject({ access_token: renewed, token_type: 'Bearer' });
+    expect(await admitted(fake, renewed)).toBe(true);
+  });
 });
 
 describe('the spread of the renewal time of a process', () => {

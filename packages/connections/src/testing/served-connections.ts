@@ -1,4 +1,10 @@
-import type { ConnectionServer, ConnectionSource, OrgConnection } from '@on.auto/tool-servers';
+import type {
+  AuthSettings,
+  ConnectionServer,
+  ConnectionSource,
+  ConsentCredential,
+  OrgConnection,
+} from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -33,4 +39,13 @@ function isConnected(state: OrgConnection['state']): state is Connected {
 export async function preparedOf(source: ConnectionSource, id: string): Promise<ConnectionServer> {
   const { state } = await servedAs(source, id);
   return Effect.runPromise(Option.getOrThrow(Option.liftPredicate(state, isConnected)).server);
+}
+
+function isConsent(credential: AuthSettings['credential'] | undefined): credential is ConsentCredential {
+  return credential?.kind === 'consent';
+}
+
+export async function consentServedAs(source: ConnectionSource, id: string): Promise<ConsentCredential> {
+  const { settings } = await preparedOf(source, id);
+  return Option.getOrThrow(Option.liftPredicate(settings.auth?.credential, isConsent));
 }

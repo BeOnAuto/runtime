@@ -1,9 +1,12 @@
 import { required } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { readProviders, type Placeholder, type ProviderEntry, providersShippedRoots } from '@on.auto/providers';
-import { Option, Result, Schema } from 'effect';
+import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
+import { Function, Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { reconnectionStartedAt } from '../testing/consents.ts';
+import { consentServedAs, servedAs, sourceOver } from '../testing/served-connections.ts';
 import { vendorsOfTheShippedWays } from '../testing/shipped-vendors.ts';
 import {
   consentedAtTheVendor,
@@ -67,6 +70,7 @@ const startedSourceOf = Schema.decodeUnknownOption(
 const connectedOf = Schema.decodeUnknownSync(
   Schema.Struct({
     output: Schema.Struct({
+      id: Schema.String,
       status: Schema.String,
       granted_scope: Schema.NullOr(Schema.String),
       credential: Schema.Struct({ client_source: Schema.String }),
@@ -151,6 +155,7 @@ const providersTakingConsent = [
   'google-slides',
   'hubspot',
   'linear',
+  'linkedin',
   'microsoft-advertising',
   'microsoft-teams',
   'notion',
@@ -194,5 +199,62 @@ describe('every way of consent of a shipped provider, against the fake authoriza
       'profound',
       'stripe',
     ]);
+  });
+});
+
+const sixtyDaysMs = 5_184_000_000;
+
+const connectedAt = Date.parse('2026-10-15T14:00:00.000Z');
+
+const consentEnded =
+  'The consent of the connection linkedin was revoked or has ended, so the person who added it reconnects it';
+
+const refusedByLinkedIn = {
+  response: new Response(null, { status: 401 }),
+  serverUrl: new URL('https://api.linkedin.com'),
+  fetchFn: globalThis.fetch,
+};
+
+async function connectedAtLinkedIn() {
+  const way = required(waysOfConsent.find(({ name }) => name === 'linkedin'));
+  const vendor = required(way.vendor);
+  const fake = await servedAsTheVendor(vendor);
+  closing.push(fake.close);
+  const h = harnessAtTheVendor(fake, vendor, { providers: shipped, registeredIssuer: way.issuer });
+  const { finished } = await consentedAtTheVendor(
+    h,
+    { provider: way.name, placeholders: way.placeholders, scope: way.scope },
+    { fake, vendor },
+  );
+  const { id } = connectedOf(finished).output;
+  const source = sourceOver(h, { providers: shipped });
+  return { fake, h, id, source, consent: await consentServedAs(source, id) };
+}
+
+describe('the consent of linkedin, whose vendor answers an access token of sixty days with no token_type and no refresh token', () => {
+  it('serves its token to its end and past it, breaks at the first refusal in words that say to reconnect it, and reconnects by signing in at LinkedIn again', async () => {
+    const { fake, h, id, source, consent } = await connectedAtLinkedIn();
+    const clock = clockAt(connectedAt + sixtyDaysMs + 1);
+    const tokens = h.consent.tokenSource(consent, {
+      name: 'linkedin',
+      holder: 'connection linkedin',
+      now: clock.now,
+      timer: manualTimer().timer,
+      hold: Function.constVoid,
+    });
+
+    const pastItsEnd = await tokens.token();
+    const refused = await tokens.onUnauthorized(refusedByLinkedIn).catch((error: unknown) => error);
+    const { state } = await servedAs(source, id);
+    const asked = new URL((await reconnectionStartedAt(h, id)).url);
+
+    expect(consent.held.tokens).toMatchObject({ expires_at: new Date(connectedAt + sixtyDaysMs).toISOString() });
+    expect(consent.held.tokens).not.toHaveProperty('refresh_token');
+    expect(consent.held.tokens.token_type).toBe('Bearer');
+    expect(pastItsEnd).toBe(consent.held.tokens.access_token);
+    expect(refused).toEqual(new Error(consentEnded));
+    expect(state).toEqual({ status: 'unready', unready: { because: 'connection_broken', detail: consentEnded } });
+    expect(fake.tokenRequests()).toBe(1);
+    expect(`${asked.origin}${asked.pathname}`).toBe('https://www.linkedin.com/oauth/v2/authorization');
   });
 });

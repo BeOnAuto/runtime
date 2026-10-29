@@ -1,0 +1,531 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LinkedIn member, posts, comments and reactions",
+    "version": "202610",
+    "description": "Five LinkedIn API operations a member's token calls, written by hand from the vendor's references for the LinkedIn-Version 202610: who the member is, and creating and deleting a post, commenting on a post and reacting to it, as the member. The versioned operations under /rest take the headers LinkedIn-Version and X-Restli-Protocol-Version: 2.0.0, which the entry sends with every call and /v2/userinfo ignores."
+  },
+  "externalDocs": {
+    "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
+  },
+  "servers": [
+    {
+      "url": "https://api.linkedin.com"
+    }
+  ],
+  "security": [
+    {
+      "linkedin_oauth": []
+    }
+  ],
+  "paths": {
+    "/v2/userinfo": {
+      "get": {
+        "operationId": "get_userinfo",
+        "description": "Answers the member who connected: sub, the member's id, their name, picture and locale, and their primary email address where LinkedIn has one. A post's author, a comment's actor and a reaction's actor is the member's person URN, urn:li:person:{sub}, so call this first.",
+        "externalDocs": {
+          "url": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2"
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The member's details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Failure"
+          }
+        },
+        "security": [
+          {
+            "linkedin_oauth": ["openid", "profile", "email"]
+          }
+        ]
+      }
+    },
+    "/rest/posts": {
+      "post": {
+        "operationId": "create_post",
+        "description": "Creates a post as the member, of text alone or with an article. LinkedIn answers 201 Created with an empty body and the post's URN, urn:li:share:{id} or urn:li:ugcPost:{id}, in the x-restli-id header.",
+        "externalDocs": {
+          "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPost"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The post is created; the body is empty.",
+            "headers": {
+              "x-restli-id": {
+                "description": "The URN of the post created, such as urn:li:share:6844785523593134080 or urn:li:ugcPost:68447855235931240.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Failure"
+          }
+        },
+        "security": [
+          {
+            "linkedin_oauth": ["w_member_social"]
+          }
+        ]
+      }
+    },
+    "/rest/posts/{postUrn}": {
+      "delete": {
+        "operationId": "delete_post",
+        "description": "Deletes a post of the member. A deletion is idempotent: deleting a post already deleted answers 204 No Content too.",
+        "externalDocs": {
+          "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PostUrn"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The post is deleted."
+          },
+          "default": {
+            "$ref": "#/components/responses/Failure"
+          }
+        },
+        "security": [
+          {
+            "linkedin_oauth": ["w_member_social"]
+          }
+        ]
+      }
+    },
+    "/rest/socialActions/{postUrn}/comments": {
+      "post": {
+        "operationId": "create_comment",
+        "description": "Comments on a post as the member. LinkedIn answers 201 Created with the comment, whose commentUrn names it.",
+        "externalDocs": {
+          "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/network-update-social-actions"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PostUrn"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewComment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The comment is created.",
+            "headers": {
+              "x-restli-id": {
+                "description": "The id of the comment created.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Failure"
+          }
+        },
+        "security": [
+          {
+            "linkedin_oauth": ["w_member_social"]
+          }
+        ]
+      }
+    },
+    "/rest/reactions": {
+      "post": {
+        "operationId": "create_reaction",
+        "description": "Reacts to a post as the member. LinkedIn answers 201 Created with the reaction.",
+        "externalDocs": {
+          "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/reactions-api"
+        },
+        "parameters": [
+          {
+            "name": "actor",
+            "in": "query",
+            "required": true,
+            "description": "The member's person URN, urn:li:person:{sub}, with the sub get_userinfo answers.",
+            "schema": {
+              "type": "string",
+              "pattern": "^urn:li:person:"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewReaction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The reaction is created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reaction"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Failure"
+          }
+        },
+        "security": [
+          {
+            "linkedin_oauth": ["w_member_social"]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "PostUrn": {
+        "name": "postUrn",
+        "in": "path",
+        "required": true,
+        "description": "The URN of the post, urn:li:share:{id} or urn:li:ugcPost:{id}, as create_post answers it or as the post's address, https://www.linkedin.com/feed/update/{postUrn}/, holds it. The call encodes it, as LinkedIn takes a URN in a path.",
+        "schema": {
+          "type": "string",
+          "pattern": "^urn:li:(?:share|ugcPost):"
+        }
+      }
+    },
+    "responses": {
+      "Failure": {
+        "description": "A failure, as 400 for a request LinkedIn cannot read, 401 for a token that is missing, invalid, expired or revoked, 403 for a token without the permission, 404 for a post that is not there, 426 for a LinkedIn-Version LinkedIn has sunset and 429 for a rate limit.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Member": {
+        "type": "object",
+        "properties": {
+          "sub": {
+            "type": "string",
+            "description": "The member's id, of which the person URN is urn:li:person:{sub}."
+          },
+          "name": {
+            "type": "string",
+            "description": "The member's full name."
+          },
+          "given_name": {
+            "type": "string",
+            "description": "The member's first name."
+          },
+          "family_name": {
+            "type": "string",
+            "description": "The member's last name."
+          },
+          "picture": {
+            "type": "string",
+            "description": "The address of the member's profile picture."
+          },
+          "locale": {
+            "description": "The member's locale."
+          },
+          "email": {
+            "type": "string",
+            "description": "The member's primary email address; LinkedIn may leave it out."
+          },
+          "email_verified": {
+            "type": "boolean",
+            "description": "Whether LinkedIn has verified the member's primary email address; LinkedIn may leave it out."
+          }
+        },
+        "required": ["sub"]
+      },
+      "NewPost": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string",
+            "pattern": "^urn:li:person:",
+            "description": "The member's person URN, urn:li:person:{sub}, with the sub get_userinfo answers."
+          },
+          "commentary": {
+            "type": "string",
+            "description": "The text of the post, in LinkedIn's little text format: each of the reserved characters | { } @ [ ] ( ) < > # \\ * _ ~ is escaped with a backslash to read as itself, @[Name](urn:li:person:{id}) mentions a member or an organization, and {hashtag|\\#|tag} is a hashtag."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": ["PUBLIC", "CONNECTIONS"],
+            "description": "Who sees the post: PUBLIC, anyone on LinkedIn, or CONNECTIONS, the member's first-degree connections alone."
+          },
+          "distribution": {
+            "type": "object",
+            "properties": {
+              "feedDistribution": {
+                "type": "string",
+                "enum": ["MAIN_FEED", "NONE"],
+                "description": "MAIN_FEED distributes the post to the LinkedIn feed; NONE does not distribute it in a feed."
+              },
+              "targetEntities": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                },
+                "maxItems": 0,
+                "description": "Empty: a member's post targets no audience."
+              },
+              "thirdPartyDistributionChannels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 0,
+                "description": "Empty: the post is not distributed outside LinkedIn."
+              }
+            },
+            "required": ["feedDistribution", "targetEntities", "thirdPartyDistributionChannels"]
+          },
+          "lifecycleState": {
+            "type": "string",
+            "enum": ["PUBLISHED"],
+            "description": "PUBLISHED, the one state LinkedIn takes at creation."
+          },
+          "isReshareDisabledByAuthor": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether nobody may reshare the post."
+          },
+          "content": {
+            "type": "object",
+            "description": "Left out for a post of text alone.",
+            "properties": {
+              "article": {
+                "type": "object",
+                "description": "An article the post shares. LinkedIn does not read the article's page, so the post shows the title and the description given.",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "The address of the article."
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 399,
+                    "description": "The title of the article."
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4085,
+                    "description": "The description of the article."
+                  }
+                },
+                "required": ["source", "title"]
+              }
+            },
+            "required": ["article"]
+          }
+        },
+        "required": ["author", "commentary", "visibility", "distribution", "lifecycleState"]
+      },
+      "NewComment": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "pattern": "^urn:li:person:",
+            "description": "The member's person URN, urn:li:person:{sub}, with the sub get_userinfo answers."
+          },
+          "object": {
+            "type": "string",
+            "description": "The URN of the post commented on, the postUrn of the path."
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "The text of the comment."
+              }
+            },
+            "required": ["text"]
+          }
+        },
+        "required": ["actor", "object", "message"]
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The id of the comment."
+          },
+          "commentUrn": {
+            "type": "string",
+            "description": "The URN of the comment, urn:li:comment:({postUrn},{id})."
+          },
+          "actor": {
+            "type": "string",
+            "description": "The URN of who commented."
+          },
+          "object": {
+            "type": "string",
+            "description": "The URN of the post commented on."
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "attributes": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "created": {
+            "$ref": "#/components/schemas/AuditStamp"
+          },
+          "lastModified": {
+            "$ref": "#/components/schemas/AuditStamp"
+          }
+        }
+      },
+      "NewReaction": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "description": "The URN of the post reacted to, urn:li:share:{id}, urn:li:ugcPost:{id} or the urn:li:activity:{id} of a share, not encoded."
+          },
+          "reactionType": {
+            "type": "string",
+            "enum": ["LIKE", "PRAISE", "EMPATHY", "INTEREST", "APPRECIATION", "ENTERTAINMENT"],
+            "description": "The reaction, as LinkedIn shows it: LIKE is Like, PRAISE Celebrate, EMPATHY Love, INTEREST Insightful, APPRECIATION Support and ENTERTAINMENT Funny."
+          }
+        },
+        "required": ["root", "reactionType"]
+      },
+      "Reaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The URN of the reaction, urn:li:reaction:({actor},{root})."
+          },
+          "reactionType": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string",
+            "description": "The URN of the post reacted to."
+          },
+          "created": {
+            "$ref": "#/components/schemas/AuditStamp"
+          },
+          "lastModified": {
+            "$ref": "#/components/schemas/AuditStamp"
+          }
+        }
+      },
+      "AuditStamp": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "The URN of who acted."
+          },
+          "time": {
+            "type": "integer",
+            "description": "When, in milliseconds since the epoch."
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "The HTTP status."
+          },
+          "serviceErrorCode": {
+            "type": "integer",
+            "description": "LinkedIn's code of the failure, such as 65600 for an invalid access token or 65604 for an empty one."
+          },
+          "code": {
+            "type": "string",
+            "description": "LinkedIn's name of the failure, such as INVALID_ACCESS_TOKEN or EMPTY_ACCESS_TOKEN."
+          },
+          "message": {
+            "type": "string",
+            "description": "What failed, in LinkedIn's words."
+          }
+        },
+        "required": ["status", "message"]
+      }
+    },
+    "securitySchemes": {
+      "linkedin_oauth": {
+        "type": "oauth2",
+        "description": "A member's access token, which LinkedIn gives for 60 days and with no refresh token.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://www.linkedin.com/oauth/v2/authorization",
+            "tokenUrl": "https://www.linkedin.com/oauth/v2/accessToken",
+            "scopes": {
+              "openid": "Use OpenID Connect to authenticate the member.",
+              "profile": "Retrieve the member's lite profile, with their id, name and profile picture.",
+              "email": "Retrieve the member's primary email address.",
+              "w_member_social": "Post, comment and like posts on behalf of the member."
+            }
+          }
+        }
+      }
+    }
+  }
+}

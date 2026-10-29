@@ -28,7 +28,10 @@ const RequestBodySchema = Schema.Struct({
   content: Schema.Record(Schema.String, MediaTypeSchema),
 });
 
-const ResponseSchema = Schema.Struct({ content: Schema.optionalKey(Schema.Record(Schema.String, MediaTypeSchema)) });
+const ResponseSchema = Schema.Struct({
+  content: Schema.optionalKey(Schema.Record(Schema.String, MediaTypeSchema)),
+  headers: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+});
 
 const SecurityRequirementSchema = Schema.Record(Schema.String, Schema.Array(Schema.String));
 

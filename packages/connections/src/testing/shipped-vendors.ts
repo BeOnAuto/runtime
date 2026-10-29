@@ -48,6 +48,10 @@ const bufferMcp = 'https://mcp.buffer.com/mcp';
 
 const bufferAuth = 'https://auth.buffer.com';
 
+const linkedInIssuer = 'https://www.linkedin.com/oauth';
+
+const sixtyDays = 5_184_000;
+
 const bufferScopes = [
   'posts:read',
   'posts:write',
@@ -187,6 +191,19 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     resource: hubspotMcp,
   },
   linear: registeringServerAt('https://mcp.linear.app/mcp', 'https://mcp.linear.app'),
+  linkedin: {
+    metadata: {
+      issuer: linkedInIssuer,
+      issuesRefreshTokens: false,
+      expiresInSeconds: sixtyDays,
+      namesTokenType: false,
+    },
+    endpointsAt: {
+      authorization: 'https://www.linkedin.com/oauth/v2/authorization',
+      token: 'https://www.linkedin.com/oauth/v2/accessToken',
+    },
+    resource: null,
+  },
   'microsoft-advertising': microsoftAdvertising,
   'microsoft-teams': microsoftGraph,
   notion: registeringServerAt('https://mcp.notion.com/mcp', 'https://mcp.notion.com'),

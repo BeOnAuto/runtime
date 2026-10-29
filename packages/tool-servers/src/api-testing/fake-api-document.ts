@@ -38,6 +38,11 @@ const profileId: Schema.JsonObject = {
   schema: { type: 'string' },
 };
 
+const noteIdHeader: DocumentFields = {
+  description: 'The note, whose id the X-Note-Id header carries.',
+  headers: { 'X-Note-Id': { schema: { type: 'string' } } },
+};
+
 function readPaths(): DocumentFields {
   return {
     '/search': {
@@ -75,7 +80,15 @@ function otherPaths(): DocumentFields {
     },
     '/denied': { get: { operationId: 'denied', summary: 'Answers as a policy that denies a field.' } },
     '/photo': { get: { operationId: 'photo' } },
-    '/notes': { get: { operationId: 'notes', security: [] } },
+    '/notes': {
+      get: { operationId: 'notes', security: [] },
+      put: {
+        operationId: 'saveNote',
+        security: [],
+        responses: { '200': { ...noteIdHeader, ...json({ type: 'object' }) } },
+      },
+      post: { operationId: 'addNote', security: [], responses: { '201': noteIdHeader } },
+    },
     '/files/{fileName}': {
       get: {
         operationId: 'file',
@@ -143,5 +156,7 @@ export const fakeApiToolNames = [
   'denied',
   'photo',
   'notes',
+  'saveNote',
+  'addNote',
   'file',
 ];
