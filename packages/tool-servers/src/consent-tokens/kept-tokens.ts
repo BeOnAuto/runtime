@@ -1,4 +1,7 @@
+import type { FetchLike } from '@modelcontextprotocol/client';
 import { DateTime, Option, Redacted, Schema } from 'effect';
+
+const unnamedTokenType = 'Bearer';
 
 const tokenFields = {
   access_token: Schema.String,
@@ -16,7 +19,11 @@ const TimeSchema = Schema.String.check(
   Schema.makeFilter((text: string) => Number.isFinite(Date.parse(text)) || 'Expected a time in ISO 8601'),
 );
 
-export const HandedTokensSchema = Schema.Struct({ ...tokenFields, expires_at: Schema.optionalKey(TimeSchema) });
+export const HandedTokensSchema = Schema.Struct({
+  ...tokenFields,
+  expires_at: Schema.optionalKey(TimeSchema),
+  token_type: Schema.optionalKey(Schema.String),
+});
 
 export type HandedTokens = typeof HandedTokensSchema.Type;
 
@@ -83,7 +90,7 @@ export function keptHandedOf(handed: HandedTokens, scope: string | undefined, ke
     ...(refreshToken === undefined ? {} : { refresh_token: refreshToken }),
     ...(expiresAt === undefined ? {} : { expires_at: expiresAt }),
     ...(scope === undefined ? {} : { scope }),
-    token_type: tokenType,
+    token_type: tokenType ?? unnamedTokenType,
     connection_key: key,
   };
 }
@@ -96,4 +103,35 @@ export function heldAmongSecrets(tokens: KeptTokens, { holder, hold }: TokenHold
   if (tokens.connection_key !== undefined) {
     hold(`${holder} connection key`, tokens.connection_key);
   }
+}
+
+const decodeAnswer = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)));
+
+type Answer = Readonly<Record<string, unknown>>;
+
+function namesNoTokenType(answer: Answer): boolean {
+  return Object.hasOwn(answer, 'access_token') && !Object.hasOwn(answer, 'token_type');
+}
+
+function typedAnswerOf(response: Readonly<Response>, answer: Answer): Response {
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  return new Response(JSON.stringify({ ...answer, token_type: unnamedTokenType }), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+async function readAsBearer(response: Response): Promise<Response> {
+  if (!response.ok) {
+    return response;
+  }
+  const untyped = Option.filter(decodeAnswer(await response.clone().text()), namesNoTokenType);
+  return Option.match(untyped, { onNone: () => response, onSome: (answer) => typedAnswerOf(response, answer) });
+}
+
+export function tokenAnswersReadAsBearer(fetch: FetchLike): FetchLike {
+  return async (...[address, init]: readonly [unknown, unknown?]) =>
+    readAsBearer(await fetch(String(address), Object.assign({}, init)));
 }

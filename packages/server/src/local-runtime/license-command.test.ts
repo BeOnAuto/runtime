@@ -48,7 +48,12 @@ async function ranWith(args: readonly string[], answer: () => Promise<Response>)
 
 const runtimeId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const licensed = { runtime_id: runtimeId, state: 'licensed', summary: 'Licensed to acme (free plan): 1000 runs left.' };
+const licensed = {
+  runtime_id: runtimeId,
+  state: 'licensed',
+  features: [],
+  summary: 'Licensed to acme (free plan): 1000 runs left.',
+};
 
 describe('auto-runtime license activate', () => {
   it('sends the key to the runtime running on this computer and says where it stands, in its words, with its id', async () => {
@@ -56,7 +61,7 @@ describe('auto-runtime license activate', () => {
 
     expect(asked).toEqual({
       code: 0,
-      logged: [`Licensed to acme (free plan): 1000 runs left. Runtime id ${runtimeId}.`],
+      logged: [`Licensed to acme (free plan): 1000 runs left. Runtime id ${runtimeId}. Features: none.`],
       errors: [],
       sent: [
         ['http://127.0.0.1:5555/runtime', undefined],
@@ -70,7 +75,7 @@ describe('auto-runtime license activate', () => {
     const asked = await ranWith(['activate', key], () => Promise.resolve(Response.json(unruly)));
 
     expect(asked.logged).toEqual([
-      `[2JLicensed to Acme Corporation (team plan): 9 runs left. Runtime id ${runtimeId}.`,
+      `[2JLicensed to Acme Corporation (team plan): 9 runs left. Runtime id ${runtimeId}. Features: none.`,
     ]);
   });
 
@@ -94,6 +99,17 @@ describe('auto-runtime license activate', () => {
     const asked = await ranWith(['activate', key], answer);
 
     expect([asked.code, asked.errors]).toEqual([1, [said]]);
+  });
+});
+
+describe('auto-runtime license activate, for a license that includes features', () => {
+  it('names the features its license includes', async () => {
+    const featured = { ...licensed, features: ['prediction-onnx', 'prediction-other'] };
+    const asked = await ranWith(['activate', key], () => Promise.resolve(Response.json(featured)));
+
+    expect(asked.logged).toEqual([
+      `Licensed to acme (free plan): 1000 runs left. Runtime id ${runtimeId}. Features: prediction-onnx, prediction-other.`,
+    ]);
   });
 });
 

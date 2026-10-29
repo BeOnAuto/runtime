@@ -20,11 +20,11 @@ People sign in through the Auto identity service. When it is ready, it prints th
 
 <!-- x-release-please-start-version -->
 
-Add Auto Runtime to your agent as an MCP server that runs `npx -y @on.auto/runtime@0.45.0 mcp`, the release this README comes with, such as:
+Add Auto Runtime to your agent as an MCP server that runs `npx -y @on.auto/runtime@0.46.0 mcp`, the release this README comes with, such as:
 
 ```bash
-claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.45.0 mcp
-codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.45.0 mcp
+claude mcp add auto-runtime -- npx -y @on.auto/runtime@0.46.0 mcp
+codex mcp add auto-runtime -- npx -y @on.auto/runtime@0.46.0 mcp
 ```
 
 <!-- x-release-please-end -->
@@ -86,7 +86,7 @@ The subpaths are the `.ts` sources the server runs, and they import one another 
 
 <!-- npm/pack.ts writes the alias here -->
 
-The subpaths are TypeScript, and three of the modules they import ship no types of their own, so a program that type-checks them installs the type packages the runtime's own checks use: `@types/json-schema` for `@on.auto/runtime/reasoning`, `@types/semver` for `@on.auto/runtime/coordination`, and `@types/pg` for `@on.auto/runtime/ledger/postgresql`. The types of Node's own modules, which the subpaths import too, are `@types/node`, or those of the platform the program runs on.
+The subpaths are TypeScript, and three of the modules they import ship no types of their own, so a program that type-checks them installs the type packages the runtime's own checks use: `@types/json-schema` for `@on.auto/runtime/reasoning`, `@types/semver` for `@on.auto/runtime/coordination`, and `@types/pg` for `@on.auto/runtime/ledger/postgresql`. The types of Node's own modules, which the subpaths import too, are `@types/node`, or those of the platform the program runs on. The declarations of `unpdf`, which `@on.auto/runtime/documents` imports, import `@napi-rs/canvas` and name types of the DOM, so a program checks them with `skipLibCheck`, as the runtime's own checks do, or installs the types of `@napi-rs/canvas` and names the DOM's in its `lib`.
 
 ## License
 

@@ -2,7 +2,15 @@ import { Function, Redacted } from 'effect';
 
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { RegisteredClient } from '../consent/client-sources.ts';
-import type { ConsentClient, ConsentClientOptions, ConsentWay, StartAsked } from '../consent/consent-client.ts';
+import type {
+  ConsentCallAnswer,
+  ConsentClient,
+  ConsentClientOptions,
+  ConsentStep,
+  ConsentWay,
+  StartAsked,
+  UnansweredCall,
+} from '../consent/consent-client.ts';
 import { makeConsentClient } from '../consent/consent-making.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import { memoryRegistrations } from './given-consents.ts';
@@ -23,6 +31,18 @@ export function consentRegistration(changes: Partial<ClientRegistration> = {}): 
     redirectUris: [returnAddress],
     ...changes,
   };
+}
+
+export function hostOf({ origin }: { readonly origin: string }): string {
+  return new URL(origin).host;
+}
+
+export function unansweredCall(
+  step: ConsentStep,
+  server: { readonly origin: string },
+  answer: ConsentCallAnswer,
+): UnansweredCall {
+  return { refused: 'unanswered', call: { step, host: hostOf(server), answer } };
 }
 
 export function registeredAt(issuer: string, changes: Partial<RegisteredClient> = {}): RegisteredClient {

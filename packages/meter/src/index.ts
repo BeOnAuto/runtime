@@ -28,7 +28,15 @@ export {
   type OfflineCredits,
 } from './standing/status-document.ts';
 export { shownOrgName } from './licensing/org-name.ts';
+export {
+  LicensedFeatures,
+  licensedFeaturesOf,
+  type FeatureAsked,
+  type FeatureUse,
+  type GivenFeatures,
+  type LicensedFeaturesPorts,
+} from './standing/licensed-features.ts';
 export { RuntimeLicense, type LicenseGiven, type LicensePorts } from './licensing/runtime-license.ts';
 export { ledgerMeter, selfHostedMeterOver, type SelfHostedMeter } from './licensing/self-hosted-meter.ts';
 export { autoSigners, SignedSchema, type Signed, type Signers } from './licensing/signed-answers.ts';
-export { METER_STREAM } from './meter-stream/meter-events.ts';
+export { METER_STREAM, MeterEventSchema } from './meter-stream/meter-events.ts';

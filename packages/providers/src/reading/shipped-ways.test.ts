@@ -54,6 +54,7 @@ const hostsOfTheWays = [
   [[['slides.googleapis.com', google]]],
   [[['mcp.hubspot.com', 'mcp.hubspot.com']]],
   [[['mcp.linear.app', 'mcp.linear.app']]],
+  [[['api.linkedin.com', 'www.linkedin.com', 'www.linkedin.com', 'www.linkedin.com']]],
   [[['partner.api.bingads.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['mcp.notion.com', 'mcp.notion.com']]],
@@ -158,6 +159,14 @@ function consentOf({ name, credentials }: ProviderEntry) {
   return credentials.filter(({ kind }) => kind === 'authorization').map((way) => [name, fieldsOfConsent(way)]);
 }
 
+function signsInAtGoogle({ credentials }: ProviderEntry): boolean {
+  return credentials.some(({ issuer }) => issuer === `https://${google}`);
+}
+
+function scopesOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
+  return [name, credentials.map(({ scope = '' }) => scope.replaceAll('https://www.googleapis.com/auth/', ''))];
+}
+
 function headersOf({ name, headers }: ProviderEntry) {
   return headers === undefined ? [] : [[name, headers]];
 }
@@ -178,6 +187,31 @@ describe('the ways of consent of the shipped providers of Microsoft, Amazon and 
   });
 });
 
+describe('the ways of consent of the shipped providers of Google', () => {
+  it('ask the scopes their tools need, way by way in the order a person is offered them, google-drive reading every file first', () => {
+    const consenting = shipped.providers.filter(({ entry }) => signsInAtGoogle(entry));
+
+    expect(consenting.map(({ entry }) => scopesOfEachWayAtGoogle(entry))).toEqual([
+      ['campaign-manager-360', ['dfareporting dfatrafficking']],
+      ['display-video-360', ['display-video']],
+      ['display-video-360-reports', ['doubleclickbidmanager']],
+      ['gmail', ['gmail.readonly']],
+      ['google-ads', ['adwords']],
+      ['google-analytics', ['analytics.readonly']],
+      ['google-analytics-admin', ['analytics.readonly']],
+      ['google-docs', ['documents.readonly documents']],
+      ['google-drive', ['drive.readonly', 'drive.file']],
+      ['google-search-console', ['webmasters']],
+      ['google-sheets', ['spreadsheets.readonly spreadsheets']],
+      ['google-slides', ['presentations.readonly presentations']],
+      ['search-ads-360', ['doubleclicksearch']],
+      ['youtube', ['youtube.readonly']],
+      ['youtube-analytics', ['yt-analytics.readonly yt-analytics-monetary.readonly']],
+      ['youtube-management', ['youtube.force-ssl']],
+    ]);
+  });
+});
+
 describe('the headers of the shipped providers', () => {
   it('are those their vendors ask for, with the client id of the connection where a vendor asks for it', () => {
     expect(shipped.providers.flatMap(({ entry }) => headersOf(entry))).toEqual([
@@ -186,6 +220,7 @@ describe('the headers of the shipped providers', () => {
       ['amazon-ads-mcp', { 'Amazon-Ads-ClientId': '{client_id}' }],
       ['github', { 'X-MCP-Toolsets': 'context,repos,issues,pull_requests,users' }],
       ['google-ads', { 'login-customer-id': '{manager_id}' }],
+      ['linkedin', { 'LinkedIn-Version': '202610', 'X-Restli-Protocol-Version': '2.0.0' }],
       ['search-ads-360', { 'login-customer-id': '{manager_id}' }],
     ]);
   });
@@ -232,6 +267,6 @@ const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry))
 describe('the words of the scopes the shipped providers ask', () => {
   it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
     expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(123);
+    expect(saidScopes).toHaveLength(127);
   });
 });

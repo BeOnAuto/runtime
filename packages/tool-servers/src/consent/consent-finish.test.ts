@@ -8,6 +8,7 @@ import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
   consentClientWith,
   finishAskedOf,
+  hostOf,
   memoryRegistrations,
   registeredAt,
   startAskedAt,
@@ -110,6 +111,16 @@ describe('the finish of a consent', () => {
     ]);
     expect(Object.keys(tokensKeptBy(ungranted))).toEqual(['access_token', 'refresh_token', 'token_type']);
   });
+
+  it('keeps a bearer token where the token answer names no token_type, the one type a call sends', async () => {
+    const untyped = await served({ namesTokenType: false });
+    const client = consentClientWith({ registeredClients: [registeredAt(untyped.origin)] });
+
+    const kept = tokensKeptBy(await finishedAt(client, startAskedAt(untyped)));
+
+    expect(kept.token_type).toBe('Bearer');
+    expect(await admitted(untyped, kept.access_token)).toBe(true);
+  });
 });
 
 describe('a finish refused before the code is redeemed', () => {
@@ -145,7 +156,10 @@ describe('a finish whose code is not redeemed', () => {
     const fake = await served();
     const client = consentClientWith({ fetch: failingTokens, registeredClients: [registeredAt(fake.origin)] });
 
-    expect(await refused(client, await finishAskedOf(client, startAskedAt(fake)))).toEqual({ refused: 'unanswered' });
+    expect(await refused(client, await finishAskedOf(client, startAskedAt(fake)))).toEqual({
+      refused: 'unanswered',
+      call: { step: 'token', host: hostOf(fake), answer: { status: 500, retryAfterMs: null } },
+    });
   });
 });
 

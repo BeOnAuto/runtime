@@ -1,3 +1,4 @@
+import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { presentationOf } from '@on.auto/operations';
 import { memoryLedger, nothingKept } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
@@ -5,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { reactionRefusalDecider } from './reaction-refusals.ts';
+import { reactionRefusalDecider, ReactionRefusedSchema } from './reaction-refusals.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -55,5 +56,27 @@ describe('a refused reaction of a workflow', () => {
     expect(rows).toMatchObject([
       { type: 'reaction_refused', metadata: { definition: { type: 'workflow', name: 'close-the-month', version: 3 } } },
     ]);
+  });
+});
+
+describe('the facts of the reactions a playbook refused', () => {
+  recordedFactsBehaviour({
+    schema: ReactionRefusedSchema,
+    folder: new URL('.', import.meta.url),
+    releases: {
+      '0.46.0': [
+        {
+          type: 'reaction_refused',
+          data: { count: 4, reason: 'The workflow started 60 runs this minute', minute: '2026-10-29T10:00' },
+          context: {
+            at: '2026-10-29T10:00:30.000Z',
+            by: 'playbook:sales',
+            definitionType: 'workflow',
+            definitionName: 'close-the-month',
+            definitionVersion: 3,
+          },
+        },
+      ],
+    },
   });
 });

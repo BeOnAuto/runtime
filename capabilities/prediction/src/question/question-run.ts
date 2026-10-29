@@ -6,7 +6,7 @@ import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { checkedAnswer } from './answer-check.ts';
 import { answeringModelOf } from './default-forecast.ts';
-import { answered } from './model-answers.ts';
+import { answeredWhileLicensed } from './model-answers.ts';
 import { aheadOf, observedOf, originFormOf, QuestionSchema } from './question-asked.ts';
 import { seriesWindow } from './series-window.ts';
 
@@ -29,7 +29,8 @@ export function questionRun(
     });
     const now = yield* Clock.currentTimeMillis;
     const window = yield* seriesWindow(ports, { playbook, document, series: question.series, now });
-    const answer = yield* answered({ ports, document, question }, model, window);
+    const answering = { ports, document, question, org: context.org };
+    const { model: answered, answer } = yield* answeredWhileLicensed(answering, model, window);
     const origin = originFormOf(predicts, window.origin);
     const ahead = aheadOf(predicts, window.origin);
     const output = {
@@ -46,8 +47,8 @@ export function questionRun(
     return {
       output,
       record: {
-        version: model.version,
-        ...(model.version === null ? { default_forecast: true } : {}),
+        version: answered.version,
+        ...(answered.version === null ? { default_forecast: true, ...answered.defaultBecause } : {}),
         runtime: { ...answer.runtime },
         coverage,
         decimals: decimalsObserved(window.y),

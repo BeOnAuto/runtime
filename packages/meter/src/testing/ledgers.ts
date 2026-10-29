@@ -23,6 +23,7 @@ export interface LedgerAt {
   readonly rows: (statement: string, values?: readonly (string | number)[]) => Promise<readonly Row[]>;
   readonly dataOf: (stored: unknown) => unknown;
   readonly stored: (data: unknown) => string;
+  readonly unreadable: string;
   readonly remove: () => Promise<void>;
 }
 
@@ -54,7 +55,7 @@ export function tamperingOn(at: LedgerAt): Tampering {
       await at.rows('DELETE FROM emt_messages WHERE message_id = ?', [id]);
     },
     garbled: async (id) => {
-      await at.rows("UPDATE emt_messages SET message_data = '{not json' WHERE message_id = ?", [id]);
+      await at.rows('UPDATE emt_messages SET message_data = ? WHERE message_id = ?', [at.unreadable, id]);
     },
     lastPosition: async () => {
       const [row] = await at.rows('SELECT MAX(global_position) AS last FROM emt_messages');
@@ -93,6 +94,7 @@ export function sqliteLedger(): LedgerAt {
     },
     dataOf: (stored) => parsed(String(stored)),
     stored: (data) => JSON.stringify(data),
+    unreadable: '{not json',
     remove: () => {
       rmSync(directory, { recursive: true, force: true });
       return Promise.resolve();
@@ -134,6 +136,7 @@ export async function postgresqlLedger(server: string): Promise<LedgerAt> {
     },
     dataOf: (stored) => parsed(String(Reflect.get(new Object(stored), 'json'))),
     stored: (data) => JSON.stringify({ json: JSON.stringify(data) }),
+    unreadable: JSON.stringify({ json: '{not json' }),
     remove: () => administered(server, `DROP DATABASE ${name} WITH (FORCE)`),
   };
 }

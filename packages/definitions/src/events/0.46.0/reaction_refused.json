@@ -1,0 +1,15 @@
+{
+  "type": "reaction_refused",
+  "data": {
+    "count": 4,
+    "reason": "The workflow started 60 runs this minute",
+    "minute": "2026-10-29T10:00"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:30.000Z",
+    "by": "playbook:sales",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 3
+  }
+}

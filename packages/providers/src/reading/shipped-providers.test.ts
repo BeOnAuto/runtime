@@ -61,18 +61,6 @@ const googleProviders = [
 
 const googleWaysOfConsent = [...googleProviders, 'google-drive'].toSorted();
 
-const microsoftAmazonAndAdobe = [
-  'adobe-analytics',
-  'adobe-analytics-mcp',
-  'amazon-ads',
-  'amazon-ads-mcp',
-  'microsoft-advertising',
-  'microsoft-teams',
-  'onedrive',
-  'outlook',
-  'work-iq',
-];
-
 function signsInAtGoogle({ entry }: Provider): boolean {
   return googleProviders.includes(entry.name);
 }
@@ -121,6 +109,7 @@ const addressesOfTheShipped = [
   ['google-slides', 'https://slides.googleapis.com'],
   ['hubspot', 'https://mcp.hubspot.com'],
   ['linear', 'https://mcp.linear.app/mcp'],
+  ['linkedin', 'https://api.linkedin.com'],
   ['microsoft-advertising', 'https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta'],
   ['microsoft-teams', microsoftGraph],
   ['notion', 'https://mcp.notion.com/mcp'],
@@ -143,25 +132,8 @@ describe('the shipped providers', () => {
   it('are the entries of the folder, each named as its file, sorted by name and so each named once', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
-    expect(names).toEqual(
-      [
-        ...googleProviders,
-        ...microsoftAmazonAndAdobe,
-        'atlassian',
-        'buffer',
-        'github',
-        'hubspot',
-        'linear',
-        'notion',
-        'posthog',
-        'profound',
-        'slack',
-        'slack-bot',
-        'stripe',
-        'zoom',
-      ].toSorted(),
-    );
-    expect(names).toHaveLength(37);
+    expect(names).toEqual(addressesOfTheShipped.map(([name]: readonly string[]) => name));
+    expect(names).toHaveLength(38);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -208,6 +180,7 @@ describe('the ways of the shipped providers', () => {
       ['google-slides', ['authorization'], []],
       ['hubspot', ['authorization'], []],
       ['linear', ['authorization'], []],
+      ['linkedin', ['authorization'], []],
       ['microsoft-advertising', ['authorization'], []],
       ['microsoft-teams', ['authorization'], []],
       ['notion', ['authorization'], []],

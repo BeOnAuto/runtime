@@ -10,8 +10,8 @@ head:
 
 Auto Runtime is in early development and is not ready for production use; see [Availability](../concepts/functions.md#availability). Your team can still run it today, and you can rely on these behaviors:
 
-- Auto keeps every playbook, definition, run and its history in its ledger, with the workflows that wait on timers and events. On a durable volume or database, all of it survives a restart. A release that keeps the ledger's layout opens it as it is; before launch, one that changes the layout refuses the older ledger at start and says what to delete ([Upgrades](#upgrades)).
-- Backups are yours to run: copy the volume, or rely on your database's own backups.
+- Auto keeps every playbook, definition, run and its history in its ledger, with the workflows that wait on timers and events. On a durable volume or database, all of it survives a restart, and an upgrade carries it forward ([Upgrades](#upgrades)).
+- Backups are yours to run: copy the volume, or rely on your database's own backups, and take one before every upgrade.
 - One server runs the workflows at a time. If it stops or dies, a standby that shares its database takes them over within about three seconds.
 
 A deployment for a team is the container from [Run with Docker](docker.md), with the additions below.
@@ -138,12 +138,13 @@ The server stops cleanly on `SIGTERM`, usually within a second. It finishes the 
 
 Size the container's memory limit from the parts you use:
 
-| Part                                    | Memory                                                                                                                                                                                                                                                                                                         |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The server                              | About 180 MiB idle, measured once with the arm64 image and no memory limit                                                                                                                                                                                                                                     |
-| Computation and recall workers          | Up to `COMPUTATION_WORKERS` threads, 4 unless set. Each is stopped past a 256 MiB heap and has a 64 MiB stack: about 320 MiB each, 1.25 GiB for four at once                                                                                                                                                   |
-| Model processes of prediction functions | Up to `PREDICTION_PROCESSES`, 4 unless set, started only when needed. Each is ended if it reserves more than `PREDICTION_PROCESS_MEMORY`, 1,280 MiB unless set. Each stays far below that: about 160 MiB before it loads a model, and about 650 MiB at the peak of walking a 64 MiB model over the widest rows |
-| The runtime's own models                | In the server itself, at most `PREDICTION_BUILDS_AT_ONCE` walks at once, 2 unless set. A walk over the widest rows holds about 190 MiB more at its peak                                                                                                                                                        |
+| Part                                              | Memory                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The server                                        | About 180 MiB idle, measured once with the arm64 image and no memory limit                                                                                                                                                                                                                                     |
+| Computation and recall workers                    | Up to `COMPUTATION_WORKERS` threads, 4 unless set. Each is stopped past a 256 MiB heap and has a 64 MiB stack: about 320 MiB each, 1.25 GiB for four at once                                                                                                                                                   |
+| Model processes of prediction functions           | Up to `PREDICTION_PROCESSES`, 4 unless set, started only when needed. Each is ended if it reserves more than `PREDICTION_PROCESS_MEMORY`, 1,280 MiB unless set. Each stays far below that: about 160 MiB before it loads a model, and about 650 MiB at the peak of walking a 64 MiB model over the widest rows |
+| Processes that read the text of files tools fetch | Up to `DOCUMENT_PROCESSES`, 2 unless set, started only when a tool answers a file, apart from the model processes. Each is ended if it reserves more than `PREDICTION_PROCESS_MEMORY`, or when the call runs out of its 30 seconds, and its read answers in words                                              |
+| The runtime's own models                          | In the server itself, at most `PREDICTION_BUILDS_AT_ONCE` walks at once, 2 unless set. A walk over the widest rows holds about 190 MiB more at its peak                                                                                                                                                        |
 
 Reasoning functions, workflows and the runtime's own models run in the server itself. Computation, recall and prediction functions add their workers and processes while they run. Watch the container's memory under your own load, and set the limit with room above the peak. The [configuration reference](configuration.md#settings) lists the settings that bound each part, with their defaults.
 
@@ -191,7 +192,10 @@ Pin a full version, such as `docker.on.auto/onauto/runtime:0.9.1`, and upgrade o
 
 1. Read the [release notes](https://github.com/BeOnAuto/runtime/releases).
 2. Pull the new tag. With the files from [Run with Docker](docker.md#upgrade), change the `IMAGE` line of `.env`.
-3. Replace the container. A new server that keeps the ledger's layout opens the ledger as it is. Before launch nothing is carried over: a server that changes the layout refuses the ledger at start, names the layout it found and the one it keeps, and says to delete the files or to point `DATABASE_URL` at an empty database.
+3. Back up the ledger: [copy the volume](docker.md#back-up-and-restore), or take a backup of the database.
+4. Replace the container. The new server opens the ledger of the release before it and carries it forward as it starts: it changes the tables to its own layout, one step at a time, and reads every fact the earlier release recorded.
+
+Upgrades go forward only. A server refuses a ledger that a newer release carried forward, or that holds facts it does not read, names the layout, or the facts and their positions, that it found, and says to start that release again, or to restore the backup taken before the upgrade. A ledger is carried forward when the facts it holds are ones this release reads: as it starts, the server reads the types of all of them and the newest fact of each type, and refuses the ledger at start when one is of a type or in a shape this release does not read, or when the ledger is in an earlier layout than this release carries forward, and says to delete the files or to point `DATABASE_URL` at an empty database.
 
 Servers of different versions never share a database at the same time. With several servers, follow [Upgrade several servers](workflows.md#upgrade-several-servers): stop every old server before you start a new one.
 

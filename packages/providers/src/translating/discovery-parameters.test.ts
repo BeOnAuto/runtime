@@ -121,6 +121,66 @@ describe('the parameters a manifest leaves out', () => {
   });
 });
 
+const decodeDescribedPaths = Schema.decodeUnknownSync(
+  Schema.Record(
+    Schema.String,
+    Schema.Record(
+      Schema.String,
+      Schema.Struct({
+        description: Schema.String,
+        parameters: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)),
+      }),
+    ),
+  ),
+);
+
+function keptGlobal(method: string, parameter: string, values: readonly string[]): () => unknown {
+  return () => translated({ global_parameters: [{ method, parameter, values, says: 'It answers media.' }] });
+}
+
+describe('the global parameters a manifest keeps', () => {
+  it('are parameters of the method taking the values the manifest names alone, its words ending the description of the method', () => {
+    const { document } = translatedDiscoveryOf(labelled, trackerAuthorizationServer, {
+      methods: [listId, 'tracker.about.get'],
+      global_parameters: [
+        {
+          method: listId,
+          parameter: 'alt',
+          values: ['media'],
+          says: 'With alt=media it answers the issues as a file.',
+        },
+        { method: 'tracker.about.get', parameter: 'alt', values: ['media'], says: 'With alt=media it answers a file.' },
+      ],
+    });
+    const documented = decodeDescribedPaths(document['paths']);
+
+    const takesMediaAlone: unknown = expect.arrayContaining([
+      { name: 'alt', in: 'query', schema: { enum: ['media'], type: 'string' } },
+    ]);
+
+    expect(documented['/v1/projects/{projectsId}/issues']?.['get']).toMatchObject({
+      description: 'Lists issues. With alt=media it answers the issues as a file.',
+      parameters: takesMediaAlone,
+    });
+    expect(documented['/v1/about/{version}']?.['get']?.description).toBe('With alt=media it answers a file.');
+  });
+
+  it('are refused where the method, the global parameter or one of its values is not in the Discovery document', () => {
+    expect(keptGlobal('tracker.issues.close', 'alt', ['media'])).toThrow(
+      'The Discovery document has no method tracker.issues.close, which a global parameter kept names',
+    );
+    expect(keptGlobal(listId, 'callback', ['media'])).toThrow(
+      'The Discovery document has no global parameter callback, which a global parameter kept names',
+    );
+    expect(keptGlobal(listId, 'alt', ['proto', 'media'])).toThrow(
+      'The global parameter alt of the Discovery document lists no value proto, which a global parameter kept names',
+    );
+    expect(keptGlobal(listId, 'key', ['media'])).toThrow(
+      'The global parameter key of the Discovery document lists no value media, which a global parameter kept names',
+    );
+  });
+});
+
 describe('the parameters a manifest changes of a Discovery document that holds little', () => {
   it('are refused for a method without parameters and a document without schemas', () => {
     expect(() =>
@@ -129,5 +189,10 @@ describe('the parameters a manifest changes of a Discovery document that holds l
     expect(() =>
       discoveryParametersChanged(bare, { required: [{ schema: 'Ping', properties: ['at'], because }] }),
     ).toThrow('The Discovery document has no schema Ping, which a requirement names');
+    expect(() =>
+      discoveryParametersChanged(bare, {
+        global_parameters: [{ method: 'bare.ping', parameter: 'alt', values: ['media'], says: 'It answers media.' }],
+      }),
+    ).toThrow('The Discovery document has no global parameter alt, which a global parameter kept names');
   });
 });

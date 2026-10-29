@@ -180,7 +180,12 @@ export {
   type Emission,
   type EmittedEvents,
 } from './events/event-emitter.ts';
-export { publishedEventOf, type EventPublished, type RecordedEventPublished } from './events/published-events.ts';
+export {
+  EventPublishedSchema,
+  publishedEventOf,
+  type EventPublished,
+  type RecordedEventPublished,
+} from './events/published-events.ts';
 export {
   ReactionRefusedSchema,
   reactionRefusalDecider,

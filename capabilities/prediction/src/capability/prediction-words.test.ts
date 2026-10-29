@@ -41,6 +41,20 @@ describe('the words of what a run of a prediction function answers', () => {
     );
   });
 
+  it('say that the default forecast answered when the active version needs a feature the license does not include', () => {
+    const record = {
+      version: null,
+      default_forecast: true,
+      because: 'feature_unlicensed',
+      feature: 'prediction-example',
+      coverage: 0.8,
+    };
+
+    expect(describeOutput(prediction, record)).toBe(
+      "From 2026-W41, it predicts 120.5 orders in 2026-W42 (96 to 1,250 orders) and 131 orders in 2026-W45 (100 to 160 orders), each range holding the truth eight times in ten, from the default forecast, since its active version needs prediction-example, which this runtime's license does not include.",
+    );
+  });
+
   it('say a total by the end of the period it sums to, in its unit, from the period the record names', () => {
     const total = { name: 'total', points: [{ at: '2026-11-01', value: 78, low: 70, high: 85 }] };
     const answer = { ...prediction, unit: 'visits', origin: '2026-10-25', lines: [observed, total] };

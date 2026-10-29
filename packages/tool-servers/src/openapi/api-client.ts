@@ -1,4 +1,5 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
+import { unreadDocuments, type DocumentReading } from '@on.auto/documents';
 import { Result } from 'effect';
 
 import type { Observed } from '../clients/observed-requests.ts';
@@ -13,6 +14,7 @@ export interface ApiOpening {
   readonly fetch: FetchLike;
   readonly tokens: TokenSource | undefined;
   readonly now: () => number;
+  readonly documents?: DocumentReading | undefined;
 }
 
 const unobserved: Observed = { id: null, response: null };
@@ -61,7 +63,8 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
   const answering: Answering = { requestIdHeader: settings.request_id, now: opening.now };
   const { promise: closed, resolve } = Promise.withResolvers<void>();
   return {
-    call: async ({ tool, input, signal }) => {
+    call: async ({ tool, input, signal, timeoutMs }) => {
+      const started = performance.now();
       const operation = operations.get(tool);
       if (operation === undefined) {
         return { error: new ArgumentsRefused(`The tool server lists no tool ${tool}`), observed: unobserved };
@@ -78,6 +81,15 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
           await sent(request.success, { endpoint, opening, signal }),
           answering,
           operation.answers,
+          {
+            named: request.success.named,
+            read: (given, textBytes) =>
+              (opening.documents ?? unreadDocuments)(given, {
+                deadlineMs: timeoutMs - (performance.now() - started),
+                textBytes,
+                signal,
+              }),
+          },
         );
       } catch (error) {
         return { error, observed: unobserved };

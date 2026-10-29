@@ -10,6 +10,7 @@ import {
   documentsIn,
   refusalOf,
 } from '../api-testing/described-documents.ts';
+import { fakeApiToolNames } from '../api-testing/fake-api-document.ts';
 import { shippedDocumentOf } from '../settings/server-settings.ts';
 import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
 
@@ -92,7 +93,7 @@ describe('the document of an openapi server a provider ships', () => {
     );
 
     expect(described?.baseUrl).toBe('https://graph.example.com/v1');
-    expect(described?.operations).toHaveLength(9);
+    expect(described?.operations).toHaveLength(fakeApiToolNames.length);
   });
 
   it('is refused when the providers ship no document of that name', async () => {
@@ -121,7 +122,7 @@ describe('the document of an openapi server, read from a file at start', () => {
     const listed = await describedApiOf({ notes: { document: 'notes.yaml', org: 'acme' } }, documentsIn(directory));
 
     expect(graph?.baseUrl).toBe('https://graph.example.com/v1');
-    expect(graph?.operations).toHaveLength(9);
+    expect(graph?.operations).toHaveLength(fakeApiToolNames.length);
     expect(listed).toMatchObject({
       baseUrl: 'https://notes.example.com/v1',
       operations: [{ tool: { name: 'listNotes' } }],

@@ -1,0 +1,11 @@
+{
+  "type": "usage_reported",
+  "data": {
+    "actions": 140,
+    "licensed": 120
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

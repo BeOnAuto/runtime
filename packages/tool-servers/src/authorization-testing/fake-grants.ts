@@ -93,7 +93,7 @@ function redirectedTo(redirectUri: string, parameters: Readonly<Record<string, s
   return new Response(null, { status: 302, headers: { location: location.href } });
 }
 
-export function fakeTokens({ expiresInSeconds }: ClientRegistration): FakeTokens {
+export function fakeTokens({ expiresInSeconds, namesTokenType }: ClientRegistration): FakeTokens {
   const live = new Map<string, Live>();
   const revokedWhere = (isRevoked: (held: Live) => boolean): void => {
     for (const [token, held] of live) {
@@ -108,7 +108,7 @@ export function fakeTokens({ expiresInSeconds }: ClientRegistration): FakeTokens
       live.set(token, { expiresAt: Date.now() + (expiresInSeconds ?? lifetimeWhenUnsaid) * 1000, clientId, grant });
       return {
         access_token: token,
-        token_type: 'Bearer',
+        ...(namesTokenType === false ? {} : { token_type: 'Bearer' }),
         ...(expiresInSeconds === null ? {} : { expires_in: expiresInSeconds }),
       };
     },

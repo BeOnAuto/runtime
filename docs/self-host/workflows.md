@@ -63,7 +63,7 @@ Only the logs say which server holds the claim. `/health` responds the same on e
 Servers of different versions never share a database at the same time:
 
 1. Stop every server of the old version.
-2. Start one server of the new version. A version that adds a table fills it from the ledger's history at its first start, before it accepts requests, under the database's migration lock.
+2. Start one server of the new version. It carries the ledger forward at its first start, before it accepts requests, under the database's migration lock, and a version that adds a table fills it from the ledger's history then.
 3. Start the others once the first is ready. A server that starts meanwhile waits for that lock for up to 60 seconds, then stops if it is still held. Start it again.
 
 ## Starting, stopping and restarting

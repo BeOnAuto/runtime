@@ -30,6 +30,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     consent: options.consent,
     secrets,
     now: options.now ?? Date.now,
+    documents: options.documents,
     timing,
     reportOutput: (server: string, message: string) => {
       report({ server, message, run_id: null, call_id: null });

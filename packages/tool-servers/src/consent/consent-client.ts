@@ -75,6 +75,23 @@ export interface FinishedConsent {
   readonly revoked: Effect.Effect<void>;
 }
 
+export type ConsentStep = 'ping' | 'resource_metadata' | 'authorization_server_metadata' | 'registration' | 'token';
+
+export type ConsentCallAnswer =
+  | { readonly status: number; readonly retryAfterMs: number | null }
+  | { readonly failed: 'timed_out' | 'unreachable' | 'unreadable' | 'failing' };
+
+export interface ConsentCall {
+  readonly step: ConsentStep;
+  readonly host: string;
+  readonly answer: ConsentCallAnswer;
+}
+
+export interface UnansweredCall {
+  readonly refused: 'unanswered';
+  readonly call: ConsentCall;
+}
+
 export type ConsentRefusal =
   | { readonly refused: 'another_issuer'; readonly named: string; readonly by: 'server' | 'authorization_server' }
   | { readonly refused: 'another_resource'; readonly named: string }
@@ -85,7 +102,7 @@ export type ConsentRefusal =
   | { readonly refused: 'no_client' }
   | { readonly refused: 'client_gone' }
   | { readonly refused: 'host'; readonly rule: string }
-  | { readonly refused: 'unanswered' }
+  | { readonly refused: 'unanswered'; readonly call?: ConsentCall }
   | { readonly refused: 'iss' }
   | { readonly refused: 'code' }
   | { readonly refused: 'studio_elsewhere' }
@@ -114,7 +131,8 @@ export type IssuerRefusal = Refused<
 
 export type WayRefusal =
   | { readonly refused: 'no_authorization_server' }
-  | Refused<'another_resource' | 'malformed_scope' | 'host' | 'unanswered'>
+  | Refused<'another_resource' | 'malformed_scope' | 'host'>
+  | UnansweredCall
   | { readonly refused: 'at_the_issuer'; readonly issuer: string; readonly refusal: IssuerRefusal };
 
 export interface KeptRow {

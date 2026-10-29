@@ -10,23 +10,24 @@ The release carries one model runtime, the only one of its format:
 | -------- | -------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `series` | `series` | `@on.auto/prediction-series` | [The runtime's own models](prediction-format.md#the-runtime-s-own-models): JSON recipes it executes in TypeScript, in the server's own process. It also fits them from a build's training rows, and answers a function with no active version from its default forecast |
 
-A server can load more, each from a package named in its settings, which is an **extension**. ONNX models are executed by the ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository.
+A server can load more, each from a package named in its settings, which is an **extension**. ONNX models are executed by the ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository; it names the feature `prediction-onnx`, so it does its work only while the runtime's license includes that feature, as [A runtime that needs a feature](#a-runtime-that-needs-a-feature) says.
 
 ## What a candidate records
 
 A candidate names its format as it is uploaded, `POST /runs/{run_id}/build/candidates?format=series`, and a server takes only a format one of its model runtimes executes for the function. The runtime that executes it is recorded beside what it answered:
 
-| Record                      | What it holds                                                                                                  |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `candidate_uploaded`        | The candidate's `format`, the `runtime` that checked it, by `name` and `version`, and the `signature` it found |
-| `candidate_scored`          | The `runtime` that walked the candidate                                                                        |
-| The card of `version_built` | `file.format` and `file.runtime`, the runtime that scored the winner, and the `signature`                      |
-| `version_activated`         | `file_format`, the format of the version's file                                                                |
-| `candidates_fitted`         | The `runtime` that fitted a build's candidates itself, and the candidates it fitted                            |
-| `shadow_predicted`          | The `runtime` that answered, null when no runtime of the server executes the version's format                  |
-| The record of a question    | The `runtime` that answered, and `default_forecast` when no version was active                                 |
+| Record                      | What it holds                                                                                                                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `candidate_uploaded`        | The candidate's `format`, the `runtime` that checked it, by `name` and `version`, and the `signature` it found                                                                                              |
+| `candidate_scored`          | The `runtime` that walked the candidate                                                                                                                                                                     |
+| `candidate_disqualified`    | `because: feature_unlicensed` and the `feature`, for a candidate whose runtime needs a feature the license lacks                                                                                            |
+| The card of `version_built` | `file.format` and `file.runtime`, the runtime that scored the winner, and the `signature`                                                                                                                   |
+| `version_activated`         | `file_format`, the format of the version's file                                                                                                                                                             |
+| `candidates_fitted`         | The `runtime` that fitted a build's candidates itself, and the candidates it fitted                                                                                                                         |
+| `shadow_predicted`          | The `runtime` that answered, null when no runtime of the server executes the version's format, or with `because: feature_unlicensed` and the `feature` when its runtime needs a feature the license lacks   |
+| The record of a question    | The `runtime` that answered, and `default_forecast` when no version was active, or with `because: feature_unlicensed` and the `feature` when the active version's runtime needs a feature the license lacks |
 
-The brief of a build closes with the formats an upload takes, and the server keeps a model file under a name that carries its format, `models/<sha256>/model.<format>`. A version whose format no runtime of the server executes any more is refused at a question, `unavailable` with the kind `model_process_failed` and `because` `no_model_runtime`; a candidate in that format is disqualified `not_loaded`.
+The brief of a build closes with the formats an upload takes, which leave out the formats of a runtime that needs a feature the license lacks, and the server keeps a model file under a name that carries its format, `models/<sha256>/model.<format>`. A version whose format no runtime of the server executes any more is refused at a question, `unavailable` with the kind `model_process_failed` and `because` `no_model_runtime`; a candidate in that format is disqualified `not_loaded`.
 
 ## List the extensions
 
@@ -56,7 +57,7 @@ Two runtimes that execute one format are resolved by their order: the first exec
 The server loads each extension as it starts, in order, and stops at the first it refuses, with one line that names the package and why:
 
 ```text
-Auto Runtime could not start: ExtensionRefused: The extension @acme/prediction-models is refused: it provides prediction/model-runtime built against contract 3, and this runtime accepts contracts 1 to 2
+Auto Runtime could not start: ExtensionRefused: The extension @acme/prediction-models is refused: it provides prediction/model-runtime built against contract 4, and this runtime accepts contracts 1 to 3
 ```
 
 It refuses a package:
@@ -89,7 +90,7 @@ A package that holds a symbolic link is refused when an `integrity` is given, si
 
 ## The contract
 
-A model runtime is written against the contract of the point `prediction/model-runtime`, which the package `@on.auto/prediction-contract` holds as schemas and types. The package is on npm with a version line of its own, and the release carries its own copy of it. The contract has a version, an integer, 2 in this release, and the runtime accepts the range `1` to `2`. It changes by addition, and each addition raises it: a field or a capability a runtime may give, or a kind of binding, raises the version by one and the top of the range with it, while the bottom of the range stays where it is. A runtime built against an earlier version still loads, and a server older than a runtime refuses it, naming the contract the runtime was built against and the range the server accepts. A change that would break a runtime built against it names a new point instead, which the runtime serves beside the old one for a release.
+A model runtime is written against the contract of the point `prediction/model-runtime`, which the package `@on.auto/prediction-contract` holds as schemas and types. The package is on npm with a version line of its own, and the release carries its own copy of it. The contract has a version, an integer, 3 in this release, and the runtime accepts the range `1` to `3`. It changes by addition, and each addition raises it: a field or a capability a runtime may give, or a kind of binding, raises the version by one and the top of the range with it, while the bottom of the range stays where it is. A runtime built against an earlier version still loads, and a server older than a runtime refuses it, naming the contract the runtime was built against and the range the server accepts. A change that would break a runtime built against it names a new point instead, which the runtime serves beside the old one for a release.
 
 Version 2 added, to version 1:
 
@@ -98,6 +99,8 @@ Version 2 added, to version 1:
 - the exports `fitModels` and `defaultModel` of the module of a runtime that `fits`.
 
 A runtime built against version 1 gives none of them and loads as it did.
+
+Version 3 added, to version 2, the optional `feature` of a runtime, the feature of the license its work needs. A runtime built against version 1 or 2 names none, and a runtime that names none is never gated.
 
 ### What an extension exports
 
@@ -110,7 +113,7 @@ export const manifest = {
   provides: [
     {
       point: 'prediction/model-runtime',
-      contract: 2,
+      contract: 3,
       implementation: {
         name: 'acme-runtime',
         version: '1.0.0',
@@ -123,7 +126,7 @@ export const manifest = {
 };
 ```
 
-An extension adds the package as a peer dependency, `"@on.auto/prediction-contract": "^1"`, and imports its schemas and types: `ExtensionManifest` and `ModelRuntime` are the types of these values, and `ExtensionManifestSchema` and `ModelRuntimeSchema` the schemas the server checks them with. The contract's declarations use `effect`'s, which need TypeScript's `esnext.disposable` library, which a `target` of `esnext` includes, as do the types of Node, `@types/node`, which reference it. The package's version is the package's own, which rises with each release that changes the package; the contract's version is the integer above, which rises by addition. The extension writes the contract's version it was built against into its manifest itself, as `contract: 2` above, since `providedModelRuntime(runtime)` writes the version of the copy of the package installed beside it, which `^1` may resolve to a later one; the release's own runtimes, built and shipped with the release's copy, use it.
+An extension adds the package as a peer dependency, `"@on.auto/prediction-contract": "^1"`, and imports its schemas and types: `ExtensionManifest` and `ModelRuntime` are the types of these values, and `ExtensionManifestSchema` and `ModelRuntimeSchema` the schemas the server checks them with. The contract's declarations use `effect`'s, which need TypeScript's `esnext.disposable` library, which a `target` of `esnext` includes, as do the types of Node, `@types/node`, which reference it. The package's version is the package's own, which rises with each release that changes the package; the contract's version is the integer above, which rises by addition. The extension writes the contract's version it was built against into its manifest itself, as `contract: 3` above, since `providedModelRuntime(runtime)` writes the version of the copy of the package installed beside it, which `^1` may resolve to a later one; the release's own runtimes, built and shipped with the release's copy, use it.
 
 | Field of the manifest | What it holds                                                                                           |
 | --------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -135,6 +138,7 @@ An extension adds the package as a peer dependency, `"@on.auto/prediction-contra
 | `name`, `version`        | The runtime, which every record of a model it answered names                                                                                                                                                                                                                                              |
 | `formats`                | The formats it executes, each a lower-case letter, then at most 31 lower-case letters, digits and hyphens                                                                                                                                                                                                 |
 | `capabilities`           | Whether it takes the features of a function, `features`, its `given` features ahead, `given`, and the periods to the end of a total, `totals`; optionally whether it reads the period of each origin, `calendar`, and whether it fits its own models, `fits`                                              |
+| `feature`                | Optional. The feature of the license the runtime's work needs, a lower-case letter, then at most 31 lower-case letters, digits and hyphens, as [A runtime that needs a feature](#a-runtime-that-needs-a-feature) says; the release's `series` names none                                                  |
 | `binding`                | `{ kind: 'process', module }` or `{ kind: 'inline', module }`: a function that answers the URL of a file, the module that loads a model. A model process imports a process binding's module; the server imports an inline binding's module into its own process, and only for an extension of the release |
 
 ### The module of a binding
@@ -176,6 +180,18 @@ A runtime that states `fits` exports two more functions from the module of its b
 | `fitModels(shape, training)` | A list of `{ format, bytes }`, the models it fits from a build's training rows, which a build with no trainer, or whose trainer names no candidate, uploads and scores |
 
 `shape` is what the function is: `fed`, as `issueFor` takes it; `grain`, the period of its target; `season`, or null; `accumulates`, the enclosing period of a total, or null; and `holdout`, the periods a build holds back. `training` is `{ first, series }`: `first`, the index of the training rows' first period, as `at` counts it, and `series`, the target of each series over the training periods, NaN where a period was not observed. Each model is uploaded to the build as a trainer's candidate is, checked by the runtime of its format, and scored; [What a build does without a trainer](prediction-format.md#what-a-build-does-without-a-trainer) says how.
+
+### A runtime that needs a feature
+
+A runtime that names a `feature` does its work only while the runtime's license includes that [feature](../self-host/licensing.md#features) for the org whose function it serves. The server checks the feature at every piece of the runtime's work as it starts, the check of a candidate, a question's run, a walk, a fit and a default forecast, so no path executes it without the feature. While the license does not include it:
+
+- a build leaves the runtime's formats out of the formats its brief offers, and an upload in one of them is refused before its body is read, `conflict` with the kind `feature_unlicensed`, in words that name the feature, the format and where to add the feature, `This runtime's license does not include prediction-onnx, which executes onnx models. The account holder or an organization admin can add it at <page>.`, with the page in `resolve_at`; one that lapses while the candidate is checked is refused the same way, recording nothing;
+- a candidate in one of its formats that a build has not scored yet is disqualified `feature_unlicensed`, with those words and the `feature`, and never walked; a model a build fits itself in one of its formats is refused, `candidate_refused` with `because: feature_unlicensed` and those words;
+- a version in one of its formats is not walked in a shadow: its `shadow_predicted` names no `runtime`, counts nothing, and says `because: feature_unlicensed` with the `feature`; the close decides nothing and uses up none of the shadow's closes, which go on, within the most of 52, once the feature is back, so a lapse never decides which version is active;
+- a question whose active version is in one of its formats is answered by the [default forecast](prediction-format.md#the-default-forecast), whose record says `because: feature_unlicensed` and the `feature`, or refused `conflict`, `feature_unlicensed`, where no runtime of the server answers a default forecast for the function; a default forecast whose model is in one of its formats is refused the same way;
+- the runtime does not fit a build's candidates or the default forecast; the next runtime that fits and takes what the function feeds does.
+
+So a license that lapses stops nothing: each function answers from the runtime's own models until a license that includes the feature is in force again, and then from its active version. The formats of a runtime that names no feature, as the release's `series`, are never gated, and every record of a model a runtime answered keeps naming that runtime's `name` and `version`. A server that cannot read its license to check a feature answers `unavailable` with the kind `meter_unavailable`, and a build waits a minute and tries again.
 
 ## The runtime's own models
 

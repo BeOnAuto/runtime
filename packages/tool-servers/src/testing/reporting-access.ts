@@ -1,9 +1,9 @@
+import { documentsReadInProcess } from '@on.auto/documents/testing';
 import type { RecordedContent } from '@on.auto/operations';
 import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { Effect, Function } from 'effect';
 
 import type { ServerMessage } from '../access/caller-context.ts';
-import type { Timing } from '../bounds/call-bounds.ts';
 import { makeToolAccess } from '../call-fetch/access-of-the-call.ts';
 import { consentClientWith } from '../consent-testing/consent-fakes.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
@@ -22,13 +22,14 @@ export const testClientInfo: ToolAccessOptions['clientInfo'] = { name: '@on.auto
 
 export interface AccessOptions {
   readonly environment?: Environment;
-  readonly timing?: Timing;
+  readonly timing?: ToolAccessOptions['timing'];
   readonly fetch?: ToolAccessOptions['fetch'];
   readonly consent?: ToolAccessOptions['consent'];
   readonly now?: ToolAccessOptions['now'];
   readonly traceMeta?: ToolAccessOptions['traceMeta'];
   readonly connections?: ToolAccessOptions['connections'];
   readonly runtimeSecrets?: ToolAccessOptions['runtimeSecrets'];
+  readonly documents?: ToolAccessOptions['documents'] | null;
   readonly providers?: NonNullable<ToolServerSettingsContext['providers']>;
 }
 
@@ -55,7 +56,16 @@ function servers(
 
 function accessOver(
   settings: ToolServers,
-  { timing, fetch, consent = consentClientWith(), now, traceMeta, connections, runtimeSecrets }: AccessOptions,
+  {
+    timing,
+    fetch,
+    consent = consentClientWith(),
+    now,
+    traceMeta,
+    connections,
+    runtimeSecrets,
+    documents,
+  }: AccessOptions,
 ): ReportingAccess {
   const messages: ServerMessage[] = [];
   const content = memoryRecordedContent();
@@ -63,6 +73,7 @@ function accessOver(
     clientInfo: testClientInfo,
     consent,
     content,
+    ...(documents === null ? {} : { documents: documents ?? documentsReadInProcess }),
     reportServerMessage: (message) => {
       messages.push(message);
     },

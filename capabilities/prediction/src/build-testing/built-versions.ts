@@ -44,9 +44,10 @@ export async function builtFrom(
   playbook: BuildPlaybook,
   names: readonly CandidateName[],
   functionName = 'daily-visits',
+  format?: string,
 ): Promise<string> {
   const build = await askedBuild(playbook, functionName);
-  await uploaded(playbook, build, names);
+  await uploaded(playbook, build, names, format);
   expect(await answered(playbook, build, { candidates: names.map((name) => candidateSha256(name)) })).toMatchObject({
     status: 'succeeded',
   });

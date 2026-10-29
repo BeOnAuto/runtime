@@ -1,0 +1,10 @@
+{
+  "src/hand-calls/0.46.0/tool_call_answered.json": "caefcc06631ab58de2737f0649878fa8e2261a2c4fc83504363ac419db2d3b8b",
+  "src/hand-calls/0.46.0/tool_call_failed.json": "890f60d77a3d60b9b4368aade63b4098b0c32bf8f6843126f6ddfeac424e2b12",
+  "src/hand-calls/0.46.0/tool_call_started.json": "1d17d06298c33eed8c3dc5545559b115b429e3ec9797ce148c247e94890d5d03",
+  "src/own-calls/0.46.0/reading_failed.json": "76d50ad2d3efce6f4f8d2a288b555539849ce0de5305a199fece04e7dafcbf84",
+  "src/own-calls/0.46.0/replies_read.json": "ac8d91ac5851f324b867d8cf5061fff256a64f839530100b722cd87856c4741c",
+  "src/own-calls/0.46.0/telling_failed.json": "28cefaa933d512661840d06ba3df52212bee8d648c2431d61d740ca463a3abe4",
+  "src/own-calls/0.46.0/telling_started.json": "5b8c0d0b1ed3b2f19824737c87c1e5e3c6c0be9fd7008a3a252c6d145431a0c4",
+  "src/own-calls/0.46.0/telling_succeeded.json": "2200334d17ee74c843070035f875c03de19ad4637661821039f2dcdd3803892b"
+}

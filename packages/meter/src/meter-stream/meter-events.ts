@@ -1,4 +1,4 @@
-import { ActedContextSchema, factOf } from '@on.auto/operations';
+import { ActedContextSchema, earlierShapeOf, factOf, readingEarlierShapes } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import {
@@ -16,6 +16,8 @@ import {
   InvalidatedSchema,
   keyRefusedOf,
   LicenseRecordSchema,
+  LicenseRecordWithoutFeaturesSchema,
+  withNoFeatures,
   type HeldLicense,
   type KeyRefused,
 } from './license-events.ts';
@@ -27,8 +29,12 @@ const ReportSchema = Schema.Struct({ actions: Schema.Int, licensed: Schema.Int }
 export const MeterEventSchema = Schema.Union([
   factOf('installation_identified', Schema.Struct({ installation: Schema.String }), ActedContextSchema),
   factOf('action_admitted', AdmittedSchema, ActedContextSchema),
-  factOf('license_activated', LicenseRecordSchema, ActedContextSchema),
-  factOf('license_renewed', LicenseRecordSchema, ActedContextSchema),
+  readingEarlierShapes(factOf('license_activated', LicenseRecordSchema, ActedContextSchema), [
+    earlierShapeOf(factOf('license_activated', LicenseRecordWithoutFeaturesSchema, ActedContextSchema), withNoFeatures),
+  ]),
+  readingEarlierShapes(factOf('license_renewed', LicenseRecordSchema, ActedContextSchema), [
+    earlierShapeOf(factOf('license_renewed', LicenseRecordWithoutFeaturesSchema, ActedContextSchema), withNoFeatures),
+  ]),
   factOf('license_invalidated', InvalidatedSchema, ActedContextSchema),
   factOf('usage_reported', ReportSchema, ActedContextSchema),
   AllocationEventSchema,

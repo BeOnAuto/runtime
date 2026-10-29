@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "Auto Runtime",
-    "version": "0.45.0",
+    "version": "0.46.0",
     "description": "Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run alone or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
@@ -6056,7 +6056,7 @@
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
         "tags": [
           "connections"
         ],
@@ -7172,6 +7172,13 @@
                       ],
                       "description": "The plan of that org"
                     },
+                    "features": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The features of the license in force, which a model runtime that names one needs to do its work; none without a license, or once it is invalid or lapsed"
+                    },
                     "standing": {
                       "anyOf": [
                         {
@@ -7433,6 +7440,7 @@
                     "org",
                     "org_name",
                     "plan",
+                    "features",
                     "standing",
                     "licensed",
                     "runs_left",
@@ -7614,6 +7622,13 @@
                       ],
                       "description": "The plan of that org"
                     },
+                    "features": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The features of the license in force, which a model runtime that names one needs to do its work; none without a license, or once it is invalid or lapsed"
+                    },
                     "standing": {
                       "anyOf": [
                         {
@@ -7875,6 +7890,7 @@
                     "org",
                     "org_name",
                     "plan",
+                    "features",
                     "standing",
                     "licensed",
                     "runs_left",
@@ -10584,6 +10600,7 @@
                                 "build_ended",
                                 "no_trainer",
                                 "already_active",
+                                "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
                                 "license_required",
@@ -11036,6 +11053,7 @@
                                 "build_ended",
                                 "no_trainer",
                                 "already_active",
+                                "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
                                 "license_required",
@@ -11503,6 +11521,7 @@
                                 "build_ended",
                                 "no_trainer",
                                 "already_active",
+                                "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
                                 "license_required",
@@ -11942,6 +11961,7 @@
                                 "build_ended",
                                 "no_trainer",
                                 "already_active",
+                                "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
                                 "license_required",
@@ -15565,7 +15585,7 @@
       "post": {
         "operationId": "upload_candidate",
         "summary": "Upload candidate",
-        "description": "Uploads a candidate model to a build of a prediction function that waits for its trainer: a file in a format the brief of the build lists, named by format, at most 64 MiB, with its Content-Length. The file is checked in a model process by the model runtime of its format, and refused when that runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates; a format the server does not execute for the function is refused at format. The answer is the SHA-256 the answer to the build names; the same bytes again answer the same.",
+        "description": "Uploads a candidate model to a build of a prediction function that waits for its trainer: a file in a format the brief of the build lists, named by format, at most 64 MiB, with its Content-Length. The file is checked in a model process by the model runtime of its format, and refused when that runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates; a format the server does not execute for the function is refused at format, and one whose model runtime needs a feature the license of the runtime does not include is refused as feature_unlicensed. The answer is the SHA-256 the answer to the build names; the same bytes again answer the same.",
         "tags": [
           "prediction"
         ],
@@ -16276,6 +16296,7 @@
               "build_ended",
               "no_trainer",
               "already_active",
+              "feature_unlicensed",
               "connections_full",
               "credits_exhausted",
               "license_required",

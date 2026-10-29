@@ -1,0 +1,25 @@
+{
+  "type": "reading_failed",
+  "data": {
+    "call_id": "call-1",
+    "server": "chat",
+    "connection_id": "connection-1",
+    "tool": "read_replies",
+    "conversation": "thread-1",
+    "since": "2026-10-29T09:00:00.000Z",
+    "arguments_bytes": 40,
+    "arguments_sha256": "b1c2d3",
+    "detail": "The server asked the runtime to wait",
+    "duration_ms": 50,
+    "jsonrpc_id": 6,
+    "server_request_id": "request-3",
+    "because": "server_failure",
+    "retry_after_ms": 60000,
+    "result_bytes": 16,
+    "result_sha256": "c7d8e9"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

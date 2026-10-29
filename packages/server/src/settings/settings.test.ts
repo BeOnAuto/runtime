@@ -73,6 +73,7 @@ describe('readSettings', () => {
       computation: { workers: 4 },
       recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
+      documents: { processes: 2 },
       connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
       registeredClients: [],
       autoClientsWritten: undefined,
@@ -155,6 +156,7 @@ const everySettingRead = {
   computation: { workers: 4 },
   recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
   prediction: defaultPrediction,
+  documents: { processes: 2 },
   connections: {
     peopleMayAdd: false,
     allowedHosts: ['*.example.com'],

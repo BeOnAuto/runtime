@@ -1,3 +1,4 @@
+import { documentsReadInProcess } from '@on.auto/documents/testing';
 import { describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
@@ -48,40 +49,76 @@ describe('an answer of an HTTP API that is shown', () => {
     });
   });
 
-  it('of text, or of JSON that does not parse, is text, and an empty one is no content', async () => {
+  it('of JSON that does not parse is text, and an empty one is no content, whatever its type', async () => {
     expect(
       await resultsOf(
-        new Response('Found 2 rows.', { headers: { 'content-type': 'text/plain' } }),
         new Response('{', { headers: { 'content-type': 'application/json' } }),
         new Response(null, { status: 204 }),
+        new Response('', { headers: { 'content-type': 'text/plain' } }),
       ),
-    ).toEqual([
-      { content: [{ type: 'text', text: 'Found 2 rows.' }] },
-      { content: [{ type: 'text', text: '{' }] },
-      { content: [] },
-    ]);
+    ).toEqual([{ content: [{ type: 'text', text: '{' }] }, { content: [] }, { content: [] }]);
   });
 });
 
 describe('an answer of an HTTP API that is not shown as it is', () => {
-  it('of another media type, or of none, is noted and not shown', async () => {
-    expect(
-      await resultsOf(
-        new Response('png', { headers: { 'content-type': 'image/png' } }),
-        new Response(new Uint8Array([1, 2])),
-      ),
-    ).toEqual([{ content: [{ type: 'binary', mimeType: 'image/png' }] }, { content: [{ type: 'binary' }] }]);
+  it('of no media type and an empty body, as a 201 that says nothing more, is no content and no document', async () => {
+    const empty = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        controller.close();
+      },
+    });
+
+    expect(await resultsOf(new Response(empty, { status: 201 }))).toEqual([{ content: [] }]);
   });
 
-  it('of an error other than 401, 429 and 5xx is an error result carrying its body, or its status when it has none', async () => {
+  it('of an error other than 401, 429 and 5xx is an error result carrying its body, of any type and never read as a document, or its status when it has none', async () => {
     expect(
       await resultsOf(
         new Response('{"title":"Not Found"}', { status: 404, headers: { 'content-type': 'application/problem+json' } }),
+        new Response('<p>Gone</p>', { status: 410, headers: { 'content-type': 'text/html' } }),
         new Response(null, { status: 409 }),
       ),
     ).toEqual([
       { content: [{ type: 'text', text: '{"title":"Not Found"}' }], isError: true },
+      { content: [{ type: 'text', text: '<p>Gone</p>' }], isError: true },
       { content: [{ type: 'text', text: 'The tool server answered HTTP 409' }], isError: true },
+    ]);
+  });
+});
+
+const describingAnId = { schemas: [], components: {}, headers: { '2XX': ['X-Id'] } };
+
+const readInProcess = {
+  named: undefined,
+  read: (given: Parameters<typeof documentsReadInProcess>[0], textBytes: number) =>
+    documentsReadInProcess(given, { deadlineMs: 30_000, signal: undefined, textBytes }),
+};
+
+describe('the headers an operation describes for its successful answers', () => {
+  it('are carried beside a body or a document’s text, alone where the body is empty, by the range of statuses they are described for, and nothing where the answer holds none', async () => {
+    const answered = { 'x-id': 'id-1' };
+    const savedDocument = '[The answer, text/plain, 6 bytes]\nSaved.';
+    const settled = await Promise.all([
+      settledOf(
+        new Response('Saved.', { headers: { ...answered, 'content-type': 'text/plain' } }),
+        answering,
+        describingAnId,
+        readInProcess,
+      ),
+      settledOf(new Response(null, { status: 201, headers: answered }), answering, describingAnId),
+      settledOf(Response.json({ saved: true }), answering, describingAnId),
+    ]);
+
+    expect(settled.map((each) => resultOf(each))).toEqual([
+      {
+        content: [{ type: 'text', text: JSON.stringify({ headers: { 'X-Id': 'id-1' }, body: savedDocument }) }],
+        structuredContent: { headers: { 'X-Id': 'id-1' }, body: savedDocument },
+      },
+      {
+        content: [{ type: 'text', text: '{"headers":{"X-Id":"id-1"}}' }],
+        structuredContent: { headers: { 'X-Id': 'id-1' } },
+      },
+      { content: [{ type: 'text', text: '{"saved":true}' }], structuredContent: { saved: true } },
     ]);
   });
 });
@@ -127,9 +164,9 @@ describe('an answer of an HTTP API that fails its call', () => {
     ]);
   });
 
-  it('larger than a call over HTTP may take is a failure noted as too large', async () => {
+  it('of JSON larger than a call over HTTP may take is a failure noted as too large', async () => {
     const settled = await settledOf(
-      new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'text/plain' } }),
+      new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'application/json' } }),
       { requestIdHeader: null, now: Date.now },
     );
 

@@ -30,12 +30,16 @@ describe('the keys the runtime trusts', () => {
     const signed = signedByTheTestKey(license);
 
     expect(Option.isNone(licenseIn(signed, autoSigners))).toBe(true);
-    expect(licenseIn(signed, testSigners)).toEqual(Option.some({ ...license, org_name: null }));
+    expect(licenseIn(signed, testSigners)).toEqual(Option.some({ ...license, org_name: null, features: [] }));
   });
 });
 
 function nameSignedAs(orgName: unknown): string | null | undefined {
   return Option.getOrUndefined(licenseIn(signedByTheTestKey({ ...license, org_name: orgName }), testSigners))?.org_name;
+}
+
+function featuresSignedAs(signed: object): readonly string[] | undefined {
+  return Option.getOrUndefined(licenseIn(signedByTheTestKey({ ...license, ...signed }), testSigners))?.features;
 }
 
 describe('the license Auto signs', () => {
@@ -47,7 +51,22 @@ describe('the license Auto signs', () => {
     ]);
   });
 
+  it('lists the features its agreement includes, none where it lists none, as a license issued before features were signed lists none', () => {
+    expect([
+      featuresSignedAs({ features: ['prediction-example'] }),
+      featuresSignedAs({ features: [] }),
+      featuresSignedAs({}),
+    ]).toEqual([['prediction-example'], [], []]);
+  });
+
+  it('keeps the well-formed names of the features it lists and leaves out the rest, still a license', () => {
+    expect(featuresSignedAs({ features: ['prediction-example', 'Prediction Example', `p${'x'.repeat(32)}`] })).toEqual([
+      'prediction-example',
+    ]);
+  });
+
   it.each([
+    ['features that are not a list of names', { features: 'prediction-example' }],
     ['an earlier version', { v: 1 }],
     ['no license', { kind: 'entitlement' }],
     ['a standing it does not know', { standing: 'frozen' }],

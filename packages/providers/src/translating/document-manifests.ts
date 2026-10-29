@@ -4,7 +4,7 @@ import { Result, Schema } from 'effect';
 
 import { shippedEntries } from '../reading/shipped-providers.ts';
 import { CutSchema } from './discovery-cuts.ts';
-import { LeftOutParametersSchema, RequirementSchema } from './discovery-parameters.ts';
+import { GlobalParameterSchema, LeftOutParametersSchema, RequirementSchema } from './discovery-parameters.ts';
 import { OpenApiTranslationSchema } from './openapi-translation.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
@@ -37,6 +37,11 @@ const DiscoveryManifestSchema = Schema.Struct({
   left_out_parameters: Schema.optionalKey(
     Schema.Array(LeftOutParametersSchema).annotate({
       description: 'The parameters of the methods kept that the document leaves out, since a call never sends them',
+    }),
+  ),
+  global_parameters: Schema.optionalKey(
+    Schema.Array(GlobalParameterSchema).annotate({
+      description: 'The global parameters of the Discovery document a method kept takes, with the values a call sends',
     }),
   ),
 });
@@ -167,7 +172,7 @@ async function discoveryTranslated(
   const metadata = await reading(manifest.authorization_server);
   const { document, revision } = translatedDiscoveryOf(read, metadata, manifest);
   const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
-  const { required, left_out_parameters: leftOut } = manifest;
+  const { required, left_out_parameters: leftOut, global_parameters: globals } = manifest;
   const remade = {
     type,
     discovery: address,
@@ -177,6 +182,7 @@ async function discoveryTranslated(
     ...(cuts === undefined ? {} : { cuts }),
     ...(required === undefined ? {} : { required }),
     ...(leftOut === undefined ? {} : { left_out_parameters: leftOut }),
+    ...(globals === undefined ? {} : { global_parameters: globals }),
   };
   return [
     { file: shippedFileIn(folder, `${name}${documentSuffix}`), text: jsonText(document) },

@@ -1,0 +1,10 @@
+{
+  "type": "installation_identified",
+  "data": {
+    "installation": "installation-1"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

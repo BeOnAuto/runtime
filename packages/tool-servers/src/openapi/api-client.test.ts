@@ -32,7 +32,7 @@ function searchAt(path: string): ApiOperation {
     inputs: [],
     body: null,
     credentials: [],
-    answers: { schemas: [], components: {} },
+    answers: { schemas: [], components: {}, headers: {} },
   };
 }
 
@@ -92,6 +92,7 @@ describe('the client of an HTTP API', () => {
         return Promise.resolve(new Response('{}'));
       },
       tokens: undefined,
+
       now: Date.now,
     });
 
@@ -111,7 +112,12 @@ describe('the client of an HTTP API', () => {
   });
 
   it('closes when it ends, holding no session', async () => {
-    const client = apiClient(settings, { fetch: globalThis.fetch, tokens: undefined, now: Date.now });
+    const client = apiClient(settings, {
+      fetch: globalThis.fetch,
+      tokens: undefined,
+
+      now: Date.now,
+    });
 
     await client.end();
 

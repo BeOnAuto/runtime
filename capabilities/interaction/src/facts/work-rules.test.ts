@@ -150,19 +150,34 @@ describe('the replies a request takes or refuses', () => {
 });
 
 describe('the work of a request as its capability reads it', () => {
-  it('passes over the work another capability declares, and keeps when a delivery landed', () => {
-    const at = '2026-10-07T09:00:00.000Z';
+  const at = '2026-10-07T09:00:00.000Z';
 
+  const context = {
+    at,
+    by: 'playbook:alpha',
+    runId: askedRunId,
+    definitionType: 'interaction',
+    definitionName: 'approval',
+    definitionVersion: 1,
+  };
+
+  it('passes over the work another capability declares, and keeps when a delivery landed', () => {
     expect(
       interactionWorkOf([
-        { type: 'nudge_sent', data: { number: 1 }, at },
-        { type: 'delivery_started', data: started(1).data, at },
+        { type: 'nudge_sent', data: { number: 1 }, context },
+        { type: 'delivery_started', data: started(1).data, context },
         {
           type: 'delivery_succeeded',
           data: { number: 1, result_bytes: 2, result_sha256: 'd'.repeat(64), duration_ms: 3, jsonrpc_id: 1 },
-          at,
+          context,
         },
       ]),
     ).toEqual({ lastAttempt: 1, inFlight: null, deliveredAt: at, refusedReplies: [] });
+  });
+
+  it('refuses work of its own in a shape no reader of it knows, as any unreadable fact of the run', () => {
+    expect(() => interactionWorkOf([{ type: 'delivery_started', data: { number: 1 }, context }])).toThrow(
+      'Missing key\n  at ["data"]["target"]',
+    );
   });
 });

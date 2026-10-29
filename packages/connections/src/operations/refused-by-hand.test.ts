@@ -1,5 +1,5 @@
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { failingAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import { failingAt, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -174,12 +174,12 @@ describe('a server given by hand that does not answer', () => {
       {
         status: 'rejected',
         reason: 'unavailable',
-        detail: `The server at ${silent.url} did not answer as an MCP server does; try again in a moment`,
+        detail: `The server at ${silent.url} cannot be connected now: ${hostOf(silent)} did not answer the request sent without a token in time; try again in a moment`,
       },
       {
         status: 'rejected',
         reason: 'unavailable',
-        detail: `The authorization server ${failing.origin} of the server at ${failing.url} did not answer as an authorization server does; try again in a moment`,
+        detail: `The server at ${failing.url} cannot be connected now: ${hostOf(failing)} answered the read of its authorization server metadata with HTTP 500; try again in a moment`,
       },
     ]);
   });

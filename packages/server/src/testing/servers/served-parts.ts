@@ -1,26 +1,28 @@
 import { RunMeter, type Meter } from '@on.auto/definitions';
-import type { Signers } from '@on.auto/meter';
+import type { LicensedFeatures } from '@on.auto/meter';
 import { Ledger } from '@on.auto/operations';
 import type { LanguageModel } from '@on.auto/reasoning';
 import type { Timing } from '@on.auto/tool-servers';
 import type { HostClock } from '@on.auto/workflow-host';
 import { Context, Layer } from 'effect';
 
-import type { ProgramPoolOf } from '../../composition/served-computation.ts';
+import type { CompositionParts } from '../../composition/composition-root.ts';
 import type { ComposedServerOptions } from '../../server-options/composed-options.ts';
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 
 export type LedgerOver = (ledger: Ledger['Service']) => Ledger['Service'];
 
 export interface ServedParts {
-  readonly programPoolOf?: ProgramPoolOf;
+  readonly programPoolOf?: NonNullable<CompositionParts['programPoolOf']>;
   readonly clock?: HostClock;
   readonly toolTiming?: Timing;
   readonly ledgerOver?: LedgerOver;
   readonly admit?: LanguageModel['Service']['admit'];
   readonly ledger?: TemporaryLedger;
-  readonly signers?: Signers;
+  readonly signers?: NonNullable<CompositionParts['signers']>;
   readonly meter?: Meter;
+  readonly installed?: NonNullable<CompositionParts['installed']>;
+  readonly features?: Layer.Layer<LicensedFeatures>;
 }
 
 function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {

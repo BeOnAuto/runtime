@@ -1,19 +1,42 @@
 import type { ModelRuntime } from '@on.auto/prediction-contract';
-import { Result } from 'effect';
+import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { parsePredictionDocument } from '../document/document-parsing.ts';
-import { inlineScriptedRuntime, scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
+import {
+  inlineScriptedRuntime,
+  scriptedFeaturesOf,
+  licensedScriptedRuntime,
+  scriptedFeature,
+  scriptedRuntime,
+} from '../runtime-testing/scripted-runtime.ts';
 import { dailyTotals, dailyVisits } from '../testing/daily-documents.ts';
 import { weeklyOrders } from '../testing/weekly-orders.ts';
 import { candidateFilesOf, listedFormats } from './format-words.ts';
-import { fedShapeOf, formatsAcceptedFor, modelRuntimePoint, runtimeFor, runtimeNamed } from './model-runtimes.ts';
+import {
+  fedShapeOf,
+  fittingRuntimeFor,
+  formatsAcceptedFor,
+  formatsOfferedFor,
+  modelRuntimePoint,
+  runtimeFor,
+  runtimeNamed,
+  unlicensedFeatureOf,
+} from './model-runtimes.ts';
 
 const visits = Result.getOrThrow(parsePredictionDocument(dailyVisits));
 
 const orders = Result.getOrThrow(parsePredictionDocument(weeklyOrders));
 
 const totals = Result.getOrThrow(parsePredictionDocument(dailyTotals));
+
+const unlicensed = scriptedFeaturesOf({ features: [] });
+
+const licensed = scriptedFeaturesOf({ features: [scriptedFeature] });
+
+function named({ format, runtime }: { readonly format: string; readonly runtime: ModelRuntime }): readonly string[] {
+  return [format, runtime.name];
+}
 
 const takesNothing = { features: false, given: false, totals: false };
 
@@ -26,10 +49,10 @@ function runtimeOf(
 }
 
 describe('the extension point of model runtimes', () => {
-  it('is prediction/model-runtime, accepting contracts 1 and 2, and takes a model runtime whose module is a file', () => {
+  it('is prediction/model-runtime, accepting contracts 1 to 3, and takes a model runtime whose module is a file', () => {
     expect([modelRuntimePoint.name, modelRuntimePoint.contracts]).toEqual([
       'prediction/model-runtime',
-      { least: 1, most: 2 },
+      { least: 1, most: 3 },
     ]);
     expect(modelRuntimePoint.implementationOf(scriptedRuntime)).toEqual(Result.succeed(scriptedRuntime));
   });
@@ -106,7 +129,9 @@ describe('the runtimes a server has installed', () => {
     const totalled = runtimeOf('totalled', ['totalled'], { ...takesNothing, totals: true });
     const runtimes = [plain, featured, given, totalled];
     const formatsOf = (document: typeof visits) =>
-      formatsAcceptedFor(runtimes, fedShapeOf(document)).map(({ format }) => format);
+      Effect.runSync(formatsAcceptedFor({ runtimes, features: unlicensed, org: 'acme' }, fedShapeOf(document))).map(
+        ({ format }) => format,
+      );
 
     expect([formatsOf(visits), formatsOf(orders), formatsOf(totals)]).toEqual([
       ['plain', 'featured', 'given', 'totalled'],
@@ -114,6 +139,45 @@ describe('the runtimes a server has installed', () => {
       ['totalled'],
     ]);
     expect(runtimeNamed(given)).toEqual({ name: 'given', version: '1.0.0' });
+  });
+});
+
+describe('the runtimes whose work needs a feature of the license', () => {
+  it('offer their formats while the license includes it, and set them apart while it does not', () => {
+    const runtimes = [licensedScriptedRuntime, scriptedRuntime];
+    const offered = (features: typeof licensed) =>
+      Effect.runSync(formatsOfferedFor({ runtimes, features, org: 'acme' }, fedShapeOf(visits)));
+
+    expect([offered(licensed).accepted.map(named), offered(licensed).unlicensed]).toEqual([
+      [
+        ['scripted-licensed', 'licensed-scripted-runtime'],
+        ['scripted', 'scripted-runtime'],
+      ],
+      [],
+    ]);
+    expect(offered(unlicensed)).toEqual({
+      accepted: [{ format: 'scripted', runtime: scriptedRuntime }],
+      unlicensed: [{ format: 'scripted-licensed', runtime: licensedScriptedRuntime, feature: scriptedFeature }],
+    });
+  });
+
+  it('fit a function’s models only while the license includes their feature, the next runtime that fits doing so meanwhile', () => {
+    const runtimes = [licensedScriptedRuntime, scriptedRuntime];
+    const fitting = (features: typeof licensed) =>
+      Effect.runSync(fittingRuntimeFor({ runtimes, features, org: 'acme' }, fedShapeOf(visits)))?.name;
+
+    expect([fitting(licensed), fitting(unlicensed)]).toEqual(['licensed-scripted-runtime', 'scripted-runtime']);
+  });
+
+  it('name the feature the license lacks, and a runtime that names none never lacks one', () => {
+    const lacking = (features: typeof licensed, runtime: ModelRuntime) =>
+      Effect.runSync(unlicensedFeatureOf({ features, org: 'acme' }, runtime));
+
+    expect([
+      lacking(unlicensed, licensedScriptedRuntime),
+      lacking(licensed, licensedScriptedRuntime),
+      lacking(unlicensed, scriptedRuntime),
+    ]).toEqual([scriptedFeature, undefined, undefined]);
   });
 });
 

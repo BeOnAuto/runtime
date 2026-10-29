@@ -87,6 +87,7 @@ jobs:
               - connections
               - coordination
               - definitions
+              - documents
               - identity
               - interaction
               - json-schema

@@ -1,60 +1,19 @@
 import { Effect } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type { CalledOnce } from '../one-call/called-once.ts';
+import {
+  accessTo,
+  answerOf,
+  apiKey,
+  apiTiming,
+  called,
+  clientSecret,
+  closedAfter,
+  fakeApi,
+  keyed,
+} from '../api-testing/api-calls.ts';
 import { describedAccess, type ClientRegistration } from '../testing/index.ts';
-import { serveFakeApi, type FakeApiOptions, type FakeApiServer } from '../testing/served-fakes.ts';
-
-const apiKey = 'graph-api-key-4f1d9a7c2b';
-
-const clientSecret = 'graph-client-secret-81c2';
-
-const timing = { callMs: 20_000, openMs: 20_000, longestRetryWaitMs: 1000 };
-
-const closing: (() => Promise<void>)[] = [];
-
-afterEach(async () => {
-  await Promise.all(closing.splice(0).map((close) => close()));
-});
-
-async function fakeApi(options: FakeApiOptions = {}): Promise<FakeApiServer> {
-  const fake = await serveFakeApi({ key: apiKey, ...options });
-  closing.push(fake.close);
-  return fake;
-}
-
-async function accessTo(entry: Readonly<Record<string, unknown>>) {
-  const reporting = await describedAccess(
-    { graph: { org: 'acme', ...entry } },
-    { environment: { GRAPH_API_KEY: apiKey, GRAPH_CLIENT_SECRET: clientSecret }, timing },
-  );
-  closing.push(reporting.access.close);
-  return reporting.access;
-}
-
-function keyed(fake: FakeApiServer) {
-  return { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' } };
-}
-
-function called(
-  access: Awaited<ReturnType<typeof accessTo>>,
-  tool: string,
-  input: Readonly<Record<string, unknown>> = {},
-): Promise<CalledOnce> {
-  return Effect.runPromise(
-    access.callOnce({
-      org: 'acme',
-      playbook: 'alpha',
-      reference: { server: 'graph', tool },
-      input,
-      meta: { 'auto.on/run_id': 'run-1' },
-    }),
-  );
-}
-
-function answerOf(answered: CalledOnce): unknown {
-  return 'answer' in answered ? answered.answer : answered;
-}
+import { serveFakeApi } from '../testing/served-fakes.ts';
 
 const searchTool: unknown = expect.arrayContaining([
   expect.objectContaining({
@@ -93,7 +52,7 @@ describe('the request of a call of a tool of an HTTP API', () => {
       method: 'PUT',
       path: '/v1/profiles/ada',
       body: '{"name":"Ada","title":null}',
-      headers: { accept: 'application/json', 'content-type': 'application/json', 'x-api-key': apiKey },
+      headers: { accept: 'application/json, */*;q=0.5', 'content-type': 'application/json', 'x-api-key': apiKey },
     });
     expect(get).toMatchObject({ method: 'GET', path: '/v1/rows', query: '?tag=open&tag=mine', body: '' });
   });
@@ -103,9 +62,9 @@ describe('the request of a call of a tool of an HTTP API', () => {
     const fake = await fakeApi({ key: formKey });
     const reporting = await describedAccess(
       { graph: { org: 'acme', document: fake.documentUrl, security: { queryKey: '${GRAPH_API_KEY}' } } },
-      { environment: { GRAPH_API_KEY: formKey }, timing },
+      { environment: { GRAPH_API_KEY: formKey }, timing: apiTiming },
     );
-    closing.push(reporting.access.close);
+    closedAfter(reporting.access.close);
 
     expect(await called(reporting.access, 'removeProfile', { id: 'eve' })).toMatchObject({
       outcome: 'tool_error',
@@ -146,7 +105,7 @@ describe('the query of a call of a tool of an HTTP API', () => {
 });
 
 describe('the answer of a call of a tool of an HTTP API', () => {
-  it('answers JSON as structured content and its text, text as text, another media type noted and not shown, and nothing as no content', async () => {
+  it('answers JSON as structured content and its text, any other answer as a document, and nothing as no content', async () => {
     const fake = await fakeApi();
     const access = await accessTo(keyed(fake));
 
@@ -159,8 +118,15 @@ describe('the answer of a call of a tool of an HTTP API', () => {
 
     expect(answers.map((answer) => answerOf(answer))).toEqual([
       { content: [{ type: 'text', text: '{"name":"Ada","rows":2}' }], structuredContent: { name: 'Ada', rows: 2 } },
-      { content: [{ type: 'text', text: 'Found 2 rows for acme.' }] },
-      { content: [{ type: 'binary', mimeType: 'image/png' }] },
+      { content: [{ type: 'text', text: '[The answer, text/plain, 22 bytes]\nFound 2 rows for acme.' }] },
+      {
+        content: [
+          {
+            type: 'text',
+            text: '[The answer, image/png, 8 bytes]\nThe runtime does not read image/png as text; it reads text, PDF and Word documents',
+          },
+        ],
+      },
       { content: [] },
     ]);
   });
@@ -232,7 +198,7 @@ describe('a call of a tool of an HTTP API that fails', () => {
     await gone.close();
     const access = await accessTo({ ...keyed(fake), base_url: gone.baseUrl });
 
-    expect(await called(access, 'search', { query: 'acme' })).toMatchObject({
+    expect(answerOf(await called(access, 'search', { query: 'acme' }))).toMatchObject({
       outcome: 'server_failure',
       detail: 'The tool server could not be reached',
     });

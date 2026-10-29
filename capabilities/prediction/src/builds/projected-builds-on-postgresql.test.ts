@@ -4,6 +4,7 @@ import { Client, Pool } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
 import { projectedBuildsSuite } from '../build-testing/projected-builds-suite.ts';
+import { projectedLicensedSuite } from '../build-testing/projected-licensed-suite.ts';
 import { projectedQuestionsSuite } from '../build-testing/projected-questions-suite.ts';
 import type { SettingsOf } from '../dataset-testing/dataset-stores.ts';
 
@@ -36,5 +37,6 @@ const onPostgreSQL: SettingsOf = async () => {
 
 describe.skipIf(skipped)(`the builds of prediction functions over projected datasets on PostgreSQL${notice}`, () => {
   projectedBuildsSuite(onPostgreSQL);
+  projectedLicensedSuite(onPostgreSQL);
   projectedQuestionsSuite(onPostgreSQL);
 });

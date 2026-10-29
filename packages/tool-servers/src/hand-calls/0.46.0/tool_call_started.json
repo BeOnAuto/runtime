@@ -1,0 +1,16 @@
+{
+  "type": "tool_call_started",
+  "data": {
+    "call_id": "call-1",
+    "server": "crm",
+    "connection_id": "connection-1",
+    "tool": "find_contact",
+    "arguments_bytes": 24,
+    "arguments_sha256": "a1b2c3",
+    "read_only": true
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

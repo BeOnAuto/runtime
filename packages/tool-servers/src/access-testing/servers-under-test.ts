@@ -20,6 +20,7 @@ export interface ServedUnderTest {
   readonly bare: Entry;
   readonly credential: CredentialUnderTest;
   readonly echoed: (input: Entry) => Entry;
+  readonly answeredText: (text: string) => string;
   readonly failNextCall: (status: number, headers?: Readonly<Record<string, string>>) => void;
   readonly calls: () => number;
   readonly requests: () => number;
@@ -49,6 +50,7 @@ function mcpServed(fake: FakeMcpServer, credentialled: Pick<ServedUnderTest, 'en
     ...credentialled,
     bare: { url: fake.url },
     echoed: (input) => input,
+    answeredText: (text) => text,
     failNextCall: (status, headers = {}) => {
       fake.answerNextOf('tools/call', status, 1, headers);
     },
@@ -66,6 +68,7 @@ function apiServed(fake: FakeApiServer, credentialled: Pick<ServedUnderTest, 'en
     ...credentialled,
     bare: { document: fake.documentUrl },
     echoed: (input) => ({ body: input }),
+    answeredText: (text) => `[The answer, text/plain, ${new TextEncoder().encode(text).byteLength} bytes]\n${text}`,
     failNextCall: (status, headers = {}) => {
       fake.answerNextWith({ status, headers });
     },

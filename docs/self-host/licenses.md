@@ -53,10 +53,10 @@ A key activated by the command, Studio or the API is kept in the runtime's secre
 The command answers in one line, such as:
 
 ```text
-Licensed to Acme Corporation on the team plan, with 570 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.
+Licensed to Acme Corporation on the team plan, with 570 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a. Features: none.
 ```
 
-The runtime says the same as it starts, in its terminal and on the page it serves at its root. `GET /v1/orgs/{org}/license` answers it as `summary`, beside `state` and the license's dates; the [HTTP reference](../reference/http.md#license) describes each field.
+The runtime says where it stands as it starts, in its terminal and on the page it serves at its root. `GET /v1/orgs/{org}/license` answers it as `summary`, beside `state`, the license's dates and its [features](licensing.md#features); the [HTTP reference](../reference/http.md#license) describes each field.
 
 In Studio, Settings, Self-hosted lists each runtime with its state, its last report and when it would warn and fall back. Settings, Runtime shows the same for the runtime Studio is connected to.
 

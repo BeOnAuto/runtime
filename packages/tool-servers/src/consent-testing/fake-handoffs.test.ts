@@ -4,6 +4,7 @@ import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
+import { keptHandedOf } from '../consent-tokens/kept-tokens.ts';
 import { clockAt, type ClientRegistration, type FakeMcpServer } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
@@ -97,14 +98,14 @@ describe('the tokens the fake consent service refreshes and revokes', () => {
     const issuer = serve.fake.origin;
     const refreshToken = String(handed.tokens.refresh_token);
     const keyed = { issuer, refreshToken, connectionKey: handed.connection_key, resource: `${issuer}/mcp` };
-    const kept = { ...handed.tokens, connection_key: handed.connection_key };
+    const kept = keptHandedOf(handed.tokens, handed.tokens.scope, handed.connection_key);
     const accessAlone = {
       access_token: kept.access_token,
       token_type: kept.token_type,
-      connection_key: kept.connection_key,
+      connection_key: handed.connection_key,
     };
 
-    const key = kept.connection_key;
+    const key = handed.connection_key;
 
     const unkeyed = await run(calls.refresh({ ...keyed, connectionKey: 'another-key' }));
     const refreshed = await run(calls.refresh({ ...keyed, resource: undefined }));
@@ -190,7 +191,7 @@ describe('the calls of the fake consent service an authorization server fails', 
 
     expect([
       await run(calls.refresh({ issuer, refreshToken: 'a-refresh-token', connectionKey, resource: undefined })),
-      await run(calls.revoke({ issuer, tokens: handed.tokens, connectionKey })),
+      await run(calls.revoke({ issuer, tokens: keptHandedOf(handed.tokens, undefined, connectionKey), connectionKey })),
       await run(calls.redeem(second.state, studioSession, { code: 'another-code' })),
     ]).toMatchObject([
       { failure: { refused: 'unanswered' } },

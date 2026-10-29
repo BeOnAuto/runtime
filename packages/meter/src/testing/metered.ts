@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
 import type { LicenseGiven, LicensePorts } from '../licensing/runtime-license.ts';
-import { selfHostedMeterOver } from '../licensing/self-hosted-meter.ts';
+import { selfHostedMeterOver, type SelfHostedMeter } from '../licensing/self-hosted-meter.ts';
 import { accountFake, type AccountFake } from './account-fake.ts';
 import type { LedgerAt } from './ledgers.ts';
 import { meterRuntimeOn, type MeterRuntime } from './meter-runtime.ts';
@@ -26,6 +26,9 @@ export interface Metered extends Pick<MeterRuntime, 'executesFail' | 'warnings' 
   readonly allocated: (allocation: Parameters<LicensePorts['allocate']>[0]) => Promise<Answer>;
   readonly madeReport: (of?: string) => Promise<Effect.Success<ReturnType<LicensePorts['allocationReport']>>>;
   readonly status: () => Promise<Effect.Success<LicensePorts['status']>>;
+  readonly includes: (feature: string) => Promise<boolean>;
+  readonly refusedIncludes: (feature: string) => Promise<Answer>;
+  readonly featureRefusal: (use: Parameters<SelfHostedMeter['features']['refusal']>[0]) => Promise<Answer>;
   readonly refusedStatus: () => Promise<Answer>;
   readonly refusedReport: (of?: string) => Promise<Answer>;
   readonly refreshed: () => Promise<Answer>;
@@ -41,7 +44,7 @@ export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Pro
   const { key, keySource = 'environment', account = accountFake(), ...meterOptions } = options;
   const metering = meterRuntimeOn(at);
   const { timed, onTheLedger } = metering;
-  const { meter, license } = await timed(
+  const { meter, license, features } = await timed(
     Effect.flatMap(metering.ledgered, (ledgered) =>
       selfHostedMeterOver(
         { ...ledgered, account: account.ports },
@@ -61,6 +64,9 @@ export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Pro
     allocated: (allocation) => timed(answerOf(license.allocate(allocation), 'allocated')),
     madeReport: (of) => timed(license.allocationReport(of)),
     status: () => timed(license.status),
+    includes: (feature) => timed(features.includes({ org: 'acme', feature })),
+    refusedIncludes: (feature) => timed(answerOf(features.includes({ org: 'acme', feature }), 'read')),
+    featureRefusal: (use) => timed(answerOf(Effect.flatMap(features.refusal(use), Effect.fail), 'refused')),
     refusedStatus: () => timed(answerOf(license.status, 'read')),
     refusedReport: (of) => timed(answerOf(license.allocationReport(of), 'made')),
     refreshed: () => timed(answerOf(license.allocationRefreshed, 'refreshed')),

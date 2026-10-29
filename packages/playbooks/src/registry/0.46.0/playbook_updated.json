@@ -1,0 +1,11 @@
+{
+  "type": "playbook_updated",
+  "data": {
+    "playbook": "sales",
+    "description": "Leads and orders"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

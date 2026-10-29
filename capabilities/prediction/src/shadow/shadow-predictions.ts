@@ -1,7 +1,7 @@
 import { textToKeep } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { aMinute, restingUntil, type Performing } from '../build-work/build-performing.ts';
+import { aMinute, restingUntil, type Performing, type PerformedStep } from '../build-work/build-performing.ts';
 import type { ModelOutcome, WalkAnswer } from '../model-processes/model-processes.ts';
 import { executed } from '../models/model-commands.ts';
 import { executingRuntimeOf } from '../runtimes/model-runtimes.ts';
@@ -15,7 +15,7 @@ const notExecuted: ModelOutcome<WalkAnswer> = {
   milliseconds: 0,
 };
 
-function predictedOn(performing: Performing, predicting: Predicting, rows: ShadowRows): Effect.Effect<void> {
+function predictedOn(performing: Performing, predicting: Predicting, rows: ShadowRows): PerformedStep {
   const { ports, build, now } = performing;
   const { org, playbook, id } = build.address;
   const { document, challenger, of, origin } = predicting;
@@ -41,18 +41,19 @@ function predictedOn(performing: Performing, predicting: Predicting, rows: Shado
         version: challenger.version,
         of: of.version,
         build: id,
-        runtime: executing === undefined ? null : { ...executing.named },
+        runtime: executing === undefined || outcome.ended === 'unlicensed' ? null : { ...executing.named },
         origin: origin.form,
         count,
         missing,
         predictions_sha256: predictions.sha256,
         predictions_bytes: predictions.bytes,
+        ...(outcome.ended === 'unlicensed' ? { because: 'feature_unlicensed', feature: outcome.feature } : {}),
       },
     }));
   });
 }
 
-export function predicted(performing: Performing, predicting: Predicting): Effect.Effect<void> {
+export function predicted(performing: Performing, predicting: Predicting): PerformedStep {
   const { ports, build, now } = performing;
   const release = ports.permits.take();
   if (release === null) {

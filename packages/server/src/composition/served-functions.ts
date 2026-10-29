@@ -21,7 +21,15 @@ type ProjectedDatabase = Parameters<FunctionWiring['projections']['served']>[0][
 
 type ServingRuntime = Parameters<typeof toolUsersServedBy>[0];
 
+type LicensedFeatures = Parameters<typeof predictionFunctionsServedBy>[3]['features'];
+
 type ShippedFiles = Parameters<typeof computationServedBy>[2];
+
+interface ServedWiring extends FunctionWiring, ToolUsersWiring {
+  readonly shippedFiles: ShippedFiles;
+  readonly features: LicensedFeatures;
+  readonly installed?: Parameters<typeof extensionsServedBy>[3];
+}
 
 export interface ServedFunctions {
   readonly parts: Omit<WorkflowParts, 'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'shippedFiles'>;
@@ -32,14 +40,9 @@ export async function functionsServedBy(
   runtime: ServingRuntime,
   settings: Settings,
   database: ProjectedDatabase,
-  {
-    programPoolOf,
-    projections: wiring,
-    shippedFiles,
-    ...tools
-  }: FunctionWiring & ToolUsersWiring & { readonly shippedFiles: ShippedFiles },
+  { programPoolOf, projections: wiring, shippedFiles, features, installed, ...tools }: ServedWiring,
 ): Promise<ServedFunctions> {
-  const extensions = await extensionsServedBy(runtime, settings.extensions, predictionExtensionPoints);
+  const extensions = await extensionsServedBy(runtime, settings.extensions, predictionExtensionPoints, installed);
   const { reasoning, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
   const computation = await computationServedBy(settings.computation, programPoolOf, shippedFiles);
   const projections = await wiring.served({ recall: settings.recall, database }, computation.pool, [
@@ -48,6 +51,8 @@ export async function functionsServedBy(
   const prediction = await predictionFunctionsServedBy(runtime, settings, computation.pool, {
     store: projections.store,
     provided: extensions.provided,
+    features,
+    modelProcesses: tools.registry.processes.pool,
   });
   const capabilities = [
     reasoning.capability,

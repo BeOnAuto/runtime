@@ -1,3 +1,5 @@
+import { fileNamed, pixel } from './fake-api-files.ts';
+
 export interface SeenApiRequest {
   readonly method: string;
   readonly path: string;
@@ -23,7 +25,7 @@ export interface ApiAnswering {
 
 type Route = (request: Readonly<Request>, url: Readonly<URL>) => Promise<Response> | Response;
 
-const pixel = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const filesPath = '/files/';
 
 function bodyOf(text: string): unknown {
   const parsed: unknown = JSON.parse(text);
@@ -36,6 +38,8 @@ function problem(status: number, detail: string): Response {
     headers: { 'content-type': 'application/problem+json' },
   });
 }
+
+const noteHeaders = { 'x-note-id': 'note-1', 'x-trace': 'trace-1' };
 
 const routes: ReadonlyMap<string, Route> = new Map<string, Route>([
   [
@@ -51,7 +55,9 @@ const routes: ReadonlyMap<string, Route> = new Map<string, Route>([
   ['GET /rows', (_request, url) => Response.json({ tags: url.searchParams.getAll('tag') })],
   ['GET /sessions', (request) => Response.json({ session: request.headers.get('x-session') })],
   ['GET /photo', () => new Response(pixel, { headers: { 'content-type': 'image/png' } })],
-  ['GET /notes', () => new Response('', { status: 200 })],
+  ['GET /notes', () => new Response('', { status: 200, headers: noteHeaders })],
+  ['PUT /notes', () => Response.json({ saved: true }, { headers: noteHeaders })],
+  ['POST /notes', () => new Response(null, { status: 201, headers: noteHeaders })],
 ]);
 
 function noSuchRoute(request: Readonly<Request>): Response {
@@ -77,6 +83,9 @@ export async function answerTo(request: Readonly<Request>, path: string, answeri
   const route = routes.get(`${request.method} ${path}`);
   if (path === '/denied') {
     return withRequestId(problem(403, answering.deniedText), answering.requestIdHeader, requestId);
+  }
+  if (path.startsWith(filesPath)) {
+    return fileNamed(decodeURIComponent(path.slice(filesPath.length)));
   }
   const response = route === undefined ? noSuchRoute(request) : await route(request, new URL(request.url));
   return withRequestId(response, answering.requestIdHeader, requestId);

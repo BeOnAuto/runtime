@@ -7,6 +7,7 @@ import {
   memoryRegistrations,
   registeredAt,
   startAskedAt,
+  unansweredCall,
   type ClientRegistration,
 } from '../testing/index.ts';
 import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
@@ -92,7 +93,10 @@ describe('a dynamic registration the runtime does not keep', () => {
     expect([
       await refused(client, startAskedAt(refusing, { clients: ['dynamic'] })),
       await refused(client, startAskedAt(nameless, { clients: ['dynamic'] })),
-    ]).toEqual([{ refused: 'unanswered' }, { refused: 'unanswered' }]);
+    ]).toEqual([
+      unansweredCall('registration', refusing, { status: 400, retryAfterMs: null }),
+      unansweredCall('registration', nameless, { failed: 'unreadable' }),
+    ]);
     expect(registrations.kept()).toEqual([]);
   });
 

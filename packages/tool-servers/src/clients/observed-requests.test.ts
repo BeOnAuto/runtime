@@ -109,9 +109,16 @@ describe('the size of an HTTP answer to one of several requests', () => {
 describe('Retry-After', () => {
   const now = Date.parse('2026-10-05T09:00:00.000Z');
 
-  it('reads seconds, never below none', () => {
-    expect(retryAfterMsOf('1.5', now)).toBe(1500);
-    expect(retryAfterMsOf('-3', now)).toBe(0);
+  it('reads seconds written in digits alone, as HTTP writes them', () => {
+    expect([retryAfterMsOf('15', now), retryAfterMsOf(' 0 ', now)]).toEqual([15_000, 0]);
+  });
+
+  it('reads no wait longer than a day, however many digits or however far the date', () => {
+    expect([
+      retryAfterMsOf('9'.repeat(20), now),
+      retryAfterMsOf('9'.repeat(309), now),
+      retryAfterMsOf('Fri, 05 Oct 2096 09:00:00 GMT', now),
+    ]).toEqual([86_400_000, 86_400_000, 86_400_000]);
   });
 
   it('reads a date, never in the past', () => {
@@ -123,5 +130,9 @@ describe('Retry-After', () => {
     expect(retryAfterMsOf(null, now)).toBeNull();
     expect(retryAfterMsOf('  ', now)).toBeNull();
     expect(retryAfterMsOf('soon', now)).toBeNull();
+  });
+
+  it('reads nothing from seconds in another notation, a fraction or below none', () => {
+    expect(['0x10', '1e3', '1.5', '-3'].map((value) => retryAfterMsOf(value, now))).toEqual([null, null, null, null]);
   });
 });

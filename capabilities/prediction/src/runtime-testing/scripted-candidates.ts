@@ -63,12 +63,18 @@ export function candidateFile(name: CandidateName): string {
   return path;
 }
 
-export async function uploaded(playbook: BuildPlaybook, build: string, names: readonly CandidateName[]): Promise<void> {
+export async function uploaded(
+  playbook: BuildPlaybook,
+  build: string,
+  names: readonly CandidateName[],
+  format?: string,
+): Promise<void> {
   const [first, ...rest] = names;
   if (first === undefined) {
     return;
   }
   const upload = uploadCandidate(playbook.test.ports);
-  expect(await playbook.send(upload, { run_id: build }, candidateBytes(first))).toMatchObject({ status: 'succeeded' });
-  await uploaded(playbook, build, rest);
+  const input = format === undefined ? { run_id: build } : { run_id: build, format };
+  expect(await playbook.send(upload, input, candidateBytes(first))).toMatchObject({ status: 'succeeded' });
+  await uploaded(playbook, build, rest, format);
 }

@@ -13,7 +13,7 @@ import { Effect, Schema } from 'effect';
 import { isPinnableUrl } from '../settings/checked.ts';
 import { isSameIssuer } from './client-sources.ts';
 import type { ConsentAsked, ConsentRefusal, ConsentServer, ConsentWay, Refused } from './consent-client.ts';
-import { discoveryRefusalOf, refusalOf } from './consent-failures.ts';
+import { discoveryRefusalOf, observedCalls, type CallRefusal } from './consent-failures.ts';
 import { withOfflineAccess } from './scopes.ts';
 
 const endpointFields = {
@@ -104,7 +104,7 @@ function isResourceOf(url: string, resource: string): boolean {
   return checkResourceAllowed({ requestedResource: resourceUrlFromServerUrl(url), configuredResource: resource });
 }
 
-type ResourceRefusal = Refused<'another_resource' | 'host' | 'unanswered'>;
+type ResourceRefusal = Refused<'another_resource'> | CallRefusal;
 
 export const answeredNotFound = (status: number): boolean => status === notFound;
 
@@ -114,10 +114,11 @@ async function pingedBy(answer: Readonly<Response>): Promise<Pinged> {
   return { takesNoToken: answer.ok, challenge: { resourceMetadata: resourceMetadataUrl?.href, scope } };
 }
 
-export function pingedAt(url: string, fetch: FetchLike): Effect.Effect<Pinged, Refused<'host' | 'unanswered'>> {
+export function pingedAt(url: string, fetch: FetchLike): Effect.Effect<Pinged, CallRefusal> {
+  const observed = observedCalls('ping', url, fetch);
   return Effect.tryPromise({
-    try: async () => pingedBy(await fetch(url, pingOpeningNoSession)),
-    catch: refusalOf,
+    try: async () => pingedBy(await observed.fetch(url, pingOpeningNoSession)),
+    catch: observed.refusalOf,
   });
 }
 
@@ -127,19 +128,13 @@ function resourceReadAt(
   unpublished: typeof answeredNotFound,
   resourceMetadataUrl?: string,
 ): Effect.Effect<ProtectedResource | undefined, ResourceRefusal> {
-  const answered = { status: 0 };
-  const observing: FetchLike = async (...[address, init]: readonly [unknown, unknown?]) => {
-    answered.status = 0;
-    const response = await fetch(String(address), Object.assign({}, init));
-    answered.status = response.status;
-    return response;
-  };
+  const observed = observedCalls('resource_metadata', resourceMetadataUrl ?? url, fetch);
   const discovered = Effect.tryPromise({
     try: () =>
       discoverOAuthProtectedResourceMetadata(
         url,
         resourceMetadataUrl === undefined ? {} : { resourceMetadataUrl },
-        observing,
+        observed.fetch,
       ),
     catch: (error) => error,
   }).pipe(Effect.map(protectedResourceOfAnswer));
@@ -148,7 +143,8 @@ function resourceReadAt(
       isResourceOf(url, metadata.resource)
         ? Effect.succeed(metadata)
         : Effect.fail<Refused<'another_resource'>>({ refused: 'another_resource', named: metadata.resource }),
-    onFailure: (error) => (unpublished(answered.status) ? Effect.undefined : Effect.fail(refusalOf(error))),
+    onFailure: (error) =>
+      observed.answeredWith(unpublished) ? Effect.undefined : Effect.fail(observed.refusalOf(error)),
   });
 }
 
@@ -204,13 +200,14 @@ function builtServerOf({
 export function discoveredServerOf(
   issuer: string,
   fetch: FetchLike,
-): Effect.Effect<AuthorizationServer, Refused<'another_issuer' | 'no_metadata' | 'host' | 'unanswered'>> {
+): Effect.Effect<AuthorizationServer, Refused<'another_issuer' | 'no_metadata'> | CallRefusal> {
   if (!isPinnableUrl(issuer)) {
     return Effect.fail(noMetadata);
   }
+  const observed = observedCalls('authorization_server_metadata', issuer, fetch);
   return Effect.tryPromise({
-    try: () => discoverAuthorizationServerMetadata(issuer, { fetchFn: fetch }),
-    catch: discoveryRefusalOf,
+    try: () => discoverAuthorizationServerMetadata(issuer, { fetchFn: observed.fetch }),
+    catch: (error) => discoveryRefusalOf(error, observed),
   }).pipe(
     Effect.map(discoveredServerOfAnswer),
     Effect.flatMap((discovered) => (discovered === undefined ? Effect.fail(noMetadata) : Effect.succeed(discovered))),

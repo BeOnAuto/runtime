@@ -1,0 +1,23 @@
+{
+  "type": "shadow_predicted",
+  "data": {
+    "version": 2,
+    "of": 1,
+    "build": "build-2",
+    "runtime": null,
+    "origin": "2026-10-26",
+    "count": 0,
+    "missing": 0,
+    "predictions_sha256": "e1f2a4",
+    "predictions_bytes": 36,
+    "because": "feature_unlicensed",
+    "feature": "prediction-onnx"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

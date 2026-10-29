@@ -83,11 +83,13 @@ export {
 } from './consent/client-sources.ts';
 export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
 export { makeConsentClient } from './consent/consent-making.ts';
+export { callWordsOf, waitWordsOf } from './consent/call-words.ts';
 export {
   type ChosenClient,
   type ClientRegistrations,
   type ConnectionTokens,
   type ConsentAsked,
+  type ConsentCall,
   type ConsentClient,
   type ConsentClientOptions,
   type ConsentRefusal,
@@ -128,6 +130,7 @@ export { defineValidate } from './tool-reads/validate.ts';
 export { defineDryRun } from './tool-reads/dry-run.ts';
 export { defineExecute } from './execute/execute.ts';
 export { answeredInWords, failedInWords, toolInWords } from './names/tool-words.ts';
+export { HandCallEventSchema } from './hand-calls/hand-call-events.ts';
 export { handCallPresenter } from './hand-calls/hand-call-presenter.ts';
 export { conversationCallPresenter } from './own-calls/conversation-call-presenter.ts';
 export { defaultTiming, runBoundMs, toolBounds, type Timing } from './bounds/call-bounds.ts';

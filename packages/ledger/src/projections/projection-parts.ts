@@ -1,6 +1,7 @@
 import type { KeyedProjection, ProjectionAdvancer, ProjectionReader, RunOutcomeMapping } from '@on.auto/operations';
 
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import type { CarriedTables } from '../layout/layout-steps.ts';
 import { keptProjections } from '../outcomes/run-outcome-projection.ts';
 import type { InlineRegistration } from './inline-projection.ts';
 import type { ProjectionDialect } from './projection-dialect.ts';
@@ -8,7 +9,7 @@ import { preparedProjections } from './projection-fill.ts';
 import { projectionRegistrations } from './projection-keeping.ts';
 import { projectionReader, type ProjectionStatements } from './projection-reads.ts';
 
-export interface KeptTables {
+export interface KeptTables extends CarriedTables {
   readonly runOutcomes?: RunOutcomeMapping | undefined;
   readonly projections?: readonly KeyedProjection[] | undefined;
 }

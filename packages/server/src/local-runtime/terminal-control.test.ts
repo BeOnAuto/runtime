@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { homeOfTheTest, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
-import { aLedgerOfAnotherVersionAt } from '../testing/records/a-ledger-of-another-version.ts';
+import { aLedgerOfAnEarlierVersionAt } from '../testing/records/a-ledger-of-another-version.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const homePrefix = 'auto-runtime-terminal-';
@@ -96,7 +96,7 @@ async function aHomeWithALedgerOfAnotherVersion(): Promise<{ readonly home: stri
   const home = homeOfTheTest(homePrefix);
   const ledger = join(home, '.auto-runtime', 'ledger.db');
   mkdirSync(join(home, '.auto-runtime'));
-  await aLedgerOfAnotherVersionAt(ledger);
+  await aLedgerOfAnEarlierVersionAt(ledger);
   return { home, ledger };
 }
 

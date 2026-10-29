@@ -1,0 +1,22 @@
+{
+  "type": "delivery_failed",
+  "data": {
+    "number": 1,
+    "because": "timed_out",
+    "detail": "The server did not answer within 30 s",
+    "retry_after_ms": 60000,
+    "result_bytes": 0,
+    "result_sha256": "a7b8c9",
+    "duration_ms": 30000,
+    "jsonrpc_id": 4,
+    "server_request_id": null
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "interaction",
+    "definitionName": "confirm-order",
+    "definitionVersion": 2
+  }
+}

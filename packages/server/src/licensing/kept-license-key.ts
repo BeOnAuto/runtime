@@ -11,7 +11,7 @@ import { DateTime, Effect, Function, Option, Redacted, Result, Schema } from 'ef
 
 const licenseKeyStream = 'runtime/license-key';
 
-const LicenseKeyEventSchema = factOf(
+export const LicenseKeyEventSchema = factOf(
   'license_key_kept',
   Schema.Struct({ secret_id: Schema.String }),
   ActedContextSchema,

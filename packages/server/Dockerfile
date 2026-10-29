@@ -13,6 +13,7 @@ COPY packages/playbooks/package.json packages/playbooks/
 COPY packages/config/package.json packages/config/
 COPY packages/connections/package.json packages/connections/
 COPY packages/definitions/package.json packages/definitions/
+COPY packages/documents/package.json packages/documents/
 COPY packages/identity/package.json packages/identity/
 COPY packages/json-schema/package.json packages/json-schema/
 COPY packages/ledger/package.json packages/ledger/
@@ -60,6 +61,7 @@ COPY packages/config/src packages/config/src
 COPY packages/connections/src packages/connections/src
 COPY packages/definitions/src packages/definitions/src
 COPY packages/definitions/lib packages/definitions/lib
+COPY packages/documents/src packages/documents/src
 COPY packages/identity/src packages/identity/src
 COPY packages/json-schema/src packages/json-schema/src
 COPY packages/ledger/src packages/ledger/src

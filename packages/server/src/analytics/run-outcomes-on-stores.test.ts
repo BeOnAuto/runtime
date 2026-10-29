@@ -73,12 +73,25 @@ function opened(layer: Layer.Layer<Ledger>): Promise<Ledger['Service']> {
 
 const usage = { input: { total: 1200, cache_read: 1000 }, output: { total: 300 } };
 
+const unavailable = { reason: 'unavailable', detail: 'The answer is not JSON' };
+
 function ofTheRun(name: string, type: string, at: string): Context {
-  return { by: 'acme-admin', at, definitionType: type, definitionName: name, definitionVersion: 1 };
+  return {
+    by: 'acme-admin',
+    at,
+    runId: `${name}-run`,
+    definitionType: type,
+    definitionName: name,
+    definitionVersion: 1,
+  };
 }
 
 function started(name: string, at: string, type = 'reasoning'): Written {
-  return { fact: { type: 'run_started', data: { input: {} } }, context: ofTheRun(name, type, at) };
+  const startedBy = { id: 'acme-admin', name: 'acme-admin' };
+  return {
+    fact: { type: 'run_started', data: { input: {}, started_by: startedBy } },
+    context: ofTheRun(name, type, at),
+  };
 }
 
 function finished(
@@ -97,7 +110,7 @@ const runs: readonly (readonly [string, readonly Written[]])[] = [
       started('triage', '2026-10-01T09:00:00.000Z'),
       finished('run_failed', '2026-10-01T09:00:01.000Z'),
       started('triage', '2026-10-01T10:00:00.000Z'),
-      finished('tool_call_started', '2026-10-01T10:00:00.100Z', { number: 1 }),
+      finished('attempt_resumed', '2026-10-01T10:00:00.100Z', { attempt: 2 }),
       finished('run_succeeded', '2026-10-01T10:00:00.250Z', { output: 'ok', record: { usage } }),
     ],
   ],
@@ -109,24 +122,24 @@ const runs: readonly (readonly [string, readonly Written[]])[] = [
     ],
   ],
   [
-    'not-an-object',
+    'usage-not-an-object',
     [
       started('triage', '2026-10-01T12:00:00.000Z'),
-      finished('run_succeeded', '2026-10-01T12:00:00.100Z', { output: 'ok', record: 'text' }),
+      finished('run_succeeded', '2026-10-01T12:00:00.100Z', { output: 'ok', record: { usage: 'text' } }),
     ],
   ],
   [
     'rejected-with-usage',
     [
       started('triage', '2026-10-01T13:00:00.000Z'),
-      finished('run_rejected', '2026-10-01T13:00:01.000Z', { rejection: {}, record: { usage } }),
+      finished('run_rejected', '2026-10-01T13:00:01.000Z', { rejection: unavailable, record: { usage } }),
     ],
   ],
   [
     'rejected',
     [
       started('triage', '2026-10-01T14:00:00.000Z'),
-      finished('run_rejected', '2026-10-01T14:00:01.000Z', { rejection: {} }),
+      finished('run_rejected', '2026-10-01T14:00:01.000Z', { rejection: unavailable }),
     ],
   ],
   [

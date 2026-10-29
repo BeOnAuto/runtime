@@ -61,7 +61,7 @@ const decodeVendorTokens = Schema.decodeUnknownOption(
       refresh_token: Schema.optionalKey(Schema.String),
       expires_in: Schema.optionalKey(Schema.Number),
       scope: Schema.optionalKey(Schema.String),
-      token_type: Schema.String,
+      token_type: Schema.optionalKey(Schema.String),
     }),
   ),
 );

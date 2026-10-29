@@ -17,6 +17,7 @@ const refusedWords: Readonly<Record<BuildWorkOf<'candidate_refused'>['data']['be
   failed_to_load: 'the file is not a model the runtime loads',
   wrong_signature: 'its inputs or outputs are not the signature the playbook feeds',
   too_many: 'the build already has its 8 candidates',
+  feature_unlicensed: 'the license of this runtime does not include the feature the model runtime of its format needs',
 };
 
 const disqualifiedWords: Readonly<Record<BuildWorkOf<'candidate_disqualified'>['data']['because'], string>> = {
@@ -27,6 +28,7 @@ const disqualifiedWords: Readonly<Record<BuildWorkOf<'candidate_disqualified'>['
   answered_badly: 'it answered in the wrong shape or with a number that is not finite',
   coverage_below_floor: 'its interval held fewer truths than the floor',
   not_better: 'it did not beat every baseline with the confidence asked',
+  feature_unlicensed: 'the license of this runtime does not include the feature the model runtime of its format needs',
 };
 
 const buildWords = {
@@ -83,8 +85,10 @@ function verdictWords({ version, metric, challenger, active }: ModelFactOf<'shad
 const modelWords = {
   version_built: ({ version, file }: ModelFactOf<'version_built'>['data']) =>
     `Version ${version} of the model was built from candidate ${shortOf(file.sha256)}`,
-  shadow_predicted: ({ version, of, origin, count, missing }: ModelFactOf<'shadow_predicted'>['data']) =>
-    `Version ${of} predicted ${figure(count)} series from ${origin} in the shadow of version ${version}, and ${figure(missing)} whose answer was not finite or had a low above its likely value or a high below it`,
+  shadow_predicted: ({ version, of, origin, count, missing, feature }: ModelFactOf<'shadow_predicted'>['data']) =>
+    feature === undefined
+      ? `Version ${of} predicted ${figure(count)} series from ${origin} in the shadow of version ${version}, and ${figure(missing)} whose answer was not finite or had a low above its likely value or a high below it`
+      : `Version ${of} was not walked from ${origin} in the shadow of version ${version}: the license of this runtime does not include ${feature}, which the model runtime of its format needs`,
   shadow_graded: ({ of, period, graded, answered, missing }: ModelFactOf<'shadow_graded'>['data']) =>
     `The shadow predictions of version ${of} for ${period} were graded: ${figure(graded)} graded beside the other version's, of ${figure(answered)} it answered, ${figure(missing)} without an answer or a truth`,
   shadow_passed: (data: ModelFactOf<'shadow_passed'>['data']) => `The shadow passed for ${verdictWords(data)}`,

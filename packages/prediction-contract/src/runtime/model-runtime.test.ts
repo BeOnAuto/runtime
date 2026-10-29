@@ -32,6 +32,8 @@ const refusals: readonly (readonly [string, unknown, string])[] = [
     { ...runtime, capabilities: { ...runtime.capabilities, fits: 'yes' } },
     'boolean',
   ],
+  ['a feature that is not lower case', { ...runtime, feature: 'Prediction-Example' }, 'Expected a feature'],
+  ['a feature longer than 32 characters', { ...runtime, feature: `p${'x'.repeat(32)}` }, 'Expected a feature'],
   [
     'a binding of another kind',
     { ...runtime, binding: { kind: 'remote', url: 'https://models.example.com' } },
@@ -57,6 +59,12 @@ describe('a model runtime', () => {
     };
 
     expect(decoded(inline)).toEqual(Result.succeed(inline));
+  });
+
+  it('may name the feature of the license its work needs', () => {
+    const licensed: ModelRuntime = { ...runtime, feature: 'prediction-example' };
+
+    expect(decoded(licensed)).toEqual(Result.succeed(licensed));
   });
 
   it.each(refusals)('is refused with %s', (_case, value, words) => {

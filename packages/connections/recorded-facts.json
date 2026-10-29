@@ -1,0 +1,10 @@
+{
+  "src/registrations/0.46.0/client_registered.json": "0325f6217a1089821169f512b124cb87891df4f3862061a500f146e7e95a2c8c",
+  "src/registry/0.46.0/connection_added.json": "bab944325e554461ed35f76f8489109d144761736951673e6219005795fca788",
+  "src/registry/0.46.0/connection_approved.json": "a87318ed7d5c87933e0ed669a0e065d7f89f61e93d9d26d6f8eb7d49cf8c039c",
+  "src/registry/0.46.0/connection_broken.json": "e9376cf7a9926f49a3d2a5d69aac357a4950f1579ee4c1aafc6516695d0d3d69",
+  "src/registry/0.46.0/connection_connected.json": "4a79c75282f7412e805899f96c14edd3ff0ad7acb2aa195969c2943debecfefb",
+  "src/registry/0.46.0/connection_consent_started.json": "3c1e4efac4994e5cf202770e1a48858744d19d547f56d671d9692a3210cf37ec",
+  "src/registry/0.46.0/connection_link_issued.json": "b97fc069c5840f456bde0e905aef451e5dcc6ae0e4dc2c66bcbd362f4b80812e",
+  "src/registry/0.46.0/connection_removed.json": "6a93501e68ec3fc4188b2c8fd73668d4cb8d3f526a84177f66110b478d532e19"
+}

@@ -53,6 +53,17 @@ export const LeftOutParametersSchema = Schema.Struct({
 
 type LeftOutParameters = typeof LeftOutParametersSchema.Type;
 
+export const GlobalParameterSchema = Schema.Struct({
+  method: Schema.String.annotate({ description: 'The id of the method that keeps a global parameter' }),
+  parameter: Schema.String.annotate({ description: 'The global parameter of the Discovery document the method keeps' }),
+  values: NamesSchema.annotate({ description: 'The values of the parameter a call may send, each one it lists' }),
+  says: Schema.String.annotate({
+    description: 'What the method answers a call that sends them, ending its description',
+  }),
+});
+
+type GlobalParameter = typeof GlobalParameterSchema.Type;
+
 function missingOf(names: readonly string[], held: Readonly<Record<string, unknown>>): readonly string[] {
   return names.filter((name) => !Object.hasOwn(held, name));
 }
@@ -160,15 +171,45 @@ function leftOutOnce(discovery: DiscoveryDocument, { method, parameters }: LeftO
   });
 }
 
+function globalParameterOf(discovery: DiscoveryDocument, { parameter, values }: GlobalParameter): JsonObject {
+  const globals = discovery.parameters ?? {};
+  const written = Object.hasOwn(globals, parameter) ? globals[parameter] : undefined;
+  if (written === undefined) {
+    throw new Error(`The Discovery document has no global parameter ${parameter}, which a global parameter kept names`);
+  }
+  const listed: readonly Json[] = isJsonList(written['enum']) ? written['enum'] : [];
+  const unlisted = values.filter((value) => !listed.includes(value));
+  if (unlisted.length > 0) {
+    throw new Error(
+      `The global parameter ${parameter} of the Discovery document lists no value ${unlisted.join(', ')}, which a global parameter kept names`,
+    );
+  }
+  const withoutItsDefault = Object.entries(written).filter(
+    ([keyword]: readonly [string, Json]) => keyword !== 'default',
+  );
+  return { ...Object.fromEntries(withoutItsDefault), enum: values };
+}
+
+function globalKeptOnce(discovery: DiscoveryDocument, kept: GlobalParameter): DiscoveryDocument {
+  const parameter = globalParameterOf(discovery, kept);
+  return methodChanged(discovery, kept.method, 'a global parameter kept', (method) => ({
+    ...method,
+    description: method.description === undefined ? kept.says : `${method.description} ${kept.says}`,
+    parameters: { ...method.parameters, [kept.parameter]: parameter },
+  }));
+}
+
 export interface ParameterChanges {
   readonly required?: readonly Requirement[];
   readonly left_out_parameters?: readonly LeftOutParameters[];
+  readonly global_parameters?: readonly GlobalParameter[];
 }
 
 export function discoveryParametersChanged(
   discovery: DiscoveryDocument,
-  { required = [], left_out_parameters: leftOut = [] }: ParameterChanges,
+  { required = [], left_out_parameters: leftOut = [], global_parameters: globals = [] }: ParameterChanges,
 ): DiscoveryDocument {
   const withRequired = required.reduce<DiscoveryDocument>((changed, each) => requiredOnce(changed, each), discovery);
-  return leftOut.reduce<DiscoveryDocument>((changed, each) => leftOutOnce(changed, each), withRequired);
+  const withoutLeftOut = leftOut.reduce<DiscoveryDocument>((changed, each) => leftOutOnce(changed, each), withRequired);
+  return globals.reduce<DiscoveryDocument>((changed, each) => globalKeptOnce(changed, each), withoutLeftOut);
 }

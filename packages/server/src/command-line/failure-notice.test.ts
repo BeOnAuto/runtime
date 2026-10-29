@@ -7,27 +7,31 @@ import { ledgerOfAnotherVersion } from '../database/ledger-of-another-version.ts
 import type { ColorStream } from '../logging/terminal.ts';
 import { startupFailureNoticeFor } from './failure-notice.ts';
 
-const inAnotherLayout = { found: 2, kept: 1 };
+const inAnEarlierLayout = { found: 1, kept: 3, floor: 2 };
 
-const ledgerFileOfAnotherVersion = ledgerOfAnotherVersion(inAnotherLayout, {
+const inANewerLayout = { found: 4, kept: 3, floor: 2 };
+
+const ledgerFileOfAnEarlierVersion = ledgerOfAnotherVersion(inAnEarlierLayout, {
   ledger: { store: 'sqlite', file: '/Users/ada/.auto-runtime/ledger.db' },
   distribution: 'npx',
 });
 
-const servicesFailed = new Error("The server's services could not start", { cause: ledgerFileOfAnotherVersion });
+const servicesFailed = new Error("The server's services could not start", { cause: ledgerFileOfAnEarlierVersion });
 
 const notATerminal: ColorStream = {};
 
 const aTerminalWithColors: ColorStream = { isTTY: true, getColorDepth: () => 24 };
 
-describe('the notice that a server could not start on a ledger file of another version', () => {
+describe('the notice that a server could not start on a ledger file of an earlier version it does not carry forward', () => {
   it('says where the ledger is and why it is refused, what to do with the command that does it, and where to ask, last', () => {
     expect(startupFailureNoticeFor(notATerminal)(servicesFailed)?.split('\n')).toEqual([
       '  ✖ Auto Runtime could not start',
       '',
       '  The ledger is kept in the file /Users/ada/.auto-runtime/ledger.db, and was',
-      '  made by another version of Auto Runtime. This version keeps the ledger in',
-      '  layout 1 and cannot read a ledger in layout 2.',
+      '  made by an earlier version of Auto Runtime, whose ledger this version does',
+      '  not carry forward. This version keeps the ledger in layout 3 and carries',
+      '  forward a ledger in layout 2 or later, so it cannot read a ledger in',
+      '  layout 1.',
       '',
       '  What you can do',
       '    Delete the ledger and start Auto Runtime again. Everything in the ledger',
@@ -40,7 +44,7 @@ describe('the notice that a server could not start on a ledger file of another v
   });
 
   it('marks the failure in red, sets the command apart in cyan and links Discord where stderr is a terminal with colors', () => {
-    const notice = String(startupFailureNoticeFor(aTerminalWithColors)(ledgerFileOfAnotherVersion));
+    const notice = String(startupFailureNoticeFor(aTerminalWithColors)(ledgerFileOfAnEarlierVersion));
 
     expect(notice).toContain('\u001B[31m✖\u001B[39m');
     expect(notice).toContain(
@@ -58,14 +62,35 @@ describe('the notice that a server could not start on a ledger file of another v
   });
 });
 
-describe('the notice that a server in the image could not start on a ledger file of another version', () => {
+describe('the notice that a server could not start on a ledger file a newer version made', () => {
+  it('says that upgrades go forward only, to start that version or a later one, or to restore the backup taken before the upgrade, with no command', () => {
+    const newer = ledgerOfAnotherVersion(inANewerLayout, {
+      ledger: { store: 'sqlite', file: '/Users/ada/.auto-runtime/ledger.db' },
+      distribution: 'npx',
+    });
+
+    expect(startupFailureNoticeFor(notATerminal)(newer)?.split('\n').slice(2)).toEqual([
+      '  The ledger is kept in the file /Users/ada/.auto-runtime/ledger.db, and was',
+      '  made by a newer version of Auto Runtime. This version keeps the ledger in',
+      '  layout 3 and cannot read a ledger in layout 4: upgrades go forward only.',
+      '',
+      '  What you can do',
+      '    Start the version of Auto Runtime that made the ledger, or a later one.',
+      '    To go back to this version, restore the backup taken before the upgrade.',
+      '',
+      '  Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8',
+    ]);
+  });
+});
+
+describe('the notice that a server in the image could not start on a ledger file of an earlier version', () => {
   it('says which files to delete from the volume, or to remove the volume, with no command', () => {
-    const inTheImage = ledgerOfAnotherVersion(inAnotherLayout, {
+    const inTheImage = ledgerOfAnotherVersion(inAnEarlierLayout, {
       ledger: { store: 'sqlite', file: '/app/data/ledger.db' },
       distribution: 'docker',
     });
 
-    expect(startupFailureNoticeFor(notATerminal)(inTheImage)?.split('\n').slice(6, 13)).toEqual([
+    expect(startupFailureNoticeFor(notATerminal)(inTheImage)?.split('\n').slice(7, 14)).toEqual([
       '  What you can do',
       '    Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume',
       "    mounted at /data, the ledger's folder /app/data in the image, or remove",
@@ -77,9 +102,9 @@ describe('the notice that a server in the image could not start on a ledger file
   });
 });
 
-describe('the notice that a server could not start on a ledger in PostgreSQL of another version', () => {
+describe('the notice that a server could not start on a ledger in PostgreSQL of an earlier version', () => {
   it('says to point DATABASE_URL at an empty database, with no command', () => {
-    const inPostgreSQL = ledgerOfAnotherVersion(inAnotherLayout, {
+    const inPostgreSQL = ledgerOfAnotherVersion(inAnEarlierLayout, {
       ledger: {
         store: 'postgresql',
         url: Redacted.make('postgresql://playbooks:a-secret-password@db.example.com/auto_runtime'),
@@ -92,8 +117,10 @@ describe('the notice that a server could not start on a ledger in PostgreSQL of 
 
     expect(startupFailureNoticeFor(notATerminal)(inPostgreSQL)?.split('\n').slice(2)).toEqual([
       '  The ledger is kept in PostgreSQL, in the database auto_runtime on',
-      '  db.example.com:5432, and was made by another version of Auto Runtime. This',
-      '  version keeps the ledger in layout 1 and cannot read a ledger in layout 2.',
+      '  db.example.com:5432, and was made by an earlier version of Auto Runtime,',
+      '  whose ledger this version does not carry forward. This version keeps the',
+      '  ledger in layout 3 and carries forward a ledger in layout 2 or later, so',
+      '  it cannot read a ledger in layout 1.',
       '',
       '  What you can do',
       '    Point DATABASE_URL at an empty database, or empty this one, and start',

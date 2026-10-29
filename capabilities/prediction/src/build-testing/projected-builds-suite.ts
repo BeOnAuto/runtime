@@ -156,7 +156,7 @@ function shadowWaits(settingsOf: SettingsOf): void {
     const { models } = projected.playbook.test.ports;
     projected.scripted.next('held');
     const held = ['first', 'second'].map((sha256) =>
-      Effect.runPromiseExit(models.check(scriptedRuntime, { sha256, path: `/${sha256}.scripted` }, heldFed)),
+      Effect.runPromiseExit(models.check('acme', scriptedRuntime, { sha256, path: `/${sha256}.scripted` }, heldFed)),
     );
     await projected.scripted.untilSleeping(['check', 'check']);
     await performedIn(projected, ['held']);

@@ -5,6 +5,7 @@ import {
   autoSigners,
   ledgerMeter,
   meterDefaults,
+  type LicensedFeatures,
   type RuntimeLicense,
   type Signers,
 } from '@on.auto/meter';
@@ -16,6 +17,7 @@ import { defaultAccountsOrigin, type LicenseSettings } from './license-settings.
 export interface MeterComposing extends LicenseSettings {
   readonly studio: string;
   readonly signers?: Signers;
+  readonly features?: Layer.Layer<LicensedFeatures>;
 }
 
 export const unlicensed: MeterComposing = {
@@ -27,11 +29,12 @@ export const unlicensed: MeterComposing = {
 
 export function meterLayerOver(
   ledger: Layer.Layer<LedgerServices>,
-  { studio, accounts, key, signers = autoSigners }: MeterComposing,
-): Layer.Layer<RunMeter | RuntimeLicense> {
+  { studio, accounts, key, signers = autoSigners, features }: MeterComposing,
+): Layer.Layer<RunMeter | RuntimeLicense | LicensedFeatures> {
   const account = accountServiceLayer({ origin: accounts, fetch: outboundFetch });
-  return ledgerMeter({ ...meterDefaults, studio }, { key, signers }).pipe(
+  const metered = ledgerMeter({ ...meterDefaults, studio }, { key, signers }).pipe(
     Layer.provide(ledger),
     Layer.provide(account),
   );
+  return features === undefined ? metered : Layer.merge(metered, features);
 }

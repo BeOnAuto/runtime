@@ -1,4 +1,4 @@
-import { recordedDecoder, type KeyedProjection, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
+import { factReaderOf, type KeyedProjection, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
 import { ConversationCallEventSchema, conversationCallsKind, type ReadingRecorded } from '@on.auto/tool-servers';
 import { Option, Schema } from 'effect';
 
@@ -30,7 +30,7 @@ export const conversationRowFrom: (row: ProjectedRow) => ConversationRow =
 
 const decodeRow = Schema.decodeUnknownOption(ConversationRowSchema);
 
-const decodeCall = recordedDecoder(ConversationCallEventSchema);
+const readCall = factReaderOf(ConversationCallEventSchema);
 
 export interface Cadence {
   readonly open: boolean;
@@ -67,13 +67,14 @@ function readOf({ data }: ReadingRecorded): Read {
   return { kind: 'read', place: { server, tool, key: conversation }, since };
 }
 
-function factOf(message: ProjectedMessage): ConversationFact | undefined {
+function conversationFactOf(message: ProjectedMessage): ConversationFact | undefined {
   const fact = interactionFactOf(message);
   if (fact?.type === 'delivery_succeeded') {
     const place = fact.data.replies_in;
     return place === undefined ? undefined : { kind: 'join', place, at: Date.parse(fact.context.at) };
   }
-  return Option.getOrUndefined(Option.map(Option.filter(decodeCall(message), isReading), readOf));
+  const call = readCall(message);
+  return call !== undefined && isReading(call) ? readOf(call) : undefined;
 }
 
 function joined(row: ConversationRow | undefined, { place, at }: Join, { id }: ProjectedMessage): ProjectedRow {
@@ -91,7 +92,7 @@ function joined(row: ConversationRow | undefined, { place, at }: Join, { id }: P
 }
 
 function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): ProjectedRow | undefined {
-  const fact = factOf(message);
+  const fact = conversationFactOf(message);
   const kept = row === undefined ? undefined : Option.getOrUndefined(decodeRow(row));
   if (fact?.kind === 'join') {
     return joined(kept, fact, message);
@@ -119,7 +120,7 @@ export const conversations: KeyedProjection = {
   ],
   indexes: [{ name: 'due', columns: ['due_at'], acrossPlaybooks: true, whereSet: 'due_at' }],
   keyOf: (message) => {
-    const fact = factOf(message);
+    const fact = conversationFactOf(message);
     return fact === undefined ? undefined : conversationKeyOf(fact.place);
   },
   advanced: ['open', 'active_at', 'reads', 'next_read_at', 'due_at'].map((column) => ({

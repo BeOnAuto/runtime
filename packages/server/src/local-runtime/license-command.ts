@@ -31,8 +31,14 @@ function onOneLine(text: string): string {
 }
 
 const licensedIn = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ runtime_id: Schema.String, summary: Schema.String })),
+  Schema.fromJsonString(
+    Schema.Struct({ runtime_id: Schema.String, features: Schema.Array(Schema.String), summary: Schema.String }),
+  ),
 );
+
+function featuresInWords(features: readonly string[]): string {
+  return `Features: ${features.length === 0 ? 'none' : features.map((feature) => onOneLine(feature)).join(', ')}.`;
+}
 
 const allocationIn = Schema.decodeUnknownOption(
   Schema.fromJsonString(
@@ -96,7 +102,8 @@ function activation(key: string): LicenseCommand {
     path: '/license',
     body: { key },
     answerIn: licensedIn,
-    said: ({ runtime_id: runtimeId, summary }) => `${onOneLine(summary)} Runtime id ${onOneLine(runtimeId)}.`,
+    said: ({ runtime_id: runtimeId, features, summary }) =>
+      `${onOneLine(summary)} Runtime id ${onOneLine(runtimeId)}. ${featuresInWords(features)}`,
     failed: 'Auto Runtime did not activate the key',
   });
 }

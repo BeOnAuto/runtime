@@ -187,7 +187,7 @@ describe('a candidate scored while every model process is taken', { timeout: tes
     const { models } = playbook.test.ports;
     scripted.next('held');
     const held = ['first', 'second'].map((sha256) =>
-      Effect.runPromiseExit(models.check(scriptedRuntime, { sha256, path: `/${sha256}.scripted` }, heldFed)),
+      Effect.runPromiseExit(models.check('acme', scriptedRuntime, { sha256, path: `/${sha256}.scripted` }, heldFed)),
     );
     await scripted.untilSleeping(['check', 'check']);
     await performedOnce(playbook.due, Date.now());

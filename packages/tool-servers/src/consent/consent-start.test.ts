@@ -11,6 +11,7 @@ import {
   returnAddress,
   startAskedAt,
   studioBase,
+  unansweredCall,
   type ClientRegistration,
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
@@ -236,7 +237,11 @@ describe('a start that cannot ask the server', () => {
         consentClientWith({ fetch: failingAt('/.well-known/oauth-authorization-server') }),
         startAskedAt(failing),
       ),
-    ]).toEqual([{ refused: 'unanswered' }, { refused: 'unanswered' }, { refused: 'unanswered' }]);
+    ]).toEqual([
+      unansweredCall('ping', gone, { failed: 'unreachable' }),
+      unansweredCall('resource_metadata', failing, { status: 500, retryAfterMs: null }),
+      unansweredCall('authorization_server_metadata', failing, { status: 500, retryAfterMs: null }),
+    ]);
   });
 
   it('is unanswered where the server does not answer within the bound of a request', async () => {
@@ -245,7 +250,9 @@ describe('a start that cannot ask the server', () => {
     const fake = await served();
     const asked: StartAsked = { ...startAskedAt(fake), server: { type: 'mcp', url: `${silent.origin}/mcp` } };
 
-    expect(await refused(consentClientWith({ requestMs: 50 }), asked)).toEqual({ refused: 'unanswered' });
+    expect(await refused(consentClientWith({ requestMs: 50 }), asked)).toEqual(
+      unansweredCall('ping', silent, { failed: 'timed_out' }),
+    );
   });
 });
 

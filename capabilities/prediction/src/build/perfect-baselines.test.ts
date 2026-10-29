@@ -70,7 +70,12 @@ const heldWalk = {
 
 function heldBy(playbook: BuildPlaybook, model: string) {
   return Effect.runFork(
-    playbook.test.ports.models.walk(scriptedRuntime, { sha256: model, path: `/${model}.scripted` }, heldWalk),
+    playbook.test.ports.models.walk(
+      'acme',
+      scriptedRuntime,
+      Effect.succeed({ sha256: model, path: `/${model}.scripted` }),
+      heldWalk,
+    ),
   );
 }
 

@@ -5,6 +5,7 @@ import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-re
 import { ignored } from '../clients/ignored.ts';
 import type { Observed } from '../clients/observed-requests.ts';
 import { failureOf, type FailureKind } from '../clients/server-failures.ts';
+import { DocumentTooLarge } from '../openapi/document-too-large.ts';
 import type { SentCallFailedBecause } from './call-facts.ts';
 import type { ServerSlot } from './server-slot.ts';
 
@@ -65,6 +66,10 @@ const tooLargeWords: Readonly<Record<ServerSlot['settings']['type'], string>> = 
   stdio: `The MCP server wrote more than the ${counted.format(toolBounds.stdioOutputBytes)} bytes a stdio server may write at once`,
   openapi: answeredTooMuch,
 };
+
+function tooLargeWordsOf(forwarding: Forwarding, error: unknown): string {
+  return error instanceof DocumentTooLarge ? error.message : tooLargeWords[forwarding.slot.settings.type];
+}
 
 function requestIdOf(forwarding: Forwarding, observed: Observed, result: ToolResult): string | null {
   const key = forwarding.slot.settings.request_id;
@@ -153,7 +158,7 @@ async function attempted(forwarding: Forwarding, attempt: Attempt): Promise<Forw
     return answered(forwarding, settled);
   }
   if (settled.observed.response?.tooLarge === true) {
-    return failed('too_large', 'too_large', tooLargeWords[forwarding.slot.settings.type], settled.observed);
+    return failed('too_large', 'too_large', tooLargeWordsOf(forwarding, settled.error), settled.observed);
   }
   const halted = stopped(forwarding, attempt, settled.observed);
   if (halted !== undefined) {

@@ -1,0 +1,14 @@
+{
+  "src/meter-stream/0.46.0/action_admitted.json": "be6a3b7a032aaf33959c2410b93aa130f203cd4b0dbf815e811473023123fca0",
+  "src/meter-stream/0.46.0/allocation_received.json": "5b2b45d5710c9d9f854c88d90bd6ed63e9f769f76563a4270c0677392ebb9e51",
+  "src/meter-stream/0.46.0/allocation_refreshed.json": "717afb5e5b18fbaa20f37a1a264e724eaba6ed1463e0937cf7cfc7fe0c47daa2",
+  "src/meter-stream/0.46.0/allocation_reported.json": "2ef2acd20fb339a12e2e3d9ff7a0dca1fb472dd35f0692ee3d44c35555658cb1",
+  "src/meter-stream/0.46.0/allocation_withdrawn.json": "442bd1eb07a0bd388a9f6405c8fa98112c541962dc8a86f7a0155c20e5c8c5aa",
+  "src/meter-stream/0.46.0/installation_identified.json": "e9701b3bb8bd58a699e076f08aba20b78f9551d2a68399b253b5a495d6758c93",
+  "src/meter-stream/0.46.0/license_activated.json": "7950f9a8d57480d5c2b3eaab23aec397dd242fecf80937effad4971c60fcb492",
+  "src/meter-stream/0.46.0/license_invalidated.json": "b3b50a9e6e4c3af279437ee788fe04809770bd3b277c8e327c203d7c66690a47",
+  "src/meter-stream/0.46.0/license_renewed.json": "9cd5ed2cc0add72e1b262cafe2033df1f4ed9a22daf65b75422c634b39c5adf1",
+  "src/meter-stream/0.46.0/usage_reported.json": "785a0e48599d9169e5b123f8fcf5f30e246d3884129002b58cf67291532a4a84",
+  "src/meter-stream/0.47.0/license_activated.json": "dba9b267d88eefe36c825194bb0607dca67ca9aedd2430cfb6da23d9bf7360dd",
+  "src/meter-stream/0.47.0/license_renewed.json": "3f62c9d6d9cc07ac3a3c644679c6d947c0a74556084d68b17557323c9a537498"
+}

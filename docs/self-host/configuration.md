@@ -88,6 +88,7 @@ Inside an argument, only the value is judged, never the name the argument gives 
 | The requests interaction functions may keep open                         | `INTERACTION_OPEN_REQUESTS`                                                                                                                  | [Interaction functions](#interaction-functions)                                         |
 | The model processes and the builds of prediction functions               | `PREDICTION_PROCESSES`, `PREDICTION_PROCESS_MEMORY`, `PREDICTION_BUILDS_AT_ONCE`, `PREDICTION_BUILDS_PER_DAY` and `PREDICTION_MAX_FUNCTIONS` | [Prediction functions](#prediction-functions)                                           |
 | The folder prediction functions keep model files in                      | `PREDICTION_CACHE_DIR`                                                                                                                       | [Prediction functions](#prediction-functions)                                           |
+| The processes that read the text of files tools fetch                    | `DOCUMENT_PROCESSES`                                                                                                                         | [Prediction functions](#prediction-functions)                                           |
 | A model runtime of your own, or a pinned one, for prediction functions   | `extensions` in the file, the packages the server loads as it starts, each with its `integrity` when you pin it                              | [Extensions](#extensions)                                                               |
 | No usage ping when Auto starts                                           | `DO_NOT_TRACK=1` or `USAGE_PING=false`                                                                                                       | [Usage ping](#usage-ping)                                                               |
 | A runtime on its org's credits, past the free runs it runs without a key | `AUTO_RUNTIME_LICENSE_KEY`, or `license.key` in the file, the key Studio gives                                                               | [License a self-hosted runtime](licenses.md)                                            |
@@ -225,14 +226,15 @@ Its model processes load models and read a build's rows from files the server ke
 
 Each setting is read with its range and logged at start. A value outside its range stops the server at start, naming the setting. [Plan memory](production.md#plan-memory) sets out how much the processes take.
 
-| Variable                    | Default                 | Purpose                                                                                                                                                                                           |
-| --------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PREDICTION_MAX_FUNCTIONS`  | `32`                    | The most active prediction functions a playbook may keep, from 1 to 1,000. A save past it is refused                                                                                              |
-| `PREDICTION_PROCESSES`      | `4`                     | The most model processes that run at once, from 2 to 64                                                                                                                                           |
-| `PREDICTION_PROCESS_MEMORY` | `1280`                  | The data each model process may reserve, in MiB, from 768 to 16,384. A process that reaches it is ended, and its job ends out of memory                                                           |
-| `PREDICTION_BUILDS_AT_ONCE` | `2`                     | The most builds the server scores at once, from 1 to 63, and below `PREDICTION_PROCESSES` so that a question always finds a process. A build past it is `unavailable` with the kind `builds_full` |
-| `PREDICTION_BUILDS_PER_DAY` | `4`                     | The most builds a prediction function may ask in the trailing 24 hours, from 1 to 100. A build past it is `unavailable` with the kind `builds_full` and the `because` field `builds_of_the_day`   |
-| `PREDICTION_CACHE_DIR`      | `/var/tmp/auto-runtime` | The absolute path of the folder the model files are kept in                                                                                                                                       |
+| Variable                    | Default                 | Purpose                                                                                                                                                                                                                                                     |
+| --------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PREDICTION_MAX_FUNCTIONS`  | `32`                    | The most active prediction functions a playbook may keep, from 1 to 1,000. A save past it is refused                                                                                                                                                        |
+| `PREDICTION_PROCESSES`      | `4`                     | The most model processes that run at once, from 2 to 64                                                                                                                                                                                                     |
+| `PREDICTION_PROCESS_MEMORY` | `1280`                  | The data each model process, and each process that reads documents, may reserve, in MiB, from 768 to 16,384. A process that reaches it is ended, and its job ends out of memory, the reading of a file among them                                           |
+| `PREDICTION_BUILDS_AT_ONCE` | `2`                     | The most builds the server scores at once, from 1 to 63, and below `PREDICTION_PROCESSES` so that a question always finds a process. A build past it is `unavailable` with the kind `builds_full`                                                           |
+| `PREDICTION_BUILDS_PER_DAY` | `4`                     | The most builds a prediction function may ask in the trailing 24 hours, from 1 to 100. A build past it is `unavailable` with the kind `builds_full` and the `because` field `builds_of_the_day`                                                             |
+| `PREDICTION_CACHE_DIR`      | `/var/tmp/auto-runtime` | The absolute path of the folder the model files are kept in                                                                                                                                                                                                 |
+| `DOCUMENT_PROCESSES`        | `2`                     | The most processes that read [the text of a file](connections.md#the-text-of-a-file) a tool fetches at once, from 1 to 64, apart from the model processes, so files and models never wait on one another; each reserves at most `PREDICTION_PROCESS_MEMORY` |
 
 The folder of `PREDICTION_CACHE_DIR` follows these rules:
 
@@ -477,20 +479,22 @@ A call:
 - fills the path and the query, with an array sent as repeated keys, or as one key of comma-joined items when the document writes the parameter with `explode: false`;
 - sends a path argument encoded as one segment, a `/` it holds as `%2F`, and refuses one that is empty or is `.` or `..`;
 - sends nothing to an address that would leave the origin or the path of `base_url`;
-- sends the body as JSON, with the entry's headers and query parameters.
+- sends the body as JSON, with the entry's headers and query parameters;
+- asks for JSON first, and takes any other answer after it.
 
 The response is read as the result of an MCP server's call is read, within the same bounds:
 
-| The API responds with               | The call's result                                                                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| JSON                                | The tool's structured content, and its text                                                                        |
-| Text                                | Text                                                                                                               |
-| Any other media type                | Noted, and not shown                                                                                               |
-| `401`                               | A key the server refused                                                                                           |
-| `429`                               | Waits out a `Retry-After` that fits                                                                                |
-| `5xx`                               | A failing server                                                                                                   |
-| A redirect                          | An error result with its status. It is not followed, so the entry's headers and token go to no address but its own |
-| Any other response, including `404` | An error result carrying the API's response                                                                        |
+| The API responds with                       | The call's result                                                                                                                                                                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JSON                                        | The tool's structured content, and its text                                                                                                                                                                            |
+| Anything else, such as a file               | A line naming the file, its type and its size, then its text where Auto reads the type, a text file, a PDF or a Word document, or why it does not, as [The text of a file](connections.md#the-text-of-a-file) sets out |
+| An empty body, with or without a media type | No content                                                                                                                                                                                                             |
+| A header the operation's response describes | `{ headers, body }`: the headers the document describes for that status, named as it names them, beside the body as the rows above read it, which an empty body leaves out                                             |
+| `401`                                       | A key the server refused                                                                                                                                                                                               |
+| `429`                                       | Waits out a `Retry-After` that fits                                                                                                                                                                                    |
+| `5xx`                                       | A failing server                                                                                                                                                                                                       |
+| A redirect                                  | An error result with its status. It is not followed, so the entry's headers and token go to no address but its own                                                                                                     |
+| Any other response, including `404`         | An error result carrying the API's response                                                                                                                                                                            |
 
 Listing an HTTP API's tools asks the API nothing: the document is the list.
 

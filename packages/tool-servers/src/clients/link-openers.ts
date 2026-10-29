@@ -2,7 +2,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 
 import type { Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
-import { apiClient } from '../openapi/api-client.ts';
+import { apiClient, type ApiOpening } from '../openapi/api-client.ts';
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import { openHttp, systemTimer, type Timer } from './http-client.ts';
 import {
@@ -23,6 +23,7 @@ export interface LinkOptions {
   readonly consent: ConsentTokenSources;
   readonly secrets: Secrets;
   readonly now: () => number;
+  readonly documents?: ApiOpening['documents'];
   readonly timer?: Timer;
   readonly timing: Timing;
   readonly reportOutput: (server: string, line: string) => void;
@@ -87,7 +88,10 @@ export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOption
   }
   if (settings.type === 'openapi') {
     const tokens = tokensOf({ settings, serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' }, options);
-    return () => Promise.resolve(apiClient(settings, { fetch: options.fetch, tokens, now: options.now }));
+    return () =>
+      Promise.resolve(
+        apiClient(settings, { fetch: options.fetch, tokens, now: options.now, documents: options.documents }),
+      );
   }
   const authProvider = tokensOf({ settings, serverUrl: settings.url, discovery: 'from_the_server' }, options);
   const { openMs, longestRetryWaitMs } = options.timing;

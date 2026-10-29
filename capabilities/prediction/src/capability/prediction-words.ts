@@ -26,6 +26,8 @@ const PredictionSchema = Schema.Struct({
 const RecordSchema = Schema.Struct({
   version: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   default_forecast: Schema.optionalKey(Schema.Boolean),
+  because: Schema.optionalKey(Schema.Literal('feature_unlicensed')),
+  feature: Schema.optionalKey(Schema.String),
   total_to: Schema.optionalKey(Schema.String),
   decimals: Schema.optionalKey(Schema.Int),
 });
@@ -61,9 +63,11 @@ function totalWords(point: PredictedPoint, unit: string, recorded: Recorded, dec
   return `${observedFigure(point.value, decimals)} ${unit} by the end of ${to} ${rangeWords(point, unit, decimals)}`;
 }
 
-function versionWords({ version, default_forecast: byDefault }: Recorded): string {
+function versionWords({ version, default_forecast: byDefault, feature }: Recorded): string {
   if (byDefault === true) {
-    return ', from the default forecast, since no version of its model is active';
+    return feature === undefined
+      ? ', from the default forecast, since no version of its model is active'
+      : `, from the default forecast, since its active version needs ${feature}, which this runtime's license does not include`;
   }
   return version === undefined || version === null ? '' : `, from version ${version} of its model`;
 }

@@ -12,7 +12,13 @@ import {
   serverMetadataOf,
   type ServerMetadata,
 } from '../consent/server-metadata.ts';
-import { answeredTokensOf, keptOf, type AnsweredTokens, type KeptTokens } from './kept-tokens.ts';
+import {
+  answeredTokensOf,
+  keptOf,
+  tokenAnswersReadAsBearer,
+  type AnsweredTokens,
+  type KeptTokens,
+} from './kept-tokens.ts';
 import { renewedTokens, type Refreshing, type Sourced } from './renewed-tokens.ts';
 
 export interface TokenRequests {
@@ -57,7 +63,7 @@ function refreshedWith(
           metadata: libraryMetadataOf(server),
           clientInformation: libraryClientOf(client.identity),
           refreshToken,
-          fetchFn: fetch,
+          fetchFn: tokenAnswersReadAsBearer(fetch),
           ...(resource === undefined ? {} : { resource }),
           ...(client.authentication === undefined ? {} : { addClientAuthentication: client.authentication }),
         }),

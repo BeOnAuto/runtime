@@ -1,7 +1,7 @@
 import { exchangeAuthorization, startAuthorization } from '@modelcontextprotocol/client';
 import { DateTime, Effect, Redacted } from 'effect';
 
-import { answeredTokensOf, keptOf, keptValueOf } from '../consent-tokens/kept-tokens.ts';
+import { answeredTokensOf, keptOf, keptValueOf, tokenAnswersReadAsBearer } from '../consent-tokens/kept-tokens.ts';
 import { libraryClientOf, type Requests, type ServerSource } from './acting-clients.ts';
 import type {
   CodeFinishAsked,
@@ -13,7 +13,7 @@ import type {
   WayAsked,
   WayRefusal,
 } from './consent-client.ts';
-import { exchangeRefusalOf } from './consent-failures.ts';
+import { exchangeRefusalOf, observedCalls } from './consent-failures.ts';
 import { namedWayOf } from './named-ways.ts';
 import { revocationOf } from './revocation.ts';
 import { grantedScopeOf } from './scopes.ts';
@@ -80,6 +80,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
     const fetch = fetchFor(asked.reaches);
     const { server, resource } = yield* serverMetadataOf(asked, fetch);
     const client = yield* clients.recordedFor(asked);
+    const observed = observedCalls('token', server.token_endpoint, fetch);
     const exchanged = yield* Effect.tryPromise({
       try: () =>
         exchangeAuthorization(asked.way.issuer, {
@@ -88,12 +89,12 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
           authorizationCode: asked.code,
           codeVerifier: Redacted.value(asked.verifier),
           redirectUri: asked.returnAddress,
-          fetchFn: fetch,
+          fetchFn: tokenAnswersReadAsBearer(observed.fetch),
           ...(asked.iss === undefined ? {} : { iss: asked.iss }),
           ...(resource === undefined ? {} : { resource }),
           ...(client.authentication === undefined ? {} : { addClientAuthentication: client.authentication }),
         }),
-      catch: exchangeRefusalOf,
+      catch: (error) => exchangeRefusalOf(error, observed),
     });
     const tokens = { access_token: exchanged.access_token, refresh_token: exchanged.refresh_token };
     const revoking = Effect.ignore(revocationOf({ server, client, tokens, fetch }));

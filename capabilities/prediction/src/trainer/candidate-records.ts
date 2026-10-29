@@ -5,6 +5,7 @@ import { Effect, type Schema } from 'effect';
 import { correlationOf, type BuildState } from '../builds/build-state.ts';
 import { predictionBounds } from '../capability/prediction-bounds.ts';
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
+import { buildWorkIn } from '../facts/build-facts.ts';
 import { buildRunFacts } from '../facts/prediction-facts.ts';
 import type { Checked } from './candidate-checks.ts';
 
@@ -26,8 +27,10 @@ function wasAlreadyUploaded(error: unknown): boolean {
 
 function uploadRule(sha256: string): WorkRule {
   return ({ work }) => {
-    const uploads = work.filter(({ type }) => type === 'candidate_uploaded');
-    if (uploads.some(({ data }) => data['sha256'] === sha256)) {
+    const uploads = work
+      .flatMap((each) => buildWorkIn(each))
+      .flatMap((fact) => (fact.type === 'candidate_uploaded' ? [fact.data.sha256] : []));
+    if (uploads.includes(sha256)) {
       return alreadyUploaded;
     }
     return uploads.length >= predictionBounds.candidatesInABuild ? fullBuild : undefined;

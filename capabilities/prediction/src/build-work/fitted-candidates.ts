@@ -1,12 +1,19 @@
 import { playbookCallerOf } from '@on.auto/operations';
+import type { ModelRuntime } from '@on.auto/prediction-contract';
 import { Effect, Option } from 'effect';
 
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
-import { fedShapeOf, fittingRuntimeFor, functionShapeOf, runtimeNamed } from '../runtimes/model-runtimes.ts';
+import {
+  fedShapeOf,
+  fittingRuntimeFor,
+  functionShapeOf,
+  licensedFor,
+  runtimeNamed,
+} from '../runtimes/model-runtimes.ts';
 import { rowsFileOf } from '../scoring/scoring-inputs.ts';
 import type { TrainerAnswer } from '../scoring/version-card.ts';
 import { uploadedFitted } from '../trainer/fitted-uploads.ts';
-import { aMinute, recordedWork, restingUntil, type Performing } from './build-performing.ts';
+import { aMinute, recordedWork, restingUntil, type Performing, type PerformedStep } from './build-performing.ts';
 
 interface FittedBy {
   readonly runtime: ReturnType<typeof runtimeNamed> | null;
@@ -19,15 +26,12 @@ function fittedRecorded(performing: Performing, fitted: FittedBy, detail?: strin
   return recordedWork(performing, { type: 'candidates_fitted', data });
 }
 
-export function fittingStep(
+function fittedBy(
   performing: Performing,
   document: PredictionFunctionDefinitionDocument,
-): Effect.Effect<void> {
+  runtime: ModelRuntime,
+): PerformedStep {
   const { ports, build, now } = performing;
-  const runtime = fittingRuntimeFor(ports.runtimes, fedShapeOf(document));
-  if (runtime === undefined) {
-    return fittedRecorded(performing, { runtime: null, candidates: [] });
-  }
   const release = ports.permits.take();
   if (release === null) {
     return restingUntil(performing, now + aMinute);
@@ -38,12 +42,18 @@ export function fittingStep(
   return Effect.gen(function* () {
     const path = yield* rowsFileOf(ports, { org, playbook }, assembled.training_sha256);
     const outcome = yield* ports.models.fit(
+      org,
       runtime,
       { sha256: assembled.training_sha256, path },
       functionShapeOf(document),
     );
     if (outcome.ended === 'busy' || outcome.ended === 'closing' || outcome.ended === 'cancelled') {
       return yield* restingUntil(performing, now + aMinute);
+    }
+    if (outcome.ended === 'unlicensed') {
+      const which = `${runtime.name} needs to fit the models of this function`;
+      const { detail } = yield* ports.features.refusal({ org, feature: outcome.feature, which });
+      return yield* fittedRecorded(performing, { runtime: named, candidates: [] }, detail);
     }
     if (outcome.ended !== 'answered') {
       const detail = 'detail' in outcome ? outcome.detail : `its fit ended ${outcome.ended}`;
@@ -57,6 +67,15 @@ export function fittingStep(
     const candidates = uploaded.flatMap((each) => ('sha256' in each ? [each.sha256] : []));
     return yield* fittedRecorded(performing, { runtime: named, candidates });
   }).pipe(Effect.ensuring(Effect.sync(release)));
+}
+
+export function fittingStep(performing: Performing, document: PredictionFunctionDefinitionDocument): PerformedStep {
+  const licensed = licensedFor(performing.ports, performing.build.address.org);
+  return Effect.flatMap(fittingRuntimeFor(licensed, fedShapeOf(document)), (runtime) =>
+    runtime === undefined
+      ? fittedRecorded(performing, { runtime: null, candidates: [] })
+      : fittedBy(performing, document, runtime),
+  );
 }
 
 export function fittedAnswerOf({ build }: Performing, candidates: readonly string[]): TrainerAnswer {
