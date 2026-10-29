@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { DocumentText } from '../reading/document-text.ts';
 import { documentsReadInProcess } from '../testing/index.ts';
 import { pdfOfNestedDrawings, pdfOfPages, wordDocumentOf } from '../testing/written-documents.ts';
-import { documentJobs, documentJobKind } from './document-jobs.ts';
 import { documentsReadIn, unreadDocuments, type DocumentProcesses } from './pooled-documents.ts';
 
 const mebibyte = 1_048_576;
@@ -32,10 +31,6 @@ function saidBy(document: DocumentText): string {
 
 function answering(outcome: ProcessOutcome): DocumentProcesses {
   return { run: () => Promise.resolve(outcome) };
-}
-
-function payloadNamed(name: string | null) {
-  return { bytes: pdfOfPages([['Net 30']]), mediaType: 'application/pdf', name, textBytes: 1000 };
 }
 
 function termsPdf() {
@@ -157,16 +152,7 @@ describe('a document a process could not read', () => {
   });
 });
 
-describe('the jobs of a process that reads documents', () => {
-  it('read the document of their payload, named or not', async () => {
-    const reads = documentJobs()[documentJobKind];
-
-    expect(await Promise.all([reads?.(payloadNamed(null)), reads?.(payloadNamed('a.pdf'))])).toEqual([
-      { read: true, text: 'Net 30', mediaType: 'application/pdf' },
-      { read: true, text: 'Net 30', mediaType: 'application/pdf' },
-    ]);
-  });
-
+describe('a document read in the process of a test', () => {
   it('are read in the process of a test through the testing entry, which no composition takes', async () => {
     expect(await documentsReadInProcess(termsPdf(), unbounded)).toMatchObject({
       read: true,
