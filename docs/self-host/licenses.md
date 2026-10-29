@@ -78,7 +78,7 @@ When the runtime cannot reach Auto, it goes on with its last license. Fourteen d
 
 When an owner rotates the key or removes the runtime from its org, the runtime runs at the free rate until a valid key is activated. It never stops outright.
 
-A runtime that held a key once runs no new first 100 runs: whenever it is without a usable license, it runs at the free rate. A ledger wiped and started again with the same key gains nothing either: the runtime takes what Auto already charged as the least of its licensed count.
+A runtime that held a key once runs no new first 100 runs: whenever it is without a usable license, it runs at the free rate. A ledger wiped, or restored from an older copy, and started again with the same key gains nothing either: whenever the runtime takes a license, as it activates its key or as Auto answers a report, it takes what Auto already charged as the least of its licensed count. A restored ledger reports a lower count once, which Auto charges nothing for, and counts on from what Auto charged after that.
 
 The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules beside `studio.on.auto`.
 

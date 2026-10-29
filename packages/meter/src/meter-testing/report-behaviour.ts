@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
 
-import { runOf } from '../testing/runs.ts';
 import {
   admittedEach,
   licensedInstallation,
@@ -114,7 +113,7 @@ export function earlyReportBehaviour(ledgerOf: LedgerOf): void {
 }
 
 export function restoredReportBehaviour(ledgerOf: LedgerOf): void {
-  it('reports the lower count of a ledger restored from an older copy, which Auto charges nothing for, and goes on', async () => {
+  it('reports the lower count of a ledger restored from an older copy with the same key once, then counts from what Auto charged, never backwards', async () => {
     const { metered, tampering, key } = await licensedOn(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
     const copied = await tampering.lastPosition();
@@ -122,9 +121,19 @@ export function restoredReportBehaviour(ledgerOf: LedgerOf): void {
     await metered.reported();
     const restored = await restartedAfter(metered, () => tampering.restoredTo(copied), { key });
     await restored.reported();
+    const floored = (await restored.state()).admitted;
+    await startedOnceAdmitted(restored, 'run-4');
+    await restored.reported();
+    await restored.reported();
 
+    expect(floored).toMatchObject({ actions: 3, licensed: 3 });
+    expect(restored.account.reports()).toEqual([
+      { actions: 3, licensed: 3 },
+      { actions: 1, licensed: 1 },
+      { actions: 4, licensed: 4 },
+      { actions: 4, licensed: 4 },
+    ]);
     expect(restored.account.wentBackwards()).toEqual([{ installation, licensed: 1, charged_through: 3 }]);
-    expect(restored.account.chargedThrough(installation)).toBe(3);
-    expect((await restored.admitted(runOf('run-4'))).kind).toBe('admitted');
+    expect(restored.account.chargedThrough(installation)).toBe(4);
   });
 }

@@ -76,9 +76,13 @@ function admittedBy(state: MeterState, { data: { run, until, basis }, context: {
 
 type LicenseEvent = Extract<MeterEvent, { type: 'license_activated' | 'license_renewed' }>;
 
-function licensedBy(state: MeterState, { type, data, context: { at } }: LicenseEvent): MeterState {
-  const admitted = type === 'license_activated' ? flooredAt(state.admitted, data.charged_through) : state.admitted;
-  return { ...state, admitted, license: heldLicenseOf(data, at), refused: undefined };
+function licensedBy(state: MeterState, { data, context: { at } }: LicenseEvent): MeterState {
+  return {
+    ...state,
+    admitted: flooredAt(state.admitted, data.charged_through),
+    license: heldLicenseOf(data, at),
+    refused: undefined,
+  };
 }
 
 export function evolveMeter(state: MeterState, event: MeterEvent): MeterState {
