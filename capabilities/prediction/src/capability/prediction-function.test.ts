@@ -1,8 +1,9 @@
 import { shapeNamed } from '@on.auto/definitions/testing';
-import { Conflict, InvalidInput } from '@on.auto/operations';
+import { Conflict, InvalidInput, Unavailable } from '@on.auto/operations';
 import { Effect, Exit, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { scriptedRuntimeThatFitsNothing } from '../runtime-testing/scripted-runtime.ts';
 import { cancelsInACall } from '../testing/cancels-in-a-call.ts';
 import { predictionRuns } from '../testing/prediction-runs.ts';
 import { weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
@@ -67,6 +68,7 @@ describe('the prediction capability', () => {
         'candidate_disqualified',
         'baseline_scored',
         'baseline_not_walked',
+        'candidates_fitted',
       ],
       ['models'],
       32,
@@ -145,11 +147,26 @@ describe('the summary of a prediction function', () => {
 });
 
 describe('a run of a prediction function before a version is built', () => {
-  it('refuses a question, since no version is active yet, and says how to ask for a build', async () => {
+  it('asks a question of the default forecast of a runtime that fits its own models, reading its window as any question does', async () => {
     expect(await predictionRuns().running(weeklyOrders, question)).toEqual(
       Exit.fail(
+        new Unavailable({
+          detail:
+            "The dataset is still being built from the playbook's history; ask again once get_definition shows it live",
+          kind: 'dataset_not_ready',
+        }),
+      ),
+    );
+  });
+
+  it('refuses a question where no runtime of the server answers a function with no version, and says how to ask for a build', async () => {
+    expect(
+      await predictionRuns(undefined, undefined, [scriptedRuntimeThatFitsNothing]).running(weeklyOrders, question),
+    ).toEqual(
+      Exit.fail(
         new Conflict({
-          detail: 'The function has no active version yet; ask for a build with the input { build: {} }',
+          detail:
+            'The function has no active version, and no model runtime this server has installed answers a function with none; ask for a build with the input { build: {} }',
           kind: 'no_active_version',
         }),
       ),
@@ -232,7 +249,7 @@ describe('a run of a prediction function cancelled from outside while its call i
       expect.objectContaining({ status: 'succeeded' }),
     ]);
     expect([asked, built]).toMatchObject([
-      { status: 'rejected', reason: 'conflict', kind: 'no_active_version' },
+      { status: 'rejected', reason: 'unavailable', kind: 'dataset_not_ready' },
       { status: 'rejected', reason: 'unavailable', kind: 'dataset_not_ready' },
     ]);
   });

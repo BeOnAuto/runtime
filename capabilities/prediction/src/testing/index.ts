@@ -5,6 +5,7 @@ export {
   dailyTotalsWith,
   dailyVisits,
   dailyVisitsWith,
+  trainerlessDailyVisits,
   uploadedDailyTotals,
   uploadedDailyVisits,
 } from './daily-documents.ts';

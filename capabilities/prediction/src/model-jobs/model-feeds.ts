@@ -1,4 +1,4 @@
-import type { ModelFeeds } from '@on.auto/prediction-contract';
+import type { FedTensor, ModelFeeds } from '@on.auto/prediction-contract';
 import { Schema } from 'effect';
 
 import { BaselineSchema, MetricSchema } from '../document/evaluation-names.ts';
@@ -26,6 +26,7 @@ export const RunJobSchema = Schema.Struct({
   x: Schema.NullOr(Floats),
   given: Schema.NullOr(Floats),
   h: Schema.NullOr(Whole),
+  at: Schema.NullOr(Schema.Int),
   features: Whole,
   givens: Whole,
 });
@@ -41,9 +42,24 @@ export const WalkJobSchema = Schema.Struct({
   features: Whole,
   given: Schema.Array(Whole),
   remaining: Schema.NullOr(Schema.Array(Whole)),
+  first: Schema.NullOr(Schema.Int),
 });
 
 export type WalkJob = typeof WalkJobSchema.Type;
+
+const FunctionShapeSchema = Schema.Struct({
+  fed: FedShapeSchema,
+  grain: Schema.Literals(grains),
+  season: Schema.NullOr(Whole),
+  accumulates: Schema.NullOr(Schema.Literals(enclosings)),
+  holdout: Whole,
+});
+
+export const FitJobSchema = Schema.Struct({ runtime: Schema.String, rows: Schema.String, shape: FunctionShapeSchema });
+
+export type FitJob = typeof FitJobSchema.Type;
+
+export const DefaultJobSchema = Schema.Struct({ runtime: Schema.String, shape: FunctionShapeSchema });
 
 export const WindowJobSchema = Schema.Struct({
   rows: Schema.String,
@@ -75,6 +91,7 @@ export interface Fed {
   readonly x: Readonly<Float32Array> | null;
   readonly given: Readonly<Float32Array> | null;
   readonly h: number | null;
+  readonly at: number | null;
   readonly features: number;
   readonly givens: number;
 }
@@ -86,12 +103,17 @@ function lastOf(values: Readonly<Float32Array>, periods: number, width: number):
   return taken;
 }
 
-export function feedsOf({ y, x, given, h, features, givens }: Fed, length?: number): ModelFeeds {
+function periodTensor(value: number): FedTensor {
+  return { data: BigInt64Array.of(BigInt(value)), dims: [1] };
+}
+
+export function feedsOf({ y, x, given, h, at, features, givens }: Fed, length?: number): ModelFeeds {
   const periods = length ?? y.length;
   return {
     y: { data: lastOf(y, periods, 1), dims: [1, periods] },
     ...(x === null ? {} : { x: { data: lastOf(x, periods, features), dims: [1, periods, features] } }),
     ...(given === null ? {} : { given: { data: given, dims: [1, given.length / givens, givens] } }),
-    ...(h === null ? {} : { h: { data: BigInt64Array.of(BigInt(h)), dims: [1] } }),
+    ...(h === null ? {} : { h: periodTensor(h) }),
+    ...(at === null ? {} : { at: periodTensor(at) }),
   };
 }

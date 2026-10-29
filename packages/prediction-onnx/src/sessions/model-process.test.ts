@@ -79,8 +79,17 @@ const mean = { sha256: 'visits-mean', path: candidatePath('visits-mean') };
 describe('a model process that runs the models of onnxruntime', () => {
   it('checks a candidate, answers a question and walks the held-back origins in the process that holds the model', async () => {
     const { models } = testPorts({ runtimes: [onnxRuntime], processes: 3 }).ports;
-    const question = { y: Float32Array.of(10, 12), x: null, given: null, h: null, features: 0, givens: 0 };
-    const walk = { rows: rowsFile(), window: 2, holdout: 1, steps: 2, features: 0, given: [], remaining: null };
+    const question = { y: Float32Array.of(10, 12), x: null, given: null, h: null, at: null, features: 0, givens: 0 };
+    const walk = {
+      rows: rowsFile(),
+      window: 2,
+      holdout: 1,
+      steps: 2,
+      features: 0,
+      given: [],
+      remaining: null,
+      first: null,
+    };
 
     expect(await Effect.runPromise(models.check(onnxRuntime, mean, fed))).toMatchObject({
       ended: 'answered',

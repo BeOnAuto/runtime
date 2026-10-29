@@ -28,13 +28,18 @@ const refusals: readonly (readonly [string, unknown, string])[] = [
     'boolean',
   ],
   [
+    'a capability of a later contract that is not a flag',
+    { ...runtime, capabilities: { ...runtime.capabilities, fits: 'yes' } },
+    'boolean',
+  ],
+  [
     'a binding of another kind',
     { ...runtime, binding: { kind: 'remote', url: 'https://models.example.com' } },
     'process',
   ],
   [
     'a module that is not a function',
-    { ...runtime, binding: { kind: 'process', module: 'file:///m.js' } },
+    { ...runtime, binding: { kind: 'inline', module: 'file:///m.js' } },
     'a function',
   ],
 ];
@@ -42,6 +47,16 @@ const refusals: readonly (readonly [string, unknown, string])[] = [
 describe('a model runtime', () => {
   it('names itself, its version, the formats it executes, what it takes and the module a model process loads', () => {
     expect(Result.isSuccess(decoded(runtime))).toBe(true);
+  });
+
+  it('may be bound inline, its module imported by the server itself, and state that it takes the calendar and fits its own models', () => {
+    const inline: ModelRuntime = {
+      ...runtime,
+      capabilities: { ...runtime.capabilities, calendar: true, fits: true },
+      binding: { kind: 'inline', module: () => new URL('file:///models/example-models.js') },
+    };
+
+    expect(decoded(inline)).toEqual(Result.succeed(inline));
   });
 
   it.each(refusals)('is refused with %s', (_case, value, words) => {

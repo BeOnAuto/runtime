@@ -47,7 +47,7 @@ function interactionCalled(name: string | undefined, role: CallRole): readonly C
 
 function callsOf({ source, evaluation: { activate } }: PredictionFunctionDefinitionDocument) {
   return [
-    ...interactionCalled(source.through, 'trainer'),
+    ...interactionCalled(source?.through, 'trainer'),
     ...interactionCalled(activate === 'automatic' ? undefined : activate.approved, 'approver'),
   ];
 }

@@ -18,6 +18,8 @@ type Decided = BuildWorkOf<'candidate_scored' | 'candidate_disqualified'>;
 
 type BaselineFact = BuildWorkOf<'baseline_scored' | 'baseline_not_walked'>;
 
+type Fitted = BuildWorkOf<'candidates_fitted'>['data'];
+
 export interface BuildState {
   readonly address: BuildAddress;
   readonly run: RecordedRun;
@@ -25,9 +27,10 @@ export interface BuildState {
   readonly uploads: readonly Uploaded[];
   readonly decided: ReadonlyMap<string, Decided>;
   readonly baselines: ReadonlyMap<string, BaselineFact>;
+  readonly fitted: Fitted | undefined;
 }
 
-const BuildRecordSchema = Schema.Struct({
+const RequestRecordSchema = Schema.Struct({
   expires_at: Schema.String,
   build: Schema.Struct({
     brief_sha256: Schema.String,
@@ -39,6 +42,15 @@ const BuildRecordSchema = Schema.Struct({
   waiting_for: Schema.optionalKey(Schema.Struct({ run: Schema.String })),
 });
 
+const TrainerlessRecordSchema = Schema.Struct({
+  trainer: Schema.Null,
+  build: Schema.Struct({ training_sha256: Schema.String, training_bytes: Schema.Int }),
+});
+
+const BuildRecordSchema = Schema.Union([RequestRecordSchema, TrainerlessRecordSchema]);
+
+export type RequestRecord = typeof RequestRecordSchema.Type;
+
 export type BuildRecord = typeof BuildRecordSchema.Type;
 
 const decodeRecord = Schema.decodeUnknownOption(BuildRecordSchema);
@@ -47,11 +59,16 @@ export function buildRecordOf({ run }: RecordedRun): BuildRecord | undefined {
   return Option.getOrUndefined(decodeRecord(run.record));
 }
 
+export function asksATrainer(record: BuildRecord): record is RequestRecord {
+  return 'expires_at' in record;
+}
+
 function stateOf(address: BuildAddress, run: RecordedRun): BuildState {
   const work = run.work.flatMap((each) => buildWorkIn(each));
   const ofType = <Type extends BuildWork['type']>(...types: readonly Type[]) =>
     work.filter((fact): fact is BuildWorkOf<Type> => types.some((type) => type === fact.type));
   const [assembled] = ofType('dataset_assembled');
+  const [fitted] = ofType('candidates_fitted');
   return {
     address,
     run,
@@ -59,6 +76,7 @@ function stateOf(address: BuildAddress, run: RecordedRun): BuildState {
     uploads: ofType('candidate_uploaded').map(({ data }) => data),
     decided: new Map(ofType('candidate_scored', 'candidate_disqualified').map((fact) => [fact.data.sha256, fact])),
     baselines: new Map(ofType('baseline_scored', 'baseline_not_walked').map((fact) => [fact.data.baseline, fact])),
+    fitted: fitted?.data,
   };
 }
 

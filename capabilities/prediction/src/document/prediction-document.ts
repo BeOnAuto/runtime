@@ -88,7 +88,7 @@ export interface PredictionFunctionDefinitionDocument {
   readonly data: DataPart;
   readonly dataSha256: string;
   readonly evaluation: Evaluation;
-  readonly source: BuildSource;
+  readonly source?: BuildSource;
   readonly rules: readonly string[];
   readonly brief: ParsedTemplate;
   readonly dataExpressions: readonly DataExpression[];

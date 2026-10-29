@@ -13,13 +13,14 @@ type PredictionKind =
       | 'unscorable'
       | 'not_a_build'
       | 'build_ended'
+      | 'no_trainer'
       | 'already_active'
     >
   | Extract<UnavailableKind, 'builds_full' | 'dataset_not_ready' | 'model_process_busy' | 'model_process_failed'>;
 
 export const predictionExplanations: Readonly<Record<PredictionKind, Explanation>> = {
   no_active_version: {
-    why: 'the function has no model that answers yet',
+    why: 'the function has no active version, and no model runtime of this server answers a function with none',
     remedy: 'It answers once a build has given it an active version: ask for one with the input { build: {} }.',
   },
   data_changed: {
@@ -52,6 +53,10 @@ export const predictionExplanations: Readonly<Record<PredictionKind, Explanation
   build_ended: {
     why: 'the build has ended or has taken its answer, so it takes nothing more from its trainer',
     remedy: 'A new build can be asked for with the input { build: {} }.',
+  },
+  no_trainer: {
+    why: 'the build asks no trainer, since its function names none, so the playbook fits its candidates itself',
+    remedy: 'Nothing waits for a trainer: get_run shows the build as it scores the candidates it fitted.',
   },
   already_active: {
     why: 'that version is already the active one',

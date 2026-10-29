@@ -79,11 +79,12 @@ function approvalOf({ evaluation }: PredictionFunctionDefinitionDocument): reado
 }
 
 function sendingOf({ source }: PredictionFunctionDefinitionDocument): readonly Called[] {
-  return source.through === undefined
+  const through = source?.through;
+  return through === undefined
     ? []
     : [
         {
-          name: source.through,
+          name: through,
           pointer: '/source/through',
           purpose: 'sends a build to its trainer',
           input: { build: {} },

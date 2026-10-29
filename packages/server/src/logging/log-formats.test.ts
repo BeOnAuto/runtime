@@ -101,7 +101,7 @@ describe('the server with LOG_FORMAT=pretty', () => {
         /^INFO {2}Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the server made at this start, and 0 sealed under the previous key were sealed again under it secrets_kid=[\da-f]{16} secrets_resealed=0 secrets_key_from=start$/u,
       ),
       expect.stringMatching(
-        /^INFO {2}Extensions loaded, in their order of precedence: @on\.auto\/prediction-onnx [\d.]+, of the release, filling prediction\/model-runtime extensions=/u,
+        /^INFO {2}Extensions loaded, in their order of precedence: @on\.auto\/prediction-onnx [\d.]+, of the release, filling prediction\/model-runtime; @on\.auto\/prediction-series [\d.]+, of the release, filling prediction\/model-runtime extensions=/u,
       ),
       expect.stringMatching(/^WARN {2}No model provider is configured, .* providers=\[\{"provider":"anthropic",/u),
       "INFO  Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window most_input_tokens=2000000",

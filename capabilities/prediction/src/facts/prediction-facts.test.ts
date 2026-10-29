@@ -141,6 +141,21 @@ const buildFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
     { baseline: 'seasonal-naive', because: 'too_short' },
     'The baseline seasonal-naive could not be walked: no series had a season observed before an origin',
   ],
+  [
+    'candidates_fitted',
+    { runtime, candidates: [sha256, sha256] },
+    "The model runtime scripted-runtime 1.0.0 fitted 2 candidates from the training rows, uploaded to the build as a trainer's are",
+  ],
+  [
+    'candidates_fitted',
+    { runtime, candidates: [], detail: 'The fit broke' },
+    'The model runtime scripted-runtime 1.0.0 fitted no candidate: The fit broke',
+  ],
+  [
+    'candidates_fitted',
+    { runtime: null, candidates: [] },
+    'No model runtime this server has installed fits its own models for the function, so the build fitted no candidate',
+  ],
 ];
 
 describe('the facts of a build, as a run shows them', () => {

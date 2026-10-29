@@ -22,6 +22,7 @@ describe('the columns of the row of a build that its due work advances', () => {
       run_rejected: ['staged'],
       run_failed: ['staged'],
       candidate_uploaded: ['next_due_at'],
+      candidates_fitted: ['staged'],
       candidate_scored: ['staged'],
       candidate_disqualified: ['staged'],
       baseline_scored: ['staged'],

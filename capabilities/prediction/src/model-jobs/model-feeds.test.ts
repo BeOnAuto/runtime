@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { feedsOf } from './model-feeds.ts';
 
-const fed = { y: Float32Array.of(1, 2, 3), x: null, given: null, h: null, features: 0, givens: 0 };
+const fed = { y: Float32Array.of(1, 2, 3), x: null, given: null, h: null, at: null, features: 0, givens: 0 };
 
 function shown(feeds: ReturnType<typeof feedsOf>) {
   const each: Record<string, { readonly data: readonly (number | bigint)[]; readonly dims: readonly number[] }> = {};

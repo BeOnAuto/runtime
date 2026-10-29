@@ -4,7 +4,10 @@ import { readySignal } from '../jobs/ready-signal.ts';
 import { ProcessJobSchema, type ProcessAnswer } from './process-messages.ts';
 import { valueOf, wireOf, type ProcessValue } from './process-values.ts';
 
-export type ProcessHandler = (payload: ProcessValue) => ProcessValue | Promise<ProcessValue>;
+export type ProcessHandler = (
+  payload: ProcessValue,
+  signal?: Readonly<AbortSignal>,
+) => ProcessValue | Promise<ProcessValue>;
 
 export type ProcessHandlers = Readonly<Record<string, ProcessHandler>>;
 
@@ -26,7 +29,7 @@ function jobNamedIn(message: unknown): number {
   return typeof job === 'number' ? job : -1;
 }
 
-function isAllocationFailure(error: unknown): boolean {
+export function isAllocationFailure(error: unknown): boolean {
   return error instanceof RangeError && /allocation failed/u.test(error.message);
 }
 

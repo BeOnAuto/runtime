@@ -13,6 +13,7 @@ interface Accumulated {
 }
 
 export interface ScoringGrid {
+  readonly first: number;
   readonly window: number;
   readonly holdout: number;
   readonly training: number;
@@ -48,6 +49,7 @@ export function scoringGridOf(predicts: GridReach, { window, holdout, firstPerio
   const accumulated = accumulatedOf(predicts, first, window);
   const steps = Math.max(0, ...predicts.horizons);
   return {
+    first,
     window,
     holdout,
     training: window - holdout,

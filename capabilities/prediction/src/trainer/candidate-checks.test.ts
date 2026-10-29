@@ -13,7 +13,7 @@ import { uploadCandidate } from './candidate-upload.ts';
 
 const endedWhileLoading: unknown = expect.stringMatching(/^The model process ended while it loaded the file: /u);
 
-const question = { y: Float32Array.of(1), x: null, given: null, h: null, features: 0, givens: 0 };
+const question = { y: Float32Array.of(1), x: null, given: null, h: null, at: null, features: 0, givens: 0 };
 
 function sent(playbook: BuildPlaybook, build: string, name: CandidateName) {
   return playbook.send(uploadCandidate(playbook.test.ports), { run_id: build }, candidateBytes(name));
@@ -29,7 +29,7 @@ describe('a candidate whose check ends without an answer', () => {
     const scripted = scriptedModels();
     const hurried = buildPlaybook({
       module: scripted.module,
-      deadlines: { check: 1500, run: 10_000, walk: 60_000, baselines: 30_000 },
+      deadlines: { check: 1500, run: 10_000, walk: 60_000, baselines: 30_000, fit: 30_000 },
     });
     const playbook = buildPlaybook({ module: scripted.module });
     const hurriedBuild = await waitingBuild(hurried);
@@ -71,7 +71,7 @@ describe('a candidate uploaded while every model process is taken', () => {
     const playbook = buildPlaybook({
       module: scripted.module,
       processes: 2,
-      deadlines: { check: 300, run: 60_000, walk: 60_000, baselines: 30_000 },
+      deadlines: { check: 300, run: 60_000, walk: 60_000, baselines: 30_000, fit: 30_000 },
     });
     const build = await waitingBuild(playbook);
     scripted.next('sleeps');

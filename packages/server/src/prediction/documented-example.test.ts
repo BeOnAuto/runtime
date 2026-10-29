@@ -11,7 +11,7 @@ import { sha256Of, uploaded } from './dataset-uploads.ts';
 
 const testTimeoutMs = 90_000;
 
-const [, , , sendBuild, , nextWeekOrders] = blocksInOrderOf('reference/prediction-format.md').map(({ body }) => body);
+const [, , , sendBuild, , , nextWeekOrders] = blocksInOrderOf('reference/prediction-format.md').map(({ body }) => body);
 
 const weeks = Array.from({ length: 20 }, (_, at) => `2026-W${String(21 + at).padStart(2, '0')}`);
 
@@ -40,7 +40,7 @@ async function forecastRun(): Promise<unknown> {
 }
 
 describe('the workflow of the prediction function format, through the server', { timeout: testTimeoutMs }, () => {
-  it('answers no forecast before weekly-orders has an active version, and the forecast of its version after a build', async () => {
+  it('answers the default forecast before weekly-orders has an active version, and the forecast of its version after a build', async () => {
     server = await servingReasoning([], { WORKFLOW_SWEEP_INTERVAL: 'PT0.05S' });
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     const upload = await uploaded(server.origin, orderRows);
@@ -65,7 +65,7 @@ describe('the workflow of the prediction function format, through the server', {
     expect([upload.status, ...created.map(({ status }) => status), sent.status, answered.status]).toEqual([
       200, 201, 201, 200, 200,
     ]);
-    expect(before).toMatchObject({ status: 'succeeded', output: { forecast: null } });
+    expect(before).toMatchObject({ status: 'succeeded', output: { forecast: 1 } });
     expect(after).toMatchObject({ status: 'succeeded', output: { forecast: 1 } });
   });
 });

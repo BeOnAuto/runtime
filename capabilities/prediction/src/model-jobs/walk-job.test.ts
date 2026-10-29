@@ -70,19 +70,23 @@ const walk = {
   features: 0,
   given: [],
   remaining: null,
+  first: null,
 };
 
 describe('a walk of a model over the held-back origins of each series', () => {
   it('feeds each series up to each held-back origin and answers every step of every origin, series by series', async () => {
     const seen: Fed[] = [];
     const answer = await walked(
-      lastValueModel(
-        () => 2,
-        (fed) => {
-          seen.push(fed);
-        },
-      ),
-      walk,
+      {
+        model: lastValueModel(
+          () => 2,
+          (fed) => {
+            seen.push(fed);
+          },
+        ),
+        walk,
+        signal: undefined,
+      },
       rows,
     );
 
@@ -107,13 +111,16 @@ describe('a walk of a model that takes given features or predicts a total', () =
     const seen: Fed[] = [];
     const givenWalk = { ...walk, features: 1, given: [0], remaining: [3, 1] };
     await walked(
-      lastValueModel(
-        () => 1,
-        (fed) => {
-          seen.push(fed);
-        },
-      ),
-      givenWalk,
+      {
+        model: lastValueModel(
+          () => 1,
+          (fed) => {
+            seen.push(fed);
+          },
+        ),
+        walk: givenWalk,
+        signal: undefined,
+      },
       rowsOf(1),
     );
 
@@ -126,18 +133,40 @@ describe('a walk of a model that takes given features or predicts a total', () =
   it('answers badly when its runtime says the model answered badly', async () => {
     const badly: LoadedModel = { ...lastValueModel(() => 2), run: () => Promise.resolve({ badly: 'No q' }) };
 
-    expect(await walked(badly, walk, rows)).toEqual({ badly: 'No q' });
+    expect(await walked({ model: badly, walk, signal: undefined }, rows)).toEqual({ badly: 'No q' });
   });
 
   it('answers badly when the model answers q of another shape', async () => {
-    expect(
-      await walked(
-        lastValueModel(() => 3),
-        walk,
-        rows,
-      ),
-    ).toEqual({
+    expect(await walked({ model: lastValueModel(() => 3), walk, signal: undefined }, rows)).toEqual({
       badly: 'The model answered q of the shape [1, 3, 3] where [1, 2, 3] was expected',
     });
+  });
+});
+
+describe('a walk of a model whose runtime reads the calendar', () => {
+  it('feeds each origin the index of its period as at, counted from the first period of the rows', async () => {
+    const seen: ModelFeeds[] = [];
+    const model: LoadedModel = {
+      ...lastValueModel(() => 2),
+      run: (feeds) => {
+        seen.push(feeds);
+        return lastValueModel(() => 2).run(feeds);
+      },
+    };
+
+    await walked({ model, walk: { ...walk, first: 100 }, signal: undefined }, rows.slice(0, 1));
+
+    expect(seen.map((feeds) => feeds['at']?.data)).toEqual([BigInt64Array.of(102n), BigInt64Array.of(103n)]);
+  });
+});
+
+describe('a walk stopped as it runs', () => {
+  it('fails at the next series once its signal is aborted, so a walk in the server’s own process ends at its deadline', async () => {
+    const stopping = new AbortController();
+    stopping.abort();
+
+    await expect(walked({ model: lastValueModel(() => 2), walk, signal: stopping.signal }, rows)).rejects.toThrow(
+      'The walk was stopped before it walked every series',
+    );
   });
 });

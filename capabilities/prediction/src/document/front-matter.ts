@@ -53,7 +53,7 @@ const FrontMatterSchema = Schema.Struct({
   predicts: PredictsSchema,
   data: DataSchema,
   evaluation: EvaluationSchema,
-  source: SourceSchema,
+  source: Schema.optionalKey(SourceSchema),
   rules: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
@@ -65,7 +65,7 @@ export type WrittenData = PredictionFrontMatter['data'];
 
 export type WrittenEvaluation = PredictionFrontMatter['evaluation'];
 
-export type WrittenSource = PredictionFrontMatter['source'];
+export type WrittenSource = NonNullable<PredictionFrontMatter['source']>;
 
 const sections: readonly FrontMatterSection[] = [
   { name: undefined, keys: Object.keys(FrontMatterSchema.fields) },
@@ -82,5 +82,5 @@ export const decodeFrontMatter = Schema.decodeUnknownResult(FrontMatterSchema, {
 export const predictionFrontMatter: FrontMatterShape = {
   sections,
   decode: decodeFrontMatter,
-  required: 'what it predicts, the data it learns from, how it is evaluated and where its builds go',
+  required: 'what it predicts, the data it learns from and how it is evaluated',
 };

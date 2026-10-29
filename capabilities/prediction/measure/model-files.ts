@@ -9,6 +9,10 @@ export const seriesMeasured = 1000;
 
 export const daysMeasured = 200;
 
+const firstOfTheMeasures = Date.UTC(2026, 2, 1);
+
+export const firstDayMeasured = firstOfTheMeasures / 86_400_000;
+
 export interface MeasuredFiles {
   readonly directory: string;
   readonly runtime: ModelRuntime;
@@ -20,7 +24,7 @@ export interface MeasuredFiles {
 
 function rowsText(): string {
   const records = ['series,period,visits'];
-  const first = Date.UTC(2026, 2, 1);
+  const first = firstOfTheMeasures;
   for (let series = 0; series < seriesMeasured; series += 1) {
     const name = `store-${String(series).padStart(4, '0')}`;
     for (let day = 0; day < daysMeasured; day += 1) {
@@ -37,7 +41,7 @@ export const widestFeatures = 40;
 export function widestRowsText(): string {
   const features = Array.from({ length: widestFeatures }, (_, feature) => `feature_${feature}`);
   const records = [['series', 'period', 'visits', ...features].join(',')];
-  const first = Date.UTC(2026, 2, 1);
+  const first = firstOfTheMeasures;
   for (let series = 0; series < seriesMeasured; series += 1) {
     const name = `store-${String(series).padStart(4, '0')}`;
     for (let day = 0; day < daysMeasured; day += 1) {
@@ -49,20 +53,29 @@ export function widestRowsText(): string {
   return `${records.join('\r\n')}\r\n`;
 }
 
-function measuredRuntime(module: string): ModelRuntime {
+type MeasuredBinding = ModelRuntime['binding']['kind'];
+
+function measuredRuntime(module: string, kind: MeasuredBinding): ModelRuntime {
   const address = pathToFileURL(resolve(module));
   return {
     name: 'measured-runtime',
     version: '0.0.0',
     formats: ['measured'],
     capabilities: { features: true, given: true, totals: true },
-    binding: { kind: 'process', module: () => address },
+    binding: { kind, module: () => address },
   };
 }
 
-export function measuredFiles(module: string, mean: string, large: string): MeasuredFiles {
+export interface Measuring {
+  readonly module: string;
+  readonly mean: string;
+  readonly large: string;
+  readonly kind: MeasuredBinding;
+}
+
+export function measuredFiles({ module, mean, large, kind }: Measuring): MeasuredFiles {
   const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-prediction-models-'));
   const files = { rows: join(directory, 'scoring.csv'), widest: join(directory, 'widest.csv') };
   writeFileSync(files.rows, rowsText());
-  return { directory, runtime: measuredRuntime(module), mean, large, ...files };
+  return { directory, runtime: measuredRuntime(module, kind), mean, large, ...files };
 }

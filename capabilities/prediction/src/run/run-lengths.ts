@@ -20,7 +20,7 @@ export function finishesLater(): boolean {
 }
 
 export function longestRunOf({ source }: PredictionFunctionDefinitionDocument): number {
-  return source.expiresMs + candidatesInABuild * scoringACandidateMs + buildStartMs;
+  return (source?.expiresMs ?? 0) + candidatesInABuild * scoringACandidateMs + buildStartMs;
 }
 
 export function finishesLaterFor(document: PredictionFunctionDefinitionDocument, input: Schema.Json): boolean {

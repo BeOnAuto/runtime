@@ -18,6 +18,7 @@ const declaredOnRuns: readonly DeclaredFact[] = [
   declaredFact('candidate_disqualified', buildFactSchemas.candidate_disqualified, presentedBuild),
   declaredFact('baseline_scored', buildFactSchemas.baseline_scored, presentedBuild),
   declaredFact('baseline_not_walked', buildFactSchemas.baseline_not_walked, presentedBuild),
+  declaredFact('candidates_fitted', buildFactSchemas.candidates_fitted, presentedBuild),
 ];
 
 const decodeModelFact = strictRecordedDecoder(ModelFactSchema);

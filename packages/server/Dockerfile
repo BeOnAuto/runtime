@@ -22,6 +22,7 @@ COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
 COPY packages/prediction-contract/package.json packages/prediction-contract/
 COPY packages/prediction-onnx/package.json packages/prediction-onnx/
+COPY packages/prediction-series/package.json packages/prediction-series/
 COPY packages/providers/package.json packages/providers/
 COPY packages/secrets/package.json packages/secrets/
 COPY packages/tool-servers/package.json packages/tool-servers/
@@ -80,6 +81,7 @@ COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src
 COPY packages/prediction-contract/src packages/prediction-contract/src
 COPY packages/prediction-onnx/src packages/prediction-onnx/src
+COPY packages/prediction-series/src packages/prediction-series/src
 COPY packages/providers/src packages/providers/src
 COPY packages/secrets/src packages/secrets/src
 COPY packages/server/src packages/server/src

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.0](https://github.com/BeOnAuto/runtime/compare/v0.40.0...v0.41.0) (2026-10-28)
+
+
+### Features
+
+* **prediction:** the runtime forecasts with its own models ([#396](https://github.com/BeOnAuto/runtime/issues/396)) ([3ff2f49](https://github.com/BeOnAuto/runtime/commit/3ff2f499459937b5ec6280e31f0932b30b7afeb6))
+
 ## [0.40.0](https://github.com/BeOnAuto/runtime/compare/v0.39.0...v0.40.0) (2026-10-28)
 
 

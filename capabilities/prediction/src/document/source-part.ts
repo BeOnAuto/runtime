@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import type { DocumentIssue, SourceLines } from '@on.auto/definitions/document';
 import { readDuration } from '@on.auto/workflow-engine/dsl';
+import { Result } from 'effect';
 
 import { figure } from '../capability/figures.ts';
 import { predictionBounds } from '../capability/prediction-bounds.ts';
@@ -48,7 +49,10 @@ function partyIssues({ through, to }: WrittenSource, lines: SourceLines): readon
     : [];
 }
 
-export function sourceOf(written: WrittenSource, lines: SourceLines): Checked<BuildSource> {
+export function sourceOf(written: WrittenSource | undefined, lines: SourceLines): Checked<BuildSource | undefined> {
+  if (written === undefined) {
+    return Result.succeed(written);
+  }
   const expiry = expiryOf(written.expires, lines);
   const issues = [...expiry.issues, ...partyIssues(written, lines)];
   return checkedFrom(issues, () => ({

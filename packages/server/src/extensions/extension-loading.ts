@@ -18,6 +18,7 @@ type Provenance = 'configured' | 'release';
 
 export interface ListedExtension extends ExtensionEntry {
   readonly provenance: Provenance;
+  readonly ofTheRelease: boolean;
 }
 
 export interface LoadedExtension {
@@ -71,10 +72,15 @@ function refusedAs(entry: ListedExtension, detail: string): ExtensionRefused {
   return new ExtensionRefused({ message: `The extension ${entry.package} is refused: ${detail}` });
 }
 
-function listedAs(provenance: Provenance, entries: readonly ExtensionEntry[]): readonly ListedExtension[] {
-  return entries.map(({ package: name, integrity }) =>
-    integrity === undefined ? { package: name, provenance } : { package: name, integrity, provenance },
-  );
+function listedAs(
+  provenance: Provenance,
+  entries: readonly ExtensionEntry[],
+  releasePackages: ReadonlySet<string>,
+): readonly ListedExtension[] {
+  return entries.map(({ package: name, integrity }) => {
+    const listed = { package: name, provenance, ofTheRelease: releasePackages.has(name) };
+    return integrity === undefined ? listed : { ...listed, integrity };
+  });
 }
 
 export function listedExtensions(
@@ -82,11 +88,13 @@ export function listedExtensions(
   release: readonly ExtensionEntry[],
 ): readonly ListedExtension[] {
   const named = new Set(configured.map((entry) => entry.package));
+  const releasePackages = new Set(release.map((entry) => entry.package));
   return [
-    ...listedAs('configured', configured),
+    ...listedAs('configured', configured, releasePackages),
     ...listedAs(
       'release',
       release.filter((entry) => !named.has(entry.package)),
+      releasePackages,
     ),
   ];
 }
@@ -108,7 +116,11 @@ async function verified(entry: ListedExtension, installed: InstalledPackages): P
   }
 }
 
-function provisionProblem(provision: Provision, points: readonly ExtensionPoint[]): string | undefined {
+function provisionProblem(
+  provision: Provision,
+  points: readonly ExtensionPoint[],
+  entry: ListedExtension,
+): string | undefined {
   const point = points.find(({ name }) => name === provision.point);
   if (point === undefined) {
     const declared = points.map(({ name }) => name).join(', ');
@@ -119,9 +131,10 @@ function provisionProblem(provision: Provision, points: readonly ExtensionPoint[
     return `it provides ${provision.point} built against contract ${provision.contract}, and this runtime accepts contracts ${least} to ${most}`;
   }
   const implemented = point.implementationOf(provision.implementation);
-  return Result.isFailure(implemented)
-    ? `its implementation of ${provision.point} is refused: ${implemented.failure}`
-    : undefined;
+  if (Result.isFailure(implemented)) {
+    return `its implementation of ${provision.point} is refused: ${implemented.failure}`;
+  }
+  return entry.ofTheRelease ? undefined : point.reservedForTheRelease?.(implemented.success);
 }
 
 async function loadedOne(
@@ -149,7 +162,7 @@ async function loadedOne(
     );
   }
   const problem = manifest.provides
-    .map((provision) => provisionProblem(provision, points))
+    .map((provision) => provisionProblem(provision, points, entry))
     .find((found) => found !== undefined);
   if (problem !== undefined) {
     throw refusedAs(entry, problem);

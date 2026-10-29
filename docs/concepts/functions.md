@@ -58,9 +58,9 @@ Choose interaction when a person must decide or supply something, or when the pl
 
 A prediction function predicts a number over time from the playbook's history, or from rows you upload. For example, it can forecast each region's orders next week, or their total to the end of the quarter. Each prediction is a series: the last periods observed, and each period ahead as a likely value with a low and a high.
 
-The model behind it is trained outside the playbook, by a person or an agent that can run code. The playbook tests each candidate model on periods the trainer never saw, and keeps it only when it does better than simple baselines. So keep three things apart: the prediction function you define, the predictive model it holds, and the prediction a run gives back.
+The model behind it is one of the runtime's own, which a build fits from the playbook's data when no trainer is named, or one trained outside the playbook, by a person or an agent that can run code. The playbook tests each candidate model on periods it was not fitted on, and keeps the best of those that do better than simple baselines. Before any model is kept, the function answers from the runtime's default forecast. So keep three things apart: the prediction function you define, the predictive model it holds, and the prediction a run gives back.
 
-Choose prediction for a numeric question that comes back again and again, such as weekly sign-ups, and that past figures can answer. A prediction function does not train its own model, and it does not use a language model.
+Choose prediction for a numeric question that comes back again and again, such as weekly sign-ups, and that past figures can answer. A prediction function uses no language model.
 
 - [Forecast with a prediction function](../guides/forecast.md) shows how to forecast from your own playbook, and [Developer example: forecast sign-ups](../tutorials/first-forecast.md) builds one with supplied data.
 - [Prediction function format](../reference/prediction-format.md) describes the document and how a model is built, and [Terminology](terminology.md#prediction) defines its words.

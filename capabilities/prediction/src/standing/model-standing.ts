@@ -26,7 +26,7 @@ function buildStanding({ key, row: stored }: ProjectedKeyedRow): Schema.JsonObje
     run_id: key,
     standing: row.standing,
     requested_at: new Date(row.requested_at).toISOString(),
-    expires_at: new Date(row.expires_at).toISOString(),
+    expires_at: row.expires_at === null ? null : new Date(row.expires_at).toISOString(),
     candidates: row.uploaded,
     scored: row.scored,
   };

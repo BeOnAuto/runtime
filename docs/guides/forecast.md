@@ -16,9 +16,9 @@ This guide is for developers and technical readers, and for anyone whose agent r
 - You know the number to forecast and how many periods ahead you will ask. A period is a day, a week, a month, a quarter or a year.
 - You can restart Auto to give the trainer a key, or you can ask whoever runs it to. An Auto in [local mode](../self-host/security.md#local-mode) needs no key.
 
-Auto does not train models, and a prediction function calls no language model. A trainer fits each model outside the playbook and uploads it. The playbook scores it, keeps the best as a model version and forecasts with that version. [How a prediction function learns](../reference/prediction-format.md#how-a-prediction-function-learns) sets out each stage.
+A prediction function calls no language model. Until a model version is active, it answers from the runtime's default forecast, and a build of a function that names no trainer fits [the runtime's own models](../reference/prediction-format.md#the-runtime-s-own-models) from your data. A trainer fits models of its own outside the playbook and uploads them. The playbook scores them, keeps the best as a model version and forecasts with that version. [How a prediction function learns](../reference/prediction-format.md#how-a-prediction-function-learns) sets out each stage.
 
-Two kinds of version appear on this page. The function's document has versions, like any definition, counted from 1 each time it is saved. Its models have versions of their own, counted from 1 each time a build keeps one. A forecast always comes from the active model version.
+Two kinds of version appear on this page. The function's document has versions, like any definition, counted from 1 each time it is saved. Its models have versions of their own, counted from 1 each time a build keeps one. A forecast comes from the active model version, or from the default forecast before one is active.
 
 ## 1. Choose where the data comes from
 
@@ -104,7 +104,7 @@ You should see a document with its settings at the top, as YAML front matter bet
 - `predicts`: the `target`, its `period`, its `horizons` (how many periods ahead a question may ask) and its `unit`. Name a `season` when the numbers repeat, such as 52 for weeks over a year. For a total to the end of a period, name `accumulates` in place of `horizons`.
 - `data`: the source you chose in step 1, and the `window` of periods a model trains on.
 - `evaluation`: the `holdout`, the last periods held back to score candidates, and `activate`. Use `automatic`, or `{ approved: <interaction function> }` to have a person approve each model version.
-- `source`: `expires`, how long a build waits for its trainer, and where its request goes. By default it waits in the inbox for the party `trainer`. `to` names another party, and `through` names an interaction function that sends the request where the trainer works.
+- `source`: `expires`, how long a build waits for its trainer, and where its request goes. By default it waits in the inbox for the party `trainer`. `to` names another party, and `through` names an interaction function that sends the request where the trainer works. Leave `source` out and a build asks no trainer: it fits the runtime's own models from the rows.
 - `rules`: what the trainer must follow, one line each.
 - The brief: what the trainer needs to know that the rows do not say, such as what the target means and what a good model must not do.
 
@@ -114,7 +114,7 @@ You should see a document with its settings at the top, as YAML front matter bet
 
 Approve it, and the agent saves it with `create_definition`, under a name of lowercase words joined by hyphens, which it uses in later steps. A save that breaks a rule is refused at its line, and nothing is saved.
 
-The function is saved at version 1 of its document. It cannot forecast yet: it has no model until a build makes one and a model version is activated.
+The function is saved at version 1 of its document. It forecasts at once, from the default forecast, until a build makes a model version and that version is activated.
 
 ### Check the build and the training
 
@@ -167,9 +167,9 @@ The agent runs the function with a question, such as `{ "series": "north", "hori
 - The `observed` line holds the last periods of the data up to the origin, twice the longest horizon unless the document's `predicts.history` says how many.
 - The `predicted` line holds a point for each period forecast. Its `value` is the likely value, the model's 50th percentile.
 - Its `low` and `high` are the 10th and 90th percentiles. The true value should fall between them about eight times in ten.
-- The run's record holds `version`, the model version that made the forecast, not the version of the function's document, and `coverage`, always 0.8, the share of truths such an interval should hold. The card's `coverage` says how often it held on the held-back periods.
+- The run's record holds `version`, the model version that made the forecast, not the version of the function's document, and `coverage`, always 0.8, the share of truths such an interval should hold. The card's `coverage` says how often it held on the held-back periods. Before a model version is active, `version` is null, `runtime` is `series` and `default_forecast` is true: [the default forecast](../reference/prediction-format.md#the-default-forecast) answered.
 
-A question also gives a value for each feature the document names under `given`, and a function that predicts a total to the end of a period takes no horizon; [A question](../reference/prediction-format.md#a-question) has both. A workflow asks the same question in a task. [In a workflow](../reference/prediction-format.md#in-a-workflow) shows how, including what to do before any model version is active.
+A question also gives a value for each feature the document names under `given`, and a function that predicts a total to the end of a period takes no horizon; [A question](../reference/prediction-format.md#a-question) has both. A workflow asks the same question in a task. [In a workflow](../reference/prediction-format.md#in-a-workflow) shows how, including what to do when the data changed since the active model version was built.
 
 ## Keep it current
 
@@ -184,9 +184,9 @@ To refresh an uploaded dataset, ask your agent to upload the new file and give i
 - **An upload or a trainer's call gets `401`.** It sent no key, or Auto does not list the key yet. Add it as [API keys](../self-host/security.md#api-keys) describes.
 - **An upload or a trainer's call gets `403`.** The key is for another org, or does not cover this playbook or permission. Check its `--org`, `--playbooks` and `--permissions`.
 - **Starting a build is refused.** `build_in_flight` means an earlier build still waits for its trainer, so answer its request or cancel it with `cancel_run`. `builds_full` means the function has had its builds of the day, or Auto is scoring as many builds as it may. [A build](../reference/prediction-format.md#a-build) lists every refusal.
-- **A candidate is refused at upload.** Its format is not one the brief lists, or its signature, opset or IR version is not one Auto takes, and the refusal names which. A model that Auto cannot load, such as one with too new an IR version, is refused `failed_to_load`. Recent onnx packages write such an IR version unless the trainer sets an older one; [The signature of a candidate](../reference/prediction-format.md#the-signature-of-a-candidate) has the rule.
+- **A candidate is refused at upload.** Its format is not one the brief lists, or it names none where the brief lists two, such as `onnx` and `series`, which `?format=onnx` settles; or its signature, opset or IR version is not one Auto takes, and the refusal names which. A model that Auto cannot load, such as one with too new an IR version, is refused `failed_to_load`. Recent onnx packages write such an IR version unless the trainer sets an older one; [The signature of a candidate](../reference/prediction-format.md#the-signature-of-a-candidate) has the rule.
 - **The build succeeds with `version: null`.** No candidate won. Each candidate's `verdict` says why, such as `coverage_below_floor` when its interval held too few truths, or `not_better` when it did not beat every baseline.
-- **A question is refused `no_active_version` or `data_changed`.** No model version is active yet, or the data changed since the active one was built. Run a build.
+- **A question is refused `data_changed`.** The data changed since the active model version was built. Run a build.
 
 [How a run ends](../reference/prediction-format.md#how-a-run-ends) lists every refusal.
 

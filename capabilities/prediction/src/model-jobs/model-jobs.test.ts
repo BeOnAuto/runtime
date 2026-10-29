@@ -37,7 +37,10 @@ function countingLoads(model: LoadedModel | string): {
     counted.loads += 1;
     return typeof model === 'string' ? Promise.reject(new Error(model)) : Promise.resolve(model);
   };
-  return { jobs: modelJobs(() => Promise.resolve(load)), loads: () => counted.loads };
+  return {
+    jobs: modelJobs({ loaders: () => Promise.resolve(load) }),
+    loads: () => counted.loads,
+  };
 }
 
 const fed = { features: 0, given: 0, horizon: 2, totals: false };
@@ -71,7 +74,17 @@ describe('the check of a model file in its process', () => {
   });
 });
 
-const question = { runtime, threads: 1, y: Float32Array.of(1), x: null, given: null, h: null, features: 0, givens: 0 };
+const question = {
+  runtime,
+  threads: 1,
+  y: Float32Array.of(1),
+  x: null,
+  given: null,
+  h: null,
+  at: null,
+  features: 0,
+  givens: 0,
+};
 
 describe('a question run in a model process', () => {
   it('answers q and its dimensions', async () => {
@@ -83,6 +96,7 @@ describe('a question run in a model process', () => {
       x: null,
       given: null,
       h: null,
+      at: null,
       features: 0,
       givens: 0,
     });
@@ -151,6 +165,7 @@ const walking = {
   features: 0,
   given: [],
   remaining: null,
+  first: null,
 };
 
 describe('a walk in a model process', () => {

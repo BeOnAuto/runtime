@@ -27,7 +27,7 @@ function assembled(
     data: data.data,
     dataSha256: dataDigestOf(data.data, predicts.period),
     evaluation,
-    source,
+    ...(source === undefined ? {} : { source }),
     rules,
     brief,
     dataExpressions: data.expressions,
