@@ -76,8 +76,12 @@ describe('a candidate uploaded while every model process is taken', () => {
     const build = await waitingBuild(playbook);
     scripted.next('sleeps');
     const { models } = playbook.test.ports;
-    void Effect.runPromise(models.run(scriptedRuntime, { sha256: 'held', path: '/held.scripted' }, question));
-    void Effect.runPromise(models.run(scriptedRuntime, { sha256: 'held', path: '/held.scripted' }, question));
+    void Effect.runPromise(
+      models.run('acme', scriptedRuntime, Effect.succeed({ sha256: 'held', path: '/held.scripted' }), question),
+    );
+    void Effect.runPromise(
+      models.run('acme', scriptedRuntime, Effect.succeed({ sha256: 'held', path: '/held.scripted' }), question),
+    );
     await scripted.untilSleeping(['run', 'run']);
 
     expect(await sent(playbook, build, 'visits-mean')).toMatchObject({

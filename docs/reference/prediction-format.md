@@ -414,6 +414,7 @@ A candidate is the model's file, sent as `application/octet-stream` with its `Co
 
 - A body without a `Content-Length` is refused with 411, and one past 64 MiB with 413, before the body is read.
 - `format`, one the brief lists, may be left out when it lists one; another is refused `invalid_input` at `/format` before the body is read.
+- A format whose model runtime needs a [feature](../self-host/licenses.md#features) the runtime's license does not include is not in the brief, and is refused `conflict` with the kind `feature_unlicensed` before the body is read, in words that name the feature, the format and where to add the feature, with that page in `resolve_at`.
 - The runtime of its format checks the file in a model process within 30 seconds. The playbook refuses it as `invalid_input` when the runtime does not load it or finds its signature is not the one the function feeds, and any file once the build has its 8 candidates.
 - It responds `unavailable` with the kind `model_process_busy` while every model process a build may hold is taken. A check holds one of the processes that builds share, never one a question needs.
 - The same accepted bytes sent again return the same result, and nothing is recorded for them twice. A refused file sent again is checked again and refused again.
@@ -455,6 +456,10 @@ For each baseline, it estimates `p_better`: how sure it is that the candidate is
 A candidate is disqualified when:
 
 - no runtime of the server executes its format, as `not_loaded`;
+- the runtime of its format needs a feature the license no longer includes, as `feature_unlicensed`, with the `feature`, and it is not walked;
+
+A model a build fits itself in a format whose runtime needs a feature the license does not include is refused `feature_unlicensed`, recorded as `candidate_refused` with that `because`, and never scored.
+
 - its walk takes longer than 10 minutes or runs out of memory, or its model process ends;
 - it returns an answer of another shape, a number that is not finite, or, at any origin, a 10th percentile above its 50th or a 90th below it, which a question would refuse;
 - its interval holds fewer truths than `coverage_floor`;
@@ -489,7 +494,7 @@ The run succeeds with `{ version, winner, candidates }`. Each candidate has its 
 The first version a function builds activates under its rule on its holdout alone. When the function's dataset is a projection, a later version first runs a shadow beside the active version:
 
 - The shadow lasts `shadow_periods` closes of the grain, or of the enclosing period with `accumulates`.
-- At each close, both versions predict every series. Once the predicted periods close, the predictions are graded against what happened, over the series both versions predicted.
+- At each close, both versions predict every series. A version whose model runtime needs a feature the license does not include is not walked: its `shadow_predicted` predicts nothing, names no `runtime` and says `because: "feature_unlicensed"` with the `feature`. Such a close is graded for neither version, decides nothing and uses up none of the `shadow_periods`, so a lapse of the license never decides which version is active; the shadow goes on at the closes after the feature is back, within its 52 closes.
 - Some series are counted apart: a series without a truth, and one for which a version returned no number, a number that is not finite, or a 10th percentile above its 50th or a 90th below it.
 - The new version passes its shadow when its `metric` over those series is no higher than the active version's. It fails otherwise. It also fails when it predicted nothing the active version did, and passes when the active version predicted nothing.
 - While neither version has a graded series, for example before the first truth arrives, the shadow is undecided. It runs one more close, up to 52 closes in all. A shadow that reaches 52 without a graded series fails. Its `shadow_failed` names the closes that graded nothing, and the version is refused `shadow_failed`.
@@ -540,7 +545,7 @@ The runtime has models of its own, in the format `series`: JSON recipes, a name 
 
 ### The default forecast
 
-A function with no active version answers from the level-adjusted seasonal naive with a season, and persistence, or the run-rate for a total, without one. Its record names the runtime `series`, holds `version: null` and says `default_forecast: true`; nothing is activated.
+A function with no active version answers from the level-adjusted seasonal naive with a season, and persistence, or the run-rate for a total, without one. Its record names the runtime `series`, holds `version: null` and says `default_forecast: true`; nothing is activated. A function whose active version is in a format whose model runtime needs a [feature](../self-host/licenses.md#features) the license does not include answers from the default forecast too, while the license does not include it, and its record also says `because: "feature_unlicensed"` and the `feature`, as the run's words do. A default forecast whose own model is in such a format is refused `feature_unlicensed`.
 
 ### What a build does without a trainer
 
@@ -553,7 +558,7 @@ A question is `{ series, horizon?, given?, marks? }`, or `{ series, given?, mark
 - over a projection, the dataset's rows up to the last closed period at its checkpoint;
 - over an uploaded dataset, the rows up to its last period. A model process reads them from the upload, so the server parses none of it.
 
-The active version answers it, or, before one is active, [the default forecast](#the-default-forecast). The model process that holds the version's file returns the prediction within 10 seconds; a model of the format `series` answers in the server's own process within the same 10 seconds. The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds the `version`, null for the default forecast, `default_forecast` when it answered, the `runtime`, the `coverage`, `decimals`, the `origin`, the `dataset_checkpoint` and the `duration_ms`. `decimals` is the most decimals a value the series observed in the window carries, at most 2: the run's words write each figure to it, so a series of whole numbers is said in whole numbers, while the output keeps every figure as the model answered it. A question can also be refused; [How a run ends](#how-a-run-ends) lists each case.
+The active version answers it, or, before one is active, [the default forecast](#the-default-forecast). The model process that holds the version's file returns the prediction within 10 seconds; a model of the format `series` answers in the server's own process within the same 10 seconds. The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds the `version`, null for the default forecast, `default_forecast` when it answered, with `because: "feature_unlicensed"` and the `feature` when it answered in place of an active version whose runtime needs a feature the license does not include, the `runtime`, the `coverage`, `decimals`, the `origin`, the `dataset_checkpoint` and the `duration_ms`. `decimals` is the most decimals a value the series observed in the window carries, at most 2: the run's words write each figure to it, so a series of whole numbers is said in whole numbers, while the output keeps every figure as the model answered it. A question can also be refused; [How a run ends](#how-a-run-ends) lists each case.
 
 For example, `{ "series": "north", "given": { "promotion": 1 } }` asks `weekly-orders` for both its horizons, and its answer shows the 8 weeks observed before them:
 
@@ -591,19 +596,21 @@ For example, `{ "series": "north", "given": { "promotion": 1 } }` asks `weekly-o
 
 A question ends within its call and cannot be cancelled while it runs:
 
-| Ending                                                             | When                                                                                                                                         |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `succeeded`                                                        | The prediction is its output                                                                                                                 |
-| `invalid_input`                                                    | The input is neither a question the function takes nor `{ build: {} }`, or the series is not in the dataset's window, at `/input/series`     |
-| `conflict`, kind `no_active_version`                               | No version is active, and no model runtime of the server answers a function with none; the release's `series` runtime answers every function |
-| `conflict`, kind `data_changed`                                    | The data part, `horizons`, the `given` features or `accumulates` changed after the active version's model was built for them                 |
-| `unavailable`, kind `dataset_not_ready`                            | The dataset is waiting or rebuilding; with `because` `stalled`, it stalled                                                                   |
-| `unavailable`, kind `model_process_busy`                           | Every model process is taken                                                                                                                 |
-| `unavailable`, kind `model_process_failed`                         | The model process ended before it returned, such as when it ran out of time or memory                                                        |
-| `unavailable`, kind `model_process_failed`, because `not_finite`   | The model returned a number that is not finite, or a shape its signature does not give; asking again does not change it                      |
-| `unavailable`, kind `model_process_failed`, because `not_in_order` | The model returned a low above its likely value or a high below it, which no series holds; asking again does not change it                   |
-| `unavailable`, because `no_model_runtime`                          | Of the kind `model_process_failed`: no runtime of the server executes the active version's format                                            |
-| `failed`                                                           | The runtime itself broke down                                                                                                                |
+| Ending                                                             | When                                                                                                                                                                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `succeeded`                                                        | The prediction is its output                                                                                                                                                                     |
+| `invalid_input`                                                    | The input is neither a question the function takes nor `{ build: {} }`, or the series is not in the dataset's window, at `/input/series`                                                         |
+| `conflict`, kind `no_active_version`                               | No version is active, and no model runtime of the server answers a function with none; the release's `series` runtime answers every function                                                     |
+| `conflict`, kind `feature_unlicensed`                              | The active version's model runtime needs a feature the license does not include, and no other runtime answers a default forecast for the function; or the default forecast's own model needs one |
+| `unavailable`, kind `meter_unavailable`                            | The runtime could not read its license to check the feature a model runtime needs; asking again shortly may work                                                                                 |
+| `conflict`, kind `data_changed`                                    | The data part, `horizons`, the `given` features or `accumulates` changed after the active version's model was built for them                                                                     |
+| `unavailable`, kind `dataset_not_ready`                            | The dataset is waiting or rebuilding; with `because` `stalled`, it stalled                                                                                                                       |
+| `unavailable`, kind `model_process_busy`                           | Every model process is taken                                                                                                                                                                     |
+| `unavailable`, kind `model_process_failed`                         | The model process ended before it returned, such as when it ran out of time or memory                                                                                                            |
+| `unavailable`, kind `model_process_failed`, because `not_finite`   | The model returned a number that is not finite, or a shape its signature does not give; asking again does not change it                                                                          |
+| `unavailable`, kind `model_process_failed`, because `not_in_order` | The model returned a low above its likely value or a high below it, which no series holds; asking again does not change it                                                                       |
+| `unavailable`, because `no_model_runtime`                          | Of the kind `model_process_failed`: no runtime of the server executes the active version's format                                                                                                |
+| `failed`                                                           | The runtime itself broke down                                                                                                                                                                    |
 
 A build finishes later, so `run_definition` returns it `started` and `get_run` shows how it ended:
 

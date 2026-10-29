@@ -60,7 +60,7 @@ Give the runtime its key in one of four ways. A key in the environment or the co
   It asks the runtime running on this computer to activate the key, and says where the runtime stands, the org by its name at Auto, or by its id where Auto names none:
 
   ```text
-  Licensed to Acme Corporation on the free plan, with 1000 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.
+  Licensed to Acme Corporation on the free plan, with 1000 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a. Features: none.
   ```
 
 - **Studio, or any client of the API.** `POST /v1/orgs/{org}/license` with `{ "key": "<the key>" }`, or the MCP tool `activate_license`, activates the key for the whole runtime and answers where it stands, as [`GET /v1/orgs/{org}/license`](#see-where-the-runtime-stands) does. It takes the permission to change the org, as adding a connection does.
@@ -96,6 +96,7 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
   "org": "acme",
   "org_name": "Acme Corporation",
   "plan": "team",
+  "features": ["prediction-onnx"],
   "standing": "overage",
   "licensed": 2430,
   "runs_left": 570,
@@ -117,6 +118,7 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
 - `runtime_id` is the id an owner registers in Studio. A runtime that has no id yet takes one as it is first read, the id its first run would have taken.
 - `free_runs` is `{ used, of }`, the first runs the runtime used of its 100, while it has never held a license, and `null` once it has.
 - `org`, `org_name`, `plan`, `standing`, `credits`, `issued_at`, `warn_at` and `limit_at` are those of the license of the key in force, `standing` being `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`, and all `null` without one. `org_name` is kept on one line of at most 80 characters, its control and format characters taken out, and is `null` where Auto named none or a blank one.
+- `features` lists the [features](#features) of the license in force, `[]` without a license in force: without a key, before its key is activated, once the license lapsed at its `limit_at`, unless live offline credits stand, once its key was replaced or removed or its org closed, or once offline credits it holds stopped. A license whose org has run out of credits is still in force, so its features stand while the runtime runs at the free rate.
 - `licensed` is the runs the runtime started on a license, in all, and `runs_left` the runs it may still start on its license, `0` while it is limited, `null` without a license.
 - `last_report_at` is when the runtime last took a license from Auto, as it activated its key or reported.
 - `fallback` is the free rate it runs at, `{ per_day, per_month, used_today, used_this_month, lifts_at }`, while it runs at it, `lifts_at` being when it can run again once it has used what the rate allows; `null` otherwise.
@@ -125,6 +127,24 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
 - `summary` says all of it in plain words, with how to put it right.
 
 Started by `npx @on.auto/runtime`, the runtime says its `summary` in its terminal and on the page it serves at its root, such as `This runtime has used 12 of its 100 free runs. After that, without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. Get a free license key at https://studio.on.auto/licenses?installation=….` without a key, `Licensed to Acme Corporation on the free plan, with 940 runs left.` once it is licensed, or, while it runs at the free rate, why, what it has used and how to put it right.
+
+## Features
+
+A feature is a part of Auto Runtime licensed on its own, beyond the runs a license admits. A license lists the features its org's agreement includes, and a license that lists none includes none. Each is a name of lower-case letters, digits and hyphens; a name of another shape is left out, and the rest of the license stands. The ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository, needs the feature `prediction-onnx`; the release's own model runtime, `series`, needs none, so it always runs.
+
+A [model runtime](../reference/model-runtimes.md) that names a feature does its work only while the license in force lists it. Every piece of its work is checked as it starts, so nothing it executes can run without the feature:
+
+- A build offers a trainer none of its formats, and a candidate uploaded in one is refused `409` with the kind `feature_unlicensed`, whose `detail` says which feature the license does not include, which format it executes and where to add it, `This runtime's license does not include prediction-onnx, which executes onnx models. The account holder or an organization admin can add it at https://studio.on.auto/licenses?installation=….`, with that page in `resolve_at`.
+- A candidate in one of its formats that a build has not scored yet is disqualified `feature_unlicensed`, and a model a build fits itself in one of them is refused `feature_unlicensed`, each in those words.
+- A version in one of its formats is not walked in a shadow, which records why. A close at which either version was not walked decides nothing and uses up none of the shadow's closes, so a lapse never changes which version is active; the shadow goes on once the feature is back, within its most of 52 closes. A lapse that outlasts those 52 closes ends the shadow as failed for the challenger, which is not activated, and the active version stays active.
+- A prediction function whose active version is in one of its formats answers from the runtime's own models, the [default forecast](../reference/prediction-format.md#the-default-forecast), and its record says why, `because: "feature_unlicensed"` and the `feature`. A default forecast whose model is in one of its formats is refused `feature_unlicensed`.
+- A runtime that names a feature fits neither a build's candidates nor the default forecast while the license lacks it; the next runtime that fits does, as the release's `series` does.
+
+When the license lapses at its `limit_at`, or its key is replaced or removed, or its org is closed, nothing stops: each prediction function goes on answering, from the runtime's own models where its active version needs the feature, and candidates in those formats are refused until a license that lists the feature is in force again. The function's active version answers again from then on, with nothing to rebuild. A license whose org has run out of credits, or reached its overage cap, is still in force, so its features stand while its runs are limited to the free rate.
+
+A runtime on [offline credits](#offline-runtimes) keeps the features of the license it holds for as long as live offline credits admit its runs, past the license's `limit_at`, since such a runtime never reaches Auto to renew it; once the credits stop, so do the features.
+
+`GET /v1/orgs/{org}/license` lists the features in force as `features`, and `auto-runtime license activate` ends with them, `Features: prediction-onnx.` or `Features: none.` A runtime that cannot read its own ledger to check a feature answers the work `503` `meter_unavailable`, as it answers a run it cannot admit, and a build waits and tries again.
 
 ## When a run is refused
 
@@ -141,8 +161,6 @@ The `detail` of a refusal at the free rate says why the runtime runs at it, whic
 
 | Case                    | Kind and `detail`                                                                                                                                                                                                                                                                                                                                                  |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Case                    | Kind and `detail`                                                                                                                                                                                                                                                                                                                                                  |
-| ----------------------- | -----------------                                                                                                                                                                                                                                                                                                                                                  |
 | No key                  | `license_required`: `This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month.`, or `This runtime has no license key, so it's limited to …` for one that held a key once, then the limit, then `To run more, get a free license key at {resolve_at} and activate it on this runtime.` |
 | No credits              | `credits_exhausted`, `limited_because: "credits"`: `This runtime's organization is out of credits, so the runtime is limited to the free rate of …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}; the runtime picks them up within the hour.`                                                                          |
 | The overage cap         | `credits_exhausted`, `limited_because: "cap"`: `This runtime's organization has reached its overage cap of {cap} credits, so the runtime is limited to …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}. New credits repay the overage first, and the runtime picks them up within the hour.`                           |

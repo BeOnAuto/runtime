@@ -15,5 +15,8 @@
   "src/facts/0.46.0/shadow_passed.json": "c951a07ee70a385d4dbf6bd6d52fb90bde9824854e52e2e2050f509929edcdd9",
   "src/facts/0.46.0/shadow_predicted.json": "16d190b08ab35b61f14f1493bf63a6f189713f7fa31f13843eaed9364c4eeddf",
   "src/facts/0.46.0/version_activated.json": "42ccfcf1efcab105abbb2f9801b3829cdef0239408b04516227c49816f3f9c98",
-  "src/facts/0.46.0/version_built.json": "f771831bba336e4357227330960032ab96a0e83fe9b9e558a80bc83e774fae06"
+  "src/facts/0.46.0/version_built.json": "f771831bba336e4357227330960032ab96a0e83fe9b9e558a80bc83e774fae06",
+  "src/facts/0.47.0/candidate_disqualified.json": "78fe17fc58fdfbdb960725376d281f8f19c93f499d7717e3ea881f8d64234b3b",
+  "src/facts/0.47.0/candidate_refused.json": "140b61faa1e102f1b777cb7c353335043db5ba68fc89891b0c4a694e88103d11",
+  "src/facts/0.47.0/shadow_predicted.json": "c2fbd5fce894208992be116f4243e8d8aed0c776e279a891691e8a45f4124538"
 }

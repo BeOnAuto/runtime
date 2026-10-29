@@ -4,7 +4,12 @@ import { Effect, Option } from 'effect';
 import type { Performing } from '../build-work/build-performing.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { executed } from '../models/model-commands.ts';
-import type { BuiltVersion, ModelsState, ShadowPrediction } from '../models/model-state.ts';
+import {
+  licensedPredictionsOf,
+  type BuiltVersion,
+  type ModelsState,
+  type ShadowPrediction,
+} from '../models/model-state.ts';
 import { periodOfForm } from '../periods/grains.ts';
 import { gradeOf, predictionsOf, type Aimed } from './shadow-grades.ts';
 import { targetsOf, type ShadowTarget } from './shadow-schedule.ts';
@@ -32,8 +37,8 @@ function aimedAtBy(
   of: number,
   target: ShadowTarget,
 ) {
-  return models.predicted
-    .filter((each) => each.version === challenger.version && each.of === of)
+  return licensedPredictionsOf(models, challenger.version)
+    .filter((each) => each.of === of)
     .flatMap((prediction) =>
       targetsOf(document.predicts, Number(periodOfForm(document.predicts.period, prediction.origin)))
         .filter(({ form }) => form === target.form)

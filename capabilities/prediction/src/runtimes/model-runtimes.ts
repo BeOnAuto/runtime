@@ -1,4 +1,5 @@
 import type { ExtensionPoint } from '@on.auto/definitions';
+import type { Conflict, Unavailable } from '@on.auto/operations';
 import {
   acceptedModelRuntimeContracts,
   firstLineOf,
@@ -8,8 +9,9 @@ import {
   type FunctionShape,
   type ModelRuntime,
 } from '@on.auto/prediction-contract';
-import { Result, Schema } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 
+import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { longestHorizonOf } from '../document/predicts-part.ts';
 import { modelFileName, type CachedName } from '../model-cache/model-files.ts';
@@ -88,19 +90,77 @@ function takesWhatItIsFed({ capabilities }: ModelRuntime, fed: FedShape): boolea
   return features && given && (!fed.totals || capabilities.totals);
 }
 
+export interface LicensedRuntimes extends Pick<PredictionPorts, 'runtimes' | 'features'> {
+  readonly org: string;
+}
+
+export function licensedFor(
+  { runtimes, features }: Pick<PredictionPorts, 'runtimes' | 'features'>,
+  org: string,
+): LicensedRuntimes {
+  return { runtimes, features, org };
+}
+
+export function unlicensedFeatureOf(
+  { features, org }: Pick<LicensedRuntimes, 'features' | 'org'>,
+  { feature }: ModelRuntime,
+): Effect.Effect<string | undefined, Unavailable> {
+  return feature === undefined
+    ? Effect.undefined
+    : Effect.map(features.includes({ org, feature }), (included) => (included ? undefined : feature));
+}
+
+function licensedRuntimesOf(licensed: LicensedRuntimes): Effect.Effect<readonly ModelRuntime[], Unavailable> {
+  return Effect.filter(licensed.runtimes, (runtime) =>
+    Effect.map(unlicensedFeatureOf(licensed, runtime), (feature) => feature === undefined),
+  );
+}
+
 export interface ExecutedFormat {
   readonly format: string;
   readonly runtime: ModelRuntime;
 }
 
-export function formatsAcceptedFor(runtimes: readonly ModelRuntime[], fed: FedShape): readonly ExecutedFormat[] {
-  return [...executingRuntimes(runtimes)]
-    .filter(([, runtime]: readonly [string, ModelRuntime]) => takesWhatItIsFed(runtime, fed))
-    .map(([format, runtime]: readonly [string, ModelRuntime]) => ({ format, runtime }));
+export interface UnlicensedFormat extends ExecutedFormat {
+  readonly feature: string;
 }
 
-export function fittingRuntimeFor(runtimes: readonly ModelRuntime[], fed: FedShape): ModelRuntime | undefined {
-  return runtimes.find((runtime) => runtime.capabilities.fits === true && takesWhatItIsFed(runtime, fed));
+export interface OfferedFormats {
+  readonly accepted: readonly ExecutedFormat[];
+  readonly unlicensed: readonly UnlicensedFormat[];
+}
+
+export function formatsOfferedFor(
+  licensed: LicensedRuntimes,
+  fed: FedShape,
+): Effect.Effect<OfferedFormats, Unavailable> {
+  const taken = [...executingRuntimes(licensed.runtimes)]
+    .filter(([, runtime]: readonly [string, ModelRuntime]) => takesWhatItIsFed(runtime, fed))
+    .map(([format, runtime]: readonly [string, ModelRuntime]): ExecutedFormat => ({ format, runtime }));
+  const lacking = Effect.forEach(taken, ({ runtime }) => unlicensedFeatureOf(licensed, runtime));
+  return Effect.map(lacking, (features: readonly (string | undefined)[]) => ({
+    accepted: taken.filter((_executed, at) => features[at] === undefined),
+    unlicensed: taken.flatMap((executed, at) => {
+      const feature = features[at];
+      return feature === undefined ? [] : [{ ...executed, feature }];
+    }),
+  }));
+}
+
+export function formatsAcceptedFor(
+  licensed: LicensedRuntimes,
+  fed: FedShape,
+): Effect.Effect<readonly ExecutedFormat[], Unavailable> {
+  return Effect.map(formatsOfferedFor(licensed, fed), ({ accepted }) => accepted);
+}
+
+export function fittingRuntimeFor(
+  licensed: LicensedRuntimes,
+  fed: FedShape,
+): Effect.Effect<ModelRuntime | undefined, Unavailable> {
+  return Effect.map(licensedRuntimesOf(licensed), (inForce) =>
+    inForce.find((runtime) => runtime.capabilities.fits === true && takesWhatItIsFed(runtime, fed)),
+  );
 }
 
 export function readsTheCalendar({ capabilities }: ModelRuntime): boolean {
@@ -130,4 +190,16 @@ export function executingRuntimeOf(
   return runtime === undefined
     ? undefined
     : { runtime, named: runtimeNamed(runtime), file: { sha256, name: modelFileName(format) } };
+}
+
+export function refusedAs(
+  { features, org }: Pick<LicensedRuntimes, 'features' | 'org'>,
+  feature: string,
+  which: string,
+): Effect.Effect<never, Conflict | Unavailable> {
+  return Effect.flatMap(features.refusal({ org, feature, which }), Effect.fail);
+}
+
+export function executesFormat(format: string): string {
+  return `executes ${format} models`;
 }

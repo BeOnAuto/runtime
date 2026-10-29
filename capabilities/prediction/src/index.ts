@@ -23,7 +23,13 @@ export { datasetsPortOn, type DatasetsPort } from './dataset/datasets-port.ts';
 export { uploadDataset } from './upload/upload-dataset.ts';
 export type { FileCache } from './model-cache/model-files.ts';
 export { modelDeadlines, modelProcessModule, type ModelProcesses } from './model-processes/model-processes.ts';
-export { cacheDirectory, modelPorts, type ModelPorts, type ModelPortSettings } from './model-processes/model-ports.ts';
+export {
+  cacheDirectory,
+  licensedModelsOf,
+  modelPorts,
+  type ModelPorts,
+  type ModelPortSettings,
+} from './model-processes/model-ports.ts';
 export { inlineModels } from './model-processes/inline-models.ts';
 export type { ScoringPermits } from './model-processes/scoring-permits.ts';
 export { modelRuntimePoint } from './runtimes/model-runtimes.ts';

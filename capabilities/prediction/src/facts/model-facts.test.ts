@@ -118,10 +118,30 @@ const baseline: readonly (typeof ModelFactSchema.Type)[] = [
   { type: 'build_ended', data: { build: 'build-4' }, context: ofTheDefinition },
 ];
 
+const unlicensed: readonly (typeof ModelFactSchema.Type)[] = [
+  {
+    type: 'shadow_predicted',
+    data: {
+      version: 2,
+      of: 1,
+      build: 'build-2',
+      runtime: null,
+      origin: '2026-10-26',
+      count: 0,
+      missing: 0,
+      predictions_sha256: 'e1f2a4',
+      predictions_bytes: 36,
+      because: 'feature_unlicensed',
+      feature: 'prediction-onnx',
+    },
+    context: ofTheDefinition,
+  },
+];
+
 describe('the facts of the models of a prediction function', () => {
   recordedFactsBehaviour({
     schema: ModelFactSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.47.0': unlicensed },
   });
 });

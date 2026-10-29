@@ -29,6 +29,7 @@ export interface AccountFake extends Omit<AllocationFake, 'ports'> {
   readonly ports: AccountPorts;
   readonly keyFor: (installation: string, org?: string) => string;
   readonly orgNamed: (org: string, name: string) => void;
+  readonly grant: (org: string, features: readonly string[]) => void;
   readonly fund: (org: string, books: Partial<Books>) => void;
   readonly booksOf: (org: string) => Books;
   readonly policy: (policy: Partial<Policy>) => void;
@@ -72,6 +73,7 @@ function licenseOf(keeping: Keeping, { installation, org }: Registration, licens
   const books = keeping.booksOf(org);
   const chargedThrough = keeping.chargedThrough(installation);
   const name = keeping.nameOf(org);
+  const features = keeping.featuresOf(org);
   const { policy, answering } = keeping.settings();
   return answers[answering]({
     v: 2,
@@ -89,6 +91,7 @@ function licenseOf(keeping: Keeping, { installation, org }: Registration, licens
     standing: standingOf(books),
     credits: { available: books.available, owed: books.owed, overage_cap: books.overage_cap },
     fallback: { per_day: policy.per_day, per_month: policy.per_month },
+    ...(features === undefined ? {} : { features }),
   });
 }
 
@@ -137,6 +140,7 @@ function controlsOf(keeping: Keeping): Controls {
       return key;
     },
     orgNamed: keeping.name,
+    grant: keeping.grant,
     fund: keeping.fund,
     booksOf: keeping.booksOf,
     policy: (policy) => {

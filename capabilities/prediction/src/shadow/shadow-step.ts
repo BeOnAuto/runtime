@@ -1,9 +1,17 @@
-import { Option, type Effect } from 'effect';
+import { Option } from 'effect';
 
-import { restingUntil, type Performing } from '../build-work/build-performing.ts';
+import { restingUntil, type Performing, type PerformedStep } from '../build-work/build-performing.ts';
 import { isProjected, type PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { decided } from '../models/model-commands.ts';
-import { builtVersionOf, wasGraded, wasPredicted, type BuiltVersion, type ModelsState } from '../models/model-state.ts';
+import {
+  builtVersionOf,
+  licensedPredictionsOf,
+  unlicensedClosesOf,
+  wasGraded,
+  wasPredicted,
+  type BuiltVersion,
+  type ModelsState,
+} from '../models/model-state.ts';
 import { periodOfForm } from '../periods/grains.ts';
 import { shadowVerdictOf } from './shadow-grades.ts';
 import { graded, type Shadowing } from './shadow-grading.ts';
@@ -31,16 +39,14 @@ interface AimedTarget {
 }
 
 function targetsAimed({ document, models, challenger }: Shadowing): readonly AimedTarget[] {
-  return models.predicted
-    .filter((each) => each.version === challenger.version)
-    .flatMap((each) =>
-      targetsOf(document.predicts, Number(periodOfForm(document.predicts.period, each.origin))).map(
-        (target): AimedTarget => ({ of: each.of, target }),
-      ),
-    );
+  return licensedPredictionsOf(models, challenger.version).flatMap((each) =>
+    targetsOf(document.predicts, Number(periodOfForm(document.predicts.period, each.origin))).map(
+      (target): AimedTarget => ({ of: each.of, target }),
+    ),
+  );
 }
 
-function stepOver(performing: Performing, shadowing: Shadowing, closes: number): Effect.Effect<void> | undefined {
+function stepOver(performing: Performing, shadowing: Shadowing, closes: number): PerformedStep | undefined {
   const { document, models, challenger } = shadowing;
   const { now } = performing;
   const origins = shadowOrigins(document.predicts, challenger.builtAt, closes);
@@ -67,9 +73,15 @@ function closesPredicted({ models, challenger }: Shadowing): number {
     .size;
 }
 
-function nextStep(performing: Performing, shadowing: Shadowing): Effect.Effect<void> {
+function closesOf(shadowing: Shadowing): number {
   const { document, models, challenger } = shadowing;
-  const closes = Math.max(document.evaluation.shadowPeriods, closesPredicted(shadowing));
+  const asked = document.evaluation.shadowPeriods + unlicensedClosesOf(models, challenger.version);
+  return Math.min(mostShadowCloses, Math.max(asked, closesPredicted(shadowing)));
+}
+
+function nextStep(performing: Performing, shadowing: Shadowing): PerformedStep {
+  const { document, models, challenger } = shadowing;
+  const closes = closesOf(shadowing);
   const step = stepOver(performing, shadowing, closes);
   if (step !== undefined) {
     return step;
@@ -94,7 +106,7 @@ export function shadowStep(
   document: PredictionFunctionDefinitionDocument,
   models: ModelsState,
   challenger: BuiltVersion,
-): Effect.Effect<void> {
+): PerformedStep {
   const active = models.active === null ? undefined : builtVersionOf(models, models.active);
   const metric = document.evaluation.metric;
   if (

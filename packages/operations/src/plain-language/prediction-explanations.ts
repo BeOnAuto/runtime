@@ -15,6 +15,7 @@ type PredictionKind =
       | 'build_ended'
       | 'no_trainer'
       | 'already_active'
+      | 'feature_unlicensed'
     >
   | Extract<UnavailableKind, 'builds_full' | 'dataset_not_ready' | 'model_process_busy' | 'model_process_failed'>;
 
@@ -61,6 +62,11 @@ export const predictionExplanations: Readonly<Record<PredictionKind, Explanation
   already_active: {
     why: 'that version is already the active one',
     remedy: 'Nothing needs to change; get_definition shows the active version.',
+  },
+  feature_unlicensed: {
+    why: 'the license of this runtime does not include the feature the model runtime of its format needs',
+    remedy:
+      'Trying again will not help until the account holder or an organization admin adds the feature to the license at the page the details name.',
   },
   builds_full: {
     why: 'this server is scoring as many builds as it may at once',

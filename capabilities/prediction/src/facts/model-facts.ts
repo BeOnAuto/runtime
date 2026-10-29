@@ -64,6 +64,8 @@ const ShadowPredictedSchema = Schema.Struct({
   missing: Schema.Int,
   predictions_sha256: Schema.String,
   predictions_bytes: Schema.Int,
+  because: Schema.optionalKey(Schema.Literal('feature_unlicensed')),
+  feature: Schema.optionalKey(Schema.String),
 });
 
 const ShadowGradedSchema = Schema.Struct({

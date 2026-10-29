@@ -6,7 +6,7 @@ import type { RequestRecord } from '../builds/build-state.ts';
 import { buildAnswerIssues } from '../checks/build-answers.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { TrainerAnswer } from '../scoring/version-card.ts';
-import { restingUntil, settledBuild, type Performing } from './build-performing.ts';
+import { restingUntil, settledBuild, type Performing, type PerformedStep } from './build-performing.ts';
 import { childRunOf, requestReference, startedChild } from './child-runs.ts';
 import { trainerAnswerOf } from './trainer-answers.ts';
 
@@ -60,8 +60,8 @@ export function throughAChild(
   performing: Performing,
   document: PredictionFunctionDefinitionDocument,
   record: RequestRecord,
-  scoring: (answer: TrainerAnswer) => Effect.Effect<void>,
-): Effect.Effect<void> {
+  scoring: (answer: TrainerAnswer) => PerformedStep,
+): PerformedStep {
   const through = String(document.source?.through);
   return Effect.flatMap(childRunOf(performing.ports.ledger, performing.build.address, requestReference), (child) => {
     if (child === undefined) {

@@ -139,7 +139,9 @@ describe('a question whose model processes are all taken', () => {
     scripted.next('sleeps');
     const { models } = playbook.test.ports;
     for (const held of ['first', 'second', 'third']) {
-      void Effect.runPromise(models.walk(scriptedRuntime, { sha256: held, path: `/${held}.scripted` }, heldWalk));
+      void Effect.runPromise(
+        models.walk('acme', scriptedRuntime, Effect.succeed({ sha256: held, path: `/${held}.scripted` }), heldWalk),
+      );
     }
     await scripted.untilSleeping(['walk', 'walk', 'walk']);
 

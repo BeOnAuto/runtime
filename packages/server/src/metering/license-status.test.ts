@@ -56,6 +56,7 @@ describe('the license a runtime nobody registered holds', () => {
       org: null,
       org_name: null,
       plan: null,
+      features: [],
       standing: null,
       licensed: 0,
       runs_left: null,
@@ -81,6 +82,19 @@ describe('the license a runtime nobody registered holds', () => {
     expect((await server.call('GET', license)).status).toBe(401);
     expect((await server.call('GET', license, { key: globex.key })).status).toBe(403);
     expect(await pageOf(server)).not.toContain('class="license"');
+  });
+});
+
+describe('the features of the license a licensed runtime holds', () => {
+  it('lists the features its license includes', async () => {
+    const accounts = await accountsServed();
+    accounts.account.grant('acme', ['prediction-onnx']);
+    const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
+
+    expect((await server.call('GET', license)).body).toMatchObject({
+      state: 'licensed',
+      features: ['prediction-onnx'],
+    });
   });
 });
 

@@ -1,7 +1,7 @@
 import type { AppRuntime } from '@on.auto/api';
 import { openRequestsName } from '@on.auto/interaction';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { PredictionPorts } from '@on.auto/prediction';
+import { licensedModelsOf, type PredictionPorts } from '@on.auto/prediction';
 import type { WorkflowStore } from '@on.auto/workflow-host';
 
 import { logPredictionFunctions } from '../logging/prediction-logging.ts';
@@ -15,10 +15,16 @@ export interface ServedPrediction {
   readonly withProcessesClosed: ServedClosing;
 }
 
+export interface PredictionServing {
+  readonly store: WorkflowStore;
+  readonly runtimes: PredictionPorts['runtimes'];
+  readonly features: PredictionPorts['features'];
+}
+
 export async function predictionServedBy(
   runtime: AppRuntime<DispatcherServices>,
   { prediction, interaction }: Pick<Settings, 'prediction' | 'interaction'>,
-  { store, runtimes }: { readonly store: WorkflowStore; readonly runtimes: PredictionPorts['runtimes'] },
+  { store, runtimes, features }: PredictionServing,
 ): Promise<ServedPrediction> {
   const { mostFunctions, processes, processMemoryMebibytes, buildsAtOnce, buildsPerDay, cacheDirectory } = prediction;
   const { pool, inline, ports: models } = await servedModels(prediction);
@@ -39,7 +45,9 @@ export async function predictionServedBy(
       ledger,
       database: store.database,
       runtimes,
+      features,
       ...models,
+      models: licensedModelsOf(models.models, features),
       bounds: { buildsPerDay, buildsAtOnce, mostOpenRequests: interaction.mostOpenRequests },
       openRequests: (playbook) =>
         ledger.countProjectedRows(openRequestsName, playbook, [{ column: 'open', equals: true }]),

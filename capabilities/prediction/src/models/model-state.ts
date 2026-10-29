@@ -103,6 +103,23 @@ export function wasPredicted(
   return state.predicted.some((each) => each.version === version && each.of === of && each.origin === origin);
 }
 
+function unlicensedOriginsOf(state: ModelsState, version: number): ReadonlySet<string> {
+  return new Set(
+    state.predicted
+      .filter((each) => each.version === version && each.because === 'feature_unlicensed')
+      .map(({ origin }) => origin),
+  );
+}
+
+export function unlicensedClosesOf(state: ModelsState, version: number): number {
+  return unlicensedOriginsOf(state, version).size;
+}
+
+export function licensedPredictionsOf(state: ModelsState, version: number): readonly ShadowPrediction[] {
+  const unlicensed = unlicensedOriginsOf(state, version);
+  return state.predicted.filter((each) => each.version === version && !unlicensed.has(each.origin));
+}
+
 export function wasGraded(
   state: ModelsState,
   { version, of, period }: Pick<ShadowGrade, 'version' | 'of' | 'period'>,

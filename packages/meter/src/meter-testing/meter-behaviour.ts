@@ -8,6 +8,7 @@ import {
   laggingClockBehaviour,
 } from './allowance-behaviour.ts';
 import { countingBehaviour, historyBehaviour, startedRunsBehaviour } from './counting-behaviour.ts';
+import { featuresBehaviour } from './features-behaviour.ts';
 import { licensesBehaviour } from './license-behaviour.ts';
 import type { LedgerOf } from './opened.ts';
 import { earlyReportBehaviour, reportBehaviour, restoredReportBehaviour } from './report-behaviour.ts';
@@ -30,6 +31,9 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
     });
     describe('licenses', () => {
       licensesBehaviour(ledgerOf);
+    });
+    describe('the features of its license', () => {
+      featuresBehaviour(ledgerOf);
     });
     describe('allocations', () => {
       allocationsBehaviour(ledgerOf);

@@ -38,16 +38,7 @@ export async function servingReasoning(
   replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
   fetch: Fetch = noNetwork,
-  {
-    programPoolOf = patientWorkerPool,
-    clock,
-    toolTiming,
-    ledgerOver,
-    admit,
-    ledger: shared,
-    signers,
-    meter,
-  }: ServedParts = {},
+  { programPoolOf = patientWorkerPool, ledgerOver, admit, ledger: shared, meter, ...composing }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const ledger = shared ?? temporaryLedger();
   const scripted = scriptedLanguageModel(...replies);
@@ -57,12 +48,7 @@ export async function servingReasoning(
         ...access,
         languageModel: { ...scripted.languageModel, ...(admit === undefined ? {} : { admit }) },
       })),
-    {
-      programPoolOf,
-      ...(clock === undefined ? {} : { clock }),
-      ...(toolTiming === undefined ? {} : { toolTiming }),
-      ...(signers === undefined ? {} : { signers }),
-    },
+    { programPoolOf, ...composing },
   );
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), ...environment },

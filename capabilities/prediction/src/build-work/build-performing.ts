@@ -1,5 +1,5 @@
 import { runEnded, runSettler, workRecorder, type Settlement } from '@on.auto/definitions';
-import type { Lineage } from '@on.auto/operations';
+import type { Lineage, Unavailable } from '@on.auto/operations';
 import { Effect, Equal, type Schema } from 'effect';
 
 import { predictionBuildsName, type BuildRow } from '../builds/build-rows.ts';
@@ -17,6 +17,8 @@ export interface Performing {
 }
 
 export const aMinute = 60_000;
+
+export type PerformedStep = Effect.Effect<void, Unavailable>;
 
 function endedMeanwhile(error: unknown): boolean {
   return Equal.equals(error, runEnded);

@@ -2,7 +2,7 @@ import type { RecordedRun } from '@on.auto/definitions';
 import type { RecordedCaller } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
-import { restingUntil, type Performing } from '../build-work/build-performing.ts';
+import { restingUntil, type Performing, type PerformedStep } from '../build-work/build-performing.ts';
 import { approvalReference, childRunOf, startedChild } from '../build-work/child-runs.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { executed, modelsOf } from '../models/model-commands.ts';
@@ -99,10 +99,7 @@ function approval(performing: Performing, approver: string, built: BuiltVersion)
   });
 }
 
-export function lifecycleStep(
-  performing: Performing,
-  document: PredictionFunctionDefinitionDocument,
-): Effect.Effect<void> {
+export function lifecycleStep(performing: Performing, document: PredictionFunctionDefinitionDocument): PerformedStep {
   const { id } = performing.build.address;
   return Effect.flatMap(modelsOf(performing), (state) => {
     const built = Option.getOrThrow(Option.fromNullishOr(versionOfBuild(state, id)));

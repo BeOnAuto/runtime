@@ -1,5 +1,11 @@
 import { renderClock } from '@on.auto/definitions/template';
-import { textToKeep, type Conflict, type PlaybookAddress, type RecordedContent } from '@on.auto/operations';
+import {
+  textToKeep,
+  type Conflict,
+  type PlaybookAddress,
+  type RecordedContent,
+  type Unavailable,
+} from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
 import { briefVariablesOf } from '../brief/brief-dataset.ts';
@@ -8,7 +14,7 @@ import type { PredictionFunctionDefinitionDocument } from '../document/predictio
 import type { DatasetFiles } from '../files/files-refusals.ts';
 import { periodForm, periodOfForm } from '../periods/grains.ts';
 import { candidateFilesOf } from '../runtimes/format-words.ts';
-import { fedShapeOf, formatsAcceptedFor } from '../runtimes/model-runtimes.ts';
+import { fedShapeOf, formatsAcceptedFor, type LicensedRuntimes } from '../runtimes/model-runtimes.ts';
 
 export interface KeptBrief {
   readonly text: string;
@@ -25,7 +31,7 @@ function trainingLastOf(document: PredictionFunctionDefinitionDocument, files: D
 export interface Briefing {
   readonly name: string;
   readonly files: DatasetFiles;
-  readonly runtimes: Parameters<typeof formatsAcceptedFor>[0];
+  readonly licensed: LicensedRuntimes;
 }
 
 function withTheCandidates(rendered: string, formats: readonly string[]): string {
@@ -36,9 +42,8 @@ export function keptBrief(
   content: Pick<RecordedContent, 'put'>,
   playbook: PlaybookAddress,
   document: PredictionFunctionDefinitionDocument,
-  { name, files, runtimes }: Briefing,
-): Effect.Effect<KeptBrief, Conflict> {
-  const formats = formatsAcceptedFor(runtimes, fedShapeOf(document)).map(({ format }) => format);
+  { name, files, licensed }: Briefing,
+): Effect.Effect<KeptBrief, Conflict | Unavailable> {
   const variables = briefVariablesOf(document, {
     name,
     rows: files.series * (files.window - files.holdout),
@@ -46,17 +51,14 @@ export function keptBrief(
     firstPeriod: files.firstPeriod,
     lastPeriod: trainingLastOf(document, files),
   });
-  return Effect.flatMap(renderClock, (clock) => {
-    const rendered = renderedBrief(document.brief, variables, clock);
+  return Effect.gen(function* () {
+    const rendered = renderedBrief(document.brief, variables, yield* renderClock);
     if (Result.isFailure(rendered)) {
-      return Effect.fail(unworkableBrief);
+      return yield* Effect.fail(unworkableBrief);
     }
+    const formats = (yield* formatsAcceptedFor(licensed, fedShapeOf(document))).map(({ format }) => format);
     const text = withTheCandidates(rendered.success, formats);
-    return Effect.map(Effect.orDie(content.put(playbook, textToKeep(text, 'text/markdown'))), (kept) => ({
-      text,
-      sha256: kept.sha256,
-      bytes: kept.bytes,
-      formats,
-    }));
+    const kept = yield* Effect.orDie(content.put(playbook, textToKeep(text, 'text/markdown')));
+    return { text, sha256: kept.sha256, bytes: kept.bytes, formats };
   });
 }
