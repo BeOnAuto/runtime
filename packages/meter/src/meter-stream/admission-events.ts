@@ -3,7 +3,7 @@ import { Schema } from 'effect';
 import type { Fallback } from '../licensing/signed-answers.ts';
 import { dayOf, monthOf } from '../standing/utc-periods.ts';
 
-export const BasisSchema = Schema.Literals(['licensed', 'first_runs', 'free_rate', 'offline']);
+const BasisSchema = Schema.Literals(['licensed', 'first_runs', 'free_rate', 'offline']);
 
 export type Basis = typeof BasisSchema.Type;
 

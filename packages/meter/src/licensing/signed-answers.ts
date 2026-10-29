@@ -44,15 +44,6 @@ const LicenseSchema = Schema.Struct({
   fallback: FallbackSchema,
 });
 
-const RepairSchema = Schema.Struct({
-  v: Schema.Literal(1),
-  kind: Schema.Literal('repair'),
-  installation: Schema.String,
-  id: Schema.String,
-  reason: Schema.String,
-  issued_at: Schema.String,
-});
-
 const AllocationSchema = Schema.Struct({
   v: Schema.Literal(1),
   kind: Schema.Literal('allocation'),
@@ -66,8 +57,6 @@ const AllocationSchema = Schema.Struct({
 export type License = Omit<typeof LicenseSchema.Type, 'org_name'> & { readonly org_name: string | null };
 
 export type AllocationPayload = typeof AllocationSchema.Type;
-
-export type Repair = typeof RepairSchema.Type;
 
 function isSignedBy(signers: Signers, { payload, signature, kid }: Signed): boolean {
   const x = signers.get(kid);
@@ -94,7 +83,5 @@ export function licenseIn(signed: Signed, signers: Signers): Option.Option<Licen
     org_name: shownOrgName(license.org_name),
   }));
 }
-
-export const repairIn = payloadOf(RepairSchema);
 
 export const allocationIn = payloadOf(AllocationSchema);

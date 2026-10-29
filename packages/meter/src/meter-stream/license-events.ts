@@ -18,7 +18,7 @@ const LicenseInvalidBecauseSchema = Schema.Literals([
 
 export const isLicenseInvalidBecause = Schema.is(LicenseInvalidBecauseSchema);
 
-export type LicenseInvalidBecause = typeof LicenseInvalidBecauseSchema.Type;
+type LicenseInvalidBecause = typeof LicenseInvalidBecauseSchema.Type;
 
 export const LicenseRecordSchema = Schema.Struct({
   installation: Schema.String,

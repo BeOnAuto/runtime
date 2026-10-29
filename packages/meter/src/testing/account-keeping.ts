@@ -24,7 +24,7 @@ export interface WentBackwards {
   readonly charged_through: number;
 }
 
-export interface Settings {
+interface Settings {
   readonly now: number;
   readonly up: boolean;
   readonly closed: AccountRefusal | undefined;
