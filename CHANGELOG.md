@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.48.1](https://github.com/BeOnAuto/runtime/compare/v0.48.0...v0.48.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **documents:** a Word file is read wherever its library is bundled ([#431](https://github.com/BeOnAuto/runtime/issues/431)) ([d7ece07](https://github.com/BeOnAuto/runtime/commit/d7ece077fd88cf14c2092331bc256cb359bea1b7))
+* **providers:** a written-out way may take no PKCE, as LinkedIn's web endpoint does ([#429](https://github.com/BeOnAuto/runtime/issues/429)) ([cd3eb75](https://github.com/BeOnAuto/runtime/commit/cd3eb75829fb612a9755d0e9b56eb67f5e2a68e6))
+
 ## [0.48.0](https://github.com/BeOnAuto/runtime/compare/v0.47.0...v0.48.0) (2026-10-29)
 
 
