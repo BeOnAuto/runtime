@@ -5,8 +5,11 @@ import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import { InvalidInput } from '../outcome/invalid-input.ts';
 import type { PlaybookProjectionReader, ProjectionReader } from '../projections/keyed-projection.ts';
 import { isCalendarDay } from '../reading/calendar-days.ts';
-import { mostRecordsInAPage } from '../reading/page-bounds.ts';
+import { mostExaminedInAPage, mostRecordsInAPage } from '../reading/page-bounds.ts';
 import type {
+  AppendedFacts,
+  AppendedFactsRequest,
+  AppendedScope,
   InvalidCursorKind,
   RecordedFact,
   RecordedPage,
@@ -15,6 +18,9 @@ import type {
 } from '../reading/recorded-read.ts';
 import type { RunOutcomeWindow } from '../run-outcomes/run-outcomes.ts';
 import type {
+  AppendedFactsReader,
+  OrgAppendedFactsReader,
+  PlaybookAppendedFactsReader,
   PlaybookRecordedReader,
   PlaybookRunOutcomesReader,
   RecordedReader,
@@ -163,5 +169,57 @@ export function playbookBoundRunOutcomesReader(
   return {
     readRunOutcomes: (window, selection) =>
       wellFormedWindow(window).pipe(Effect.flatMap((checked) => ledger.readRunOutcomes(playbook, checked, selection))),
+  };
+}
+
+function wellFormedRequest(request: AppendedFactsRequest): Effect.Effect<AppendedFactsRequest> {
+  const { most } = request;
+  return Number.isInteger(most) && most >= 1 && most <= mostExaminedInAPage
+    ? Effect.succeed(request)
+    : Effect.die(new RangeError(`A read of appended facts takes 1 to ${mostExaminedInAPage} facts, not ${most}`));
+}
+
+function factsRelativeTo(prefix: string): (read: AppendedFacts) => AppendedFacts {
+  return ({ facts, ...reached }) => ({
+    facts: facts.map((fact) => ({ ...fact, stream: fact.stream.slice(prefix.length) })),
+    ...reached,
+  });
+}
+
+function boundTo(
+  ledger: AppendedFactsReader,
+  prefix: string,
+): (scope: AppendedScope, request: AppendedFactsRequest) => ReturnType<AppendedFactsReader['readAppendedFacts']> {
+  return (scope, request) =>
+    wellFormedRequest(request).pipe(
+      Effect.flatMap((checked) => ledger.readAppendedFacts(scope, checked)),
+      Effect.map(factsRelativeTo(prefix)),
+    );
+}
+
+export function playbookBoundAppendedFactsReader(
+  ledger: AppendedFactsReader,
+  playbook: PlaybookAddress,
+): PlaybookAppendedFactsReader {
+  const scope: AppendedScope = { kind: 'playbook', playbook };
+  const read = boundTo(ledger, streamPrefixOfPlaybook(playbook));
+  return {
+    readAppendedFacts: (request) => read(scope, request),
+    waitForAppend: (after, deadline) => ledger.waitForAppend(scope, after, deadline),
+  };
+}
+
+export function orgBoundAppendedFactsReader(ledger: AppendedFactsReader, org: OrgAddress): OrgAppendedFactsReader {
+  const prefix = streamPrefixOfOrg(org);
+  const read = boundTo(ledger, prefix);
+  const scopeOf = (streams: readonly string[]): Effect.Effect<AppendedScope> =>
+    Effect.map(Effect.forEach(streams, wellFormed), (named: readonly string[]) => ({
+      kind: 'streams',
+      streams: named.map((stream) => `${prefix}${stream}`),
+    }));
+  return {
+    readAppendedFacts: (streams, request) => Effect.flatMap(scopeOf(streams), (scope) => read(scope, request)),
+    waitForAppend: (streams, after, deadline) =>
+      Effect.flatMap(scopeOf(streams), (scope) => ledger.waitForAppend(scope, after, deadline)),
   };
 }

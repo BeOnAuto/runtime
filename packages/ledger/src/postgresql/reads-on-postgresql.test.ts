@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Effect } from 'effect';
+import { Clock, Effect } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -165,6 +165,38 @@ describe.skipIf(skipped)(`A read on PostgreSQL while an append is still open${no
     expect([details(whileOpen), details(rest)]).toEqual([['before'], ['late', 'after']]);
   });
 });
+
+function appendedTo(ledger: OpenLedger['ledger'], after?: string) {
+  const asked = { most: 10, dataOf: [], ...(after === undefined ? {} : { after }) };
+  return Effect.runPromise(ledger.readAppendedFacts({ kind: 'playbook', playbook: alpha }, asked));
+}
+
+async function waitedFor(ledger: OpenLedger['ledger'], through: string): Promise<void> {
+  const deadline = (await Effect.runPromise(Clock.currentTimeMillis)) + 20_000;
+  await Effect.runPromise(ledger.waitForAppend({ kind: 'playbook', playbook: alpha }, through, deadline));
+}
+
+describe.skipIf(skipped)(
+  `The facts appended to a playbook on PostgreSQL while an append is still open${notice}`,
+  () => {
+    it('stay behind it, so a cursor of now leaves the message committed late to be read, and a wait ends once it commits', async () => {
+      const { database, ledger } = await aLedgerOnItsOwnDatabase();
+      await noting(ledger, 'notes', 'noted', 'before');
+      const open = await anAppendLeftOpen(database, 'playbook/acme/alpha/late', 'noted');
+      await noting(ledger, 'notes', 'noted', 'after');
+
+      const now = await appendedTo(ledger);
+      const whileOpen = await appendedTo(ledger, now.cursor);
+      const woken = waitedFor(ledger, whileOpen.through);
+      await open.query('COMMIT');
+      await woken;
+      const rest = await appendedTo(ledger, whileOpen.cursor);
+
+      expect(whileOpen.facts).toEqual([]);
+      expect(rest.facts.map(({ stream }) => stream)).toEqual(['playbook/acme/alpha/late', 'playbook/acme/alpha/notes']);
+    });
+  },
+);
 
 describe.skipIf(skipped)(`A list of runs on PostgreSQL while an append is still open${notice}`, () => {
   it('lists runs oldest first behind it, and every run once after it commits', async () => {

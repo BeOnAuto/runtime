@@ -73,7 +73,7 @@ function firstMessagesOfRuns(
         message_type AS type, ${timeOf('created')} AS recorded, ${lineageColumns}, message_data,
         ${ofTheDefinitionAsked(bind, runs)} AS of_the_definition
       FROM emt_messages
-      WHERE ${matchedThroughItsIndex(bind, kindKeyOfStream, `${scope.playbookKey}runs/`)} AND stream_position = 1
+      WHERE ${matchedThroughItsIndex(bind, kindKeyOfStream, `${runs.playbookKey}runs/`)} AND stream_position = 1
         AND partition = ${partition} AND is_archived = FALSE${notOfTypes(bind, runs.notBeginningWith ?? [])}
         ${horizon}${bounds(bind, scope)}
       ORDER BY ${orderedThroughItsIndex(kindKeyOfStream, scope)}

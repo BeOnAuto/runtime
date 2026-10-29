@@ -1,4 +1,5 @@
-import { playbookOperations } from '@on.auto/playbooks';
+import { connectionChanges } from '@on.auto/connections';
+import { defineListOrgChanges, playbookChanges, playbookOperations } from '@on.auto/playbooks';
 
 import { extensionsServedBy } from '../extensions/served-extensions.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -13,6 +14,8 @@ import {
   type ServedPredictionFunctions,
 } from './served-prediction-functions.ts';
 import { toolUsersServedBy, type ToolUsersWiring } from './served-tools.ts';
+
+const orgChanges = defineListOrgChanges([playbookChanges, connectionChanges]);
 
 type ProjectedDatabase = Parameters<FunctionWiring['projections']['served']>[0]['database'];
 
@@ -59,7 +62,7 @@ export async function functionsServedBy(
       capabilities,
       facts,
       names,
-      orgOperations: [...playbookOperations, reasoning.listModels, ...toolOperations.inOrg],
+      orgOperations: [...playbookOperations, orgChanges, reasoning.listModels, ...toolOperations.inOrg],
       playbookOperations: [
         ...toolOperations.inPlaybook,
         ...interaction.operationsFor(capabilities),

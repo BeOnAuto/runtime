@@ -1,4 +1,4 @@
-import type { KeptContent, PresentedFact, Presenter } from '@on.auto/operations';
+import { changingEvents, type KeptContent, type PresentedFact, type Presenter } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { cutAsStored } from '../bounds/text-bytes.ts';
@@ -41,4 +41,5 @@ export const handCallPresenter: Presenter = {
     tool_call_failed: ['tool_call_failed'],
   },
   present: ({ type, data, context }, content) => [factOf(decodeHandCallEvent({ type, data, context }), content)],
+  changes: changingEvents(['tool_call_started', 'tool_call_answered', 'tool_call_failed']),
 };

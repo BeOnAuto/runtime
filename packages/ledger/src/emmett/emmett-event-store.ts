@@ -7,7 +7,7 @@ import { contextOf, messageIdOf, noLineage, type Context, type Lineage } from '@
 import type { Schema } from 'effect';
 
 import type { AppendListeners, MessageLineage, RecordedMessage, StreamStore } from '../event-store.ts';
-import { streamAppends } from '../signal/append-signal.ts';
+import { signalOf } from '../signal/append-signal.ts';
 import { VersionConflict } from '../version-conflict.ts';
 
 export interface EmmettStore extends Pick<EmmettEventStore, 'readStream' | 'appendToStream'> {
@@ -67,9 +67,10 @@ function recordedMessageOf<Stored extends Record<string, unknown>>(
 
 export function emmettEventStore<Stored extends Record<string, unknown>>(
   store: EmmettStore,
-  { data, mostEventsInOneAppend, appended = streamAppends, observer }: EmmettEventStoreOptions<Stored>,
+  { data, mostEventsInOneAppend, observer, ...listeners }: EmmettEventStoreOptions<Stored>,
 ): StreamStore {
   const recorded = recordedMessageOf(data);
+  const appended = signalOf(listeners);
   return {
     mostEventsInOneAppend,
     read: async (stream, after = 0) => {

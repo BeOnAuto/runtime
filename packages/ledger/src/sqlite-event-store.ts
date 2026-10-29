@@ -41,9 +41,10 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     mostEventsInOneAppend: eventsWithinAHundredParameters,
     ...listeners,
   });
+  const recorded = sqliteRecordedStoreOn(pool, listeners);
   return {
     ...streams,
-    ...sqliteRecordedStoreOn(pool),
+    ...recorded,
     ...projections.readerOn({
       query: async (sql) => (await pool.execute.query(sql)).rows,
       command: (sql) => pool.execute.command(sql),
@@ -55,6 +56,10 @@ export function sqliteEventStore<Driver extends AnyDriver>(
       await streams.migrate();
       await sqliteSchemaCreated(pool.execute);
       await preparedOn(projections.prepare, pool);
+    },
+    close: async () => {
+      recorded.endWaits();
+      await streams.close();
     },
   };
 }

@@ -2,9 +2,18 @@ import { Schema } from 'effect';
 
 import { postgresqlAppended } from '../appended/postgresql-appended.ts';
 import { postgresqlContentOn, type ContentConnections } from '../content/postgresql-content.ts';
-import type { DefinitionStreamsStore, LedgerStore, RecordedStore, StreamAgesStore } from '../event-store.ts';
+import type {
+  AppendListeners,
+  AppendWaitsStore,
+  DefinitionStreamsStore,
+  LedgerStore,
+  RecordedStore,
+  StreamAgesStore,
+} from '../event-store.ts';
 import { dataAsJsonText } from '../postgresql/json-text.ts';
 import {
+  appendedFactsOver,
+  nowOf,
   pointKey,
   recordOf,
   recordedReadingOver,
@@ -78,11 +87,11 @@ function recordsWhere(keys: readonly Keyed[], records: RecordsScope): string {
 }
 
 function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
-  const playbook = { key: playbookKeyOfStream, value: records.scope.playbookKey };
   if (selected.kind === 'playbook') {
-    return recordsWhere([playbook], records);
+    return recordsWhere([{ key: playbookKeyOfStream, value: selected.playbookKey }], records);
   }
   if (selected.kind === 'correlated') {
+    const playbook = { key: playbookKeyOfStream, value: selected.playbookKey };
     return recordsWhere([playbook, { key: correlationOfMessage, value: selected.correlation }], records);
   }
   const ofEachStream = selected.streams.map(
@@ -185,24 +194,35 @@ function recordWithId(query: Query): RecordedStore['readRecordedEvent'] {
   };
 }
 
-export function postgresqlRecordedStore(query: Query): RecordedStore & DefinitionStreamsStore & StreamAgesStore {
+export function postgresqlRecordedStore(
+  query: Query,
+  listeners: AppendListeners = {},
+): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore {
+  const appended = postgresqlAppended(query, listeners);
+  const statements: RecordedStatements = {
+    firstPointSince: firstPointSince(query),
+    examineRecords: examineRecords(query),
+    examineRuns: examineRuns(query),
+    dataAt: dataAt(query),
+  };
   return {
     ...postgresqlDefinitionStreams(query),
-    ...postgresqlAppended(query),
+    ...appended,
     pointLength: 2,
     readRecordedEvent: recordWithId(query),
-    readRecorded: recordedReadingOver({
-      firstPointSince: firstPointSince(query),
-      examineRecords: examineRecords(query),
-      examineRuns: examineRuns(query),
-      dataAt: dataAt(query),
-    }),
+    readRecorded: recordedReadingOver(statements),
+    readAppendedFacts: appendedFactsOver(statements, nowOf(appended.readAppended)),
   };
 }
 
 export function postgresqlRecordedStoreOn(
   query: Query,
   connections: ContentConnections,
-): RecordedStore & DefinitionStreamsStore & StreamAgesStore & Pick<LedgerStore, 'content' | 'sweepContent'> {
-  return { ...postgresqlRecordedStore(query), ...postgresqlContentOn(connections) };
+  listeners: AppendListeners,
+): RecordedStore &
+  DefinitionStreamsStore &
+  StreamAgesStore &
+  AppendWaitsStore &
+  Pick<LedgerStore, 'content' | 'sweepContent'> {
+  return { ...postgresqlRecordedStore(query, listeners), ...postgresqlContentOn(connections) };
 }

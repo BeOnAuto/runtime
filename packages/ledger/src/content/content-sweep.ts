@@ -14,6 +14,7 @@ export interface ContentSweeping {
 
 export interface ChorePorts {
   readonly sweepOrphans: (now: number) => Effect.Effect<number>;
+  readonly endWaits: Effect.Effect<void>;
 }
 
 export class LedgerChores extends Context.Service<LedgerChores, ChorePorts>()('@on.auto/ledger/LedgerChores') {}

@@ -1,5 +1,6 @@
 import {
   ActedContextSchema,
+  changingNothing,
   factOf,
   type Decided,
   type Decider,
@@ -31,7 +32,7 @@ interface Recording {
   readonly at: string;
 }
 
-const recorder: Decider<null, Recording, typeof FactSchema.Type> = {
+export const recorder: Decider<null, Recording, typeof FactSchema.Type> = {
   initialState: null,
   evolve: (state) => state,
   decide: ({ fact }) => Result.succeed([fact]),
@@ -56,6 +57,7 @@ export function presenterOf(streamKind: string, publicNames: Readonly<Record<str
       ]),
     ),
     present: (recorded) => [eventOf(String(publicNames[recorded.type]), decodeText(recorded.data).text)],
+    changes: changingNothing(Object.keys(publicNames)),
   };
 }
 
@@ -70,6 +72,7 @@ const steps: Presenter = {
     const { text } = decodeText(recorded.data);
     return [eventOf('run_moved', text), ...[1, 2].map((step) => eventOf('run_stepped', `${text}${step}`, step))];
   },
+  changes: changingNothing(['moved']),
 };
 
 export const listPlaybookEvents = defineListPlaybookEvents([notes, shelves, steps]);

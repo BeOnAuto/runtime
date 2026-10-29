@@ -1,5 +1,6 @@
 import { Data } from 'effect';
 
+import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { Context } from '../ledger/context.ts';
 
 export type RecordedOrder = 'asc' | 'desc';
@@ -61,3 +62,31 @@ export interface RecordedPage {
 export type InvalidCursorKind = 'malformed' | 'of_another_playbook';
 
 export class InvalidCursor extends Data.TaggedError('invalid_cursor')<{ readonly kind: InvalidCursorKind }> {}
+
+export type AppendedScope =
+  | { readonly kind: 'playbook'; readonly playbook: PlaybookAddress }
+  | { readonly kind: 'streams'; readonly streams: readonly string[] };
+
+export interface AppendedFactsRequest {
+  readonly after?: string;
+  readonly most: number;
+  readonly dataOf: readonly string[];
+}
+
+export interface AppendedFact {
+  readonly cursor: string;
+  readonly id: string;
+  readonly stream: string;
+  readonly type: string;
+  readonly context: Context;
+  readonly data: unknown;
+}
+
+export type AppendWaited = 'appended' | 'ended';
+
+export interface AppendedFacts {
+  readonly facts: readonly AppendedFact[];
+  readonly cursor: string;
+  readonly through: string;
+  readonly more: boolean;
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { changingNothing } from '../changes/change-naming.ts';
 import {
   presentationOf,
   streamKindOf,
@@ -37,12 +38,14 @@ const notes: Presenter = {
   streamKind: 'notes',
   publicNames: { note_added: ['shown_note_added'], note_dropped: [], note_kept: ['shown_note_kept'] },
   present: (record) => [shown(record)],
+  changes: changingNothing(['note_added', 'note_dropped', 'note_kept']),
 };
 
 const shelves: Presenter = {
   streamKind: 'shelves',
   publicNames: { shelf_filled: ['shown_shelf_filled', 'shown_shelf_counted'], note_added: ['shown_note_added'] },
   present: (record) => (record.stream.endsWith('/secret') ? [] : [shown(record)]),
+  changes: changingNothing(['shelf_filled', 'note_added']),
 };
 
 const steps: Presenter = {
@@ -53,6 +56,7 @@ const steps: Presenter = {
     { type: 'stepped', summary: 'A step started.', data: {}, part: { number: 1, causedBy: 0 } },
     { type: 'stepped', summary: 'A step ended.', data: {}, part: { number: 2, causedBy: 1 } },
   ],
+  changes: changingNothing(['input_applied']),
 };
 
 const presentation = presentationOf([notes, shelves, steps]);

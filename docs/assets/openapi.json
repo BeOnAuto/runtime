@@ -17,6 +17,9 @@
       "description": "The playbooks of the org: made, listed, read, renamed and retired"
     },
     {
+      "name": "changes"
+    },
+    {
       "name": "models",
       "description": "The models this server can call, which a reasoning function names"
     },
@@ -876,6 +879,170 @@
           {
             "openIdConnect": [
               "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/changes": {
+      "get": {
+        "operationId": "list_org_changes",
+        "summary": "List org changes",
+        "description": "Answers which playbooks and connections of the org changed after a cursor, of those the caller may read. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
+        "tags": [
+          "changes"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The cursor of the answer before; left out, the answer holds the cursor of now and no changes"
+            }
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 25,
+              "description": "How many seconds, 0 to 25, the runtime holds the request while nothing changed; 25 when left out"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_org_changes/output",
+                  "type": "object",
+                  "properties": {
+                    "cursor": {
+                      "type": "string",
+                      "description": "The cursor after the last change listed, to give back as since"
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "playbook"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "playbook": {
+                                "type": "string",
+                                "description": "The id of the playbook"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "playbook"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A playbook created, updated or retired"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "connection"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The id of the connection"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "connection"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A connection added, connected, broken or removed"
+                          }
+                        ]
+                      },
+                      "description": "What changed, in the order the ledger recorded it, each resource once, at most 200"
+                    },
+                    "more": {
+                      "type": "boolean",
+                      "description": "Whether more changed already, so the client asks again at once"
+                    }
+                  },
+                  "required": [
+                    "cursor",
+                    "changes",
+                    "more"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
             ]
           }
         ]
@@ -10293,7 +10460,8 @@
                             "kind": {
                               "type": "string",
                               "enum": [
-                                "input_schema"
+                                "input_schema",
+                                "cursor_not_held"
                               ],
                               "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
                             }
@@ -10744,7 +10912,8 @@
                             "kind": {
                               "type": "string",
                               "enum": [
-                                "input_schema"
+                                "input_schema",
+                                "cursor_not_held"
                               ],
                               "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
                             }
@@ -11210,7 +11379,8 @@
                             "kind": {
                               "type": "string",
                               "enum": [
-                                "input_schema"
+                                "input_schema",
+                                "cursor_not_held"
                               ],
                               "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
                             }
@@ -11742,6 +11912,7 @@
                               "type": "string",
                               "enum": [
                                 "input_schema",
+                                "cursor_not_held",
                                 "model_not_offered",
                                 "tool_not_offered",
                                 "tool_server_failed",
@@ -13157,6 +13328,217 @@
           {
             "openIdConnect": [
               "playbook:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/changes": {
+      "get": {
+        "operationId": "list_playbook_changes",
+        "summary": "List playbook changes",
+        "description": "Answers which runs, interactions, definitions, and events of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
+        "tags": [
+          "changes"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The cursor of the answer before; left out, the answer holds the cursor of now and no changes"
+            }
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 25,
+              "description": "How many seconds, 0 to 25, the runtime holds the request while nothing changed; 25 when left out"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_playbook_changes/output",
+                  "type": "object",
+                  "properties": {
+                    "cursor": {
+                      "type": "string",
+                      "description": "The cursor after the last change listed, to give back as since"
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "run"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "run_id": {
+                                "type": "string",
+                                "description": "The id of the run"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "run_id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A run that started, took an input or ended"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "interaction"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "run_id": {
+                                "type": "string",
+                                "description": "The id of the run that asks"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "run_id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The request of a run, opened, answered or ended"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "definition"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "type",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A function or workflow saved or retired"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "event"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "event_id": {
+                                "type": "string",
+                                "description": "The id of the event, as list_playbook_events lists it"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "event_id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An event the feed of the playbook lists"
+                          }
+                        ]
+                      },
+                      "description": "What changed, in the order the ledger recorded it, each resource once, at most 200"
+                    },
+                    "more": {
+                      "type": "boolean",
+                      "description": "Whether more changed already, so the client asks again at once"
+                    }
+                  },
+                  "required": [
+                    "cursor",
+                    "changes",
+                    "more"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
             ]
           }
         ]
@@ -15698,7 +16080,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/rebuilding, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed"
+            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/rebuilding, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed, https://on.auto/problems/cursor_not_held"
           },
           "title": {
             "type": "string",
@@ -15875,6 +16257,7 @@
             "type": "string",
             "enum": [
               "input_schema",
+              "cursor_not_held",
               "taken",
               "retired",
               "concurrent_change",

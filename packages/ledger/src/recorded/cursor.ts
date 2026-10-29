@@ -12,7 +12,7 @@ const largestPosition = 2n ** 63n - 1n;
 
 const decimal = /^(?:0|[1-9]\d{0,18})$/u;
 
-function isPosition(part: CursorPart): part is string {
+export function isPosition(part: CursorPart): part is string {
   return typeof part === 'string' && decimal.test(part) && BigInt(part) <= largestPosition;
 }
 

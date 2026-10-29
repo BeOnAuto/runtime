@@ -1,4 +1,4 @@
-import { RunContextSchema, factOf, type Presenter } from '@on.auto/operations';
+import { RunContextSchema, changingNothing, factOf, type Presenter } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import {
@@ -16,6 +16,7 @@ export const nudgesPresenter: Presenter = {
   streamKind: 'nudges',
   publicNames: { nudge_read: ['nudge_read'] },
   present: ({ type }) => [{ type, summary: 'A nudge was read.', data: {} }],
+  changes: changingNothing(['nudge_read']),
 };
 
 export const askedRequest: RequestRecord = {

@@ -1,4 +1,4 @@
-import type { Presenter } from '@on.auto/operations';
+import { changingNothing, type Presenter } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { defineListPlaybookEvents } from '../index.ts';
@@ -7,6 +7,7 @@ const notes: Presenter = {
   streamKind: 'notes',
   publicNames: { added: ['note_added'] },
   present: () => [],
+  changes: changingNothing(['added']),
 };
 
 const { plainLanguage } = defineListPlaybookEvents([notes]).registration;

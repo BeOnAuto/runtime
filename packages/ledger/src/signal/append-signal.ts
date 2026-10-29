@@ -26,3 +26,7 @@ export function streamSignalOf(): StreamSignal {
 }
 
 export const streamAppends: StreamSignal = streamSignalOf();
+
+export function signalOf({ appended }: { readonly appended?: StreamSignal | undefined }): StreamSignal {
+  return appended ?? streamAppends;
+}

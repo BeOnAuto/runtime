@@ -11,6 +11,7 @@ import {
   type KindWithType,
   type RejectedCall,
   type Settlement,
+  type UnavailableKind,
 } from '@on.auto/operations';
 import { Schema } from 'effect';
 
@@ -148,8 +149,14 @@ export function reasonOfStatus(status: number): 'invalid_input' | 'unavailable' 
 
 type ConflictKindWithType = Extract<KindWithType, ConflictKind>;
 
+type UnavailableKindWithType = Extract<KindWithType, UnavailableKind>;
+
 function isConflictKind(kind: KindWithType): kind is ConflictKindWithType {
   return reasonOfKind(kind) === 'conflict';
+}
+
+function isUnavailableKind(kind: KindWithType): kind is UnavailableKindWithType {
+  return reasonOfKind(kind) === 'unavailable';
 }
 
 function becauseOf(kind: KindWithType, because: string | undefined) {
@@ -158,9 +165,12 @@ function becauseOf(kind: KindWithType, because: string | undefined) {
 
 function ownTypeRejectionOf(kind: KindWithType, detail: string, because: string | undefined): Settlement {
   const known = becauseOf(kind, because);
-  return isConflictKind(kind)
-    ? { status: 'rejected', reason: 'conflict', detail, kind, ...known }
-    : { status: 'rejected', reason: 'unavailable', detail, kind, ...known };
+  if (isConflictKind(kind)) {
+    return { status: 'rejected', reason: 'conflict', detail, kind, ...known };
+  }
+  return isUnavailableKind(kind)
+    ? { status: 'rejected', reason: 'unavailable', detail, kind, ...known }
+    : { status: 'rejected', reason: 'invalid_input', detail, kind };
 }
 
 export function unworkableOutputOf(title: string, instance: string): DslError {

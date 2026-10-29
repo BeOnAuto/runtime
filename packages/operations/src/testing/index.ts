@@ -11,6 +11,7 @@ export { runTallyRows, tallyDueAfterMs, tallyRowsOf } from '../projections/tally
 export { topicFacts, topicRows, topicWaitMs, type TopicFact } from '../projections/topic-rows.ts';
 export type { ContentEntry, ContentStoreUnderTest } from '../content-testing/content-entry.ts';
 export { recordedContentBehaviour } from '../content-testing/recorded-content-behaviour.ts';
+export { appendedFactsBehaviour, type AppendedFactsEntry } from '../changes-testing/appended-facts-behaviour.ts';
 export {
   alpha,
   answerOfAbout,

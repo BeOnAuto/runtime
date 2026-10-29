@@ -1,6 +1,11 @@
 import { capabilityRegistryHeld } from '../capability-registry/capability-registry.ts';
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
-import { ledgerConnectionIn, ledgerDatabaseOf, withARefusedLayoutExplained } from '../database/ledger-database.ts';
+import {
+  ledgerConnectionIn,
+  ledgerDatabaseOf,
+  withARefusedLayoutExplained,
+  withHeldRequestsEndedFirst,
+} from '../database/ledger-database.ts';
 import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer, withLiveAttemptsClosedFirst } from './application-layer.ts';
@@ -61,7 +66,10 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       ...(clock === undefined ? {} : { clock }),
     };
     const served = stores.withSecretsClosed(functions.closing(await serveWorkflows(runtime, parts)));
-    const closing = license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] });
+    const closing = await withHeldRequestsEndedFirst(
+      runtime,
+      license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] }),
+    );
     return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice };
   };
 }

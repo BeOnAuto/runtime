@@ -1,6 +1,14 @@
 import { Schema } from 'effect';
 
-import type { AppendedStreams, RecordedStore, StreamAgesStore } from '../event-store.ts';
+import type {
+  AppendListeners,
+  AppendWaitsStore,
+  LatestAppends,
+  ReadLatestAppends,
+  RecordedPoint,
+  RecordedStore,
+  StreamAgesStore,
+} from '../event-store.ts';
 import { kindKeyOfStream } from '../postgresql-reads/playbook-indexes.ts';
 import {
   binding,
@@ -10,6 +18,7 @@ import {
   type Query,
 } from '../postgresql-reads/recorded-parts.ts';
 import { postgresqlStreamAges } from '../stream-ages/postgresql-stream-ages.ts';
+import { appendWatchOf } from './append-watch.ts';
 
 const AppendedRows = Schema.NonEmptyArray(
   Schema.Union([
@@ -47,22 +56,31 @@ function groupsOf(rows: readonly AppendedRow[]): readonly Group[] {
   );
 }
 
-function appendedOf(horizon: string, groups: readonly Group[], most: number): AppendedStreams {
+function pointOf({ transaction, position }: Group): RecordedPoint {
+  return [String(transaction), String(position)];
+}
+
+function appendedOf(horizon: string, groups: readonly Group[], most: number): LatestAppends {
   const read = groups.reduce((sum, group) => sum + group.read, 0);
   const streams = groups.map(({ name }) => name);
+  const latest = new Map(groups.map((group) => [group.name, pointOf(group)]));
   const [first, ...others] = groups;
   if (first === undefined || read < most) {
-    return { streams, through: [horizon, '0'], more: false };
+    return { streams, latest, through: [horizon, '0'], more: false };
   }
-  const last = others.reduce((latest, group) => laterOf(latest, group), first);
-  return { streams, through: [String(last.transaction), String(last.position)], more: true };
+  const last = others.reduce((later, group) => laterOf(later, group), first);
+  return { streams, latest, through: pointOf(last), more: true };
 }
 
-export function postgresqlAppended(query: Query): Pick<RecordedStore, 'readAppended'> & StreamAgesStore {
-  return { readAppended: appendedAfter(query), ...postgresqlStreamAges(query) };
+export function postgresqlAppended(
+  query: Query,
+  listeners: AppendListeners = {},
+): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & AppendWaitsStore {
+  const readAppended = appendedAfter(query);
+  return { readAppended, ...appendWatchOf(readAppended, listeners), ...postgresqlStreamAges(query) };
 }
 
-function appendedAfter(query: Query): RecordedStore['readAppended'] {
+function appendedAfter(query: Query): ReadLatestAppends {
   return async (after, most) => {
     const elsewhere = await writesOpenElsewhere(query);
     const { values, bind } = binding();

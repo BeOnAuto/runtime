@@ -1,5 +1,7 @@
 import { Context } from 'effect';
 
-import type { StreamReader } from './stream-ports.ts';
+import type { OrgAppendedFactsReader, StreamReader } from './stream-ports.ts';
 
-export class OrgReader extends Context.Service<OrgReader, StreamReader>()('@on.auto/operations/OrgReader') {}
+export class OrgReader extends Context.Service<OrgReader, StreamReader & OrgAppendedFactsReader>()(
+  '@on.auto/operations/OrgReader',
+) {}

@@ -149,8 +149,11 @@ export type { HandlerServices } from './definition/handler-services.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';
 export { InvalidInput, InvalidInputKindSchema, type InvalidInputKind } from './outcome/invalid-input.ts';
+export { CursorNotHeld } from './reading/cursor-not-held.ts';
 export {
   InvalidCursor,
+  type AppendedFacts,
+  type AppendedScope,
   type ExaminedPlace,
   type InvalidCursorKind,
   type RecordedEvent,
@@ -292,3 +295,6 @@ export {
   type ShippedFiles,
   type ShippedRoots,
 } from './shipped-files/shipped-files.ts';
+export { changeKindOf, changingEvents, changingNothing, changingOne } from './changes/change-naming.ts';
+export type { ChangedFact, ChangeNaming, ChangesNamed, PlacedFact, ResourceChange } from './changes/change-naming.ts';
+export { changeCatalogOf, presentedChangeCatalogOf, type ChangeCatalog } from './changes/change-catalog.ts';

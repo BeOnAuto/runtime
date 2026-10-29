@@ -43,7 +43,7 @@ These four need no key. Where sign-in is on, the [protected resource metadata](a
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five prediction routes, the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five prediction routes, the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `list_org_changes`, `list_playbook_changes`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body. The two uploads take a CSV dataset or a candidate's bytes as the body, and the document gives their maximum size; an upload takes the rest of its input, such as the `format` of a candidate, in the query string.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -772,6 +772,47 @@ A page can contain fewer items than `limit`, or none, while `has_more` is `true`
 - a page stops after loading 4 MiB of stored data;
 - with `status`, `type` or `name`, a page stops after looking at 1,000 runs or records.
 
+## Changes
+
+A client learns of changes by asking what changed since the cursor of its last answer. The runtime holds the request until something changes, so the client does not poll. These two routes are served over HTTP alone; no MCP tool serves them.
+
+| Operation               | Method and route                                  | Permission                    | Input                       |
+| ----------------------- | ------------------------------------------------- | ----------------------------- | --------------------------- |
+| `list_org_changes`      | `GET /v1/orgs/{org}/changes`                      | `org:read` or `playbook:read` | Optional `since` and `wait` |
+| `list_playbook_changes` | `GET /v1/orgs/{org}/playbooks/{playbook}/changes` | `playbook:read`               | Optional `since` and `wait` |
+
+Each returns `cursor`, `changes` and `more`:
+
+```json
+{
+  "cursor": "WyIxMjMiLCIwNmJhYjQ1YS0wNTVhLTU4ZTQtOWQ0Zi1mNmRkYTk0MDJjZjgiXQ",
+  "changes": [
+    { "kind": "definition", "type": "reasoning", "name": "summary" },
+    { "kind": "run", "run_id": "0199f7a2-6c1e-7b3a-9d40-5e8f1a2b3c4d" }
+  ],
+  "more": false
+}
+```
+
+- Without `since`, the response comes at once, with the cursor of now and no changes, so a client starts from now.
+- A change names only what the caller may read, as the routes that read it decide: `list_org_changes` names a playbook only to a caller that may access it, as `list_playbooks` lists it, and a connection only to a caller with `org:read`. What the caller may not read ends no held request, and a response that lists nothing and says no `more` gives back the cursor it was given, so the caller learns nothing of it.
+- With `since`, the cursor of an earlier response, the response comes at once when something changed after it. Otherwise the runtime holds the request until the next change, or until `wait` seconds pass and it answers no changes with the cursor it was given. A server that stops answers every request it holds at once, the same way.
+- `wait` is 0 to 25 seconds, 25 when left out. A larger or negative `wait` returns `invalid_input` at `/wait`.
+- `cursor` is opaque: the ledger's point after the last change listed. Give it back as `since`. A cursor the ledger does not hold, such as one of another database or of another playbook, returns `invalid_input` of the type `https://on.auto/problems/cursor_not_held`; ask again without `since`.
+- `changes` lists at most 200 resources, in the order the ledger recorded what changed them, each once; one record may name several. When `more` is `true`, more changed already: ask again at once with the new `cursor`.
+- Each change names a resource and its identity, nothing else. Read the resource through its own route.
+
+| Route                   | `kind`        | Identity       | What names it                                                                                                                                                                      |
+| ----------------------- | ------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_org_changes`      | `playbook`    | `playbook`     | A playbook created, updated or retired                                                                                                                                             |
+| `list_org_changes`      | `connection`  | `connection`   | A connection added, connected, broken or removed                                                                                                                                   |
+| `list_playbook_changes` | `definition`  | `type`, `name` | A function or workflow saved or retired, or a prediction function's versions                                                                                                       |
+| `list_playbook_changes` | `run`         | `run_id`       | A run started, given an input or an event, or ended                                                                                                                                |
+| `list_playbook_changes` | `interaction` | `run_id`       | Everything the run of an interaction function records: its request opened, answered, expired, undelivered or cancelled, beside the run                                             |
+| `list_playbook_changes` | `event`       | `event_id`     | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |
+
+A run's own records, its steps and its tool calls name the run; read them with `list_playbook_events` given its `run_id`. A new link or consent of a connection names nothing until the connection is connected.
+
 ## Analytics
 
 | Operation                | Method and route | Permission      | Input                                                           |
@@ -1245,7 +1286,7 @@ A successful operation responds with JSON and `Cache-Control: no-store`. The cre
 
 An error is an RFC 9457 problem document, with `Content-Type: application/problem+json`. Inspect its `reason` and `detail`:
 
-- `invalid_input` includes an `errors` list of JSON pointers, and the kind `input_schema` when the input schema of the function or workflow refused the input it was given, before it ran.
+- `invalid_input` includes an `errors` list of JSON pointers, and the kind `input_schema` when the input schema of the function or workflow refused the input it was given, before it ran, or `cursor_not_held` for a cursor of [changes](#changes) the ledger does not hold.
 - A rejection that has a `kind` carries it.
 - An `unavailable` or `conflict` rejection that has a `because` carries it.
 - A `conflict` may have the kind `oversized`, for a workflow whose output is larger than a run can record.
@@ -1311,6 +1352,7 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/content_too_large`      | 413    | The body is larger than the operation accepts: 1,048,576 bytes of JSON, or 64 MiB for a dataset or a candidate. Their `Content-Length` is refused before the body is read                                                                                                                                                                                  |
 | `https://on.auto/problems/unsupported_media_type` | 415    | The body is not sent as the media type the operation accepts, `application/json` in UTF-8 unless the route says otherwise, or is sent compressed                                                                                                                                                                                                           |
 | `https://on.auto/problems/invalid_input`          | 422    | The input does not fit, with the `errors` that point at it                                                                                                                                                                                                                                                                                                 |
+| `https://on.auto/problems/cursor_not_held`        | 422    | The `since` of `list_org_changes` or `list_playbook_changes` is not a cursor the ledger holds; its `reason` is `invalid_input`; ask again without `since`                                                                                                                                                                                                  |
 | `https://on.auto/problems/client_closed_request`  | 499    | The client disconnected before the response                                                                                                                                                                                                                                                                                                                |
 | `https://on.auto/problems/internal`               | 500    | Something went wrong inside the server                                                                                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/unavailable`            | 503    | Something the server relies on cannot serve now                                                                                                                                                                                                                                                                                                            |
