@@ -51,7 +51,9 @@ The preview opens under `/docs/`. Read [Documentation contributions](docs/contri
   - The scope is a package or capability folder name (`server`, `config`, `ledger`, `reasoning`, ...), or one of `global`, `deps`, `ci` and `release`.
   - `pnpm commit` walks you through it, and a git hook checks every message.
 - **The pull request title matters most.** Pull requests are squash-merged, so the title becomes the commit on `main` and the changelog entry. CI checks it too.
-- **CI must pass, then the pull request merges through the merge queue.** CI runs the full `pnpm check`, builds and smoke-tests the container, and audits the workflows. Keep each pull request to one change.
+- **CI must pass and a maintainer must approve before the pull request merges.** CI runs the full `pnpm check`, builds and smoke-tests the container, and audits the workflows. Keep each pull request to one change.
+
+Auto develops the runtime in a private monorepo and mirrors it to `main` here, so most commits on `main` arrive from there. Pull requests are still welcome: they're reviewed and merged here as usual, then synced back into the monorepo, and if that sync conflicts with work there, the maintainers resolve it. Work in progress in the monorepo isn't visible here, so for a large change, open an issue first and we'll tell you early if it overlaps.
 
 ## Adding a function or workflow adapter
 
