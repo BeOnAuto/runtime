@@ -156,7 +156,7 @@ const waysWithoutAClient = {
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: ['authorization set up first'],
-  'slack-api': ['secret offered'],
+  'slack-bot': ['secret offered'],
   stripe: ['authorization offered'],
   zoom: ['authorization set up first'],
 };
@@ -171,7 +171,7 @@ const searchedWithoutAClient = [
   'notion',
   'posthog',
   'profound',
-  'slack-api',
+  'slack-bot',
   'stripe',
 ];
 
@@ -190,7 +190,7 @@ const waysWithAClient = {
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: ['authorization offered'],
-  'slack-api': ['secret offered'],
+  'slack-bot': ['secret offered'],
   stripe: ['authorization offered'],
   zoom: ['authorization offered'],
 };
