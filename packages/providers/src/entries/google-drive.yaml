@@ -1,20 +1,10 @@
 name: google-drive
 title: Google Drive
-description: Search and list Google Drive files, read their metadata and sharing, export Docs, Sheets and Slides files as text, and create empty files and copy files. The first way reaches only files Auto creates; the second reads every file, through drive.readonly, which Google restricts, and creates none.
+description: The first way searches, lists and reads every file of the person's Google Drive, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and creates and changes nothing. The second reaches only the files Auto creates, and creates empty files and copies files.
 website: https://developers.google.com/workspace/drive/api/reference/rest/v3
 type: openapi
 document: documents/google-drive.openapi.json
 credentials:
-  - kind: authorization
-    issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.file
-    says:
-      https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
-    parameters:
-      access_type: offline
-      prompt: consent
-    clients: [registered]
-    description: Sign in to Google and allow Google Drive.
   - kind: authorization
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/drive.readonly
@@ -25,3 +15,13 @@ credentials:
       prompt: consent
     clients: [registered]
     description: Sign in to Google and allow all of Google Drive to be read.
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/drive.file
+    says:
+      https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow only the Google Drive files Auto creates.
