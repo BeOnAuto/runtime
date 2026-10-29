@@ -16,6 +16,20 @@ export function countingBehaviour(ledgerOf: LedgerOf): void {
     expect((await metered.state()).recent.map(({ run }) => run)).toEqual([runStreamOf('run-1'), runStreamOf('run-2')]);
   });
 
+  it('counts a run whose stream held other events before its start, and admits it without counting once started, however often', async () => {
+    const { metered } = await opened(ledgerOf);
+    await metered.noted(runStreamOf('run-1'), 2);
+    await metered.admitted(runOf('run-1'));
+    await metered.started('run-1');
+    await metered.started('run-1');
+    metered.at('2026-10-27T12:10:00.001Z');
+
+    expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
+    expect((await metered.state()).admitted.actions).toBe(1);
+  });
+}
+
+export function startedRunsBehaviour(ledgerOf: LedgerOf): void {
   it('counts every run of every org and playbook it admits, and nothing it did not admit', async () => {
     const { metered } = await opened(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');

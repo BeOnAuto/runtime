@@ -8,6 +8,8 @@ import { allocatedOn, opened, replicaOf, runsNamed, startedOnceAdmitted, type Le
 
 const aMonthAndADayLater = '2026-11-27T12:00:00.000Z';
 
+const keyWithoutCredits = 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.c2VjcmV0';
+
 async function licensesPageOf(metered: Metered): Promise<string> {
   return `https://studio.on.auto/licenses?installation=${String((await metered.state()).installation)}`;
 }
@@ -139,6 +141,17 @@ function withdrawalBehaviour(ledgerOf: LedgerOf): void {
     expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
     expect((await metered.state()).admitted).toMatchObject({ first_runs: 1 });
     expect((await metered.allocated(allocation)).detail).toContain(`its offline credits ${id} were withdrawn`);
+  });
+
+  it('refreshes no offline credits where it holds none, or holds no key to ask with', async () => {
+    const { metered } = await opened(ledgerOf, { key: keyWithoutCredits });
+    const { metered: keyless } = await opened(ledgerOf);
+
+    expect([await metered.refreshed(), await keyless.refreshed()]).toEqual([
+      { kind: 'refreshed', detail: '' },
+      { kind: 'refreshed', detail: '' },
+    ]);
+    expect([...metered.warnings(), ...keyless.warnings()]).toEqual([]);
   });
 
   it('keeps its allocation, saying so, while Auto cannot be reached or answers another', async () => {

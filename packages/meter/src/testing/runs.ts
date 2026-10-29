@@ -12,7 +12,7 @@ const AppendedSchema = Schema.Struct({
 
 type Appended = typeof AppendedSchema.Type;
 
-function appending(type: Appended['type'], count: number): Decider<number, null, Appended> {
+export function appending(type: Appended['type'], count: number): Decider<number, null, Appended> {
   return {
     initialState: 0,
     evolve: (seen) => seen + 1,

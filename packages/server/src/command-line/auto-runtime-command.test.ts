@@ -72,8 +72,8 @@ describe('the auto-runtime command', () => {
     expect(await playbooks.json()).toEqual({ playbooks: [] });
     expect(runtime.output().stdout).toContain(`     MCP      ${runtime.url}/mcp\n`);
     expect(runtime.output().stdout).toContain('     Docs     https://on.auto/docs/\n');
-    expect(runtime.output().stdout).toContain(
-      '  0 of 100 free runs used, then a free key from Studio\n  Local mode: no sign-in, so anyone using this computer can act as you. To require sign-in, set PUBLIC_URL.\n',
+    expect(runtime.output().stdout).toMatch(
+      /\n {2}0 of 100 free runs used, then the free rate of 15 runs a UTC day and 75 a UTC month without a key\. Get a free key at https:\/\/\S+\/licenses\?installation=[\da-f-]+\.\n {2}Local mode: no sign-in, so anyone using this computer can act as you\. To require sign-in, set PUBLIC_URL\.\n/u,
     );
     expect(runtime.output().stderr).toBe('');
     runtime.interrupt();

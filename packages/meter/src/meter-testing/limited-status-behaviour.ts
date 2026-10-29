@@ -87,7 +87,10 @@ function keyLimitedStatusBehaviour(ledgerOf: LedgerOf): void {
   it('reads limited as not activated while it holds a key Auto has not answered for yet, still on its first runs', async () => {
     const { metered } = await opened(ledgerOf);
     const keyed = await restartedOf(metered, { key: metered.account.keyFor(installation) });
+    const before = await keyed.status();
     await keyed.admitted(runOf('run-1'));
+
+    expect(before).toMatchObject({ runtime_id: installation, free_runs: { used: 0, of: 100 } });
 
     expect(await keyed.status()).toMatchObject({
       state: 'limited',

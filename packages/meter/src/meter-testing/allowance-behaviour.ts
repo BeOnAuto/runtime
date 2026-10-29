@@ -43,7 +43,24 @@ export function allowanceBehaviour(ledgerOf: LedgerOf): void {
     expect(lastDay.kind).toBe('license_required');
     expect((await metered.admitted(runOf('run-6'))).kind).toBe('admitted');
   });
+}
 
+export function laggingClockBehaviour(ledgerOf: LedgerOf): void {
+  it('counts a free run dated before the day it counted, as on a replica whose clock lags, toward that day alone', async () => {
+    const { metered } = await opened(ledgerOf, { allowance: 0, freeRate: { per_day: 5, per_month: 9 } });
+    metered.at('2026-10-28T09:00:00.000Z');
+    await startedOnceAdmitted(metered, 'ahead');
+    metered.at('2026-10-27T23:59:00.000Z');
+    await startedOnceAdmitted(metered, 'behind');
+
+    expect((await metered.state()).admitted).toMatchObject({
+      free_day: { period: '2026-10-28', runs: 1 },
+      free_month: { period: '2026-10', runs: 2 },
+    });
+  });
+}
+
+export function defaultAllowanceBehaviour(ledgerOf: LedgerOf): void {
   it('runs 100 first runs and then 15 a UTC day and 75 a UTC month by default, with no call to Auto', async () => {
     const { metered } = await opened(ledgerOf);
     const admitted = await admittedEach(metered, runsNamed('run', 115));
@@ -59,16 +76,17 @@ export function allowanceBehaviour(ledgerOf: LedgerOf): void {
 }
 
 export function concurrencyBehaviour(ledgerOf: LedgerOf): void {
-  it('admits exactly its 100 first runs and the day’s 15 of 200 asked at once, on two replicas of one ledger', async () => {
-    const { at, metered } = await opened(ledgerOf);
-    const replica = await replicaOf(at);
+  it('admits exactly its first runs and the day’s free rate of 60 asked at once, on two replicas of one ledger', async () => {
+    const tight = { allowance: 20, freeRate: { per_day: 10, per_month: 75 } };
+    const { at, metered } = await opened(ledgerOf, tight);
+    const replica = await replicaOf(at, tight);
     const answers = await Promise.all([
-      ...runsNamed('one', 100).map((run) => metered.admitted(runOf(run))),
-      ...runsNamed('other', 100).map((run) => replica.admitted(runOf(run))),
+      ...runsNamed('one', 30).map((run) => metered.admitted(runOf(run))),
+      ...runsNamed('other', 30).map((run) => replica.admitted(runOf(run))),
     ]);
 
-    expect(answers.filter(({ kind }) => kind === 'admitted')).toHaveLength(115);
-    expect(answers.filter(({ kind }) => kind === 'license_required')).toHaveLength(85);
-    expect((await metered.state()).admitted).toMatchObject({ actions: 115, first_runs: 100 });
+    expect(answers.filter(({ kind }) => kind === 'admitted')).toHaveLength(30);
+    expect(answers.filter(({ kind }) => kind === 'license_required')).toHaveLength(30);
+    expect((await metered.state()).admitted).toMatchObject({ actions: 30, first_runs: 20 });
   }, 120_000);
 }

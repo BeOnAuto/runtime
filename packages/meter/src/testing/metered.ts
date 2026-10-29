@@ -7,7 +7,7 @@ import { selfHostedMeterOver } from '../licensing/self-hosted-meter.ts';
 import { accountFake, type AccountFake } from './account-fake.ts';
 import type { LedgerAt } from './ledgers.ts';
 import { meterRuntimeOn, type MeterRuntime } from './meter-runtime.ts';
-import { answerOf, runStreamOf, starts, type Answer } from './runs.ts';
+import { answerOf, appending, runStreamOf, starts, type Answer } from './runs.ts';
 import { testSigners } from './test-signing.ts';
 
 export interface MeteredOptions extends Partial<MeterOptions> {
@@ -32,6 +32,7 @@ export interface Metered extends Pick<MeterRuntime, 'executesFail' | 'warnings' 
   readonly reported: () => Promise<Answer>;
   readonly reportDue: () => Promise<boolean>;
   readonly started: (run: string, playbook?: string, org?: string) => Promise<void>;
+  readonly noted: (stream: string, count: number) => Promise<void>;
   readonly restarted: (options: MeteredOptions, meanwhile: () => Promise<void>) => Promise<Metered>;
   readonly dispose: () => Promise<void>;
 }
@@ -67,6 +68,9 @@ export async function meteredOn(at: LedgerAt, options: MeteredOptions = {}): Pro
     reportDue: () => timed(license.reportDue),
     started: async (run, playbook, org) => {
       await onTheLedger((ledger) => ledger.execute(runStreamOf(run, playbook, org), starts, null));
+    },
+    noted: async (stream, count) => {
+      await onTheLedger((ledger) => ledger.execute(stream, appending('noted', count), null));
     },
     restarted: async (again, meanwhile) => {
       await metering.dispose();
