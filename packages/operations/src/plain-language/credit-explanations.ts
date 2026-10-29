@@ -17,10 +17,10 @@ const freeRunsAgain =
   'The details below say when it can be run again; an owner can get more credits sooner at their resolve_at link.';
 
 const freeRateAgain =
-  'The details below say when it can be run again; to run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.';
+  'The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.';
 
 const licenseAgain =
-  'The details below say why, what puts it right and when it can be run again, and an owner of its org can put it right in Auto Studio at their resolve_at link.';
+  'The details below explain why and when it can run again. The account holder or an organization admin can fix it in Auto Studio at the resolve_at link.';
 
 export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
   credits_exhausted: {
@@ -29,7 +29,7 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
       'It can be run again once the account has more credits; the details below say how, with the resolve_at link where they give one.',
   },
   license_required: {
-    why: 'this runtime, which holds no key, has used the free runs it may run for now',
+    why: 'this runtime has no license key and has used its free runs for now',
     remedy: freeRateAgain,
   },
   license_invalid: {
@@ -68,11 +68,11 @@ export const creditExplanationsByBecause: Readonly<
 > = {
   license_required: {
     free_daily_limit: {
-      why: 'this runtime, which holds no key, has used its free runs for the day',
+      why: 'this runtime has no license key and has used its free runs for the day',
       remedy: freeRateAgain,
     },
     free_month_used: {
-      why: 'this runtime, which holds no key, has used its free runs for the month',
+      why: 'this runtime has no license key and has used its free runs for the month',
       remedy: freeRateAgain,
     },
   },
@@ -86,11 +86,11 @@ export const creditExplanationsByBecause: Readonly<
   },
   license_invalid: {
     free_daily_limit: {
-      why: 'the license of this runtime does not stand for now, so it runs at the free rate, and it has used its free runs for the day',
+      why: "this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the day",
       remedy: licenseAgain,
     },
     free_month_used: {
-      why: 'the license of this runtime does not stand for now, so it runs at the free rate, and it has used its free runs for the month',
+      why: "this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the month",
       remedy: licenseAgain,
     },
     key_rotated: {

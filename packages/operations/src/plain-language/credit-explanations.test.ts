@@ -8,27 +8,27 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
   [
     'a runtime without a key that used its free runs for now',
     { reason: 'conflict', kind: 'license_required' },
-    'Could not run the workflow “tally”: this runtime, which holds no key, has used the free runs it may run for now. The details below say when it can be run again; to run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
+    'Could not run the workflow “tally”: this runtime has no license key and has used its free runs for now. The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
   ],
   [
     'a runtime without a key that used its free runs for the day',
     { reason: 'conflict', kind: 'license_required', because: 'free_daily_limit' },
-    'Could not run the workflow “tally”: this runtime, which holds no key, has used its free runs for the day. The details below say when it can be run again; to run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
+    'Could not run the workflow “tally”: this runtime has no license key and has used its free runs for the day. The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
   ],
   [
     'a runtime without a key that used its free runs for the month',
     { reason: 'conflict', kind: 'license_required', because: 'free_month_used' },
-    'Could not run the workflow “tally”: this runtime, which holds no key, has used its free runs for the month. The details below say when it can be run again; to run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
+    'Could not run the workflow “tally”: this runtime has no license key and has used its free runs for the month. The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.',
   ],
   [
-    'a runtime at the free rate for the day while its license does not stand',
+    "a runtime at the free rate for the day while its license can't be used",
     { reason: 'conflict', kind: 'license_invalid', because: 'free_daily_limit' },
-    'Could not run the workflow “tally”: the license of this runtime does not stand for now, so it runs at the free rate, and it has used its free runs for the day. The details below say why, what puts it right and when it can be run again, and an owner of its org can put it right in Auto Studio at their resolve_at link.',
+    "Could not run the workflow “tally”: this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the day. The details below explain why and when it can run again. The account holder or an organization admin can fix it in Auto Studio at the resolve_at link.",
   ],
   [
-    'a runtime at the free rate for the month while its license does not stand',
+    "a runtime at the free rate for the month while its license can't be used",
     { reason: 'conflict', kind: 'license_invalid', because: 'free_month_used' },
-    'Could not run the workflow “tally”: the license of this runtime does not stand for now, so it runs at the free rate, and it has used its free runs for the month. The details below say why, what puts it right and when it can be run again, and an owner of its org can put it right in Auto Studio at their resolve_at link.',
+    "Could not run the workflow “tally”: this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the month. The details below explain why and when it can run again. The account holder or an organization admin can fix it in Auto Studio at the resolve_at link.",
   ],
   [
     'a license that no longer stands',
@@ -96,7 +96,7 @@ describe('the words of a refusal of the meter', () => {
 
   it('give why of the case beside the kind where the case belongs to another kind', () => {
     expect(explanationOf({ reason: 'conflict', kind: 'license_required', because: 'none_left' }).why).toBe(
-      'this runtime, which holds no key, has used the free runs it may run for now, because the account has no credits left',
+      'this runtime has no license key and has used its free runs for now, because the account has no credits left',
     );
     expect(
       [

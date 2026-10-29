@@ -41,7 +41,7 @@ function limitedByCreditsBehaviour(ledgerOf: LedgerOf): void {
       licensed: 0,
       runs_left: 0,
       fallback: { per_day: 15, per_month: 75, used_today: 1, used_this_month: 1, lifts_at: null },
-      summary: `This runtime's org has no credits left, so it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used 1 of today's 15 and 1 of this month's 75. An owner can add credits at ${billing}; the runtime takes them at its next report, within the hour.`,
+      summary: `This runtime's organization has no credits left, so it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used 1 of today's 15 and 1 of this month's 75. The account holder or an organization admin can add credits at ${billing}. The runtime picks them up at its next report, within the hour.`,
     });
   });
 
@@ -102,7 +102,7 @@ function keyLimitedStatusBehaviour(ledgerOf: LedgerOf): void {
       fallback: null,
       key_source: 'environment',
       summary:
-        "This runtime holds a key it hasn't activated with Auto yet; until it does, it runs its free runs, 1 of 100 used, then the free rate of 15 runs a UTC day and 75 a UTC month. Check that it can reach billing.on.auto; it activates the key at its next report, within the hour.",
+        "This runtime has a key it hasn't activated with Auto yet. Until it does, it uses its free runs, 1 of 100 used, then the free rate of 15 runs a UTC day and 75 a UTC month. Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.",
     });
   });
 }
@@ -130,7 +130,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
     const { metered } = await allocatedOn(ledgerOf, 5);
     metered.at('2026-11-27T12:00:00.000Z');
     const stopped =
-      'These offline credits stopped on 2026-11-26. An owner can request new ones at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.';
+      'This offline allocation expired on 2026-11-26. The account holder or an organization admin can request a new allocation at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.';
 
     expect(await metered.status()).toMatchObject({
       state: 'invalid',

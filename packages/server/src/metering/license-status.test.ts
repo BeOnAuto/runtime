@@ -45,7 +45,7 @@ describe('the license a runtime nobody registered holds', () => {
     const after = await server.call('GET', license);
     const runtimeId = await runtimeIdOf(server);
 
-    const summary = `2 of 100 free runs used, then the free rate of 15 runs a UTC day and 75 a UTC month without a key. Get a free key at ${studio}/licenses?installation=${runtimeId}.`;
+    const summary = `2 of 100 free runs used. After that, it runs at the free rate of 15 runs a UTC day and 75 a UTC month without a license key. Get a free key at ${studio}/licenses?installation=${runtimeId}.`;
 
     expect(before).toMatchObject({ status: 200, body: { state: 'unregistered', free_runs: { used: 0, of: 100 } } });
     expect(after.body).toEqual({

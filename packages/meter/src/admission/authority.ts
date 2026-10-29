@@ -36,7 +36,7 @@ export interface AdmissionAuthority {
 
 const authorityUnavailable = new Unavailable({
   detail:
-    'This runtime could not ask its account at Auto to admit the run, so the run was not started; ask again shortly',
+    "The run could not start because the runtime could not contact Auto to check the account's credits. Try again shortly.",
   kind: 'meter_unavailable',
 });
 

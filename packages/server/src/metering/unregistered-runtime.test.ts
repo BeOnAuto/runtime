@@ -40,7 +40,7 @@ function licenseRequiredOf(runtimeId: string) {
   const page = `${studio}/licenses?installation=${runtimeId}`;
   return {
     kind: 'license_required',
-    detail: `This runtime has used its 100 free runs, and without a key it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15, so it can run again from ${tomorrowOf(new Date())} 00:00 UTC. To run more, get a free key at ${page}, then activate it on the runtime.`,
+    detail: `This runtime has used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15 free runs and can run again at 00:00 UTC on ${tomorrowOf(new Date())}. To run more, get a free key at ${page}, then activate it on the runtime.`,
     because: 'free_daily_limit',
     resolve_at: page,
     runtime_id: runtimeId,

@@ -99,7 +99,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 ## A run is refused as `license_required` {#license-required}
 
-**Symptom.** A run is answered `409` with the kind `license_required`, its limit in `because`, `free_daily_limit` or `free_month_used`: `This runtime has used its 100 free runs, and without a key it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15, so it can run again from … 00:00 UTC. To run more, get a free key at …, then activate it on the runtime.`
+**Symptom.** A run is answered `409` with the kind `license_required`, its limit in `because`, `free_daily_limit` or `free_month_used`: `This runtime has used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15 free runs and can run again at 00:00 UTC on …. To run more, get a free key at …, then activate it on the runtime.`
 
 **Cause.** A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month, and this one has used the day's or the month's.
 
@@ -111,13 +111,13 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause and fix**, by the license's `limited_because` and the refusal's first words:
 
-- `credits`, `This runtime's org has no credits left`: the org is on the Free plan and has used its credits. An owner adds credits at `resolve_at`, Billing in Studio; the runtime takes them at its next report, within the hour.
-- `cap`, `This runtime's org has reached its overage cap`: the org owes as much overage as its plan allows. An owner adds credits at `resolve_at`, which repay what is owed first; the runtime takes them at its next report.
+- `credits`, `This runtime's organization has no credits left`: the org is on the Free plan and has used its credits. An owner adds credits at `resolve_at`, Billing in Studio; the runtime takes them at its next report, within the hour.
+- `cap`, `This runtime's organization has reached its overage cap`: the org owes as much overage as its plan allows. An owner adds credits at `resolve_at`, which repay what is owed first; the runtime takes them at its next report.
 - `out_of_touch`, `This runtime hasn't reached Auto since` a date: the runtime has not reached `billing.on.auto` for 28 days since its last license. Check its egress; it goes back to its org's credits at its next report.
 - `key_rotated`, `This runtime's key was replaced`: an owner rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, an owner rotates it again at `resolve_at`.
 - `key_revoked`, `This runtime was removed from its org` or `Auto no longer accepts this runtime's key`: an owner removed the runtime. An owner registers it again at `resolve_at`; activate the new key.
-- `org_closed`, `This runtime's org at Auto is closed`: the org was deleted. An owner can restore it, for a limited time only, and the runtime goes back to its credits at its next report; otherwise activate a key of another org.
-- `not_activated`, `This runtime holds a key it hasn't activated with Auto yet`: the runtime has not reached Auto since it was given the key. Check its egress; it activates the key at its next report, within the hour.
+- `org_closed`, `This runtime's organization at Auto is closed`: the org was deleted. An owner can restore it, for a limited time only, and the runtime goes back to its credits at its next report; otherwise activate a key of another org.
+- `not_activated`, `This runtime has a key it hasn't activated with Auto yet`: the runtime has not reached Auto since it was given the key. Check its egress; it activates the key at its next report, within the hour.
 
 ## Activating a key, or a run on offline credits, is refused as `license_invalid` {#license-invalid}
 
@@ -127,8 +127,8 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 - `This runtime's key was replaced.`, with `because: "key_rotated"`: the key was rotated. Activate the new key an owner was shown, or have an owner rotate it again at `resolve_at`.
 - `This runtime was removed from its org.`, with `because: "installation_revoked"`: an owner registers the runtime again at `resolve_at`; activate the new key.
-- `These offline credits stopped on` a date: offline credits last 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. An owner requests new credits at `resolve_at`, or the runtime refreshes them with Auto.
-- `This runtime's license does not stand`, followed by why: a key for another runtime is refused before the runtime asks Auto, so register this runtime, which `runtime_id` names, rather than reuse another's key; a license not signed by Auto is refused whatever key brought it.
+- `This offline allocation expired on` a date: offline credits last 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. An owner requests new credits at `resolve_at`, or the runtime refreshes them with Auto.
+- `This runtime's license is invalid`, followed by why: a key for another runtime is refused before the runtime asks Auto, so register this runtime, which `runtime_id` names, rather than reuse another's key; a license not signed by Auto is refused whatever key brought it.
 
 ## A run on offline credits is refused as `credits_exhausted` {#credits-exhausted}
 

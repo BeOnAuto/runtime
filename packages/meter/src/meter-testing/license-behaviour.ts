@@ -131,7 +131,7 @@ function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
     expect(free).toEqual(['admitted', 'admitted']);
     expect(refused).toMatchObject({ kind: 'license_required', because: 'free_month_used' });
     expect(refused.detail).toMatch(
-      /^This runtime holds no key, so it runs at the free rate of 2 runs a UTC day and 2 a UTC month\./u,
+      /^This runtime has no license key, so it runs at the free rate of 2 runs a UTC day and 2 a UTC month\./u,
     );
     expect(key).toContain(installation);
   });

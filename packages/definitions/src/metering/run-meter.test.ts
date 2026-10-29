@@ -106,7 +106,8 @@ describe('a run the meter refuses', () => {
     expect(refused).toMatchObject({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'This runtime is missing its usage meter and cannot start runs. Reinstall the official Auto Runtime package.',
+      detail:
+        'This runtime is missing its usage meter and cannot start runs. Reinstall the official Auto Runtime package.',
     });
     expect(refused).not.toHaveProperty('kind');
     expect(prober.runs()).toBe(0);

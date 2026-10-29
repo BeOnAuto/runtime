@@ -10,12 +10,13 @@ import { nowMs, usageFrom, type Licensing } from './licensing.ts';
 import type { Signed } from './signed-answers.ts';
 
 const reportUnavailable = new Unavailable({
-  detail: 'This runtime could not report its runs to its account at Auto; it reports them again shortly',
+  detail: 'The runtime could not report its runs to Auto. It will try again shortly.',
   kind: 'meter_unavailable',
 });
 
 const notAutosLicense = new Unavailable({
-  detail: 'This runtime did not take the answer to its report, which was not a license Auto signed for it',
+  detail:
+    "The answer to the runtime's report wasn't a license Auto signed for it, so the runtime kept its last license.",
   kind: 'meter_unavailable',
 });
 

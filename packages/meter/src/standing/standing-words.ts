@@ -20,7 +20,7 @@ export interface WordsReading {
 }
 
 function liftedWords(liftsAt: string | undefined): string {
-  return liftsAt === undefined ? '' : ` It can run again from ${dayOf(liftsAt)} 00:00 UTC.`;
+  return liftsAt === undefined ? '' : ` It can run again at 00:00 UTC on ${dayOf(liftsAt)}.`;
 }
 
 function usedWords({ rate, use, liftsAt }: WordsReading): string {
@@ -30,14 +30,15 @@ function usedWords({ rate, use, liftsAt }: WordsReading): string {
 function standingNote(license: HeldLicense, options: MeterOptions): string {
   const { owed, overage_cap: cap } = license.credits;
   const billing = billingPageOf(options, license.org);
-  const owing = `the org owes ${owed} of at most ${cap} credits, which its next credits repay`;
-  if (license.standing === 'low') return ` Its org's credits are low; an owner can add credits at ${billing}.`;
+  const owing = `the organization owes ${owed} of up to ${cap} credits, which its next credits repay first`;
+  const adding = `The account holder or an organization admin can add credits at ${billing}.`;
+  if (license.standing === 'low') return ` Its organization's credits are low. ${adding}`;
   if (license.standing === 'empty') {
-    return ` Its org has no credits left, so its runs go into overage, which its next credits repay; an owner can add credits at ${billing}.`;
+    return ` Its organization has no credits left, so its runs go into overage, which its next credits repay first. ${adding}`;
   }
-  if (license.standing === 'overage') return ` It is in overage: ${owing}.`;
+  if (license.standing === 'overage') return ` It's in overage: ${owing}.`;
   if (license.standing === 'near_cap') {
-    return ` It is near its overage cap: ${owing}; an owner can add credits at ${billing}.`;
+    return ` It's near its overage cap: ${owing}. ${adding}`;
   }
   return '';
 }
@@ -46,7 +47,7 @@ function licensedWords(license: HeldLicense, outOfTouch: boolean, { options, lic
   const to = shownOrgName(license.org_name) ?? license.org;
   const left = Math.max(0, license.admits_through - licensed);
   const touch = outOfTouch
-    ? ` It hasn't reached Auto since ${dayOf(license.issued_at)}; unless it reaches billing.on.auto, it runs at the free rate from ${dayOf(license.limit_at)}.`
+    ? ` It hasn't reached Auto since ${dayOf(license.issued_at)}. Unless it reaches billing.on.auto, it will run at the free rate from ${dayOf(license.limit_at)}.`
     : '';
   return `Licensed to ${to} (${license.plan} plan): ${left} runs left.${standingNote(license, options)}${touch}`;
 }
@@ -55,9 +56,9 @@ function firstRunsWords(footing: FreeRateFooting, used: number, reading: WordsRe
   const { options, installation, rate } = reading;
   const then = `then ${freeRateWords(rate)}`;
   if (footing.kind === 'keyless') {
-    return `${used} of ${options.allowance} free runs used, ${then} without a key. Get a free key at ${licensesPageOf(options, installation)}.`;
+    return `${used} of ${options.allowance} free runs used. After that, it runs at ${freeRateWords(rate)} without a license key. Get a free key at ${licensesPageOf(options, installation)}.`;
   }
-  return `This runtime holds a key it hasn't activated with Auto yet; until it does, it runs its free runs, ${used} of ${options.allowance} used, ${then}. Check that it can reach billing.on.auto; it activates the key at its next report, within the hour.`;
+  return `This runtime has a key it hasn't activated with Auto yet. Until it does, it uses its free runs, ${used} of ${options.allowance} used, ${then}. Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.`;
 }
 
 export function summaryOf(reading: WordsReading): string {

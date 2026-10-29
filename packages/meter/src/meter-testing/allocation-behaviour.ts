@@ -33,7 +33,7 @@ function allocatedAdmissionBehaviour(ledgerOf: LedgerOf): void {
     expect(answers).toEqual(['admitted', 'admitted', 'admitted']);
     expect(refused).toEqual({
       kind: 'credits_exhausted',
-      detail: `This runtime has used all 2 offline credits. An owner can request more at ${page}.`,
+      detail: `This runtime has used all 2 offline credits. The account holder or an organization admin can request more at ${page}.`,
       because: 'none_left',
       resolve_at: page,
       runtime_id: String((await metered.state()).installation),
@@ -67,7 +67,7 @@ function graceBehaviour(ledgerOf: LedgerOf): void {
     const page = await licensesPageOf(metered);
     expect(refused).toEqual({
       kind: 'license_invalid',
-      detail: `These offline credits stopped on 2026-11-26. An owner can request new ones at ${page}.`,
+      detail: `This offline allocation expired on 2026-11-26. The account holder or an organization admin can request a new allocation at ${page}.`,
       resolve_at: page,
       runtime_id: String((await metered.state()).installation),
     });
@@ -124,7 +124,7 @@ function allocationRefusalBehaviour(ledgerOf: LedgerOf): void {
 
     expect(again.kind).toBe('allocated');
     expect((await metered.allocated(allocation)).detail).toBe(
-      `These offline credits stopped on 2026-11-26. An owner can request new ones at ${await licensesPageOf(metered)}.`,
+      `This offline allocation expired on 2026-11-26. The account holder or an organization admin can request a new allocation at ${await licensesPageOf(metered)}.`,
     );
     expect((await metered.state()).allocation?.sequence).toBe(0);
   });

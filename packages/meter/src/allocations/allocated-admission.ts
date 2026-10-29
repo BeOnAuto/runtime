@@ -25,7 +25,7 @@ export function admittedByTheAllocation(
         through: allocation.actions + credits,
         refusal: () =>
           new Conflict({
-            detail: `This runtime has used all ${credits} offline credits. An owner can request more at ${page}.`,
+            detail: `This runtime has used all ${credits} offline credits. The account holder or an organization admin can request more at ${page}.`,
             kind: 'credits_exhausted',
             because: 'none_left',
             resolve_at: page,

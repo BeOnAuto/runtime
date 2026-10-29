@@ -14,7 +14,7 @@ const billing = 'https://studio.on.auto/?settings=billing&org=acme';
 
 const freeRate = 'the free rate of 2 runs a UTC day and 4 a UTC month';
 
-const usedToday = "It has used today's 2, so it can run again from 2026-10-28 00:00 UTC.";
+const usedToday = "It has used today's 2 free runs and can run again at 00:00 UTC on 2026-10-28.";
 
 async function refusedAfterTheFreeRate(metered: Metered): Promise<Answer> {
   await admittedEach(metered, ['free-1', 'free-2']);
@@ -35,35 +35,35 @@ const keyRefusals: readonly (readonly [string, (account: AccountFake, key: strin
     (account, key) => {
       account.revoke(key, 'key_rotated');
     },
-    `This runtime's key was replaced, so it runs at ${freeRate}. ${usedToday} Activate the new key an owner was shown when they rotated it; if the key is lost, an owner can rotate it again at ${page}.`,
+    `This runtime's key was replaced, so it runs at ${freeRate}. ${usedToday} Activate the new key shown when it was rotated. If that key is lost, the account holder or an organization admin can rotate it again at ${page}.`,
   ],
   [
     'it was removed from its org',
     (account, key) => {
       account.revoke(key, 'installation_revoked');
     },
-    `This runtime was removed from its org, so it runs at ${freeRate}. ${usedToday} To run on its org's credits again, an owner can register it again at ${page}, then activate the new key.`,
+    `This runtime was removed from its organization, so it runs at ${freeRate}. ${usedToday} To use its organization's credits again, the account holder or an organization admin can register it again at ${page}. Then activate the new key.`,
   ],
   [
     'Auto no longer knows its key',
     (account, key) => {
       account.revoke(key);
     },
-    `Auto no longer accepts this runtime's key, so it runs at ${freeRate}. ${usedToday} Activate a key of this runtime, which an owner registers at ${page}.`,
+    `Auto no longer accepts this runtime's key, so it runs at ${freeRate}. ${usedToday} Activate a key for this runtime. The account holder or an organization admin can register it at ${page}.`,
   ],
   [
     'its org was deleted',
     (account) => {
       account.close({ detail: 'The org acme was deleted; an owner can restore it', because: 'org_deleted' });
     },
-    `This runtime's org at Auto is closed, so it runs at ${freeRate}. ${usedToday} If an owner restores the org, the runtime goes back to its credits at its next report; or activate a key of another org, which an owner registers at ${page}.`,
+    `This runtime's organization at Auto is closed, so it runs at ${freeRate}. ${usedToday} If the organization is restored, the runtime returns to its credits at its next report. Otherwise, activate a key from another organization; the account holder or an organization admin can register it at ${page}.`,
   ],
   [
     'its org was deleted for good',
     (account) => {
       account.close({ detail: 'The org acme was deleted for good', because: 'org_purged' });
     },
-    `This runtime's org at Auto is closed, so it runs at ${freeRate}. ${usedToday} The org can't be restored; activate a key of another org, which an owner registers at ${page}.`,
+    `This runtime's organization at Auto is closed, so it runs at ${freeRate}. ${usedToday} The organization can't be restored. Activate a key from another organization; the account holder or an organization admin can register it at ${page}.`,
   ],
 ];
 
@@ -76,7 +76,7 @@ function creditWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(metered)).toEqual({
       kind: 'credits_exhausted',
-      detail: `This runtime's org has no credits left, so it runs at ${freeRate}. ${usedToday} An owner can add credits at ${billing}; the runtime takes them at its next report, within the hour.`,
+      detail: `This runtime's organization has no credits left, so it runs at ${freeRate}. ${usedToday} The account holder or an organization admin can add credits at ${billing}. The runtime picks them up at its next report, within the hour.`,
       because: 'free_daily_limit',
       resolve_at: billing,
       runtime_id: installation,
@@ -91,7 +91,7 @@ function creditWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(metered)).toEqual({
       kind: 'credits_exhausted',
-      detail: `This runtime's org has reached its overage cap of 600 credits, so it runs at ${freeRate}. ${usedToday} An owner can add credits at ${billing}, which repay what is owed first; the runtime takes them at its next report, within the hour.`,
+      detail: `This runtime's organization has reached its overage cap of 600 credits, so it runs at ${freeRate}. ${usedToday} The account holder or an organization admin can add credits at ${billing}; they repay what's owed first. The runtime picks them up at its next report, within the hour.`,
       because: 'free_daily_limit',
       resolve_at: billing,
       runtime_id: installation,
@@ -105,7 +105,7 @@ function creditWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(metered)).toEqual({
       ...asLicenseInvalid(
-        `This runtime hasn't reached Auto since 2026-10-27, so since 2026-11-24 it runs at ${freeRate}. It has used today's 2, so it can run again from 2026-11-25 00:00 UTC. Check that it can reach billing.on.auto; it goes back to its org's credits at its next report.`,
+        `This runtime hasn't reached Auto since 2026-10-27, so it has run at ${freeRate} since 2026-11-24. It has used today's 2 free runs and can run again at 00:00 UTC on 2026-11-25. Check that it can reach billing.on.auto. It returns to its organization's credits at its next report.`,
       ),
     });
   });
@@ -135,12 +135,12 @@ function keyWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(another)).toEqual(
       asLicenseInvalid(
-        `This runtime holds a key it hasn't activated with Auto yet, so it runs at ${freeRate}. ${usedToday} Check that it can reach billing.on.auto; it activates the key at its next report, within the hour.`,
+        `This runtime has a key it hasn't activated with Auto yet, so it runs at ${freeRate}. ${usedToday} Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.`,
       ),
     );
     expect(await refusedAfterTheFreeRate(fresh)).toEqual(
       asLicenseInvalid(
-        `This runtime has used its 2 free runs and holds a key it hasn't activated with Auto yet, so it runs at ${freeRate}. ${usedToday} Check that it can reach billing.on.auto; it activates the key at its next report, within the hour.`,
+        `This runtime has used its 2 free runs and has a key it hasn't activated with Auto yet, so it runs at ${freeRate}. ${usedToday} Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.`,
       ),
     );
   });
@@ -218,12 +218,12 @@ export function keptWordingBehaviour(ledgerOf: LedgerOf): void {
     expect(notAKey).toEqual({
       kind: 'license_invalid',
       detail:
-        "This runtime's license does not stand: its key is not a license key of Studio, which reads alk.<org>.<runtime id>.<secret>. Activate a key of this runtime, which an owner of its org registers at https://studio.on.auto/licenses",
+        "This runtime's license is invalid: its key is not a license key of Studio, which reads alk.<org>.<runtime id>.<secret>. Activate a license key for this runtime. The account holder or an organization admin can register it at https://studio.on.auto/licenses.",
       resolve_at: 'https://studio.on.auto/licenses',
     });
     expect(unknown).toEqual({
       kind: 'license_invalid',
-      detail: `This runtime's license does not stand: The key is unknown, was rotated away or its runtime was removed. Activate a key of this runtime, which an owner of its org registers at ${page}`,
+      detail: `This runtime's license is invalid: The key is unknown, was rotated away or its runtime was removed. Activate a license key for this runtime. The account holder or an organization admin can register it at ${page}.`,
       resolve_at: page,
       runtime_id: installation,
     });
