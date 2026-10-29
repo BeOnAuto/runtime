@@ -3,7 +3,7 @@ import { Effect, Layer } from 'effect';
 
 import { RunMeter, type MeteredRun } from '../index.ts';
 
-export type MeterRefusal = 'credits_exhausted' | 'license_required' | 'metering_fault' | 'meter_unavailable';
+export type MeterRefusal = 'credits_exhausted' | 'license_required' | 'license_invalid' | 'meter_unavailable';
 
 export interface RecordingMeter {
   readonly layer: Layer.Layer<RunMeter>;
@@ -14,7 +14,7 @@ export interface RecordingMeter {
 const refusals = {
   credits_exhausted: new Conflict({ detail: 'The account has no credits left', kind: 'credits_exhausted' }),
   license_required: new Conflict({ detail: 'This runtime needs a license', kind: 'license_required' }),
-  metering_fault: new Conflict({ detail: 'The meter does not agree with the ledger', kind: 'metering_fault' }),
+  license_invalid: new Conflict({ detail: 'The key of this runtime was replaced', kind: 'license_invalid' }),
   meter_unavailable: new Unavailable({ detail: 'The account could not be asked', kind: 'meter_unavailable' }),
 } as const;
 

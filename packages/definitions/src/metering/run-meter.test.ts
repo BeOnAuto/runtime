@@ -101,7 +101,14 @@ describe('a run the meter refuses', () => {
   it('is every run of a runtime composed without its meter', async () => {
     const { prober, running } = await meteredBy(Layer.empty);
 
-    expect(await running()).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'metering_fault' });
+    const refused = await running();
+
+    expect(refused).toMatchObject({
+      status: 'rejected',
+      reason: 'conflict',
+      detail: 'This runtime is missing its usage meter and cannot start runs. Reinstall the official Auto Runtime package.',
+    });
+    expect(refused).not.toHaveProperty('kind');
     expect(prober.runs()).toBe(0);
   });
 });
