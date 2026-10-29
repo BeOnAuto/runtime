@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.0](https://github.com/BeOnAuto/runtime/compare/v0.41.0...v0.42.0) (2026-10-29)
+
+
+### Features
+
+* **global:** establish the Auto product voice ([#397](https://github.com/BeOnAuto/runtime/issues/397)) ([6fb4776](https://github.com/BeOnAuto/runtime/commit/6fb4776ce3d6192991451750f3488cab5ef19298))
+
 ## [0.41.0](https://github.com/BeOnAuto/runtime/compare/v0.40.0...v0.41.0) (2026-10-28)
 
 
