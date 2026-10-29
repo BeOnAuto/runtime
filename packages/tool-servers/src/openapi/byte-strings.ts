@@ -15,7 +15,7 @@ const base64Text = /^(?:[A-Za-z0-9+/]+|[A-Za-z0-9_-]+)={0,2}$/u;
 
 const whitespaceControls: ReadonlySet<string> = new Set(['\t', '\n', '\f', '\r']);
 
-const utf8 = new TextDecoder('utf-8', { fatal: true });
+const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
 
 function definitionAt(reference: Schema.Json | undefined, { components }: AnswerSchemas): Schema.Json | undefined {
   if (typeof reference !== 'string' || !reference.startsWith(definitionReference)) {
