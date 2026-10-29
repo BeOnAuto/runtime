@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.1](https://github.com/BeOnAuto/runtime/compare/v0.42.0...v0.42.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **global:** remove the internal voice guide from public surfaces ([#402](https://github.com/BeOnAuto/runtime/issues/402)) ([7bc2f9a](https://github.com/BeOnAuto/runtime/commit/7bc2f9a11ae4812c7fddd7923aa2584beade03b2))
+
 ## [0.42.0](https://github.com/BeOnAuto/runtime/compare/v0.41.0...v0.42.0) (2026-10-29)
 
 
