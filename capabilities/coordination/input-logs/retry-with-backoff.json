@@ -134,7 +134,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
@@ -447,7 +447,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 4408
+          "value": 4409
         }
       ],
       "outputs": [
@@ -488,7 +488,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",1]",
@@ -604,7 +604,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 6700
+          "value": 6702
         }
       ],
       "outputs": [
@@ -625,7 +625,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "timer_fired",
         "key": "3",
@@ -782,7 +782,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 9518
+          "value": 9521
         }
       ],
       "outputs": [
@@ -815,7 +815,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",2]",
@@ -931,7 +931,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 11811
+          "value": 11815
         }
       ],
       "outputs": [
@@ -952,7 +952,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "timer_fired",
         "key": "5",
@@ -1109,7 +1109,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 14630
+          "value": 14635
         }
       ],
       "outputs": [
@@ -1142,7 +1142,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",3]",
@@ -1242,7 +1242,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 16262
+          "value": 16268
         }
       ],
       "outputs": [

@@ -1,4 +1,4 @@
-import { invalidArguments, type CallResult } from '@on.auto/operations';
+import { invalidArguments, type CallResult, type RejectedCall } from '@on.auto/operations';
 
 import type { CancelReason } from '../dispatch/run-output.ts';
 import { evaluateTemplate } from '../dsl/evaluation.ts';
@@ -6,8 +6,13 @@ import { field, jsonBytesOf } from '../dsl/json.ts';
 import { callErrorOf, capitalized, errorType, raised, type CallSite } from '../dsl/raised-error.ts';
 import { callKeyText } from '../executor/call-key.ts';
 import type { DslError } from '../machine/dsl-error.ts';
-import { mostCallArgumentsBytes } from '../machine/limits.ts';
-import type { FrameBody } from '../machine/run-state.ts';
+import {
+  firstAdmissionWaitMs,
+  longestAdmissionWaitMs,
+  mostAdmissionWaitMs,
+  mostCallArgumentsBytes,
+} from '../machine/limits.ts';
+import type { FrameBody, ValueId } from '../machine/run-state.ts';
 import {
   doneOf,
   raisedOf,
@@ -19,6 +24,49 @@ import {
 } from '../runner/advance.ts';
 
 type CallBody = Extract<FrameBody, { readonly kind: 'call' }>;
+
+type AdmissionBody = Extract<FrameBody, { readonly kind: 'admission' }>;
+
+interface Called {
+  readonly function: string;
+  readonly arguments: ValueId;
+  readonly label: string;
+}
+
+function called(invocation: Invocation, call: Called, run: number, refused?: CallBody['refused']): BodyAdvance {
+  const { machine, entry, frame } = invocation;
+  const { session } = machine;
+  const { reference } = entry;
+  const given = session.valueOf(call.arguments);
+  session.beforeWaiting();
+  const key = { runId: session.runId(), reference, run };
+  const deadline = session.calls.startCall({ key, function: call.function, arguments: given });
+  const child = session.options.functions.childOf?.({
+    function: call.function,
+    reference,
+    run,
+    arguments: given,
+    attributes: session.attributes(),
+  });
+  session.record({
+    reference,
+    run: frame.run,
+    outcome: 'waiting',
+    waitsFor: 'call',
+    ...(child === undefined ? {} : { child }),
+    ...(refused === undefined ? {} : { times: refused.waited }),
+  });
+  const { function: name, arguments: held, label } = call;
+  return waitingOn({
+    kind: 'call',
+    key,
+    function: name,
+    arguments: held,
+    label,
+    deadline,
+    ...(refused === undefined ? {} : { refused }),
+  });
+}
 
 export function startCall(invocation: Invocation): BodyAdvance {
   const { machine, entry, frame, configuration, input, variables } = invocation;
@@ -37,26 +85,8 @@ export function startCall(invocation: Invocation): BodyAdvance {
       entry.reference,
     );
   }
-  session.beforeWaiting();
-  const key = { runId: session.runId(), reference: entry.reference, run: frame.run };
-  const deadline = session.calls.startCall({ key, function: name, arguments: given });
-  const { reference } = entry;
-  const child = session.options.functions.childOf?.({
-    function: name,
-    reference,
-    run: frame.run,
-    arguments: given,
-    attributes: session.attributes(),
-  });
-  session.record({
-    reference,
-    run: frame.run,
-    outcome: 'waiting',
-    waitsFor: 'call',
-    ...(child === undefined ? {} : { child }),
-  });
   const label = session.options.functions.describe(name, given);
-  return waitingOn({ kind: 'call', key, function: name, arguments: session.hold(given), label, deadline });
+  return called(invocation, { function: name, arguments: session.hold(given), label }, frame.run);
 }
 
 type FailedResult = Exclude<CallResult, { readonly status: 'succeeded' }>;
@@ -80,11 +110,60 @@ function errorOf(machine: Machine, result: FailedResult, body: CallBody): DslErr
   });
 }
 
-function answered({ machine }: Invocation, body: CallBody, result: CallResult): BodyAdvance {
-  machine.session.calls.answerCall(body);
-  return result.status === 'succeeded'
-    ? doneOf(machine.session.hold(result.output))
-    : raisedOf(errorOf(machine, result, body));
+function admissionWaitAfter(refusals: number): number {
+  return Math.min(firstAdmissionWaitMs * 2 ** (refusals - 1), longestAdmissionWaitMs);
+}
+
+function waitedForAdmission(invocation: Invocation, body: CallBody, refusal: RejectedCall): BodyAdvance | undefined {
+  const { machine, entry, frame } = invocation;
+  const { session } = machine;
+  const since = body.refused?.since ?? session.now;
+  const until = since + mostAdmissionWaitMs;
+  if (session.now >= until) {
+    return undefined;
+  }
+  const refusals = (body.refused?.refusals ?? 0) + 1;
+  const waited = (body.refused?.waited ?? 1) + 1;
+  const retryAt = Math.min(session.now + admissionWaitAfter(refusals), until);
+  const { reference } = entry;
+  session.beforeWaiting();
+  const timer = session.timers.arm({
+    purpose: 'retry_delay',
+    reference,
+    milliseconds: retryAt - session.now,
+    label: `${reference} admission ${refusals}`,
+  });
+  session.record({
+    reference,
+    run: frame.run,
+    outcome: 'waiting',
+    waitsFor: 'admission',
+    times: waited,
+    refusal: { ...refusal, retry_at: retryAt, until },
+  });
+  const { function: name, arguments: given, label } = body;
+  return waitingOn({
+    kind: 'admission',
+    function: name,
+    arguments: given,
+    label,
+    timer,
+    refused: { since, refusals, waited },
+  });
+}
+
+function failedWith(invocation: Invocation, body: CallBody, result: FailedResult): BodyAdvance {
+  const waiting =
+    result.status === 'rejected' && result.admission === 'refused'
+      ? waitedForAdmission(invocation, body, result)
+      : undefined;
+  return waiting ?? raisedOf(errorOf(invocation.machine, result, body));
+}
+
+function answered(invocation: Invocation, body: CallBody, result: CallResult): BodyAdvance {
+  const { session } = invocation.machine;
+  session.calls.answerCall(body);
+  return result.status === 'succeeded' ? doneOf(session.hold(result.output)) : failedWith(invocation, body, result);
 }
 
 function timedOutCall({ machine }: Invocation, body: CallBody, milliseconds: number): BodyAdvance {
@@ -97,8 +176,8 @@ function timedOutCall({ machine }: Invocation, body: CallBody, milliseconds: num
   });
 }
 
-function resumed({ machine }: Invocation, { key }: CallBody): void {
-  machine.session.resumedFrom({ reference: key.reference, run: key.run, times: 1 });
+function resumed({ machine, frame }: Invocation, { refused }: CallBody): void {
+  machine.session.resumedFrom({ reference: frame.reference, run: frame.run, times: refused?.waited ?? 1 });
 }
 
 export function resumeCall(invocation: Invocation, body: CallBody, signal: Signal): BodyAdvance | undefined {
@@ -115,4 +194,19 @@ export function resumeCall(invocation: Invocation, body: CallBody, signal: Signa
 
 export function cancelCall(machine: Machine, body: CallBody, reason: CancelReason): void {
   machine.session.calls.cancelCall(body, reason);
+}
+
+export function resumeAdmission(invocation: Invocation, body: AdmissionBody, signal: Signal): BodyAdvance | undefined {
+  if (signal.kind !== 'timer' || signal.timerId !== body.timer) {
+    return undefined;
+  }
+  const { machine, frame, entry } = invocation;
+  const { session } = machine;
+  const { refused } = body;
+  session.resumedFrom({ reference: frame.reference, run: frame.run, times: refused.waited });
+  return called(invocation, body, session.nextRun(entry.reference), { ...refused, waited: refused.waited + 1 });
+}
+
+export function cancelAdmission(machine: Machine, body: AdmissionBody): void {
+  machine.session.timers.disarm(body.timer);
 }

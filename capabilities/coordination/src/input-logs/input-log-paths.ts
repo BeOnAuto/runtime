@@ -9,6 +9,14 @@ import {
 } from '../document/definition-arguments.ts';
 import { testSandbox, testWorkflowSettings } from '../testing/test-sandbox.ts';
 import { workflow } from '../testing/workflows.ts';
+import {
+  admittedOnTheThirdTry,
+  fewerThanOneSeat,
+  flakyTwice,
+  refusedSeats,
+  refusingSeats,
+  summarizing,
+} from './input-log-answers.ts';
 import type { InputLog } from './input-log-corpus.ts';
 
 type Answer = (definition: DefinitionArguments, run: number) => CallResult;
@@ -30,24 +38,6 @@ function attributesOf(name: string, runId: string): JsonObject {
     definition: { name, version: 1 },
     caller: { id: 'acme-admin' },
   };
-}
-
-function summarizing({ name, input }: DefinitionArguments): CallResult {
-  return { status: 'succeeded', output: { summary: `${name} of ${JSON.stringify(input)}` } };
-}
-
-function flakyTwice(_definition: DefinitionArguments, run: number): CallResult {
-  return run < 3
-    ? { status: 'rejected', reason: 'unavailable', detail: `busy on call ${run}` }
-    : { status: 'succeeded', output: { calls: run } };
-}
-
-const fewerThanOneSeat = 'seats, How many seats to hold: expected at least 1.';
-
-const refusedSeats = [{ pointer: '/input/seats', detail: fewerThanOneSeat }];
-
-function refusingSeats(): CallResult {
-  return { status: 'rejected', reason: 'invalid_input', detail: fewerThanOneSeat, issues: refusedSeats };
 }
 
 function delivering(...events: readonly { readonly id: string; readonly type: string; readonly data: string }[]) {
@@ -257,6 +247,16 @@ do:
       },
     },
     answer: refusingSeats,
+  },
+  {
+    name: 'admission-wait',
+    source: `
+do:
+  - first: { call: run_definition, with: { type: reasoning, name: summarize, input: { text: hello } } }
+  - second: { call: run_definition, with: { type: reasoning, name: tally } }
+`,
+    ends: { kind: 'completed', output: { summary: 'tally of {}' } },
+    answer: admittedOnTheThirdTry,
   },
 ];
 

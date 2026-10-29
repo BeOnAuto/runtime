@@ -37,3 +37,9 @@ export const mostEmittedEvents = 1024;
 export const mostEmittedEventBytes = 4_194_304;
 
 export const mostEmittedEventSize = 245_760;
+
+export const firstAdmissionWaitMs = 60_000;
+
+export const longestAdmissionWaitMs = 3_600_000;
+
+export const mostAdmissionWaitMs = 86_400_000;

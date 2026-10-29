@@ -1,3 +1,4 @@
+import { RunMeter, type Meter } from '@on.auto/definitions';
 import type { Signers } from '@on.auto/meter';
 import { Ledger } from '@on.auto/operations';
 import type { LanguageModel } from '@on.auto/reasoning';
@@ -19,12 +20,10 @@ export interface ServedParts {
   readonly admit?: LanguageModel['Service']['admit'];
   readonly ledger?: TemporaryLedger;
   readonly signers?: Signers;
+  readonly meter?: Meter;
 }
 
-export function composedWithTheLedgerOver(
-  options: ComposedServerOptions,
-  ledgerOver: LedgerOver,
-): ComposedServerOptions {
+function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {
   return {
     ...options,
     composed: async (settings, telemetry, shippedFiles) => {
@@ -35,4 +34,30 @@ export function composedWithTheLedgerOver(
       return { ...composed, services };
     },
   };
+}
+
+function composedWithTheMeter(options: ComposedServerOptions, meter: Meter): ComposedServerOptions {
+  return {
+    ...options,
+    composed: async (settings, telemetry, shippedFiles) => {
+      const composed = await options.composed(settings, telemetry, shippedFiles);
+      const services = Layer.flatMap(composed.services, (served) =>
+        Layer.succeedContext(Context.add(served, RunMeter, meter)),
+      );
+      return { ...composed, services };
+    },
+  };
+}
+
+interface ComposedParts {
+  readonly ledgerOver: LedgerOver | undefined;
+  readonly meter: Meter | undefined;
+}
+
+export function composedWithTheParts(
+  options: ComposedServerOptions,
+  { ledgerOver, meter }: ComposedParts,
+): ComposedServerOptions {
+  const metered = meter === undefined ? options : composedWithTheMeter(options, meter);
+  return ledgerOver === undefined ? metered : composedWithTheLedgerOver(metered, ledgerOver);
 }

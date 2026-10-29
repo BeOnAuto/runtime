@@ -1,5 +1,7 @@
 import { Schema } from 'effect';
 
+import { InstantSchema } from '../machine/instant.ts';
+
 export const mostNameBytes = 256;
 
 export const mostTitleBytes = 1024;
@@ -18,9 +20,20 @@ const StepOutcomeSchema = Schema.Literals([
 
 export type StepOutcome = typeof StepOutcomeSchema.Type;
 
-const WaitsForSchema = Schema.Literals(['call', 'timer', 'event']);
+const WaitsForSchema = Schema.Literals(['call', 'timer', 'event', 'admission']);
 
 export type WaitsFor = typeof WaitsForSchema.Type;
+
+const StepRefusalSchema = Schema.Struct({
+  kind: Schema.optionalKey(Schema.String),
+  because: Schema.optionalKey(Schema.String),
+  detail: Schema.String,
+  resolve_at: Schema.optionalKey(Schema.String),
+  retry_at: InstantSchema,
+  until: InstantSchema,
+});
+
+export type StepRefusal = typeof StepRefusalSchema.Type;
 
 const StepKeySchema = Schema.Struct({
   reference: Schema.String,
@@ -45,6 +58,7 @@ export const StepSchema = Schema.Struct({
   error: Schema.optionalKey(Schema.Struct({ type: Schema.String, title: Schema.optionalKey(Schema.String) })),
   waits_for: Schema.optionalKey(WaitsForSchema),
   child: Schema.optionalKey(Schema.String),
+  refusal: Schema.optionalKey(StepRefusalSchema),
 });
 
 export type Step = typeof StepSchema.Type;

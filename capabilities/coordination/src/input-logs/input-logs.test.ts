@@ -74,7 +74,7 @@ describe('the recorded input logs of workflows', () => {
     expect(causesNotRecordedBefore(events)).toEqual([]);
   });
 
-  it('are the sixteen paths of the corpus', () => {
+  it('are the seventeen paths of the corpus', () => {
     expect([...committed.keys()]).toEqual(inputLogPaths.map(({ name }) => name).toSorted());
   });
 });

@@ -68,3 +68,18 @@ describe('the rejection of running a definition that names its kind and because'
     });
   });
 });
+
+describe('the refusal of running a definition that names where to put it right', () => {
+  it('keeps the link, which the step that waits for credits shows', () => {
+    const refused = {
+      status: 'rejected',
+      reason: 'conflict',
+      detail: 'The account has no credits left',
+      kind: 'credits_exhausted',
+      because: 'none_left',
+      resolve_at: 'https://studio.example.com/billing',
+    } as const;
+
+    expect(definitionRunResultOf(refused)).toEqual(refused);
+  });
+});

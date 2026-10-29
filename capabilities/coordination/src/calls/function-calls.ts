@@ -18,7 +18,7 @@ const noCaller: CallAnswer = {
 
 function callResultOf(result: EndedRunResult): CallResult {
   if (result.status === 'rejected') {
-    const { reason, detail, kind, because, issues } = result;
+    const { reason, detail, kind, because, issues, resolve_at: resolveAt } = result;
     return {
       status: 'rejected',
       reason,
@@ -26,6 +26,7 @@ function callResultOf(result: EndedRunResult): CallResult {
       ...(kind === undefined ? {} : { kind }),
       ...(because === undefined ? {} : { because }),
       ...(issues === undefined ? {} : { issues }),
+      ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
     };
   }
   if (result.status === 'failed') {
@@ -44,9 +45,23 @@ export function callResultOfEnding(ending: RunEnding): CallResult {
   return callResultOf(endedRunResultOf(ending));
 }
 
+const refusedAdmission: ReadonlySet<string> = new Set([
+  'credits_exhausted',
+  'license_required',
+  'license_invalid',
+  'meter_unavailable',
+]);
+
+function asAnswered(result: EndedRunResult): CallResult {
+  const answer = callResultOf(result);
+  return answer.status === 'rejected' && refusedAdmission.has(answer.kind ?? '')
+    ? { ...answer, admission: 'refused' }
+    : answer;
+}
+
 function callAnswerOf(result: DefinitionRunResult, child: string, resumesAfterMs: number | undefined): CallAnswer {
   if (result.status !== 'waiting') {
-    return callResultOf(result);
+    return asAnswered(result);
   }
   return resumesAfterMs === undefined ? { status: 'waiting', child } : { status: 'waiting', child, resumesAfterMs };
 }

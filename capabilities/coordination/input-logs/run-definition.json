@@ -76,7 +76,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000302",
@@ -327,7 +327,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 3704
+          "value": 3705
         }
       ],
       "outputs": [
@@ -368,7 +368,7 @@
     },
     {
       "type": "input_applied",
-      "format": 9,
+      "format": 10,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000302\",\"/do/0/summarize\",1]",
@@ -479,7 +479,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 5521
+          "value": 5523
         }
       ],
       "outputs": [

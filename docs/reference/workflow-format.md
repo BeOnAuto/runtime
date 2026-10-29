@@ -322,6 +322,19 @@ Some runs finish within their call, and others later. A task waits for the longe
 - Workflows that call workflows reach at most 8 calls deep. The run that would sit a ninth call below the workflow at the top is refused as a `conflict`, which the calling task raises as a `runtime` error.
 - The runs under one workflow at the top of a tree wait for at most 1,000 calls at once. The next call is refused in the same way.
 
+#### When the runtime will not start the run for now
+
+A runtime starts a run only once its meter admits it ([Licenses and credits](../self-host/licenses.md)). When the meter refuses the run a task calls with `credits_exhausted`, `license_required`, `license_invalid` or `meter_unavailable`, the task does not fail. It waits at its step and asks again:
+
+- It asks again a minute after the refusal, then after 2, 4, 8, 16 and 32 minutes, and then every hour.
+- It stops 24 hours after the first refusal. The last try is made at that moment, and a refusal then raises the error of that refusal, as the table below says, in its words. A `catch` sees the refusal only then.
+- Each try starts a new run of the function, under a new `run_id`. A run the meter refused never started, so nothing of it is counted, and the steps before the task never run again.
+- While it waits, the task holds no call and no deadline of its call; each try has the whole wait of its call. The task's own `timeout`, the longest the workflow may run and `cancel_run` still stop it.
+- The wait outlasts a restart of the server: the next try is due when it was due, and a try due while the server was down is made once it is back.
+- A refusal of any other kind, or a run that started and was then rejected with one of these kinds, raises its error at once.
+
+The run stays `started` while it waits. Its history and the events of the playbook show the step as `step_waiting`, waiting for `admission`, with the refusal and when the task tries again; [What `data` shows](http.md#what-data-shows) lists them. Its summary says it in plain words, such as `The step “report” waits for credits, since the account it runs under has used its free runs for the day; it can be put right at https://studio.on.auto/billing. It tries again at 2026-10-28T09:01:00.000Z, and stops waiting at 2026-10-29T09:00:00.000Z.` A workflow that called the waiting one waits for it as it waits for any workflow it called, and both show in the events of the run at the top.
+
 #### When the function's run does not succeed
 
 A run of the function that does not succeed raises an error the workflow can catch:

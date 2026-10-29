@@ -33,7 +33,7 @@ export const SnapshotSchema = Schema.Union([
     snapshotNamesOfFormatsOneToSix,
   ),
   writtenInAnOlderFormat(SnapshotOfFormatSevenSchema, snapshotInFormat(Schema.Literal(7)), snapshotNamesOfFormatSeven),
-  snapshotInFormat(Schema.Literal(8)),
+  snapshotInFormat(Schema.Literals([8, 9])),
 ]);
 
 export type Snapshot = typeof SnapshotSchema.Type;

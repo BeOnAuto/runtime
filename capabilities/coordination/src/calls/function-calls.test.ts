@@ -203,3 +203,40 @@ describe('a call whose definition is rejected with a kind and because', () => {
     });
   });
 });
+
+describe('a call whose definition the meter refused to start', () => {
+  it.each([
+    ['conflict', 'credits_exhausted'],
+    ['conflict', 'license_required'],
+    ['conflict', 'license_invalid'],
+    ['unavailable', 'meter_unavailable'],
+  ] as const)('answers a %s of the kind %s as a refusal of admission, with its link', async (reason, kind) => {
+    const { perform } = answering({
+      status: 'rejected',
+      reason,
+      detail: 'Not now',
+      kind,
+      resolve_at: 'https://studio.example.com/billing',
+    });
+
+    expect(await Effect.runPromise(perform(classify, run, origin, firstAttempt))).toEqual({
+      status: 'rejected',
+      reason,
+      detail: 'Not now',
+      kind,
+      resolve_at: 'https://studio.example.com/billing',
+      admission: 'refused',
+    });
+  });
+
+  it('answers any other refusal as one that ends the step', async () => {
+    const { perform } = answering({ status: 'rejected', reason: 'conflict', detail: 'Closed', kind: 'account_closed' });
+
+    expect(await Effect.runPromise(perform(classify, run, origin, firstAttempt))).toEqual({
+      status: 'rejected',
+      reason: 'conflict',
+      detail: 'Closed',
+      kind: 'account_closed',
+    });
+  });
+});

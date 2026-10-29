@@ -719,7 +719,7 @@ Some events show more in `data`:
 
 - `workflow_input_applied` shows the kind and key of the input and how many steps it moved. It lists the first five, each with its task, run and outcome. For a function's rejection that has a kind and a `because`, it shows both, and its summary says them in words. It also shows the kinds of what the run did next. It never shows the run's data.
 - A step event shows the step's `name` and its `reference` in the document. It also shows `run`, which counts each time the step starts, and `times`, which counts how often it moved that way in that run.
-- `step_waiting` adds what it waits for, `call`, `timer` or `event`. For a call it adds the `run_id` of the run it started, whose `run_started` names that `step_waiting` as its cause.
+- `step_waiting` adds what it waits for, `call`, `timer`, `event` or `admission`. For a call it adds the `run_id` of the run it started, whose `run_started` names that `step_waiting` as its cause. For `admission`, a call the meter would not start for now ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)), it adds the refusal's `detail`, its `kind`, its `because` and its `resolve_at` where it gave them, `retry_at`, when the step tries again, and `until`, when it stops waiting, both in ISO 8601 UTC; its summary says what it waits for, why, where to put it right and when.
 - `step_failed` adds how it failed, and its error's type and title.
 - `event_published` shows the published event's `event_id`, `event_type`, `source`, `subject`, `time` and `data`, and which attributes the runtime `filled` in.
 - `reaction_refused` shows how many times in the `minute` a trigger did not start its workflow, as `count`, and the last `reason`.
@@ -1332,10 +1332,11 @@ The origin of Studio is the one `STUDIO_ORIGIN` names. [Licenses](../self-host/l
 
 [When a tool-calling run cannot finish](reasoning-format.md#when-a-tool-calling-run-cannot-finish) explains when a run ends as `tools_unfinished` or `effect_unknown`. [Retrying under a run id](#retrying-under-a-run-id) says when a request returns `tools_called`.
 
-Inside a workflow, two rejections of a run the workflow called differ from their HTTP form:
+Inside a workflow, three rejections of a run the workflow called differ from their HTTP form:
 
 - `invalid_input` is status 422 over HTTP, but a workflow raises it as a `validation` error of status 400. A `catch` for it matches status 400 or the `validation` type, never 422.
 - A cancellation of a called run that the workflow does not catch rejects the workflow as `invalid_input`, not as `cancelled`, since the workflow itself was not cancelled.
+- `credits_exhausted`, `license_required`, `license_invalid` and `meter_unavailable`, when the meter would not start the run, reach the workflow only 24 hours on: until then its step waits and asks again ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)).
 
 [When the function's run does not succeed](workflow-format.md#when-the-function-s-run-does-not-succeed) has the full table of what a workflow `catch` sees.
 

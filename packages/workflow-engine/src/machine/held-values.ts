@@ -45,7 +45,7 @@ function bodyReach(body: FrameBody): Reach {
   if (body.kind === 'try') {
     return body.phase.kind === 'backing_off' ? nothing : cursorReach(body.phase.list);
   }
-  if (body.kind === 'call') {
+  if (body.kind === 'call' || body.kind === 'admission') {
     return { values: [body.arguments], frames: 0 };
   }
   return body.kind === 'listen'
