@@ -1,4 +1,4 @@
-import { defineHttpOperation, Unavailable, type NotFound } from '@on.auto/operations';
+import { defineHttpOperation, type NotFound } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
@@ -18,11 +18,11 @@ import {
 import {
   finishRefusalOf,
   tokensUnkeptOf,
-  unavailableWords,
+  verifierUnreadOf,
   wrongShapeOf,
   type ConsentRefused,
   type Returned,
-} from './consent-words.ts';
+} from './consent-refusals.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
 
@@ -81,11 +81,7 @@ function redeemedOf(
   return Effect.gen(function* () {
     const verifier = yield* secrets
       .read(verifierSecretId)
-      .pipe(
-        Effect.mapError(
-          ({ detail }) => new Unavailable({ detail: unavailableWords.verifierUnread(named.name, detail) }),
-        ),
-      );
+      .pipe(Effect.mapError(({ detail }) => verifierUnreadOf(named, detail)));
     if (verifier === undefined) {
       return yield* Effect.fail(noOpenConsent(kept.connection.name));
     }

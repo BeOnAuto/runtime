@@ -8,6 +8,7 @@ import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
   consentClientWith,
   finishAskedOf,
+  hostOf,
   memoryRegistrations,
   registeredAt,
   startAskedAt,
@@ -145,7 +146,10 @@ describe('a finish whose code is not redeemed', () => {
     const fake = await served();
     const client = consentClientWith({ fetch: failingTokens, registeredClients: [registeredAt(fake.origin)] });
 
-    expect(await refused(client, await finishAskedOf(client, startAskedAt(fake)))).toEqual({ refused: 'unanswered' });
+    expect(await refused(client, await finishAskedOf(client, startAskedAt(fake)))).toEqual({
+      refused: 'unanswered',
+      call: { step: 'token', host: hostOf(fake), answer: { status: 500, retryAfterMs: null } },
+    });
   });
 });
 

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes, reconnecting, statusesOf, type Added } from '../testing/additions.ts';
 import { consentFake } from '../testing/consents.ts';
+import { connectedCrm } from '../testing/crm-connections.ts';
 import { ada, harness, operationNamed, type Harness, loopbackPolicy } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -173,6 +174,17 @@ describe('the words of reconnecting a connection', () => {
 
     expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
       'Gave a new link to the connection “notes”; the link before it stops working. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
+    );
+  });
+});
+
+describe('the words of reconnecting a connection that is connected', () => {
+  it('say it stays connected as it is until the person finishes on the page, which replaces its credential', async () => {
+    const h = harness();
+    const id = await connectedCrm(h);
+
+    expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
+      'Gave a new link to the connection “crm”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
     );
   });
 });

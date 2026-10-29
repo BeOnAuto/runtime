@@ -1,4 +1,4 @@
-import { HostRefused } from '@on.auto/outbound';
+import { HostRefused, HostUnresolved } from '@on.auto/outbound';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -10,6 +10,7 @@ import {
   connectedByConsent,
   consentClientAt,
   gatedRequests,
+  hostOf,
   registeredAt,
   rowOf,
   servedOf,
@@ -180,12 +181,33 @@ describe('a renewal that fails otherwise', () => {
 
     expect([unanswered, unrenewable]).toEqual([
       new Error(
-        'The authorization server of the connection files did not answer as an authorization server does, so its tokens were not renewed; the next call tries again',
+        `The tokens of the connection files were not renewed, since ${hostOf(gone.fake)} could not be reached for the request sent without a token; the next call tries again`,
       ),
       new Error(
         'The authorization server of the connection files no longer answers as it did when the connection was made, so its tokens cannot be renewed',
       ),
     ]);
+  });
+});
+
+const allowed: string | undefined = undefined;
+
+function unresolvedOnLocalhost(url: string): Promise<string | undefined> {
+  return new URL(url).hostname === 'localhost'
+    ? Promise.reject(new HostUnresolved({ host: 'localhost' }))
+    : Promise.resolve(allowed);
+}
+
+describe('a renewal whose authorization server names an endpoint whose host cannot be looked up', () => {
+  it('fails in the words of an authorization server that did not answer, naming no call', async () => {
+    const connected = await connectedAt({ endpointHost: 'localhost' });
+    const unresolving = { ...connected, served: { ...connected.served, reaches: unresolvedOnLocalhost } };
+
+    expect(await renewed(unresolving, sourceOf(unresolving))).toEqual(
+      new Error(
+        'The authorization server of the connection files did not answer as an authorization server does, so its tokens were not renewed; the next call tries again',
+      ),
+    );
   });
 });
 

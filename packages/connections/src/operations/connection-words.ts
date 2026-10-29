@@ -108,12 +108,14 @@ export function addedWordsOf(added: AddedConnection, providers: ProviderList): s
   return linkedWordsOf((named) => `Added ${named}.`, added, providers);
 }
 
+function newLinkWordsOf(named: string, { status }: AddedConnection): string {
+  return status === 'connected'
+    ? `Gave a new link to ${named}, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working.`
+    : `Gave a new link to ${named}; the link before it stops working.`;
+}
+
 export function reconnectedWordsOf(reconnected: AddedConnection, providers: ProviderList): string {
-  return linkedWordsOf(
-    (named) => `Gave a new link to ${named}; the link before it stops working.`,
-    reconnected,
-    providers,
-  );
+  return linkedWordsOf((named) => newLinkWordsOf(named, reconnected), reconnected, providers);
 }
 
 function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {

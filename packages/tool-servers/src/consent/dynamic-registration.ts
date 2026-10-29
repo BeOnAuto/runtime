@@ -9,13 +9,14 @@ import type {
   RegistrationPlace,
   RegistrationUnavailable,
 } from './consent-client.ts';
-import { refusalOf, unanswered } from './consent-failures.ts';
+import { observedCalls } from './consent-failures.ts';
 
 const RegistrationFieldsSchema = Schema.Struct({
   client_id: ClientIdSchema,
   client_secret: Schema.optionalKey(Schema.String),
   client_secret_expires_at: Schema.optionalKey(Schema.Number),
   token_endpoint_auth_method: Schema.optionalKey(Schema.String),
+  redirect_uris: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 type RegistrationFields = typeof RegistrationFieldsSchema.Type;
@@ -67,9 +68,20 @@ export function registrationFieldsOf({ registration }: KeptRegistration): Regist
   return decodeRegistration(Redacted.value(registration));
 }
 
-function isLasting(kept: KeptRegistration, nowMillis: number): boolean {
-  const endsAt = registrationFieldsOf(kept).client_secret_expires_at;
-  return endsAt === undefined || endsAt === neverEnds || endsAt * millisOfASecond > nowMillis;
+function isLasting({ client_secret: secret, client_secret_expires_at: endsAt }: RegistrationFields, nowMillis: number) {
+  return secret === undefined || endsAt === undefined || endsAt === neverEnds || endsAt * millisOfASecond > nowMillis;
+}
+
+function isTakenAt(
+  kept: KeptRegistration | undefined,
+  returnAddress: string,
+  nowMillis: number,
+): kept is KeptRegistration {
+  if (kept === undefined) {
+    return false;
+  }
+  const fields = registrationFieldsOf(kept);
+  return fields.redirect_uris?.includes(returnAddress) === true && isLasting(fields, nowMillis);
 }
 
 function keyOf({ issuer, server }: RegistrationPlace): string {
@@ -83,22 +95,26 @@ function answeredRegistration({
   tokenEndpointMethods,
   fetch,
 }: Registration): Effect.Effect<KeptRegistration, ConsentRefusal> {
+  const observed = observedCalls('registration', endpoint, fetch);
   return Effect.tryPromise({
     try: async () => {
-      const answer = await fetch(endpoint, {
+      const answer = await observed.fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify(registrationAskedOf(returnAddress, place.server, tokenEndpointMethods)),
       });
       return answer.ok ? answeredFieldsOf(await answer.json()) : Option.none();
     },
-    catch: refusalOf,
+    catch: observed.refusalOf,
   }).pipe(
     Effect.flatMap(
       Option.match({
-        onNone: () => Effect.fail(unanswered),
+        onNone: () => Effect.fail(observed.refusalOfTheAnswer()),
         onSome: (fields) =>
-          Effect.succeed({ clientId: fields.client_id, registration: Redacted.make(encodeRegistration(fields)) }),
+          Effect.succeed({
+            clientId: fields.client_id,
+            registration: Redacted.make(encodeRegistration({ ...fields, redirect_uris: [returnAddress] })),
+          }),
       }),
     ),
   );
@@ -188,17 +204,17 @@ export function registrationFor(
   registration: Registration,
   keeping: RegistrationKeeping,
 ): Effect.Effect<KeptRegistration, ConsentRefusal> {
-  const { place } = registration;
+  const { place, returnAddress } = registration;
   return keeping.registeredOnce(
     place,
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const waiting = keeping.unkept.heldAt(place);
-      if (waiting !== undefined && isLasting(waiting, now)) {
+      if (isTakenAt(waiting, returnAddress, now)) {
         return yield* keptAt(place, waiting, keeping);
       }
       const latest = yield* Effect.mapError(keeping.registrations.latestAt(place), registrationUnavailable);
-      if (latest !== undefined && isLasting(latest, now)) {
+      if (isTakenAt(latest, returnAddress, now)) {
         return latest;
       }
       return yield* keptAt(place, yield* answeredRegistration(registration), keeping);

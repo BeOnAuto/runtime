@@ -7,6 +7,7 @@ import {
   consentClientWith,
   everyHost,
   failingAt,
+  hostOf,
   pingAnsweredWith,
   recordedFetch,
   type ClientRegistration,
@@ -272,6 +273,7 @@ describe('the naming of a way that cannot ask the server', () => {
 
     expect(await refused({ url: `${silent.origin}/mcp`, reaches: everyHost }, { requestMs: 50 })).toEqual({
       refused: 'unanswered',
+      call: { step: 'ping', host: hostOf(silent), answer: { failed: 'timed_out' } },
     });
   });
 
@@ -281,7 +283,14 @@ describe('the naming of a way that cannot ask the server', () => {
     expect(await refused(askedAt(fake), { fetch: failingAt('/.well-known/oauth-authorization-server') })).toEqual({
       refused: 'at_the_issuer',
       issuer: fake.origin,
-      refusal: { refused: 'unanswered' },
+      refusal: {
+        refused: 'unanswered',
+        call: {
+          step: 'authorization_server_metadata',
+          host: hostOf(fake),
+          answer: { status: 500, retryAfterMs: null },
+        },
+      },
     });
   });
 });

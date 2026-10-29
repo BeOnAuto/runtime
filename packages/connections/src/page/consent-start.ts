@@ -1,4 +1,4 @@
-import { defineHttpOperation, Unavailable } from '@on.auto/operations';
+import { defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
@@ -7,7 +7,7 @@ import { ClientSourceField, ExpiresAtField } from '../operations/connection-fiel
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
 import { startableConnectionOf } from '../registry/registry-decisions.ts';
 import { consentAskedOf, forgottenVerifierOf, namedOf, type ConsentServices } from './consent-asking.ts';
-import { consentRefusalOf, unavailableWords } from './consent-words.ts';
+import { consentRefusalOf, verifierUnkeptOf } from './consent-refusals.ts';
 import { LinkSchema } from './link-operations.ts';
 
 const StartedSchema = Schema.Struct({
@@ -36,6 +36,7 @@ export function defineStartConsent(services: ConsentServices) {
     description: [
       "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
       'The consent is finished within ten minutes, and a second start replaces the first.',
+      'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
       'On a runtime that signs people in, only the person who added the connection may start it.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/consent' },
@@ -55,11 +56,7 @@ export function defineStartConsent(services: ConsentServices) {
         .pipe(Effect.mapError((refusal) => consentRefusalOf(named, refusal)));
       const verifierSecretId = yield* secrets
         .keep(started.verifier)
-        .pipe(
-          Effect.mapError(
-            ({ detail }) => new Unavailable({ detail: unavailableWords.verifierUnkept(named.name, detail) }),
-          ),
-        );
+        .pipe(Effect.mapError(({ detail }) => verifierUnkeptOf(named, detail)));
       const expiresAt = yield* tenMinutesOn;
       yield* recordInRegistry({
         type: 'start',

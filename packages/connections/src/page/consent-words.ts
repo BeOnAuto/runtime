@@ -1,22 +1,22 @@
-import { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
+import { Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
 import type {
   ClientSource,
+  ConsentCall,
   ConsentRefusal,
   IssuerRefusal,
   RevocationFailure,
-  SecretKeepingFailure,
   WayRefusal,
 } from '@on.auto/tool-servers';
 
 import { invalidAddition } from '../entries/entry-checks.ts';
+import { unansweredWordsOf } from './unanswered-words.ts';
 
 export interface ConsentNamed {
   readonly name: string;
   readonly issuer: string;
   readonly provider: string | null;
+  readonly connected: boolean;
 }
-
-export type ConsentRefused = Conflict | Forbidden | InvalidInput | Unavailable;
 
 type ConflictingRefusal = Extract<
   ConsentRefusal,
@@ -47,8 +47,6 @@ const notAsAdded = 'so it cannot be connected as it was added';
 const notByConsent = 'so this runtime cannot connect it by consent';
 
 const takesNoChallenge = 'does not take the authorization code with an S256 challenge';
-
-const didNotAnswerAsAnAuthorizationServer = 'did not answer as an authorization server does; try again in a moment';
 
 const notAScope = 'written with characters a scope does not hold';
 
@@ -117,11 +115,11 @@ const issuerNamedBy: Readonly<
     `The authorization server of the connection ${named.name} ${namesAsItsIssuer(other)}, ${whereItWasNamed(named)}, ${notAsAdded}`,
 };
 
-function refusedAt(pointer: string, detail: string): InvalidInput {
+export function refusedAt(pointer: string, detail: string): InvalidInput {
   return new InvalidInput({ detail: 'The consent cannot be finished as it is given', issues: [{ pointer, detail }] });
 }
 
-function detailOf(named: ConsentNamed, refusal: ConflictingRefusal): string {
+export function detailOf(named: ConsentNamed, refusal: ConflictingRefusal): string {
   if (refusal.refused === 'another_issuer') {
     return issuerNamedBy[refusal.by](named, refusal.named);
   }
@@ -134,35 +132,6 @@ function detailOf(named: ConsentNamed, refusal: ConflictingRefusal): string {
   return refusal.refused === 'authorization_server_unnamed'
     ? noLongerNamedAt(refusal.url)
     : conflictsOf[refusal.refused](named);
-}
-
-function conflictOf(named: ConsentNamed, refusal: ConflictingRefusal): Conflict {
-  return new Conflict({ detail: detailOf(named, refusal) });
-}
-
-export function consentRefusalOf(named: ConsentNamed, refusal: ConsentRefusal): ConsentRefused {
-  if (refusal.refused === 'host') {
-    return new Forbidden({ detail: refusal.rule });
-  }
-  if (refusal.refused === 'unanswered') {
-    return new Unavailable({
-      detail: `The authorization server of the connection ${named.name} ${didNotAnswerAsAnAuthorizationServer}`,
-    });
-  }
-  if (refusal.refused === 'registration_unavailable') {
-    return new Unavailable({ detail: unavailableWords.registration(named.name, refusal.detail) });
-  }
-  if (refusal.refused === 'registration_refused') {
-    return new Conflict({
-      detail: `The client the runtime registered for the connection ${named.name} cannot be kept: ${refusal.detail}`,
-    });
-  }
-  if (refusal.refused === 'iss') {
-    return refusedAt('/iss', `Expected the issuer of the authorization server of the connection, ${named.issuer}`);
-  }
-  return refusal.refused === 'code'
-    ? refusedAt('/code', 'Expected a code the authorization server takes; it refused this one')
-    : conflictOf(named, refusal);
 }
 
 type RefusedAtTheServer = Exclude<WayRefusal, { readonly refused: 'host' | 'unanswered' | 'at_the_issuer' }>;
@@ -201,11 +170,14 @@ function issuerWordsOf(refusal: Exclude<IssuerRefusal, { readonly refused: 'unan
     : refusedByTheIssuer[refusal.refused];
 }
 
+function unansweredAdditionOf(url: string, call: ConsentCall | undefined): Unavailable {
+  return new Unavailable({ detail: unansweredWordsOf(`The server at ${url} cannot be connected now`, call) });
+}
+
 function issuerRefusalOf(url: string, { issuer, refusal }: RefusedAtTheIssuer): InvalidInput | Unavailable {
-  const named = `The authorization server ${issuer} of the server at ${url}`;
   return refusal.refused === 'unanswered'
-    ? new Unavailable({ detail: `${named} ${didNotAnswerAsAnAuthorizationServer}` })
-    : refusedKindOf(`${named} ${issuerWordsOf(refusal)}`);
+    ? unansweredAdditionOf(url, refusal.call)
+    : refusedKindOf(`The authorization server ${issuer} of the server at ${url} ${issuerWordsOf(refusal)}`);
 }
 
 export function takesConsentOf(url: string, issuer: string): InvalidInput {
@@ -228,40 +200,11 @@ export function wayRefusalOf(url: string, refusal: WayRefusal): WayRefused {
     return new Forbidden({ detail: refusal.rule });
   }
   if (refusal.refused === 'unanswered') {
-    return new Unavailable({
-      detail: `The server at ${url} did not answer as an MCP server does; try again in a moment`,
-    });
+    return unansweredAdditionOf(url, refusal.call);
   }
   return refusal.refused === 'at_the_issuer'
     ? issuerRefusalOf(url, refusal)
     : refusedKindOf(serverWordsOf(url, refusal));
-}
-
-export function tokensUnkeptOf({ name }: ConsentNamed, { _tag, detail }: SecretKeepingFailure): Conflict | Unavailable {
-  return _tag === 'secret_refused'
-    ? new Conflict({ detail })
-    : new Unavailable({ detail: unavailableWords.tokensUnkept(name, detail) });
-}
-
-const throughAuto = (name: string) =>
-  `Expected handle: the consent of the connection ${name} began through Auto's consent service, which answers a handle, not a code`;
-
-const throughAClientOfItsOwn = (name: string) =>
-  `Expected code: the consent of the connection ${name} began with a client of this runtime's, which answers a code, not a handle`;
-
-export type Returned = 'code' | 'handle';
-
-export function wrongShapeOf({ name }: ConsentNamed, began: Returned, given: Returned): InvalidInput | undefined {
-  if (began === given) {
-    return undefined;
-  }
-  return given === 'code' ? refusedAt('/code', throughAuto(name)) : refusedAt('/handle', throughAClientOfItsOwn(name));
-}
-
-export function finishRefusalOf(named: ConsentNamed, refusal: ConsentRefusal, given: Returned): ConsentRefused {
-  return given === 'handle' && refusal.refused === 'code'
-    ? refusedAt('/handle', "Expected a handle Auto's consent service takes; it refused this one")
-    : consentRefusalOf(named, refusal);
 }
 
 function unansweredRevocationOf(name: string, source: ClientSource): string {

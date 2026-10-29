@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { servedStudio } from '@on.auto/identity/testing';
 import type { ReturnKind } from '@on.auto/tool-servers';
 import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, consentedAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import { autoClientsOf, consentedAt, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -230,8 +230,7 @@ describe('a start refused where the server cannot proceed', () => {
       },
       {
         reason: 'unavailable',
-        detail:
-          'The authorization server of the connection files did not answer as an authorization server does; try again in a moment',
+        detail: `The consent of the connection files cannot go on: ${hostOf(gone)} could not be reached for the request sent without a token; try again in a moment`,
       },
     ]);
   });

@@ -24,8 +24,8 @@ export type ConsentServices = Pick<ConnectionServices, 'consent' | 'policy' | 'p
 
 export type FinishedConsent = Effect.Success<ReturnType<ConsentServices['consent']['finish']>>;
 
-export function namedOf({ name, provider, credential }: RecordedConnection): ConsentNamed {
-  return { name, issuer: required(credential.issuer), provider };
+export function namedOf({ name, provider, credential, status }: RecordedConnection): ConsentNamed {
+  return { name, issuer: required(credential.issuer), provider, connected: status === 'connected' };
 }
 
 function serverOf({ type, entry, provider }: RecordedConnection): ConsentServer {

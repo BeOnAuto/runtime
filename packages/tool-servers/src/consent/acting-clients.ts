@@ -116,7 +116,7 @@ function dynamicActing(kept: KeptRegistration, returnAddress: string): ActingCli
   const { client_id: clientId, ...given } = registrationFieldsOf(kept);
   return {
     chosen: { client_id: clientId, client_source: 'dynamic' },
-    identity: { client_id: clientId, redirect_uris: [returnAddress], ...given },
+    identity: { client_id: clientId, ...given, redirect_uris: [returnAddress] },
     authentication: undefined,
   };
 }
