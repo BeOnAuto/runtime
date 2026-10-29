@@ -77,7 +77,9 @@ function busy(settingsOf: SettingsOf): void {
       first: null,
     };
     for (const held of ['first', 'second']) {
-      void Effect.runPromise(models.walk(scriptedRuntime, { sha256: held, path: `/${held}.scripted` }, walk));
+      void Effect.runPromise(
+        models.walk('acme', scriptedRuntime, Effect.succeed({ sha256: held, path: `/${held}.scripted` }), walk),
+      );
     }
     await projected.scripted.untilSleeping(['walk', 'walk']);
 

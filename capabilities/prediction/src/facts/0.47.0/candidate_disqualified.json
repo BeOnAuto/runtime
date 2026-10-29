@@ -1,0 +1,17 @@
+{
+  "type": "candidate_disqualified",
+  "data": {
+    "sha256": "c7d8e9",
+    "because": "feature_unlicensed",
+    "detail": "This runtime's license does not include prediction-onnx, which executes onnx models. The account holder or an organization admin can add it at https://studio.on.auto/licenses.",
+    "feature": "prediction-onnx"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

@@ -132,6 +132,11 @@ const buildFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
     'Candidate a1b2c3d4e5f6… was disqualified: it did not beat every baseline with the confidence asked',
   ],
   [
+    'candidate_disqualified',
+    { sha256, because: 'feature_unlicensed', detail: 'The license lacks it', feature: 'prediction-example' },
+    'Candidate a1b2c3d4e5f6… was disqualified: the license of this runtime does not include the feature the model runtime of its format needs',
+  ],
+  [
     'baseline_scored',
     { baseline: 'persistence', scores: [score], coverage: 0.7, series_walked: 3 },
     'The baseline persistence was walked over 3 series: mase 0.75',
@@ -180,6 +185,23 @@ const modelFacts: readonly (readonly [string, Schema.JsonObject, string])[] = [
       predictions_bytes: 90,
     },
     'Version 1 predicted 3 series from 2026-10-11 in the shadow of version 2, and 1 whose answer was not finite or had a low above its likely value or a high below it',
+  ],
+  [
+    'shadow_predicted',
+    {
+      version: 2,
+      of: 1,
+      build: 'run-2',
+      runtime: null,
+      origin: '2026-10-11',
+      count: 0,
+      missing: 0,
+      predictions_sha256: sha256,
+      predictions_bytes: 30,
+      because: 'feature_unlicensed',
+      feature: 'prediction-example',
+    },
+    'Version 1 was not walked from 2026-10-11 in the shadow of version 2: the license of this runtime does not include prediction-example, which the model runtime of its format needs',
   ],
   [
     'shadow_graded',

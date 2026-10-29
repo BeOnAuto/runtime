@@ -1,10 +1,21 @@
 import { Effect } from 'effect';
 
-import { aMinute, recordedWork, restingUntil, type Performing } from '../build-work/build-performing.ts';
+import {
+  aMinute,
+  recordedWork,
+  restingUntil,
+  type Performing,
+  type PerformedStep,
+} from '../build-work/build-performing.ts';
 import { untilTheRunEnds } from '../build-work/run-watch.ts';
 import type { BuildWorkOf } from '../facts/build-facts.ts';
 import type { ModelFile, ModelOutcome, WalkAnswer } from '../model-processes/model-processes.ts';
-import { readsTheCalendar, type ExecutingRuntime, type RuntimeNamed } from '../runtimes/model-runtimes.ts';
+import {
+  readsTheCalendar,
+  type ExecutingRuntime,
+  type RuntimeNamed,
+  executesFormat,
+} from '../runtimes/model-runtimes.ts';
 import { baselineWalks } from './baselines.ts';
 import { verdictOf, type Scoring } from './candidate-scoring.ts';
 import { remainingOfTheOrigins } from './scoring-grid.ts';
@@ -49,16 +60,23 @@ function answeredFact(scoring: Scoring, walked: Walked, answer: WalkAnswer, mill
     : { type: 'candidate_disqualified', data: { sha256, because: verdict.because, detail: verdict.detail } };
 }
 
-export function walkedCandidate(
+interface Walking<Placing> {
+  readonly executing: ExecutingRuntime;
+  readonly sha256: string;
+  readonly placed: Effect.Effect<ModelFile, Placing>;
+  readonly format: string;
+}
+
+export function walkedCandidate<Placing>(
   performing: Performing,
   { document, assembled }: ScoredBuild,
-  { executing, file }: { readonly executing: ExecutingRuntime; readonly file: ModelFile },
-): Effect.Effect<void> {
+  { executing, sha256, placed, format }: Walking<Placing>,
+): Effect.Effect<void, Effect.Error<PerformedStep> | Placing> {
   const { ports, build, now } = performing;
-  const { sha256 } = file;
+  const { org } = build.address;
   return Effect.gen(function* () {
     const { path: rows, scoring } = yield* scoringOf(ports, build, document, assembled);
-    const walk = ports.models.walk(executing.runtime, file, {
+    const walk = ports.models.walk(org, executing.runtime, placed, {
       rows,
       window: assembled.window,
       holdout: assembled.holdout,
@@ -72,6 +90,13 @@ export function walkedCandidate(
     if (outcome.ended === 'answered') {
       const walked = { runtime: executing.named, sha256 };
       return yield* recordedWork(performing, answeredFact(scoring, walked, outcome.answer, outcome.milliseconds));
+    }
+    if (outcome.ended === 'unlicensed') {
+      const { feature } = outcome;
+      const which = executesFormat(format);
+      const { detail } = yield* ports.features.refusal({ org, feature, which });
+      const data = { sha256, because: 'feature_unlicensed', detail, feature };
+      return yield* recordedWork(performing, { type: 'candidate_disqualified', data });
     }
     const disqualified = disqualifiedOf(sha256, outcome);
     return disqualified === undefined

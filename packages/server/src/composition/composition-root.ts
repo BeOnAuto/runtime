@@ -14,11 +14,15 @@ import { ledgerLayerFor } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
 
+type Installed = NonNullable<Parameters<typeof functionsServedBy>[3]['installed']>;
+
 export interface CompositionParts {
   readonly programPoolOf?: FunctionWiring['programPoolOf'];
   readonly clock?: WorkflowParts['clock'];
   readonly toolTiming?: FunctionWiring['toolTiming'];
   readonly signers?: NonNullable<Parameters<typeof applicationLayer>[1]>['signers'];
+  readonly features?: NonNullable<Parameters<typeof applicationLayer>[1]>['features'];
+  readonly installed?: Installed;
 }
 
 type Composing = Parameters<ComposedServerOptions['composed']>;
@@ -32,10 +36,12 @@ interface Serving {
   readonly shippedFiles: Composing[2];
   readonly database: Awaited<ReturnType<typeof ledgerDatabaseOf>>;
   readonly capabilities: ReturnType<typeof capabilityRegistryHeld>;
+  readonly installed: Installed | undefined;
 }
 
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
-  const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, capabilities } = serving;
+  const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, capabilities, installed } =
+    serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
     const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata, license } =
@@ -53,6 +59,8 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       connections: source,
       offering,
       shippedFiles,
+      features: license.features,
+      ...(installed === undefined ? {} : { installed }),
     });
     const parts = {
       ledger,
@@ -76,7 +84,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
 
 export function compositionRootWith(
   modelAccessOf: ModelAccessOf,
-  { programPoolOf, clock, toolTiming, signers }: CompositionParts = {},
+  { programPoolOf, clock, toolTiming, signers, features, installed }: CompositionParts = {},
 ): ComposedServerOptions {
   const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
@@ -90,10 +98,21 @@ export function compositionRootWith(
       studio: settings.studio.origin,
       ...settings.license,
       ...(signers === undefined ? {} : { signers }),
+      ...(features === undefined ? {} : { features }),
     };
     return {
       services: capabilities.closedFirstOf(applicationLayer(ledgerLayer, meter)),
-      serve: servedWith({ modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, capabilities }),
+      serve: servedWith({
+        modelAccessOf,
+        wiring,
+        clock,
+        settings,
+        telemetry,
+        shippedFiles,
+        database,
+        capabilities,
+        installed,
+      }),
     };
   });
 }

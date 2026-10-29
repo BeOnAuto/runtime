@@ -1,3 +1,4 @@
+import type { Conflict, Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { BuildState } from '../builds/build-state.ts';
@@ -7,7 +8,7 @@ import type { PredictionFunctionDefinitionDocument } from '../document/predictio
 import type { BuildWorkOf } from '../facts/build-facts.ts';
 import { modelFileName, type CachedFile } from '../model-cache/model-files.ts';
 import type { ModelOutcome, Signature } from '../model-processes/model-processes.ts';
-import { fedShapeOf, runtimeNamed, type ExecutedFormat } from '../runtimes/model-runtimes.ts';
+import { fedShapeOf, runtimeNamed, type ExecutedFormat, executesFormat } from '../runtimes/model-runtimes.ts';
 
 type Uploaded = BuildWorkOf<'candidate_uploaded'>['data'];
 
@@ -64,7 +65,11 @@ export function receivedCandidate(
   return ports.caches.models.received(stream, modelFileName(chosen.format));
 }
 
-export function checkedCandidate(ports: PredictionPorts, checking: Checking, file: CachedFile): Effect.Effect<Checked> {
+export function checkedCandidate(
+  ports: PredictionPorts,
+  checking: Checking,
+  file: CachedFile,
+): Effect.Effect<Checked, Conflict | Unavailable> {
   const { build, document, chosen } = checking;
   const { sha256, bytes } = file;
   const already = build.uploads.find((uploaded) => uploaded.sha256 === sha256);
@@ -75,12 +80,21 @@ export function checkedCandidate(ports: PredictionPorts, checking: Checking, fil
     const detail = `The build has its ${candidatesInABuild} candidates`;
     return Effect.succeed({ refused: { sha256, bytes, because: 'too_many', detail } });
   }
-  const checked = ports.models.check(chosen.runtime, { sha256, path: file.path }, fedShapeOf(document));
-  return Effect.map(checked, (outcome): Checked => {
+  const checked = ports.models.check(
+    build.address.org,
+    chosen.runtime,
+    { sha256, path: file.path },
+    fedShapeOf(document),
+  );
+  return Effect.flatMap(checked, (outcome): Effect.Effect<Checked, Conflict | Unavailable> => {
     if (outcome.ended === 'answered') {
-      return answeredOf(checking, file, outcome.answer);
+      return Effect.succeed(answeredOf(checking, file, outcome.answer));
+    }
+    if (outcome.ended === 'unlicensed') {
+      const use = { org: build.address.org, feature: outcome.feature, which: executesFormat(chosen.format) };
+      return Effect.flatMap(ports.features.refusal(use), Effect.fail);
     }
     const refusal = refusalOf(outcome);
-    return refusal === undefined ? { busy: true } : { refused: { sha256, bytes, ...refusal } };
+    return Effect.succeed(refusal === undefined ? { busy: true } : { refused: { sha256, bytes, ...refusal } });
   });
 }

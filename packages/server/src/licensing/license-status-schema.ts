@@ -42,6 +42,10 @@ export const LicenseStatusSchema = Schema.Struct({
     'The name of that org, as Auto signed it into the license, or null where it named none',
   ),
   plan: orNull(Schema.String, 'The plan of that org'),
+  features: Schema.Array(Schema.String).annotate({
+    description:
+      'The features of the license in force, which a model runtime that names one needs to do its work; none without a license, or once it is invalid or lapsed',
+  }),
   standing: orNull(
     Schema.Literals(['ok', 'low', 'empty', 'overage', 'near_cap', 'capped']),
     'Where the credits of its org stood when Auto signed the license',

@@ -88,6 +88,20 @@ export function offlineCreditsStopped(options: MeterOptions, installation: strin
   );
 }
 
+export function featureUnlicensed(
+  options: Pick<MeterOptions, 'studio'>,
+  installation: string | undefined,
+  { feature, which }: { readonly feature: string; readonly which: string },
+): Conflict {
+  const page = licensesPageOf(options, installation);
+  return new Conflict({
+    detail: `This runtime's license does not include ${feature}, which ${which}. The account holder or an organization admin can add it at ${page}.`,
+    kind: 'feature_unlicensed',
+    resolve_at: page,
+    ...(installation === undefined ? {} : { runtime_id: installation }),
+  });
+}
+
 export function invalidityOf({ detail, because }: AccountRefusal): Invalidity {
   return isLicenseInvalidBecause(because) ? { detail, because } : { detail };
 }

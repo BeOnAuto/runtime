@@ -31,6 +31,10 @@ const ofPrediction: ReadonlyArray<readonly [ExplainedRejection, string]> = [
     'the build asks no trainer, since its function names none, so the playbook fits its candidates itself',
   ],
   [{ reason: 'conflict', kind: 'already_active' }, 'that version is already the active one'],
+  [
+    { reason: 'conflict', kind: 'feature_unlicensed' },
+    'the license of this runtime does not include the feature the model runtime of its format needs',
+  ],
   [{ reason: 'unavailable', kind: 'builds_full' }, 'this server is scoring as many builds as it may at once'],
   [
     { reason: 'unavailable', kind: 'builds_full', because: 'builds_of_the_day' },
@@ -77,6 +81,12 @@ describe('the explanation of a refusal of a prediction function', () => {
   it('says how to ask for a build when no version is active, and that nothing was changed', () => {
     expect(unsuccessfulWords('predict', 'command', rejected('conflict', 'x', undefined, 'no_active_version'))).toBe(
       'Could not predict: the function has no active version, and no model runtime of this server answers a function with none. Nothing was changed. It answers once a build has given it an active version: ask for one with the input { build: {} }.',
+    );
+  });
+
+  it('says that the license lacks the feature a question’s model needs, and who can add it', () => {
+    expect(unsuccessfulWords('predict', 'command', rejected('conflict', 'x', undefined, 'feature_unlicensed'))).toBe(
+      'Could not predict: the license of this runtime does not include the feature the model runtime of its format needs. Nothing was changed. Trying again will not help until the account holder or an organization admin adds the feature to the license at the page the details name.',
     );
   });
 

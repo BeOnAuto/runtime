@@ -23,7 +23,7 @@ describe('the extensions of the release', () => {
         provenance: 'release',
         name: series.name,
         version: release.version,
-        provides: [{ point: 'prediction/model-runtime', contract: 2 }],
+        provides: [{ point: 'prediction/model-runtime', contract: 3 }],
       },
     ]);
     expect(loaded.provided(modelRuntimePoint).map(({ name, formats }) => [name, formats])).toEqual([

@@ -8,5 +8,7 @@
   "src/meter-stream/0.46.0/license_activated.json": "7950f9a8d57480d5c2b3eaab23aec397dd242fecf80937effad4971c60fcb492",
   "src/meter-stream/0.46.0/license_invalidated.json": "b3b50a9e6e4c3af279437ee788fe04809770bd3b277c8e327c203d7c66690a47",
   "src/meter-stream/0.46.0/license_renewed.json": "9cd5ed2cc0add72e1b262cafe2033df1f4ed9a22daf65b75422c634b39c5adf1",
-  "src/meter-stream/0.46.0/usage_reported.json": "785a0e48599d9169e5b123f8fcf5f30e246d3884129002b58cf67291532a4a84"
+  "src/meter-stream/0.46.0/usage_reported.json": "785a0e48599d9169e5b123f8fcf5f30e246d3884129002b58cf67291532a4a84",
+  "src/meter-stream/0.47.0/license_activated.json": "dba9b267d88eefe36c825194bb0607dca67ca9aedd2430cfb6da23d9bf7360dd",
+  "src/meter-stream/0.47.0/license_renewed.json": "3f62c9d6d9cc07ac3a3c644679c6d947c0a74556084d68b17557323c9a537498"
 }

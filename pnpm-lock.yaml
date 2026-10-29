@@ -763,6 +763,9 @@ importers:
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations
+      '@on.auto/prediction-contract':
+        specifier: workspace:*
+        version: link:../prediction-contract
       effect:
         specifier: 'catalog:'
         version: 4.0.0

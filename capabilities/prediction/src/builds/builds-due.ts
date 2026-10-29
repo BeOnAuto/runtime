@@ -2,7 +2,7 @@ import type { ProjectedKeyedRow } from '@on.auto/operations';
 import type { DueItem, DueWork } from '@on.auto/workflow-host';
 import { Effect, Option } from 'effect';
 
-import type { Performing } from '../build-work/build-performing.ts';
+import { aMinute, restingUntil, type Performing } from '../build-work/build-performing.ts';
 import { afterTheRun } from '../build-work/run-ended.ts';
 import { duringTheRun } from '../build-work/run-steps.ts';
 import type { PredictionPorts, StartChild } from '../capability/prediction-ports.ts';
@@ -23,9 +23,9 @@ function performedBuild({ ports, runs }: BuildsDueParts, kept: ProjectedKeyedRow
     const correlationId = yield* correlationOf(ports.ledger, address);
     const performing: Performing = { ports, runs, row, build, lineage: { causationId: row.cause, correlationId }, now };
     const document = yield* documentOfBuild(ports.ledger, build);
-    return build.run.run.status === 'started'
-      ? yield* duringTheRun(performing, document)
-      : yield* afterTheRun(performing, document);
+    const step =
+      build.run.run.status === 'started' ? duringTheRun(performing, document) : afterTheRun(performing, document);
+    return yield* step.pipe(Effect.catchTag('unavailable', () => restingUntil(performing, now + aMinute)));
   });
 }
 

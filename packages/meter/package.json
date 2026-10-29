@@ -17,6 +17,7 @@
     "@on.auto/definitions": "workspace:*",
     "@on.auto/ledger": "workspace:*",
     "@on.auto/operations": "workspace:*",
+    "@on.auto/prediction-contract": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

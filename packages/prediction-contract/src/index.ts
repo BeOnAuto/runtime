@@ -12,6 +12,7 @@ export {
   type Provision,
 } from './extension/extension-manifest.ts';
 export {
+  FeatureSchema,
   FormatSchema,
   ModelRuntimeSchema,
   type ModelRuntime,

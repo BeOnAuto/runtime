@@ -38,6 +38,7 @@ describe('the services the playbook operations run on', () => {
       '@on.auto/ledger/LedgerChores',
       '@on.auto/ledger/LedgerConnection',
       '@on.auto/ledger/LedgerLog',
+      '@on.auto/meter/LicensedFeatures',
       '@on.auto/meter/RuntimeLicense',
       '@on.auto/operations/IncidentReporter',
       '@on.auto/operations/Ledger',

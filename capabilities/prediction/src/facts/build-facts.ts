@@ -19,7 +19,7 @@ export type Score = typeof ScoreSchema.Type;
 
 export const AgainstSchema = Schema.Struct({ baseline: BaselineSchema, p_better: Schema.Number });
 
-const RefusedBecauseSchema = Schema.Literals(['failed_to_load', 'wrong_signature', 'too_many']);
+const RefusedBecauseSchema = Schema.Literals(['failed_to_load', 'wrong_signature', 'too_many', 'feature_unlicensed']);
 
 const DisqualifiedBecauseSchema = Schema.Literals([
   'timed_out',
@@ -29,6 +29,7 @@ const DisqualifiedBecauseSchema = Schema.Literals([
   'answered_badly',
   'coverage_below_floor',
   'not_better',
+  'feature_unlicensed',
 ]);
 
 const AssembledSchema = Schema.Struct({
@@ -77,6 +78,7 @@ const DisqualifiedSchema = Schema.Struct({
   sha256: Schema.String,
   because: DisqualifiedBecauseSchema,
   detail: Schema.optionalKey(Schema.String),
+  feature: Schema.optionalKey(Schema.String),
 });
 
 const BaselineScoredSchema = Schema.Struct({

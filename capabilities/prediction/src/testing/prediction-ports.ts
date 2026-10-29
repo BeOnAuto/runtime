@@ -5,9 +5,14 @@ import { Effect } from 'effect';
 
 import { predictionBuilds } from '../builds/builds-projection.ts';
 import type { BuildBounds, PredictionPorts } from '../capability/prediction-ports.ts';
-import { modelPorts, type ModelPortSettings } from '../model-processes/model-ports.ts';
+import {
+  licensedModelsOf,
+  modelPorts,
+  type ModelPorts,
+  type ModelPortSettings,
+} from '../model-processes/model-ports.ts';
 import { predictionModels } from '../models/models-projection.ts';
-import { scriptedRuntime } from '../runtime-testing/scripted-runtime.ts';
+import { scriptedFeaturesOf, scriptedRuntime, type ScriptedLicense } from '../runtime-testing/scripted-runtime.ts';
 import { closedAfterTheTest, scratchDirectory } from './scratch.ts';
 
 export interface PortOptions extends Pick<ModelPortSettings, 'module' | 'deadlines' | 'mostBytes'> {
@@ -17,9 +22,11 @@ export interface PortOptions extends Pick<ModelPortSettings, 'module' | 'deadlin
   readonly longJobs?: number;
   readonly openRequests?: number;
   readonly runtimes?: PredictionPorts['runtimes'];
+  readonly license?: ScriptedLicense;
+  readonly features?: PredictionPorts['features'];
   readonly projections?: readonly KeyedProjection[];
   readonly content?: (kept: RecordedContent) => RecordedContent;
-  readonly models?: (processes: PredictionPorts['models']) => PredictionPorts['models'];
+  readonly models?: (processes: ModelPorts['models']) => ModelPorts['models'];
 }
 
 export interface TestPorts {
@@ -42,6 +49,7 @@ export function testPorts(options: PortOptions = {}): TestPorts {
     scoringAtOnce: Math.max(1, processes - 2),
     directory,
   });
+  const features = options.features ?? scriptedFeaturesOf(options.license ?? { features: [] });
   const ports: PredictionPorts = {
     ledger:
       options.content === undefined
@@ -49,8 +57,12 @@ export function testPorts(options: PortOptions = {}): TestPorts {
         : { ...ledger.service, content: options.content(ledger.service.content) },
     database: options.database ?? emptyHostDatabase,
     runtimes: options.runtimes ?? [scriptedRuntime],
+    features,
     ...modelled,
-    models: options.models === undefined ? modelled.models : options.models(modelled.models),
+    models: licensedModelsOf(
+      options.models === undefined ? modelled.models : options.models(modelled.models),
+      features,
+    ),
     bounds: { buildsPerDay: 4, buildsAtOnce: 2, mostOpenRequests: 64, ...options.bounds },
     openRequests: () => Effect.succeed(options.openRequests ?? 0),
   };

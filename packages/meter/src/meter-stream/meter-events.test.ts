@@ -33,8 +33,8 @@ const baseline: readonly (typeof MeterEventSchema.Type)[] = [
     data: { run: 'run-1', until: '2026-10-29T10:10:00.000Z', basis: 'licensed' },
     context: acted,
   },
-  { type: 'license_activated', data: license, context: acted },
-  { type: 'license_renewed', data: { ...license, charged_through: 180 }, context: acted },
+  { type: 'license_activated', data: { ...license, features: [] }, context: acted },
+  { type: 'license_renewed', data: { ...license, charged_through: 180, features: [] }, context: acted },
   {
     type: 'license_invalidated',
     data: { key_sha256: 'f0e1d2', detail: 'The key of the license was rotated', because: 'key_rotated' },
@@ -77,10 +77,19 @@ const baseline: readonly (typeof MeterEventSchema.Type)[] = [
   },
 ];
 
+const withFeatures: readonly (typeof MeterEventSchema.Type)[] = [
+  { type: 'license_activated', data: { ...license, features: ['prediction-onnx'] }, context: acted },
+  {
+    type: 'license_renewed',
+    data: { ...license, charged_through: 180, features: ['prediction-onnx'] },
+    context: acted,
+  },
+];
+
 describe('the facts of the meter and of the allocations of credits it holds', () => {
   recordedFactsBehaviour({
     schema: MeterEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.47.0': withFeatures },
   });
 });

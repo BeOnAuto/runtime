@@ -28,22 +28,18 @@ export function shadowWalk(
   { executing, rows }: { readonly executing: ExecutingRuntime; readonly rows: ShadowRows },
 ) {
   const grid = shadowGridOf(document, rows);
-  return Effect.flatMap(
+  const placed = Effect.map(
     ports.caches.models.pathOf(executing.file, () => ports.ledger.content.get(playbook, of.fileSha256)),
-    (kept) =>
-      ports.models.walk(
-        executing.runtime,
-        { sha256: of.fileSha256, path: Option.getOrThrow(Option.fromNullishOr(kept)) },
-        {
-          rows: rows.path,
-          window: rows.files.window,
-          holdout: 1,
-          steps: grid.steps,
-          features: featureNamesOf(document).length,
-          given: givenIndexesOf(document),
-          remaining: remainingOfTheOrigins(grid),
-          first: readsTheCalendar(executing.runtime) ? grid.first : null,
-        },
-      ),
+    (kept) => ({ sha256: of.fileSha256, path: Option.getOrThrow(Option.fromNullishOr(kept)) }),
   );
+  return ports.models.walk(playbook.org, executing.runtime, placed, {
+    rows: rows.path,
+    window: rows.files.window,
+    holdout: 1,
+    steps: grid.steps,
+    features: featureNamesOf(document).length,
+    given: givenIndexesOf(document),
+    remaining: remainingOfTheOrigins(grid),
+    first: readsTheCalendar(executing.runtime) ? grid.first : null,
+  });
 }

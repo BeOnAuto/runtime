@@ -44,7 +44,7 @@ export function buildRun(
     if (refusal !== undefined) {
       return yield* Effect.fail(refusal);
     }
-    yield* fitsWhenNoneTrains(ports, document);
+    yield* fitsWhenNoneTrains(ports, document, playbook.org);
     yield* claimable(claiming);
     const files = yield* buildFilesOf(ports, playbook, document, now);
     const assembled = assembledOf(files);

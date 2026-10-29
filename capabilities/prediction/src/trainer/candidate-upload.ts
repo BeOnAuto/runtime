@@ -40,7 +40,7 @@ export function uploadCandidate(ports: PredictionPorts) {
     title: 'Upload candidate',
     description: [
       'Uploads a candidate model to a build of a prediction function that waits for its trainer: a file in a format the brief of the build lists, named by format, at most 64 MiB, with its Content-Length.',
-      'The file is checked in a model process by the model runtime of its format, and refused when that runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates; a format the server does not execute for the function is refused at format.',
+      'The file is checked in a model process by the model runtime of its format, and refused when that runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates; a format the server does not execute for the function is refused at format, and one whose model runtime needs a feature the license of the runtime does not include is refused as feature_unlicensed.',
       'The answer is the SHA-256 the answer to the build names; the same bytes again answer the same.',
     ].join(' '),
     route: { method: 'POST', path: '/runs/{run_id}/build/candidates' },

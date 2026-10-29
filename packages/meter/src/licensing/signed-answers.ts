@@ -1,5 +1,6 @@
 import { createPublicKey, verify } from 'node:crypto';
 
+import { FeatureSchema } from '@on.auto/prediction-contract';
 import { Option, Schema } from 'effect';
 
 import { shownOrgName } from './org-name.ts';
@@ -42,6 +43,7 @@ const LicenseSchema = Schema.Struct({
   standing: StandingSchema,
   credits: LicenseCreditsSchema,
   fallback: FallbackSchema,
+  features: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 const AllocationSchema = Schema.Struct({
@@ -54,7 +56,10 @@ const AllocationSchema = Schema.Struct({
   refresh_by: Schema.String,
 });
 
-export type License = Omit<typeof LicenseSchema.Type, 'org_name'> & { readonly org_name: string | null };
+export type License = Omit<typeof LicenseSchema.Type, 'org_name' | 'features'> & {
+  readonly org_name: string | null;
+  readonly features: readonly string[];
+};
 
 export type AllocationPayload = typeof AllocationSchema.Type;
 
@@ -75,12 +80,15 @@ function payloadOf<S extends Schema.Codec<unknown, unknown>>(
     isSignedBy(signers, signed) ? decoded(Buffer.from(signed.payload, 'base64url').toString('utf8')) : Option.none();
 }
 
+const isFeatureName = Schema.is(FeatureSchema);
+
 const licensePayloadIn = payloadOf(LicenseSchema);
 
 export function licenseIn(signed: Signed, signers: Signers): Option.Option<License> {
   return Option.map(licensePayloadIn(signed, signers), (license) => ({
     ...license,
     org_name: shownOrgName(license.org_name),
+    features: (license.features ?? []).filter((name) => isFeatureName(name)),
   }));
 }
 

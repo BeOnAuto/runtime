@@ -1,6 +1,7 @@
 import type {
   CallerIdentity,
   CallLink,
+  Conflict,
   Lineage,
   PlaybookAddress,
   ProjectionAdvancer,
@@ -9,6 +10,7 @@ import type {
   RecordedReader,
   StreamReader,
   StreamWriter,
+  Unavailable,
 } from '@on.auto/operations';
 import type { ModelRuntime } from '@on.auto/prediction-contract';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
@@ -18,7 +20,7 @@ import type { Effect, Schema } from 'effect';
 import type { DatasetsPort } from '../dataset/datasets-port.ts';
 import type { FileCache, NamedFileCache } from '../model-cache/model-files.ts';
 import type { ParsedRows } from '../model-cache/parsed-rows.ts';
-import type { ModelProcesses } from '../model-processes/model-processes.ts';
+import type { LicensedModels } from '../model-processes/model-ports.ts';
 import type { ScoringPermits } from '../model-processes/scoring-permits.ts';
 
 export interface PredictionLedger
@@ -58,11 +60,26 @@ export interface BuildBounds {
   readonly mostOpenRequests: number;
 }
 
+interface FeatureAsked {
+  readonly org: string;
+  readonly feature: string;
+}
+
+interface FeatureUse extends FeatureAsked {
+  readonly which: string;
+}
+
+interface LicensedFeaturesPort {
+  readonly includes: (asked: FeatureAsked) => Effect.Effect<boolean, Unavailable>;
+  readonly refusal: (use: FeatureUse) => Effect.Effect<Conflict, Unavailable>;
+}
+
 export interface PredictionPorts {
   readonly ledger: PredictionLedger;
   readonly database: Pick<HostDatabase, 'readConsistently'>;
   readonly runtimes: readonly ModelRuntime[];
-  readonly models: ModelProcesses;
+  readonly features: LicensedFeaturesPort;
+  readonly models: LicensedModels;
   readonly caches: ModelCaches;
   readonly permits: ScoringPermits;
   readonly bounds: BuildBounds;

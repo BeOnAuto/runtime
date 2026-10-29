@@ -20,7 +20,7 @@ export const isLicenseInvalidBecause = Schema.is(LicenseInvalidBecauseSchema);
 
 type LicenseInvalidBecause = typeof LicenseInvalidBecauseSchema.Type;
 
-export const LicenseRecordSchema = Schema.Struct({
+const signedFields = {
   installation: Schema.String,
   org: Schema.String,
   org_name: Schema.optionalKey(Schema.String),
@@ -34,12 +34,30 @@ export const LicenseRecordSchema = Schema.Struct({
   standing: StandingSchema,
   credits: LicenseCreditsSchema,
   fallback: FallbackSchema,
+};
+
+const keptFields = {
   licensed_reported: Schema.Int,
   key_sha256: Schema.String,
   license: SignedSchema,
+};
+
+export const LicenseRecordWithoutFeaturesSchema = Schema.Struct({ ...signedFields, ...keptFields });
+
+export const LicenseRecordSchema = Schema.Struct({
+  ...signedFields,
+  features: Schema.Array(Schema.String),
+  ...keptFields,
 });
 
 export type LicenseRecord = typeof LicenseRecordSchema.Type;
+
+export function withNoFeatures<Fact extends { readonly data: typeof LicenseRecordWithoutFeaturesSchema.Type }>({
+  data,
+  ...fact
+}: Fact): Omit<Fact, 'data'> & { readonly data: LicenseRecord } {
+  return { ...fact, data: { ...data, features: [] } };
+}
 
 export const InvalidatedSchema = Schema.Struct({
   key_sha256: Schema.String,
@@ -70,6 +88,7 @@ export interface HeldLicense {
   readonly standing: Standing;
   readonly credits: { readonly available: number; readonly owed: number; readonly overage_cap: number };
   readonly fallback: Fallback;
+  readonly features: readonly string[];
   readonly licensed_reported: number;
   readonly key_sha256: string;
   readonly taken_at: string;

@@ -133,8 +133,8 @@ describe('an extension a runtime refuses, so that it does not start', () => {
   it.each<readonly [string, string, string]>([
     [
       'built against a contract outside the range the runtime accepts',
-      manifestSource('@acme/models', [provisionSource('acme-runtime', ['acme'], 3)]),
-      'The extension @acme/models is refused: it provides prediction/model-runtime built against contract 3, and this runtime accepts contracts 1 to 2',
+      manifestSource('@acme/models', [provisionSource('acme-runtime', ['acme'], 4)]),
+      'The extension @acme/models is refused: it provides prediction/model-runtime built against contract 4, and this runtime accepts contracts 1 to 3',
     ],
     [
       'that exports no manifest',

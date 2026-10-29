@@ -31,6 +31,7 @@ export interface LicenseStatus {
   readonly org: string | null;
   readonly org_name: string | null;
   readonly plan: string | null;
+  readonly features: readonly string[];
   readonly standing: Standing | null;
   readonly licensed: number;
   readonly runs_left: number | null;
@@ -52,6 +53,7 @@ export interface StatusReading {
   readonly state: MeterState;
   readonly key_sha256: string | undefined;
   readonly key_source: KeySource | null;
+  readonly features: readonly string[];
   readonly at: string;
 }
 
@@ -134,6 +136,7 @@ function keyedStatusOf(reading: StatusReading, footing: Footing): LicenseStatus 
       ? null
       : { used: Math.min(admitted.first_runs, options.allowance), of: options.allowance },
     ...licenseFieldsOf(licenseOfFooting(footing)),
+    features: reading.features,
     licensed: admitted.licensed,
     runs_left: runsLeftOf(footing, admitted.licensed),
     fallback: fallbackOf(words),

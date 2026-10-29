@@ -41,6 +41,8 @@ export interface Keeping {
   readonly revoke: (key: string, because: Revocation | undefined) => void;
   readonly nameOf: (org: string) => string | undefined;
   readonly name: (org: string, name: string) => void;
+  readonly featuresOf: (org: string) => readonly string[] | undefined;
+  readonly grant: (org: string, features: readonly string[]) => void;
   readonly booksOf: (org: string) => Books;
   readonly fund: (org: string, books: Partial<Books>) => void;
   readonly chargedThrough: (installation: string) => number;
@@ -79,6 +81,7 @@ interface Kept {
   readonly registrations: Map<string, Registration>;
   readonly revoked: Map<string, AccountFailure>;
   readonly names: Map<string, string>;
+  readonly features: Map<string, readonly string[]>;
   readonly books: Map<string, Books>;
   readonly charged: Map<string, number>;
 }
@@ -88,6 +91,7 @@ function freshKept(): Kept {
     registrations: new Map(),
     revoked: new Map(),
     names: new Map(),
+    features: new Map(),
     books: new Map(),
     charged: new Map(),
   };
@@ -155,6 +159,10 @@ export function accountKeeping(): Keeping {
     nameOf: (org) => kept.names.get(org),
     name: (org, name) => {
       kept.names.set(org, name);
+    },
+    featuresOf: (org) => kept.features.get(org),
+    grant: (org, features) => {
+      kept.features.set(org, features);
     },
     booksOf,
     fund: (org, books) => {

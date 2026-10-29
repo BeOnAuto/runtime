@@ -5,6 +5,7 @@ import { Context, Effect, Layer, Ref } from 'effect';
 import { AccountService, type AccountPorts } from '../accounts/account-service.ts';
 import { meterAdmitting, type MeteredLedger } from '../admission/admitting.ts';
 import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
+import { heldFeaturesOf, LicensedFeatures, type LicensedFeaturesPorts } from '../standing/licensed-features.ts';
 import type { KeyInHand, Licensing } from './licensing.ts';
 import { licensePortsOf, RuntimeLicense, unlicensed, type LicenseGiven, type LicensePorts } from './runtime-license.ts';
 import { admittedSelfHosted } from './self-hosted-admission.ts';
@@ -12,6 +13,7 @@ import { admittedSelfHosted } from './self-hosted-admission.ts';
 export interface SelfHostedMeter {
   readonly meter: Meter;
   readonly license: LicensePorts;
+  readonly features: LicensedFeaturesPorts;
 }
 
 function activatedKey(key: string): KeyInHand {
@@ -35,19 +37,22 @@ export function selfHostedMeterOver(
       keyHeld: (held) => Ref.update(inForce, (current) => (current?.key === held ? current : activatedKey(held))),
     };
     const meter = meterAdmitting(ledgered, (run) => admittedSelfHosted(licensing, run));
-    return { meter, license: licensePortsOf(licensing) };
+    return { meter, license: licensePortsOf(licensing), features: heldFeaturesOf(licensing) };
   });
 }
 
 export function ledgerMeter(
   options: MeterOptions = meterDefaults,
   given: LicenseGiven = unlicensed,
-): Layer.Layer<RunMeter | RuntimeLicense, never, Ledger | AccountService> {
+): Layer.Layer<RunMeter | RuntimeLicense | LicensedFeatures, never, Ledger | AccountService> {
   return Layer.effectContext(
     Effect.gen(function* () {
       const ledgered = { ledger: yield* Ledger, account: yield* AccountService };
-      const { meter, license } = yield* selfHostedMeterOver(ledgered, options, given);
-      return Context.make(RunMeter, meter).pipe(Context.add(RuntimeLicense, license));
+      const { meter, license, features } = yield* selfHostedMeterOver(ledgered, options, given);
+      return Context.make(RunMeter, meter).pipe(
+        Context.add(RuntimeLicense, license),
+        Context.add(LicensedFeatures, features),
+      );
     }),
   );
 }

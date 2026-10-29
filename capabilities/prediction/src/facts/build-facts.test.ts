@@ -87,11 +87,27 @@ const baseline: readonly (typeof BuildFactSchema.Type)[] = [
   },
 ];
 
+const unlicensedDetail =
+  "This runtime's license does not include prediction-onnx, which executes onnx models. The account holder or an organization admin can add it at https://studio.on.auto/licenses.";
+
+const unlicensed: readonly (typeof BuildFactSchema.Type)[] = [
+  {
+    type: 'candidate_refused',
+    data: { sha256: 'b1c2d3', bytes: 2048, because: 'feature_unlicensed', detail: unlicensedDetail },
+    context: onTheRun,
+  },
+  {
+    type: 'candidate_disqualified',
+    data: { sha256: 'c7d8e9', because: 'feature_unlicensed', detail: unlicensedDetail, feature: 'prediction-onnx' },
+    context: onTheRun,
+  },
+];
+
 describe('the facts a prediction function records on the run of a build', () => {
   recordedFactsBehaviour({
     schema: BuildFactSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.47.0': unlicensed },
   });
 });
 

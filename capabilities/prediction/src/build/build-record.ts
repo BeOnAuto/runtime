@@ -6,7 +6,7 @@ import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { Assembled } from '../facts/build-facts.ts';
 import type { DatasetFiles } from '../files/files-refusals.ts';
-import { fedShapeOf, fittingRuntimeFor } from '../runtimes/model-runtimes.ts';
+import { fedShapeOf, fittingRuntimeFor, licensedFor } from '../runtimes/model-runtimes.ts';
 import { keptBrief } from './build-brief.ts';
 import { buildRecordOf, trainerlessRecordOf } from './build-request.ts';
 
@@ -38,7 +38,7 @@ export function deferredRecordOf(
     keptBrief(ports.ledger.content, { org, playbook }, document, {
       name: definition.name,
       files,
-      runtimes: ports.runtimes,
+      licensed: licensedFor(ports, org),
     }),
     (brief) =>
       buildRecordOf({ run: { org, playbook, id }, name: definition.name, source, assembled, brief, requestedAt: now }),
@@ -48,8 +48,12 @@ export function deferredRecordOf(
 export function fitsWhenNoneTrains(
   ports: PredictionPorts,
   document: PredictionFunctionDefinitionDocument,
+  org: string,
 ): Effect.Effect<void, Unavailable> {
-  return document.source === undefined && fittingRuntimeFor(ports.runtimes, fedShapeOf(document)) === undefined
-    ? Effect.fail(nothingFits)
-    : Effect.void;
+  if (document.source !== undefined) {
+    return Effect.void;
+  }
+  return Effect.flatMap(fittingRuntimeFor(licensedFor(ports, org), fedShapeOf(document)), (runtime) =>
+    runtime === undefined ? Effect.fail(nothingFits) : Effect.void,
+  );
 }

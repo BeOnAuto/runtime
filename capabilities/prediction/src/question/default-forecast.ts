@@ -1,20 +1,34 @@
 import { createHash } from 'node:crypto';
 
 import { Conflict, contentOfBytes, type PlaybookAddress, type Unavailable } from '@on.auto/operations';
+import type { ModelRuntime } from '@on.auto/prediction-contract';
 import { Effect } from 'effect';
 
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import type { ContentSource } from '../model-cache/model-files.ts';
-import { fedShapeOf, fittingRuntimeFor, functionShapeOf } from '../runtimes/model-runtimes.ts';
+import {
+  fedShapeOf,
+  fittingRuntimeFor,
+  functionShapeOf,
+  licensedFor,
+  executesFormat,
+  refusedAs,
+} from '../runtimes/model-runtimes.ts';
 import { activeVersionOf, type ActiveVersion } from './active-version.ts';
 import { busy, crashedAs, ended } from './model-refusals.ts';
+
+interface DefaultBecause {
+  readonly because: 'feature_unlicensed';
+  readonly feature: string;
+}
 
 export interface AnsweringModel {
   readonly version: number | null;
   readonly file: string;
   readonly format: string;
   readonly source: ContentSource;
+  readonly defaultBecause?: DefaultBecause;
 }
 
 const noDefaultForecast = new Conflict({
@@ -31,15 +45,16 @@ function activeModelOf(
   return { version, file, format, source: () => ports.ledger.content.get(playbook, file) };
 }
 
-function defaultForecastOf(
+function defaultModelOf(
   ports: PredictionPorts,
-  document: PredictionFunctionDefinitionDocument,
+  { document, org }: Defaulting,
+  runtime: ModelRuntime,
 ): Effect.Effect<AnsweringModel, Conflict | Unavailable> {
-  const runtime = fittingRuntimeFor(ports.runtimes, fedShapeOf(document));
-  if (runtime === undefined) {
-    return Effect.fail(noDefaultForecast);
-  }
-  return Effect.flatMap(ports.models.defaultModel(runtime, functionShapeOf(document)), (outcome) => {
+  const licensed = { ...ports, org };
+  return Effect.flatMap(ports.models.defaultModel(org, runtime, functionShapeOf(document)), (outcome) => {
+    if (outcome.ended === 'unlicensed') {
+      return refusedAs(licensed, outcome.feature, `${runtime.name} needs to answer the default forecast`);
+    }
     if (outcome.ended === 'busy') {
       return Effect.fail(busy);
     }
@@ -59,6 +74,35 @@ function defaultForecastOf(
   });
 }
 
+interface Defaulting {
+  readonly document: PredictionFunctionDefinitionDocument;
+  readonly org: string;
+}
+
+function defaultForecastOf(
+  ports: PredictionPorts,
+  defaulting: Defaulting,
+  refusal: Effect.Effect<never, Conflict | Unavailable> = Effect.fail(noDefaultForecast),
+): Effect.Effect<AnsweringModel, Conflict | Unavailable> {
+  const fitting = fittingRuntimeFor(licensedFor(ports, defaulting.org), fedShapeOf(defaulting.document));
+  return Effect.flatMap(fitting, (runtime) =>
+    runtime === undefined ? refusal : defaultModelOf(ports, defaulting, runtime),
+  );
+}
+
+export function defaultInPlaceOf(
+  ports: PredictionPorts,
+  defaulting: Defaulting,
+  { active, feature }: { readonly active: AnsweringModel; readonly feature: string },
+): Effect.Effect<AnsweringModel, Conflict | Unavailable> {
+  const which = `${executesFormat(active.format)}, the format of version ${String(active.version)}`;
+  const refusal = refusedAs({ ...ports, org: defaulting.org }, feature, which);
+  return Effect.map(defaultForecastOf(ports, defaulting, refusal), (answering): AnsweringModel => ({
+    ...answering,
+    defaultBecause: { because: 'feature_unlicensed', feature },
+  }));
+}
+
 export interface AnsweredFor {
   readonly playbook: PlaybookAddress;
   readonly name: string;
@@ -73,6 +117,8 @@ export function answeringModelOf(
   return Effect.flatMap(
     activeVersionOf({ ledger: ports.ledger, playbook, name, definitionVersion, document }),
     (active) =>
-      active === null ? defaultForecastOf(ports, document) : Effect.succeed(activeModelOf(ports, playbook, active)),
+      active === null
+        ? defaultForecastOf(ports, { document, org: playbook.org })
+        : Effect.succeed(activeModelOf(ports, playbook, active)),
   );
 }

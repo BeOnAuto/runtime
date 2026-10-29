@@ -32,7 +32,7 @@ export const meterUnavailable = new Unavailable({
   kind: 'meter_unavailable',
 });
 
-export function licensesPageOf({ studio }: MeterOptions, installation: string | undefined): string {
+export function licensesPageOf({ studio }: Pick<MeterOptions, 'studio'>, installation: string | undefined): string {
   return installation === undefined ? `${studio}/licenses` : `${studio}/licenses?installation=${installation}`;
 }
 
