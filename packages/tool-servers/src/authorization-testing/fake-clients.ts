@@ -33,6 +33,8 @@ export interface ClientRegistration {
   readonly refusesRegistration?: boolean;
   readonly registeredClientId?: string;
   readonly registrationSecretSeconds?: number;
+  readonly registrationsBeforeTheLimit?: number;
+  readonly registrationRetryAfter?: string;
 }
 
 export interface KnownClient {
@@ -177,14 +179,36 @@ async function authenticatedIn(
     : client;
 }
 
-function secretEndOf({ registrationSecretSeconds }: ClientRegistration): number {
-  return registrationSecretSeconds === undefined ? 0 : Math.floor(Date.now() / 1000) + registrationSecretSeconds;
+function secretEndIn(
+  { registrationSecretSeconds }: ClientRegistration,
+  clientSecret: string | undefined,
+): { readonly client_secret_expires_at?: number } {
+  if (registrationSecretSeconds === undefined) {
+    return clientSecret === undefined ? {} : { client_secret_expires_at: 0 };
+  }
+  return { client_secret_expires_at: Math.floor(Date.now() / 1000) + registrationSecretSeconds };
 }
 
-async function registeredIn(
-  { registration, clients, registered }: Registry,
-  request: Readonly<Request>,
-): Promise<Response> {
+const rateLimited = { error: 'rate_limited', error_description: 'Too many requests. Please try again later.' };
+
+function isPastTheLimit({ registration, registered }: Registry): boolean {
+  const { registrationsBeforeTheLimit: limit } = registration;
+  return limit !== undefined && registered.size >= limit;
+}
+
+function rateLimitedBy({ registrationRetryAfter: retryAfter }: ClientRegistration): Response {
+  const answer = json(rateLimited, 429);
+  if (retryAfter !== undefined) {
+    answer.headers.set('retry-after', retryAfter);
+  }
+  return answer;
+}
+
+async function registeredIn(registry: Registry, request: Readonly<Request>): Promise<Response> {
+  const { registration, clients, registered } = registry;
+  if (isPastTheLimit(registry)) {
+    return rateLimitedBy(registration);
+  }
   const asked = decodeRegistration(await request.text());
   if (Option.isNone(asked) || registration.refusesRegistration === true) {
     return json({ error: 'invalid_client_metadata', error_description: 'Expected redirect_uris' }, 400);
@@ -198,9 +222,8 @@ async function registeredIn(
   return json(
     {
       client_id: clientId,
-      ...(clientSecret === undefined
-        ? {}
-        : { client_secret: clientSecret, client_secret_expires_at: secretEndOf(registration) }),
+      ...(clientSecret === undefined ? {} : { client_secret: clientSecret }),
+      ...secretEndIn(registration, clientSecret),
       client_id_issued_at: Math.floor(Date.now() / 1000),
       redirect_uris: asked.value.redirect_uris,
       token_endpoint_auth_method: method,

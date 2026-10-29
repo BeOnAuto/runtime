@@ -51,16 +51,19 @@ function requestIdOf(message: unknown): RequestId | undefined {
   return decoded?.method === undefined ? undefined : decoded.id;
 }
 
+const delaySeconds = /^\d+$/u;
+
+const mostRetryAfterMs = 86_400_000;
+
+const httpDate = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
+
 export function retryAfterMsOf(value: string | null, now: number): number | null {
-  if (value === null || value.trim() === '') {
-    return null;
+  const given = value?.trim() ?? '';
+  if (delaySeconds.test(given)) {
+    return Math.min(Number(given) * 1000, mostRetryAfterMs);
   }
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) {
-    return Math.max(0, Math.ceil(seconds * 1000));
-  }
-  const date = Date.parse(value);
-  return Number.isNaN(date) ? null : Math.max(0, date - now);
+  const date = httpDate.test(given) ? Date.parse(given) : Number.NaN;
+  return Number.isNaN(date) ? null : Math.min(Math.max(0, date - now), mostRetryAfterMs);
 }
 
 type Observing = (response: Readonly<Response>, requestIdHeader: string | null) => ObservedResponse;

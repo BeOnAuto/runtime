@@ -2,7 +2,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { consentClientWith, everyHost, failingAt } from '../testing/index.ts';
+import { consentClientWith, everyHost, failingAt, hostOf } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import { serveFakeMcp, servedForConsent } from '../testing/served-fakes.ts';
 import type { ConsentClientOptions } from './consent-client.ts';
@@ -24,6 +24,10 @@ function refused(url: string, options: Partial<ConsentClientOptions> = {}) {
 }
 
 const wellKnownPath = '/.well-known/oauth-protected-resource/mcp';
+
+function unreadAt(host: string, answer: unknown) {
+  return { refused: 'unanswered', call: { step: 'resource_metadata', host, answer } };
+}
 
 const unreachableAtTheWellKnownPaths: FetchLike = (...[address, init]: readonly [unknown, unknown?]) =>
   new URL(String(address)).pathname.startsWith('/.well-known/')
@@ -57,13 +61,15 @@ describe('a server given by hand whose answer names no protected resource metada
   it('is unanswered where its well-known paths answer a server error, fail on the network or do not answer in time', async () => {
     const bearing = await kept(serveFakeMcp({ bearer: 'files-token' }));
     const silent = await kept(serveOnLoopback(silentAtTheWellKnownPaths));
-    const unanswered = { refused: 'unanswered' };
-
     expect([
       await refused(bearing.url, { fetch: failingAt(wellKnownPath) }),
       await refused(bearing.url, { fetch: unreachableAtTheWellKnownPaths }),
       await refused(`${silent.origin}/mcp`, { requestMs: 50 }),
-    ]).toEqual([unanswered, unanswered, unanswered]);
+    ]).toMatchObject([
+      unreadAt(hostOf(bearing), { status: 500, retryAfterMs: null }),
+      unreadAt(hostOf(bearing), { failed: 'failing' }),
+      { refused: 'unanswered', call: { host: hostOf(silent), answer: { failed: 'timed_out' } } },
+    ]);
     expect(silent.heard().map(({ path }) => path)).toEqual(['/mcp', wellKnownPath]);
   });
 });
@@ -72,6 +78,8 @@ describe('a server given by hand whose challenge names protected resource metada
   it('is unanswered where that metadata cannot be read there nor at its well-known paths', async () => {
     const fake = await kept(servedForConsent({ dynamicRegistration: true }));
 
-    expect(await refused(fake.url, { fetch: failingAt(wellKnownPath) })).toEqual({ refused: 'unanswered' });
+    expect(await refused(fake.url, { fetch: failingAt(wellKnownPath) })).toEqual(
+      unreadAt(hostOf(fake), { status: 500, retryAfterMs: null }),
+    );
   });
 });

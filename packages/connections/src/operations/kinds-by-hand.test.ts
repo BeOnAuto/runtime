@@ -1,5 +1,5 @@
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { failingAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import { failingAt, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -170,7 +170,7 @@ describe('an MCP server given by hand that does not answer how it authenticates'
     const unavailable = {
       status: 'rejected',
       reason: 'unavailable',
-      detail: `The server at ${silent.url} did not answer as an MCP server does; try again in a moment`,
+      detail: `The server at ${silent.url} cannot be connected now: ${hostOf(silent)} did not answer the request sent without a token in time; try again in a moment`,
     };
 
     expect([
@@ -192,10 +192,10 @@ describe('an MCP server given by hand that does not answer how it authenticates'
       await adding(h, givenAt(bare, secret)),
       await adding(h, leftOutAt(bare)),
     ]).toEqual(
-      [naming, naming, bare, bare].map(({ url }) => ({
+      [naming, naming, bare, bare].map((asked) => ({
         status: 'rejected',
         reason: 'unavailable',
-        detail: `The server at ${url} did not answer as an MCP server does; try again in a moment`,
+        detail: `The server at ${asked.url} cannot be connected now: ${hostOf(asked)} answered the read of its protected resource metadata with HTTP 500; try again in a moment`,
       })),
     );
     expect(await h.facts()).toEqual([]);

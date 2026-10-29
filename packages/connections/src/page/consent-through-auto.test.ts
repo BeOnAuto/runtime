@@ -2,7 +2,7 @@ import { servedStudio } from '@on.auto/identity/testing';
 import type { Outcome, Succeeded } from '@on.auto/operations';
 import { keptTokensIn, type ConsentClientOptions, type KeptTokens, type ReturnKind } from '@on.auto/tool-servers';
 import { servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, handleOf, serviceCallsAt } from '@on.auto/tool-servers/testing';
+import { autoClientsOf, failingAt, handleOf, serviceCallsAt } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -66,6 +66,16 @@ async function loggedRemovalOf({ h, link }: Connecting): Promise<string> {
 }
 
 describe('the start of a consent through Auto’s consent service', () => {
+  it('is unavailable where the service does not answer the start, in words that name no server it did not ask', async () => {
+    const connecting = await throughAuto({ fetch: failingAt('/consents') });
+
+    expect(await starting(connecting.h, connecting.link)).toMatchObject({
+      reason: 'unavailable',
+      detail:
+        'The consent of the connection files cannot go on: a server it asks did not answer; try again in a moment',
+    });
+  });
+
   it('answers that it began with Auto’s client, and records the digest of the state the service made', async () => {
     const connecting = await throughAuto();
 

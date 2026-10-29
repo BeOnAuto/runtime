@@ -75,11 +75,13 @@ export {
   consentRegistration,
   consentSecret,
   everyHost,
+  hostOf,
   registeredAfterAnother,
   registeredAt,
   returnAddress,
   startAskedAt,
   studioBase,
+  unansweredCall,
 } from '../consent-testing/consent-fakes.ts';
 export {
   fakeConsentServiceAnswers,

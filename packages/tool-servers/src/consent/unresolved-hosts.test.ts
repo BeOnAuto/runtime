@@ -2,7 +2,7 @@ import { HostUnresolved, type Reaches } from '@on.auto/outbound';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { consentClientWith } from '../testing/index.ts';
+import { consentClientWith, hostOf } from '../testing/index.ts';
 import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -47,6 +47,9 @@ describe('the naming of a way whose hosts cannot be looked up', () => {
   it('is unanswered where the host of the server itself cannot', async () => {
     const fake = await served();
 
-    expect(await refusedAt(fake, unresolvedAt('127.0.0.1'))).toEqual({ refused: 'unanswered' });
+    expect(await refusedAt(fake, unresolvedAt('127.0.0.1'))).toEqual({
+      refused: 'unanswered',
+      call: { step: 'ping', host: hostOf(fake), answer: { failed: 'unreachable' } },
+    });
   });
 });
