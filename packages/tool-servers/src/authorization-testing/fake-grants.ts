@@ -58,6 +58,7 @@ interface Granting {
 
 interface GrantStore {
   readonly issuer: string;
+  readonly takesNoChallenge: boolean;
   readonly rotates: boolean;
   readonly refreshes: boolean;
   readonly grantedScope: string | undefined;
@@ -77,6 +78,10 @@ const lifetimeWhenUnsaid = 3600;
 
 function invalidGrant(): Response {
   return json({ error: 'invalid_grant' }, 400);
+}
+
+function verifierRefused(): Response {
+  return json({ error: 'invalid_client', error_description: 'Client authentication failed for the code' }, 401);
 }
 
 function challengeOf(verifier: string): string {
@@ -162,13 +167,20 @@ function codeOf(store: GrantStore, { client, redirectUri, asked }: Authorizing &
   return code;
 }
 
-function refusedRequestOf({ asked, redirectUri, state }: Authorizing, issuer: string): Response | undefined {
+function isChallengedAsTaken(store: GrantStore, asked: Readonly<URLSearchParams>): boolean {
+  return (
+    store.takesNoChallenge || (asked.get('code_challenge') !== null && asked.get('code_challenge_method') === 'S256')
+  );
+}
+
+function refusedRequestOf(store: GrantStore, { asked, redirectUri, state }: Authorizing): Response | undefined {
+  const { issuer } = store;
   if (asked.get('response_type') !== 'code') {
     return redirectedTo(redirectUri, { error: 'unsupported_response_type', state, iss: issuer });
   }
-  return asked.get('code_challenge') === null || asked.get('code_challenge_method') !== 'S256'
-    ? redirectedTo(redirectUri, { error: 'invalid_request', state, iss: issuer })
-    : undefined;
+  return isChallengedAsTaken(store, asked)
+    ? undefined
+    : redirectedTo(redirectUri, { error: 'invalid_request', state, iss: issuer });
 }
 
 async function authorized(store: GrantStore, clients: FakeClients, request: Readonly<Request>): Promise<Response> {
@@ -179,7 +191,7 @@ async function authorized(store: GrantStore, clients: FakeClients, request: Read
     return json({ error: 'invalid_request', error_description: 'The client or its redirect URI is unknown here' }, 400);
   }
   return (
-    refusedRequestOf(authorizing, store.issuer) ??
+    refusedRequestOf(store, authorizing) ??
     redirectedTo(authorizing.redirectUri, {
       code: codeOf(store, { ...authorizing, client }),
       state: authorizing.state,
@@ -188,20 +200,23 @@ async function authorized(store: GrantStore, clients: FakeClients, request: Read
   );
 }
 
-function isRedeemedBy(code: Code | undefined, { form, client }: TokenRequest): code is Code {
+function isRedeemedBy(code: Code | undefined, { form, client }: TokenRequest, store: GrantStore): code is Code {
   return (
     code !== undefined &&
     code.clientId === client.clientId &&
     code.redirectUri === form.get('redirect_uri') &&
-    code.challenge === challengeOf(form.get('code_verifier') ?? '')
+    (store.takesNoChallenge || code.challenge === challengeOf(form.get('code_verifier') ?? ''))
   );
 }
 
 function exchanged(store: GrantStore, asked: TokenRequest): Response {
+  if (store.takesNoChallenge && asked.form.has('code_verifier')) {
+    return verifierRefused();
+  }
   const presented = asked.form.get('code') ?? '';
   const code = store.codes.get(presented);
   store.codes.delete(presented);
-  if (!isRedeemedBy(code, asked)) {
+  if (!isRedeemedBy(code, asked, store)) {
     return invalidGrant();
   }
   const grant = crypto.randomUUID();
@@ -254,6 +269,7 @@ export function fakeGrants(
 ): FakeGrants {
   const store: GrantStore = {
     issuer,
+    takesNoChallenge: registration.takesNoChallenge === true,
     rotates: registration.rotatesRefreshTokens === true,
     refreshes: registration.issuesRefreshTokens !== false,
     grantedScope: registration.grantedScope,

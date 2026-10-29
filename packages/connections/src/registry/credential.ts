@@ -85,6 +85,12 @@ export const CredentialFieldsSchema = Schema.Struct({
       description: 'For authorization, the revocation endpoint, beside them where the server has one',
     }),
   ),
+  pkce: Schema.optionalKey(
+    wayFields.pkce.annotate({
+      description:
+        'For authorization, none where the server, its endpoints written out, takes no PKCE challenge, so a registered client that authenticates redeems the code without a verifier',
+    }),
+  ),
   clients: Schema.optionalKey(
     wayFields.clients.annotate({
       description:
@@ -113,6 +119,7 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'scope',
   'parameters',
   ...consentEndpoints,
+  'pkce',
   'clients',
   'client_source',
 ];
@@ -129,7 +136,7 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   client_credentials: { required: ['issuer'], optional: ['client_id', 'scope'] },
   authorization: {
     required: ['issuer'],
-    optional: ['scope', 'parameters', ...consentEndpoints, 'clients', 'client_id', 'client_source'],
+    optional: ['scope', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'client_id', 'client_source'],
   },
 };
 

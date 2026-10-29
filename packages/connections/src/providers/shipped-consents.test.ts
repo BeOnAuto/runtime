@@ -105,6 +105,7 @@ async function consentOf({ name, placeholders, issuer, scope, vendor }: WayOfCon
     authorization_endpoint: `${asked.origin}${asked.pathname}`.replace(fake.origin, '<the fake>'),
     scope: asked.searchParams.get('scope'),
     resource: asked.searchParams.get('resource'),
+    code_challenge: asked.searchParams.has('code_challenge'),
     code_challenge_method: asked.searchParams.get('code_challenge_method'),
     parameters: parametersAsked(asked, theVendor),
     client_sources: facts.flatMap((fact) =>
@@ -121,7 +122,9 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
     authorization_endpoint: endpointsAt?.authorization ?? '<the fake>/authorize',
     scope: asked,
     resource,
-    code_challenge_method: 'S256',
+    ...(metadata.takesNoChallenge === true
+      ? { code_challenge: false, code_challenge_method: null }
+      : { code_challenge: true, code_challenge_method: 'S256' }),
     parameters,
     client_sources: [source],
     connected: { status: 'connected', granted_scope: metadata.grantedScope ?? asked, client_source: source },
@@ -221,15 +224,26 @@ async function connectedAtLinkedIn() {
   const fake = await servedAsTheVendor(vendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, vendor, { providers: shipped, registeredIssuer: way.issuer });
-  const { finished } = await consentedAtTheVendor(
+  const { asked, finished } = await consentedAtTheVendor(
     h,
     { provider: way.name, placeholders: way.placeholders, scope: way.scope },
     { fake, vendor },
   );
-  const { id } = connectedOf(finished).output;
+  const { id, status } = connectedOf(finished).output;
   const source = sourceOver(h, { providers: shipped });
-  return { fake, h, id, source, consent: await consentServedAs(source, id) };
+  return { fake, h, id, asked, status, source, consent: await consentServedAs(source, id) };
 }
+
+describe('the consent of linkedin, whose web endpoint takes no PKCE and refuses a code redeemed with a verifier', () => {
+  it('starts at its authorization endpoint without a challenge and finishes connected by the client registered there, without a verifier', async () => {
+    const { fake, asked, status } = await connectedAtLinkedIn();
+
+    expect(`${asked.origin}${asked.pathname}`).toBe('https://www.linkedin.com/oauth/v2/authorization');
+    expect([...asked.searchParams.keys()].filter((name) => name.startsWith('code_challenge'))).toEqual([]);
+    expect(status).toBe('connected');
+    expect(fake.tokenRequests()).toBe(1);
+  });
+});
 
 describe('the consent of linkedin, whose vendor answers an access token of sixty days with no token_type and no refresh token', () => {
   it('serves its token to its end and past it, breaks at the first refusal in words that say to reconnect it, and reconnects by signing in at LinkedIn again', async () => {

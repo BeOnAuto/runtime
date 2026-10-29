@@ -13,6 +13,10 @@ export const WayClientSourceSchema = Schema.Literals(wayClientSources);
 
 export type WayClientSource = typeof WayClientSourceSchema.Type;
 
+export const WayPkceSchema = Schema.Literal('none');
+
+export type WayPkce = typeof WayPkceSchema.Type;
+
 export const ClientIdSchema = Schema.String.check(Schema.isMinLength(1));
 
 const defaultClientSources: readonly WayClientSource[] = ['registered'];
@@ -50,6 +54,7 @@ export interface WayOfClients {
   readonly issuer: string;
   readonly scope?: string | undefined;
   readonly clients?: readonly WayClientSource[] | undefined;
+  readonly pkce?: WayPkce | undefined;
 }
 
 export interface HadSources {
@@ -114,11 +119,21 @@ function covers({ scopes }: { readonly scopes?: readonly string[] }, { scope }: 
   return scopes === undefined || (scope?.split(' ') ?? []).every((asked) => scopes.includes(asked));
 }
 
+export function takesNoPkce({ pkce }: WayOfClients): boolean {
+  return pkce === WayPkceSchema.literal;
+}
+
+function bindsItsCodeAt({ credential }: RegisteredClient, way: WayOfClients): boolean {
+  return credential.kind !== 'public' || !takesNoPkce(way);
+}
+
 export function registeredClientFor(
   clients: readonly RegisteredClient[],
   way: WayOfClients,
 ): RegisteredClient | undefined {
-  return clients.find((client) => isRegisteredClientAt(client, way.issuer) && covers(client, way));
+  return clients.find(
+    (client) => isRegisteredClientAt(client, way.issuer) && covers(client, way) && bindsItsCodeAt(client, way),
+  );
 }
 
 export function registeredClientNamed(

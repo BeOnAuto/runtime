@@ -194,6 +194,7 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   linkedin: {
     metadata: {
       issuer: linkedInIssuer,
+      takesNoChallenge: true,
       issuesRefreshTokens: false,
       expiresInSeconds: sixtyDays,
       namesTokenType: false,

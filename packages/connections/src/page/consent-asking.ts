@@ -40,6 +40,7 @@ export function wayOf({ credential }: RecordedConnection): ConsentAsked['way'] {
     authorization_endpoint: credential.authorization_endpoint,
     token_endpoint: credential.token_endpoint,
     revocation_endpoint: credential.revocation_endpoint,
+    pkce: credential.pkce,
     clients: credential.clients,
   };
 }

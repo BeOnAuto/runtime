@@ -1,4 +1,4 @@
-import { exchangeAuthorization, startAuthorization } from '@modelcontextprotocol/client';
+import { exchangeAuthorization, startAuthorization, type FetchLike } from '@modelcontextprotocol/client';
 import { DateTime, Effect, Redacted } from 'effect';
 
 import { answeredTokensOf, keptOf, keptValueOf, tokenAnswersReadAsBearer } from '../consent-tokens/kept-tokens.ts';
@@ -17,7 +17,13 @@ import { exchangeRefusalOf, observedCalls } from './consent-failures.ts';
 import { namedWayOf } from './named-ways.ts';
 import { revocationOf } from './revocation.ts';
 import { grantedScopeOf } from './scopes.ts';
-import { handGivenUrlOf, libraryMetadataOf, scopeAskedOf, serverMetadataOf } from './server-metadata.ts';
+import {
+  handGivenUrlOf,
+  libraryMetadataOf,
+  scopeAskedOf,
+  serverMetadataOf,
+  takesNoChallenge,
+} from './server-metadata.ts';
 
 export interface ServerConsents {
   readonly namedWay: (asked: WayAsked) => Effect.Effect<NamedWay, WayRefusal>;
@@ -47,6 +53,22 @@ function parametersOf({ server, way }: StartAsked): Readonly<Record<string, stri
   return { ...way.parameters, ...(handGivenUrlOf(server) === undefined ? {} : promptingForConsent) };
 }
 
+const challengeParameters = ['code_challenge', 'code_challenge_method'];
+
+function challengeLeftOut(authorizationUrl: Readonly<URL>): void {
+  for (const name of challengeParameters) {
+    authorizationUrl.searchParams.delete(name);
+  }
+}
+
+function sentWithoutAVerifier(fetch: FetchLike): FetchLike {
+  return async (...[address, init]: readonly [unknown, unknown?]) => {
+    const form = new URLSearchParams(await new Request(String(address), Object.assign({}, init)).text());
+    form.delete('code_verifier');
+    return fetch(String(address), Object.assign({}, init, { body: form }));
+  };
+}
+
 function started(
   asked: StartAsked,
   { clients, fetchFor }: Requests,
@@ -70,6 +92,9 @@ function started(
     for (const [name, value] of Object.entries(parametersOf(asked))) {
       authorizationUrl.searchParams.set(name, value);
     }
+    if (takesNoChallenge(asked.way)) {
+      challengeLeftOut(authorizationUrl);
+    }
     const verifier = Redacted.make(codeVerifier);
     return { url: authorizationUrl.href, state: asked.state, verifier, client: client.chosen };
   });
@@ -81,6 +106,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
     const { server, resource } = yield* serverMetadataOf(asked, fetch);
     const client = yield* clients.recordedFor(asked);
     const observed = observedCalls('token', server.token_endpoint, fetch);
+    const exchangedBy = takesNoChallenge(asked.way) ? sentWithoutAVerifier(observed.fetch) : observed.fetch;
     const exchanged = yield* Effect.tryPromise({
       try: () =>
         exchangeAuthorization(asked.way.issuer, {
@@ -89,7 +115,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
           authorizationCode: asked.code,
           codeVerifier: Redacted.value(asked.verifier),
           redirectUri: asked.returnAddress,
-          fetchFn: tokenAnswersReadAsBearer(observed.fetch),
+          fetchFn: tokenAnswersReadAsBearer(exchangedBy),
           ...(asked.iss === undefined ? {} : { iss: asked.iss }),
           ...(resource === undefined ? {} : { resource }),
           ...(client.authentication === undefined ? {} : { addClientAuthentication: client.authentication }),
