@@ -9,7 +9,6 @@ const reasonsOfKinds = {
   license_required: 'conflict',
   license_invalid: 'conflict',
   account_closed: 'conflict',
-  metering_fault: 'conflict',
 } as const;
 
 export type KindWithType = keyof typeof reasonsOfKinds;

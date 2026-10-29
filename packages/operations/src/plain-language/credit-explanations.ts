@@ -5,12 +5,7 @@ import type { Explanation } from './plain-language.ts';
 
 type CreditKind = Extract<
   ConflictKind | UnavailableKind,
-  | 'credits_exhausted'
-  | 'license_required'
-  | 'license_invalid'
-  | 'account_closed'
-  | 'metering_fault'
-  | 'meter_unavailable'
+  'credits_exhausted' | 'license_required' | 'license_invalid' | 'account_closed' | 'meter_unavailable'
 >;
 
 type CreditBecause = Extract<
@@ -21,6 +16,12 @@ type CreditBecause = Extract<
 const freeRunsAgain =
   'The details below say when it can be run again; an owner can get more credits sooner at their resolve_at link.';
 
+const freeRateAgain =
+  'The details below say when it can be run again; to run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.';
+
+const licenseAgain =
+  'The details below say why, what puts it right and when it can be run again, and an owner of its org can put it right in Auto Studio at their resolve_at link.';
+
 export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
   credits_exhausted: {
     why: 'the account it runs under has no credits left for it',
@@ -28,9 +29,8 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
       'It can be run again once the account has more credits; the details below say how, with the resolve_at link where they give one.',
   },
   license_required: {
-    why: 'this runtime has used its free runs',
-    remedy:
-      'Get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime and run this again.',
+    why: 'this runtime, which holds no key, has used the free runs it may run for now',
+    remedy: freeRateAgain,
   },
   license_invalid: {
     why: 'the license this runtime holds no longer stands',
@@ -43,11 +43,6 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
       'A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the details below say which this is, and the resolve_at link, where they give one, says until when.',
     remedyOnRecord:
       'A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below says which this is.',
-  },
-  metering_fault: {
-    why: 'this runtime stopped starting runs, since what it counted no longer agrees with its ledger',
-    remedy:
-      'Auto needs to repair it: the details below give its runtime id and link to Auto’s support at resolve_at. Reading, editing and exporting still work.',
   },
   meter_unavailable: {
     why: 'the account it runs under could not be asked for its credits',
@@ -66,8 +61,21 @@ export const creditBecauses: Readonly<Record<CreditBecause, string>> = {
 };
 
 export const creditExplanationsByBecause: Readonly<
-  Record<'credits_exhausted' | 'license_invalid' | 'account_closed', Partial<Record<RejectionBecause, Explanation>>>
+  Record<
+    'license_required' | 'credits_exhausted' | 'license_invalid' | 'account_closed',
+    Partial<Record<RejectionBecause, Explanation>>
+  >
 > = {
+  license_required: {
+    free_daily_limit: {
+      why: 'this runtime, which holds no key, has used its free runs for the day',
+      remedy: freeRateAgain,
+    },
+    free_month_used: {
+      why: 'this runtime, which holds no key, has used its free runs for the month',
+      remedy: freeRateAgain,
+    },
+  },
   credits_exhausted: {
     none_left: {
       why: 'the account it runs under has no credits left',
@@ -77,6 +85,14 @@ export const creditExplanationsByBecause: Readonly<
     free_month_used: { why: 'the account it runs under has used its free runs for the month', remedy: freeRunsAgain },
   },
   license_invalid: {
+    free_daily_limit: {
+      why: 'the license of this runtime does not stand for now, so it runs at the free rate, and it has used its free runs for the day',
+      remedy: licenseAgain,
+    },
+    free_month_used: {
+      why: 'the license of this runtime does not stand for now, so it runs at the free rate, and it has used its free runs for the month',
+      remedy: licenseAgain,
+    },
     key_rotated: {
       why: 'the key of this runtime was replaced',
       remedy:
