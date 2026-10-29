@@ -158,6 +158,14 @@ function consentOf({ name, credentials }: ProviderEntry) {
   return credentials.filter(({ kind }) => kind === 'authorization').map((way) => [name, fieldsOfConsent(way)]);
 }
 
+function signsInAtGoogle({ credentials }: ProviderEntry): boolean {
+  return credentials.some(({ issuer }) => issuer === `https://${google}`);
+}
+
+function scopesOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
+  return [name, credentials.map(({ scope = '' }) => scope.replaceAll('https://www.googleapis.com/auth/', ''))];
+}
+
 function headersOf({ name, headers }: ProviderEntry) {
   return headers === undefined ? [] : [[name, headers]];
 }
@@ -175,6 +183,31 @@ describe('the ways of consent of the shipped providers of Microsoft, Amazon and 
     const consenting = shipped.providers.filter(({ entry }) => microsoftAmazonAndAdobe.has(entry.name));
 
     expect(consenting.flatMap(({ entry }) => consentOf(entry))).toEqual(consentWays);
+  });
+});
+
+describe('the ways of consent of the shipped providers of Google', () => {
+  it('ask the scopes their tools need, way by way in the order a person is offered them, google-drive reading every file first', () => {
+    const consenting = shipped.providers.filter(({ entry }) => signsInAtGoogle(entry));
+
+    expect(consenting.map(({ entry }) => scopesOfEachWayAtGoogle(entry))).toEqual([
+      ['campaign-manager-360', ['dfareporting dfatrafficking']],
+      ['display-video-360', ['display-video']],
+      ['display-video-360-reports', ['doubleclickbidmanager']],
+      ['gmail', ['gmail.readonly']],
+      ['google-ads', ['adwords']],
+      ['google-analytics', ['analytics.readonly']],
+      ['google-analytics-admin', ['analytics.readonly']],
+      ['google-docs', ['documents.readonly documents']],
+      ['google-drive', ['drive.readonly', 'drive.file']],
+      ['google-search-console', ['webmasters']],
+      ['google-sheets', ['spreadsheets.readonly spreadsheets']],
+      ['google-slides', ['presentations.readonly presentations']],
+      ['search-ads-360', ['doubleclicksearch']],
+      ['youtube', ['youtube.readonly']],
+      ['youtube-analytics', ['yt-analytics.readonly yt-analytics-monetary.readonly']],
+      ['youtube-management', ['youtube.force-ssl']],
+    ]);
   });
 });
 
