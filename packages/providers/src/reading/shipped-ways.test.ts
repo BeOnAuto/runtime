@@ -48,7 +48,7 @@ const hostsOfTheWays = [
   [[['analyticsdata.googleapis.com', google]]],
   [[['analyticsadmin.googleapis.com', google]]],
   [[['docsmcp.googleapis.com', google]]],
-  [[['drivemcp.googleapis.com', google]]],
+  [[['drivemcp.googleapis.com', google]], [['drivemcp.googleapis.com', google]]],
   [[['searchconsole.googleapis.com', google]]],
   [[['sheetsmcp.googleapis.com', google]]],
   [[['slidesmcp.googleapis.com', google]]],
@@ -232,6 +232,6 @@ const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry))
 describe('the words of the scopes the shipped providers ask', () => {
   it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
     expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(123);
+    expect(saidScopes).toHaveLength(124);
   });
 });

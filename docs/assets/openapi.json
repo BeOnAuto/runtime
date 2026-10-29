@@ -1717,7 +1717,7 @@
                       },
                       "scope": {
                         "type": "string",
-                        "description": "For client_credentials, the scopes, separated by spaces; none when left out"
+                        "description": "For client_credentials, the scopes, separated by spaces, none when left out; with provider, the scope of the way to take, as list_providers lists it"
                       }
                     },
                     "required": [

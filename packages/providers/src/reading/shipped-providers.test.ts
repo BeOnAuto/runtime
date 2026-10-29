@@ -38,7 +38,7 @@ const microsoftGraph = 'https://graph.microsoft.com/v1.0';
 
 const googleScopes = 'https://www.googleapis.com/auth/';
 
-const restrictedByGoogle = ['gmail.readonly'];
+const restrictedByGoogle = ['drive.readonly', 'gmail.readonly'];
 
 const googleProviders = [
   'campaign-manager-360',
@@ -58,6 +58,8 @@ const googleProviders = [
   'youtube-analytics',
   'youtube-management',
 ];
+
+const googleWaysOfConsent = [...googleProviders, 'google-drive'].toSorted();
 
 const microsoftAmazonAndAdobe = [
   'adobe-analytics',
@@ -200,7 +202,7 @@ describe('the ways of the shipped providers', () => {
       ['google-analytics', ['authorization'], []],
       ['google-analytics-admin', ['authorization'], []],
       ['google-docs', ['authorization'], []],
-      ['google-drive', ['authorization'], []],
+      ['google-drive', ['authorization', 'authorization'], []],
       ['google-search-console', ['authorization'], []],
       ['google-sheets', ['authorization'], []],
       ['google-slides', ['authorization'], []],
@@ -249,11 +251,11 @@ describe('the servers of the shipped providers', () => {
 });
 
 describe('the shipped providers of Google', () => {
-  it('ask Google for an offline access and a consent prompt, through a client whoever runs the runtime registers', () => {
+  it('ask Google, in every way of consent, for an offline access and a consent prompt, through a client whoever runs the runtime registers', () => {
     const atGoogle = shipped.providers.filter((provider) => signsInAtGoogle(provider));
 
     expect(atGoogle.flatMap((provider) => waysOfConsentOf(provider))).toEqual(
-      googleProviders.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
+      googleWaysOfConsent.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
     );
   });
 
@@ -275,7 +277,7 @@ describe('the shipped providers of Google', () => {
       ['google-analytics', []],
       ['google-analytics-admin', []],
       ['google-docs', []],
-      ['google-drive', []],
+      ['google-drive', ['drive.readonly']],
       ['google-search-console', []],
       ['google-sheets', []],
       ['google-slides', []],

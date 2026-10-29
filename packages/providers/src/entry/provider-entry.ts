@@ -1,7 +1,8 @@
+import { articled } from '@on.auto/operations';
 import { ServerEntrySchema, serverNameProblems } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { CredentialWaySchema } from './credential-ways.ts';
+import { asksAScope, asksTheSameScopes, CredentialWaySchema, type WayKind } from './credential-ways.ts';
 import { placementIssuesOf } from './entry-placeholders.ts';
 import { localDocumentOf, writtenIssuesOf } from './entry-values.ts';
 import { PlaceholdersSchema } from './placeholders.ts';
@@ -50,7 +51,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   ),
   credentials: Schema.Array(CredentialWaySchema).check(Schema.isMinLength(1)).annotate({
     description:
-      'The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials or none; a way that asks a scope says, beside it, what a connection can do through each scope',
+      'The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials, none or authorization, two of one kind told apart by the scope each asks; a way that asks a scope says, beside it, what a connection can do through each scope',
   }),
 });
 
@@ -87,12 +88,23 @@ function typeIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   ];
 }
 
+function repeatedWayIssueOf(kind: WayKind, index: number): EntryIssue {
+  return asksAScope(kind)
+    ? {
+        path: ['credentials', index, 'scope'],
+        issue: `Expected a scope no other ${kind} way asks, by which a caller tells two ways of one kind apart`,
+      }
+    : {
+        path: ['credentials', index, 'kind'],
+        issue: `Expected a kind no other way has, since ${articled(`${kind} way`)} asks no scope by which a caller would tell two apart`,
+      };
+}
+
 function wayIssuesOf({ credentials }: ProviderEntry): readonly EntryIssue[] {
-  const kinds = credentials.map(({ kind }) => kind);
-  return kinds.flatMap((kind, index): readonly EntryIssue[] =>
-    kinds.indexOf(kind) === index
-      ? []
-      : [{ path: ['credentials', index, 'kind'], issue: 'Expected a kind no other way has' }],
+  return credentials.flatMap(({ kind, scope }, index): readonly EntryIssue[] =>
+    credentials.slice(0, index).some((earlier) => earlier.kind === kind && asksTheSameScopes(earlier.scope, scope))
+      ? [repeatedWayIssueOf(kind, index)]
+      : [],
   );
 }
 
