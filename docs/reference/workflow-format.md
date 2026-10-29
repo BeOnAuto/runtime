@@ -324,7 +324,7 @@ Some runs finish within their call, and others later. A task waits for the longe
 
 #### When the runtime will not start the run for now
 
-A runtime starts a run only once its meter admits it ([Licenses and credits](../self-host/licenses.md)). When the meter refuses the run a task calls with `credits_exhausted`, `license_required`, `license_invalid` or `meter_unavailable`, the task does not fail. It waits at its step and asks again:
+A runtime starts a run only once its meter admits it ([Self-hosted licensing reference](../self-host/licensing.md)). When the meter refuses the run a task calls with `credits_exhausted`, `license_required`, `license_invalid` or `meter_unavailable`, the task does not fail. It waits at its step and asks again:
 
 - It asks again a minute after the refusal, then after 2, 4, 8, 16 and 32 minutes, and then every hour.
 - It stops 24 hours after the first refusal. The last try is made at that moment, and a refusal then raises the error of that refusal, as the table below says, in its words. A `catch` sees the refusal only then.

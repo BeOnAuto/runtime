@@ -217,7 +217,7 @@ A connection is a tool server that a person adds to the org through their agent,
 
 ### License
 
-`activate_license` activates the license of the whole runtime with the key Studio gives, `alk.<org>.<runtime id>.<secret>`, the HTTP operation `POST /license`. It is listed on `/mcp` and the org endpoint to a caller who may change the org, and answers where the runtime stands, as `GET /license` does, saying it in words. A key Auto does not know, or one for another runtime, is refused as `license_invalid`. [License](http.md#license) gives the rest, and [Licenses](../self-host/licenses.md) the other ways to give a runtime its key.
+`activate_license` activates the license of the whole runtime with the key Studio gives, `alk.<org>.<runtime id>.<secret>`, the HTTP operation `POST /license`. It is listed on `/mcp` and the org endpoint to a caller who may change the org, and answers where the runtime stands, as `GET /license` does, saying it in words. A key Auto does not know, or one for another runtime, is refused as `license_invalid`. [License](http.md#license) gives the rest, and [Activate the key](../self-host/licenses.md#activate-the-key) the other ways to give a runtime its key.
 
 ## Guides and prompts
 

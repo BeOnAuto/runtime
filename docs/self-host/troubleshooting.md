@@ -103,7 +103,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause.** A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month, and this one has used the day's or the month's.
 
-**Fix.** Wait until the time the `detail` gives, or open the refusal's `resolve_at` while signed in to Studio as an owner of the org, register the runtime its `runtime_id` names, and activate the key Studio shows once. [Licenses](licenses.md#activate-the-key) gives the four ways to activate it. A workflow whose call was refused waits at that step and asks again.
+**Fix.** Wait until the time the `detail` gives, or open the refusal's `resolve_at` while signed in to Studio as an owner of the org, register the runtime its `runtime_id` names, and activate the key Studio shows once. [Activate the key](licenses.md#activate-the-key) gives the ways to activate it. A workflow whose call was refused waits at that step and asks again.
 
 ## A runtime with a key runs at the free rate {#limited}
 
@@ -134,7 +134,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Symptom.** A run is answered `409` with the kind `credits_exhausted` and `because: "none_left"`: `This runtime has used its … offline credits`.
 
-**Cause.** A [runtime on offline credits](licenses.md#offline-runtimes) has spent them. A run asked again under the id of a run that already started counts nothing more, and is not refused.
+**Cause.** A [runtime on offline credits](licensing.md#offline-credits) has spent them. A run asked again under the id of a run that already started counts nothing more, and is not refused.
 
 **Fix.** An owner of the org requests more offline credits at `resolve_at`.
 
