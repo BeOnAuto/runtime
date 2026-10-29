@@ -1,13 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":semanticCommits"],
+  "extends": ["config:recommended", ":semanticCommits"],
   "mode": "full",
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
-  "minimumReleaseAge": "1 day",
-  "rangeStrategy": "pin",
   "dependencyDashboard": true,
   "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
   "postUpdateOptions": ["pnpmDedupe"],
   "lockFileMaintenance": {
     "enabled": true,
@@ -15,82 +16,9 @@
   },
   "packageRules": [
     {
-      "matchDepTypes": ["engines"],
+      "description": "Dependencies are updated in the private monorepo this repository is mirrored from, so here Renovate only refreshes the lockfile and answers vulnerability alerts",
+      "matchPackageNames": ["*"],
       "enabled": false
-    },
-    {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "groupName": "non-major dependencies",
-      "groupSlug": "non-major"
-    },
-    {
-      "description": "A family of packages released together moves in a pull request of its own, so an update that fails the gate holds back only its own family",
-      "matchPackageNames": ["ai", "@ai-sdk/*"],
-      "groupName": "AI SDK",
-      "groupSlug": "ai-sdk"
-    },
-    {
-      "matchPackageNames": ["@aws-sdk/*", "@smithy/*"],
-      "groupName": "AWS SDK",
-      "groupSlug": "aws-sdk"
-    },
-    {
-      "matchPackageNames": ["@opentelemetry/*"],
-      "groupName": "OpenTelemetry",
-      "groupSlug": "opentelemetry"
-    },
-    {
-      "matchPackageNames": ["@modelcontextprotocol/*"],
-      "groupName": "MCP SDK",
-      "groupSlug": "mcp-sdk"
-    },
-    {
-      "description": "effect 4.0.3 bounds every exported integer schema at the safe integers, which changes the OpenAPI document and the MCP tool listings, so effect comes in a pull request of its own that holds no other update back",
-      "matchPackageNames": ["effect", "@effect/*"],
-      "groupName": "Effect",
-      "groupSlug": "effect"
-    },
-    {
-      "matchPackageNames": ["@event-driven-io/*"],
-      "groupName": "event store",
-      "groupSlug": "event-store"
-    },
-    {
-      "matchManagers": ["github-actions", "custom.regex"],
-      "groupName": "CI workflows",
-      "groupSlug": "ci-workflows"
-    },
-    {
-      "description": "Node.js moves in one pull request wherever the repository names it, so CI tests on the version the image runs",
-      "matchDepNames": ["node"],
-      "groupName": "Node.js",
-      "groupSlug": "node"
-    },
-    {
-      "description": "typescript6 is TypeScript 6 under an alias, the last version with the compiler API the program check of the definitions package calls, so it stays below 7; an alias is matched by its dependency name, since its package name is typescript",
-      "matchDepNames": ["typescript6"],
-      "allowedVersions": "<7"
-    },
-    {
-      "description": "dumbo's 0.13.0-betabeta.50 is a mistyped tag published as latest, which semver ranks above every 0.13.0-beta.N; dumbo and emmett never take a version whose prerelease tag holds betabeta",
-      "matchPackageNames": ["@event-driven-io/dumbo", "@event-driven-io/emmett"],
-      "allowedVersions": "!/betabeta/"
-    },
-    {
-      "description": "google-auth-library makes the client the Vertex provider signs its requests with, so it stays on the major @ai-sdk/google-vertex depends on, which is 10; a client of 11 is not one the provider accepts",
-      "matchPackageNames": ["google-auth-library"],
-      "allowedVersions": "<11"
-    }
-  ],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Container images the workflows run in their steps, pinned by tag and digest",
-      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
-      "matchStrings": [
-        "\\s(?<depName>[a-z0-9][a-z0-9./-]*):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
-      ],
-      "datasourceTemplate": "docker"
     }
   ]
 }
