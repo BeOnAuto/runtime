@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.45.0](https://github.com/BeOnAuto/runtime/compare/v0.44.0...v0.45.0) (2026-10-29)
+
+
+### Features
+
+* **providers:** the Google Workspace providers connect by their API documents ([#409](https://github.com/BeOnAuto/runtime/issues/409)) ([85cf279](https://github.com/BeOnAuto/runtime/commit/85cf2795392be4bb639ac9e6b07d950095956187))
+
 ## [0.44.0](https://github.com/BeOnAuto/runtime/compare/v0.43.1...v0.44.0) (2026-10-29)
 
 
