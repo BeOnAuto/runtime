@@ -211,7 +211,6 @@ const extras = [
   'auto-runtime.schema.json',
   'auto-runtime.example.yaml',
   'docs/concepts/terminology.md',
-  'docs/contributing/voice.md',
   ...readdirSync(join(repository, 'docs', 'reference'))
     .filter((name) => name.endsWith('-format.md'))
     .map((name) => `docs/reference/${name}`),

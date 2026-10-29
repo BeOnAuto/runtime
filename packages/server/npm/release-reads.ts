@@ -26,7 +26,6 @@ deepStrictEqual(pages, [
   ['terminology', true],
   ['workflow', true],
   ['templates', true],
-  ['voice', true],
   ['schedule', true],
 ]);
 

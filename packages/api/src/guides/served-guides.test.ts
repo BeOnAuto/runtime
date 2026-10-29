@@ -80,13 +80,12 @@ const pages: Readonly<Record<string, string>> = {
   'prediction-function': 'reference/prediction-format.md',
   workflow: 'reference/workflow-format.md',
   templates: 'reference/template.md',
-  voice: 'contributing/voice.md',
 };
 
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type, the templates, the voice guide and the four recipes', () => {
+  it('are the terminology, a guide per type, the templates and the four recipes', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'terminology',
       'reasoning-function',
@@ -95,7 +94,6 @@ describe('the guides of a server that runs every type of definition', () => {
       'prediction-function',
       'workflow',
       'templates',
-      'voice',
       'first-playbook',
       'remember',
       'give-tools',
@@ -134,7 +132,6 @@ describe('the titles and links of the guides of a server that runs every type of
       'Prediction function format',
       'Workflow format',
       'Templates',
-      'Auto voice',
     ]);
   });
 
@@ -172,7 +169,6 @@ describe('the size and the words of the guides of a server', () => {
       'How prediction functions are written: their document, fields, examples and bounds.',
       'How workflows are written: their document, fields, examples and bounds.',
       'The filters a template may use, the same in every template of every definition.',
-      'How to write clear, accurate product text and playbook overviews in the Auto voice.',
     ]);
   });
 });

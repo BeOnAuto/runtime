@@ -7592,7 +7592,7 @@
                   },
                   "overview": {
                     "type": "string",
-                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Read get_guide with guide=\"voice\"; avoid invented benefits.",
+                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Avoid invented benefits.",
                     "minLength": 1,
                     "maxLength": 16384
                   }
@@ -8773,7 +8773,7 @@
                   },
                   "overview": {
                     "type": "string",
-                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Read get_guide with guide=\"voice\"; avoid invented benefits.",
+                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Avoid invented benefits.",
                     "minLength": 1,
                     "maxLength": 16384
                   }
@@ -15097,7 +15097,7 @@
       "get": {
         "operationId": "get_guide",
         "summary": "Get guide",
-        "description": "Reads one of the playbook's guides: what its words mean, how each kind of definition is written, with its format, examples and bounds, and how the common tasks are done. Read a format guide before writing that type of definition, the voice guide before writing an overview, and a recipe before its task. `guide` names one of them, and the answer is its whole text in Markdown.",
+        "description": "Reads one of the playbook's guides: what its words mean, how each kind of definition is written, with its format, examples and bounds, and how the common tasks are done. Read a format guide before writing that type of definition, and a recipe before its task. `guide` names one of them, and the answer is its whole text in Markdown.",
         "tags": [
           "guides"
         ],
@@ -15106,7 +15106,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, Auto voice, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), templates (Templates), voice (Auto voice), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -15118,7 +15118,6 @@
                 "prediction-function",
                 "workflow",
                 "templates",
-                "voice",
                 "first-playbook",
                 "remember",
                 "give-tools",
