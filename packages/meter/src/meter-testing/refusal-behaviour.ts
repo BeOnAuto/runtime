@@ -14,7 +14,9 @@ const billing = 'https://studio.on.auto/?settings=billing&org=acme';
 
 const freeRate = 'the free rate of 2 runs a UTC day and 4 a UTC month';
 
-const usedToday = "It has used today's 2 free runs and can run again at 00:00 UTC on 2026-10-28.";
+const usedToday = "It has used all of today's free runs, so it can start runs again at 00:00 UTC on 2026-10-28.";
+
+const liftsToday = '2026-10-28T00:00:00.000Z';
 
 async function refusedAfterTheFreeRate(metered: Metered): Promise<Answer> {
   await admittedEach(metered, ['free-1', 'free-2']);
@@ -25,45 +27,60 @@ function atTheFreeRate(account: AccountFake): void {
   account.policy({ per_day: 2, per_month: 4 });
 }
 
-function asLicenseInvalid(detail: string): Answer {
-  return { kind: 'license_invalid', detail, because: 'free_daily_limit', resolve_at: page, runtime_id: installation };
+function asLicenseInvalid(detail: string, limitedBecause: string, liftsAt = liftsToday): Answer {
+  return {
+    kind: 'license_invalid',
+    detail,
+    because: 'free_daily_limit',
+    resolve_at: page,
+    runtime_id: installation,
+    lifts_at: liftsAt,
+    limited_because: limitedBecause,
+  };
 }
 
-const keyRefusals: readonly (readonly [string, (account: AccountFake, key: string) => void, string])[] = [
+type KeyRefusal = readonly [string, (account: AccountFake, key: string) => void, string, string];
+
+const keyRefusals: readonly KeyRefusal[] = [
   [
     'its key was rotated',
     (account, key) => {
       account.revoke(key, 'key_rotated');
     },
-    `This runtime's key was replaced, so it runs at ${freeRate}. ${usedToday} Activate the new key shown when it was rotated. If that key is lost, the account holder or an organization admin can rotate it again at ${page}.`,
+    `This runtime's license key was replaced, so it's limited to ${freeRate}. ${usedToday} Activate the new key that was shown when the key was rotated. If that key is lost, the account holder or an organization admin can rotate it again at ${page}.`,
+    'key_rotated',
   ],
   [
     'it was removed from its org',
     (account, key) => {
       account.revoke(key, 'installation_revoked');
     },
-    `This runtime was removed from its organization, so it runs at ${freeRate}. ${usedToday} To use its organization's credits again, the account holder or an organization admin can register it again at ${page}. Then activate the new key.`,
+    `This runtime was removed from its organization, so it's limited to ${freeRate}. ${usedToday} To use the organization's credits again, the account holder or an organization admin can register it again at ${page}, then activate the new key.`,
+    'key_revoked',
   ],
   [
     'Auto no longer knows its key',
     (account, key) => {
       account.revoke(key);
     },
-    `Auto no longer accepts this runtime's key, so it runs at ${freeRate}. ${usedToday} Activate a key for this runtime. The account holder or an organization admin can register it at ${page}.`,
+    `Auto no longer accepts this runtime's license key, so it's limited to ${freeRate}. ${usedToday} The account holder or an organization admin can register this runtime at ${page}, then activate the new key.`,
+    'key_revoked',
   ],
   [
     'its org was deleted',
     (account) => {
       account.close({ detail: 'The org acme was deleted; an owner can restore it', because: 'org_deleted' });
     },
-    `This runtime's organization at Auto is closed, so it runs at ${freeRate}. ${usedToday} If the organization is restored, the runtime returns to its credits at its next report. Otherwise, activate a key from another organization; the account holder or an organization admin can register it at ${page}.`,
+    `This runtime's organization at Auto is closed, so it's limited to ${freeRate}. ${usedToday} If the organization is restored, the runtime goes back to the organization's credits at its next report. Otherwise, the account holder or an admin of another organization can register this runtime at ${page}, then activate the new key.`,
+    'org_closed',
   ],
   [
     'its org was deleted for good',
     (account) => {
       account.close({ detail: 'The org acme was deleted for good', because: 'org_purged' });
     },
-    `This runtime's organization at Auto is closed, so it runs at ${freeRate}. ${usedToday} The organization can't be restored. Activate a key from another organization; the account holder or an organization admin can register it at ${page}.`,
+    `This runtime's organization at Auto is closed, so it's limited to ${freeRate}. ${usedToday} The organization can't be restored. The account holder or an admin of another organization can register this runtime at ${page}, then activate the new key.`,
+    'org_closed',
   ],
 ];
 
@@ -76,10 +93,12 @@ function creditWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(metered)).toEqual({
       kind: 'credits_exhausted',
-      detail: `This runtime's organization has no credits left, so it runs at ${freeRate}. ${usedToday} The account holder or an organization admin can add credits at ${billing}. The runtime picks them up at its next report, within the hour.`,
+      detail: `This runtime's organization is out of credits, so the runtime is limited to ${freeRate}. ${usedToday} The account holder or an organization admin can add credits at ${billing}; the runtime picks them up within the hour.`,
       because: 'free_daily_limit',
       resolve_at: billing,
       runtime_id: installation,
+      lifts_at: liftsToday,
+      limited_because: 'credits',
     });
   });
 
@@ -91,10 +110,12 @@ function creditWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(metered)).toEqual({
       kind: 'credits_exhausted',
-      detail: `This runtime's organization has reached its overage cap of 600 credits, so it runs at ${freeRate}. ${usedToday} The account holder or an organization admin can add credits at ${billing}; they repay what's owed first. The runtime picks them up at its next report, within the hour.`,
+      detail: `This runtime's organization has reached its overage cap of 600 credits, so the runtime is limited to ${freeRate}. ${usedToday} The account holder or an organization admin can add credits at ${billing}. New credits repay the overage first, and the runtime picks them up within the hour.`,
       because: 'free_daily_limit',
       resolve_at: billing,
       runtime_id: installation,
+      lifts_at: liftsToday,
+      limited_because: 'cap',
     });
   });
 
@@ -103,23 +124,25 @@ function creditWordsBehaviour(ledgerOf: LedgerOf): void {
     metered.account.goDown();
     metered.at('2026-11-24T12:00:00.000Z');
 
-    expect(await refusedAfterTheFreeRate(metered)).toEqual({
-      ...asLicenseInvalid(
-        `This runtime hasn't reached Auto since 2026-10-27, so it has run at ${freeRate} since 2026-11-24. It has used today's 2 free runs and can run again at 00:00 UTC on 2026-11-25. Check that it can reach billing.on.auto. It returns to its organization's credits at its next report.`,
+    expect(await refusedAfterTheFreeRate(metered)).toEqual(
+      asLicenseInvalid(
+        `This runtime hasn't reached Auto since 2026-10-27, so it has been limited to ${freeRate} since 2026-11-24. It has used all of today's free runs, so it can start runs again at 00:00 UTC on 2026-11-25. Make sure it can reach billing.on.auto. It goes back to its organization's credits at its next report, within the hour.`,
+        'out_of_touch',
+        '2026-11-25T00:00:00.000Z',
       ),
-    });
+    );
   });
 }
 
 function keyWordsBehaviour(ledgerOf: LedgerOf): void {
   it.each(keyRefusals)(
     'refuses past the free rate as license_invalid once a report says %s, in the words of the case',
-    async (_, refusing, detail) => {
+    async (_, refusing, detail, limitedBecause) => {
       const { metered, key } = await licensedOn(ledgerOf, {}, atTheFreeRate);
       refusing(metered.account, key);
       await metered.reported();
 
-      expect(await refusedAfterTheFreeRate(metered)).toEqual(asLicenseInvalid(detail));
+      expect(await refusedAfterTheFreeRate(metered)).toEqual(asLicenseInvalid(detail, limitedBecause));
     },
   );
 
@@ -135,12 +158,14 @@ function keyWordsBehaviour(ledgerOf: LedgerOf): void {
 
     expect(await refusedAfterTheFreeRate(another)).toEqual(
       asLicenseInvalid(
-        `This runtime has a key it hasn't activated with Auto yet, so it runs at ${freeRate}. ${usedToday} Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.`,
+        `This runtime's license key isn't activated yet, so it's limited to ${freeRate}. ${usedToday} Make sure it can reach billing.on.auto. It activates the key at its next report, within the hour.`,
+        'not_activated',
       ),
     );
     expect(await refusedAfterTheFreeRate(fresh)).toEqual(
       asLicenseInvalid(
-        `This runtime has used its 2 free runs and has a key it hasn't activated with Auto yet, so it runs at ${freeRate}. ${usedToday} Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.`,
+        `This runtime has used its 2 free runs. Its license key isn't activated yet, so it's limited to ${freeRate}. ${usedToday} Make sure it can reach billing.on.auto. It activates the key at its next report, within the hour.`,
+        'not_activated',
       ),
     );
   });

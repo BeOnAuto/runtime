@@ -2,7 +2,7 @@ import { Conflict } from '@on.auto/operations';
 
 import type { MeterOptions } from '../admission/metering.ts';
 import type { FreeRateReached } from '../meter-stream/meter-commands.ts';
-import { freeRateCaseOf, liftWords } from './free-rate-cases.ts';
+import { freeRateCaseOf, liftsAt, liftWords } from './free-rate-cases.ts';
 
 export function freeRateRefusalOf(options: MeterOptions): (reached: FreeRateReached) => Conflict {
   return ({ installation, footing, limit, rate, licensedEver, at }) => {
@@ -18,11 +18,13 @@ export function freeRateRefusalOf(options: MeterOptions): (reached: FreeRateReac
       rate,
     });
     return new Conflict({
-      detail: `${why} ${liftWords(limit, rate, at)} ${fix}`,
+      detail: `${why} ${liftWords(limit, at)} ${fix}`,
       kind,
       because: limit,
       resolve_at: resolveAt,
       runtime_id: installation,
+      lifts_at: liftsAt(limit, at),
+      ...(footing.kind === 'limited' ? { limited_because: footing.because } : {}),
     });
   };
 }

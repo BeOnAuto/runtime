@@ -84,7 +84,7 @@ export function offlineCreditsStopped(options: MeterOptions, installation: strin
     options,
     installation,
     (page) =>
-      `This offline allocation expired on ${dayOf(refreshBy)}. The account holder or an organization admin can request a new allocation at ${page}.`,
+      `This runtime's offline credits expired on ${dayOf(refreshBy)}, so it can't start runs. The account holder or an organization admin can request new offline credits at ${page}.`,
   );
 }
 

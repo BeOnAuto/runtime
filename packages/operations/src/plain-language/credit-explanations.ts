@@ -1,5 +1,10 @@
 import type { ConflictKind } from '../outcome/conflict.ts';
-import type { AccountClosedBecause, CreditsExhaustedBecause, RejectionBecause } from '../outcome/rejection-because.ts';
+import type {
+  AccountClosedBecause,
+  CreditsExhaustedBecause,
+  LimitedBecause,
+  RejectionBecause,
+} from '../outcome/rejection-because.ts';
 import type { UnavailableKind } from '../outcome/unavailable.ts';
 import type { Explanation } from './plain-language.ts';
 
@@ -14,7 +19,13 @@ type CreditBecause = Extract<
 >;
 
 const freeRunsAgain =
-  'The details below say when it can be run again; an owner can get more credits sooner at their resolve_at link.';
+  'The details below say when it can run again. To run sooner, the account holder or an organization admin can add credits at the resolve_at link.';
+
+const creditsAgain =
+  'The details below say when it can run again. To run sooner, the account holder or an organization admin can add credits at the resolve_at link; the runtime picks them up within the hour.';
+
+const capAgain =
+  'The details below say when it can run again. To run sooner, the account holder or an organization admin can add credits at the resolve_at link. New credits repay the overage first, and the runtime picks them up within the hour.';
 
 const freeRateAgain =
   'The details below say when it can run again. To run more, get a free key from Auto Studio at the resolve_at link in the details below, then activate it on the runtime.';
@@ -24,9 +35,9 @@ const licenseAgain =
 
 export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
   credits_exhausted: {
-    why: 'the account it runs under has no credits left for it',
+    why: 'the organization it runs under is out of credits',
     remedy:
-      'It can be run again once the account has more credits; the details below say how, with the resolve_at link where they give one.',
+      'It can run again once the organization has more credits. The details below say how, with the resolve_at link where they give one.',
   },
   license_required: {
     why: 'this runtime has no license key and has used its free runs for now',
@@ -51,7 +62,7 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
 };
 
 export const creditBecauses: Readonly<Record<CreditBecause, string>> = {
-  none_left: 'because the account has no credits left',
+  none_left: 'because its organization is out of credits',
   free_daily_limit: 'because its free runs for the day are used',
   free_month_used: 'because its free runs for the month are used',
   key_rotated: 'because the key of this runtime was replaced',
@@ -78,19 +89,26 @@ export const creditExplanationsByBecause: Readonly<
   },
   credits_exhausted: {
     none_left: {
-      why: 'the account it runs under has no credits left',
-      remedy: 'An owner can get more credits at the resolve_at link in the details below, then run this again.',
+      why: 'the organization it runs under is out of credits',
+      remedy:
+        'The account holder or an organization admin can get more credits at the resolve_at link in the details below, then run it again.',
     },
-    free_daily_limit: { why: 'the account it runs under has used its free runs for the day', remedy: freeRunsAgain },
-    free_month_used: { why: 'the account it runs under has used its free runs for the month', remedy: freeRunsAgain },
+    free_daily_limit: {
+      why: "today's free runs are used, and the organization it runs under has no other credits to spend",
+      remedy: freeRunsAgain,
+    },
+    free_month_used: {
+      why: "this month's free runs are used, and the organization it runs under has no other credits to spend",
+      remedy: freeRunsAgain,
+    },
   },
   license_invalid: {
     free_daily_limit: {
-      why: "this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the day",
+      why: "this runtime's license can't be used right now, so the runtime is limited to the free rate and has used today's free runs",
       remedy: licenseAgain,
     },
     free_month_used: {
-      why: "this runtime's license can't be used right now, so it runs at the free rate and has used its free runs for the month",
+      why: "this runtime's license can't be used right now, so the runtime is limited to the free rate and has used this month's free runs",
       remedy: licenseAgain,
     },
     key_rotated: {
@@ -118,3 +136,40 @@ export const creditExplanationsByBecause: Readonly<
     },
   },
 };
+
+type FreeRateLimit = Extract<RejectionBecause, 'free_daily_limit' | 'free_month_used'>;
+
+const usedRuns: Readonly<Record<FreeRateLimit, string>> = {
+  free_daily_limit: "today's free runs",
+  free_month_used: "this month's free runs",
+};
+
+const runtimeLimited: Readonly<Record<'credits' | 'cap', { readonly why: string; readonly remedy: string }>> = {
+  credits: { why: "this runtime's organization is out of credits", remedy: creditsAgain },
+  cap: { why: "this runtime's organization has reached its overage cap", remedy: capAgain },
+};
+
+function isFreeRateLimit(because: RejectionBecause | undefined): because is FreeRateLimit {
+  return because === 'free_daily_limit' || because === 'free_month_used';
+}
+
+interface LimitedRejection {
+  readonly kind: string;
+  readonly because?: RejectionBecause;
+  readonly limited_because?: LimitedBecause;
+}
+
+export function limitedCreditExplanationOf({
+  kind,
+  because,
+  limited_because: limitedBecause,
+}: LimitedRejection): Explanation | undefined {
+  if (kind !== 'credits_exhausted' || !isFreeRateLimit(because)) {
+    return undefined;
+  }
+  if (limitedBecause !== 'credits' && limitedBecause !== 'cap') {
+    return undefined;
+  }
+  const { why, remedy } = runtimeLimited[limitedBecause];
+  return { why: `${why}, so the runtime is limited to the free rate and has used ${usedRuns[because]}`, remedy };
+}

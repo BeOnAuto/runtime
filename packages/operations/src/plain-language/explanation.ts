@@ -4,11 +4,16 @@ import type { RejectionBecause } from '../outcome/rejection-because.ts';
 import type { RejectionKind } from '../outcome/rejection.ts';
 import { connectionBecauses, connectionExplanations, connectionRemedies } from './connection-explanations.ts';
 import { credentialBecauses, credentialRemedies } from './credential-explanations.ts';
-import { creditBecauses, creditExplanations, creditExplanationsByBecause } from './credit-explanations.ts';
+import {
+  creditBecauses,
+  creditExplanations,
+  creditExplanationsByBecause,
+  limitedCreditExplanationOf,
+} from './credit-explanations.ts';
 import type { Explanation, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
 
-export type ExplainedRejection = Pick<Rejected, 'reason' | 'kind' | 'because'>;
+export type ExplainedRejection = Pick<Rejected, 'reason' | 'kind' | 'because' | 'limited_because'>;
 
 const correctable = 'This can be corrected and tried again; the details below say what to change.';
 
@@ -229,15 +234,15 @@ const explanationByKindAndBecause: Readonly<
 
 const noRemedies: Remedies = {};
 
-export function explanationOf(
-  { reason, kind, because }: ExplainedRejection,
-  remedies: Remedies = noRemedies,
-): Explanation {
+export function explanationOf(rejection: ExplainedRejection, remedies: Remedies = noRemedies): Explanation {
+  const { reason, kind, because } = rejection;
   if (kind === undefined) {
     return explanationByReason[reason];
   }
   const explanation = explanationByKind[kind];
-  const ofBoth = because === undefined ? undefined : explanationByKindAndBecause[kind]?.[because];
+  const ofBoth =
+    limitedCreditExplanationOf({ ...rejection, kind }) ??
+    (because === undefined ? undefined : explanationByKindAndBecause[kind]?.[because]);
   if (ofBoth !== undefined) {
     return ofBoth;
   }

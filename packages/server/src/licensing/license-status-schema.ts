@@ -1,3 +1,4 @@
+import { LimitedBecauseSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 function orNull<S extends Schema.Constraint>(schema: S, description: string): Schema.NullOr<S> {
@@ -24,7 +25,7 @@ export const LicenseStatusSchema = Schema.Struct({
       'unregistered without a key; licensed while it runs on the license Auto signed; out_of_touch once it has not reached Auto since that license warns from, still running on it; limited while it runs at the free rate though it holds a key; offline while it spends offline credits; invalid once those credits stopped',
   }),
   limited_because: orNull(
-    Schema.Literals(['credits', 'cap', 'out_of_touch', 'key_rotated', 'key_revoked', 'org_closed', 'not_activated']),
+    LimitedBecauseSchema,
     'While it is limited, why: its org has no credits, or owes its overage cap; it has not reached Auto since its license limits from; its key was replaced or no longer stands; its org was closed; or it holds a key Auto has not answered for yet',
   ),
   runtime_id: Schema.String.annotate({ description: 'The id of this runtime, which an owner registers in Studio' }),

@@ -19,6 +19,7 @@ const noCaller: CallAnswer = {
 function callResultOf(result: EndedRunResult): CallResult {
   if (result.status === 'rejected') {
     const { reason, detail, kind, because, issues, resolve_at: resolveAt } = result;
+    const { lifts_at: liftsAt, limited_because: limitedBecause } = result;
     return {
       status: 'rejected',
       reason,
@@ -27,6 +28,8 @@ function callResultOf(result: EndedRunResult): CallResult {
       ...(because === undefined ? {} : { because }),
       ...(issues === undefined ? {} : { issues }),
       ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+      ...(liftsAt === undefined ? {} : { lifts_at: liftsAt }),
+      ...(limitedBecause === undefined ? {} : { limited_because: limitedBecause }),
     };
   }
   if (result.status === 'failed') {

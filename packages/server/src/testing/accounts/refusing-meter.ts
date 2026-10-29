@@ -1,5 +1,11 @@
 import type { Meter } from '@on.auto/definitions';
-import { Conflict, Unavailable, type ConflictKind, type UnavailableKind } from '@on.auto/operations';
+import {
+  Conflict,
+  Unavailable,
+  type ConflictKind,
+  type LimitedBecause,
+  type UnavailableKind,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
 interface Refusing {
@@ -8,8 +14,13 @@ interface Refusing {
   readonly resolve_at?: string;
 }
 
+interface Limiting extends Refusing {
+  readonly lifts_at?: string;
+  readonly limited_because?: LimitedBecause;
+}
+
 export type MeterRefusal =
-  | (Refusing & {
+  | (Limiting & {
       readonly kind: Extract<
         ConflictKind,
         'credits_exhausted' | 'license_required' | 'license_invalid' | 'account_closed'
@@ -25,8 +36,8 @@ export interface RefusingMeter {
   readonly refused: () => readonly string[];
 }
 
-function refusalOf({ kind, ...said }: MeterRefusal): Conflict | Unavailable {
-  return kind === 'meter_unavailable' ? new Unavailable({ ...said, kind }) : new Conflict({ ...said, kind });
+function refusalOf(refusal: MeterRefusal): Conflict | Unavailable {
+  return refusal.kind === 'meter_unavailable' ? new Unavailable(refusal) : new Conflict(refusal);
 }
 
 export function refusingMeter(): RefusingMeter {

@@ -25,11 +25,8 @@ describe('a workflow whose call the meter refuses for a license, or because it c
       },
       'waits for a license',
     ],
-    [{ kind: 'license_invalid', detail: 'The key was replaced' }, 'waits for its license to be put right'],
-    [
-      { kind: 'meter_unavailable', detail: 'The account could not be asked' },
-      'waits until its account at Auto can be asked for credits',
-    ],
+    [{ kind: 'license_invalid', detail: 'The key was replaced' }, 'waits for its license to be fixed'],
+    [{ kind: 'meter_unavailable', detail: 'The account could not be asked' }, 'waits until its credits can be checked'],
   ] as const)(
     'waits too: %o',
     async (refusal, said) => {

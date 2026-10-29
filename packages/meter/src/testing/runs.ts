@@ -49,6 +49,8 @@ export interface Answer {
   readonly because?: string;
   readonly resolve_at?: string;
   readonly runtime_id?: string;
+  readonly lifts_at?: string;
+  readonly limited_because?: string;
 }
 
 function memberOf(refused: object, member: keyof Answer): Partial<Answer> {
@@ -64,6 +66,8 @@ function answerOfRefusal(refusal: unknown): Answer {
     ...memberOf(refused, 'because'),
     ...memberOf(refused, 'resolve_at'),
     ...memberOf(refused, 'runtime_id'),
+    ...memberOf(refused, 'lifts_at'),
+    ...memberOf(refused, 'limited_because'),
   };
 }
 

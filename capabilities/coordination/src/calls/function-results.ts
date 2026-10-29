@@ -1,12 +1,20 @@
 import type { RunEnding } from '@on.auto/definitions';
-import type { Outcome } from '@on.auto/operations';
+import type { Outcome, Rejected } from '@on.auto/operations';
 import { field, textField } from '@on.auto/workflow-engine';
 
 import type { DefinitionRunResult, EndedRunResult } from './function-run.ts';
 
+function whereAndWhenOf({ resolve_at: resolveAt, lifts_at: liftsAt, limited_because: limitedBecause }: Rejected) {
+  return {
+    ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+    ...(liftsAt === undefined ? {} : { lifts_at: liftsAt }),
+    ...(limitedBecause === undefined ? {} : { limited_because: limitedBecause }),
+  };
+}
+
 export function definitionRunResultOf(outcome: Outcome): DefinitionRunResult {
   if (outcome.status === 'rejected') {
-    const { reason, detail, issues, kind, because, resolve_at: resolveAt } = outcome;
+    const { reason, detail, issues, kind, because } = outcome;
     return {
       status: 'rejected',
       reason,
@@ -14,7 +22,7 @@ export function definitionRunResultOf(outcome: Outcome): DefinitionRunResult {
       ...(issues === undefined ? {} : { issues }),
       ...(kind === undefined ? {} : { kind }),
       ...(because === undefined ? {} : { because }),
-      ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+      ...whereAndWhenOf(outcome),
     };
   }
   if (outcome.status === 'failed') {

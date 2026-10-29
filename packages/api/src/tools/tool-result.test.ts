@@ -17,6 +17,20 @@ const exhausted: Rejected = {
   resolve_at: 'https://studio.on.auto/billing',
 };
 
+const capped: Rejected = {
+  ...rejected(
+    'conflict',
+    "This runtime's organization has reached its overage cap of 125 credits.",
+    undefined,
+    'credits_exhausted',
+  ),
+  because: 'free_daily_limit',
+  resolve_at: 'https://studio.on.auto/?settings=billing&org=org_acme',
+  runtime_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+  lifts_at: '2026-10-29T00:00:00.000Z',
+  limited_because: 'cap',
+};
+
 const purged: Rejected = {
   ...rejected('conflict', 'The org acme was deleted for good.', undefined, 'account_closed'),
   because: 'org_purged',
@@ -61,7 +75,23 @@ describe('the tool result of a refusal of the meter', () => {
     });
     expect(problemIn(problem)).not.toHaveProperty('runtime_id');
   });
+});
 
+describe('the tool result of a refusal at the free rate', () => {
+  it('carries when the free rate lifts and why the runtime is limited to it, which its words name', () => {
+    const [words = '', problem = ''] = textsOf(capped);
+
+    expect(words).toContain("this runtime's organization has reached its overage cap, so the runtime is limited");
+    expect(problemIn(problem)).toMatchObject({
+      kind: 'credits_exhausted',
+      because: 'free_daily_limit',
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'cap',
+    });
+  });
+});
+
+describe('the tool result of a refusal of a closed account', () => {
   it('says a run of an org whose account is closed never runs again once the org is purged, beside its problem', () => {
     const [words = '', problem = ''] = textsOf(purged);
 

@@ -1,6 +1,6 @@
 import { Data, Schema } from 'effect';
 
-import type { RejectionBecause } from './rejection-because.ts';
+import type { LimitedBecause, RejectionBecause } from './rejection-because.ts';
 
 export const ConflictKindSchema = Schema.Literals([
   'taken',
@@ -33,12 +33,21 @@ export type ConflictKind = typeof ConflictKindSchema.Type;
 export interface Resolution {
   readonly resolve_at?: string;
   readonly runtime_id?: string;
+  readonly lifts_at?: string;
+  readonly limited_because?: LimitedBecause;
 }
 
-export function resolutionOf({ resolve_at: resolveAt, runtime_id: runtimeId }: Resolution): Resolution {
+export function resolutionOf({
+  resolve_at: resolveAt,
+  runtime_id: runtimeId,
+  lifts_at: liftsAt,
+  limited_because: limitedBecause,
+}: Resolution): Resolution {
   return {
     ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
     ...(runtimeId === undefined ? {} : { runtime_id: runtimeId }),
+    ...(liftsAt === undefined ? {} : { lifts_at: liftsAt }),
+    ...(limitedBecause === undefined ? {} : { limited_because: limitedBecause }),
   };
 }
 

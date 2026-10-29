@@ -14,19 +14,20 @@ A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a U
 
 ## Without a key
 
-A runtime nobody registered runs its first 100 runs, then at the free rate of 15 runs a UTC day and 75 a UTC calendar month. It counts both itself, from the runs it admitted. The run past the free rate is refused with `license_required`, whose `detail` says which limit it reached, when it lifts and where to get a key, with that page of Studio in `resolve_at`, the limit in `because`, `free_daily_limit` or `free_month_used`, and the runtime's id in `runtime_id`:
+A runtime nobody registered runs its first 100 runs, then at the free rate of 15 runs a UTC day and 75 a UTC calendar month. It counts both itself, from the runs it admitted. The run past the free rate is refused with `license_required`, whose `detail` says which limit it reached, when it lifts and where to get a key, with that page of Studio in `resolve_at`, the limit in `because`, `free_daily_limit` or `free_month_used`, when it lifts in `lifts_at`, and the runtime's id in `runtime_id`:
 
 ```json
 {
   "type": "https://on.auto/problems/license_required",
   "title": "License required",
   "status": 409,
-  "detail": "This runtime has used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15 free runs and can run again at 00:00 UTC on 2026-10-29. To run more, get a free key at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a, then activate it on the runtime.",
+  "detail": "This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. It has used all of today's free runs, so it can start runs again at 00:00 UTC on 2026-10-29. To run more, get a free license key at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a and activate it on this runtime.",
   "reason": "conflict",
   "kind": "license_required",
   "because": "free_daily_limit",
   "resolve_at": "https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
-  "runtime_id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a"
+  "runtime_id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+  "lifts_at": "2026-10-29T00:00:00.000Z"
 }
 ```
 
@@ -59,7 +60,7 @@ Give the runtime its key in one of four ways. A key in the environment or the co
   It asks the runtime running on this computer to activate the key, and says where the runtime stands, the org by its name at Auto, or by its id where Auto names none:
 
   ```text
-  Licensed to Acme Corporation (free plan): 1000 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.
+  Licensed to Acme Corporation on the free plan, with 1000 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.
   ```
 
 - **Studio, or any client of the API.** `POST /v1/orgs/{org}/license` with `{ "key": "<the key>" }`, or the MCP tool `activate_license`, activates the key for the whole runtime and answers where it stands, as [`GET /v1/orgs/{org}/license`](#see-where-the-runtime-stands) does. It takes the permission to change the org, as adding a connection does.
@@ -107,7 +108,7 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
   "key_source": "environment",
   "offline": null,
   "invalid_because": null,
-  "summary": "Licensed to Acme Corporation (team plan): 570 runs left. It is in overage: the org owes 30 of at most 600 credits, which its next credits repay."
+  "summary": "Licensed to Acme Corporation on the team plan, with 570 runs left. The organization owes 30 credits of overage, and its cap is 600. Its next credits repay the overage first."
 }
 ```
 
@@ -123,11 +124,11 @@ The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules 
 - `offline` is `{ credits, spent, usable_until }` while the runtime holds offline credits, and `invalid_because` the words a run is refused in once they have stopped.
 - `summary` says all of it in plain words, with how to put it right.
 
-Started by `npx @on.auto/runtime`, the runtime says its `summary` in its terminal and on the page it serves at its root, such as `12 of 100 free runs used. After that, it runs at the free rate of 15 runs a UTC day and 75 a UTC month without a license key. Get a free key at https://studio.on.auto/licenses?installation=….` without a key, `Licensed to Acme Corporation (free plan): 940 runs left.` once it is licensed, or, while it runs at the free rate, why, what it has used and how to put it right.
+Started by `npx @on.auto/runtime`, the runtime says its `summary` in its terminal and on the page it serves at its root, such as `This runtime has used 12 of its 100 free runs. After that, without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. Get a free license key at https://studio.on.auto/licenses?installation=….` without a key, `Licensed to Acme Corporation on the free plan, with 940 runs left.` once it is licensed, or, while it runs at the free rate, why, what it has used and how to put it right.
 
 ## When a run is refused
 
-Each refusal is a problem document with the status `409`, the reason `conflict` and one of these kinds, or with `503` and the kind `meter_unavailable`. Beside its `detail`, a refusal that a person resolves somewhere gives that page's absolute URL in `resolve_at`, the runtime's id in `runtime_id`, and its case in `because`, so Studio and an agent can offer the way out. A workflow whose call is refused with one of these kinds waits at that step and asks again.
+Each refusal is a problem document with the status `409`, the reason `conflict` and one of these kinds, or with `503` and the kind `meter_unavailable`. Beside its `detail`, a refusal that a person resolves somewhere gives that page's absolute URL in `resolve_at`, the runtime's id in `runtime_id`, and its case in `because`, so Studio and an agent can offer the way out. A refusal at the free rate also gives when the limit lifts in `lifts_at`, in ISO 8601 UTC, and, for a runtime that holds a key, why it is limited in `limited_because`, which reads as `limited_because` of [where the runtime stands](#see-where-the-runtime-stands) does. A workflow whose call is refused with one of these kinds waits at that step and asks again.
 
 | Kind                | Means                                                                                                                                                                                                                                                                                            | What to do                                                                                                                             |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -138,18 +139,20 @@ Each refusal is a problem document with the status `409`, the reason `conflict` 
 
 The `detail` of a refusal at the free rate says why the runtime runs at it, which limit it reached and when it lifts, and how to put it right:
 
-| Case                    | Kind and `detail`                                                                                                                                                                                                                                                                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No key                  | `license_required`: `This runtime has used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month.`, or `This runtime has no license key, so it runs at …` for one that held a key once, then the limit, then `To run more, get a free key at {resolve_at}, then activate it on the runtime.` |
-| No credits              | `credits_exhausted`: `This runtime's organization has no credits left, so it runs at the free rate of …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}. The runtime picks them up at its next report, within the hour.`                                                                                |
-| The overage cap         | `credits_exhausted`: `This runtime's organization has reached its overage cap of {cap} credits, so it runs at …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}; they repay what's owed first. The runtime picks them up at its next report, within the hour.`                                          |
-| Out of touch            | `license_invalid`: `This runtime hasn't reached Auto since {date}, so it has run at … since {date}.`, the limit, `Check that it can reach billing.on.auto. It returns to its organization's credits at its next report.`                                                                                                                          |
-| The key was rotated     | `license_invalid`: `This runtime's key was replaced, so it runs at …`, the limit, `Activate the new key shown when it was rotated. If that key is lost, the account holder or an organization admin can rotate it again at {resolve_at}.`                                                                                                         |
-| The runtime was removed | `license_invalid`: `This runtime was removed from its organization, so it runs at …`, the limit, `To use its organization's credits again, the account holder or an organization admin can register it again at {resolve_at}. Then activate the new key.`                                                                                         |
-| The org was closed      | `license_invalid`: `This runtime's organization at Auto is closed, so it runs at …`, the limit, then how to restore the organization or activate a key from another                                                                                                                                                                               |
-| A key not yet activated | `license_invalid`: `This runtime has a key it hasn't activated with Auto yet, so it runs at …`, the limit, `Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.`                                                                                                                                   |
+| Case                    | Kind and `detail`                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Case                    | Kind and `detail`                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | -----------------                                                                                                                                                                                                                                                                                                                                                  |
+| No key                  | `license_required`: `This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month.`, or `This runtime has no license key, so it's limited to …` for one that held a key once, then the limit, then `To run more, get a free license key at {resolve_at} and activate it on this runtime.` |
+| No credits              | `credits_exhausted`, `limited_because: "credits"`: `This runtime's organization is out of credits, so the runtime is limited to the free rate of …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}; the runtime picks them up within the hour.`                                                                          |
+| The overage cap         | `credits_exhausted`, `limited_because: "cap"`: `This runtime's organization has reached its overage cap of {cap} credits, so the runtime is limited to …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}. New credits repay the overage first, and the runtime picks them up within the hour.`                           |
+| Out of touch            | `license_invalid`, `limited_because: "out_of_touch"`: `This runtime hasn't reached Auto since {date}, so it has been limited to … since {date}.`, the limit, `Make sure it can reach billing.on.auto. It goes back to its organization's credits at its next report, within the hour.`                                                                             |
+| The key was rotated     | `license_invalid`, `limited_because: "key_rotated"`: `This runtime's license key was replaced, so it's limited to …`, the limit, `Activate the new key that was shown when the key was rotated. If that key is lost, the account holder or an organization admin can rotate it again at {resolve_at}.`                                                             |
+| The runtime was removed | `license_invalid`, `limited_because: "key_revoked"`: `This runtime was removed from its organization, so it's limited to …`, the limit, `To use the organization's credits again, the account holder or an organization admin can register it again at {resolve_at}, then activate the new key.`                                                                   |
+| The org was closed      | `license_invalid`, `limited_because: "org_closed"`: `This runtime's organization at Auto is closed, so it's limited to …`, the limit, then how to restore the organization or register the runtime with another                                                                                                                                                    |
+| A key not yet activated | `license_invalid`, `limited_because: "not_activated"`: `This runtime's license key isn't activated yet, so it's limited to …`, the limit, `Make sure it can reach billing.on.auto. It activates the key at its next report, within the hour.`                                                                                                                      |
 
-The limit reads `It has used today's 15 free runs and can run again at 00:00 UTC on {date}.` or `It has used this month's 75 free runs and can run again at 00:00 UTC on {date}.`
+The limit reads `It has used all of today's free runs, so it can start runs again at 00:00 UTC on {date}.` or `It has used all of this month's free runs, so it can start runs again at 00:00 UTC on {date}.`, the same time `lifts_at` gives.
 
 Activating a key can be refused too: as `license_invalid` for a key that is not one of Studio's, one Auto does not know, one for another runtime, one that was rotated (`because: "key_rotated"`) or removed (`because: "installation_revoked"`), or a license not signed by Auto; and as `account_closed` for a key of an org whose account is closed, `because: "org_deleted"` while an owner can still restore it, until the date at the `resolve_at` Auto gives, or `"org_purged"` once it is gone for good.
 
@@ -172,10 +175,10 @@ Give the runtime its offline credits, and its key, which signs its reports, in a
     allocation: ${ACME_ALLOCATION}
   ```
 
-- **The command.** With Auto Runtime running on your computer, `npx -y @on.auto/runtime license allocation '<their JSON>'`, which says what the runtime holds: `Offline credits: 0 of 50 used, usable until 2026-11-27.`
+- **The command.** With Auto Runtime running on your computer, `npx -y @on.auto/runtime license allocation '<their JSON>'`, which says what the runtime holds: `This runtime uses offline credits: 0 of 50 used, usable until 2026-11-27.`
 - **The API.** `POST /v1/orgs/{org}/license/allocation` with `{ "allocation": { "payload": "…", "signature": "…", "kid": "…" } }`.
 
-While it holds offline credits, the runtime starts each new run against them and asks Auto nothing. It counts what it spent from its own record of the runs it admitted since it took them; replicas of one ledger admit exactly that many between them. Past the date Auto signed into them the runtime refuses new runs as `license_invalid`, `This offline allocation expired on 2026-11-27. The account holder or an organization admin can request a new allocation at https://studio.on.auto/licenses?installation=…`, and once they are spent as `credits_exhausted` with `because: "none_left"`, `This runtime has used all 50 offline credits. The account holder or an organization admin can request more at https://studio.on.auto/licenses?installation=…`, each with that page in `resolve_at`.
+While it holds offline credits, the runtime starts each new run against them and asks Auto nothing. It counts what it spent from its own record of the runs it admitted since it took them; replicas of one ledger admit exactly that many between them. Past the date Auto signed into them the runtime refuses new runs as `license_invalid`, `This runtime's offline credits expired on 2026-11-27, so it can't start runs. The account holder or an organization admin can request new offline credits at https://studio.on.auto/licenses?installation=…`, and once they are spent as `credits_exhausted` with `because: "none_left"`, `This runtime has used its 50 offline credits, so it can't start more runs. The account holder or an organization admin can request more offline credits at https://studio.on.auto/licenses?installation=…`, each with that page in `resolve_at`.
 
 A runtime that does reach Auto now and then refreshes its offline credits every day, which gives them their days again, and sends Auto a report of what it spent every hour. One that never does needs an owner to carry its reports to Studio:
 

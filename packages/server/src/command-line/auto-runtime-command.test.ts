@@ -73,7 +73,7 @@ describe('the auto-runtime command', () => {
     expect(runtime.output().stdout).toContain(`     MCP      ${runtime.url}/mcp\n`);
     expect(runtime.output().stdout).toContain('     Docs     https://on.auto/docs/\n');
     expect(runtime.output().stdout).toMatch(
-      /\n {2}0 of 100 free runs used\. After that, it runs at the free rate of 15 runs a UTC day and 75 a UTC month without a license key\. Get a free key at https:\/\/\S+\/licenses\?installation=[\da-f-]+\.\n {2}Local mode: no sign-in, so anyone using this computer can act as you\. To require sign-in, set PUBLIC_URL\.\n/u,
+      /\n {2}This runtime has used 0 of its 100 free runs\. After that, without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month\. Get a free license key at https:\/\/\S+\/licenses\?installation=[\da-f-]+\.\n {2}Local mode: no sign-in, so anyone using this computer can act as you\. To require sign-in, set PUBLIC_URL\.\n/u,
     );
     expect(runtime.output().stderr).toBe('');
     runtime.interrupt();

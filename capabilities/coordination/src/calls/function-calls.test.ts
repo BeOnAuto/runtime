@@ -217,6 +217,8 @@ describe('a call whose definition the meter refused to start', () => {
       detail: 'Not now',
       kind,
       resolve_at: 'https://studio.example.com/billing',
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'credits',
     });
 
     expect(await Effect.runPromise(perform(classify, run, origin, firstAttempt))).toEqual({
@@ -225,6 +227,8 @@ describe('a call whose definition the meter refused to start', () => {
       detail: 'Not now',
       kind,
       resolve_at: 'https://studio.example.com/billing',
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'credits',
       admission: 'refused',
     });
   });

@@ -51,7 +51,7 @@ function keylessStatusBehaviour(ledgerOf: LedgerOf): void {
       key_source: null,
       offline: null,
       invalid_because: null,
-      summary: `2 of 100 free runs used. After that, it runs at the free rate of 15 runs a UTC day and 75 a UTC month without a license key. Get a free key at ${free}.`,
+      summary: `This runtime has used 2 of its 100 free runs. After that, without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. Get a free license key at ${free}.`,
     });
     expect((await metered.state()).installation).toBe(runtime);
   });
@@ -71,7 +71,7 @@ function keylessStatusBehaviour(ledgerOf: LedgerOf): void {
     });
     expect(reached).toMatchObject({
       fallback: { used_today: 2, used_this_month: 2, lifts_at: '2026-10-28T00:00:00.000Z' },
-      summary: `This runtime has used its 2 free runs. Without a license key, it runs at the free rate of 2 runs a UTC day and 4 a UTC month. It has used 2 of today's 2 and 2 of this month's 4. It can run again at 00:00 UTC on 2026-10-28. To run more, get a free key at ${free}, then activate it on the runtime.`,
+      summary: `This runtime has used its 2 free runs. Without a license key, it's limited to the free rate of 2 runs a UTC day and 4 a UTC month. It has used 2 of today's 2 runs and 2 of this month's 4. It can start runs again at 00:00 UTC on 2026-10-28. To run more, get a free license key at ${free} and activate it on this runtime.`,
     });
   });
 }
@@ -104,7 +104,7 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
       key_source: 'configuration',
       offline: null,
       invalid_because: null,
-      summary: 'Licensed to acme (free plan): 999 runs left.',
+      summary: 'Licensed to acme on the free plan, with 999 runs left.',
     });
   });
 
@@ -118,7 +118,7 @@ function licensedStatusBehaviour(ledgerOf: LedgerOf): void {
       state: 'out_of_touch',
       org_name: 'Acme Corporation',
       summary:
-        "Licensed to Acme Corporation (free plan): 1000 runs left. It hasn't reached Auto since 2026-10-27. Unless it reaches billing.on.auto, it will run at the free rate from 2026-11-24.",
+        "Licensed to Acme Corporation on the free plan, with 1000 runs left. It hasn't reached Auto since 2026-10-27. It will be limited to the free rate from 2026-11-24 unless it reaches billing.on.auto first.",
     });
   });
 
@@ -134,22 +134,32 @@ const standings = [
   [
     'low',
     { available: 100 },
-    `Licensed to acme (free plan): 100 runs left. Its organization's credits are low. The account holder or an organization admin can add credits at ${billing}.`,
+    `Licensed to acme on the free plan, with 100 runs left. The organization's credits are running low. The account holder or an organization admin can add credits at ${billing}.`,
   ],
   [
     'empty',
     { plan: 'team', available: 0, overage_cap: 600 },
-    `Licensed to acme (team plan): 600 runs left. Its organization has no credits left, so its runs go into overage, which its next credits repay first. The account holder or an organization admin can add credits at ${billing}.`,
+    `Licensed to acme on the team plan, with 600 runs left. The organization is out of credits, so new runs go into overage, up to its cap of 600 credits. The account holder or an organization admin can add credits at ${billing}; new credits repay the overage first.`,
   ],
   [
     'overage',
     { plan: 'team', available: 0, owed: 30, overage_cap: 600 },
-    "Licensed to acme (team plan): 570 runs left. It's in overage: the organization owes 30 of up to 600 credits, which its next credits repay first.",
+    'Licensed to acme on the team plan, with 570 runs left. The organization owes 30 credits of overage, and its cap is 600. Its next credits repay the overage first.',
+  ],
+  [
+    'overage',
+    { plan: 'team', available: 0, owed: 1, overage_cap: 600 },
+    'Licensed to acme on the team plan, with 599 runs left. The organization owes 1 credit of overage, and its cap is 600. Its next credits repay the overage first.',
   ],
   [
     'near_cap',
     { plan: 'team', available: 0, owed: 500, overage_cap: 600 },
-    `Licensed to acme (team plan): 100 runs left. It's near its overage cap: the organization owes 500 of up to 600 credits, which its next credits repay first. The account holder or an organization admin can add credits at ${billing}.`,
+    `Licensed to acme on the team plan, with 100 runs left. The organization owes 500 credits of overage, close to its cap of 600. At the cap, this runtime is limited to the free rate. The account holder or an organization admin can add credits at ${billing}; new credits repay the overage first.`,
+  ],
+  [
+    'near_cap',
+    { plan: 'team', available: 0, owed: 599, overage_cap: 600 },
+    `Licensed to acme on the team plan, with 1 run left. The organization owes 599 credits of overage, close to its cap of 600. At the cap, this runtime is limited to the free rate. The account holder or an organization admin can add credits at ${billing}; new credits repay the overage first.`,
   ],
 ] as const;
 

@@ -80,13 +80,13 @@ function admittedLater(refusal: NonNullable<Step['refusal']>) {
   return step;
 }
 
-const tries = 'It tries again at 2026-10-05T09:01:00.000Z, and stops waiting at 2026-10-06T09:00:00.000Z.';
+const tries = 'It tries again at 09:01:00 UTC on 2026-10-05 and stops waiting at 09:00:00 UTC on 2026-10-06.';
 
 describe('a step that waits for credits or a license', () => {
-  it('says in plain words what it waits for and why, where to put it right, when it tries again and until when', () => {
+  it('says in plain words what it waits for and why, when it tries again and until when, and where to fix it', () => {
     expect(admittedLater(outOfCredits)).toMatchObject({
       type: 'step_waiting',
-      summary: `The step “ask” waits for credits, since the account it runs under has no credits left; it can be put right at https://studio.example.com/billing. ${tries}`,
+      summary: `The step “ask” waits for credits. The organization it runs under is out of credits. ${tries} Credits can be added at https://studio.example.com/billing.`,
       data: {
         ...dataOfAsk,
         times: 2,
@@ -106,15 +106,15 @@ describe('a step that waits for a refusal of each kind', () => {
   it.each([
     [
       'license_required',
-      'The step “ask” waits for a license, since this runtime has no license key and has used its free runs for now.',
+      'The step “ask” waits for a license key. This runtime has no license key and has used its free runs for now.',
     ],
     [
       'license_invalid',
-      'The step “ask” waits for its license to be put right, since the license this runtime holds no longer stands.',
+      'The step “ask” waits for its license to be fixed. The license this runtime holds no longer stands.',
     ],
     [
       'meter_unavailable',
-      'The step “ask” waits until its account at Auto can be asked for credits, since the account it runs under could not be asked for its credits.',
+      'The step “ask” waits until its credits can be checked. The account it runs under could not be asked for its credits.',
     ],
     ['busy_elsewhere', 'The step “ask” waits for credits or a license.'],
   ])('says what a refusal of the kind %s waits for', (kind, said) => {
@@ -125,29 +125,93 @@ describe('a step that waits for a refusal of each kind', () => {
     expect(internalTermsIn(String(step?.summary))).toEqual([]);
     expect([link, because]).toEqual(['https://studio.example.com/billing', 'none_left']);
   });
+
+  it.each([
+    ['license_required', 'A free license key is available at https://studio.example.com/licenses.'],
+    ['license_invalid', 'The license can be fixed at https://studio.example.com/licenses.'],
+    ['meter_unavailable', 'It can be fixed at https://studio.example.com/licenses.'],
+  ])('says where a refusal of the kind %s is fixed', (kind, fixed) => {
+    const { because, ...refused } = outOfCredits;
+    const step = admittedLater({ ...refused, kind, resolve_at: 'https://studio.example.com/licenses' });
+
+    expect(step?.summary?.endsWith(`${tries} ${fixed}`)).toBe(true);
+    expect(because).toBe('none_left');
+  });
 });
 
-describe('a step that waits out the free rate', () => {
-  it.each([
-    [
-      'credits_exhausted',
-      'free_daily_limit',
-      'waits for credits, since the account it runs under has used its free runs for the day',
-    ],
-    [
-      'license_required',
-      'free_month_used',
-      'waits for a license, since this runtime has no license key and has used its free runs for the month',
-    ],
-  ])('says which limit a refusal of the kind %s reached, %s', (kind, because, said) => {
-    const { resolve_at: link, ...refused } = outOfCredits;
+type FreeRateCase = readonly [string, string, Readonly<Record<string, string>>, string];
 
-    expect(admittedLater({ ...refused, kind, because })?.summary).toBe(`The step “ask” ${said}. ${tries}`);
-    expect(link).toBe('https://studio.example.com/billing');
+const freeRateCases: readonly FreeRateCase[] = [
+  [
+    'credits_exhausted',
+    'free_daily_limit',
+    {},
+    "waits for credits. Today's free runs are used, and the organization it runs under has no other credits to spend.",
+  ],
+  [
+    'credits_exhausted',
+    'free_daily_limit',
+    { limited_because: 'credits' },
+    "waits for credits. This runtime's organization is out of credits, so the runtime is limited to the free rate and has used today's free runs.",
+  ],
+  [
+    'credits_exhausted',
+    'free_month_used',
+    { limited_because: 'cap' },
+    "waits for credits. This runtime's organization has reached its overage cap, so the runtime is limited to the free rate and has used this month's free runs.",
+  ],
+  [
+    'license_required',
+    'free_month_used',
+    {},
+    'waits for a license key. This runtime has no license key and has used its free runs for the month.',
+  ],
+  [
+    'credits_exhausted',
+    'free_daily_limit',
+    { limited_because: 'rested' },
+    "waits for credits. Today's free runs are used, and the organization it runs under has no other credits to spend.",
+  ],
+];
+
+describe('a step that waits out the free rate', () => {
+  it.each(freeRateCases)(
+    'says which limit a refusal of the kind %s reached, %s, and why it is limited, %o',
+    (kind, because, limited, said) => {
+      const { resolve_at: link, ...refused } = outOfCredits;
+      const step = admittedLater({ ...refused, kind, because, ...limited });
+
+      expect(step?.summary).toBe(`The step “ask” ${said} ${tries}`);
+      expect(link).toBe('https://studio.example.com/billing');
+    },
+  );
+
+  it('shows when the limit lifts and why the runtime is limited in its data', () => {
+    const step = admittedLater({
+      ...outOfCredits,
+      because: 'free_daily_limit',
+      lifts_at: '2026-10-06T00:00:00.000Z',
+      limited_because: 'cap',
+    });
+
+    expect(step?.data).toMatchObject({
+      because: 'free_daily_limit',
+      lifts_at: '2026-10-06T00:00:00.000Z',
+      limited_because: 'cap',
+    });
   });
 });
 
 describe('a step that waits with less said, or the most', () => {
+  it('says where to fix a refusal that names no kind', () => {
+    const { kind, ...unnamed } = outOfCredits;
+
+    expect(admittedLater(unnamed)?.summary).toBe(
+      `The step “ask” waits for credits or a license. ${tries} It can be fixed at https://studio.example.com/billing.`,
+    );
+    expect(kind).toBe('credits_exhausted');
+  });
+
   it('names only what the refusal gave', () => {
     const { kind, because, resolve_at: link, ...bare } = outOfCredits;
 
@@ -168,6 +232,8 @@ describe('a step that waits with less said, or the most', () => {
       because: '😀'.repeat(64),
       detail: '\\u0000'.repeat(170),
       resolve_at: `https://example.com/${'\\u0000'.repeat(166)}`,
+      lifts_at: '\\u0000'.repeat(42),
+      limited_because: '😀'.repeat(64),
       retry_at: retryAt,
       until,
     });

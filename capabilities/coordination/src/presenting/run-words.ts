@@ -2,6 +2,7 @@ import {
   CancelledKindSchema,
   ConflictKindSchema,
   InvalidInputKindSchema,
+  LimitedBecauseSchema,
   UnansweredKindSchema,
   RejectionBecauseSchema,
   UnavailableKindSchema,
@@ -48,11 +49,24 @@ const decodeUnansweredKind = Schema.decodeUnknownOption(UnansweredKindSchema);
 
 const decodeBecause = Schema.decodeUnknownOption(RejectionBecauseSchema);
 
-type Rejection = NonNullable<Extract<InputReceipt, { readonly kind: 'call_answered' }>['rejection']>;
+const decodeLimitedBecause = Schema.decodeUnknownOption(LimitedBecauseSchema);
 
-function whyNot({ kind, because }: Rejection): string {
+type Rejection = NonNullable<Extract<InputReceipt, { readonly kind: 'call_answered' }>['rejection']> & {
+  readonly limited_because?: string;
+};
+
+function becausesOf({ because, limited_because: limitedBecause }: Rejection) {
   const known = Option.getOrUndefined(decodeBecause(because));
-  const withBecause = known === undefined ? {} : { because: known };
+  const limited = Option.getOrUndefined(decodeLimitedBecause(limitedBecause));
+  return {
+    ...(known === undefined ? {} : { because: known }),
+    ...(limited === undefined ? {} : { limited_because: limited }),
+  };
+}
+
+function whyNot(rejection: Rejection): string {
+  const { kind } = rejection;
+  const withBecause = becausesOf(rejection);
   const refused = Option.getOrUndefined(decodeInvalidInputKind(kind));
   if (refused !== undefined) {
     return explanationOf({ reason: 'invalid_input', kind: refused }).why;
@@ -104,30 +118,41 @@ const waits: Readonly<Record<NonNullable<Step['waits_for']>, string>> = {
 
 const awaited: ReadonlyMap<string, string> = new Map([
   ['credits_exhausted', 'waits for credits'],
-  ['license_required', 'waits for a license'],
-  ['license_invalid', 'waits for its license to be put right'],
-  ['meter_unavailable', 'waits until its account at Auto can be asked for credits'],
+  ['license_required', 'waits for a license key'],
+  ['license_invalid', 'waits for its license to be fixed'],
+  ['meter_unavailable', 'waits until its credits can be checked'],
+]);
+
+const fixedAt: ReadonlyMap<string, (page: string) => string> = new Map([
+  ['credits_exhausted', (page: string) => `Credits can be added at ${page}.`],
+  ['license_required', (page: string) => `A free license key is available at ${page}.`],
+  ['license_invalid', (page: string) => `The license can be fixed at ${page}.`],
 ]);
 
 type StepRefusal = NonNullable<Step['refusal']>;
 
-function sinceWhy(refusal: StepRefusal): string {
+function whyInWords(refusal: StepRefusal): string {
   const said = whyNot(refusal);
-  return said === '' ? '' : `, since ${said}`;
+  return said === '' ? '' : ` ${asSentence(capitalized(said))}`;
 }
 
-function whereToPutItRight({ resolve_at: resolveAt }: StepRefusal): string {
-  return resolveAt === undefined ? '' : `; it can be put right at ${resolveAt}`;
+function whereToFixIt({ kind, resolve_at: resolveAt }: StepRefusal): string {
+  if (resolveAt === undefined) {
+    return '';
+  }
+  const fixed = fixedAt.get(kind ?? '') ?? ((page: string) => `It can be fixed at ${page}.`);
+  return ` ${fixed(resolveAt)}`;
 }
 
 function timeOf(instant: number): string {
-  return new Date(instant).toISOString();
+  const moment = new Date(instant).toISOString();
+  return `${moment.slice(11, 19)} UTC on ${moment.slice(0, 10)}`;
 }
 
 function waitingInWords(refusal: StepRefusal): string {
   const waiting = awaited.get(refusal.kind ?? '') ?? waits.admission;
-  const tries = `It tries again at ${timeOf(refusal.retry_at)}, and stops waiting at ${timeOf(refusal.until)}.`;
-  return `${waiting}${sinceWhy(refusal)}${whereToPutItRight(refusal)}. ${tries}`;
+  const tries = ` It tries again at ${timeOf(refusal.retry_at)} and stops waiting at ${timeOf(refusal.until)}.`;
+  return `${waiting}.${whyInWords(refusal)}${tries}${whereToFixIt(refusal)}`;
 }
 
 const outcomes: Readonly<Record<Exclude<Step['outcome'], 'waiting'>, string>> = {

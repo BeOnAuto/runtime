@@ -57,7 +57,8 @@ function refusalShown(refusal: StepRefusal | undefined): Pick<Step, 'refusal'> {
   if (refusal === undefined) {
     return {};
   }
-  const { kind, because, detail, resolve_at: resolveAt, retry_at, until } = refusal;
+  const { kind, because, detail, resolve_at: resolveAt, lifts_at: liftsAt, retry_at, until } = refusal;
+  const { limited_because: limitedBecause } = refusal;
   return {
     refusal: {
       ...(kind === undefined ? {} : { kind: textCutAt(kind, mostNameBytes) }),
@@ -66,6 +67,8 @@ function refusalShown(refusal: StepRefusal | undefined): Pick<Step, 'refusal'> {
       ...(resolveAt === undefined || textCutAt(resolveAt, mostTitleBytes) !== resolveAt
         ? {}
         : { resolve_at: resolveAt }),
+      ...(liftsAt === undefined || textCutAt(liftsAt, mostNameBytes) !== liftsAt ? {} : { lifts_at: liftsAt }),
+      ...(limitedBecause === undefined ? {} : { limited_because: textCutAt(limitedBecause, mostNameBytes) }),
       retry_at,
       until,
     },

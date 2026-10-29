@@ -102,6 +102,17 @@ describe('a refusal shown on the step that waits', () => {
     expect(shownFor({ ...outOfCredits, resolve_at: longLink }).shown).not.toHaveProperty('resolve_at');
   });
 
+  it('shows when the limit lifts and why the runtime is limited, cutting the why at 256 bytes and leaving out a longer time', () => {
+    const limited = { ...outOfCredits, because: 'free_daily_limit', lifts_at: '2026-10-29T00:00:00.000Z' };
+
+    expect(shownFor({ ...limited, limited_because: 'cap' }).shown).toMatchObject({
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'cap',
+    });
+    expect(shownFor({ ...limited, limited_because: 'c'.repeat(300) }).shown?.limited_because?.length).toBe(256);
+    expect(shownFor({ ...limited, lifts_at: 't'.repeat(300) }).shown).not.toHaveProperty('lifts_at');
+  });
+
   it('names no kind, because or link it was not given', () => {
     const { shown, refusedAt } = shownFor({
       status: 'rejected',

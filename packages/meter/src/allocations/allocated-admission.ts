@@ -6,6 +6,7 @@ import { admittedWithin } from '../admission/allowance.ts';
 import { licensesPageOf } from '../admission/metering.ts';
 import { isLiveAt, nowMs, offlineCreditsStopped, type Licensing } from '../licensing/licensing.ts';
 import type { Allocation } from '../meter-stream/allocation-events.ts';
+import { countOf, offlineCredits } from '../standing/counted-words.ts';
 
 export function admittedByTheAllocation(
   licensing: Licensing,
@@ -25,7 +26,7 @@ export function admittedByTheAllocation(
         through: allocation.actions + credits,
         refusal: () =>
           new Conflict({
-            detail: `This runtime has used all ${credits} offline credits. The account holder or an organization admin can request more at ${page}.`,
+            detail: `This runtime has used its ${countOf(credits, offlineCredits)}, so it can't start more runs. The account holder or an organization admin can request more offline credits at ${page}.`,
             kind: 'credits_exhausted',
             because: 'none_left',
             resolve_at: page,

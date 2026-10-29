@@ -82,4 +82,19 @@ describe('the refusal of running a definition that names where to put it right',
 
     expect(definitionRunResultOf(refused)).toEqual(refused);
   });
+
+  it('keeps when the free rate lifts and why the runtime is limited to it', () => {
+    const limited = {
+      status: 'rejected',
+      reason: 'conflict',
+      detail: "This runtime's organization has reached its overage cap of 125 credits.",
+      kind: 'credits_exhausted',
+      because: 'free_daily_limit',
+      resolve_at: 'https://studio.example.com/billing',
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'cap',
+    } as const;
+
+    expect(definitionRunResultOf(limited)).toEqual(limited);
+  });
 });

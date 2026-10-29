@@ -42,11 +42,14 @@ function refusalShown(refusal: Step['refusal']): Readonly<Record<string, string>
     return {};
   }
   const { kind, because, detail, resolve_at: resolveAt, retry_at: retryAt, until } = refusal;
+  const { lifts_at: liftsAt, limited_because: limitedBecause } = refusal;
   return {
     detail,
     ...(kind === undefined ? {} : { kind }),
     ...(because === undefined ? {} : { because }),
     ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+    ...(liftsAt === undefined ? {} : { lifts_at: liftsAt }),
+    ...(limitedBecause === undefined ? {} : { limited_because: limitedBecause }),
     retry_at: new Date(retryAt).toISOString(),
     until: new Date(until).toISOString(),
   };
