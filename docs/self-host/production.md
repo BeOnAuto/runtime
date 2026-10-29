@@ -8,7 +8,7 @@ head:
 
 # Deploy for your team
 
-Auto Runtime is in early development and is not ready for production use; see [Availability](../concepts/functions.md#availability). Your team can still run it today, and you can rely on these behaviors:
+When your team runs Auto Runtime, you can rely on these behaviors:
 
 - Auto keeps every playbook, definition, run and its history in its ledger, with the workflows that wait on timers and events. On a durable volume or database, all of it survives a restart, and an upgrade carries it forward ([Upgrades](#upgrades)).
 - Backups are yours to run: copy the volume, or rely on your database's own backups, and take one before every upgrade.

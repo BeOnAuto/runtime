@@ -24,8 +24,6 @@ Hosted Auto runs reasoning, interaction, computation and recall functions, and w
 
 The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
-The self-hosted runtime is in early development and is not ready for production use.
-
 These are planned and not available yet:
 
 - Dream, an optional process that would revisit a playbook's history and suggest ideas worth testing. It would not be a function type.

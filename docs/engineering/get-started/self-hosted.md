@@ -1,6 +1,6 @@
 # Build your first playbook with your agent
 
-This guide uses a local checkout. You need a terminal to start the runtime, but your agent creates the definitions and runs them through MCP. The runtime is in early development and is not ready for production use.
+This guide uses a local checkout. You need a terminal to start the runtime, but your agent creates the definitions and runs them through MCP.
 
 You need [pnpm](https://pnpm.io/installation), for example from `curl -fsSL https://get.pnpm.io/install.sh | sh -`. In this repository pnpm switches itself to the version the repository pins, 12.11.2, and runs every script on the Node.js it pins, 26.11.1, which it downloads on the first `pnpm install`; the Node.js on your machine does not matter.
 
