@@ -50,9 +50,16 @@ describe('the work a capability records on a run that finishes later', () => {
       ['nudge_sent', { number: 1 }, 'request-1', 'playbook:alpha'],
       ['nudge_sent', { number: 2 }, first.id, 'playbook:alpha'],
     ]);
+    const onTheRun = {
+      by: 'playbook:alpha',
+      runId: run.id,
+      definitionType: 'asking',
+      definitionName: 'approve',
+      definitionVersion: 1,
+    };
     expect((await state())?.work).toEqual([
-      { type: 'nudge_sent', data: { number: 1 }, at: first.at },
-      { type: 'nudge_sent', data: { number: 2 }, at: second.at },
+      { type: 'nudge_sent', data: { number: 1 }, context: { ...onTheRun, at: first.at } },
+      { type: 'nudge_sent', data: { number: 2 }, context: { ...onTheRun, at: second.at } },
     ]);
   });
 

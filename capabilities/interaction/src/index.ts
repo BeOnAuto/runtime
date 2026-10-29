@@ -7,6 +7,7 @@ export type { DeliveryParts } from './schedule/delivery-parts.ts';
 export type { RequestLedger } from './schedule/request-ledger.ts';
 export { makeInteractionFunctionAdapter } from './capability/interaction-function.ts';
 export { interactionType } from './capability/interaction-type.ts';
+export { InteractionRunFactSchema } from './facts/run-facts.ts';
 export { defineAnswerInteraction } from './requests/answer-interaction.ts';
 export { listInteractions } from './requests/list-interactions.ts';
 export { openRequests, openRequestsName } from './requests/open-requests.ts';

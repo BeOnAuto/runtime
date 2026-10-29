@@ -8,6 +8,8 @@ packages/server/data
 .claude
 **/.turbo
 **/*.test.ts
+packages/*/src/*/[0-9]*.[0-9]*.[0-9]*
+capabilities/*/src/*/[0-9]*.[0-9]*.[0-9]*
 packages/*/src/testing
 packages/*/src/*-testing
 packages/server/src/development

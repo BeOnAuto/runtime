@@ -204,6 +204,15 @@ describe('the cancelling of a run', () => {
   });
 });
 
+const onTheRun = {
+  at: '2026-10-01T09:00:00.000Z',
+  by: 'acme-admin',
+  runId: run.id,
+  definitionType: 'counting',
+  definitionName: 'count',
+  definitionVersion: 3,
+};
+
 const countedOnly: AnswerIssues = (answer, { work }) =>
   work.some(({ data }) => data['word'] === answer)
     ? []
@@ -212,7 +221,7 @@ const countedOnly: AnswerIssues = (answer, { work }) =>
 describe('the answer a run takes', () => {
   it('is any answer its request takes, unless the capability names issues of it against the run as it stands', () => {
     const answering = {
-      work: [{ type: 'counted', data: { word: 'one' }, at: '2026-10-01T09:00:00.000Z' }],
+      work: [{ type: 'counted', data: { word: 'one' }, context: onTheRun }],
     };
     const checking = defineCapability({ ...words, answerIssues: countedOnly });
 

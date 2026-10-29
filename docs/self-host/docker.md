@@ -281,7 +281,7 @@ The [configuration reference](configuration.md) describes the file and every set
 
 ## Upgrade {#upgrade}
 
-The ledger stays on its volume or in its database. A release that keeps the ledger's layout opens it as it is; before launch, one that changes the layout refuses the older ledger at start and says which files to delete from the volume, or to point `DATABASE_URL` at an empty database.
+The ledger stays on its volume or in its database, and the new release carries it forward as it starts. Upgrades go forward only, so [copy the volume](#back-up-and-restore), or back up the database, before you upgrade: an older release does not open a ledger a newer one carried forward. A ledger is carried forward when the facts it holds are ones this release reads; the server reads the types of all of them and the newest fact of each type as it starts, and refuses the ledger at start otherwise, saying which files to delete from the volume, or to point `DATABASE_URL` at an empty database.
 
 1. Read the [release notes](https://github.com/BeOnAuto/runtime/releases) of the new version.
 2. Change the version on the `IMAGE` line of `.env`, such as `IMAGE=docker.on.auto/onauto/runtime:0.9.2`.

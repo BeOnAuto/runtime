@@ -104,11 +104,12 @@ function offersTesting({ manifest }: WorkspacePackage): boolean {
   return Object.hasOwn(manifest.exports ?? {}, './testing');
 }
 
+const folderOfFixtures = /^\d+\.\d+\.\d+$/u;
+
 function isShipped(shipped: WorkspacePackage, source: string): boolean {
   const name = basename(source);
-  return (
-    !name.endsWith('.test.ts') && source !== developmentSources && (offersTesting(shipped) || !isTestingFolder(name))
-  );
+  const ofTheTests = name.endsWith('.test.ts') || folderOfFixtures.test(name);
+  return !ofTheTests && source !== developmentSources && (offersTesting(shipped) || !isTestingFolder(name));
 }
 
 function packedOf(shipped: WorkspacePackage): PackedPackage {

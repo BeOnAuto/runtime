@@ -40,7 +40,14 @@ const taken = { answer: 'yes', reply: takenReply, by: { id: 'playbook:alpha', na
 const delivered = {
   type: 'delivery_succeeded',
   data: { number: 1, result_bytes: 2, result_sha256: 'd'.repeat(64), duration_ms: 3, jsonrpc_id: 1 },
-  at,
+  context: {
+    at,
+    by: 'playbook:alpha',
+    runId: askedRunId,
+    definitionType: 'interaction',
+    definitionName: 'approval',
+    definitionVersion: 1,
+  },
 };
 
 const answeredByThePlaybook = { status: 'succeeded', output: 'yes', record: {}, by: 'playbook:alpha' };

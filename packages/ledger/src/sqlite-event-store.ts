@@ -52,7 +52,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
     log: sqliteLogOn(pool.execute),
     migrate: async () => {
-      await sqliteLayoutKept(pool, projections.projections);
+      await sqliteLayoutKept(pool, projections.projections, kept);
       await streams.migrate();
       await sqliteSchemaCreated(pool.execute);
       await preparedOn(projections.prepare, pool);

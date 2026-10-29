@@ -1,0 +1,12 @@
+{
+  "type": "license_invalidated",
+  "data": {
+    "key_sha256": "f0e1d2",
+    "detail": "The key of the license was rotated",
+    "because": "key_rotated"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

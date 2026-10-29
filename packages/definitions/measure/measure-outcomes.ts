@@ -127,7 +127,7 @@ function runEventsOf(run: number): readonly RunAppend[] {
   };
   const record = { usage: { input: { total: 100 } }, prompt: 'p'.repeat(2048) };
   return [
-    { events: [{ type: 'run_started', data: { input: {} } }], context },
+    { events: [{ type: 'run_started', data: { input: {}, started_by: { id: 'u', name: 'u' } } }], context },
     { events: [{ type: 'run_succeeded', data: { output: 'ok', record } }], context },
   ];
 }

@@ -1,0 +1,115 @@
+{
+  "layout": 6,
+  "made": [
+    "CREATE TABLE ledger_layout (\n        one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row),\n        layout INTEGER NOT NULL\n      )",
+    "CREATE TABLE dmb_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR (255) NOT NULL UNIQUE, application VARCHAR (255) NOT NULL DEFAULT 'default', sql_hash VARCHAR (64) NOT NULL, timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+    "CREATE TABLE emt_processors(\n    processor_id                 TEXT                  NOT NULL,\n    version                      INTEGER               NOT NULL DEFAULT 1,\n    partition                    TEXT                  NOT NULL DEFAULT 'global',\n    status                       TEXT                  NOT NULL DEFAULT 'stopped',\n    last_processed_checkpoint    TEXT                  NOT NULL,\n    processor_instance_id        TEXT                  DEFAULT 'emt:unknown',\n    PRIMARY KEY (processor_id, partition, version)\n)",
+    "CREATE TABLE emt_projections(\n    name                         TEXT                  NOT NULL,\n    version                      INTEGER               NOT NULL DEFAULT 1,\n    partition                    TEXT                  NOT NULL DEFAULT 'global',\n    type                         CHAR(1)               NOT NULL,\n    kind                         TEXT                  NOT NULL,\n    status                       TEXT                  NOT NULL,\n    definition                   JSONB                 NOT NULL DEFAULT '{}',\n    PRIMARY KEY (name, partition, version)\n)",
+    "CREATE TABLE emt_streams(\n    stream_id         TEXT                      NOT NULL,\n    stream_position   BIGINT                    NOT NULL DEFAULT 0,\n    partition         TEXT                      NOT NULL DEFAULT 'global',\n    stream_type       TEXT                      NOT NULL,\n    stream_metadata   JSONB                     NOT NULL,\n    is_archived       BOOLEAN                   NOT NULL DEFAULT FALSE,\n    PRIMARY KEY (stream_id, partition, is_archived),\n    UNIQUE (stream_id, partition, is_archived)\n)",
+    "CREATE TABLE emt_messages(\n      stream_id              TEXT                      NOT NULL,\n      stream_position        BIGINT                    NOT NULL,\n      partition              TEXT                      NOT NULL DEFAULT 'global',\n      message_kind           CHAR(1)                   NOT NULL DEFAULT 'E',\n      message_data           JSONB                     NOT NULL,\n      message_metadata       JSONB                     NOT NULL,\n      message_schema_version TEXT                      NOT NULL,\n      message_type           TEXT                      NOT NULL,\n      message_id             TEXT                      NOT NULL,\n      is_archived            BOOLEAN                   NOT NULL DEFAULT FALSE,\n      global_position        INTEGER                   PRIMARY KEY,\n      created                DATETIME                  DEFAULT CURRENT_TIMESTAMP,\n      UNIQUE (stream_id, stream_position, partition, is_archived)\n  )",
+    "CREATE INDEX ledger_messages_by_playbook ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), global_position)",
+    "CREATE INDEX ledger_messages_by_playbook_and_time ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), created)",
+    "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)",
+    "CREATE INDEX ledger_first_messages_by_kind\n      ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/') + 1), '/')), global_position) WHERE stream_position = 1",
+    "CREATE INDEX ledger_messages_by_playbook_and_correlation\n      ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), json_extract(message_metadata, '$.correlationId'), global_position)",
+    "CREATE INDEX ledger_definition_streams\n      ON emt_streams (CASE WHEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 1, 12) = 'definitions/' THEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 13) END) WHERE CASE WHEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 1, 12) = 'definitions/' THEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 13) END IS NOT NULL",
+    "CREATE INDEX ledger_messages_by_id ON emt_messages (message_id)",
+    "CREATE TABLE recorded_content_chunks (\n      playbook_key TEXT NOT NULL, upload_id TEXT NOT NULL,\n      chunk INTEGER NOT NULL,\n      data BLOB NOT NULL,\n      PRIMARY KEY (playbook_key, upload_id, chunk)\n    )",
+    "CREATE TABLE recorded_content_heads (\n      playbook_key TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL,\n      bytes BIGINT NOT NULL,\n      chunks INTEGER NOT NULL,\n      media_type TEXT NOT NULL,\n      PRIMARY KEY (playbook_key, sha256)\n    )",
+    "CREATE TABLE staged_content_chunks (\n      playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, upload_id TEXT NOT NULL,\n      chunk INTEGER NOT NULL,\n      data BLOB NOT NULL,\n      PRIMARY KEY (playbook_key, run_id, upload_id, chunk)\n    )",
+    "CREATE TABLE staged_content (\n      playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL,\n      bytes BIGINT NOT NULL,\n      chunks INTEGER NOT NULL,\n      media_type TEXT NOT NULL,\n      PRIMARY KEY (playbook_key, run_id, sha256)\n    )",
+    "CREATE TABLE unstaged_runs (\n    playbook_key TEXT NOT NULL, run_id TEXT NOT NULL,\n    PRIMARY KEY (playbook_key, run_id)\n  )",
+    "CREATE INDEX recorded_content_heads_by_upload ON recorded_content_heads (playbook_key, upload_id)",
+    "CREATE INDEX staged_content_by_upload ON staged_content (playbook_key, run_id, upload_id)",
+    "CREATE TABLE kept_secrets (\n    id TEXT PRIMARY KEY,\n    version INTEGER NOT NULL,\n    kept_at TEXT NOT NULL,\n    claimed_until TEXT,\n    ends_with TEXT,\n    kept_by TEXT NOT NULL,\n    held TEXT NOT NULL,\n    wrapped_key TEXT,\n    kid TEXT\n  )",
+    "CREATE TABLE run_outcomes_4 (\n      playbook_key TEXT NOT NULL,\n      row_key TEXT NOT NULL,\n      started_day TEXT,\n      started_at TEXT,\n      last_started_at TEXT,\n      definition_type TEXT,\n      name TEXT,\n      status TEXT,\n      duration_ms INTEGER,\n      input_tokens INTEGER,\n      output_tokens INTEGER,\n      cached_tokens INTEGER,\n      PRIMARY KEY (playbook_key, row_key)\n    )",
+    "CREATE INDEX run_outcomes_4_by_playbook_and_day ON run_outcomes_4 (playbook_key, started_day)",
+    "CREATE TABLE open_requests_7 (\n      playbook_key TEXT NOT NULL,\n      row_key TEXT NOT NULL,\n      request_id TEXT,\n      type TEXT,\n      function TEXT,\n      version INTEGER,\n      party TEXT,\n      delivery TEXT,\n      replies TEXT,\n      message TEXT,\n      answers INTEGER,\n      answer_schema TEXT,\n      requested_at INTEGER,\n      expires_at INTEGER,\n      attempts INTEGER,\n      next_attempt_at INTEGER,\n      standing TEXT,\n      open INTEGER,\n      attempt_due_at INTEGER,\n      ending_due_at INTEGER,\n      ended TEXT,\n      conversation TEXT,\n      sent_conversation TEXT,\n      sent_id TEXT,\n      answerer TEXT,\n      reply TEXT,\n      reply_refusals INTEGER,\n      refusals_told INTEGER,\n      PRIMARY KEY (playbook_key, row_key)\n    )",
+    "CREATE INDEX open_requests_7_by_open ON open_requests_7 (playbook_key, open, requested_at, row_key)",
+    "CREATE INDEX open_requests_7_by_party ON open_requests_7 (playbook_key, open, party, requested_at, row_key)",
+    "CREATE INDEX open_requests_7_by_function ON open_requests_7 (playbook_key, open, function, requested_at, row_key)",
+    "CREATE INDEX open_requests_7_by_type ON open_requests_7 (playbook_key, open, type, requested_at, row_key)",
+    "CREATE INDEX open_requests_7_by_conversation ON open_requests_7 (playbook_key, open, conversation, requested_at, row_key)",
+    "CREATE INDEX open_requests_7_attempts_due ON open_requests_7 (attempt_due_at) WHERE attempt_due_at IS NOT NULL",
+    "CREATE INDEX open_requests_7_endings_due ON open_requests_7 (ending_due_at) WHERE ending_due_at IS NOT NULL",
+    "CREATE TABLE conversations_3 (\n      playbook_key TEXT NOT NULL,\n      row_key TEXT NOT NULL,\n      server TEXT,\n      tool TEXT,\n      conversation TEXT,\n      since TEXT,\n      last_fact TEXT,\n      joined_by TEXT,\n      open INTEGER,\n      active_at INTEGER,\n      reads INTEGER,\n      next_read_at INTEGER,\n      due_at INTEGER,\n      PRIMARY KEY (playbook_key, row_key)\n    )",
+    "CREATE INDEX conversations_3_due ON conversations_3 (due_at) WHERE due_at IS NOT NULL",
+    "CREATE TABLE prediction_builds_1 (\n      playbook_key TEXT NOT NULL,\n      row_key TEXT NOT NULL,\n      function TEXT,\n      definition_version INTEGER,\n      standing TEXT,\n      through TEXT,\n      requested_at INTEGER,\n      expires_at INTEGER,\n      uploaded INTEGER,\n      scored INTEGER,\n      winner TEXT,\n      version INTEGER,\n      rule TEXT,\n      shadow_origins INTEGER,\n      next_due_at INTEGER,\n      open INTEGER,\n      scoring_since INTEGER,\n      ended TEXT,\n      staged INTEGER,\n      cause TEXT,\n      PRIMARY KEY (playbook_key, row_key)\n    )",
+    "CREATE INDEX prediction_builds_1_by_open ON prediction_builds_1 (playbook_key, function, open, requested_at, row_key)",
+    "CREATE INDEX prediction_builds_1_builds_due ON prediction_builds_1 (next_due_at) WHERE next_due_at IS NOT NULL",
+    "CREATE INDEX prediction_builds_1_builds_scoring ON prediction_builds_1 (scoring_since) WHERE scoring_since IS NOT NULL",
+    "CREATE TABLE prediction_models_1 (\n      playbook_key TEXT NOT NULL,\n      row_key TEXT NOT NULL,\n      active INTEGER,\n      active_data_sha256 TEXT,\n      active_file_sha256 TEXT,\n      active_file_format TEXT,\n      active_definition_version INTEGER,\n      latest INTEGER,\n      versions INTEGER,\n      challenger INTEGER,\n      challenger_build TEXT,\n      shadow_predicted INTEGER,\n      shadow_graded INTEGER,\n      shadow TEXT,\n      PRIMARY KEY (playbook_key, row_key)\n    )",
+    "CREATE TABLE workflow_runs (\n    run_key TEXT NOT NULL PRIMARY KEY,\n    stream_id TEXT NOT NULL,\n    dispatched_through BIGINT NOT NULL DEFAULT 0,\n    ended_at BIGINT,\n    taken BIGINT NOT NULL DEFAULT 0\n  )",
+    "CREATE INDEX workflow_runs_live ON workflow_runs (taken, run_key)\n    WHERE ended_at IS NULL OR dispatched_through < ended_at",
+    "CREATE TABLE workflow_snapshot_chunks (\n    run_key TEXT NOT NULL,\n    version BIGINT NOT NULL,\n    chunk INTEGER NOT NULL,\n    chunks INTEGER NOT NULL,\n    bytes INTEGER NOT NULL,\n    text TEXT NOT NULL,\n    PRIMARY KEY (run_key, version, chunk)\n  )",
+    "CREATE TABLE workflow_timers (\n    run_key TEXT NOT NULL,\n    timer_id TEXT NOT NULL,\n    state TEXT NOT NULL,\n    due_at BIGINT,\n    armed_by BIGINT,\n    PRIMARY KEY (run_key, timer_id)\n  )",
+    "CREATE INDEX workflow_timers_due ON workflow_timers (due_at) WHERE state = 'armed'",
+    "CREATE TABLE workflow_calls (\n    call_key TEXT NOT NULL PRIMARY KEY,\n    run_key TEXT NOT NULL,\n    state TEXT NOT NULL,\n    call TEXT,\n    attributes TEXT,\n    result TEXT,\n    delivered INTEGER NOT NULL DEFAULT 0,\n    child TEXT,\n    root_id TEXT,\n    started_by BIGINT,\n    resumes_after_ms BIGINT,\n    due_again_at BIGINT\n  )",
+    "CREATE INDEX workflow_calls_unfinished ON workflow_calls (call_key)\n    WHERE state = 'running' OR (state = 'answered' AND delivered = 0)",
+    "CREATE INDEX workflow_calls_open_by_root ON workflow_calls (root_id)\n    WHERE state IN ('running', 'waiting')",
+    "CREATE INDEX workflow_calls_waiting_by_run ON workflow_calls (run_key) WHERE state = 'waiting'",
+    "CREATE INDEX workflow_calls_due_again ON workflow_calls (due_again_at)\n    WHERE state = 'waiting'",
+    "CREATE TABLE workflow_pending_cancels (\n    run_key TEXT NOT NULL PRIMARY KEY,\n    cause TEXT NOT NULL,\n    cancelled_by TEXT NOT NULL,\n    kind TEXT NOT NULL,\n    reason TEXT NOT NULL\n  )",
+    "CREATE TABLE workflow_due (\n    run_key TEXT NOT NULL PRIMARY KEY,\n    version BIGINT NOT NULL,\n    next_due_at BIGINT\n  )",
+    "CREATE INDEX workflow_due_by_time ON workflow_due (next_due_at)\n    WHERE next_due_at IS NOT NULL",
+    "CREATE TABLE workflow_settlements (\n    run_key TEXT NOT NULL PRIMARY KEY,\n    settlement TEXT,\n    attempts INTEGER NOT NULL DEFAULT 0,\n    last_attempt_at BIGINT\n  )",
+    "CREATE TABLE workflow_leases (\n    name TEXT NOT NULL PRIMARY KEY,\n    holder TEXT NOT NULL,\n    expires_at BIGINT NOT NULL\n  )",
+    "CREATE TABLE workflow_followed_playbooks (\n    playbook_key TEXT NOT NULL PRIMARY KEY,\n    cursor TEXT,\n    delivered TEXT,\n    attempts INTEGER NOT NULL DEFAULT 0,\n    waiting INTEGER NOT NULL DEFAULT 0,\n    checked BIGINT NOT NULL DEFAULT 0\n  )",
+    "CREATE INDEX workflow_followed_playbooks_by_check ON workflow_followed_playbooks (waiting, checked)",
+    "CREATE TABLE workflow_followed_orgs (\n    stream_id TEXT NOT NULL PRIMARY KEY,\n    position BIGINT NOT NULL\n  )",
+    "CREATE TABLE workflow_followed_scans (name TEXT NOT NULL PRIMARY KEY)",
+    "CREATE TABLE workflow_passed_runs (\n    run_key TEXT NOT NULL PRIMARY KEY,\n    passed_through BIGINT NOT NULL\n  )",
+    "CREATE TABLE workflow_listeners (\n    run_key TEXT NOT NULL,\n    listener TEXT NOT NULL,\n    playbook_key TEXT NOT NULL,\n    stream_id TEXT NOT NULL,\n    armed_by BIGINT NOT NULL,\n    filters TEXT NOT NULL,\n    workflow TEXT NOT NULL,\n    version BIGINT NOT NULL,\n    passed INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (run_key, listener)\n  )",
+    "CREATE INDEX workflow_listeners_by_stream ON workflow_listeners (stream_id, passed)",
+    "CREATE INDEX workflow_listeners_by_playbook ON workflow_listeners (playbook_key)",
+    "CREATE TABLE workflow_listener_types (\n    playbook_key TEXT NOT NULL,\n    type TEXT NOT NULL,\n    run_key TEXT NOT NULL,\n    listener TEXT NOT NULL,\n    PRIMARY KEY (playbook_key, type, run_key, listener)\n  )",
+    "CREATE TABLE workflow_subscriptions (\n    playbook_key TEXT NOT NULL,\n    workflow TEXT NOT NULL,\n    reference TEXT NOT NULL,\n    version BIGINT NOT NULL,\n    kind TEXT NOT NULL,\n    rule TEXT NOT NULL,\n    activated_by TEXT NOT NULL,\n    activated_at BIGINT NOT NULL,\n    next_due BIGINT,\n    running TEXT,\n    PRIMARY KEY (playbook_key, workflow, reference)\n  )",
+    "CREATE INDEX workflow_subscriptions_due ON workflow_subscriptions (next_due)\n    WHERE next_due IS NOT NULL",
+    "CREATE TABLE workflow_subscription_types (\n    playbook_key TEXT NOT NULL,\n    workflow TEXT NOT NULL,\n    type TEXT NOT NULL,\n    PRIMARY KEY (playbook_key, workflow, type)\n  )",
+    "CREATE INDEX workflow_subscription_types_by_type\n    ON workflow_subscription_types (playbook_key, type, workflow)",
+    "CREATE TABLE workflow_reaction_rates (\n    playbook_key TEXT NOT NULL,\n    workflow TEXT NOT NULL,\n    minute BIGINT NOT NULL,\n    starts INTEGER NOT NULL,\n    PRIMARY KEY (playbook_key, workflow)\n  )",
+    "CREATE TABLE workflow_reaction_backlog (\n    playbook_key TEXT NOT NULL,\n    workflow TEXT NOT NULL,\n    run_id TEXT NOT NULL,\n    start TEXT NOT NULL,\n    due BIGINT NOT NULL,\n    attempts INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (playbook_key, run_id)\n  )",
+    "CREATE INDEX workflow_reaction_backlog_due ON workflow_reaction_backlog (due)",
+    "CREATE TABLE workflow_reaction_refusals (\n    playbook_key TEXT NOT NULL,\n    workflow TEXT NOT NULL,\n    version INTEGER NOT NULL,\n    minute BIGINT NOT NULL,\n    count INTEGER NOT NULL,\n    reason TEXT NOT NULL,\n    recorded INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (playbook_key, workflow)\n  )",
+    "CREATE TABLE recall_views (\n    playbook_key TEXT NOT NULL,\n    name TEXT NOT NULL,\n    version BIGINT NOT NULL,\n    saved BIGINT NOT NULL,\n    details TEXT NOT NULL,\n    phase TEXT NOT NULL,\n    view TEXT NOT NULL,\n    checkpoint TEXT NOT NULL,\n    checkpoint_at TEXT,\n    last_event_id TEXT,\n    last_event_at TEXT,\n    folded BIGINT NOT NULL,\n    overtimes INTEGER NOT NULL,\n    stalled_event_id TEXT,\n    stalled_event_type TEXT,\n    stalled_event_at TEXT,\n    stalled_kind TEXT,\n    stalled_message TEXT,\n    stalled_line INTEGER,\n    PRIMARY KEY (playbook_key, name)\n  )",
+    "CREATE TABLE prediction_datasets (\n    playbook_key TEXT NOT NULL,\n    data_sha256 TEXT NOT NULL,\n    saved BIGINT NOT NULL,\n    phase TEXT NOT NULL,\n    checkpoint TEXT NOT NULL,\n    checkpoint_at TEXT,\n    rows BIGINT NOT NULL,\n    series BIGINT NOT NULL,\n    first_period TEXT,\n    last_period TEXT,\n    events_folded BIGINT NOT NULL,\n    passed_over BIGINT NOT NULL,\n    tries BIGINT NOT NULL,\n    stalled_record TEXT,\n    stalled_detail TEXT,\n    data TEXT NOT NULL,\n    PRIMARY KEY (playbook_key, data_sha256)\n  )",
+    "CREATE TABLE prediction_rows (\n    playbook_key TEXT NOT NULL,\n    data_sha256 TEXT NOT NULL,\n    series TEXT NOT NULL,\n    period_index BIGINT NOT NULL,\n    period TEXT NOT NULL,\n    target DOUBLE PRECISION,\n    target_count BIGINT NOT NULL,\n    target_at BIGINT,\n    events BIGINT NOT NULL,\n    features TEXT NOT NULL,\n    PRIMARY KEY (playbook_key, data_sha256, series, period_index)\n  )"
+  ],
+  "kept": [
+    {
+      "table": "ledger_layout",
+      "rows": [
+        {
+          "one_row": 1,
+          "layout": 6
+        }
+      ]
+    },
+    {
+      "table": "dmb_migrations",
+      "rows": [
+        {
+          "id": 1,
+          "name": "emt:sqlite:eventstore:0.42.0:from-subscriptions-to-processors",
+          "application": "default",
+          "sql_hash": "aab11bff9a56ae4eb0dccd16ef3edc5bb6f705b1893784b39b1fb7bf40942007",
+          "timestamp": "2026-10-29 12:15:43"
+        },
+        {
+          "id": 2,
+          "name": "emt:sqlite:eventstore:0.43.0:fix-stream-partition",
+          "application": "default",
+          "sql_hash": "92c8508fd679404148520e07300418ae7300249bdc700267922b20d1c9cf8ce3",
+          "timestamp": "2026-10-29 12:15:43"
+        },
+        {
+          "id": 3,
+          "name": "emt:sqlite:eventstore:initial",
+          "application": "default",
+          "sql_hash": "653ebd5bd8e3145bcea3191a425739b26c648b95e4f8c592befabe13f30ab938",
+          "timestamp": "2026-10-29 12:15:43"
+        }
+      ]
+    }
+  ]
+}

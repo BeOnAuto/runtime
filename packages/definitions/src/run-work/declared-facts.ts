@@ -6,15 +6,15 @@ import {
   type Recorded,
   type RecordedFact,
 } from '@on.auto/operations';
-import { Schema } from 'effect';
+import { Result, Schema } from 'effect';
 
 import { reactionsStreamKind } from '../events/reaction-refusals.ts';
 import { runDecidersOf, type RunDeciders } from '../runs/run-decider.ts';
-import { isCoreRunFactType } from '../runs/run-events.ts';
+import { isCoreRunFactType, type IsDeclared } from '../runs/run-events.ts';
 
 export interface DeclaredFact {
   readonly type: string;
-  readonly schema: Schema.Top;
+  readonly schema: Schema.Top & Schema.ConstraintDecoder<unknown>;
   readonly present: (recorded: RecordedFact, content: KeptContent) => PresentedFact;
 }
 
@@ -86,9 +86,14 @@ function requireNoPlaybookStreamKind(declarations: readonly Declaration[]): void
   }
 }
 
+function isReadBy(schema: Schema.Top & Schema.ConstraintDecoder<unknown>): IsDeclared {
+  const decode = Schema.decodeUnknownResult(Schema.toCodecJson(schema));
+  return (fact) => Result.isSuccess(decode(fact));
+}
+
 export function runFactsOf(declared: readonly DeclaredFact[]): RunFacts {
   const types = new Set(declared.map(({ type }) => type));
-  const isDeclared = Schema.is(Schema.Union(declared.map(({ schema }) => schema)));
+  const isDeclared = isReadBy(Schema.Union(declared.map(({ schema }) => schema)));
   return { declared, ...runDecidersOf(isDeclared, ({ type }) => types.has(type)) };
 }
 

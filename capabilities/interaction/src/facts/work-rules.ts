@@ -1,7 +1,7 @@
 import type { RecordedWork, WorkRule } from '@on.auto/definitions';
 import { Conflict } from '@on.auto/operations';
 
-import { workFactOf, type DeliveryEvent } from './run-facts.ts';
+import { interactionFactOf, type DeliveryEvent } from './run-facts.ts';
 
 export interface InteractionWork {
   readonly lastAttempt: number;
@@ -13,7 +13,7 @@ export interface InteractionWork {
 const nothingWorked: InteractionWork = { lastAttempt: 0, inFlight: null, deliveredAt: null, refusedReplies: [] };
 
 function workedAfter(work: InteractionWork, recorded: RecordedWork): InteractionWork {
-  const fact = workFactOf(recorded);
+  const fact = interactionFactOf(recorded);
   if (fact?.type === 'delivery_started') {
     return { ...work, lastAttempt: fact.data.number, inFlight: fact.data.number };
   }
@@ -24,7 +24,7 @@ function workedAfter(work: InteractionWork, recorded: RecordedWork): Interaction
     return work;
   }
   const ended = { ...work, inFlight: null };
-  return fact.type === 'delivery_succeeded' ? { ...ended, deliveredAt: recorded.at } : ended;
+  return fact.type === 'delivery_succeeded' ? { ...ended, deliveredAt: recorded.context.at } : ended;
 }
 
 export function interactionWorkOf(work: readonly RecordedWork[]): InteractionWork {

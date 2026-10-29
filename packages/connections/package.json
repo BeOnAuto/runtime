@@ -23,6 +23,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@on.auto/ledger": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"

@@ -1,26 +1,31 @@
-import type { ProjectedMessage, RunOutcome, RunOutcomeMapping, RunOutcomeStatus } from '@on.auto/operations';
-import { Option, Predicate, Schema } from 'effect';
+import {
+  factReaderOf,
+  type ProjectedMessage,
+  type RunOutcome,
+  type RunOutcomeMapping,
+  type RunOutcomeStatus,
+} from '@on.auto/operations';
+import { Predicate, Schema } from 'effect';
 
-const Time = Schema.String.check(
-  Schema.makeFilter((at: string) => Number.isFinite(Date.parse(at)), { expected: 'a time' }),
-);
+import { RunFailedSchema, RunRejectedSchema, RunStartedSchema, RunSucceededSchema } from '../runs/run-events.ts';
 
-const StartedSchema = Schema.Struct({
-  type: Schema.Literal('run_started'),
-  context: Schema.Struct({ at: Time, definitionType: Schema.String, definitionName: Schema.String }),
-});
+const RunOutcomeFactSchema = Schema.Union([RunStartedSchema, RunSucceededSchema, RunFailedSchema, RunRejectedSchema]);
 
-const FinishedSchema = Schema.Struct({
-  type: Schema.Literals(['run_succeeded', 'run_failed', 'run_rejected']),
-  data: Schema.Struct({ record: Schema.optionalKey(Schema.Unknown) }),
-  context: Schema.Struct({ at: Time }),
-});
+type RunOutcomeFact = typeof RunOutcomeFactSchema.Type;
 
-type Started = typeof StartedSchema.Type;
+type Started = Extract<RunOutcomeFact, { readonly type: 'run_started' }>;
 
-type Finished = typeof FinishedSchema.Type;
+type Finished = Exclude<RunOutcomeFact, Started>;
 
-const decodeRunEvent = Schema.decodeUnknownOption(Schema.Union([StartedSchema, FinishedSchema]));
+const readRunFact = factReaderOf(RunOutcomeFactSchema);
+
+function isATime(at: string): boolean {
+  return Number.isFinite(Date.parse(at));
+}
+
+function recordOf(fact: Finished): unknown {
+  return fact.type === 'run_failed' ? undefined : fact.data.record;
+}
 
 const statusOf: Readonly<Record<Finished['type'], RunOutcomeStatus>> = {
   run_succeeded: 'succeeded',
@@ -74,10 +79,10 @@ function started(row: RunOutcome | undefined, { context }: Started): RunOutcome 
     : { ...row, ...again };
 }
 
-function finished(row: RunOutcome | undefined, { type, data, context }: Finished): RunOutcome {
-  const { at } = context;
-  const { record } = data;
-  const status = statusOf[type];
+function finished(row: RunOutcome | undefined, fact: Finished): RunOutcome {
+  const { at } = fact.context;
+  const record = recordOf(fact);
+  const status = statusOf[fact.type];
   if (row === undefined) {
     const notStarted = { startedDay: dayOf(at), startedAt: at, lastStartedAt: at, definitionType: '', name: '' };
     return { ...notStarted, status, durationMs: null, ...tokensAfter(noTokens, record) };
@@ -86,12 +91,14 @@ function finished(row: RunOutcome | undefined, { type, data, context }: Finished
   return { ...row, status, durationMs, ...tokensAfter(row, record) };
 }
 
+function afterTheFact(row: RunOutcome | undefined, fact: RunOutcomeFact): RunOutcome {
+  return fact.type === 'run_started' ? started(row, fact) : finished(row, fact);
+}
+
 export const runOutcomeMapping: RunOutcomeMapping = {
   types: ['run_started', 'run_succeeded', 'run_failed', 'run_rejected'],
-  rowAfter: (row, { type, data, context }: ProjectedMessage) =>
-    Option.getOrUndefined(
-      Option.map(decodeRunEvent({ type, data, context }), (decoded) =>
-        decoded.type === 'run_started' ? started(row, decoded) : finished(row, decoded),
-      ),
-    ),
+  rowAfter: (row, message: ProjectedMessage) => {
+    const fact = readRunFact(message);
+    return fact === undefined || !isATime(fact.context.at) ? undefined : afterTheFact(row, fact);
+  },
 };

@@ -12,7 +12,7 @@ export type EventAppender<Event extends Recorded> = (
 ) => Effect.Effect<void, VersionConflict>;
 
 export function eventAppenderOf<Event extends Recorded>(
-  store: Streams,
+  store: Pick<Streams, 'mostEventsInOneAppend' | 'append'>,
   eventSchema: Schema.ConstraintCodec<Event, unknown>,
 ): EventAppender<Event> {
   const { encode } = eventCodecOf(eventSchema);

@@ -1,0 +1,13 @@
+{
+  "type": "client_registered",
+  "data": {
+    "issuer": "https://accounts.example.com",
+    "server": "https://mcp.files.example.com",
+    "client_id": "client-1",
+    "secret_id": "secret-1"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

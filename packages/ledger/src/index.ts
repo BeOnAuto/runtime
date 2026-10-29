@@ -43,7 +43,15 @@ export type {
   Streams,
 } from './event-store.ts';
 export { sqliteLayout, type LayoutDialect } from './layout/layout-dialects.ts';
+export {
+  layoutStepsInSequence,
+  type LayoutStep,
+  type StatementInEachDialect,
+  type StepStatement,
+} from './layout/layout-steps.ts';
+export { LedgerFactsRefused, type FactSchemaRead, type UnreadableFact } from './layout/ledger-facts-refused.ts';
 export { LedgerLayoutRefused } from './layout/ledger-layout-refused.ts';
+export { ledgerLayoutSteps } from './layout/ledger-steps.ts';
 export type { LedgerServices, OpenedLedger } from './ledger-layer.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {

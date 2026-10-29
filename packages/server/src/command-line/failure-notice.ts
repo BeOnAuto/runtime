@@ -1,8 +1,5 @@
-import {
-  helpOfferedAt,
-  ledgerOfAnotherVersionIn,
-  type LedgerOfAnotherVersion,
-} from '../database/ledger-of-another-version.ts';
+import { ledgerOfAnotherVersionIn, type LedgerOfAnotherVersion } from '../database/ledger-of-another-version.ts';
+import { helpOfferedAt } from '../database/ledger-remedies.ts';
 import { colorDepthOf, linkerFor, painterFor, type ColorDepth, type ColorStream } from '../logging/terminal.ts';
 import { discordInvite } from './local-banner.ts';
 

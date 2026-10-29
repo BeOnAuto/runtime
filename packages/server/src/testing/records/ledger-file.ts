@@ -35,6 +35,23 @@ export async function readOfTheLedgerIn(file: string, asked: Statement): Promise
   }
 }
 
+const CatalogRowsSchema = Schema.Array(Schema.Struct({ name: Schema.String, sql: Schema.String }));
+
+export type CatalogRows = typeof CatalogRowsSchema.Type;
+
+const everyRelationButTheStores = statement`SELECT name, sql FROM sqlite_master
+  WHERE type IN ('table', 'index') AND name NOT GLOB 'emt_*' AND name NOT GLOB 'dmb_*' AND name NOT GLOB 'sqlite_*'
+  ORDER BY name`;
+
+function onOneLine(sql: string): string {
+  return sql.replaceAll(/\s+/gu, ' ').replaceAll('( ', '(').replaceAll(' )', ')');
+}
+
+export async function catalogOfTheLedgerIn(file: string): Promise<CatalogRows> {
+  const rows = Schema.decodeUnknownSync(CatalogRowsSchema)(await readOfTheLedgerIn(file, everyRelationButTheStores));
+  return rows.map(({ name, sql }) => ({ name, sql: onOneLine(sql) }));
+}
+
 type Assignment = readonly [string, StatementValue];
 
 export function everyRowSet(table: string, set: Readonly<Record<string, StatementValue>>): Statement {

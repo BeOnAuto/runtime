@@ -40,6 +40,8 @@ export function ledgerLayer({
   fileName,
   runOutcomes,
   projections,
+  layoutSteps,
+  factSchemas,
   appends,
   content,
   observer,
@@ -47,7 +49,7 @@ export function ledgerLayer({
 }: LedgerOptions): Layer.Layer<LedgerServices> {
   return sqliteLedgerLayer(
     { optionsOf: () => sqlite3OptionsOf(fileName), inMemory: fileName === privateMemory },
-    { runOutcomes, projections, appends, content, observer, appended },
+    { runOutcomes, projections, layoutSteps, factSchemas, appends, content, observer, appended },
   );
 }
 

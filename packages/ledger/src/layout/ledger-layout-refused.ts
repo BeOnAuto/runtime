@@ -3,14 +3,12 @@ import { Data } from 'effect';
 interface RefusedLayout {
   readonly found: number | undefined;
   readonly kept: number;
+  readonly floor: number;
 }
 
 export class LedgerLayoutRefused extends Data.TaggedError('ledger_layout_refused')<
   RefusedLayout & { readonly message: string }
 > {}
-
-const whatToDo =
-  'Nothing stored before launch is carried over, so delete the local database and start the server again';
 
 function whatWasFound(found: number | undefined): string {
   return found === undefined
@@ -18,10 +16,17 @@ function whatWasFound(found: number | undefined): string {
     : `The ledger's database is in layout ${found} of the ledger`;
 }
 
-export function ledgerLayoutRefused({ found, kept }: RefusedLayout): LedgerLayoutRefused {
+function whatToDo(found: number | undefined, kept: number): string {
+  return found !== undefined && found > kept
+    ? 'Upgrades go forward only, and a newer database wants a newer release of the server'
+    : 'A database older than that is not carried forward, so delete the local database and start the server again';
+}
+
+export function ledgerLayoutRefused({ found, kept, floor }: RefusedLayout): LedgerLayoutRefused {
   return new LedgerLayoutRefused({
     found,
     kept,
-    message: `${whatWasFound(found)}, where this server keeps layout ${kept}. ${whatToDo}`,
+    floor,
+    message: `${whatWasFound(found)}, where this server keeps layout ${kept} and carries forward no database older than layout ${floor}. ${whatToDo(found, kept)}`,
   });
 }

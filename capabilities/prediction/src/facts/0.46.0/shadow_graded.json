@@ -1,0 +1,28 @@
+{
+  "type": "shadow_graded",
+  "data": {
+    "version": 2,
+    "of": 1,
+    "build": "build-2",
+    "period": "2026-11-02",
+    "scores": [
+      {
+        "horizon": 4,
+        "pairs": 120,
+        "mase": 0.82,
+        "winkler": 14.5,
+        "quantile": 3.1
+      }
+    ],
+    "graded": 10,
+    "answered": 10,
+    "missing": 0
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

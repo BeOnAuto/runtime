@@ -1,3 +1,4 @@
+import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { custodianRefusal } from '@on.auto/secrets/testing';
 import type { ClientRegistrations, RegistrationPlace } from '@on.auto/tool-servers';
@@ -6,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { keptSecrets } from '../testing/harness-services.ts';
 import { sealedInMemory } from '../testing/sealed-connections.ts';
-import { clientRegistrationsStream, makeClientRegistrations } from './client-registrations.ts';
+import { clientRegistrationsStream, makeClientRegistrations, RegistrationEventSchema } from './client-registrations.ts';
 
 const accounts = 'https://accounts.example.com';
 
@@ -120,5 +121,21 @@ describe('the clients the runtime registered itself, in a secret store that cann
       detail: `The custodian of the key ${custodian.kid} refused to wrap a data key: ${custodianRefusal}`,
     });
     expect(ledger.streamNames()).not.toContain(clientRegistrationsStream);
+  });
+});
+
+describe('the facts of the registrations of clients', () => {
+  recordedFactsBehaviour({
+    schema: RegistrationEventSchema,
+    folder: new URL('.', import.meta.url),
+    releases: {
+      '0.46.0': [
+        {
+          type: 'client_registered',
+          data: { ...forFiles, client_id: 'client-1', secret_id: 'secret-1' },
+          context: { at: '2026-10-29T10:00:00.000Z', by: 'runtime' },
+        },
+      ],
+    },
   });
 });

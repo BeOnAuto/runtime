@@ -10,7 +10,7 @@ const mostNameBytes = 256;
 
 const decodeHandCallEvent = Schema.decodeUnknownSync(Schema.toCodecJson(HandCallEventSchema));
 
-function factOf(event: RecordedHandCall, content: KeptContent): PresentedFact {
+function presentedFactOf(event: RecordedHandCall, content: KeptContent): PresentedFact {
   if (event.type === 'tool_call_started') {
     const { data } = event;
     const server = cutAsStored(data.server, mostNameBytes);
@@ -40,6 +40,8 @@ export const handCallPresenter: Presenter = {
     tool_call_answered: ['tool_call_answered'],
     tool_call_failed: ['tool_call_failed'],
   },
-  present: ({ type, data, context }, content) => [factOf(decodeHandCallEvent({ type, data, context }), content)],
+  present: ({ type, data, context }, content) => [
+    presentedFactOf(decodeHandCallEvent({ type, data, context }), content),
+  ],
   changes: changingEvents(['tool_call_started', 'tool_call_answered', 'tool_call_failed']),
 };

@@ -1,0 +1,21 @@
+{
+  "type": "tool_call_answered",
+  "data": {
+    "number": 1,
+    "is_error": false,
+    "result_bytes": 512,
+    "result_sha256": "d4e5f6",
+    "shown_bytes": 256,
+    "duration_ms": 140,
+    "jsonrpc_id": 7,
+    "server_request_id": "request-1"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "reasoning",
+    "definitionName": "qualify-lead",
+    "definitionVersion": 2
+  }
+}

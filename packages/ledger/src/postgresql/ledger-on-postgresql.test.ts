@@ -1,17 +1,21 @@
-import { Client } from 'pg';
+import { Client, Pool } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
 import { executorOn } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
+import { databaseStructureBehaviour } from '../structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  earlierShapesBehaviour,
   keptSecretsBehaviour,
+  knownFactsBehaviour,
   ledgerBehaviour,
   logBehaviour,
   type LedgerEntry,
 } from '../testing/index.ts';
+import { postgresqlLayoutCarried } from './postgresql-layout.ts';
 import {
   plainPoolsOn,
   postgresqlEventStore,
@@ -21,6 +25,15 @@ import {
 } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
+
+const carriedOn: LedgerEntry['carriedOn'] = async (database, carrying) => {
+  const pool = new Pool({ connectionString: database });
+  try {
+    await postgresqlLayoutCarried(pool, [], carrying);
+  } finally {
+    await pool.end();
+  }
+};
 
 const executedOn: LedgerEntry['executedOn'] = async (database, work) => {
   const client = new Client({ connectionString: database });
@@ -115,6 +128,7 @@ const onPostgreSQL: LedgerEntry = {
   queried,
   executedOn,
   layout: postgresqlLayout,
+  carriedOn,
   definitionStreamsIndexed,
   planOf,
   throughTheKindIndex: `Index Cond: (("substring"(stream_id, '^(?:[^/]*/){4}'::text) = ANY`,
@@ -137,6 +151,9 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   ledgerBehaviour(onPostgreSQL);
   logBehaviour(onPostgreSQL);
   appendedFactsOnStoresBehaviour(onPostgreSQL);
+  earlierShapesBehaviour(onPostgreSQL);
+  databaseStructureBehaviour(onPostgreSQL);
+  knownFactsBehaviour(onPostgreSQL);
   keptSecretsBehaviour({
     ...onPostgreSQL,
     secretRowsOn: (database) => postgresqlSecretRows({ pools: plainPoolsOn(database) }),

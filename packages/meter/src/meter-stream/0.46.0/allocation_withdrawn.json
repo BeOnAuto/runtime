@@ -1,0 +1,11 @@
+{
+  "type": "allocation_withdrawn",
+  "data": {
+    "id": "allocation-1",
+    "detail": "The allocation was withdrawn"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

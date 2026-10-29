@@ -77,7 +77,12 @@ describe('the conversations projection', () => {
   });
 
   it('keys nothing for a delivery that kept no place to read, nor for a telling', () => {
-    const messages = [deliveryEnded('2026-10-01T09:00:00.000Z', false), read(null, 'telling_started')];
+    const telling = messageOf(
+      'telling_started',
+      { call_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70', server: 'chat', tool: 'post_message', arguments_bytes: 34 },
+      ofTheRun('2026-10-01T09:00:00.000Z'),
+    );
+    const messages = [deliveryEnded('2026-10-01T09:00:00.000Z', false), telling];
 
     expect(
       messages.map((message) => [conversations.keyOf?.(message, stream), conversations.rowAfter(undefined, message)]),
@@ -86,7 +91,22 @@ describe('the conversations projection', () => {
       [undefined, undefined],
     ]);
   });
+});
 
+describe('the facts the conversations projection reads', () => {
+  it('refuses one in a shape no reader of it knows, as any unreadable fact', () => {
+    const at = '2026-10-01T09:00:00.000Z';
+
+    expect(() =>
+      conversations.rowAfter(undefined, messageOf('delivery_succeeded', { number: 1 }, ofTheRun(at))),
+    ).toThrow('Missing key');
+    expect(() =>
+      conversations.rowAfter(undefined, messageOf('replies_read', { server: 'chat' }, ofTheRun(at))),
+    ).toThrow('Missing key');
+  });
+});
+
+describe('a conversation the projection opens', () => {
   it('opens a row when a request joins it, due five seconds after', () => {
     expect(conversations.rowAfter(undefined, deliveryEnded('2026-10-01T09:00:00.000Z'))).toEqual({
       server: 'chat',

@@ -29,14 +29,14 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
   opening: SQLiteOpening<Driver>,
   options: StoreLayerOptions = {},
 ): Layer.Layer<LedgerServices> {
-  const { runOutcomes, projections, appends, content } = options;
+  const { runOutcomes, projections, layoutSteps, factSchemas, appends, content } = options;
   return Layer.unwrap(
     Effect.map(Effect.context(), (context) => {
       const listeners = { ...listenersOf(options), watchFailed: watchFailuresLoggedWith(context) };
-      return ledgerLayerOver(() => sqliteLedgerOpened(opening, { runOutcomes, projections }, listeners), {
-        appends,
-        content,
-      });
+      return ledgerLayerOver(
+        () => sqliteLedgerOpened(opening, { runOutcomes, projections, layoutSteps, factSchemas }, listeners),
+        { appends, content },
+      );
     }),
   );
 }

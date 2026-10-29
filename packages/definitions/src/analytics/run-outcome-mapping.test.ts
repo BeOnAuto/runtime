@@ -7,13 +7,18 @@ function messageOf(type: string, data: unknown, context: Context): ProjectedMess
   return { id: 'm-1', position: 1, type, data, context };
 }
 
+function runContextAt(at: string, name = 'triage', type = 'reasoning'): Context {
+  return { at, by: 'acme-admin', runId: 'run-1', definitionType: type, definitionName: name, definitionVersion: 1 };
+}
+
+const startedBy = { id: 'acme-admin', name: 'Acme Admin' };
+
 function startedAt(at: string, name = 'triage', type = 'reasoning'): ProjectedMessage {
-  const context = { at, by: 'acme-admin', definitionType: type, definitionName: name, definitionVersion: 1 };
-  return messageOf('run_started', { input: {} }, context);
+  return messageOf('run_started', { input: {}, started_by: startedBy }, runContextAt(at, name, type));
 }
 
 function endedAt(at: string, type: string, data: object = {}): ProjectedMessage {
-  return messageOf(type, data, { at, by: 'acme-admin' });
+  return messageOf(type, data, runContextAt(at));
 }
 
 const usage = {
@@ -175,8 +180,6 @@ describe('the outcome of a run with a finish it cannot measure', () => {
 });
 
 const notTokens: readonly unknown[] = [
-  'a record that is text',
-  ['a', 'list'],
   { usage: 'none' },
   { usage: { input: { total: '12', cache_read: -1 }, output: { total: 2.5 } } },
   { usage: { input: { total: Number.MAX_SAFE_INTEGER + 2 }, output: null } },
@@ -184,15 +187,32 @@ const notTokens: readonly unknown[] = [
 ];
 
 const notRunEvents: readonly ProjectedMessage[] = [
-  messageOf('run_started', { input: {} }, { at: '2026-10-01T09:00:00.000Z', by: 'u', definitionType: 'reasoning' }),
-  messageOf(
-    'run_started',
-    { input: {} },
-    { at: 'not a time', by: 'u', definitionType: 'reasoning', definitionName: 't' },
-  ),
-  messageOf('run_succeeded', 'not a fact', { at: '2026-10-01T09:00:00.000Z', by: 'u' }),
+  startedAt('not a time'),
+  endedAt('not a time', 'run_failed'),
   endedAt('2026-10-01T09:00:00.000Z', 'run_deferred', { record: {} }),
   endedAt('2026-10-01T09:00:00.000Z', 'tool_call_started'),
+];
+
+const { definitionName: _name, ...withoutItsDefinition } = runContextAt('2026-10-01T09:00:00.000Z');
+
+const unreadableRunEvents: readonly (readonly [ProjectedMessage, string])[] = [
+  [
+    messageOf('run_started', { input: {}, started_by: startedBy }, withoutItsDefinition),
+    'Missing key\n  at ["context"]["definitionName"]',
+  ],
+  [
+    messageOf('run_started', { input: {} }, runContextAt('2026-10-01T09:00:00.000Z')),
+    'Missing key\n  at ["data"]["started_by"]',
+  ],
+  [endedAt('2026-10-01T09:00:00.000Z', 'run_succeeded', { output: 'ok' }), 'Missing key\n  at ["data"]["record"]'],
+  [
+    endedAt('2026-10-01T09:00:00.000Z', 'run_succeeded', { output: 'ok', record: 'a record that is text' }),
+    'Expected object\n  at ["data"]["record"]',
+  ],
+  [
+    messageOf('run_succeeded', 'not a fact', runContextAt('2026-10-01T09:00:00.000Z')),
+    'Expected object\n  at ["data"]',
+  ],
 ];
 
 describe('what the outcome of a run leaves as it is', () => {
@@ -202,12 +222,18 @@ describe('what the outcome of a run leaves as it is', () => {
     expect(keptAfter(started, succeeded)).toMatchObject(noTokens);
   });
 
-  it.each(notRunEvents)('is the row, for an event it does not understand, %j', (message) => {
+  it.each(notRunEvents)('is the row, for an event it does not measure, %j', (message) => {
     const row = keptAfter(started);
 
     expect([runOutcomeMapping.rowAfter(row, message), runOutcomeMapping.rowAfter(undefined, message)]).toEqual([
       undefined,
       undefined,
     ]);
+  });
+});
+
+describe('what the outcome of a run refuses', () => {
+  it.each(unreadableRunEvents)('is a fact of the run in a shape no reader of the run knows, %j', (message, refusal) => {
+    expect(() => runOutcomeMapping.rowAfter(keptAfter(started), message)).toThrow(refusal);
   });
 });
