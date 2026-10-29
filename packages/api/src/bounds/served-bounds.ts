@@ -32,7 +32,7 @@ export const mostGuideBytes = 65_536;
 export const mostRecipeBytes = 4096;
 
 export function mostGuidesBeyondTheRecipes(definitionTypes: number): number {
-  return definitionTypes + 2;
+  return definitionTypes + 3;
 }
 
 export const mostRecipes = 4;

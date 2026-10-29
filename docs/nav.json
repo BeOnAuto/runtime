@@ -170,6 +170,10 @@
       {
         "text": "Documentation contributions",
         "link": "/contributing/documentation"
+      },
+      {
+        "text": "Auto voice",
+        "link": "/contributing/voice"
       }
     ]
   }

@@ -51,7 +51,7 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
   },
   meter_unavailable: {
     why: 'the account it runs under could not be asked for its credits',
-    remedy: 'Nothing needs to change: trying again in a little while should work.',
+    remedy: 'Try again shortly.',
   },
 };
 

@@ -702,8 +702,12 @@ jobs:
           call_mcp /mcp '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"get_guide","arguments":{"guide":"reasoning-function"}}}' guide.txt
           grep --quiet '# Reasoning function format' guide.txt
           grep --quiet 'On this server, ' guide.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"get_guide","arguments":{"guide":"voice"}}}' voice-guide.txt
+          grep --quiet '# Auto voice' voice-guide.txt
+          test "$(answered voice-guide.md http://127.0.0.1:5555/v1/guides/voice)" = 200
+          grep --quiet '# Auto voice' voice-guide.md
           call_mcp /mcp '{"jsonrpc":"2.0","id":10,"method":"resources/list"}' resources.txt
-          test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 12
+          test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 13
           call_mcp /mcp '{"jsonrpc":"2.0","id":11,"method":"prompts/list"}' prompts.txt
           for prompt in first-playbook remember give-tools schedule; do
             grep --quiet "\"name\":\"$prompt\"" prompts.txt
