@@ -33,7 +33,7 @@ export const SourceField = Schema.String.annotate({
 
 export const OverviewField = Schema.String.annotate({
   description:
-    'Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Read get_guide with guide="voice"; avoid invented benefits.',
+    'Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Avoid invented benefits.',
 }).check(Schema.isMinLength(1), atMostBytes(mostOverviewBytes, 'an overview'));
 
 export const RunIdInputField = Schema.String.annotate({

@@ -38,7 +38,6 @@ const guideNames = [
   'prediction-function',
   'workflow',
   'templates',
-  'voice',
   'first-playbook',
   'remember',
   'give-tools',

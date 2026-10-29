@@ -24,12 +24,6 @@ const templatesAbout: Omit<Guide, 'text'> = {
   description: 'The filters a template may use, the same in every template of every definition.',
 };
 
-const voiceAbout: Omit<Guide, 'text'> = {
-  name: 'voice',
-  title: 'Auto voice',
-  description: 'How to write clear, accurate product text and playbook overviews in the Auto voice.',
-};
-
 function pageOfGuide(guide: string): string {
   return `reference/${guide.replace(/-function$/u, '')}-format.md`;
 }
@@ -67,7 +61,6 @@ export async function guideShelfFrom(shippedFiles: ShippedFiles, types: readonly
     ),
     ...(await Promise.all(types.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
     await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
-    await pageGuideOf(shippedFiles, 'contributing/voice.md', voiceAbout),
   ];
   return guideShelfOf(guides, await recipesFor(shippedFiles, guides), definitionTypes);
 }

@@ -24,8 +24,6 @@ A guide can offer the choices its task needs, such as which Apollo connection pr
 
 ## Writing style
 
-Follow [Auto voice](voice.md) for wording, tone and review. It is the shared guide for documentation and product text.
-
 - Write short sentences: one idea each, rarely more than 25 words. When a sentence collects conditions, turn them into a list.
 - Put rules, limits, fields, settings and options in tables or bullets. Lead with the common case, then the exceptions.
 - Give each fact one home and link to it from other pages. The home of capability status is [Functions](../concepts/functions.md#availability).
@@ -33,7 +31,7 @@ Follow [Auto voice](voice.md) for wording, tone and review. It is the shared gui
 - Use [Playbook terminology](../concepts/terminology.md) for resources, capabilities and domain names. A reasoning function has a prompt; workflows coordinate functions; a run carries out a definition once.
 - Use sentence-case headings, and no em dashes.
 
-The runtime serves [Auto voice](voice.md), [Terminology](../concepts/terminology.md), every format reference and [Templates](../reference/template.md) to agents through `get_guide`, so an agent reads each of those pages alone. Keep each one complete on its own, or name the guide that holds what it leaves out, and keep each page under 64 KiB, the most a guide may hold.
+The runtime serves [Terminology](../concepts/terminology.md), every format reference and [Templates](../reference/template.md) to agents through `get_guide`, so an agent reads each of those pages alone. Keep each one complete on its own, or name the guide that holds what it leaves out, and keep each page under 64 KiB, the most a guide may hold.
 
 ## What belongs here
 
