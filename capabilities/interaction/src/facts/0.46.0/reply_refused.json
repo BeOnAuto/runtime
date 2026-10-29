@@ -1,0 +1,27 @@
+{
+  "type": "reply_refused",
+  "data": {
+    "server": "chat",
+    "tool": "read_replies",
+    "reply": {
+      "id": "reply-1",
+      "sender": "sender-1"
+    },
+    "because": "invalid",
+    "issues": [
+      {
+        "detail": "Expected yes or no",
+        "pointer": "/answer"
+      }
+    ],
+    "told": true
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "interaction",
+    "definitionName": "confirm-order",
+    "definitionVersion": 2
+  }
+}

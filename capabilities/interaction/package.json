@@ -23,6 +23,7 @@
     "liquidjs": "10.30.0"
   },
   "devDependencies": {
+    "@on.auto/ledger": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

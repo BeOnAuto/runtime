@@ -13,13 +13,7 @@ export { PlaybookReader } from './ledger/playbook-reader.ts';
 export { isCalendarDay } from './reading/calendar-days.ts';
 export { PlaybookContext, type PlaybookAddress } from './caller/playbook-context.ts';
 export { PlaybookLifecycle } from './caller/playbook-lifecycle.ts';
-export {
-  CallLineage,
-  type CallLink,
-  type GivenLineage,
-  type TriggerKind,
-  type TriggerLink,
-} from './caller/call-lineage.ts';
+export { CallLineage, type CallLink, type GivenLineage, type TriggerLink } from './caller/call-lineage.ts';
 export { PlaybookWriter } from './ledger/playbook-writer.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
 export { CallFetch } from './caller/call-fetch.ts';
@@ -83,6 +77,8 @@ export {
   type StreamState,
   type TypedEvent,
 } from './ledger/decider.ts';
+export { earlierShapeOf, readingEarlierShapes, type EarlierShape } from './fact-shapes/earlier-shapes.ts';
+export { factReaderOf, factTypesOf, type FactReader } from './fact-shapes/fact-readers.ts';
 export {
   ActedContextSchema,
   ActedOnRunContextSchema,

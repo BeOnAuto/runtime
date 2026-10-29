@@ -1,4 +1,13 @@
-import { statement, statementOf, type RowPhase, type Statement, type StatementValue } from '@on.auto/workflow-host';
+import {
+  statement,
+  statementOf,
+  type LayoutStep,
+  type RowPhase,
+  type Statement,
+  type StatementValue,
+} from '@on.auto/workflow-host';
+
+export const datasetLayoutSteps: readonly LayoutStep[] = [];
 
 export const datasetsTable = statement`CREATE TABLE IF NOT EXISTS prediction_datasets (
     playbook_key TEXT NOT NULL,

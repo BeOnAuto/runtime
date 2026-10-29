@@ -1,4 +1,4 @@
-import { statement, type ConnectionPorts, type Statement } from '@on.auto/ledger';
+import { statement, type ConnectionPorts, type LayoutStep, type Statement } from '@on.auto/ledger';
 
 const followerTables: readonly Statement[] = [
   statement`CREATE TABLE IF NOT EXISTS workflow_followed_playbooks (
@@ -168,6 +168,8 @@ const hostTables: readonly Statement[] = [
   )`,
   ...followerTables,
 ];
+
+export const hostLayoutSteps: readonly LayoutStep[] = [];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {
   return connection.migrated([...hostTables, ...tables]);

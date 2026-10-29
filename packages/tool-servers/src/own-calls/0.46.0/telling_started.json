@@ -1,0 +1,19 @@
+{
+  "type": "telling_started",
+  "data": {
+    "call_id": "call-1",
+    "server": "chat",
+    "connection_id": "connection-1",
+    "tool": "post_message",
+    "arguments_bytes": 80,
+    "arguments_sha256": "a1b2c3"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "interaction",
+    "definitionName": "confirm-order",
+    "definitionVersion": 2
+  }
+}

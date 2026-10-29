@@ -1,21 +1,14 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { Schema } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import { projectionPartsOf, type KeptTables } from '../projections/projection-parts.ts';
-import { dataAsJsonText } from './json-text.ts';
+import { storedDataOf } from './json-text.ts';
 import { postgresqlSchemaCreated } from './postgresql-schema.ts';
 
 const defaultPartition = 'emt:default';
 
 const rowsInAWrite = 500;
-
-const decodeJsonText = Schema.decodeUnknownSync(Schema.Struct({ json: Schema.String }));
-
-function storedData(stored: unknown): unknown {
-  return dataAsJsonText.read(decodeJsonText(stored));
-}
 
 const beforeEveryMessage = '0/0';
 
@@ -60,9 +53,9 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
       ORDER BY m.transaction_id, m.global_position
       LIMIT ${count}`,
   rowsInAWrite: () => rowsInAWrite,
-  filledData: storedData,
+  filledData: storedDataOf,
   filledMetadata: (column) => column,
-  appendedData: storedData,
+  appendedData: storedDataOf,
   booleanOf: (value) => value,
 };
 

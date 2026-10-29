@@ -18,6 +18,7 @@ export { activateVersion } from './models/activate-version.ts';
 export { readBuildBrief, readBuildRows } from './trainer/build-reads.ts';
 export { uploadCandidate } from './trainer/candidate-upload.ts';
 export { datasetFolder, type DatasetFolding } from './dataset/dataset-folder.ts';
+export { datasetLayoutSteps } from './dataset/dataset-statements.ts';
 export { datasetsPortOn, type DatasetsPort } from './dataset/datasets-port.ts';
 export { uploadDataset } from './upload/upload-dataset.ts';
 export type { FileCache } from './model-cache/model-files.ts';
@@ -26,3 +27,5 @@ export { cacheDirectory, modelPorts, type ModelPorts, type ModelPortSettings } f
 export { inlineModels } from './model-processes/inline-models.ts';
 export type { ScoringPermits } from './model-processes/scoring-permits.ts';
 export { modelRuntimePoint } from './runtimes/model-runtimes.ts';
+export { BuildFactSchema } from './facts/build-facts.ts';
+export { ModelFactSchema } from './facts/model-facts.ts';

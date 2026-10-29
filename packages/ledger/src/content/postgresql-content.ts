@@ -1,6 +1,6 @@
 import type { ContentStore } from '@on.auto/operations';
 
-import type { StatementExecutor } from '../event-store.ts';
+import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import { formattedFor } from '../postgresql-reads/recorded-parts.ts';
 import { postgresqlContent } from './content-dialects.ts';
 import { recordedContentOn } from './content-store.ts';
@@ -27,27 +27,27 @@ export function executorOn(querying: Querying): StatementExecutor {
   return { query: async (sql) => ({ rows: await formatted(sql) }), command: formatted };
 }
 
-async function inTransactionOn(
-  connections: ContentConnections,
-  work: (execute: StatementExecutor) => Promise<void>,
-): Promise<void> {
-  const connection = await connections.connect();
-  try {
-    await connection.query('BEGIN', []);
-    await work(executorOn(connection));
-    await connection.query('COMMIT', []);
-  } catch (failure) {
-    await connection.query('ROLLBACK', []);
-    throw failure;
-  } finally {
-    connection.release();
-  }
+export function inTransactionOn(connections: ContentConnections): InTransaction {
+  return async (work) => {
+    const connection = await connections.connect();
+    try {
+      await connection.query('BEGIN', []);
+      const done = await work(executorOn(connection));
+      await connection.query('COMMIT', []);
+      return done;
+    } catch (failure) {
+      await connection.query('ROLLBACK', []);
+      throw failure;
+    } finally {
+      connection.release();
+    }
+  };
 }
 
 export function postgresqlContentOn(connections: ContentConnections): ContentStore {
   const execute = executorOn(connections);
   return {
-    content: recordedContentOn(execute, postgresqlContent, (work) => inTransactionOn(connections, work)),
+    content: recordedContentOn(execute, postgresqlContent, inTransactionOn(connections)),
     sweepContent: contentSweepOn(execute),
   };
 }

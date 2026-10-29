@@ -3,7 +3,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { executedOn } from '../recorded/sqlite-checks.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { sqliteLayout } from './layout-dialects.ts';
-import { layoutFound } from './layout-kept.ts';
+import { layoutFound } from './layout-found.ts';
 import { ledgerLayout } from './ledger-layout.ts';
 import { aSQLiteFileInLayout } from './sqlite-file-in-layout.ts';
 
@@ -16,7 +16,7 @@ describe('a SQLite file put in a layout of the ledger', () => {
 
     expect(await executedOn(fileName, (execute) => layoutFound(execute, sqliteLayout, []))).toEqual({
       layout: ledgerLayout + 1,
-      tables: 1,
+      tables: ['ledger_layout'],
     });
   });
 });

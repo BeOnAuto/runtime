@@ -1,6 +1,13 @@
-import { IssueSchema, RunContextSchema, recordedDecoder, type Decided } from '@on.auto/operations';
+import {
+  IssueSchema,
+  RunContextSchema,
+  factOf,
+  factReaderOf,
+  type Decided,
+  type FactReader,
+} from '@on.auto/operations';
 import { CallAnsweredSchema, CallSentSchema } from '@on.auto/tool-servers';
-import { Option, Schema, Struct, Tuple } from 'effect';
+import { Schema, Struct } from 'effect';
 
 import { DeliveredAsSchema, RepliesInSchema } from '../tool-blocks/tool-block-schemas.ts';
 
@@ -70,17 +77,13 @@ const ReplyRefusedSchema = Schema.Struct({
   told: Schema.Boolean,
 });
 
-const InteractionWorkSchema = Schema.Union([
-  Schema.Struct({ type: Schema.Literal('delivery_started'), data: DeliveryStartedSchema }),
-  Schema.Struct({ type: Schema.Literal('delivery_succeeded'), data: DeliverySucceededSchema }),
-  Schema.Struct({ type: Schema.Literal('delivery_failed'), data: DeliveryFailedSchema }),
-  Schema.Struct({ type: Schema.Literal('delivery_refused'), data: DeliveryRefusedSchema }),
-  Schema.Struct({ type: Schema.Literal('reply_refused'), data: ReplyRefusedSchema }),
+export const InteractionRunFactSchema = Schema.Union([
+  factOf('delivery_started', DeliveryStartedSchema, RunContextSchema),
+  factOf('delivery_succeeded', DeliverySucceededSchema, RunContextSchema),
+  factOf('delivery_failed', DeliveryFailedSchema, RunContextSchema),
+  factOf('delivery_refused', DeliveryRefusedSchema, RunContextSchema),
+  factOf('reply_refused', ReplyRefusedSchema, RunContextSchema),
 ]);
-
-const InteractionRunFactSchema = InteractionWorkSchema.mapMembers(
-  Tuple.map(Schema.fieldsAssign({ context: RunContextSchema })),
-);
 
 export const [
   DeliveryStartedFactSchema,
@@ -117,17 +120,4 @@ export type DeliveryFailedBecause = typeof DeliveryFailedBecauseSchema.Type;
 
 export type DeliveryRefusedBecause = typeof DeliveryRefusedBecauseSchema.Type;
 
-const decodeFact = recordedDecoder(InteractionRunFactSchema);
-
-export function interactionFactOf(recorded: unknown): RecordedInteractionFact | undefined {
-  return Option.getOrUndefined(decodeFact(recorded));
-}
-
-const decodeWork = Schema.decodeUnknownOption(InteractionWorkSchema);
-
-export function workFactOf(work: {
-  readonly type: string;
-  readonly data: Schema.JsonObject;
-}): InteractionFact | undefined {
-  return Option.getOrUndefined(decodeWork(work));
-}
+export const interactionFactOf: FactReader<RecordedInteractionFact> = factReaderOf(InteractionRunFactSchema);

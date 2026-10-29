@@ -1,3 +1,4 @@
+import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { Conflict, recordingOf, type Context } from '@on.auto/operations';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -184,5 +185,29 @@ describe('a published event read back', () => {
       expect(() => recorded(fact, context)).toThrow('runId');
     }
     expect(recorded(fact, emittedContext)).toStrictEqual({ ...fact, context: emittedContext });
+  });
+});
+
+describe('the facts of the events a playbook published', () => {
+  recordedFactsBehaviour({
+    schema: EventPublishedSchema,
+    folder: new URL('.', import.meta.url),
+    releases: {
+      '0.46.0': [
+        {
+          type: 'event_published',
+          data: { event: monthClosed, filled: ['time'] },
+          context: {
+            at: '2026-10-01T09:00:00.000Z',
+            by: 'playbook:alpha',
+            runId: '019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+            definitionType: 'workflow',
+            definitionName: 'close-the-month',
+            definitionVersion: 3,
+            depth: 1,
+          },
+        },
+      ],
+    },
   });
 });

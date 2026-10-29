@@ -1,6 +1,7 @@
-import { RunContextSchema, factOf } from '@on.auto/operations';
+import type { RecordedWork } from '@on.auto/definitions';
+import { RunContextSchema, factOf, factReaderOf } from '@on.auto/operations';
 import { CandidateSignatureSchema } from '@on.auto/prediction-contract';
-import { Option, Schema } from 'effect';
+import { Schema } from 'effect';
 
 import { BaselineSchema } from '../document/evaluation-names.ts';
 
@@ -93,21 +94,6 @@ const FittedSchema = Schema.Struct({
   detail: Schema.optionalKey(Schema.String),
 });
 
-const BuildWorkSchema = Schema.Union([
-  Schema.Struct({ type: Schema.Literal('dataset_assembled'), data: AssembledSchema }),
-  Schema.Struct({ type: Schema.Literal('candidate_uploaded'), data: UploadedSchema }),
-  Schema.Struct({ type: Schema.Literal('candidate_refused'), data: RefusedSchema }),
-  Schema.Struct({ type: Schema.Literal('candidate_scored'), data: ScoredSchema }),
-  Schema.Struct({ type: Schema.Literal('candidate_disqualified'), data: DisqualifiedSchema }),
-  Schema.Struct({ type: Schema.Literal('baseline_scored'), data: BaselineScoredSchema }),
-  Schema.Struct({ type: Schema.Literal('baseline_not_walked'), data: NotWalkedSchema }),
-  Schema.Struct({ type: Schema.Literal('candidates_fitted'), data: FittedSchema }),
-]);
-
-export type BuildWork = typeof BuildWorkSchema.Type;
-
-export type BuildWorkOf<Type extends BuildWork['type']> = Extract<BuildWork, { readonly type: Type }>;
-
 export const buildFactSchemas = {
   dataset_assembled: factOf('dataset_assembled', AssembledSchema, RunContextSchema),
   candidate_uploaded: factOf('candidate_uploaded', UploadedSchema, RunContextSchema),
@@ -119,8 +105,24 @@ export const buildFactSchemas = {
   candidates_fitted: factOf('candidates_fitted', FittedSchema, RunContextSchema),
 };
 
-const decodeWork = Schema.decodeUnknownOption(BuildWorkSchema);
+export const BuildFactSchema = Schema.Union([
+  buildFactSchemas.dataset_assembled,
+  buildFactSchemas.candidate_uploaded,
+  buildFactSchemas.candidate_refused,
+  buildFactSchemas.candidate_scored,
+  buildFactSchemas.candidate_disqualified,
+  buildFactSchemas.baseline_scored,
+  buildFactSchemas.baseline_not_walked,
+  buildFactSchemas.candidates_fitted,
+]);
 
-export function buildWorkIn(work: { readonly type: string; readonly data: unknown }): readonly BuildWork[] {
-  return Option.toArray(decodeWork({ type: work.type, data: work.data }));
+export type BuildWork = typeof BuildFactSchema.Type;
+
+export type BuildWorkOf<Type extends BuildWork['type']> = Extract<BuildWork, { readonly type: Type }>;
+
+const readBuildFact = factReaderOf(BuildFactSchema);
+
+export function buildWorkIn(work: RecordedWork): readonly BuildWork[] {
+  const fact = readBuildFact(work);
+  return fact === undefined ? [] : [fact];
 }

@@ -1,0 +1,31 @@
+{
+  "type": "event_published",
+  "data": {
+    "event": {
+      "specversion": "1.0",
+      "id": "m-2026-09",
+      "source": "/ledger/eu",
+      "type": "com.acme.ledger.month-closed",
+      "subject": "september",
+      "data": {
+        "region": "eu",
+        "totals": {
+          "revenue": 120,
+          "costs": 80
+        }
+      },
+      "time": "2026-10-01T08:59:00Z",
+      "tenant": "acme"
+    },
+    "filled": ["time"]
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "playbook:alpha",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 3,
+    "depth": 1
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "activation_refused",
+  "data": {
+    "version": 3,
+    "because": "approver_rejected",
+    "refused_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    },
+    "build": "build-3"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

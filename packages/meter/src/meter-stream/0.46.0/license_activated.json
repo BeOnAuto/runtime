@@ -1,0 +1,36 @@
+{
+  "type": "license_activated",
+  "data": {
+    "installation": "installation-1",
+    "org": "org-1",
+    "org_name": "Example Org",
+    "plan": "team",
+    "policy": "standard",
+    "issued_at": "2026-10-29T10:00:00.000Z",
+    "warn_at": "2026-11-26T10:00:00.000Z",
+    "limit_at": "2026-11-29T10:00:00.000Z",
+    "charged_through": 120,
+    "admits_through": 1000,
+    "standing": "ok",
+    "credits": {
+      "available": 500,
+      "owed": 0,
+      "overage_cap": 100
+    },
+    "fallback": {
+      "per_day": 15,
+      "per_month": 75
+    },
+    "licensed_reported": 100,
+    "key_sha256": "f0e1d2",
+    "license": {
+      "payload": "eyJ2IjoyfQ",
+      "signature": "c2lnbmVk",
+      "kid": "auto-2026-10"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

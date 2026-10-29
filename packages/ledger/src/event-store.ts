@@ -205,10 +205,10 @@ interface Transaction {
 
 export interface TransactionalPool<Executor extends StatementExecutor = StatementExecutor> {
   readonly execute: Executor;
-  readonly withTransaction: (handle: (transaction: Transaction) => Promise<void>) => Promise<void>;
+  readonly withTransaction: <A>(handle: (transaction: Transaction) => Promise<A>) => Promise<A>;
 }
 
-export type InTransaction = (work: (execute: StatementExecutor) => Promise<void>) => Promise<void>;
+export type InTransaction = <A>(work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
 
 export function inTransactionOf({ withTransaction }: TransactionalPool): InTransaction {
   return (work) => withTransaction((transaction) => work(transaction.execute));

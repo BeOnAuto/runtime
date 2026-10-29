@@ -1,0 +1,12 @@
+{
+  "type": "connection_broken",
+  "data": {
+    "connection": "connection-1",
+    "kind": "credential_refused",
+    "reason": "The server refused the credential"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

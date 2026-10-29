@@ -1,0 +1,19 @@
+{
+  "src/facts/0.46.0/activation_refused.json": "68c5ea9be8855e53d4602a0e3b5d8906b79f0ea32bfabae6f104d3bbe2d59b0b",
+  "src/facts/0.46.0/baseline_not_walked.json": "b81d9389df471f74736bf1174473bc0af13f9b9e3deeedc5dc778fabb648dd36",
+  "src/facts/0.46.0/baseline_scored.json": "03b50990555444175453ad1440a7ae04c8f76d485946cf006134b484a5798e65",
+  "src/facts/0.46.0/build_asked.json": "c3789dca0a4eed37eef7b2a48e15a5cc3f04632e9d7ba05dff87eaaf30b55339",
+  "src/facts/0.46.0/build_ended.json": "2b8e3f93e707ed422c0571821ccc29752b635305bfd2bb9b1403505b8bb4d078",
+  "src/facts/0.46.0/candidate_disqualified.json": "b3da62c83144b84ec52021f5313beedf98a05f0973bead52e889b2b0237cc0dc",
+  "src/facts/0.46.0/candidate_refused.json": "cc02e2f2d39efeb7e5ecfefc994e35629aa7b05b2bce042c380710ca3d44da4c",
+  "src/facts/0.46.0/candidate_scored.json": "81f046bbb5b9c3de18ab4a6c8e9106416fe818cea5b5727224ab23b7b7d7dcb6",
+  "src/facts/0.46.0/candidate_uploaded.json": "50bf34ef97c1f39a643c779fd6a342178978e16ab842bf9380d6f921e5402e40",
+  "src/facts/0.46.0/candidates_fitted.json": "3cf2359dadec9001781ab485fc376aab105f40f72ba0904185cf950e16ee033e",
+  "src/facts/0.46.0/dataset_assembled.json": "b9475be78e74cfddee42d945a002377b8419e773e32b0d456712e1cc91fda0be",
+  "src/facts/0.46.0/shadow_failed.json": "26c7c416e51db37a1aea6954ebafa39128bccbd9032ee3ef39ded17bca5e6fac",
+  "src/facts/0.46.0/shadow_graded.json": "c14eb4b152d2aeadb250e6dc2c57e6ecfd1ec7ea67f13b0f2d9f24d27838d8c4",
+  "src/facts/0.46.0/shadow_passed.json": "c951a07ee70a385d4dbf6bd6d52fb90bde9824854e52e2e2050f509929edcdd9",
+  "src/facts/0.46.0/shadow_predicted.json": "16d190b08ab35b61f14f1493bf63a6f189713f7fa31f13843eaed9364c4eeddf",
+  "src/facts/0.46.0/version_activated.json": "42ccfcf1efcab105abbb2f9801b3829cdef0239408b04516227c49816f3f9c98",
+  "src/facts/0.46.0/version_built.json": "f771831bba336e4357227330960032ab96a0e83fe9b9e558a80bc83e774fae06"
+}
