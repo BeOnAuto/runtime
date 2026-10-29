@@ -51,10 +51,10 @@ describe('a folder of entries', () => {
 
   it('is sorted by the names of the providers, not of their files', async () => {
     const slack = tracker.replace('name: tracker', 'name: slack');
-    const slackApi = tracker.replace('name: tracker', 'name: slack-api');
+    const slackBot = tracker.replace('name: tracker', 'name: slack-bot');
 
-    expect(await entryFolderWith({ 'slack.yaml': slack, 'slack-api.yaml': slackApi }).read()).toBe(
-      'slack https://tracker.example.com/mcp; slack-api https://tracker.example.com/mcp',
+    expect(await entryFolderWith({ 'slack.yaml': slack, 'slack-bot.yaml': slackBot }).read()).toBe(
+      'slack https://tracker.example.com/mcp; slack-bot https://tracker.example.com/mcp',
     );
   });
 });
