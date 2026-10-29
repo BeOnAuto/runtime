@@ -20,14 +20,14 @@ function closed(served: ReasoningServer): Promise<TestResponse> {
   });
 }
 
-describe('a trigger of a runtime nobody registered, after its 100 actions', () => {
+describe('a trigger of a runtime nobody registered, after its 100 free runs and the 15 of the day', () => {
   it('starts no run, and its refusal is recorded as a refused reaction that names the license', async () => {
     const clock = movedClock(Date.now());
     const server = await servingWorkflows([], {}, undefined, clock);
     onTestFinished(() => server.stop());
     await tallyCreated(server);
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'close-the-month', source: closing } });
-    await talliedTimes(server, 100);
+    await talliedTimes(server, 115);
     const refusals = await until(
       async () => {
         await closed(server);
@@ -40,5 +40,5 @@ describe('a trigger of a runtime nobody registered, after its 100 actions', () =
 
     expect(JSON.stringify(refusals.body)).toContain('license');
     expect(runs.body).toMatchObject({ runs: [] });
-  }, 60_000);
+  }, 120_000);
 });

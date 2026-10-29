@@ -2,7 +2,7 @@ import type { KeyCommandConsole } from '@on.auto/identity';
 import { SignedSchema } from '@on.auto/meter';
 import { Effect, Option, Schema } from 'effect';
 
-import { dayOf, licensedToOf, offlineCreditsNotice } from '../licensing/license-notice.ts';
+import { offlineCreditsNotice } from '../licensing/license-notice.ts';
 import { runtimeAddressOf, whenRunning, type RuntimeFetch } from './runtime-probe.ts';
 
 interface RuntimeAsking {
@@ -22,16 +22,16 @@ interface Asking<A> {
 
 const askedWithinMs = 30_000;
 
+const FORMATS = /\p{Cf}+/gu;
+
+const CONTROLS = /\p{Cc}+/gu;
+
+function onOneLine(text: string): string {
+  return text.replace(FORMATS, '').replace(CONTROLS, ' ').trim();
+}
+
 const licensedIn = Schema.decodeUnknownOption(
-  Schema.fromJsonString(
-    Schema.Struct({
-      installation: Schema.String,
-      org: Schema.String,
-      org_name: Schema.optionalKey(Schema.NullOr(Schema.String)),
-      plan: Schema.String,
-      expires_at: Schema.String,
-    }),
-  ),
+  Schema.fromJsonString(Schema.Struct({ runtime_id: Schema.String, summary: Schema.String })),
 );
 
 const allocationIn = Schema.decodeUnknownOption(
@@ -96,8 +96,7 @@ function activation(key: string): LicenseCommand {
     path: '/license',
     body: { key },
     answerIn: licensedIn,
-    said: ({ org, org_name: orgName, plan, installation, expires_at: expiresAt }) =>
-      `Licensed to ${licensedToOf(org, orgName)} (${plan} plan) until ${dayOf(expiresAt)}; renews daily. Runtime id ${installation}.`,
+    said: ({ runtime_id: runtimeId, summary }) => `${onOneLine(summary)} Runtime id ${onOneLine(runtimeId)}.`,
     failed: 'Auto Runtime did not activate the key',
   });
 }
@@ -107,7 +106,7 @@ function allocationGiven(text: string): LicenseCommand {
     onNone: () => (_port, asking) =>
       Effect.sync(() => {
         asking.console.error(
-          'An allocation is the JSON an operator of Auto signed, {"payload":"…","signature":"…","kid":"…"}, given whole as one argument',
+          'Offline credits are the JSON an operator of Auto signed, {"payload":"…","signature":"…","kid":"…"}, given whole as one argument',
         );
         return 1;
       }),
@@ -118,7 +117,7 @@ function allocationGiven(text: string): LicenseCommand {
         answerIn: allocationIn,
         said: ({ credits, spent, refresh_by: refreshBy }) =>
           `${offlineCreditsNotice({ credits, spent, usable_until: refreshBy })}.`,
-        failed: 'Auto Runtime did not take the allocation',
+        failed: 'Auto Runtime did not take the offline credits',
       }),
   });
 }

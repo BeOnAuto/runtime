@@ -167,13 +167,13 @@ allowed_origins:
 # https://on.auto/docs/self-host/configuration#usage-ping
 # usage_ping: false
 
-# The license of this runtime, which it needs past the 100 actions it runs
-# before it is registered: the key Studio gives as an owner of the org registers
-# its installation, written as a reference to the variable that holds it, since
-# this file never holds a secret. AUTO_RUNTIME_LICENSE_KEY wins over it. See
-# https://on.auto/docs/self-host/licenses
-# An installation that never reaches Auto also takes the allocation an operator
-# of Auto signs for it, the JSON of its payload, signature and kid.
+# The license of this runtime, which runs it on its org's credits: without one
+# it runs 100 free runs, then 15 a UTC day and 75 a UTC month. The key Studio
+# gives as an owner of the org registers the runtime, written as a reference to
+# the variable that holds it, since this file never holds a secret.
+# AUTO_RUNTIME_LICENSE_KEY wins over it. See https://on.auto/docs/self-host/licenses
+# A runtime that never reaches Auto also takes the offline credits an operator
+# of Auto signs for it, the JSON of their payload, signature and kid.
 # license:
 #   key: ${ACME_LICENSE_KEY}
 #   allocation: ${ACME_ALLOCATION}

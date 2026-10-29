@@ -35,18 +35,17 @@ const signedIn = Schema.decodeUnknownOption(Schema.fromJsonString(SignedSchema))
 const aLicenseKey = Schema.makeFilter(
   (key: string) =>
     isLicenseKey(key) ||
-    'Expected the key Studio gave as it registered this installation, alk.<org>.<installation>.<secret>',
+    'Expected the key Studio gave as an owner registered this runtime, alk.<org>.<runtime id>.<secret>',
 );
 
 export const LicenseKey = Schema.String.annotate({
-  description:
-    'The key Studio gave as an owner of the org registered this installation, alk.<org>.<installation>.<secret>',
+  description: 'The key Studio gave as an owner of the org registered this runtime, alk.<org>.<runtime id>.<secret>',
 }).check(aLicenseKey);
 
 const anAllocation = Schema.makeFilter(
   (text: string) =>
     Option.isSome(signedIn(text)) ||
-    'Expected the allocation an operator of Auto signed for this installation, as the JSON of its payload, signature and kid',
+    'Expected the offline credits an operator of Auto signed for this runtime, as the JSON of their payload, signature and kid',
 );
 
 const AllocationText = Schema.String.check(anAllocation);
@@ -54,16 +53,16 @@ const AllocationText = Schema.String.check(anAllocation);
 const LicenseInFile = Schema.Struct({
   key: Schema.optionalKey(
     Schema.String.annotate({
-      description: `The key Studio gave as it registered this installation, written as a reference to the variable that holds it, such as \${LICENSE_KEY}. ${licenseKeyVariable} wins over it`,
+      description: `The key Studio gave as an owner registered this runtime, written as a reference to the variable that holds it, such as \${LICENSE_KEY}. ${licenseKeyVariable} wins over it`,
     }).check(aLicenseKey),
   ),
   allocation: Schema.optionalKey(
     Schema.String.annotate({
-      description: `The allocation an operator of Auto signed for an installation that does not reach Auto, the JSON of its payload, signature and kid, written as a reference to the variable that holds it, such as \${ALLOCATION}. ${allocationVariable} wins over it`,
+      description: `The offline credits an operator of Auto signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as \${ALLOCATION}. ${allocationVariable} wins over it`,
     }).check(anAllocation),
   ),
 }).annotate({
-  description: `The license of this runtime, after the 100 actions it runs before it is registered: its key, and the allocation of an installation that does not reach Auto. ${licenseVariable} wins over it`,
+  description: `The license of this runtime, which runs it on its org's credits past the 100 free runs and the free rate of 15 runs a UTC day and 75 a UTC month it runs without one: its key, and the offline credits of a runtime that does not reach Auto. ${licenseVariable} wins over it`,
 });
 
 const AccountsOrigin = Schema.String.check(

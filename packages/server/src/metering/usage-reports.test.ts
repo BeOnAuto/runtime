@@ -3,7 +3,7 @@ import { setTimeout } from 'node:timers/promises';
 import { movedClock } from '@on.auto/workflow-host/testing';
 import { describe, expect, it } from 'vitest';
 
-import { accountsServed, servedBy, type Accounts } from '../testing/accounts/licensed-server.ts';
+import { accountsServed, licensedServedBy, type Accounts } from '../testing/accounts/licensed-server.ts';
 import { tallied } from '../testing/servers/tally-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
@@ -21,10 +21,10 @@ async function reportsAskedOnceTheyCouldBe(accounts: Accounts): Promise<number> 
 }
 
 describe('a licensed runtime', () => {
-  it('reports the count it projected to the account every hour, with its checkpoint, and once more as it stops', async () => {
+  it('reports the runs it admitted, and those on its license, to the account every hour, and once more as it stops', async () => {
     const clock = movedClock(Date.now());
     const accounts = await accountsServed();
-    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { clock });
+    const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { clock });
     await tallied(server);
     await tallied(server);
     clock.moveTo(clock.now() + anHourAndAMinute);
@@ -35,7 +35,7 @@ describe('a licensed runtime', () => {
     const sentBeforeTheStop = accounts.account.reportsSent();
     await server.stop();
 
-    expect([reports.at(-1)?.actions, reports.at(-1)?.through?.length]).toEqual([2, 1]);
+    expect(reports.at(-1)).toEqual({ actions: 2, licensed: 2 });
     expect(accounts.account.reportsSent()).toBe(sentBeforeTheStop + 1);
   }, 60_000);
 });
@@ -44,7 +44,7 @@ describe('a licensed runtime whose report the account did not take', () => {
   it('asks the account again 15 minutes after, not sooner, and an hour after the report it took, not sooner', async () => {
     const clock = movedClock(Date.now());
     const accounts = await accountsServed();
-    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { clock });
+    const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { clock });
     await tallied(server);
     clock.moveTo(clock.now() + anHourAndAMinute);
     await until(

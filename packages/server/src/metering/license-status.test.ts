@@ -3,10 +3,16 @@ import { join } from 'node:path';
 
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
-import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { accountsServed, installation, runtimeIdOf, servedBy, studio } from '../testing/accounts/licensed-server.ts';
+import {
+  accountsServed,
+  installation,
+  licensedServedBy,
+  runtimeIdOf,
+  servedBy,
+  studio,
+} from '../testing/accounts/licensed-server.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { tallied, tallyCreated } from '../testing/servers/tally-server.ts';
@@ -16,8 +22,6 @@ const license = '/v1/orgs/acme/license';
 const reader = createApiKey({ id: 'acme-reader', org: 'acme', permissions: ['playbook:read'], playbooks: ['alpha'] });
 
 const globex = createApiKey({ id: 'globex-admin', org: 'globex', permissions: allPermissions, playbooks: '*' });
-
-const detailIn = Schema.decodeUnknownSync(Schema.Struct({ detail: Schema.String }));
 
 const uuid = /^[\da-f]{8}-[\da-f]{4}-7[\da-f]{3}-[\da-f]{4}-[\da-f]{12}$/u;
 
@@ -41,24 +45,33 @@ describe('the license a runtime nobody registered holds', () => {
     const after = await server.call('GET', license);
     const runtimeId = await runtimeIdOf(server);
 
+    const summary = `2 of 100 free runs used, then the free rate of 15 runs a UTC day and 75 a UTC month without a key. Get a free key at ${studio}/licenses?installation=${runtimeId}.`;
+
     expect(before).toMatchObject({ status: 200, body: { state: 'unregistered', free_runs: { used: 0, of: 100 } } });
     expect(after.body).toEqual({
       state: 'unregistered',
+      limited_because: null,
       runtime_id: runtimeId,
       free_runs: { used: 2, of: 100 },
       org: null,
       org_name: null,
       plan: null,
-      expires_at: null,
-      renewed_at: null,
+      standing: null,
+      licensed: 0,
+      runs_left: null,
+      credits: null,
+      issued_at: null,
+      warn_at: null,
+      limit_at: null,
+      last_report_at: null,
+      fallback: null,
       key_source: null,
       offline: null,
       invalid_because: null,
+      summary,
     });
     expect(runtimeId).toMatch(uuid);
-    expect(await pageOf(server)).toContain(
-      '<p class="license">2 of 100 free runs used, then a free key from Studio</p>',
-    );
+    expect(await pageOf(server)).toContain(`<p class="license">${summary}</p>`);
   });
 
   it('is read by every member of an org, and by no caller without a key or of another org', async () => {
@@ -72,25 +85,32 @@ describe('the license a runtime nobody registered holds', () => {
 });
 
 describe('the license a licensed runtime holds', () => {
-  it('reads licensed to its org on its plan, renewed and ending as Auto signed it, by a key of the environment', async () => {
+  it('reads licensed to its org on its plan, with the runs it has left and when Auto signed its license, by a key of the environment', async () => {
     const accounts = await accountsServed();
-    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
+    const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
     await tallied(server);
 
-    expect((await server.call('GET', license)).body).toEqual({
+    expect((await server.call('GET', license)).body).toMatchObject({
       state: 'licensed',
+      limited_because: null,
       runtime_id: installation,
-      free_runs: { used: 1, of: 100 },
+      free_runs: null,
       org: 'acme',
       org_name: null,
       plan: 'free',
-      expires_at: '2026-11-03T12:00:00.000Z',
-      renewed_at: '2026-10-27T12:00:00.000Z',
+      standing: 'ok',
+      licensed: 1,
+      runs_left: 999,
+      credits: { available: 1000, owed: 0, overage_cap: 0 },
+      issued_at: '2026-10-27T12:00:00.000Z',
+      warn_at: '2026-11-10T12:00:00.000Z',
+      limit_at: '2026-11-24T12:00:00.000Z',
+      fallback: null,
       key_source: 'environment',
       offline: null,
       invalid_because: null,
     });
-    expect(await pageOf(server)).toContain('<p class="license">Licensed to acme (free plan)</p>');
+    expect(await pageOf(server)).toContain('<p class="license">Licensed to acme (free plan): 999 runs left.</p>');
   });
 
   it('says its key came from its configuration file, or from an activation', async () => {
@@ -99,7 +119,7 @@ describe('the license a licensed runtime holds', () => {
     onTestFinished(ledger.remove);
     const configFile = join(ledger.directory, 'auto-runtime.yaml');
     writeFileSync(configFile, 'license:\n  key: ${ACME_LICENSE_KEY}\n');
-    const configured = await servedBy(
+    const configured = await licensedServedBy(
       accounts,
       { CONFIG_FILE: configFile, ACME_LICENSE_KEY: accounts.key },
       { ledger },
@@ -117,31 +137,40 @@ describe('the license of a runtime whose org Auto names', () => {
   it('reads the name of its org as Auto signed it, which the page at its root says in place of the id', async () => {
     const accounts = await accountsServed();
     accounts.account.orgNamed('acme', 'Acme Corporation');
-    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
-    await tallied(server);
+    const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
 
     expect((await server.call('GET', license)).body).toMatchObject({
       state: 'licensed',
       org: 'acme',
       org_name: 'Acme Corporation',
     });
-    expect(await pageOf(server)).toContain('<p class="license">Licensed to Acme Corporation (free plan)</p>');
+    expect(await pageOf(server)).toContain(
+      '<p class="license">Licensed to Acme Corporation (free plan): 1000 runs left.</p>',
+    );
   });
 });
 
 describe('the license of a runtime whose key was rotated', () => {
-  it('reads invalid in the words a run is refused in once the account says its key was rotated', async () => {
+  it('reads limited to the free rate, saying why and how to put it right', async () => {
     const accounts = await accountsServed();
-    const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
-    await tallied(server);
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const before = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { ledger });
+    await before.stop();
     accounts.account.revoke(accounts.key, 'key_rotated');
-    const refused = await tallied(server);
+    const after = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { ledger });
+    await expect
+      .poll(async () => (await after.call('GET', license)).body, { timeout: 60_000 })
+      .toMatchObject({
+        state: 'limited',
+        limited_because: 'key_rotated',
+      });
 
-    expect((await server.call('GET', license)).body).toMatchObject({
-      state: 'invalid',
-      invalid_because: detailIn(refused.body).detail,
-    });
-  });
+    expect(JSON.stringify((await after.call('GET', license)).body)).toContain(
+      "This runtime's key was replaced, so it runs at the free rate of 15 runs a UTC day and 75 a UTC month.",
+    );
+    expect((await tallied(after)).status).toBe(200);
+  }, 60_000);
 });
 
 describe('the license an offline installation holds', () => {
@@ -155,10 +184,10 @@ describe('the license an offline installation holds', () => {
     expect((await server.call('GET', license)).body).toMatchObject({
       state: 'offline',
       runtime_id: installation,
-      offline: { credits: 5, spent: 1, usable_until: '2026-11-03T12:00:00.000Z' },
+      offline: { credits: 5, spent: 1, usable_until: '2026-11-26T12:00:00.000Z' },
     });
     expect(await pageOf(server)).toContain(
-      '<p class="license">Offline credits: 1 of 5 used, usable until 2026-11-03</p>',
+      '<p class="license">Offline credits: 1 of 5 used, usable until 2026-11-26</p>',
     );
   });
 });

@@ -7,7 +7,6 @@ import type { ServerServices } from '../server-options/composed-options.ts';
 import { inRuntime } from '../workflows/in-runtime.ts';
 import { keptLicenseKeyOn, type KeptLicenseKeyServices } from './kept-license-key.ts';
 import { licenseChores } from './license-chores.ts';
-import { licenseNoticeOf } from './license-notice.ts';
 import { licenseOperationsOf } from './license-operations.ts';
 
 const lastReportWithinMs = 5000;
@@ -54,7 +53,12 @@ export async function licenseServedBy(
     operations: licenseOperationsOf(license, kept),
     dueWork: licenseChores(license),
     notice: () =>
-      inTheRuntime(license.status.pipe(Effect.map(licenseNoticeOf), Effect.orElseSucceed(Function.constUndefined))),
+      inTheRuntime(
+        license.status.pipe(
+          Effect.map(({ summary }) => summary),
+          Effect.orElseSucceed(Function.constUndefined),
+        ),
+      ),
     withALastReport: (served) => ({
       ...served,
       stopWork: async () => {

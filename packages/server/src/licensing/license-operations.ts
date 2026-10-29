@@ -5,48 +5,10 @@ import { Schema } from 'effect';
 import { defineActivateLicense } from './activate-license.ts';
 import { defineActivateAllocation, defineReportAllocation } from './allocation-operations.ts';
 import type { KeptLicenseKey } from './kept-license-key.ts';
-
-function orNull<S extends Schema.Constraint>(schema: S, description: string): Schema.NullOr<S> {
-  return Schema.NullOr(schema).annotate({ description });
-}
-
-const LicenseStatusSchema = Schema.Struct({
-  state: Schema.Literals(['unregistered', 'licensed', 'offline', 'invalid']).annotate({
-    description:
-      'unregistered before a key is given, licensed while an entitlement Auto signed stands, offline while it spends an allocation, invalid while what it holds does not stand',
-  }),
-  runtime_id: Schema.String.annotate({
-    description: 'The id of this runtime, the installation an owner registers in Studio',
-  }),
-  free_runs: Schema.Struct({
-    used: Schema.Int.annotate({ description: 'The runs it has counted, at most the free runs it may make' }),
-    of: Schema.Int.annotate({ description: 'The runs it may make before it is registered' }),
-  }),
-  org: orNull(Schema.String, 'The id of the org at Auto its license is of'),
-  org_name: orNull(
-    Schema.String,
-    'The name of that org at Auto, as Auto signed it into the entitlement, or null where Auto named none',
-  ),
-  plan: orNull(Schema.String, 'The plan of that org'),
-  expires_at: orNull(Schema.String, 'When the entitlement Auto signed ends, unless the runtime renews it'),
-  renewed_at: orNull(Schema.String, 'When Auto last signed its entitlement'),
-  key_source: orNull(
-    Schema.Literals(['environment', 'configuration', 'activated']),
-    'Where the key in force came from: AUTO_RUNTIME_LICENSE_KEY, license.key of the configuration file, or an activation',
-  ),
-  offline: orNull(
-    Schema.Struct({
-      credits: Schema.Int.annotate({ description: 'The credits of the allocation it holds' }),
-      spent: Schema.Int.annotate({ description: 'What it has spent of them' }),
-      usable_until: Schema.String.annotate({ description: 'When they stop unless Auto refreshes them' }),
-    }),
-    'The allocation of an installation that does not reach Auto',
-  ),
-  invalid_because: orNull(Schema.String, 'While it is invalid, the words a run is refused in'),
-});
+import { LicenseStatusSchema } from './license-status-schema.ts';
 
 const description = [
-  "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends.",
+  'Reads where this runtime stands to run: without a key, licensed, out of touch, limited to the free rate and why, or spending offline credits; its id, the first runs it used, the org and plan of its license, the runs it has left, the credits of its org and when Auto last answered it, the free rate while it runs at it, and all of it in plain words with how to put it right.',
   'Every member of an org may read it; the license covers the whole runtime, whatever org the route names.',
 ].join(' ');
 

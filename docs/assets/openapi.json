@@ -6869,7 +6869,7 @@
       "post": {
         "operationId": "activate_license",
         "summary": "Activate license",
-        "description": "Activates the license of this runtime with the key Studio gave as an owner of the org registered its installation, alk.<org>.<installation>.<secret>. The license covers the whole runtime, every org of it: from then on each new action is admitted against the credit of the account of the org at Auto, and the 100 actions a runtime runs before it is registered no longer count. It answers the installation, the org at Auto, its plan and when the entitlement Auto signed expires; the runtime refreshes it every day, and keeps the key in its secret store so it stands after a restart. A key Auto does not know, or one for another installation, is refused as a conflict of the kind license_invalid.",
+        "description": "Activates the license of this runtime with the key Studio gave as an owner of the org registered it, alk.<org>.<runtime id>.<secret>. The license covers the whole runtime, every org of it: from then on it starts runs on the credits of the org at Auto, without asking Auto for each, and reports the runs it started every hour, and sooner once it has used half of what its license left it. It answers where the runtime stands, as get_license does, and keeps the key in its secret store so it stands after a restart. A key Auto does not know, one that was replaced or one for another runtime is refused as a conflict of the kind license_invalid, and a key of a closed org as account_closed.",
         "tags": [
           "license"
         ],
@@ -6890,7 +6890,7 @@
                 "properties": {
                   "key": {
                     "type": "string",
-                    "description": "The key Studio gave as an owner of the org registered this installation, alk.<org>.<installation>.<secret>"
+                    "description": "The key Studio gave as an owner of the org registered this runtime, alk.<org>.<runtime id>.<secret>"
                   }
                 },
                 "required": [
@@ -6910,11 +6910,78 @@
                   "$id": "https://on.auto/schemas/runtime/activate_license/output",
                   "type": "object",
                   "properties": {
-                    "installation": {
-                      "type": "string"
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "unregistered",
+                        "licensed",
+                        "out_of_touch",
+                        "limited",
+                        "offline",
+                        "invalid"
+                      ],
+                      "description": "unregistered without a key; licensed while it runs on the license Auto signed; out_of_touch once it has not reached Auto since that license warns from, still running on it; limited while it runs at the free rate though it holds a key; offline while it spends offline credits; invalid once those credits stopped"
+                    },
+                    "limited_because": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "credits",
+                            "cap",
+                            "out_of_touch",
+                            "key_rotated",
+                            "key_revoked",
+                            "org_closed",
+                            "not_activated"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "While it is limited, why: its org has no credits, or owes its overage cap; it has not reached Auto since its license limits from; its key was replaced or no longer stands; its org was closed; or it holds a key Auto has not answered for yet"
+                    },
+                    "runtime_id": {
+                      "type": "string",
+                      "description": "The id of this runtime, which an owner registers in Studio"
+                    },
+                    "free_runs": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "integer",
+                              "description": "The first runs it has used, at most the runs it may run so"
+                            },
+                            "of": {
+                              "type": "integer",
+                              "description": "The first runs it may run without a key"
+                            }
+                          },
+                          "required": [
+                            "used",
+                            "of"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The first runs of a runtime that has never held a license, and null once it has"
                     },
                     "org": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The id of the org at Auto its license is of"
                     },
                     "org_name": {
                       "anyOf": [
@@ -6924,21 +6991,294 @@
                         {
                           "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "The name of that org, as Auto signed it into the license, or null where it named none"
                     },
                     "plan": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The plan of that org"
                     },
-                    "expires_at": {
-                      "type": "string"
+                    "standing": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "low",
+                            "empty",
+                            "overage",
+                            "near_cap",
+                            "capped"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the credits of its org stood when Auto signed the license"
+                    },
+                    "licensed": {
+                      "type": "integer",
+                      "description": "The runs it has started on a license, in all"
+                    },
+                    "runs_left": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The runs it may still start on its license, and null without one"
+                    },
+                    "credits": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "available": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN"
+                                  ]
+                                }
+                              ]
+                            },
+                            "owed": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN"
+                                  ]
+                                }
+                              ]
+                            },
+                            "overage_cap": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "available",
+                            "owed",
+                            "overage_cap"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The credits of its org when Auto signed the license"
+                    },
+                    "issued_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When Auto signed the license"
+                    },
+                    "warn_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "From when Auto warns that the runtime is out of touch, unless it reports first"
+                    },
+                    "limit_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "From when it runs at the free rate, unless it reports first"
+                    },
+                    "last_report_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it last took a license from Auto, as it activated or reported"
+                    },
+                    "fallback": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "per_day": {
+                              "type": "integer",
+                              "description": "The runs it may start at the free rate each UTC day"
+                            },
+                            "per_month": {
+                              "type": "integer",
+                              "description": "The runs it may start at the free rate each UTC calendar month"
+                            },
+                            "used_today": {
+                              "type": "integer",
+                              "description": "The runs it started at the free rate this UTC day"
+                            },
+                            "used_this_month": {
+                              "type": "integer",
+                              "description": "The runs it started at the free rate this UTC month"
+                            },
+                            "lifts_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "When the free rate lets it run again, while it has used what the rate allows"
+                            }
+                          },
+                          "required": [
+                            "per_day",
+                            "per_month",
+                            "used_today",
+                            "used_this_month",
+                            "lifts_at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The free rate it runs at, while it runs at it"
+                    },
+                    "key_source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "environment",
+                            "configuration",
+                            "activated"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the key in force came from: AUTO_RUNTIME_LICENSE_KEY, license.key of the configuration file, or an activation"
+                    },
+                    "offline": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "credits": {
+                              "type": "integer",
+                              "description": "The offline credits it holds"
+                            },
+                            "spent": {
+                              "type": "integer",
+                              "description": "What it has spent of them"
+                            },
+                            "usable_until": {
+                              "type": "string",
+                              "description": "When they stop unless Auto refreshes them"
+                            }
+                          },
+                          "required": [
+                            "credits",
+                            "spent",
+                            "usable_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The offline credits of a runtime that does not reach Auto"
+                    },
+                    "invalid_because": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "While it is invalid, the words a run is refused in"
+                    },
+                    "summary": {
+                      "type": "string",
+                      "description": "Where it stands in plain words, and how to put it right, as it says as it starts"
                     }
                   },
                   "required": [
-                    "installation",
+                    "state",
+                    "limited_because",
+                    "runtime_id",
+                    "free_runs",
                     "org",
                     "org_name",
                     "plan",
-                    "expires_at"
+                    "standing",
+                    "licensed",
+                    "runs_left",
+                    "credits",
+                    "issued_at",
+                    "warn_at",
+                    "limit_at",
+                    "last_report_at",
+                    "fallback",
+                    "key_source",
+                    "offline",
+                    "invalid_because",
+                    "summary"
                   ],
                   "additionalProperties": false
                 }
@@ -6993,7 +7333,7 @@
       "get": {
         "operationId": "get_license",
         "summary": "Get license",
-        "description": "Reads what this runtime holds to run: whether it is unregistered, licensed, offline or invalid, its id, the free runs it has used, the org and plan of its license with the org's name, where its key came from and the offline credits it spends. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
+        "description": "Reads where this runtime stands to run: without a key, licensed, out of touch, limited to the free rate and why, or spending offline credits; its id, the first runs it used, the org and plan of its license, the runs it has left, the credits of its org and when Auto last answered it, the free rate while it runs at it, and all of it in plain words with how to put it right. Every member of an org may read it; the license covers the whole runtime, whatever org the route names.",
         "tags": [
           "license"
         ],
@@ -7017,32 +7357,62 @@
                       "enum": [
                         "unregistered",
                         "licensed",
+                        "out_of_touch",
+                        "limited",
                         "offline",
                         "invalid"
                       ],
-                      "description": "unregistered before a key is given, licensed while an entitlement Auto signed stands, offline while it spends an allocation, invalid while what it holds does not stand"
+                      "description": "unregistered without a key; licensed while it runs on the license Auto signed; out_of_touch once it has not reached Auto since that license warns from, still running on it; limited while it runs at the free rate though it holds a key; offline while it spends offline credits; invalid once those credits stopped"
+                    },
+                    "limited_because": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "credits",
+                            "cap",
+                            "out_of_touch",
+                            "key_rotated",
+                            "key_revoked",
+                            "org_closed",
+                            "not_activated"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "While it is limited, why: its org has no credits, or owes its overage cap; it has not reached Auto since its license limits from; its key was replaced or no longer stands; its org was closed; or it holds a key Auto has not answered for yet"
                     },
                     "runtime_id": {
                       "type": "string",
-                      "description": "The id of this runtime, the installation an owner registers in Studio"
+                      "description": "The id of this runtime, which an owner registers in Studio"
                     },
                     "free_runs": {
-                      "type": "object",
-                      "properties": {
-                        "used": {
-                          "type": "integer",
-                          "description": "The runs it has counted, at most the free runs it may make"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "integer",
+                              "description": "The first runs it has used, at most the runs it may run so"
+                            },
+                            "of": {
+                              "type": "integer",
+                              "description": "The first runs it may run without a key"
+                            }
+                          },
+                          "required": [
+                            "used",
+                            "of"
+                          ],
+                          "additionalProperties": false
                         },
-                        "of": {
-                          "type": "integer",
-                          "description": "The runs it may make before it is registered"
+                        {
+                          "type": "null"
                         }
-                      },
-                      "required": [
-                        "used",
-                        "of"
                       ],
-                      "additionalProperties": false
+                      "description": "The first runs of a runtime that has never held a license, and null once it has"
                     },
                     "org": {
                       "anyOf": [
@@ -7064,7 +7434,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The name of that org at Auto, as Auto signed it into the entitlement, or null where Auto named none"
+                      "description": "The name of that org, as Auto signed it into the license, or null where it named none"
                     },
                     "plan": {
                       "anyOf": [
@@ -7077,18 +7447,105 @@
                       ],
                       "description": "The plan of that org"
                     },
-                    "expires_at": {
+                    "standing": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "low",
+                            "empty",
+                            "overage",
+                            "near_cap",
+                            "capped"
+                          ]
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "When the entitlement Auto signed ends, unless the runtime renews it"
+                      "description": "Where the credits of its org stood when Auto signed the license"
                     },
-                    "renewed_at": {
+                    "licensed": {
+                      "type": "integer",
+                      "description": "The runs it has started on a license, in all"
+                    },
+                    "runs_left": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The runs it may still start on its license, and null without one"
+                    },
+                    "credits": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "available": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN"
+                                  ]
+                                }
+                              ]
+                            },
+                            "owed": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN"
+                                  ]
+                                }
+                              ]
+                            },
+                            "overage_cap": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "available",
+                            "owed",
+                            "overage_cap"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The credits of its org when Auto signed the license"
+                    },
+                    "issued_at": {
                       "anyOf": [
                         {
                           "type": "string"
@@ -7097,7 +7554,88 @@
                           "type": "null"
                         }
                       ],
-                      "description": "When Auto last signed its entitlement"
+                      "description": "When Auto signed the license"
+                    },
+                    "warn_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "From when Auto warns that the runtime is out of touch, unless it reports first"
+                    },
+                    "limit_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "From when it runs at the free rate, unless it reports first"
+                    },
+                    "last_report_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it last took a license from Auto, as it activated or reported"
+                    },
+                    "fallback": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "per_day": {
+                              "type": "integer",
+                              "description": "The runs it may start at the free rate each UTC day"
+                            },
+                            "per_month": {
+                              "type": "integer",
+                              "description": "The runs it may start at the free rate each UTC calendar month"
+                            },
+                            "used_today": {
+                              "type": "integer",
+                              "description": "The runs it started at the free rate this UTC day"
+                            },
+                            "used_this_month": {
+                              "type": "integer",
+                              "description": "The runs it started at the free rate this UTC month"
+                            },
+                            "lifts_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "When the free rate lets it run again, while it has used what the rate allows"
+                            }
+                          },
+                          "required": [
+                            "per_day",
+                            "per_month",
+                            "used_today",
+                            "used_this_month",
+                            "lifts_at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The free rate it runs at, while it runs at it"
                     },
                     "key_source": {
                       "anyOf": [
@@ -7122,7 +7660,7 @@
                           "properties": {
                             "credits": {
                               "type": "integer",
-                              "description": "The credits of the allocation it holds"
+                              "description": "The offline credits it holds"
                             },
                             "spent": {
                               "type": "integer",
@@ -7144,7 +7682,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The allocation of an installation that does not reach Auto"
+                      "description": "The offline credits of a runtime that does not reach Auto"
                     },
                     "invalid_because": {
                       "anyOf": [
@@ -7156,20 +7694,33 @@
                         }
                       ],
                       "description": "While it is invalid, the words a run is refused in"
+                    },
+                    "summary": {
+                      "type": "string",
+                      "description": "Where it stands in plain words, and how to put it right, as it says as it starts"
                     }
                   },
                   "required": [
                     "state",
+                    "limited_because",
                     "runtime_id",
                     "free_runs",
                     "org",
                     "org_name",
                     "plan",
-                    "expires_at",
-                    "renewed_at",
+                    "standing",
+                    "licensed",
+                    "runs_left",
+                    "credits",
+                    "issued_at",
+                    "warn_at",
+                    "limit_at",
+                    "last_report_at",
+                    "fallback",
                     "key_source",
                     "offline",
-                    "invalid_because"
+                    "invalid_because",
+                    "summary"
                   ],
                   "additionalProperties": false
                 }
@@ -7228,7 +7779,7 @@
       "post": {
         "operationId": "activate_allocation",
         "summary": "Activate allocation",
-        "description": "Gives this runtime the allocation an operator of Auto signed for its installation, for an installation that does not reach Auto: credits it spends where Auto cannot see, with seven days of grace since it was last refreshed. From then on the runtime admits each new action against the allocation itself, asking Auto nothing, until its credits are spent or its grace has passed. It answers the allocation, its credits, what was spent of them and when it must be refreshed by; one not signed by Auto, for another installation or past its grace is refused as a conflict of the kind license_invalid.",
+        "description": "Gives this runtime the offline credits an operator of Auto signed for it, for a runtime that does not reach Auto: credits it spends where Auto cannot see, until the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order. From then on the runtime starts each new run against those credits itself, asking Auto nothing, until they are spent or their date has passed. It answers the allocation, its credits, what was spent of them and when it must be refreshed by; one not signed by Auto, for another runtime or past its date is refused as a conflict of the kind license_invalid.",
         "tags": [
           "license"
         ],
@@ -7388,7 +7939,7 @@
       "post": {
         "operationId": "report_allocation",
         "summary": "Report allocation",
-        "description": "Makes the next report of what this runtime spent of its allocation, numbered one after the last and counted in all from its ledger, signed with the key of its installation. An owner of its org uploads it in Studio for an installation that does not reach Auto; one that reaches Auto sends its report every hour itself. A runtime with no allocation, or with no key to sign with, is refused as a conflict.",
+        "description": "Makes the next report of what this runtime spent of its offline credits, numbered one after the last and counted in all from the runs it started on them, signed with its key. An owner of its org uploads it in Studio for a runtime that does not reach Auto; one that reaches Auto sends its report every hour itself. A runtime with no offline credits, or with no key to sign with, is refused as a conflict.",
         "tags": [
           "license"
         ],
@@ -9869,8 +10420,7 @@
                                 "credits_exhausted",
                                 "license_required",
                                 "license_invalid",
-                                "account_closed",
-                                "metering_fault"
+                                "account_closed"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
@@ -10321,8 +10871,7 @@
                                 "credits_exhausted",
                                 "license_required",
                                 "license_invalid",
-                                "account_closed",
-                                "metering_fault"
+                                "account_closed"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
@@ -10788,8 +11337,7 @@
                                 "credits_exhausted",
                                 "license_required",
                                 "license_invalid",
-                                "account_closed",
-                                "metering_fault"
+                                "account_closed"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
@@ -11228,7 +11776,6 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
-                                "metering_fault",
                                 "requested",
                                 "deadline",
                                 "overrun",
@@ -15151,7 +15698,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/rebuilding, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed, https://on.auto/problems/metering_fault"
+            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/rebuilding, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed"
           },
           "title": {
             "type": "string",
@@ -15351,7 +15898,6 @@
               "license_required",
               "license_invalid",
               "account_closed",
-              "metering_fault",
               "model_not_offered",
               "tool_not_offered",
               "tool_server_failed",

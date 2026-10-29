@@ -619,15 +619,15 @@
       "properties": {
         "key": {
           "type": "string",
-          "description": "The key Studio gave as it registered this installation, written as a reference to the variable that holds it, such as ${LICENSE_KEY}. AUTO_RUNTIME_LICENSE_KEY wins over it"
+          "description": "The key Studio gave as an owner registered this runtime, written as a reference to the variable that holds it, such as ${LICENSE_KEY}. AUTO_RUNTIME_LICENSE_KEY wins over it"
         },
         "allocation": {
           "type": "string",
-          "description": "The allocation an operator of Auto signed for an installation that does not reach Auto, the JSON of its payload, signature and kid, written as a reference to the variable that holds it, such as ${ALLOCATION}. AUTO_RUNTIME_ALLOCATION wins over it"
+          "description": "The offline credits an operator of Auto signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as ${ALLOCATION}. AUTO_RUNTIME_ALLOCATION wins over it"
         }
       },
       "additionalProperties": false,
-      "description": "The license of this runtime, after the 100 actions it runs before it is registered: its key, and the allocation of an installation that does not reach Auto. AUTO_RUNTIME_LICENSE wins over it"
+      "description": "The license of this runtime, which runs it on its org's credits past the 100 free runs and the free rate of 15 runs a UTC day and 75 a UTC month it runs without one: its key, and the offline credits of a runtime that does not reach Auto. AUTO_RUNTIME_LICENSE wins over it"
     },
     "extensions": {
       "type": "array",
