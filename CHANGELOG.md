@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.0](https://github.com/BeOnAuto/runtime/compare/v0.47.0...v0.48.0) (2026-10-29)
+
+
+### Features
+
+* **documents:** a host without child processes reads a document as a job of its own pool ([#427](https://github.com/BeOnAuto/runtime/issues/427)) ([14b7184](https://github.com/BeOnAuto/runtime/commit/14b718483a8c879d5e0bfbf6729b4a09bb15e1f6))
+
 ## [0.47.0](https://github.com/BeOnAuto/runtime/compare/v0.46.0...v0.47.0) (2026-10-29)
 
 
