@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.0](https://github.com/BeOnAuto/runtime/compare/v0.43.1...v0.44.0) (2026-10-29)
+
+
+### Features
+
+* **providers:** google-drive offers a second way that reads the whole Drive ([#408](https://github.com/BeOnAuto/runtime/issues/408)) ([957fb09](https://github.com/BeOnAuto/runtime/commit/957fb09ee9761c01067e1ab9116549938e1ade65))
+
 ## [0.43.1](https://github.com/BeOnAuto/runtime/compare/v0.43.0...v0.43.1) (2026-10-29)
 
 
