@@ -1,0 +1,29 @@
+{
+  "type": "discovery",
+  "discovery": "https://docs.googleapis.com/$discovery/rest?version=v1",
+  "revision": "20261021",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": ["docs.documents.get", "docs.documents.batchUpdate"],
+  "cuts": [
+    {
+      "schema": "Request",
+      "keeps": [
+        "insertText",
+        "deleteContentRange",
+        "replaceAllText",
+        "insertTable",
+        "insertTableRow",
+        "insertTableColumn",
+        "deleteTableRow",
+        "deleteTableColumn",
+        "insertPageBreak",
+        "insertInlineImage",
+        "createParagraphBullets",
+        "deleteParagraphBullets",
+        "updateTextStyle",
+        "updateParagraphStyle"
+      ],
+      "holds": "the requests that insert, replace and delete text, insert tables, page breaks and inline images, insert and delete table rows and columns, add and remove bullets, and style text and paragraphs"
+    }
+  ]
+}

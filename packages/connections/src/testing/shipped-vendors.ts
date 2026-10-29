@@ -1,4 +1,4 @@
-import { googleApi, workspaceServerAt } from './google-vendors.ts';
+import { googleApi } from './google-vendors.ts';
 import { microsoftAdvertising, microsoftGraph, workIq } from './microsoft-vendors.ts';
 import type { VendorOfTheWay } from './vendor-fakes.ts';
 
@@ -166,43 +166,15 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     resource: 'https://api.githubcopilot.com/mcp',
     asked: 'read:org repo offline_access',
   },
-  gmail: workspaceServerAt('gmailmcp.googleapis.com', [
-    'https://mail.google.com/',
-    'gmail.compose',
-    'gmail.drafts',
-    'gmail.drafts.create',
-    'gmail.drafts.readonly',
-    'gmail.labels',
-    'gmail.metadata',
-    'gmail.modify',
-    'gmail.readonly',
-    'gmail.send',
-    'gmail.settings.basic',
-  ]),
+  gmail: googleApi,
   'google-ads': googleApi,
   'google-analytics': googleApi,
   'google-analytics-admin': googleApi,
-  'google-docs': workspaceServerAt('docsmcp.googleapis.com', [
-    'drive.readonly',
-    'documents.readonly',
-    'drive',
-    'documents',
-  ]),
-  'google-drive': workspaceServerAt('drivemcp.googleapis.com', ['drive', 'drive.readonly', 'drive.file']),
+  'google-docs': googleApi,
+  'google-drive': googleApi,
   'google-search-console': googleApi,
-  'google-sheets': workspaceServerAt('sheetsmcp.googleapis.com', [
-    'drive.readonly',
-    'spreadsheets.readonly',
-    'drive',
-    'spreadsheets',
-  ]),
-  'google-slides': workspaceServerAt('slidesmcp.googleapis.com', [
-    'drive.readonly',
-    'presentations.readonly',
-    'drive',
-    'drive.file',
-    'presentations',
-  ]),
+  'google-sheets': googleApi,
+  'google-slides': googleApi,
   hubspot: {
     metadata: {
       issuer: hubspotMcp,

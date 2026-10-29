@@ -146,6 +146,24 @@ describe('the documents translated from their manifests', () => {
   });
 });
 
+describe('the manifests that change the parameters of their methods', () => {
+  it('are written with the parameters they require and leave out as they are', async () => {
+    const changed = {
+      ...uncut,
+      methods: ['tracker.projects.issues.list'],
+      required: [{ method: 'tracker.projects.issues.list', parameters: ['pageSize'], because: 'Its vendor says so' }],
+      left_out_parameters: [
+        { method: 'tracker.projects.issues.list', parameters: ['labels'], because: 'A call never sends it' },
+      ],
+    };
+    const shipped = shippedWith({ 'bare.manifest.json': changed });
+
+    const written = await translatedIn(shipped, ['bare']);
+
+    expect(written.map(({ text }) => parsed(text))[1]).toEqual({ ...changed, revision: trackerDiscovery.revision });
+  });
+});
+
 describe('the documents not translated', () => {
   it('are refused for a name no manifest has, saying how the command is used', async () => {
     const shipped = shippedWith({ 'tracker.manifest.json': trackerManifest });

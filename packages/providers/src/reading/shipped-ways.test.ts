@@ -43,15 +43,15 @@ const hostsOfTheWays = [
   [[['displayvideo.googleapis.com', google]]],
   [[['doubleclickbidmanager.googleapis.com', google]]],
   [[['api.githubcopilot.com', 'github.com']], [['api.githubcopilot.com']]],
-  [[['gmailmcp.googleapis.com', google]]],
+  [[['gmail.googleapis.com', google]]],
   [[['googleads.googleapis.com', google]]],
   [[['analyticsdata.googleapis.com', google]]],
   [[['analyticsadmin.googleapis.com', google]]],
-  [[['docsmcp.googleapis.com', google]]],
-  [[['drivemcp.googleapis.com', google]], [['drivemcp.googleapis.com', google]]],
+  [[['docs.googleapis.com', google]]],
+  [[['www.googleapis.com', google]], [['www.googleapis.com', google]]],
   [[['searchconsole.googleapis.com', google]]],
-  [[['sheetsmcp.googleapis.com', google]]],
-  [[['slidesmcp.googleapis.com', google]]],
+  [[['sheets.googleapis.com', google]]],
+  [[['slides.googleapis.com', google]]],
   [[['mcp.hubspot.com', 'mcp.hubspot.com']]],
   [[['mcp.linear.app', 'mcp.linear.app']]],
   [[['partner.api.bingads.microsoft.com', microsoft, microsoft, microsoft]]],
@@ -232,6 +232,6 @@ const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry))
 describe('the words of the scopes the shipped providers ask', () => {
   it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
     expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(124);
+    expect(saidScopes).toHaveLength(123);
   });
 });

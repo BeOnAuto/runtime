@@ -1,0 +1,36 @@
+{
+  "type": "discovery",
+  "discovery": "https://slides.googleapis.com/$discovery/rest?version=v1",
+  "revision": "20261021",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": ["slides.presentations.get", "slides.presentations.batchUpdate"],
+  "cuts": [
+    {
+      "schema": "Request",
+      "keeps": [
+        "createSlide",
+        "duplicateObject",
+        "deleteObject",
+        "updateSlidesPosition",
+        "createShape",
+        "createImage",
+        "createTable",
+        "insertText",
+        "deleteText",
+        "replaceAllText",
+        "replaceImage",
+        "replaceAllShapesWithImage",
+        "insertTableRows",
+        "insertTableColumns",
+        "deleteTableRow",
+        "deleteTableColumn",
+        "updateTextStyle",
+        "updateParagraphStyle",
+        "createParagraphBullets",
+        "deleteParagraphBullets",
+        "updatePageElementTransform"
+      ],
+      "holds": "the requests that create and move slides, duplicate and delete slides and page elements, create shapes, images and tables, insert, replace and delete text, replace images, insert and delete table rows and columns, style text and paragraphs, add and remove bullets, and move and size page elements"
+    }
+  ]
+}

@@ -21,10 +21,14 @@ const ParameterSchema = Schema.Struct({
   schema: Schema.optionalKey(SchemaValue),
 });
 
+const MediaTypeSchema = Schema.Struct({ schema: Schema.optionalKey(SchemaValue) });
+
 const RequestBodySchema = Schema.Struct({
   required: Schema.optionalKey(Schema.Boolean),
-  content: Schema.Record(Schema.String, Schema.Struct({ schema: Schema.optionalKey(SchemaValue) })),
+  content: Schema.Record(Schema.String, MediaTypeSchema),
 });
+
+const ResponseSchema = Schema.Struct({ content: Schema.optionalKey(Schema.Record(Schema.String, MediaTypeSchema)) });
 
 const SecurityRequirementSchema = Schema.Record(Schema.String, Schema.Array(Schema.String));
 
@@ -42,12 +46,15 @@ const ParameterOrReferenceSchema = Schema.Union([ReferenceSchema, ParameterSchem
 
 const RequestBodyOrReferenceSchema = Schema.Union([ReferenceSchema, RequestBodySchema]);
 
+const ResponseOrReferenceSchema = Schema.Union([ReferenceSchema, ResponseSchema]);
+
 const OperationSchema = Schema.Struct({
   operationId: Schema.optionalKey(Schema.String),
   summary: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
   parameters: Schema.optionalKey(Schema.Array(ParameterOrReferenceSchema)),
   requestBody: Schema.optionalKey(RequestBodyOrReferenceSchema),
+  responses: Schema.optionalKey(Schema.Record(Schema.String, ResponseOrReferenceSchema)),
   security: Schema.optionalKey(Schema.Array(SecurityRequirementSchema)),
 });
 
@@ -80,6 +87,7 @@ const ApiDocumentSchema = Schema.Struct({
       schemas: Schema.optionalKey(Schema.Record(Schema.String, SchemaValue)),
       parameters: Schema.optionalKey(Schema.Record(Schema.String, ParameterOrReferenceSchema)),
       requestBodies: Schema.optionalKey(Schema.Record(Schema.String, RequestBodyOrReferenceSchema)),
+      responses: Schema.optionalKey(Schema.Record(Schema.String, ResponseOrReferenceSchema)),
       securitySchemes: Schema.optionalKey(Schema.Record(Schema.String, SecuritySchemeSchema)),
     }),
   ),
@@ -104,6 +112,10 @@ export type SecurityRequirement = typeof SecurityRequirementSchema.Type;
 export type SecurityScheme = typeof SecuritySchemeSchema.Type;
 
 export type RequestBodyOrReference = typeof RequestBodyOrReferenceSchema.Type;
+
+export type ApiResponse = typeof ResponseSchema.Type;
+
+export type ResponseOrReference = typeof ResponseOrReferenceSchema.Type;
 
 export interface ReadDocument {
   readonly version: OpenApiVersion;

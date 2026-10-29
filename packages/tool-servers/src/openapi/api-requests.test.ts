@@ -24,6 +24,7 @@ const listing: ApiOperation = {
   ],
   body: null,
   credentials: [],
+  answers: { schemas: [], components: {} },
 };
 
 const writing: ApiOperation = {
@@ -33,6 +34,7 @@ const writing: ApiOperation = {
   inputs: [],
   body: { mediaType: 'application/merge-patch+json', required: true },
   credentials: [],
+  answers: { schemas: [], components: {} },
 };
 
 const pair: ApiOperation = {
@@ -45,6 +47,7 @@ const pair: ApiOperation = {
   ],
   body: null,
   credentials: [],
+  answers: { schemas: [], components: {} },
 };
 
 const climbedOut = 'The path arguments would take the call out of the path of this operation, as a . or a .. does';

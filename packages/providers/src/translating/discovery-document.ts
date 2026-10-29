@@ -20,6 +20,7 @@ const DiscoveryMethodSchema = Schema.Struct({
   httpMethod: Schema.Literals(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
   description: Schema.optionalKey(Schema.String),
   deprecated: Schema.optionalKey(Schema.Boolean),
+  supportsMediaDownload: Schema.optionalKey(Schema.Boolean),
   parameters: Schema.optionalKey(Schema.Record(Schema.String, Schema.JsonObject)),
   request: Schema.optionalKey(ReferenceSchema),
   response: Schema.optionalKey(ReferenceSchema),
@@ -28,7 +29,7 @@ const DiscoveryMethodSchema = Schema.Struct({
 
 export type DiscoveryMethod = typeof DiscoveryMethodSchema.Type;
 
-interface DiscoveryResource {
+export interface DiscoveryResource {
   readonly methods?: { readonly [name: string]: DiscoveryMethod };
   readonly resources?: { readonly [name: string]: DiscoveryResource };
 }

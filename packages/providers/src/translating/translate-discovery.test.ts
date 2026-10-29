@@ -104,6 +104,48 @@ describe('a parameter of a curated document', () => {
   });
 });
 
+describe('the answer of an operation whose Discovery method names no response schema', () => {
+  it('is the media where the method downloads media, and an empty body where it does not', () => {
+    const exporting = {
+      ...trackerDiscovery,
+      methods: {
+        export: {
+          id: 'tracker.about.export',
+          path: 'v1/about:export',
+          httpMethod: 'GET',
+          supportsMediaDownload: true,
+          scopes: [trackerReadScope],
+        },
+        about: { id: 'tracker.about.get', path: 'v1/about', httpMethod: 'GET', scopes: [trackerReadScope] },
+      },
+    };
+
+    const { paths } = curatedDocumentOf(discoveryDocumentOf(exporting), server, [
+      'tracker.about.export',
+      'tracker.about.get',
+    ]);
+
+    expect(paths).toEqual({
+      '/v1/about:export': {
+        get: {
+          operationId: 'tracker.about.export',
+          parameters: [fieldsParameter],
+          responses: { '2XX': { description: 'The media the method downloads' } },
+          security: [{ oauth2: [trackerReadScope] }],
+        },
+      },
+      '/v1/about': {
+        get: {
+          operationId: 'tracker.about.get',
+          parameters: [fieldsParameter],
+          responses: { '2XX': { description: 'An empty body' } },
+          security: [{ oauth2: [trackerReadScope] }],
+        },
+      },
+    });
+  });
+});
+
 describe('a curated document that is not made', () => {
   it('is refused for a method the Discovery document does not have', () => {
     expect(() =>

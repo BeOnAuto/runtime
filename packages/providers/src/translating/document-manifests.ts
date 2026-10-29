@@ -4,6 +4,7 @@ import { Result, Schema } from 'effect';
 
 import { shippedEntries } from '../reading/shipped-providers.ts';
 import { CutSchema } from './discovery-cuts.ts';
+import { LeftOutParametersSchema, RequirementSchema } from './discovery-parameters.ts';
 import { OpenApiTranslationSchema } from './openapi-translation.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
@@ -26,6 +27,16 @@ const DiscoveryManifestSchema = Schema.Struct({
   cuts: Schema.optionalKey(
     Schema.Array(CutSchema).annotate({
       description: 'The cuts of the schemas the requests of the document send, made before the translation',
+    }),
+  ),
+  required: Schema.optionalKey(
+    Schema.Array(RequirementSchema).annotate({
+      description: 'The parameters and properties a call must send that the Discovery document does not mark required',
+    }),
+  ),
+  left_out_parameters: Schema.optionalKey(
+    Schema.Array(LeftOutParametersSchema).annotate({
+      description: 'The parameters of the methods kept that the document leaves out, since a call never sends them',
     }),
   ),
 });
@@ -156,12 +167,22 @@ async function discoveryTranslated(
   const metadata = await reading(manifest.authorization_server);
   const { document, revision } = translatedDiscoveryOf(read, metadata, manifest);
   const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
-  const remade = { type, discovery: address, revision, authorization_server: authorizationServer, methods };
+  const { required, left_out_parameters: leftOut } = manifest;
+  const remade = {
+    type,
+    discovery: address,
+    revision,
+    authorization_server: authorizationServer,
+    methods,
+    ...(cuts === undefined ? {} : { cuts }),
+    ...(required === undefined ? {} : { required }),
+    ...(leftOut === undefined ? {} : { left_out_parameters: leftOut }),
+  };
   return [
     { file: shippedFileIn(folder, `${name}${documentSuffix}`), text: jsonText(document) },
     {
       file: shippedFileIn(folder, `${name}${manifestSuffix}`),
-      text: jsonText(cuts === undefined ? remade : { ...remade, cuts }),
+      text: jsonText(remade),
     },
   ];
 }

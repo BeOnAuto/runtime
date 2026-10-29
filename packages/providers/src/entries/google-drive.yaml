@@ -1,9 +1,9 @@
 name: google-drive
 title: Google Drive
-description: Search, list, read and download Google Drive files and their metadata and sharing, through Google's Drive MCP server. By default it reaches the files opened with Auto or created by it, and creates and copies files; its second way reads every file, through drive.readonly, which Google restricts.
-website: https://developers.google.com/workspace/drive/api/guides/configure-mcp-server
-type: mcp
-url: https://drivemcp.googleapis.com/mcp/v1
+description: Search and list Google Drive files, read their metadata and sharing, export Docs, Sheets and Slides files as text, and create empty files and copy files. The first way reaches only files Auto creates; the second reads every file, through drive.readonly, which Google restricts, and creates none.
+website: https://developers.google.com/workspace/drive/api/reference/rest/v3
+type: openapi
+document: documents/google-drive.openapi.json
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
