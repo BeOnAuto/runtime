@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.43.1](https://github.com/BeOnAuto/runtime/compare/v0.43.0...v0.43.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **meter:** plain words for the free rate and credits, with when the limit lifts ([#405](https://github.com/BeOnAuto/runtime/issues/405)) ([c9c0844](https://github.com/BeOnAuto/runtime/commit/c9c0844455d2ba7dd1e97434d74f862c39f0fdd2))
+
 ## [0.43.0](https://github.com/BeOnAuto/runtime/compare/v0.42.1...v0.43.0) (2026-10-29)
 
 
