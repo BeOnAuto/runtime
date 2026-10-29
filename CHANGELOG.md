@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.47.0](https://github.com/BeOnAuto/runtime/compare/v0.46.0...v0.47.0) (2026-10-29)
+
+
+### Features
+
+* **prediction:** a model runtime names the feature its work needs, and the license lists them ([#423](https://github.com/BeOnAuto/runtime/issues/423)) ([e1832ce](https://github.com/BeOnAuto/runtime/commit/e1832ce97d978aa3e260e5b472bed54de0c77de0))
+* **providers:** google-drive reads every file by default, and the narrow way is second ([#420](https://github.com/BeOnAuto/runtime/issues/420)) ([2959340](https://github.com/BeOnAuto/runtime/commit/2959340e15b38a035e56f6d96296e2a3b7c11c3c))
+* **providers:** linkedin posts, comments and reacts as the person who signed in ([#425](https://github.com/BeOnAuto/runtime/issues/425)) ([3b9dd39](https://github.com/BeOnAuto/runtime/commit/3b9dd39a841e581bc0d0e3792a22fa46d1736cdb))
+* **tool-servers:** a tool answers the text of the file it fetches ([#422](https://github.com/BeOnAuto/runtime/issues/422)) ([84e0163](https://github.com/BeOnAuto/runtime/commit/84e01631d8af25bdd9ced12e54c57a7439a51a34))
+
+
+### Bug Fixes
+
+* **tool-servers:** a consent start reuses the public client it registered and names a failed call ([#424](https://github.com/BeOnAuto/runtime/issues/424)) ([feb166d](https://github.com/BeOnAuto/runtime/commit/feb166dee8a2888b3f15b98a27b743c6af72fd64))
+
 ## [0.46.0](https://github.com/BeOnAuto/runtime/compare/v0.45.0...v0.46.0) (2026-10-29)
 
 
