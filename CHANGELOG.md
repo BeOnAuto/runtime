@@ -6,6 +6,7 @@
 ### Features
 
 * **api:** a client learns of changes by asking and waiting, not by polling ([#411](https://github.com/BeOnAuto/runtime/issues/411)) ([73a76a3](https://github.com/BeOnAuto/runtime/commit/73a76a303a1d939d548cb185aa3d023458beacc9))
+* **ledger:** the runtime carries its data forward across releases ([#412](https://github.com/BeOnAuto/runtime/issues/412)) ([2b777f8](https://github.com/BeOnAuto/runtime/commit/2b777f8ac2192a91145a8397d73350b599c69958))
 * **prediction-contract:** the contract is a package of its own on npm ([#417](https://github.com/BeOnAuto/runtime/issues/417)) ([5fac5f1](https://github.com/BeOnAuto/runtime/commit/5fac5f18cf40a491bc3c7fb48afe015217e9b668))
 * **prediction:** the ONNX runtime leaves the repository as an extension of its own ([#418](https://github.com/BeOnAuto/runtime/issues/418)) ([452c89d](https://github.com/BeOnAuto/runtime/commit/452c89d7b9fcf2076eee414ada6b51e81bdbe1e3))
 * **providers:** the bot provider is slack-bot, titled Slack Bot ([#416](https://github.com/BeOnAuto/runtime/issues/416)) ([b668ee3](https://github.com/BeOnAuto/runtime/commit/b668ee391503e0e7f6bbbccdd2617b1e74c2f3a3))
