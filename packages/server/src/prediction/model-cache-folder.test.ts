@@ -56,13 +56,13 @@ describe('the folder of the model files', () => {
     const entry = join(ledger.cacheDirectory, 'models', 'a'.repeat(64));
     mkdirSync(entry, { recursive: true, mode: 0o700 });
     chmodSync(ledger.cacheDirectory, 0o700);
-    writeFileSync(join(entry, 'model.onnx'), 'not the bytes of its digest');
+    writeFileSync(join(entry, 'model.series'), 'not the bytes of its digest');
 
     const child = serverOn(ledger);
     await child.port;
     child.signal('SIGTERM');
     await child.exited;
 
-    expect(existsSync(join(entry, 'model.onnx'))).toBe(true);
+    expect(existsSync(join(entry, 'model.series'))).toBe(true);
   });
 });

@@ -4,18 +4,17 @@
 
 A model runtime executes the models of [prediction functions](prediction-format.md) in one or more formats. It checks a candidate a trainer uploads against what the function feeds, loads the model, and answers the 10th, 50th and 90th percentiles of each step ahead, in a model process of the server that sees only the file it loads and what it is fed, or in the server's own process. The function, its dataset, the scoring of the candidates, the shadow and the questions are the runtime's and stay the same whatever the format; the model runtime is what executes the file.
 
-The release carries two model runtimes, each the only one of its format, so neither ever stands in for the other:
+The release carries one model runtime, the only one of its format:
 
-| Runtime            | Format   | Package                      | What it executes                                                                                                                                                                                                                                                        |
-| ------------------ | -------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `series`           | `series` | `@on.auto/prediction-series` | [The runtime's own models](prediction-format.md#the-runtime-s-own-models): JSON recipes it executes in TypeScript, in the server's own process. It also fits them from a build's training rows, and answers a function with no active version from its default forecast |
-| `onnxruntime-node` | `onnx`   | `@on.auto/prediction-onnx`   | [ONNX](https://onnx.ai) models, run by onnxruntime-node in model processes                                                                                                                                                                                              |
+| Runtime  | Format   | Package                      | What it executes                                                                                                                                                                                                                                                        |
+| -------- | -------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `series` | `series` | `@on.auto/prediction-series` | [The runtime's own models](prediction-format.md#the-runtime-s-own-models): JSON recipes it executes in TypeScript, in the server's own process. It also fits them from a build's training rows, and answers a function with no active version from its default forecast |
 
-A server can load more, each from a package named in its settings, which is an **extension**.
+A server can load more, each from a package named in its settings, which is an **extension**. ONNX models are executed by the ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository.
 
 ## What a candidate records
 
-A candidate names its format as it is uploaded, `POST /runs/{run_id}/build/candidates?format=onnx`, and a server takes only a format one of its model runtimes executes for the function. The runtime that executes it is recorded beside what it answered:
+A candidate names its format as it is uploaded, `POST /runs/{run_id}/build/candidates?format=series`, and a server takes only a format one of its model runtimes executes for the function. The runtime that executes it is recorded beside what it answered:
 
 | Record                      | What it holds                                                                                                  |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -44,9 +43,9 @@ extensions:
 | `package`   | The name of an installed package, which the server imports by that name                                                                                                                                                                                                                   |
 | `integrity` | Optional. `sha512-` and the base64 of the SHA-512 of the package's own files and of the dependencies it bundles, so a package whose files or bundled dependencies differ is refused; a dependency it does not bundle is not covered, as [the integrity](#the-integrity-of-a-package) says |
 
-The server imports a package by its name, as Node resolves a name from the server's own folder, so the package is installed beside `@on.auto/runtime`, as `npm install @on.auto/runtime @acme/prediction-models` installs both. The server never searches a folder for extensions; it loads what the list names and the extensions of the release.
+The server imports a package by its name, as Node resolves a name from the server's own folder, so the package is installed beside `@on.auto/runtime`, as `npm install @on.auto/runtime @acme/prediction-models` installs both. The server never searches a folder for extensions; it loads what the list names and the extension of the release.
 
-The extensions of the release stand after the ones the list names. They are listed by default exactly as one the list names would be: the release's ONNX runtime is the package `@on.auto/prediction-onnx` and its own models' runtime the package `@on.auto/prediction-series`, and a list that names either moves it ahead, with an `integrity` when it gives one.
+The extension of the release stands after the ones the list names. It is listed by default exactly as one the list names would be: the runtime of the release's own models is the package `@on.auto/prediction-series`, and a list that names it moves it ahead, with an `integrity` when it gives one.
 
 ### Precedence
 
@@ -75,7 +74,7 @@ It refuses a package:
 The server logs the extensions it loaded, each with its version, whether the list named it or it is the release's, and the points it fills:
 
 ```text
-Extensions loaded, in their order of precedence: @on.auto/prediction-onnx <the release's version>, of the release, filling prediction/model-runtime; @on.auto/prediction-series <the release's version>, of the release, filling prediction/model-runtime
+Extensions loaded, in their order of precedence: @on.auto/prediction-series <the release's version>, of the release, filling prediction/model-runtime
 ```
 
 ### The integrity of a package
@@ -142,14 +141,26 @@ An extension adds the package as a peer dependency, `"@on.auto/prediction-contra
 
 The module of the binding exports `loadModel(path, threads)`. For a `process` binding, a model process of the server imports it; for an `inline` binding, the server imports it into its own process, through the same jobs a model process serves. Either way it is called with the path of the model file, kept in the server's cache folder under a folder of its own, and the threads it may use. It answers a loaded model:
 
-| Field of a loaded model | What it holds                                                                                                                                                                                                                           |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `signature`             | A JSON object the runtime finds in the file, which the playbook records as given                                                                                                                                                        |
-| `length`                | The periods of `y` the model takes, or undefined when it takes any                                                                                                                                                                      |
-| `issueFor(fed)`         | The issue of the model with what the function feeds, `{ features, given, horizon, totals }`, in words, or null when it takes it                                                                                                         |
-| `run(feeds)`            | The answer to `y`, `x`, `given` and `h`, as [the signature of a candidate](prediction-format.md#the-signature-of-a-candidate) names them, and to `at`: `{ q, dims }`, `q` the float32 percentiles of each step, or `{ badly }` in words |
+| Field of a loaded model | What it holds                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `signature`             | A JSON object the runtime finds in the file, which the playbook records as given                                                |
+| `length`                | The periods of `y` the model takes, or undefined when it takes any                                                              |
+| `issueFor(fed)`         | The issue of the model with what the function feeds, `{ features, given, horizon, totals }`, in words, or null when it takes it |
+| `run(feeds)`            | The answer to the feeds below: `{ q, dims }`, `q` the float32 percentiles of each step, or `{ badly }` in words                 |
 
-`at`, an int64 tensor `[1]`, is the index of the origin's period, fed to a runtime that states `calendar` and to no other: for a day, the days since 1970-01-01; for a week, the number of the week whose Thursday falls 7 times that many days after 1970-01-01, weeks running from Monday as ISO 8601 numbers them; for a month, the year times 12 plus the month from 0; for a quarter, the year times 4 plus the quarter from 0; and for a year, the year.
+Each feed is `{ data, dims }`, what [the signature of a candidate](prediction-format.md#the-signature-of-a-candidate) says a candidate is fed at an origin:
+
+| Feed    | `dims`      | `data`  | What it holds                                                                                                       |
+| ------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `y`     | `[1, L]`    | float32 | The target over the `L` periods up to the origin, the model's `length` when it gives one; `NaN` where none observed |
+| `x`     | `[1, L, F]` | float32 | The `F` features over the same periods, in the document's order, fed when the function names features               |
+| `given` | `[1, H, G]` | float32 | The `G` `given` features for the `H` periods ahead, in the document's order, fed when the function names `given`    |
+| `h`     | `[1]`       | int64   | With `accumulates`, how many periods the total sums                                                                 |
+| `at`    | `[1]`       | int64   | The index of the origin's period, below                                                                             |
+
+`q` is `[1, H, 3]`, the 10th, 50th and 90th percentile of each of the `H` steps ahead, `H` the longest horizon, or `[1, 1, 3]` for a total.
+
+`at` is fed to a runtime that states `calendar` and to no other: for a day, the days since 1970-01-01; for a week, the number of the week whose Thursday falls 7 times that many days after 1970-01-01, weeks running from Monday as ISO 8601 numbers them; for a month, the year times 12 plus the month from 0; for a quarter, the year times 4 plus the quarter from 0; and for a year, the year.
 
 A load that fails refuses the candidate as `failed_to_load`, with the first line of what it threw. A load or a run that cannot allocate its memory throws a `RangeError` whose message holds `allocation failed`, so its job ends out of memory, and the module imports only what its package ships with or depends on.
 

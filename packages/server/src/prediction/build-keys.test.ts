@@ -8,7 +8,7 @@ import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { buildRoute, candidateFile, visits } from './build-calls.ts';
+import { buildRoute, candidateBytes, visits } from './build-calls.ts';
 
 const admin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
 
@@ -98,19 +98,19 @@ async function waitingBuild(): Promise<string> {
 describe('the routes a trainer calls under API keys', () => {
   it('read a build for a key that may read the playbook, and take a candidate from a key that may write it alone', async () => {
     const build = await waitingBuild();
-    const candidate = candidateFile('visits-mean');
+    const candidate = candidateBytes('visits-mean');
     const octets = 'application/octet-stream';
 
     const [read, refused, readOnly, written] = [
       await sent(buildRoute(build, 'brief'), { method: 'GET', key: reader.key }),
       await sent(buildRoute(build, 'rows'), { method: 'GET', key: outsider.key }),
-      await sent(`${buildRoute(build, 'candidates')}?format=onnx`, {
+      await sent(`${buildRoute(build, 'candidates')}?format=series`, {
         method: 'POST',
         key: reader.key,
         type: octets,
         body: candidate,
       }),
-      await sent(`${buildRoute(build, 'candidates')}?format=onnx`, {
+      await sent(`${buildRoute(build, 'candidates')}?format=series`, {
         method: 'POST',
         key: admin.key,
         type: octets,

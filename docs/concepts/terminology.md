@@ -79,19 +79,19 @@ An interaction function asks a system and returns its result at once, or asks a 
 
 ## Prediction
 
-| Term             | Meaning                                                                                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataset          | The rows a prediction function learns from, one for each series and period, folded from the playbook's events or uploaded.                                       |
-| Brief            | The text a trainer reads first, rendered by the function's document from its dataset's figures.                                                                  |
-| Build            | A run of a prediction function that asks a trainer for candidate models, or fits the runtime's own, scores them and keeps the winner as a version.               |
-| Trainer          | The person or agent who reads a build's brief and rows, fits models outside the playbook and uploads them.                                                       |
-| Candidate        | A model file a trainer uploads to a build, or one the runtime fits itself, scored on periods it was not fitted on.                                               |
-| Model runtime    | What checks, loads and runs the model files of a format: `series`, the runtime's own models, and ONNX in the release, others from the extensions a server lists. |
-| Card             | What a version was built from and how it scored, recorded when the build keeps it.                                                                               |
-| Shadow           | The trial in which a later version predicts beside the active version as periods close, before it may replace it.                                                |
-| Active version   | The version of a prediction function whose predictions its runs return.                                                                                          |
-| Default forecast | What a prediction function answers from before any version is active: one of the runtime's own models, chosen by the history of each series.                     |
-| Rollback         | Activating an earlier version of a prediction function again by hand.                                                                                            |
+| Term             | Meaning                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dataset          | The rows a prediction function learns from, one for each series and period, folded from the playbook's events or uploaded.                              |
+| Brief            | The text a trainer reads first, rendered by the function's document from its dataset's figures.                                                         |
+| Build            | A run of a prediction function that asks a trainer for candidate models, or fits the runtime's own, scores them and keeps the winner as a version.      |
+| Trainer          | The person or agent who reads a build's brief and rows, fits models outside the playbook and uploads them.                                              |
+| Candidate        | A model file a trainer uploads to a build, or one the runtime fits itself, scored on periods it was not fitted on.                                      |
+| Model runtime    | What checks, loads and runs the model files of a format: `series`, the runtime's own models, in the release, others from the extensions a server lists. |
+| Card             | What a version was built from and how it scored, recorded when the build keeps it.                                                                      |
+| Shadow           | The trial in which a later version predicts beside the active version as periods close, before it may replace it.                                       |
+| Active version   | The version of a prediction function whose predictions its runs return.                                                                                 |
+| Default forecast | What a prediction function answers from before any version is active: one of the runtime's own models, chosen by the history of each series.            |
+| Rollback         | Activating an earlier version of a prediction function again by hand.                                                                                   |
 
 A prediction function, the predictive model a version of it holds and the prediction a run returns are distinct. Each version a build keeps holds one model with its card, and a function's versions are numbered from 1, apart from the versions of its document.
 

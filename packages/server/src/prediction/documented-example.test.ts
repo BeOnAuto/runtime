@@ -6,7 +6,7 @@ import { alpha, servingReasoning, type ReasoningServer } from '../testing/server
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, settledRun } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
-import { askedBuild, candidateFile, digestOf, endedRun, sentCandidate, standingWhen } from './build-calls.ts';
+import { askedBuild, candidateBytes, digestOf, endedRun, sentCandidate, standingWhen } from './build-calls.ts';
 import { sha256Of, uploaded } from './dataset-uploads.ts';
 
 const testTimeoutMs = 90_000;
@@ -54,7 +54,7 @@ describe('the workflow of the prediction function format, through the server', {
     ];
     const before = await forecastRun();
     const build = await askedBuild(server, 'weekly-orders');
-    const candidate = candidateFile('orders-last');
+    const candidate = candidateBytes('orders-last');
     const sent = await sentCandidate(server, build, candidate);
     const answered = await server.call('POST', `${alpha}/runs/${build}/answer`, {
       body: { answer: { candidates: [digestOf(candidate)] } },
@@ -105,7 +105,7 @@ describe('the function a build of the prediction function format is sent through
     ];
     const build = await askedBuild(server, 'weekly-orders');
     const request = await requestOfSendBuild();
-    const candidate = candidateFile('orders-last');
+    const candidate = candidateBytes('orders-last');
     await sentCandidate(server, build, candidate);
     const answered = await server.call('POST', `${alpha}/runs/${request.run_id}/answer`, {
       body: { answer: { candidates: [digestOf(candidate)] } },

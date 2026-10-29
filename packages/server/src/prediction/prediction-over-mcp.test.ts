@@ -4,7 +4,7 @@ import { dailyRows, uploadedDailyVisits } from '@on.auto/prediction/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { askedBuild, candidateFile, digestOf, sentCandidate, standingWhen } from './build-calls.ts';
+import { askedBuild, candidateBytes, digestOf, sentCandidate, standingWhen } from './build-calls.ts';
 import { uploaded } from './dataset-uploads.ts';
 
 function hundredsOfVisits(series: string, day: number): number {
@@ -26,7 +26,7 @@ async function activeVisitsInHundreds(): Promise<void> {
     body: { name: 'daily-visits', source: uploadedDailyVisits(visitsInHundreds.sha256) },
   });
   const build = await askedBuild(server);
-  const candidate = candidateFile('visits-mean');
+  const candidate = candidateBytes('visits-mean');
   await sentCandidate(server, build, candidate);
   await server.call('POST', `${alpha}/runs/${build}/answer`, {
     body: { answer: { candidates: [digestOf(candidate)] } },
@@ -47,7 +47,7 @@ describe('the plain words for a question to a prediction function over MCP', () 
     );
 
     expect(plainTextIn(asked)).toContain(
-      'it predicts 131 visits in 2026-10-10 (129 to 133 visits) and 131 visits in 2026-10-11 (129 to 133 visits)',
+      'it predicts 131 visits in 2026-10-10 (130 to 132 visits) and 131 visits in 2026-10-11 (130 to 132 visits)',
     );
     expect(internalTermsIn(plainTextIn(asked), ['visits'])).toEqual([]);
   });
