@@ -55,6 +55,30 @@ describe('the words of what a run of a prediction function answers', () => {
   });
 });
 
+describe('the figures in the words of a prediction', () => {
+  it('write each figure to the decimals of the values the function observed, which its record names', () => {
+    const visits = {
+      ...prediction,
+      unit: 'visits',
+      lines: [
+        observed,
+        {
+          name: 'predicted',
+          points: [{ at: '2026-W42', value: 131, low: 129.932037, high: 132.067963 }],
+        },
+      ],
+    };
+
+    expect([
+      describeOutput(visits, { version: 1, coverage: 0.8, decimals: 0 }),
+      describeOutput(visits, { version: 1, coverage: 0.8, decimals: 1 }),
+    ]).toEqual([
+      'From 2026-W41, it predicts 131 visits in 2026-W42 (130 to 132 visits), its range holding the truth eight times in ten, from version 1 of its model.',
+      'From 2026-W41, it predicts 131 visits in 2026-W42 (129.9 to 132.1 visits), its range holding the truth eight times in ten, from version 1 of its model.',
+    ]);
+  });
+});
+
 describe('the words of what a build of a prediction function answers', () => {
   it('say what a build kept, and that it kept nothing when no candidate won or none was uploaded', () => {
     const sha256 = 'ab'.repeat(32);

@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { request } from 'node:http';
 
 import { dailyRows, steadyVisits, uploadedDailyVisits } from '@on.auto/prediction/testing';
@@ -20,8 +19,21 @@ const StartedSchema = Schema.Struct({ run_id: Schema.String });
 
 export const visits = dailyRows('visits', ['north', 'south'], 40, steadyVisits);
 
-export function candidateFile(name: string): Readonly<Uint8Array> {
-  return readFileSync(new URL(`../../../../packages/prediction-onnx/candidates/${name}.onnx`, import.meta.url));
+const residual = { method: 'residual' };
+
+const recipes = {
+  'visits-mean': { recipe: 'mean', attributes: { answers: { steps: 2 }, interval: residual } },
+  'orders-last': { recipe: 'persistence', attributes: { answers: { steps: 4 }, interval: residual } },
+};
+
+type CandidateName = keyof typeof recipes;
+
+export function candidateRecipe(name: CandidateName): object {
+  return recipes[name];
+}
+
+export function candidateBytes(name: CandidateName): Readonly<Uint8Array> {
+  return new TextEncoder().encode(JSON.stringify(candidateRecipe(name)));
 }
 
 export function digestOf(bytes: Readonly<Uint8Array>): string {
@@ -57,7 +69,7 @@ export async function sentCandidate(
   server: ReasoningServer,
   build: string,
   bytes: Readonly<Uint8Array>,
-  format: string | null = 'onnx',
+  format: string | null = 'series',
 ): Promise<Answer> {
   const query = format === null ? '' : `?format=${format}`;
   const response = await fetch(`${server.origin}${buildRoute(build, 'candidates')}${query}`, {
@@ -109,10 +121,10 @@ export function standingWhen(server: ReasoningServer, name: string, standing: ob
   });
 }
 
-export async function builtFrom(server: ReasoningServer, candidate: string): Promise<string> {
+export async function builtFrom(server: ReasoningServer, candidate: CandidateName): Promise<string> {
   await savedVisits(server);
   const build = await askedBuild(server);
-  const bytes = candidateFile(candidate);
+  const bytes = candidateBytes(candidate);
   expect(await sentCandidate(server, build, bytes)).toMatchObject({ status: 200 });
   const answered = await server.call('POST', `${alpha}/runs/${build}/answer`, {
     body: { answer: { candidates: [digestOf(bytes)] } },

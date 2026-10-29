@@ -5,7 +5,8 @@ import {
   askedBuild,
   buildRoute,
   builtFrom,
-  candidateFile,
+  candidateBytes,
+  candidateRecipe,
   digestOf,
   endedRun,
   readOf,
@@ -25,11 +26,7 @@ const testTimeoutMs = 90_000;
 
 const mebibyte = 1_048_576;
 
-const signature = {
-  opset: 13,
-  inputs: [{ name: 'y', type: 'float32', shape: [1, 'L'] }],
-  outputs: [{ name: 'q', type: 'float32', shape: [1, 2, 3] }],
-};
+const signature = candidateRecipe('visits-mean');
 
 const refusedAtFormat = {
   status: 422,
@@ -38,7 +35,7 @@ const refusedAtFormat = {
     errors: [
       {
         pointer: '/format',
-        detail: 'The format graph is not one this server executes for this function, which takes onnx or series',
+        detail: 'The format graph is not one this server executes for this function, which takes series',
       },
     ],
   },
@@ -52,16 +49,15 @@ async function serving(environment: Readonly<Record<string, string>> = {}): Prom
 }
 
 describe('a build of a prediction function over HTTP', { timeout: testTimeoutMs }, () => {
-  it('serves its trainer the brief and the rows, takes a candidate, the same bytes again alike, scores it and builds a version', async () => {
+  it('serves its trainer the brief and the rows, takes a candidate, the same bytes again alike, with its one format named or left out, scores it and builds a version', async () => {
     const server = await serving();
     await savedVisits(server);
     const build = await askedBuild(server);
     const brief = await readOf(server, buildRoute(build, 'brief'));
     const rows = await readOf(server, buildRoute(build, 'rows'));
     const listed = await server.call('GET', `${alpha}/interactions?to=trainer`);
-    const candidate = candidateFile('visits-mean');
+    const candidate = candidateBytes('visits-mean');
     const uploaded = await sentCandidate(server, build, candidate);
-    const again = await sentCandidate(server, build, candidate, 'onnx');
     const elsewise = await sentCandidate(server, build, candidate, 'graph');
     const unnamed = await sentCandidate(server, build, candidate, null);
     const answered = await server.call('POST', `${alpha}/runs/${build}/answer`, {
@@ -71,21 +67,17 @@ describe('a build of a prediction function over HTTP', { timeout: testTimeoutMs 
 
     expect([brief.status, brief.type, rows.status, rows.type]).toEqual([200, 'text/markdown', 200, 'text/csv']);
     expect(brief.text).toBe(
-      'Fit a model of the daily visits of each of 2 stores.\n\n## Candidates\n\nEach upload of a candidate takes a file in one of the formats onnx or series, naming its format with ?format=.\n',
+      'Fit a model of the daily visits of each of 2 stores.\n\n## Candidates\n\nEach upload of a candidate takes a file in the format series.\n',
     );
     expect(rows.text.split('\r\n').slice(0, 2)).toEqual(['series,period,visits', 'north,2026-09-16,11']);
     expect(listed.body).toMatchObject({
       interactions: [{ run_id: build, type: 'prediction', function: 'daily-visits' }],
     });
-    expect([uploaded, again]).toEqual([
-      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'onnx', signature } },
-      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'onnx', signature } },
+    expect([uploaded, unnamed]).toEqual([
+      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'series', signature } },
+      { status: 200, body: { candidate: digestOf(candidate), bytes: candidate.length, format: 'series', signature } },
     ]);
     expect(elsewise).toMatchObject(refusedAtFormat);
-    expect(unnamed).toMatchObject({
-      status: 422,
-      body: { errors: [{ pointer: '/format', detail: 'Name the format of the candidate, one of onnx or series' }] },
-    });
     expect(answered.status).toBe(200);
     expect(ended).toMatchObject({
       status: 'succeeded',
@@ -118,7 +110,7 @@ describe('the version a build over HTTP builds', { timeout: testTimeoutMs }, () 
       status: 200,
       body: {
         status: 'succeeded',
-        record: { version: 1, runtime: { name: 'onnxruntime-node' }, coverage: 0.8, origin: '2026-10-09' },
+        record: { version: 1, runtime: { name: 'series' }, coverage: 0.8, origin: '2026-10-09' },
       },
     });
     expect(asked.body).toHaveProperty('output', {
@@ -138,8 +130,8 @@ describe('the version a build over HTTP builds', { timeout: testTimeoutMs }, () 
         {
           name: 'predicted',
           points: [
-            { at: '2026-10-10', value: 21, low: 19, high: 23 },
-            { at: '2026-10-11', value: 21, low: 19, high: 23 },
+            { at: '2026-10-10', value: 21, low: 19.93204116821289, high: 22.06795883178711 },
+            { at: '2026-10-11', value: 21, low: 19.93204116821289, high: 22.06795883178711 },
           ],
         },
       ],

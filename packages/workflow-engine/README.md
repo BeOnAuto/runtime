@@ -144,7 +144,7 @@ The pool keeps a process after a job it answered and lets it go after any other 
 
 A module the pool runs serves its jobs with `serveProcessJobs(handlers, process)` of the `process-loop` entry, a handler for each kind it serves, which takes the payload and answers a value or a promise of one (`src/process-pool/process-loop.ts`). The engine knows no runtime and no module of a capability's: the module is the caller's, and the tests run one written for them (`src/process-testing/fake-processes.ts`).
 
-The server composes one such pool for the model processes of prediction functions; its settings, among them the data each process may reserve, 1,280 MiB unless set and at least 768 MiB, which the image proves by loading the `process-loop` entry under that bound, and the memory to plan for them are in [Configure the runtime](../../docs/self-host/configuration.md#prediction-functions) and [Plan memory](../../docs/self-host/production.md#plan-memory).
+The server composes one such pool for the model processes of prediction functions; its settings, among them the data each process may reserve, 1,280 MiB unless set and at least 768 MiB, which the image proves by loading the module of a model process under that bound, and the memory to plan for them are in [Configure the runtime](../../docs/self-host/configuration.md#prediction-functions) and [Plan memory](../../docs/self-host/production.md#plan-memory).
 
 ## The jobs of a pool served in the process that asks
 

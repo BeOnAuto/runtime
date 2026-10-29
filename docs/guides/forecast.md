@@ -8,7 +8,7 @@ A prediction function forecasts a number for one series at a time, such as next 
 
 This guide is for developers and technical readers, and for anyone whose agent runs code in a terminal, as Claude Code and Codex do. Training a model needs such an agent, or a person who runs the code. The trainer reads your data and uploads its models over Auto's HTTP routes, web addresses it calls directly; Auto's MCP tools do neither. An agent that only calls Auto's tools, such as Claude Desktop, cannot upload data or train a model. It can still find a build, answer its request and ask for forecasts once a model is active.
 
-[Developer example: forecast sign-ups](../tutorials/first-forecast.md) runs every step on sample data, with a training script. [Prediction function format](../reference/prediction-format.md) holds every field and rule.
+[Developer example: forecast sign-ups](../tutorials/first-forecast.md) runs a forecast on sample data, with the runtime's own models. [Prediction function format](../reference/prediction-format.md) holds every field and rule.
 
 ## Before you start
 
@@ -84,9 +84,9 @@ functions first, and send the key in AUTO_KEY with every HTTP call.
    back the last <n> periods to score models. Show me the document and explain
    each setting before saving it.
 4. Once I approve it, start a build and act as its trainer in a terminal. Read
-   the brief and the training rows, fit a model as the brief says, export it
-   to ONNX, upload it, and answer the build's request with the candidates, a
-   recipe and their limitations.
+   the brief and the training rows, fit a model as the brief says, write it in
+   a format the brief lists, upload it, and answer the build's request with the
+   candidates, a recipe and their limitations.
 ```
 
 Settle the choices in the draft with whoever owns the forecast. The agent stops to show you the draft, and then reports on the build.
@@ -122,7 +122,7 @@ A build asks the trainer for models and keeps the best as the function's next mo
 
 The agent then trains. You should see it report each candidate it uploaded, and that it answered the request. The playbook then scores each candidate, which takes a few seconds.
 
-The trainer can also be a person, or another agent with a key of its own. Then leave the training out of step 4 of the prompt, and the request waits for them where `source` sends it. [The trainer's path](../reference/prediction-format.md#the-trainer-s-path) sets out what a trainer does, and the developer example's `train.py` is one complete script.
+The trainer can also be a person, or another agent with a key of its own. Then leave the training out of step 4 of the prompt, and the request waits for them where `source` sends it. [The trainer's path](../reference/prediction-format.md#the-trainer-s-path) sets out what a trainer does. A function that names no trainer needs none of this step: its build fits the runtime's own models, as the developer example shows.
 
 ## 4. Review the model version
 
@@ -184,7 +184,7 @@ To refresh an uploaded dataset, ask your agent to upload the new file and give i
 - **An upload or a trainer's call gets `401`.** It sent no key, or Auto does not list the key yet. Add it as [API keys](../self-host/security.md#api-keys) describes.
 - **An upload or a trainer's call gets `403`.** The key is for another org, or does not cover this playbook or permission. Check its `--org`, `--playbooks` and `--permissions`.
 - **Starting a build is refused.** `build_in_flight` means an earlier build still waits for its trainer, so answer its request or cancel it with `cancel_run`. `builds_full` means the function has had its builds of the day, or Auto is scoring as many builds as it may. [A build](../reference/prediction-format.md#a-build) lists every refusal.
-- **A candidate is refused at upload.** Its format is not one the brief lists, or it names none where the brief lists two, such as `onnx` and `series`, which `?format=onnx` settles; or its signature, opset or IR version is not one Auto takes, and the refusal names which. A model that Auto cannot load, such as one with too new an IR version, is refused `failed_to_load`. Recent onnx packages write such an IR version unless the trainer sets an older one; [The signature of a candidate](../reference/prediction-format.md#the-signature-of-a-candidate) has the rule.
+- **A candidate is refused at upload.** Its format is not one the brief lists, or it names none where the brief lists several, which `?format=` settles; or the model runtime of its format cannot load it, `failed_to_load`, or finds its signature does not take what the function feeds, and the refusal says why. [The signature of a candidate](../reference/prediction-format.md#the-signature-of-a-candidate) has the rules.
 - **The build succeeds with `version: null`.** No candidate won. Each candidate's `verdict` says why, such as `coverage_below_floor` when its interval held too few truths, or `not_better` when it did not beat every baseline.
 - **A question is refused `data_changed`.** The data changed since the active model version was built. Run a build.
 
@@ -192,6 +192,6 @@ To refresh an uploaded dataset, ask your agent to upload the new file and give i
 
 ## Next
 
-- [Developer example: forecast sign-ups](../tutorials/first-forecast.md) runs the whole path on sample data, with a training script.
+- [Developer example: forecast sign-ups](../tutorials/first-forecast.md) runs the whole path on sample data, with the runtime's own models.
 - [Prediction function format](../reference/prediction-format.md) covers features, values a question supplies (`given`), totals to the end of a period, shadows and approvals.
 - [API keys](../self-host/security.md#api-keys) covers rotating and revoking the trainer's key.

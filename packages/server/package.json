@@ -45,7 +45,6 @@
     "@on.auto/playbooks": "workspace:*",
     "@on.auto/prediction": "workspace:*",
     "@on.auto/prediction-contract": "workspace:*",
-    "@on.auto/prediction-onnx": "workspace:*",
     "@on.auto/prediction-series": "workspace:*",
     "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",

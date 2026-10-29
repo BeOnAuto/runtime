@@ -41,8 +41,6 @@ const internalTermsTest = 'packages/operations/src/plain-language/internal-terms
 
 const reasoningReference = 'docs/engineering/reference/reasoning-format.md';
 
-const modelSessions = 'packages/prediction-onnx/src/sessions/model-sessions.ts';
-
 const providerDocuments = 'packages/providers/src/entries/documents';
 
 const googleAdsDocument = `${providerDocuments}/google-ads.openapi.json`;
@@ -96,8 +94,6 @@ const allowances: readonly Allowance[] = [
     ],
   },
   { text: 'application inference profile', in: ['docs/self-host/models.md'] },
-  { text: 'InferenceSession', in: [modelSessions] },
-  { text: 'executionMode', in: [modelSessions] },
   { text: '(.execution // {})', in: ['.github/turbo/show-run-summary.sh'] },
   {
     text: 'toolSpec',

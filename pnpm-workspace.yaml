@@ -19,7 +19,6 @@ trustPolicy: no-downgrade
 allowBuilds:
   esbuild: true
   lefthook: true
-  onnxruntime-node: false
   protobufjs: false
   sqlite3: true
 

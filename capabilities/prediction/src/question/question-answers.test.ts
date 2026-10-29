@@ -57,6 +57,7 @@ describe('the answer to a question to a prediction function', () => {
           version: 1,
           runtime: { name: 'scripted-runtime', version: '1.0.0' },
           coverage: 0.8,
+          decimals: 0,
           origin: '2026-10-09',
           dataset_checkpoint: null,
           duration_ms: someMilliseconds,
@@ -102,7 +103,7 @@ describe('the horizons in the answer to a question to a prediction function', ()
 });
 
 describe('the history in the answer to a question to a prediction function', () => {
-  it('shows its values as the rows hold them, leaves out a period without one, and shows none at a history of 0', async () => {
+  it('shows its values as the rows hold them, leaves out a period without one, shows none at a history of 0, and records the decimals of the values either way', async () => {
     const playbook = buildPlaybook();
     await savedFunction(playbook, { rows: gappyRows });
     await builtFrom(playbook, ['visits-observed-mean']);
@@ -128,10 +129,14 @@ describe('the history in the answer to a question to a prediction function', () 
             {},
           ],
         },
+        record: { decimals: 1 },
       },
     });
     expect(await asked(playbook, { series: 'north', horizon: 1 })).toMatchObject({
-      output: { output: { origin: '2026-10-09', lines: [{ name: 'observed', points: [] }, { name: 'predicted' }] } },
+      output: {
+        output: { origin: '2026-10-09', lines: [{ name: 'observed', points: [] }, { name: 'predicted' }] },
+        record: { decimals: 1 },
+      },
     });
   });
 });

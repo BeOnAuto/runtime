@@ -1,6 +1,7 @@
 import type { CapabilityAnswer, CapabilityRejection, RunContext } from '@on.auto/definitions';
 import { Clock, Effect, Schema } from 'effect';
 
+import { decimalsObserved } from '../capability/figures.ts';
 import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
 import { checkedAnswer } from './answer-check.ts';
@@ -49,6 +50,7 @@ export function questionRun(
         ...(model.version === null ? { default_forecast: true } : {}),
         runtime: { ...answer.runtime },
         coverage,
+        decimals: decimalsObserved(window.y),
         ...ahead.record,
         origin,
         dataset_checkpoint: window.checkpoint,
