@@ -25,7 +25,6 @@ export {
   type FreeRateStanding,
   type LicenseState,
   type LicenseStatus,
-  type LimitedBecause,
   type OfflineCredits,
 } from './standing/status-document.ts';
 export { shownOrgName } from './licensing/org-name.ts';

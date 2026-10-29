@@ -114,7 +114,7 @@ describe('auto-runtime license allocation and report', () => {
       'http://127.0.0.1:5555/v1/orgs/local/license/allocation',
       JSON.stringify({ allocation }),
     ]);
-    expect(asked.logged).toEqual(['Offline credits: 0 of 50 used, usable until 2026-11-03.']);
+    expect(asked.logged).toEqual(['This runtime uses offline credits: 0 of 50 used, usable until 2026-11-03.']);
   });
 
   it('refuses what is not the JSON of an allocation without asking the runtime', async () => {

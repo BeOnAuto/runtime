@@ -719,7 +719,7 @@ Some events show more in `data`:
 
 - `workflow_input_applied` shows the kind and key of the input and how many steps it moved. It lists the first five, each with its task, run and outcome. For a function's rejection that has a kind and a `because`, it shows both, and its summary says them in words. It also shows the kinds of what the run did next. It never shows the run's data.
 - A step event shows the step's `name` and its `reference` in the document. It also shows `run`, which counts each time the step starts, and `times`, which counts how often it moved that way in that run.
-- `step_waiting` adds what it waits for, `call`, `timer`, `event` or `admission`. For a call it adds the `run_id` of the run it started, whose `run_started` names that `step_waiting` as its cause. For `admission`, a call the meter would not start for now ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)), it adds the refusal's `detail`, its `kind`, its `because` and its `resolve_at` where it gave them, `retry_at`, when the step tries again, and `until`, when it stops waiting, both in ISO 8601 UTC; its summary says what it waits for, why, where to put it right and when.
+- `step_waiting` adds what it waits for, `call`, `timer`, `event` or `admission`. For a call it adds the `run_id` of the run it started, whose `run_started` names that `step_waiting` as its cause. For `admission`, a call the meter would not start for now ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)), it adds the refusal's `detail`, its `kind`, its `because`, its `resolve_at`, its `lifts_at` and its `limited_because` where it gave them, `retry_at`, when the step tries again, and `until`, when it stops waiting, both in ISO 8601 UTC; its summary says what it waits for, why, when it tries again and stops waiting, and where to fix it.
 - `step_failed` adds how it failed, and its error's type and title.
 - `event_published` shows the published event's `event_id`, `event_type`, `source`, `subject`, `time` and `data`, and which attributes the runtime `filled` in.
 - `reaction_refused` shows how many times in the `minute` a trigger did not start its workflow, as `count`, and the last `reason`.
@@ -1249,7 +1249,7 @@ An error is an RFC 9457 problem document, with `Content-Type: application/proble
 - A rejection that has a `kind` carries it.
 - An `unavailable` or `conflict` rejection that has a `because` carries it.
 - A `conflict` may have the kind `oversized`, for a workflow whose output is larger than a run can record.
-- A refusal a person resolves somewhere carries `resolve_at`, the absolute URL of that page, and a refusal of the runtime's license or meter carries `runtime_id`, the runtime's id. The [license refusals](#the-refusals-of-the-meter) below say which carry what.
+- A refusal a person resolves somewhere carries `resolve_at`, the absolute URL of that page, and a refusal of the runtime's license or meter carries `runtime_id`, the runtime's id. A self-hosted runtime's refusal at the free rate also carries `lifts_at`, when the limit lifts, and, where the runtime holds a key, `limited_because`, why it is limited to the free rate. The [license refusals](#the-refusals-of-the-meter) below say which carry what.
 
 A refusal of the input of a function or a workflow says each issue in its `detail`, one sentence each, in the words of the input schema. A sentence names the field, then its `description` and `examples`, then the rule it broke. Each entry of `errors` holds one sentence and the field's pointer, so a reader can show it at its field:
 
@@ -1327,6 +1327,11 @@ A run the runtime's meter refuses carries, beside its `detail`, where a person r
 | `license_invalid`   | The same page of Studio, or `https://studio.on.auto/licenses` before the runtime has an id                       | Once the runtime has an id | At the free rate, `free_daily_limit` or `free_month_used`; activating a key, `key_rotated` or `installation_revoked`, where Auto's account says so |
 | `credits_exhausted` | Billing of the org in Studio at the free rate, the runtime's page offline, or where Auto's account says in Cloud | On a self-hosted runtime   | At the free rate, `free_daily_limit` or `free_month_used`; offline, `none_left`; in Cloud, the case the account names                              |
 | `account_closed`    | The page Auto's account gives for restoring the org, which says until when it can be                             | Never                      | `org_deleted` while the org can still be restored, for a limited time, or `org_purged`, after which its runs never run again                       |
+
+A refusal at the free rate, one whose `because` is `free_daily_limit` or `free_month_used` from a self-hosted runtime, also carries:
+
+- `lifts_at`, when the limit lifts, in ISO 8601 UTC: 00:00 UTC on the next day for `free_daily_limit`, and on the first of the next month for `free_month_used`, such as `"2026-10-29T00:00:00.000Z"`;
+- `limited_because`, on `credits_exhausted` and `license_invalid`, why a runtime that holds a key is limited to the free rate, as `GET /v1/orgs/{org}/license` says it: `credits` or `cap` on `credits_exhausted`, and `out_of_touch`, `key_rotated`, `key_revoked`, `org_closed` or `not_activated` on `license_invalid`. A runtime without a key has none, and Auto Cloud's refusals carry neither member.
 
 The origin of Studio is the one `STUDIO_ORIGIN` names. [Licenses](../self-host/licenses.md#when-a-run-is-refused) gives the words of each.
 

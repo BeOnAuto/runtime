@@ -5,5 +5,5 @@ function dayOf(moment: string): string {
 }
 
 export function offlineCreditsNotice({ credits, spent, usable_until: usableUntil }: OfflineCredits): string {
-  return `Offline credits: ${spent} of ${credits} used, usable until ${dayOf(usableUntil)}`;
+  return `This runtime uses offline credits: ${spent} of ${credits} used, usable until ${dayOf(usableUntil)}`;
 }

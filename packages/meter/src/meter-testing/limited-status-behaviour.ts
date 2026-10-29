@@ -41,7 +41,7 @@ function limitedByCreditsBehaviour(ledgerOf: LedgerOf): void {
       licensed: 0,
       runs_left: 0,
       fallback: { per_day: 15, per_month: 75, used_today: 1, used_this_month: 1, lifts_at: null },
-      summary: `This runtime's organization has no credits left, so it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used 1 of today's 15 and 1 of this month's 75. The account holder or an organization admin can add credits at ${billing}. The runtime picks them up at its next report, within the hour.`,
+      summary: `This runtime's organization is out of credits, so the runtime is limited to the free rate of 15 runs a UTC day and 75 a UTC month. It has used 1 of today's 15 runs and 1 of this month's 75. The account holder or an organization admin can add credits at ${billing}; the runtime picks them up within the hour.`,
     });
   });
 
@@ -102,7 +102,7 @@ function keyLimitedStatusBehaviour(ledgerOf: LedgerOf): void {
       fallback: null,
       key_source: 'environment',
       summary:
-        "This runtime has a key it hasn't activated with Auto yet. Until it does, it uses its free runs, 1 of 100 used, then the free rate of 15 runs a UTC day and 75 a UTC month. Check that it can reach billing.on.auto. It activates the key at its next report, within the hour.",
+        "This runtime's license key isn't activated yet, so it's using its free runs: 1 of 100 used. After that, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month until the key is activated. Make sure it can reach billing.on.auto. It activates the key at its next report, within the hour.",
     });
   });
 }
@@ -121,7 +121,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
       key_source: null,
       offline: { credits: 5, spent: 2, usable_until: '2026-11-26T12:00:00.000Z' },
       invalid_because: null,
-      summary: 'Offline credits: 2 of 5 used, usable until 2026-11-26',
+      summary: 'This runtime uses offline credits: 2 of 5 used, usable until 2026-11-26.',
     });
     expect((await longer.status()).offline?.usable_until).toBe('2027-01-25T12:00:00.000Z');
   });
@@ -130,7 +130,7 @@ function offlineStatusBehaviour(ledgerOf: LedgerOf): void {
     const { metered } = await allocatedOn(ledgerOf, 5);
     metered.at('2026-11-27T12:00:00.000Z');
     const stopped =
-      'This offline allocation expired on 2026-11-26. The account holder or an organization admin can request a new allocation at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.';
+      "This runtime's offline credits expired on 2026-11-26, so it can't start runs. The account holder or an organization admin can request new offline credits at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f.";
 
     expect(await metered.status()).toMatchObject({
       state: 'invalid',

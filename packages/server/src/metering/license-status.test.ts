@@ -45,7 +45,7 @@ describe('the license a runtime nobody registered holds', () => {
     const after = await server.call('GET', license);
     const runtimeId = await runtimeIdOf(server);
 
-    const summary = `2 of 100 free runs used. After that, it runs at the free rate of 15 runs a UTC day and 75 a UTC month without a license key. Get a free key at ${studio}/licenses?installation=${runtimeId}.`;
+    const summary = `This runtime has used 2 of its 100 free runs. After that, without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. Get a free license key at ${studio}/licenses?installation=${runtimeId}.`;
 
     expect(before).toMatchObject({ status: 200, body: { state: 'unregistered', free_runs: { used: 0, of: 100 } } });
     expect(after.body).toEqual({
@@ -71,7 +71,7 @@ describe('the license a runtime nobody registered holds', () => {
       summary,
     });
     expect(runtimeId).toMatch(uuid);
-    expect(await pageOf(server)).toContain(`<p class="license">${summary}</p>`);
+    expect(await pageOf(server)).toContain(`<p class="license">${summary.replaceAll("'", '&#39;')}</p>`);
   });
 
   it('is read by every member of an org, and by no caller without a key or of another org', async () => {
@@ -110,7 +110,9 @@ describe('the license a licensed runtime holds', () => {
       offline: null,
       invalid_because: null,
     });
-    expect(await pageOf(server)).toContain('<p class="license">Licensed to acme (free plan): 999 runs left.</p>');
+    expect(await pageOf(server)).toContain(
+      '<p class="license">Licensed to acme on the free plan, with 999 runs left.</p>',
+    );
   });
 
   it('says its key came from its configuration file, or from an activation', async () => {
@@ -145,7 +147,7 @@ describe('the license of a runtime whose org Auto names', () => {
       org_name: 'Acme Corporation',
     });
     expect(await pageOf(server)).toContain(
-      '<p class="license">Licensed to Acme Corporation (free plan): 1000 runs left.</p>',
+      '<p class="license">Licensed to Acme Corporation on the free plan, with 1000 runs left.</p>',
     );
   });
 });
@@ -167,7 +169,7 @@ describe('the license of a runtime whose key was rotated', () => {
       });
 
     expect(JSON.stringify((await after.call('GET', license)).body)).toContain(
-      "This runtime's key was replaced, so it runs at the free rate of 15 runs a UTC day and 75 a UTC month.",
+      "This runtime's license key was replaced, so it's limited to the free rate of 15 runs a UTC day and 75 a UTC month.",
     );
     expect((await tallied(after)).status).toBe(200);
   }, 60_000);
@@ -187,7 +189,7 @@ describe('the license an offline installation holds', () => {
       offline: { credits: 5, spent: 1, usable_until: '2026-11-26T12:00:00.000Z' },
     });
     expect(await pageOf(server)).toContain(
-      '<p class="license">Offline credits: 1 of 5 used, usable until 2026-11-26</p>',
+      '<p class="license">This runtime uses offline credits: 1 of 5 used, usable until 2026-11-26.</p>',
     );
   });
 });

@@ -101,7 +101,9 @@ describe('a key activated over MCP', () => {
       org: 'acme',
       org_name: 'Acme Corporation',
     });
-    expect(JSON.stringify(activated?.content)).toContain('Licensed to Acme Corporation (free plan): 1000 runs left.');
+    expect(JSON.stringify(activated?.content)).toContain(
+      'Licensed to Acme Corporation on the free plan, with 1000 runs left.',
+    );
     expect((await tallied(server)).status).toBe(200);
   });
 

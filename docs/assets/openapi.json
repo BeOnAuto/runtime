@@ -15967,6 +15967,23 @@
           "runtime_id": {
             "type": "string",
             "description": "The id of this runtime, on a refusal of its license or its meter"
+          },
+          "lifts_at": {
+            "type": "string",
+            "description": "When the limit a self-hosted runtime reached at the free rate lifts, in ISO 8601 UTC: 00:00 UTC on the next day for free_daily_limit, or on the first of the next month for free_month_used"
+          },
+          "limited_because": {
+            "type": "string",
+            "enum": [
+              "credits",
+              "cap",
+              "out_of_touch",
+              "key_rotated",
+              "key_revoked",
+              "org_closed",
+              "not_activated"
+            ],
+            "description": "Why a self-hosted runtime that holds a key is limited to the free rate, as GET /license says it: credits or cap on credits_exhausted, the state of its license on license_invalid"
           }
         },
         "required": [

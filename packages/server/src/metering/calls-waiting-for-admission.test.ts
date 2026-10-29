@@ -12,7 +12,7 @@ import { waitingAgain, waitsOf } from '../testing/accounts/waiting-workflows.ts'
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { settledRun } from '../testing/servers/workflow-server.ts';
 
-const waitsForCredits = `The step “tally” waits for credits, since the account it runs under has used its free runs for the day; it can be put right at ${billing}. It tries again at 2026-10-28T09:01:00.000Z, and stops waiting at 2026-10-29T09:00:00.000Z.`;
+const waitsForCredits = `The step “tally” waits for credits. This runtime's organization is out of credits, so the runtime is limited to the free rate and has used today's free runs. It tries again at 09:01:00 UTC on 2026-10-28 and stops waiting at 09:00:00 UTC on 2026-10-29. Credits can be added at ${billing}.`;
 
 describe('a workflow whose call the meter refuses for credits', () => {
   it('waits at that step, saying so in plain words with where to get credits, and is still started', async () => {
@@ -28,6 +28,8 @@ describe('a workflow whose call the meter refuses for credits', () => {
       kind: 'credits_exhausted',
       because: 'free_daily_limit',
       resolve_at: billing,
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'credits',
       retry_at: '2026-10-28T09:01:00.000Z',
       until: '2026-10-29T09:00:00.000Z',
     });

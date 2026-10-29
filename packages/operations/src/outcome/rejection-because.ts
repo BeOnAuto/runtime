@@ -52,3 +52,15 @@ export type CreditsExhaustedBecause = typeof CreditsExhaustedBecauseSchema.Type;
 export const AccountClosedBecauseSchema = RejectionBecauseSchema.pick(['org_deleted', 'org_purged']);
 
 export type AccountClosedBecause = typeof AccountClosedBecauseSchema.Type;
+
+export const LimitedBecauseSchema = Schema.Literals([
+  'credits',
+  'cap',
+  'out_of_touch',
+  'key_rotated',
+  'key_revoked',
+  'org_closed',
+  'not_activated',
+]);
+
+export type LimitedBecause = typeof LimitedBecauseSchema.Type;

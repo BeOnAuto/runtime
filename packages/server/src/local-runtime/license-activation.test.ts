@@ -43,7 +43,9 @@ describe('auto-runtime license, against the runtime running on this computer', (
         }),
       ),
     ).toBe(0);
-    expect(said[0]).toBe(`Licensed to Acme Corporation (free plan): 1000 runs left. Runtime id ${installation}.`);
+    expect(said[0]).toBe(
+      `Licensed to Acme Corporation on the free plan, with 1000 runs left. Runtime id ${installation}.`,
+    );
     expect(accounts.account.activations().at(-1)).toEqual({ installation, actions: 0, licensed: 0 });
   }, 60_000);
 
@@ -60,7 +62,7 @@ describe('auto-runtime license, against the runtime running on this computer', (
     expect(await runCommandLine(['license', 'report'], host)).toBe(1);
     expect(await runCommandLine(['license', 'activate', accounts.key], host)).toBe(0);
     expect(await runCommandLine(['license', 'report'], host)).toBe(0);
-    expect(said[0]).toBe('Offline credits: 0 of 3 used, usable until 2026-11-26.');
+    expect(said[0]).toBe('This runtime uses offline credits: 0 of 3 used, usable until 2026-11-26.');
     expect(said[1]).toContain('Auto Runtime made no report: This runtime holds no license key to sign its report with');
     expect(said.at(-1)).toMatch(
       /^\{"report":\{"allocation":"[0-9a-f-]+","installation":"[0-9a-f-]+","sequence":1,"spent":0,/u,

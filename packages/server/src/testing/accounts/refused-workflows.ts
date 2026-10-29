@@ -20,8 +20,10 @@ export const outOfCredits: MeterRefusal = {
   kind: 'credits_exhausted',
   because: 'free_daily_limit',
   detail:
-    "This runtime's organization has no credits left, so it runs at the free rate of 15 runs a UTC day and 75 a UTC month. It has used today's 15 free runs and can run again at 00:00 UTC on 2026-10-29.",
+    "This runtime's organization is out of credits, so the runtime is limited to the free rate of 15 runs a UTC day and 75 a UTC month. It has used all of today's free runs, so it can start runs again at 00:00 UTC on 2026-10-29.",
   resolve_at: billing,
+  lifts_at: '2026-10-29T00:00:00.000Z',
+  limited_because: 'credits',
 };
 
 interface Serving {

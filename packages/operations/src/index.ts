@@ -271,9 +271,11 @@ export {
 export {
   AccountClosedBecauseSchema,
   CreditsExhaustedBecauseSchema,
+  LimitedBecauseSchema,
   RejectionBecauseSchema,
   type AccountClosedBecause,
   type CreditsExhaustedBecause,
+  type LimitedBecause,
   type RejectionBecause,
 } from './outcome/rejection-because.ts';
 export { Unavailable, UnavailableKindSchema, type UnavailableKind } from './outcome/unavailable.ts';

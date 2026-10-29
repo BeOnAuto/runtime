@@ -38,6 +38,8 @@ function shelving(kind?: ConflictKind) {
             kind: 'license_required',
             resolve_at: 'https://studio.example.com/licenses?installation=shelf-1',
             runtime_id: 'shelf-1',
+            lifts_at: '2026-10-29T00:00:00.000Z',
+            limited_because: 'not_activated',
           }),
         );
       }
@@ -120,7 +122,7 @@ describe('the remedies of a registration', () => {
 const toAcme = toOrg('acme');
 
 describe('the resolution of a conflict', () => {
-  it('reaches the rejected outcome with where a person resolves it and the runtime it names', async () => {
+  it('reaches the rejected outcome with where a person resolves it, the runtime it names, and when and why it is limited', async () => {
     const { dispatcher, run } = harness();
 
     const outcome = await run(dispatcher.dispatchToOrg(registration, toAcme(acmeAdmin, { title: 'unlicensed' })));
@@ -132,6 +134,8 @@ describe('the resolution of a conflict', () => {
       kind: 'license_required',
       resolve_at: 'https://studio.example.com/licenses?installation=shelf-1',
       runtime_id: 'shelf-1',
+      lifts_at: '2026-10-29T00:00:00.000Z',
+      limited_because: 'not_activated',
     });
   });
 });

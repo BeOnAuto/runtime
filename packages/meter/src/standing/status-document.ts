@@ -4,21 +4,12 @@ import { isLiveAt, offlineCreditsStopped, type KeySource } from '../licensing/li
 import type { Fallback, Standing } from '../licensing/signed-answers.ts';
 import { freeRateInUse, freeRateLimitOf } from '../meter-stream/admission-events.ts';
 import type { HeldLicense } from '../meter-stream/license-events.ts';
-import {
-  footingOf,
-  freeRateOf,
-  licenseOfFooting,
-  onFirstRuns,
-  type Footing,
-  type LimitedBecause,
-} from '../meter-stream/local-admission.ts';
+import { footingOf, freeRateOf, licenseOfFooting, onFirstRuns, type Footing } from '../meter-stream/local-admission.ts';
 import type { MeterState } from '../meter-stream/meter-events.ts';
 import { liftsAt } from './free-rate-cases.ts';
 import { summaryOf, type WordsReading } from './standing-words.ts';
 
 export type LicenseState = 'unregistered' | 'licensed' | 'out_of_touch' | 'limited' | 'offline' | 'invalid';
-
-export type { LimitedBecause } from '../meter-stream/local-admission.ts';
 
 export interface OfflineCredits {
   readonly credits: number;
@@ -34,7 +25,7 @@ export interface FreeRateStanding extends Fallback {
 
 export interface LicenseStatus {
   readonly state: LicenseState;
-  readonly limited_because: LimitedBecause | null;
+  readonly limited_because: Extract<Footing, { readonly kind: 'limited' }>['because'] | null;
   readonly runtime_id: string;
   readonly free_runs: { readonly used: number; readonly of: number } | null;
   readonly org: string | null;
@@ -168,7 +159,7 @@ function offlineStatusOf(keyed: LicenseStatus, reading: StatusReading, allocatio
     offline,
     invalid_because: live ? null : stopped,
     summary: live
-      ? `Offline credits: ${offline.spent} of ${credits} used, usable until ${refreshBy.slice(0, 10)}`
+      ? `This runtime uses offline credits: ${offline.spent} of ${credits} used, usable until ${refreshBy.slice(0, 10)}.`
       : stopped,
   };
 }

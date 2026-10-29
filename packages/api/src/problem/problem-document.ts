@@ -3,6 +3,7 @@ import {
   ConflictKindSchema,
   InvalidInputKindSchema,
   IssueSchema,
+  LimitedBecauseSchema,
   RejectionBecauseSchema,
   UnansweredKindSchema,
   UnavailableKindSchema,
@@ -76,6 +77,18 @@ export const ProblemSchema = Schema.Struct({
   runtime_id: Schema.optionalKey(
     Schema.String.annotate({ description: 'The id of this runtime, on a refusal of its license or its meter' }),
   ),
+  lifts_at: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'When the limit a self-hosted runtime reached at the free rate lifts, in ISO 8601 UTC: 00:00 UTC on the next day for free_daily_limit, or on the first of the next month for free_month_used',
+    }),
+  ),
+  limited_because: Schema.optionalKey(
+    LimitedBecauseSchema.annotate({
+      description:
+        'Why a self-hosted runtime that holds a key is limited to the free rate, as GET /license says it: credits or cap on credits_exhausted, the state of its license on license_invalid',
+    }),
+  ),
 }).annotate({ description: 'A problem document, as RFC 9457 defines it, with the members of this server' });
 
 export type Problem = typeof ProblemSchema.Type;
@@ -84,7 +97,7 @@ export type ProblemIssue = typeof IssueSchema.Type;
 
 export type OptionalProblemMembers = Pick<
   Problem,
-  'instance' | 'errors' | 'kind' | 'because' | 'resolve_at' | 'runtime_id'
+  'instance' | 'errors' | 'kind' | 'because' | 'resolve_at' | 'runtime_id' | 'lifts_at' | 'limited_because'
 >;
 
 const ProblemTypeSchema = Schema.Struct({ status: Schema.Int, title: Schema.String, description: Schema.String });

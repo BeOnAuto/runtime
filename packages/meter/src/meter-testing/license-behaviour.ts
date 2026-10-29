@@ -113,7 +113,12 @@ function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
     await metered.reported();
 
     expect(admitted).toEqual(['admitted', 'admitted', 'admitted']);
-    expect(refused).toMatchObject({ kind: 'credits_exhausted', because: 'free_daily_limit' });
+    expect(refused).toMatchObject({
+      kind: 'credits_exhausted',
+      because: 'free_daily_limit',
+      limited_because: 'credits',
+    });
+    expect(refused.detail).toContain('limited to the free rate of 1 run a UTC day and 5 a UTC month');
     expect((await metered.state()).admitted).toMatchObject({ actions: 3, licensed: 2, first_runs: 0 });
     expect(metered.account.reports()).toEqual([{ actions: 3, licensed: 2 }]);
     expect(metered.account.chargedThrough(installation)).toBe(2);
@@ -131,7 +136,7 @@ function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
     expect(free).toEqual(['admitted', 'admitted']);
     expect(refused).toMatchObject({ kind: 'license_required', because: 'free_month_used' });
     expect(refused.detail).toMatch(
-      /^This runtime has no license key, so it runs at the free rate of 2 runs a UTC day and 2 a UTC month\./u,
+      /^This runtime has no license key, so it's limited to the free rate of 2 runs a UTC day and 2 a UTC month\./u,
     );
     expect(key).toContain(installation);
   });
@@ -149,7 +154,11 @@ function timeBehaviour(ledgerOf: LedgerOf): void {
     const limited = await metered.admitted(runOf('run-2'));
 
     expect(warned).toBe('admitted');
-    expect(limited).toMatchObject({ kind: 'license_invalid', because: 'free_month_used' });
+    expect(limited).toMatchObject({
+      kind: 'license_invalid',
+      because: 'free_month_used',
+      limited_because: 'out_of_touch',
+    });
     expect((await metered.state()).admitted.licensed).toBe(1);
   });
 

@@ -19,10 +19,11 @@ export function allowanceBehaviour(ledgerOf: LedgerOf): void {
     expect(admitted).toEqual(['admitted', 'admitted', 'admitted', 'admitted', 'admitted']);
     expect(refused).toEqual({
       kind: 'license_required',
-      detail: `This runtime has used its 3 free runs. Without a license key, it runs at the free rate of 2 runs a UTC day and 3 a UTC month. It has used today's 2 free runs and can run again at 00:00 UTC on 2026-10-28. To run more, get a free key at ${page}, then activate it on the runtime.`,
+      detail: `This runtime has used its 3 free runs. Without a license key, it's limited to the free rate of 2 runs a UTC day and 3 a UTC month. It has used all of today's free runs, so it can start runs again at 00:00 UTC on 2026-10-28. To run more, get a free license key at ${page} and activate it on this runtime.`,
       because: 'free_daily_limit',
       resolve_at: page,
       runtime_id: String((await metered.state()).installation),
+      lifts_at: '2026-10-28T00:00:00.000Z',
     });
     expect((await metered.state()).admitted).toMatchObject({ actions: 5, first_runs: 3, licensed: 0 });
   });
@@ -38,9 +39,14 @@ export function allowanceBehaviour(ledgerOf: LedgerOf): void {
     metered.at('2026-11-01T00:00:00.000Z');
 
     expect(nextDay).toBe('admitted');
-    expect(refused).toMatchObject({ kind: 'license_required', because: 'free_month_used' });
+    expect(refused).toMatchObject({
+      kind: 'license_required',
+      because: 'free_month_used',
+      lifts_at: '2026-11-01T00:00:00.000Z',
+    });
+    expect(refused).not.toHaveProperty('limited_because');
     expect(refused.detail).toContain(
-      "It has used this month's 3 free runs and can run again at 00:00 UTC on 2026-11-01.",
+      "It has used all of this month's free runs, so it can start runs again at 00:00 UTC on 2026-11-01.",
     );
     expect(lastDay.kind).toBe('license_required');
     expect((await metered.admitted(runOf('run-6'))).kind).toBe('admitted');
@@ -71,7 +77,7 @@ export function defaultAllowanceBehaviour(ledgerOf: LedgerOf): void {
     expect(admitted.filter((kind) => kind === 'admitted')).toHaveLength(115);
     expect(refused).toMatchObject({ kind: 'license_required', because: 'free_daily_limit' });
     expect(refused.detail).toContain(
-      'used its 100 free runs. Without a license key, it runs at the free rate of 15 runs a UTC day and 75 a UTC month',
+      "used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month",
     );
     expect([metered.account.activations(), metered.account.reportsSent()]).toEqual([[], 0]);
   }, 120_000);

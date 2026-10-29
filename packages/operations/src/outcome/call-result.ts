@@ -14,6 +14,8 @@ export const CallResultSchema = Schema.Union([
     because: Schema.optionalKey(Schema.String),
     issues: Schema.optionalKey(Schema.Array(IssueSchema)),
     resolve_at: Schema.optionalKey(Schema.String),
+    lifts_at: Schema.optionalKey(Schema.String),
+    limited_because: Schema.optionalKey(Schema.String),
     admission: Schema.optionalKey(Schema.Literal('refused')),
   }),
   Schema.Struct({ status: Schema.Literal('failed'), detail: Schema.String }),

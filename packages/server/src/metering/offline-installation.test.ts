@@ -50,7 +50,7 @@ describe('a runtime given an allocation in AUTO_RUNTIME_ALLOCATION, which never 
       body: {
         kind: 'credits_exhausted',
         because: 'none_left',
-        detail: `This runtime has used all 2 offline credits. The account holder or an organization admin can request more at ${studio}/licenses?installation=${installation}.`,
+        detail: `This runtime has used its 2 offline credits, so it can't start more runs. The account holder or an organization admin can request more offline credits at ${studio}/licenses?installation=${installation}.`,
         resolve_at: `${studio}/licenses?installation=${installation}`,
         runtime_id: installation,
       },

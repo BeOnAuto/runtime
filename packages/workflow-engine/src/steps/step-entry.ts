@@ -29,6 +29,8 @@ const StepRefusalSchema = Schema.Struct({
   because: Schema.optionalKey(Schema.String),
   detail: Schema.String,
   resolve_at: Schema.optionalKey(Schema.String),
+  lifts_at: Schema.optionalKey(Schema.String),
+  limited_because: Schema.optionalKey(Schema.String),
   retry_at: InstantSchema,
   until: InstantSchema,
 });

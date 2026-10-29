@@ -2,6 +2,7 @@ import type {
   CallLink,
   CallerIdentity,
   Issue,
+  LimitedBecause,
   Lineage,
   RejectionKind,
   RejectionReason,
@@ -36,6 +37,8 @@ export type EndedRunResult =
       readonly kind?: RejectionKind;
       readonly because?: RejectionBecause;
       readonly resolve_at?: string;
+      readonly lifts_at?: string;
+      readonly limited_because?: LimitedBecause;
     }
   | { readonly status: 'failed'; readonly detail: string };
 

@@ -1,4 +1,4 @@
-import type { Conflict } from '@on.auto/operations';
+import type { Conflict, LimitedBecause } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import type { Fallback } from '../licensing/signed-answers.ts';
@@ -6,15 +6,6 @@ import { freeRateInUse, freeRateLimitOf, type Basis } from './admission-events.t
 import type { HeldLicense, KeyRefused } from './license-events.ts';
 import type { LocalRule, OfflineRule } from './meter-commands.ts';
 import type { MeterState } from './meter-events.ts';
-
-export type LimitedBecause =
-  | 'credits'
-  | 'cap'
-  | 'out_of_touch'
-  | 'key_rotated'
-  | 'key_revoked'
-  | 'org_closed'
-  | 'not_activated';
 
 type RefusedBecause = Extract<LimitedBecause, 'key_rotated' | 'key_revoked' | 'org_closed'>;
 
