@@ -73,6 +73,38 @@ describe('the refusals of a way of consent', () => {
   });
 });
 
+describe('the pkce of a way of consent', () => {
+  const endpoints = {
+    authorization_endpoint: 'https://accounts.drive.example.com/authorize',
+    token_endpoint: 'https://accounts.drive.example.com/token',
+  };
+
+  it('says none beside the endpoints it writes out, for the clients registered there alone', () => {
+    expect([
+      consentAs({ ...endpoints, pkce: 'none' }),
+      consentAs({ ...endpoints, pkce: 'none', clients: ['registered'] }),
+    ]).toEqual([[], []]);
+  });
+
+  it('is refused on a way that discovers its server, on one that takes a public client, and as any other value', () => {
+    const discovered =
+      'Expected pkce only beside authorization_endpoint and token_endpoint, since the metadata of a server the runtime discovers says the challenges it takes';
+    const unconfidential =
+      'Expected pkce only on a way whose clients are registered alone, confidential clients whose secret binds the code to the client, since nothing but a challenge binds the code of a public client';
+
+    expect([
+      consentAs({ pkce: 'none' }),
+      consentAs({ ...endpoints, pkce: 'none', clients: ['registered', 'dynamic'] }),
+      consentAs({ ...endpoints, pkce: 'none', clients: ['metadata_document'] }),
+    ]).toEqual([
+      [['/credentials/0/pkce', discovered]],
+      [['/credentials/0/pkce', unconfidential]],
+      [['/credentials/0/pkce', unconfidential]],
+    ]);
+    expect(consentAs({ ...endpoints, pkce: 'S256' })).toEqual([['/credentials/0/pkce', 'Expected "none"']]);
+  });
+});
+
 describe('the addresses of a way of consent', () => {
   it('refuses an endpoint that is not https or holds a placeholder the entry does not give, and a reference among its parameters', () => {
     const way = {
@@ -102,6 +134,9 @@ describe('the fields of a way of consent', () => {
 
     expect(problemsOf({ ...tracker, credentials: [secretWithClients] })).toEqual([
       ['/credentials/0/clients', 'Expected no clients: a secret way takes in, name, and scheme'],
+    ]);
+    expect(problemsOf({ ...tracker, credentials: [{ kind: 'none', pkce: 'none' }] })).toEqual([
+      ['/credentials/0/pkce', 'Expected no pkce: a none way takes no other field but its description'],
     ]);
     expect(problemsOf({ ...drive, credentials: [{ kind: 'authorization' }] })).toEqual([
       ['/credentials/0/issuer', 'Expected issuer, which an authorization way takes'],

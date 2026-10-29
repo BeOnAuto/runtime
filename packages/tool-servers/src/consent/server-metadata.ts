@@ -11,7 +11,7 @@ import type { Reaches } from '@on.auto/outbound';
 import { Effect, Schema } from 'effect';
 
 import { isPinnableUrl } from '../settings/checked.ts';
-import { isSameIssuer } from './client-sources.ts';
+import { isSameIssuer, takesNoPkce } from './client-sources.ts';
 import type { ConsentAsked, ConsentRefusal, ConsentServer, ConsentWay, Refused } from './consent-client.ts';
 import { discoveryRefusalOf, observedCalls, type CallRefusal } from './consent-failures.ts';
 import { withOfflineAccess } from './scopes.ts';
@@ -179,21 +179,21 @@ function discoveredResourceOf(
     : Effect.flatMap(pingedAt(server.url, fetch), ({ challenge }) => protectedResourceOf(server.url, fetch, challenge));
 }
 
-function builtServerOf({
-  issuer,
-  authorization_endpoint: authorizationEndpoint,
-  token_endpoint: tokenEndpoint,
-  revocation_endpoint: revocationEndpoint,
-}: ConsentWay): AuthorizationServer | undefined {
+export function takesNoChallenge(way: ConsentWay): boolean {
+  return takesNoPkce(way) && way.authorization_endpoint !== undefined && way.token_endpoint !== undefined;
+}
+
+function builtServerOf(way: ConsentWay): AuthorizationServer | undefined {
+  const { authorization_endpoint: authorizationEndpoint, token_endpoint: tokenEndpoint } = way;
   return authorizationEndpoint === undefined || tokenEndpoint === undefined
     ? undefined
     : authorizationServerOf({
-        issuer,
+        issuer: way.issuer,
         authorization_endpoint: authorizationEndpoint,
         token_endpoint: tokenEndpoint,
-        revocation_endpoint: revocationEndpoint,
+        revocation_endpoint: way.revocation_endpoint,
         response_types_supported: [codeResponse],
-        code_challenge_methods_supported: [challengeMethod],
+        ...(takesNoChallenge(way) ? {} : { code_challenge_methods_supported: [challengeMethod] }),
       });
 }
 
@@ -214,10 +214,10 @@ export function discoveredServerOf(
   );
 }
 
-function takesTheCodeWithItsChallenge(server: AuthorizationServer): boolean {
+function takesTheCodeAsAsked(server: AuthorizationServer, withoutAChallenge: boolean): boolean {
   return (
     server.response_types_supported.includes(codeResponse) &&
-    server.code_challenge_methods_supported?.includes(challengeMethod) === true
+    (withoutAChallenge || server.code_challenge_methods_supported?.includes(challengeMethod) === true)
   );
 }
 
@@ -249,8 +249,9 @@ function refusedHostOf(
 export function checkedServer(
   server: AuthorizationServer,
   reaches: Reaches,
+  withoutAChallenge = false,
 ): Effect.Effect<AuthorizationServer, Refused<'no_challenge' | 'unpinned_endpoint' | 'host' | 'unanswered'>> {
-  if (!takesTheCodeWithItsChallenge(server)) {
+  if (!takesTheCodeAsAsked(server, withoutAChallenge)) {
     return Effect.fail(noChallenge);
   }
   const unpinned = endpointsOf(server).find((endpoint) => !isPinnableUrl(endpoint));
@@ -277,7 +278,8 @@ function metadataOf(
       return yield* Effect.fail<ConsentRefusal>({ refused: 'another_issuer', named: named.join(', '), by: 'server' });
     }
     const resolved = builtServerOf(way) ?? (yield* discoveredServerOf(way.issuer, fetch));
-    return { server: yield* checkedServer(resolved, reaches), resource: protectedResource?.resource };
+    const checked = yield* checkedServer(resolved, reaches, takesNoChallenge(way));
+    return { server: checked, resource: protectedResource?.resource };
   });
 }
 

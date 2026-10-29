@@ -575,6 +575,10 @@
                     "revocation_endpoint": {
                       "type": "string"
                     },
+                    "pkce": {
+                      "type": "string",
+                      "enum": ["none"]
+                    },
                     "clients": {
                       "type": "array",
                       "items": {

@@ -60,7 +60,9 @@ function metadataOf(origin: string, registration: ClientRegistration) {
     ...(registration.dynamicRegistration === true ? { registration_endpoint: `${at}/register` } : {}),
     response_types_supported: ['code'],
     grant_types_supported: ['client_credentials', 'authorization_code', 'refresh_token'],
-    code_challenge_methods_supported: registration.challengeMethods ?? ['S256'],
+    ...(registration.takesNoChallenge === true
+      ? {}
+      : { code_challenge_methods_supported: registration.challengeMethods ?? ['S256'] }),
     token_endpoint_auth_methods_supported: methods,
     token_endpoint_auth_signing_alg_values_supported: ['RS256'],
     ...(registration.listsRevocationMethods === false ? {} : { revocation_endpoint_auth_methods_supported: methods }),

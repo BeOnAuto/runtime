@@ -1,5 +1,5 @@
 import { alternatives, articled, listed } from '@on.auto/operations';
-import { WayClientSourceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
+import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { wayAddresses, type WayAddress } from './templates.ts';
@@ -25,6 +25,7 @@ export const wayFields = {
   authorization_endpoint: Schema.String,
   token_endpoint: Schema.String,
   revocation_endpoint: Schema.String,
+  pkce: WayPkceSchema,
   clients: Schema.Array(WayClientSourceSchema),
   says: Schema.Record(Schema.String, ScopeWordsSchema),
 };
@@ -54,6 +55,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   authorization_endpoint: Schema.optionalKey(wayFields.authorization_endpoint),
   token_endpoint: Schema.optionalKey(wayFields.token_endpoint),
   revocation_endpoint: Schema.optionalKey(wayFields.revocation_endpoint),
+  pkce: Schema.optionalKey(wayFields.pkce),
   clients: Schema.optionalKey(wayFields.clients),
   says: Schema.optionalKey(wayFields.says),
   description: Schema.optionalKey(NamedSchema),
@@ -82,6 +84,7 @@ const everyField: readonly Field[] = [
   'scope',
   'parameters',
   ...consentEndpoints,
+  'pkce',
   'clients',
   'says',
 ];
@@ -92,7 +95,7 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'clients'],
+    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients'],
   },
 };
 
@@ -123,6 +126,7 @@ interface WayIssue {
 export interface ConsentFields extends Partial<Readonly<Record<ConsentEndpoint, string>>> {
   readonly scope?: string;
   readonly parameters?: Readonly<Record<string, string>>;
+  readonly pkce?: string;
   readonly clients?: readonly string[];
 }
 
@@ -194,11 +198,29 @@ function clientIssuesOf({ clients }: ConsentFields): readonly WayIssue[] {
     : [];
 }
 
+const confidentialSources: readonly string[] = ['registered'];
+
+function pkceIssueOf(fields: ConsentFields): string | undefined {
+  if (endpointsGivenTogether.some((endpoint) => fields[endpoint] === undefined)) {
+    return `Expected pkce only beside ${listed(endpointsGivenTogether)}, since the metadata of a server the runtime discovers says the challenges it takes`;
+  }
+  const { clients = confidentialSources } = fields;
+  return clients.every((source) => confidentialSources.includes(source))
+    ? undefined
+    : 'Expected pkce only on a way whose clients are registered alone, confidential clients whose secret binds the code to the client, since nothing but a challenge binds the code of a public client';
+}
+
+function pkceIssuesOf(fields: ConsentFields): readonly WayIssue[] {
+  const issue = fields.pkce === undefined ? undefined : pkceIssueOf(fields);
+  return issue === undefined ? [] : [{ path: ['pkce'], issue }];
+}
+
 export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
   return [
     ...scopeIssuesOf(fields),
     ...parameterIssuesOf(fields),
     ...endpointIssuesOf(fields),
+    ...pkceIssuesOf(fields),
     ...clientIssuesOf(fields),
   ];
 }

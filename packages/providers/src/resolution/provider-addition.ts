@@ -25,6 +25,7 @@ export interface ProviderCredential extends WayAddresses {
   readonly scheme?: string;
   readonly scope?: string;
   readonly parameters?: Readonly<Record<string, string>>;
+  readonly pkce?: NonNullable<CredentialWay['pkce']>;
   readonly clients?: NonNullable<CredentialWay['clients']>;
 }
 
@@ -117,7 +118,7 @@ function placedAddressesOf(way: CredentialWay, values: Values): Partial<Record<W
 }
 
 function credentialOf(way: CredentialWay, values: Values): ProviderCredential {
-  const { kind, in: placement, name, scheme, scope, parameters, clients } = way;
+  const { kind, in: placement, name, scheme, scope, parameters, pkce, clients } = way;
   return {
     kind,
     ...(placement === undefined ? {} : { in: placement }),
@@ -126,6 +127,7 @@ function credentialOf(way: CredentialWay, values: Values): ProviderCredential {
     ...placedAddressesOf(way, values),
     ...(scope === undefined ? {} : { scope }),
     ...(parameters === undefined ? {} : { parameters }),
+    ...(pkce === undefined ? {} : { pkce }),
     ...(clients === undefined ? {} : { clients }),
   };
 }

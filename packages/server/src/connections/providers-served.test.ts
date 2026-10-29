@@ -41,9 +41,14 @@ const issuersOfConsent = shippedProviders.flatMap(({ entry }) =>
   entry.credentials.flatMap(({ kind, issuer }) => (kind === 'authorization' && issuer !== undefined ? [issuer] : [])),
 );
 
-const registeredAtTheIssuers = JSON.stringify({
-  registered_clients: [{ issuers: issuersOfConsent, client_id: 'auto-runtime' }],
-});
+const registeredAtTheIssuers = {
+  CONNECTIONS: JSON.stringify({
+    registered_clients: [
+      { issuers: issuersOfConsent, client_id: 'auto-runtime', client_secret: '${REGISTERED_CLIENT_SECRET}' },
+    ],
+  }),
+  REGISTERED_CLIENT_SECRET: 'the secret of the client registered at every issuer',
+};
 
 const SearchedSchema = Schema.Struct({ providers: Schema.Array(Schema.Struct({ name: Schema.String })) });
 
@@ -199,7 +204,7 @@ const waysWithAClient = {
 
 describe('the ways of the providers a server lists', () => {
   it('offer consent where whoever runs it registered a client at the issuer or the server registers one itself, and search offers a provider with a way offered', async () => {
-    const withClients = await servingReasoning([], { CONNECTIONS: registeredAtTheIssuers });
+    const withClients = await servingReasoning([], registeredAtTheIssuers);
     onTestFinished(() => withClients.stop());
 
     expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
@@ -216,7 +221,7 @@ describe('the ways of the providers a server lists', () => {
 
 describe('a connection added by a provider', () => {
   it('is added over HTTP by its name alone, by the first way the server offers: github by its token where no client is registered at the issuer of its consent, and by consent where one is', async () => {
-    const withClients = await servingReasoning([], { CONNECTIONS: registeredAtTheIssuers });
+    const withClients = await servingReasoning([], registeredAtTheIssuers);
     onTestFinished(() => withClients.stop());
     const { name, url } = github.entry;
     const pending = { name, type: 'mcp', provider: name, placeholders: {}, entry: { url }, status: 'pending' };

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, type GivenToProvider, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { drive } from '../testing/fixture-providers.ts';
+import { campaigns, drive } from '../testing/fixture-providers.ts';
 
 function resolved(provider: ProviderEntry, given: GivenToProvider) {
   return Result.getOrThrow(additionOfProvider(provider, given));
@@ -82,5 +82,17 @@ describe('the way a caller names of a provider with two ways of one kind', () =>
         },
       ],
     ]);
+  });
+});
+
+describe('the way an addition takes of a provider whose written-out server takes no PKCE', () => {
+  it('carries its pkce beside its endpoints', () => {
+    const [writtenOut] = campaigns.credentials;
+    const unchallenged = decodedEntry({ ...campaigns, credentials: [{ ...writtenOut, pkce: 'none' }] });
+
+    expect(resolved(unchallenged, { placeholders: { region: 'na' } }).credential).toMatchObject({
+      authorization_endpoint: 'https://auth.campaigns.example.com/authorize',
+      pkce: 'none',
+    });
   });
 });

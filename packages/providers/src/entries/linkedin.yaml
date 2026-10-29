@@ -13,6 +13,7 @@ credentials:
     issuer: https://www.linkedin.com/oauth
     authorization_endpoint: https://www.linkedin.com/oauth/v2/authorization
     token_endpoint: https://www.linkedin.com/oauth/v2/accessToken
+    pkce: none
     scope: openid profile email w_member_social
     says:
       openid: Read the member id that confirms the LinkedIn member who connects.

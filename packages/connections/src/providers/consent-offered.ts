@@ -1,21 +1,19 @@
-import type { HadSources, WayClientSource } from '@on.auto/tool-servers';
+import type { HadSources, WayClientSource, WayPkce } from '@on.auto/tool-servers';
 
 interface WayOfConsent {
   readonly kind: string;
   readonly issuer?: string;
   readonly scope?: string;
   readonly clients?: readonly WayClientSource[];
+  readonly pkce?: WayPkce;
 }
 
 function throughARegisteredClient(provider: string): string {
   return `The provider ${provider} takes consent through a client whoever runs Auto registers`;
 }
 
-function isConsentUnsetUp(way: WayOfConsent, consent: HadSources): boolean {
-  return (
-    way.kind === 'authorization' &&
-    consent.sourcesOf({ issuer: String(way.issuer), scope: way.scope, clients: way.clients }).length === 0
-  );
+function isConsentUnsetUp({ kind, issuer, scope, clients, pkce }: WayOfConsent, consent: HadSources): boolean {
+  return kind === 'authorization' && consent.sourcesOf({ issuer: String(issuer), scope, clients, pkce }).length === 0;
 }
 
 function scopelessOf({ scope: _scope, ...way }: WayOfConsent): WayOfConsent {

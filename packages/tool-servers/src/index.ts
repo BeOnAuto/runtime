@@ -70,6 +70,7 @@ export {
   ClientIdSchema,
   ClientSourceSchema,
   WayClientSourceSchema,
+  WayPkceSchema,
   clientMetadataDocumentOf,
   isSameIssuer,
   wayClientSources,
@@ -80,6 +81,7 @@ export {
   type RegisteredCredential,
   type TokenEndpointAuthMethod,
   type WayClientSource,
+  type WayPkce,
 } from './consent/client-sources.ts';
 export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
 export { makeConsentClient } from './consent/consent-making.ts';

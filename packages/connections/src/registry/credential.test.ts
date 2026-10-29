@@ -69,7 +69,7 @@ describe('the fields of a credential of the kind authorization', () => {
       [
         [
           '/in',
-          'Expected no in: an authorization credential takes issuer, scope, parameters, authorization_endpoint, token_endpoint, revocation_endpoint, clients, client_id, and client_source',
+          'Expected no in: an authorization credential takes issuer, scope, parameters, authorization_endpoint, token_endpoint, revocation_endpoint, pkce, clients, client_id, and client_source',
         ],
       ],
       [['/client_source', 'Expected no client_source: a secret credential takes name, in, and scheme']],

@@ -20,6 +20,7 @@ export interface ClientRegistration {
   readonly clientMetadataDocuments?: boolean;
   readonly dynamicRegistration?: boolean;
   readonly challengeMethods?: readonly string[];
+  readonly takesNoChallenge?: boolean;
   readonly grantedScope?: string;
   readonly issuesRefreshTokens?: boolean;
   readonly namesTokenType?: boolean;
