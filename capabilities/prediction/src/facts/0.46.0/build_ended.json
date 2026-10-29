@@ -1,0 +1,13 @@
+{
+  "type": "build_ended",
+  "data": {
+    "build": "build-4"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

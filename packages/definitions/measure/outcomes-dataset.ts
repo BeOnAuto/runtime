@@ -87,7 +87,11 @@ export function runOf(playbook: string, run: number, recordBytes: number): reado
   const stream = `playbook/o1/${playbook}/runs/${runIdOf(run)}`;
   const row = rowsOfRun(stream, run);
   return [
-    row(1, { type: 'run_started', data: { input: { text: text(320) } } }, at),
+    row(
+      1,
+      { type: 'run_started', data: { input: { text: text(320) }, started_by: { id: 'user-1', name: 'user-1' } } },
+      at,
+    ),
     row(2, finishOf(run, recordBytes), finishedAt),
   ];
 }

@@ -1,0 +1,14 @@
+{
+  "type": "build_asked",
+  "data": {
+    "build": "build-4",
+    "asked_at": "2026-10-29T09:00:00.000Z"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

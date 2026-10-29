@@ -1,0 +1,20 @@
+{
+  "type": "tool_call_failed",
+  "data": {
+    "number": 1,
+    "because": "server_failure",
+    "detail": "The server answered 502",
+    "duration_ms": 90,
+    "jsonrpc_id": null,
+    "server_request_id": null,
+    "rate_limited": true
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "reasoning",
+    "definitionName": "qualify-lead",
+    "definitionVersion": 2
+  }
+}

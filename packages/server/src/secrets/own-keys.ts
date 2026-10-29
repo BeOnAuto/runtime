@@ -27,7 +27,7 @@ const OwnKeyPurposeSchema = Schema.Literals(['retry_state']);
 
 type OwnKeyPurpose = typeof OwnKeyPurposeSchema.Type;
 
-const OwnKeyEventSchema = Schema.Union([
+export const OwnKeyEventSchema = Schema.Union([
   factOf('own_key_kept', Schema.Struct({ purpose: OwnKeyPurposeSchema, secret_id: Schema.String }), ActedContextSchema),
 ]);
 

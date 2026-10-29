@@ -1,0 +1,12 @@
+{
+  "type": "action_admitted",
+  "data": {
+    "run": "run-1",
+    "until": "2026-10-29T10:10:00.000Z",
+    "basis": "licensed"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

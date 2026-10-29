@@ -15,9 +15,14 @@ export { registeredClientSecrets } from './registered-clients/registered-clients
 export type { RuntimeAccess } from './policy/policy-rules.ts';
 export { ConnectionSchema, type Connection } from './registry/connection.ts';
 export { connectionChanges } from './registry/connection-changes.ts';
+export { ConnectionEventSchema } from './registry/connection-events.ts';
 export { byTheRuntime, connectionsStream, connectionsStreamOfOrg } from './registry/registry-decider.ts';
 export { makeConnectionSource } from './serving/connection-source.ts';
-export { clientRegistrationsStream, makeClientRegistrations } from './registrations/client-registrations.ts';
+export {
+  RegistrationEventSchema,
+  clientRegistrationsStream,
+  makeClientRegistrations,
+} from './registrations/client-registrations.ts';
 export { makeProviderOffering } from './providers/provider-offering.ts';
 export { makeProviderResolver } from './providers/provider-resolver.ts';
 export type { ServingServices } from './serving/serving-services.ts';

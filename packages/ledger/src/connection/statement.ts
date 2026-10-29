@@ -15,7 +15,7 @@ export function statementOf(parts: readonly string[], values: readonly Statement
   return { strings: Object.assign([...parts], { raw: [...parts] }), values };
 }
 
-export function onSQLite({ strings, values }: Statement): SQL {
+export function sqlOf({ strings, values }: Statement): SQL {
   return SQL(strings, ...values);
 }
 

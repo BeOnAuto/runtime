@@ -1,0 +1,53 @@
+{
+  "type": "model_call_answered",
+  "data": {
+    "number": 2,
+    "finish_reason": "tool_calls",
+    "raw_finish_reason": "tool_use",
+    "usage": {
+      "input": {
+        "total": 1200,
+        "uncached": 200,
+        "cache_read": 1000,
+        "cache_write": 0
+      },
+      "output": {
+        "total": 300,
+        "text": 250,
+        "reasoning": 50
+      },
+      "total": 1500
+    },
+    "cost_usd": 0.012,
+    "response_id": "response-1",
+    "duration_ms": 2100,
+    "request_bytes": 5000,
+    "response_bytes": 800,
+    "response_sha256": "b1c2d3",
+    "resolved_model": "model-large-1",
+    "answered_model": "model-large-1",
+    "warnings": [
+      {
+        "type": "unsupported",
+        "feature": "seed",
+        "detail": null
+      }
+    ],
+    "tool_calls": [
+      {
+        "call_id": "call-2",
+        "tool": "find_contact",
+        "server": "crm",
+        "arguments_sha256": "e4f5a6"
+      }
+    ]
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "reasoning",
+    "definitionName": "qualify-lead",
+    "definitionVersion": 2
+  }
+}

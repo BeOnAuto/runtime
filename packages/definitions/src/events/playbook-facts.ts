@@ -95,7 +95,7 @@ function definitionFactOf(id: string, definitionType: string, { type, context }:
   };
 }
 
-function factOf(record: RecordedFact): CloudEvent | undefined {
+function cloudEventOf(record: RecordedFact): CloudEvent | undefined {
   const { id, stream } = record;
   const kind = streamKindOf(stream);
   const named = stream.slice(kind.length + 1);
@@ -116,7 +116,7 @@ function lineageOf({ causationId, correlationId }: RecordedFact): Readonly<Recor
 }
 
 export function playbookFactOf(record: RecordedFact): CloudEvent | undefined {
-  const fact = factOf(record);
+  const fact = cloudEventOf(record);
   return fact === undefined ? undefined : { ...fact, ...lineageOf(record) };
 }
 

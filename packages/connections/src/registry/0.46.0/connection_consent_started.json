@@ -1,0 +1,15 @@
+{
+  "type": "connection_consent_started",
+  "data": {
+    "connection": "connection-1",
+    "state_sha256": "d4e5f6",
+    "verifier_secret_id": "secret-2",
+    "client_id": "client-1",
+    "client_source": "dynamic",
+    "expires_at": "2026-10-29T10:10:00.000Z"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

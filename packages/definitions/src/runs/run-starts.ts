@@ -1,10 +1,9 @@
-import { RunContextSchema, type RunContext } from '@on.auto/operations';
-import { Option, Schema } from 'effect';
+import { factReaderOf, type RunContext } from '@on.auto/operations';
 
-const decodeStart = Schema.decodeUnknownOption(
-  Schema.Struct({ type: Schema.Literal('run_started'), context: RunContextSchema }),
-);
+import { RunStartedSchema } from './run-events.ts';
+
+const readStart = factReaderOf(RunStartedSchema);
 
 export function runStartedOf(recorded: unknown): RunContext | undefined {
-  return Option.getOrUndefined(Option.map(decodeStart(recorded), ({ context }) => context));
+  return readStart(recorded)?.context;
 }

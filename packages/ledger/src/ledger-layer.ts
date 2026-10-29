@@ -1,4 +1,4 @@
-import { Ledger, type ContentStore, type RunOutcomeMapping, type KeyedProjection } from '@on.auto/operations';
+import { Ledger, type ContentStore } from '@on.auto/operations';
 import { Context, Effect, Layer, Semaphore } from 'effect';
 
 import { signalledOn, type AppendSignal } from './appends/append-signal.ts';
@@ -7,16 +7,14 @@ import { LedgerChores, orphansSweptOf } from './content/content-sweep.ts';
 import type { AppendListeners, LedgerStore } from './event-store.ts';
 import { makeLedger } from './ledger-service.ts';
 import { LedgerLog } from './log/ledger-log.ts';
+import type { KeptTables } from './projections/projection-parts.ts';
 
 export interface OpenedWith {
   readonly appends?: AppendSignal | undefined;
   readonly content?: ContentStore | undefined;
 }
 
-export interface StoreLayerOptions extends OpenedWith, AppendListeners {
-  readonly runOutcomes?: RunOutcomeMapping | undefined;
-  readonly projections?: readonly KeyedProjection[] | undefined;
-}
+export interface StoreLayerOptions extends OpenedWith, AppendListeners, KeptTables {}
 
 export interface OpenedLedger {
   readonly store: LedgerStore;

@@ -8,7 +8,7 @@ export interface CallLink {
   readonly run: number;
 }
 
-export type TriggerKind = 'event' | 'cron' | 'every';
+type TriggerKind = 'event' | 'cron' | 'every';
 
 export interface TriggerLink {
   readonly kind: TriggerKind;

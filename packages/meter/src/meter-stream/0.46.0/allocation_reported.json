@@ -1,0 +1,14 @@
+{
+  "type": "allocation_reported",
+  "data": {
+    "allocation": "allocation-1",
+    "installation": "installation-1",
+    "sequence": 3,
+    "spent": 40,
+    "at": "2026-10-29T12:00:00.000Z"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

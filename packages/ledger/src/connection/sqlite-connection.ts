@@ -4,7 +4,7 @@ import type { LedgerStreams } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ConnectionPorts, ReadRows } from './ledger-connection.ts';
 import { lastAnswerOf, wroteARow, type StatementAnswer } from './statement-answers.ts';
-import { onSQLite } from './statement.ts';
+import { sqlOf } from './statement.ts';
 
 interface WriterTransaction {
   readonly execute: { readonly command: (sql: SQL) => Promise<StatementAnswer> };
@@ -46,7 +46,7 @@ export interface SQLiteConnecting {
 const deferred = { mode: 'DEFERRED' } as const;
 
 function readsIn({ execute }: ReaderTransaction): ReadRows {
-  return async (asked) => (await execute.query(onSQLite(asked))).rows;
+  return async (asked) => (await execute.query(sqlOf(asked))).rows;
 }
 
 function snapshotsOn(pool: SQLitePool, inMemory: boolean): ConnectionPorts['readConsistently'] {
@@ -63,15 +63,15 @@ function snapshotsOn(pool: SQLitePool, inMemory: boolean): ConnectionPorts['read
 }
 
 export function sqliteConnectionOn(pool: SQLitePool, { inMemory, streams }: SQLiteConnecting): ConnectionPorts {
-  const write = async (asked: Parameters<ReadRows>[0]) => (await pool.execute.command(onSQLite(asked))).rows;
+  const write = async (asked: Parameters<ReadRows>[0]) => (await pool.execute.command(sqlOf(asked))).rows;
   return {
     dialect: 'sqlite',
     streams,
-    read: async (asked) => (await pool.execute.query(onSQLite(asked))).rows,
+    read: async (asked) => (await pool.execute.query(sqlOf(asked))).rows,
     write,
     transaction: (statements) =>
       pool.withTransaction(async ({ execute }) => {
-        const last = await lastAnswerOf(statements, (asked) => execute.command(onSQLite(asked)));
+        const last = await lastAnswerOf(statements, (asked) => execute.command(sqlOf(asked)));
         return { success: wroteARow(last), result: last.rows };
       }),
     readConsistently: snapshotsOn(pool, inMemory),

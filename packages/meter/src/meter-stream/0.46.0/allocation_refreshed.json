@@ -1,0 +1,16 @@
+{
+  "type": "allocation_refreshed",
+  "data": {
+    "id": "allocation-1",
+    "refresh_by": "2026-10-31T10:00:00.000Z",
+    "allocation": {
+      "payload": "eyJ2IjoyfQ",
+      "signature": "c2lnbmVk",
+      "kid": "auto-2026-10"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

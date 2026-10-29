@@ -88,7 +88,7 @@ function readingFact(event: Reading, content: KeptContent): PresentedFact {
   };
 }
 
-function factOf(event: RecordedConversationCall, content: KeptContent): PresentedFact {
+function presentedFactOf(event: RecordedConversationCall, content: KeptContent): PresentedFact {
   if (event.type === 'replies_read' || event.type === 'reading_failed') {
     return readingFact(event, content);
   }
@@ -125,6 +125,8 @@ export const conversationCallPresenter: Presenter = {
     replies_read: ['replies_read'],
     reading_failed: ['reading_failed'],
   },
-  present: ({ type, data, context }, content) => [factOf(decodeConversationCall({ type, data, context }), content)],
+  present: ({ type, data, context }, content) => [
+    presentedFactOf(decodeConversationCall({ type, data, context }), content),
+  ],
   changes: changingEvents(['telling_started', 'telling_succeeded', 'telling_failed', 'replies_read', 'reading_failed']),
 };

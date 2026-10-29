@@ -1,0 +1,16 @@
+{
+  "type": "playbook_created",
+  "data": {
+    "playbook": "sales",
+    "name": "Sales",
+    "description": "Leads, quotes and orders",
+    "created_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

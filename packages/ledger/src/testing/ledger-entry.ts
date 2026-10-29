@@ -5,6 +5,7 @@ import { onTestFinished } from 'vitest';
 import type { LedgerConnection } from '../connection/ledger-connection.ts';
 import type { LedgerStore, RecordedStore, StatementExecutor } from '../event-store.ts';
 import type { LayoutDialect } from '../layout/layout-dialects.ts';
+import type { LayoutCarrying } from '../layout/layout-steps.ts';
 import type { LedgerServices, OpenedLedger } from '../ledger-layer.ts';
 import type { StreamSignal } from '../signal/append-signal.ts';
 import { openLedgerWith } from './open-ledger.ts';
@@ -25,6 +26,7 @@ export interface LedgerEntry {
   readonly queried: (database: string, statement: string) => Promise<readonly unknown[]>;
   readonly executedOn: <A>(database: string, work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
   readonly layout: LayoutDialect;
+  readonly carriedOn: (database: string, carrying: LayoutCarrying) => Promise<void>;
   readonly definitionStreamsIndexed: (database: string) => Promise<boolean>;
   readonly planOf: (database: string, read: (store: RecordedStore) => Promise<unknown>) => Promise<string>;
   readonly throughTheKindIndex: string;

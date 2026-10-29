@@ -48,7 +48,7 @@ export function recordingOf<Event extends Recorded>(
   return (event, context) => recordedOf({ ...event, context });
 }
 
-function recordedFieldsOf(recorded: unknown): Readonly<Record<'type' | 'data' | 'context', unknown>> {
+export function recordedFieldsOf(recorded: unknown): Readonly<Record<'type' | 'data' | 'context', unknown>> {
   const fields = new Object(recorded);
   const type: unknown = Reflect.get(fields, 'type');
   const data: unknown = Reflect.get(fields, 'data');

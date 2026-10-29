@@ -29,28 +29,44 @@ export const RequestAnsweredSchema = Schema.Struct({
   answered_by: RecordedCallerSchema,
 });
 
+export const RunStartedSchema = factOf(
+  'run_started',
+  Schema.Struct({
+    input: Schema.Json,
+    started_by: RecordedCallerSchema,
+    calls_tools: Schema.optionalKey(Schema.Literal(true)),
+    finishes_later: Schema.optionalKey(Schema.Literal(true)),
+    resumes: Schema.optionalKey(Schema.Literal(true)),
+    output_shape: Schema.optionalKey(OutputShapeNameSchema),
+  }),
+  RunContextSchema,
+);
+
+export const RunSucceededSchema = factOf(
+  'run_succeeded',
+  Schema.Struct({ output: Schema.Json, record: Schema.JsonObject }),
+  RunContextSchema,
+);
+
+export const RunRejectedSchema = factOf(
+  'run_rejected',
+  Schema.Struct({ rejection: RunRejectionSchema, record: Schema.optionalKey(Schema.JsonObject) }),
+  RunContextSchema,
+);
+
+export const RunFailedSchema = factOf(
+  'run_failed',
+  Schema.Struct({ incident: Schema.optionalKey(Schema.String) }),
+  RunContextSchema,
+);
+
 const coreFactSchemas = [
-  factOf(
-    'run_started',
-    Schema.Struct({
-      input: Schema.Json,
-      started_by: RecordedCallerSchema,
-      calls_tools: Schema.optionalKey(Schema.Literal(true)),
-      finishes_later: Schema.optionalKey(Schema.Literal(true)),
-      resumes: Schema.optionalKey(Schema.Literal(true)),
-      output_shape: Schema.optionalKey(OutputShapeNameSchema),
-    }),
-    RunContextSchema,
-  ),
+  RunStartedSchema,
   factOf('run_deferred', Schema.Struct({ record: Schema.JsonObject }), RunContextSchema),
   factOf('attempt_resumed', Schema.Struct({ attempt: Schema.Int }), RunContextSchema),
-  factOf('run_succeeded', Schema.Struct({ output: Schema.Json, record: Schema.JsonObject }), RunContextSchema),
-  factOf(
-    'run_rejected',
-    Schema.Struct({ rejection: RunRejectionSchema, record: Schema.optionalKey(Schema.JsonObject) }),
-    RunContextSchema,
-  ),
-  factOf('run_failed', Schema.Struct({ incident: Schema.optionalKey(Schema.String) }), RunContextSchema),
+  RunSucceededSchema,
+  RunRejectedSchema,
+  RunFailedSchema,
   factOf(
     'run_cancel_requested',
     Schema.Struct({ kind: CancelRequestKindSchema, reason: Schema.String }),
@@ -104,11 +120,11 @@ const StoredFactSchema = Schema.Struct({ type: Schema.String, data: Schema.JsonO
 
 type StoredFact = typeof StoredFactSchema.Type;
 
-const WorkSchema = factOf(
-  'work',
-  Schema.Struct({ fact: Schema.Struct({ type: Schema.String, data: Schema.JsonObject }) }),
-  RunContextSchema,
-);
+const WorkSchema = Schema.Struct({
+  type: Schema.Literal('work'),
+  data: Schema.Struct({ fact: Schema.Struct({ type: Schema.String, data: Schema.JsonObject }) }),
+  context: RunContextSchema,
+});
 
 type Work = typeof WorkSchema.Type;
 

@@ -23,7 +23,7 @@ export interface RecordedAnswer {
 export interface RecordedWork {
   readonly type: string;
   readonly data: Schema.JsonObject;
-  readonly at: string;
+  readonly context: RunContext;
 }
 
 export interface RecordedRunState extends CallNumbering {
@@ -169,7 +169,7 @@ export function recordedAnswerOf({ data, context }: RecordedAnswerFact): Recorde
 }
 
 function workOf({ data, context }: RecordedRunFact<'work'>): RecordedWork {
-  return { type: data.fact.type, data: data.fact.data, at: context.at };
+  return { type: data.fact.type, data: data.fact.data, context };
 }
 
 type RecordedAfterTheStart = Exclude<RecordedRunEvent, RecordedRunFact<'run_started'>>;

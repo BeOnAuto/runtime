@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/server": "2.3.1",
+    "@on.auto/ledger": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"

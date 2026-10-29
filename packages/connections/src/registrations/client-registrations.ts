@@ -21,7 +21,7 @@ import { byTheRuntime } from '../registry/registry-decider.ts';
 
 export const clientRegistrationsStream = 'runtime/client-registrations';
 
-const RegistrationEventSchema = Schema.Union([
+export const RegistrationEventSchema = Schema.Union([
   factOf(
     'client_registered',
     Schema.Struct({

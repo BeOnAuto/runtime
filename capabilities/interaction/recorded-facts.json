@@ -1,0 +1,7 @@
+{
+  "src/facts/0.46.0/delivery_failed.json": "ef45f82aa0ab8631a4030b188fa7a4310b5018fef78f242f2e4a791b3e200bc8",
+  "src/facts/0.46.0/delivery_refused.json": "f686d4d72fc129977d39fdaa7bc209357b36425285c3f99cf0a0ccdae1db87d8",
+  "src/facts/0.46.0/delivery_started.json": "1b8d8d1cdf967171b4f35bae17268f86eea3c98c8d94146f85485e770e7531d0",
+  "src/facts/0.46.0/delivery_succeeded.json": "021db72f4785d94bc2ba809df0077a8baf6dee606c48705482ee99196e849ff4",
+  "src/facts/0.46.0/reply_refused.json": "9f5775e5c64c226896d97c3e32f9cb08655ea94d3c3763403fb1cc64d0467263"
+}

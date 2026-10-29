@@ -128,6 +128,7 @@ export { defineValidate } from './tool-reads/validate.ts';
 export { defineDryRun } from './tool-reads/dry-run.ts';
 export { defineExecute } from './execute/execute.ts';
 export { answeredInWords, failedInWords, toolInWords } from './names/tool-words.ts';
+export { HandCallEventSchema } from './hand-calls/hand-call-events.ts';
 export { handCallPresenter } from './hand-calls/hand-call-presenter.ts';
 export { conversationCallPresenter } from './own-calls/conversation-call-presenter.ts';
 export { defaultTiming, runBoundMs, toolBounds, type Timing } from './bounds/call-bounds.ts';
