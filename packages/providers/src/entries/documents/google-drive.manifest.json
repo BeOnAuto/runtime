@@ -15,7 +15,15 @@
     {
       "method": "drive.files.get",
       "parameters": ["acknowledgeAbuse"],
-      "because": "It applies only to a download with alt=media, which the document does not write"
+      "because": "It acknowledges the risk of downloading a file flagged as malware or abuse, which a call never does for the person who connected"
+    }
+  ],
+  "global_parameters": [
+    {
+      "method": "drive.files.get",
+      "parameter": "alt",
+      "values": ["media"],
+      "says": "With `alt=media`, the call answers the text of the file where the runtime reads its type, a text file, a PDF or a Word document, and otherwise its type and its size."
     }
   ]
 }

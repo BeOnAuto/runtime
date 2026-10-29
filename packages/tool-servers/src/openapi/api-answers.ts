@@ -1,13 +1,13 @@
 import { extractWWWAuthenticateParams } from '@modelcontextprotocol/client';
-import { boundedAnswerOf } from '@on.auto/outbound';
 
-import { toolBounds } from '../bounds/call-bounds.ts';
 import { decodeToolResult } from '../bounds/tool-results.ts';
 import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
+import { fileTextOf, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
 import { AnsweredStatus } from './answered-status.ts';
 import { unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
 import { decodedAnswer } from './byte-strings.ts';
+import { DocumentTooLarge } from './document-too-large.ts';
 import { ScopeLacking, scopeLackingIn } from './scope-lacking.ts';
 
 export interface Answering {
@@ -18,7 +18,6 @@ export interface Answering {
 interface ContentBlock {
   readonly type: string;
   readonly text?: string;
-  readonly mimeType?: string;
 }
 
 interface Answer {
@@ -42,6 +41,10 @@ function mediaTypeOf(response: Readonly<Response>): string | undefined {
   return written === undefined || written === '' ? undefined : written;
 }
 
+function isJson(mediaType: string | undefined): boolean {
+  return mediaType !== undefined && jsonMediaType.test(mediaType);
+}
+
 function observedOf(response: Readonly<Response>, answering: Answering, tooLarge: boolean): Observed {
   const { requestIdHeader, now } = answering;
   return {
@@ -52,10 +55,6 @@ function observedOf(response: Readonly<Response>, answering: Answering, tooLarge
       tooLarge,
     },
   };
-}
-
-function isShown(mediaType: string | undefined): boolean {
-  return mediaType !== undefined && (jsonMediaType.test(mediaType) || mediaType.startsWith('text/'));
 }
 
 function parsedJson(text: string): { readonly parsed: unknown } | undefined {
@@ -75,6 +74,10 @@ function jsonAnswer(text: string, parsed: unknown, answers: AnswerSchemas): Answ
   };
 }
 
+function textAnswer(text: string): Answer {
+  return text === '' ? { content: [] } : { content: [{ type: 'text', text }] };
+}
+
 function shownAnswer(status: number, mediaType: string | undefined, text: string, answers: AnswerSchemas): Answer {
   if (status >= 300) {
     return {
@@ -82,11 +85,8 @@ function shownAnswer(status: number, mediaType: string | undefined, text: string
       isError: true,
     };
   }
-  if (text === '') {
-    return { content: [] };
-  }
-  const json = mediaType !== undefined && jsonMediaType.test(mediaType) ? parsedJson(text) : undefined;
-  return json === undefined ? { content: [{ type: 'text', text }] } : jsonAnswer(text, json.parsed, answers);
+  const json = isJson(mediaType) ? parsedJson(text) : undefined;
+  return json === undefined ? textAnswer(text) : jsonAnswer(text, json.parsed, answers);
 }
 
 function settled(answer: Answer, observed: Observed): CallSettled {
@@ -95,19 +95,17 @@ function settled(answer: Answer, observed: Observed): CallSettled {
   return { result: decodeToolResult(answer), resultJson: JSON.stringify(kept), observed };
 }
 
-function unreadAnswer(status: number, mediaType: string | undefined): Answer {
-  return redirected(status)
-    ? {
-        content: [
-          { type: 'text', text: `The tool server answered a redirect, HTTP ${status}, which a call does not follow` },
-        ],
-        isError: true,
-      }
-    : { content: [{ type: 'binary', ...(mediaType === undefined ? {} : { mimeType: mediaType }) }] };
+function redirectAnswer(status: number): Answer {
+  return {
+    content: [
+      { type: 'text', text: `The tool server answered a redirect, HTTP ${status}, which a call does not follow` },
+    ],
+    isError: true,
+  };
 }
 
-function leftUnread(status: number, mediaType: string | undefined, hasBody: boolean): boolean {
-  return failed(status) || redirected(status) || (status < 300 && !isShown(mediaType) && hasBody);
+function isAFile(response: Readonly<Response>, mediaType: string | undefined): boolean {
+  return response.status < 300 && response.body !== null && !isJson(mediaType);
 }
 
 interface Shown {
@@ -128,26 +126,35 @@ function shownOrRefused(
     : { error: new ScopeLacking(lacking), observed };
 }
 
+async function unreadSettled(response: Readonly<Response>, answering: Answering): Promise<CallSettled> {
+  await response.body?.cancel();
+  const observed = observedOf(response, answering, false);
+  return failed(response.status)
+    ? { error: new AnsweredStatus(response.status), observed }
+    : settled(redirectAnswer(response.status), observed);
+}
+
 export async function settledOf(
   response: Readonly<Response>,
   answering: Answering,
   answers: AnswerSchemas = unschemedAnswers,
+  file: AnsweredFile = unreadFiles,
 ): Promise<CallSettled> {
-  const mediaType = mediaTypeOf(response);
-  if (leftUnread(response.status, mediaType, response.body !== null)) {
-    await response.body?.cancel();
-    const observed = observedOf(response, answering, false);
-    return failed(response.status)
-      ? { error: new AnsweredStatus(response.status), observed }
-      : settled(unreadAnswer(response.status, mediaType), observed);
+  if (failed(response.status) || redirected(response.status)) {
+    return unreadSettled(response, answering);
   }
+  const mediaType = mediaTypeOf(response);
   let tooLarge = false;
   try {
-    const text = await boundedAnswerOf(response, toolBounds.httpAnswerBytes, () => {
+    if (isAFile(response, mediaType)) {
+      const text = await fileTextOf(response, file);
+      return settled(textAnswer(text), observedOf(response, answering, false));
+    }
+    const text = await shownTextOf(response, () => {
       tooLarge = true;
-    }).text();
+    });
     return shownOrRefused(response, { mediaType, text, answers }, observedOf(response, answering, false));
   } catch (error) {
-    return { error, observed: observedOf(response, answering, tooLarge) };
+    return { error, observed: observedOf(response, answering, tooLarge || error instanceof DocumentTooLarge) };
   }
 }

@@ -47,10 +47,22 @@ export async function predictionFunctionsServedBy(
   runtime: Parameters<typeof predictionServedBy>[0],
   settings: Pick<Settings, 'prediction' | 'interaction'>,
   pool: ProgramPool,
-  { store, provided, features }: Omit<PredictionServing, 'runtimes'> & { readonly provided: ImplementationsProvided },
+  {
+    store,
+    provided,
+    features,
+    modelProcesses,
+  }: Omit<PredictionServing, 'runtimes'> & {
+    readonly provided: ImplementationsProvided;
+  },
 ): Promise<ServedPredictionFunctions> {
   const runtimes = provided(modelRuntimePoint);
-  const { ports, withProcessesClosed } = await predictionServedBy(runtime, settings, { store, runtimes, features });
+  const { ports, withProcessesClosed } = await predictionServedBy(runtime, settings, {
+    store,
+    runtimes,
+    features,
+    modelProcesses,
+  });
   return {
     ports,
     withProcessesClosed,

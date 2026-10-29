@@ -127,14 +127,15 @@ describe('the address of a call of an HTTP API', () => {
 });
 
 describe('the request of a call of an HTTP API', () => {
-  it('fills the path with its encoded arguments and the query with repeated keys and the parameters of the entry', () => {
+  it('fills the path with its encoded arguments and the query with repeated keys and the parameters of the entry, asking for JSON first and taking any answer', () => {
     expect(apiRequestOf(listing, { folder: 'a b', id: 7, tag: ['x', true], limit: null }, endpoint)).toEqual(
       Result.succeed({
         url: 'https://graph.example.com/v1/notes/a%20b/7?tag=x&tag=true&tenant=acme',
         method: 'GET',
-        headers: { 'X-Api-Key': 'graph-api-key-4f1d9a7c2b', accept: 'application/json' },
+        headers: { 'X-Api-Key': 'graph-api-key-4f1d9a7c2b', accept: 'application/json, */*;q=0.5' },
         body: null,
         usesToken: false,
+        named: undefined,
       }),
     );
   });
@@ -146,19 +147,47 @@ describe('the request of a call of an HTTP API', () => {
       Result.succeed('https://graph.example.com/v1/notes/a,b/c'),
     );
   });
+});
 
-  it('sends the body as JSON in the media type of the operation', () => {
+describe('the file a call of an HTTP API names', () => {
+  it('is the argument of a path parameter its operation names a file name, and no other', () => {
+    const fetching: ApiOperation = {
+      ...listing,
+      path: '/folders/{folder}/files/{file_name}',
+      inputs: [
+        { name: 'folder', in: 'path' },
+        { name: 'file_name', in: 'path' },
+      ],
+    };
+    const namesOf = (input: Readonly<Record<string, unknown>>) =>
+      Result.map(apiRequestOf(fetching, input, endpoint), ({ named }) => ({ named }));
+
+    expect([
+      namesOf({ folder: 'terms', file_name: 'Supplier terms.pdf' }),
+      namesOf({ folder: 'terms', file_name: 7 }),
+      Result.map(apiRequestOf(listing, { folder: 'a', id: 'terms.pdf' }, endpoint), ({ named }) => ({ named })),
+    ]).toEqual([
+      Result.succeed({ named: 'Supplier terms.pdf' }),
+      Result.succeed({ named: undefined }),
+      Result.succeed({ named: undefined }),
+    ]);
+  });
+});
+
+describe('the body of a call of an HTTP API', () => {
+  it('is sent as JSON in the media type of the operation', () => {
     expect(apiRequestOf(writing, { body: { text: 'Hello' } }, endpoint)).toEqual(
       Result.succeed({
         url: 'https://graph.example.com/v1/notes?tenant=acme',
         method: 'POST',
         headers: {
           'X-Api-Key': 'graph-api-key-4f1d9a7c2b',
-          accept: 'application/json',
+          accept: 'application/json, */*;q=0.5',
           'content-type': 'application/merge-patch+json',
         },
         body: '{"text":"Hello"}',
         usesToken: false,
+        named: undefined,
       }),
     );
     expect(

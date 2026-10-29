@@ -35,6 +35,7 @@
     "@on.auto/connections": "workspace:*",
     "@on.auto/coordination": "workspace:*",
     "@on.auto/definitions": "workspace:*",
+    "@on.auto/documents": "workspace:*",
     "@on.auto/identity": "workspace:*",
     "@on.auto/interaction": "workspace:*",
     "@on.auto/ledger": "workspace:*",

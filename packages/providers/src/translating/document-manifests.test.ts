@@ -147,13 +147,16 @@ describe('the documents translated from their manifests', () => {
 });
 
 describe('the manifests that change the parameters of their methods', () => {
-  it('are written with the parameters they require and leave out as they are', async () => {
+  it('are written with the parameters they require, leave out and keep of the global ones as they are', async () => {
     const changed = {
       ...uncut,
       methods: ['tracker.projects.issues.list'],
       required: [{ method: 'tracker.projects.issues.list', parameters: ['pageSize'], because: 'Its vendor says so' }],
       left_out_parameters: [
         { method: 'tracker.projects.issues.list', parameters: ['labels'], because: 'A call never sends it' },
+      ],
+      global_parameters: [
+        { method: 'tracker.projects.issues.list', parameter: 'alt', values: ['media'], says: 'It answers media.' },
       ],
     };
     const shipped = shippedWith({ 'bare.manifest.json': changed });

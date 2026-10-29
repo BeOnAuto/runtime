@@ -96,10 +96,14 @@ export function admission(tally: CallTally, { tool, callId, input }: CallAsked):
     : { admitted: false, tally: counted, refusal };
 }
 
-const measured = new Intl.NumberFormat('en');
+const counts = new Intl.NumberFormat('en');
+
+export function measured(count: number): string {
+  return counts.format(count);
+}
 
 function cutNote(shown: number, bytes: number): string {
-  return `\n[The answer was cut to ${measured.format(shown)} of its ${measured.format(bytes)} bytes, to fit what the model may still read; ask for fewer rows, fields or depth to see the rest.]`;
+  return `\n[The answer was cut to ${measured(shown)} of its ${measured(bytes)} bytes, to fit what the model may still read; ask for fewer rows, fields or depth to see the rest.]`;
 }
 
 export function shownResult(text: string, room?: number): ShownResult {

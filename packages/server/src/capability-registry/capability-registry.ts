@@ -4,6 +4,7 @@ import type { ModelAccess, ModelTelemetry } from '@on.auto/reasoning';
 import type { ToolAccess, ToolServerDocumentRefused } from '@on.auto/tool-servers';
 import { Effect, type Layer, type Scope } from 'effect';
 
+import { processesServedBy, type ServedProcesses } from '../composition/served-processes.ts';
 import { ComposedModels, modelsComposedBy, type ModelAccessOf } from '../composition/served-reasoning.ts';
 import {
   ComposedTools,
@@ -18,6 +19,7 @@ export interface CapabilityRegistry {
   readonly models: Effect.Effect<ModelAccess>;
   readonly modelTelemetry: ModelTelemetry | undefined;
   readonly tools: Effect.Effect<ToolAccess, ToolServerDocumentRefused>;
+  readonly processes: ServedProcesses;
 }
 
 export interface HeldRegistry {
@@ -39,13 +41,18 @@ function capabilityRegistryOf(
   settings: Settings,
   wiring: RegistryWiring,
 ): Effect.Effect<CapabilityRegistry, never, Scope.Scope> {
+  const processes = processesServedBy(settings);
   return Effect.all({
     models: composedOnFirstUse(
       ComposedModels,
       modelsComposedBy(settings, wiring.modelAccessOf, wiring.telemetry.models),
     ),
     modelTelemetry: Effect.succeed(wiring.telemetry.models),
-    tools: composedOnFirstUse(ComposedTools, toolsComposedBy(runtime, settings, wiring)),
+    tools: composedOnFirstUse(
+      ComposedTools,
+      toolsComposedBy(runtime, settings, { ...wiring, documents: processes.documents }),
+    ),
+    processes: Effect.succeed(processes),
   });
 }
 

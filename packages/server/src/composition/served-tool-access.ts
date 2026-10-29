@@ -34,6 +34,10 @@ export interface ServedConnections {
   readonly connections: ConnectionSource;
 }
 
+interface ServedDocuments {
+  readonly documents: NonNullable<ToolAccessOptions['documents']>;
+}
+
 type ToolSettings = Pick<Settings, 'toolServers' | 'registeredClients'>;
 
 export class ComposedTools extends Context.Service<ComposedTools, ToolAccess>()('@on.auto/server/ComposedTools') {}
@@ -41,7 +45,14 @@ export class ComposedTools extends Context.Service<ComposedTools, ToolAccess>()(
 export function toolsComposedBy(
   runtime: AppRuntime<DispatcherServices>,
   { toolServers, registeredClients }: ToolSettings,
-  { toolTiming, now, consent, connections, telemetry }: ToolAccessWiring & ServedConnections,
+  {
+    toolTiming,
+    now,
+    consent,
+    connections,
+    telemetry,
+    documents,
+  }: ToolAccessWiring & ServedConnections & ServedDocuments,
 ): Layer.Layer<ComposedTools, ToolServerDocumentRefused> {
   const traceMeta = telemetry?.traceMeta;
   const reportLeftOut: Describing['reportLeftOut'] = (server, leftOut) => {
@@ -53,6 +64,7 @@ export function toolsComposedBy(
       consent,
       fetch: outboundFetch,
       connections,
+      documents,
       reportLeftOut,
       ...(toolTiming === undefined ? {} : { timing: toolTiming }),
       ...(now === undefined ? {} : { now }),

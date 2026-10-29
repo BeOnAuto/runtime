@@ -1,6 +1,6 @@
 name: google-drive
 title: Google Drive
-description: The first way searches, lists and reads every file of the person's Google Drive, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and creates and changes nothing. The second reaches only the files Auto creates, and creates empty files and copies files.
+description: The first way searches, lists and reads every file of the person's Google Drive, text included, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and changes nothing. The second reaches only the files Auto creates, and creates empty files and copies files.
 website: https://developers.google.com/workspace/drive/api/reference/rest/v3
 type: openapi
 document: documents/google-drive.openapi.json

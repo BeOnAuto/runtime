@@ -206,7 +206,11 @@ function serverFailures(underTest: ServerUnderTest, source: SourceUnderTest): vo
 
     const { reply } = await calledThrough({ fake, source }, 'search', { query: 'acme' });
 
-    expect(reply).toMatchObject({ isError: false, outcome: 'result', text: 'Found 2 rows for acme.' });
+    expect(reply).toMatchObject({
+      isError: false,
+      outcome: 'result',
+      text: fake.answeredText('Found 2 rows for acme.'),
+    });
     expect(fake.calls()).toBe(2);
   });
 }

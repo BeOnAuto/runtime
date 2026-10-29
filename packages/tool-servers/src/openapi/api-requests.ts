@@ -17,6 +17,7 @@ export interface ApiRequest {
   readonly headers: Readonly<Record<string, string>>;
   readonly body: string | null;
   readonly usesToken: boolean;
+  readonly named: string | undefined;
 }
 
 type Scalar = string | number | boolean;
@@ -28,6 +29,8 @@ const dotSegment = /^(?:\.|%2e){1,2}$/iu;
 const segmentSeparators = /[/\\]/u;
 
 const droppedByAddresses = /[\t\n\r]/gu;
+
+const fileNameParameter = /^file[_-]?name$/iu;
 
 export function keepsItsSegments(path: string): boolean {
   return !path
@@ -80,6 +83,12 @@ function pathOf(operation: ApiOperation, input: Readonly<Record<string, unknown>
   return keepsItsSegments(path)
     ? Result.succeed(path)
     : Result.fail('The path arguments would take the call out of the path of this operation, as a . or a .. does');
+}
+
+function fileNameArgumentOf(operation: ApiOperation, input: Readonly<Record<string, unknown>>): string | undefined {
+  const named = operation.inputs.find((each) => each.in === 'path' && fileNameParameter.test(each.name));
+  const value = named === undefined ? undefined : input[named.name];
+  return typeof value === 'string' ? value : undefined;
 }
 
 function formEncoded(text: string): string {
@@ -154,7 +163,7 @@ function headersOf(operation: ApiOperation, endpoint: ApiEndpoint, body: string 
       [...endpoint.headers].map(([name, value]: readonly [string, Redacted.Redacted]) => [name, Redacted.value(value)]),
     ),
     ...Object.fromEntries(operation.credentials.flatMap((placement) => credentialHeader(placement))),
-    accept: 'application/json',
+    accept: 'application/json, */*;q=0.5',
     ...(body === null || operation.body === null ? {} : { 'content-type': operation.body.mediaType }),
   };
 }
@@ -176,6 +185,7 @@ export function apiRequestOf(
         headers: headersOf(operation, endpoint, body),
         body,
         usesToken: operation.credentials.some(({ kind }) => kind === 'token'),
+        named: fileNameArgumentOf(operation, input),
       })),
     ),
   );

@@ -48,39 +48,28 @@ describe('an answer of an HTTP API that is shown', () => {
     });
   });
 
-  it('of text, or of JSON that does not parse, is text, and an empty one is no content', async () => {
+  it('of JSON that does not parse is text, and an empty one is no content, whatever its type', async () => {
     expect(
       await resultsOf(
-        new Response('Found 2 rows.', { headers: { 'content-type': 'text/plain' } }),
         new Response('{', { headers: { 'content-type': 'application/json' } }),
         new Response(null, { status: 204 }),
+        new Response('', { headers: { 'content-type': 'text/plain' } }),
       ),
-    ).toEqual([
-      { content: [{ type: 'text', text: 'Found 2 rows.' }] },
-      { content: [{ type: 'text', text: '{' }] },
-      { content: [] },
-    ]);
+    ).toEqual([{ content: [{ type: 'text', text: '{' }] }, { content: [] }, { content: [] }]);
   });
 });
 
 describe('an answer of an HTTP API that is not shown as it is', () => {
-  it('of another media type, or of none, is noted and not shown', async () => {
-    expect(
-      await resultsOf(
-        new Response('png', { headers: { 'content-type': 'image/png' } }),
-        new Response(new Uint8Array([1, 2])),
-      ),
-    ).toEqual([{ content: [{ type: 'binary', mimeType: 'image/png' }] }, { content: [{ type: 'binary' }] }]);
-  });
-
-  it('of an error other than 401, 429 and 5xx is an error result carrying its body, or its status when it has none', async () => {
+  it('of an error other than 401, 429 and 5xx is an error result carrying its body, of any type and never read as a document, or its status when it has none', async () => {
     expect(
       await resultsOf(
         new Response('{"title":"Not Found"}', { status: 404, headers: { 'content-type': 'application/problem+json' } }),
+        new Response('<p>Gone</p>', { status: 410, headers: { 'content-type': 'text/html' } }),
         new Response(null, { status: 409 }),
       ),
     ).toEqual([
       { content: [{ type: 'text', text: '{"title":"Not Found"}' }], isError: true },
+      { content: [{ type: 'text', text: '<p>Gone</p>' }], isError: true },
       { content: [{ type: 'text', text: 'The tool server answered HTTP 409' }], isError: true },
     ]);
   });
@@ -127,9 +116,9 @@ describe('an answer of an HTTP API that fails its call', () => {
     ]);
   });
 
-  it('larger than a call over HTTP may take is a failure noted as too large', async () => {
+  it('of JSON larger than a call over HTTP may take is a failure noted as too large', async () => {
     const settled = await settledOf(
-      new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'text/plain' } }),
+      new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'application/json' } }),
       { requestIdHeader: null, now: Date.now },
     );
 

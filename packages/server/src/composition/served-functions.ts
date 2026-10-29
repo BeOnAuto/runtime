@@ -52,6 +52,7 @@ export async function functionsServedBy(
     store: projections.store,
     provided: extensions.provided,
     features,
+    modelProcesses: tools.registry.processes.pool,
   });
   const capabilities = [
     reasoning.capability,

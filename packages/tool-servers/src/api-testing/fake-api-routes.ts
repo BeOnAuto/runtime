@@ -1,3 +1,5 @@
+import { fileNamed, pixel } from './fake-api-files.ts';
+
 export interface SeenApiRequest {
   readonly method: string;
   readonly path: string;
@@ -23,7 +25,7 @@ export interface ApiAnswering {
 
 type Route = (request: Readonly<Request>, url: Readonly<URL>) => Promise<Response> | Response;
 
-const pixel = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const filesPath = '/files/';
 
 function bodyOf(text: string): unknown {
   const parsed: unknown = JSON.parse(text);
@@ -77,6 +79,9 @@ export async function answerTo(request: Readonly<Request>, path: string, answeri
   const route = routes.get(`${request.method} ${path}`);
   if (path === '/denied') {
     return withRequestId(problem(403, answering.deniedText), answering.requestIdHeader, requestId);
+  }
+  if (path.startsWith(filesPath)) {
+    return fileNamed(decodeURIComponent(path.slice(filesPath.length)));
   }
   const response = route === undefined ? noSuchRoute(request) : await route(request, new URL(request.url));
   return withRequestId(response, answering.requestIdHeader, requestId);
