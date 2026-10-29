@@ -1,6 +1,6 @@
 {
   "name": "@on.auto/prediction-contract",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The contract between Auto Runtime's prediction capability and the model runtimes that execute the models of prediction functions: the schemas and types a model runtime is built against.",
   "keywords": [
     "auto",
