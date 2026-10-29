@@ -326,7 +326,7 @@ The three build routes work only on a build that is waiting for its answer:
 - that runtime finds its signature does not match what the function feeds it;
 - the build already has the 8 candidates it accepts.
 
-A candidate in a format whose model runtime needs a [feature](../self-host/licenses.md#features) the runtime's license does not include is refused before the body is read, as `conflict` with the kind `feature_unlicensed`. Its `detail` names the feature and the format and says where an owner adds the feature, which `resolve_at` links, and the brief never lists such a format.
+A candidate in a format whose model runtime needs a [feature](../self-host/licensing.md#features) the runtime's license does not include is refused before the body is read, as `conflict` with the kind `feature_unlicensed`. Its `detail` names the feature and the format and says where an owner adds the feature, which `resolve_at` links, and the brief never lists such a format.
 
 While every model process available to builds is busy, it returns `unavailable` with the kind `model_process_busy` and a `Retry-After`. The check shares those processes with the builds' scoring, and never takes one a question needs.
 
@@ -1247,7 +1247,7 @@ A connected connection is a tool server of its org: `search` lists it with `conn
 
 ## License
 
-A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month; with a key it runs on the credits of an org at Auto, starting each run itself against a license Auto signed and reporting what it started every hour. [Licenses](../self-host/licenses.md) sets out how a key is had, the other ways to activate it and how a licensed runtime runs. These routes are relative to `/v1/orgs/{org}`; the license covers the whole runtime, whatever org the route names.
+A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month; with a key it runs on the credits of an org at Auto, starting each run itself against a license Auto signed and reporting what it started every hour. [License a self-hosted runtime](../self-host/licenses.md) sets out how a key is had and the ways to activate it, and the [self-hosted licensing reference](../self-host/licensing.md) how a licensed runtime runs. These routes are relative to `/v1/orgs/{org}`; the license covers the whole runtime, whatever org the route names.
 
 | Operation             | Method and route                  | Permission                    | Input                                                                                          |
 | --------------------- | --------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -1281,7 +1281,7 @@ A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a U
 
 `activate_license` answers `200` with the same document. The runtime keeps the key in its secret store, so it stands after a restart, unless `AUTO_RUNTIME_LICENSE_KEY` or the configuration file gives another, which wins at each start. A key that is not one of Studio is refused as `invalid_input`; one Auto does not know, rotated away, removed or for another runtime, and a license not signed by Auto, as `license_invalid`; a key of an org whose account is closed as `account_closed`; and an account service that cannot be reached as `unavailable` of the kind `meter_unavailable`. Activating the same key again takes a fresh license.
 
-`activate_allocation` and `report_allocation` serve a [runtime on offline credits](../self-host/licenses.md#offline-runtimes), and are served over HTTP alone. `activate_allocation` answers `200` with `allocation`, its id, `installation`, the runtime's id, `credits`, `spent`, what the runtime admitted on them, and `refresh_by`, the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order; offline credits not signed by Auto, for another runtime or past their date are refused as `license_invalid`, and what is not their JSON as `invalid_input`. Giving the same credits again changes nothing but a later `refresh_by`. `report_allocation` answers `200` with `report`, `{ allocation, installation, sequence, spent, at }`, the next number and all spent so far, and `signature`, its HMAC-SHA256 under the runtime's key, the JSON an owner uploads in Studio; a runtime with no offline credits, with no key to sign with, or holding others than those named, is refused as `conflict`.
+`activate_allocation` and `report_allocation` serve a [runtime on offline credits](../self-host/licensing.md#offline-credits), and are served over HTTP alone. `activate_allocation` answers `200` with `allocation`, its id, `installation`, the runtime's id, `credits`, `spent`, what the runtime admitted on them, and `refresh_by`, the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order; offline credits not signed by Auto, for another runtime or past their date are refused as `license_invalid`, and what is not their JSON as `invalid_input`. Giving the same credits again changes nothing but a later `refresh_by`. `report_allocation` answers `200` with `report`, `{ allocation, installation, sequence, spent, at }`, the next number and all spent so far, and `signature`, its HMAC-SHA256 under the runtime's key, the JSON an owner uploads in Studio; a runtime with no offline credits, with no key to sign with, or holding others than those named, is refused as `conflict`.
 
 ## Responses and errors
 
@@ -1376,9 +1376,9 @@ A run the runtime's meter refuses carries, beside its `detail`, where a person r
 A refusal at the free rate, one whose `because` is `free_daily_limit` or `free_month_used` from a self-hosted runtime, also carries:
 
 - `lifts_at`, when the limit lifts, in ISO 8601 UTC: 00:00 UTC on the next day for `free_daily_limit`, and on the first of the next month for `free_month_used`, such as `"2026-10-29T00:00:00.000Z"`;
-- `limited_because`, on `credits_exhausted` and `license_invalid`, why a runtime that holds a key is limited to the free rate, as `GET /v1/orgs/{org}/license` says it: `credits` or `cap` on `credits_exhausted`, and `out_of_touch`, `key_rotated`, `key_revoked`, `org_closed` or `not_activated` on `license_invalid`. A runtime without a key has none, and Auto Cloud's refusals carry neither member.
+- `limited_because`, on `credits_exhausted` and `license_invalid`, why a runtime that holds a key is limited to the free rate, as `GET /v1/orgs/{org}/license` says it: `credits` or `cap` on `credits_exhausted`, and `out_of_touch`, `key_rotated`, `key_revoked`, `org_closed` or `not_activated` on `license_invalid`. A runtime without a key has none, and hosted Auto's refusals carry neither member.
 
-The origin of Studio is the one `STUDIO_ORIGIN` names. [Licenses](../self-host/licenses.md#when-a-run-is-refused) gives the words of each.
+The origin of Studio is the one `STUDIO_ORIGIN` names. [Refusals](../self-host/licensing.md#refusals) gives the words of each.
 
 [When a tool-calling run cannot finish](reasoning-format.md#when-a-tool-calling-run-cannot-finish) explains when a run ends as `tools_unfinished` or `effect_unknown`. [Retrying under a run id](#retrying-under-a-run-id) says when a request returns `tools_called`.
 

@@ -414,7 +414,7 @@ A candidate is the model's file, sent as `application/octet-stream` with its `Co
 
 - A body without a `Content-Length` is refused with 411, and one past 64 MiB with 413, before the body is read.
 - `format`, one the brief lists, may be left out when it lists one; another is refused `invalid_input` at `/format` before the body is read.
-- A format whose model runtime needs a [feature](../self-host/licenses.md#features) the runtime's license does not include is not in the brief, and is refused `conflict` with the kind `feature_unlicensed` before the body is read, in words that name the feature, the format and where to add the feature, with that page in `resolve_at`.
+- A format whose model runtime needs a [feature](../self-host/licensing.md#features) the runtime's license does not include is not in the brief, and is refused `conflict` with the kind `feature_unlicensed` before the body is read, in words that name the feature, the format and where to add the feature, with that page in `resolve_at`.
 - The runtime of its format checks the file in a model process within 30 seconds. The playbook refuses it as `invalid_input` when the runtime does not load it or finds its signature is not the one the function feeds, and any file once the build has its 8 candidates.
 - It responds `unavailable` with the kind `model_process_busy` while every model process a build may hold is taken. A check holds one of the processes that builds share, never one a question needs.
 - The same accepted bytes sent again return the same result, and nothing is recorded for them twice. A refused file sent again is checked again and refused again.
@@ -545,7 +545,7 @@ The runtime has models of its own, in the format `series`: JSON recipes, a name 
 
 ### The default forecast
 
-A function with no active version answers from the level-adjusted seasonal naive with a season, and persistence, or the run-rate for a total, without one. Its record names the runtime `series`, holds `version: null` and says `default_forecast: true`; nothing is activated. A function whose active version is in a format whose model runtime needs a [feature](../self-host/licenses.md#features) the license does not include answers from the default forecast too, while the license does not include it, and its record also says `because: "feature_unlicensed"` and the `feature`, as the run's words do. A default forecast whose own model is in such a format is refused `feature_unlicensed`.
+A function with no active version answers from the level-adjusted seasonal naive with a season, and persistence, or the run-rate for a total, without one. Its record names the runtime `series`, holds `version: null` and says `default_forecast: true`; nothing is activated. A function whose active version is in a format whose model runtime needs a [feature](../self-host/licensing.md#features) the license does not include answers from the default forecast too, while the license does not include it, and its record also says `because: "feature_unlicensed"` and the `feature`, as the run's words do. A default forecast whose own model is in such a format is refused `feature_unlicensed`.
 
 ### What a build does without a trainer
 

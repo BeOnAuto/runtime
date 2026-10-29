@@ -6,201 +6,102 @@ head:
       content: noindex, follow
 ---
 
-# Licenses
+# License a self-hosted runtime
 
-Auto Runtime counts the runs it starts: each run of a workflow or a function counts once by its run id, however often it is asked again, retried or resumed. Nothing else is counted, neither a model call nor the compute a function takes. The runtime counts from its own record of the runs it admitted, which it keeps in its ledger, never by counting your run history again, so deleting, redacting or restoring the history of your runs never stops it.
+Give a runtime you host a free license key, so it runs on your organization's credits instead of the free rate. This guide registers the runtime in Studio, activates its key and checks where it stands. It also covers rotating or revoking a key and running a runtime that can't reach Auto.
 
-A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month, for as long as you like, and never calls Auto. With a key, it runs on the credits of the org that registered it: it starts each run itself against a license Auto signed, and reports what it started every hour. A key costs nothing, and every org has a free plan.
+Without a key, a runtime runs its first 100 runs, then at most 15 a UTC day and 75 a UTC month, and never uses credits. The [self-hosted licensing reference](licensing.md) sets out every rule, limit and refusal.
 
-## Without a key
+## Before you start
 
-A runtime nobody registered runs its first 100 runs, then at the free rate of 15 runs a UTC day and 75 a UTC calendar month. It counts both itself, from the runs it admitted. The run past the free rate is refused with `license_required`, whose `detail` says which limit it reached, when it lifts and where to get a key, with that page of Studio in `resolve_at`, the limit in `because`, `free_daily_limit` or `free_month_used`, when it lifts in `lifts_at`, and the runtime's id in `runtime_id`:
+- Be an admin of the organization whose credits the runtime should use. In your personal organization, you are.
+- Find the runtime's id. It is in the link the runtime prints as it starts, `Get a free key at https://studio.on.auto/licenses?installation=<runtime id>`, in the `runtime_id` of a refusal, and in `GET /v1/orgs/{org}/license`.
+- Let the runtime reach `https://billing.on.auto` over HTTPS. Allow it in your egress rules beside `studio.on.auto`.
 
-```json
-{
-  "type": "https://on.auto/problems/license_required",
-  "title": "License required",
-  "status": 409,
-  "detail": "This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. It has used all of today's free runs, so it can start runs again at 00:00 UTC on 2026-10-29. To run more, get a free license key at https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a and activate it on this runtime.",
-  "reason": "conflict",
-  "kind": "license_required",
-  "because": "free_daily_limit",
-  "resolve_at": "https://studio.on.auto/licenses?installation=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
-  "runtime_id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
-  "lifts_at": "2026-10-29T00:00:00.000Z"
-}
+## 1. Register the runtime {#register-the-runtime}
+
+1. Open the link the runtime printed, or a refusal's `resolve_at`. You can also open Settings, Self-hosted in [Studio](https://studio.on.auto).
+2. Choose the organization whose credits the runtime should use.
+3. Give the runtime a name, such as "Build server". Keep the runtime id the link filled in. Leave it blank only for a runtime that has never run, and Studio makes one.
+4. Choose Register.
+
+Studio shows the key once, `alk.<org>.<runtime id>.<secret>`. Copy it to where you keep your other secrets. You can register a runtime before its free runs run out.
+
+## 2. Activate the key {#activate-the-key}
+
+Give the runtime its key in one of these ways:
+
+| Way                    | How                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| The environment        | Set `AUTO_RUNTIME_LICENSE_KEY` to the key, in the `.env` the runtime reads or its container's environment, and restart the runtime          |
+| The configuration file | Set `license.key` to a reference to the variable that holds the key, since the file never holds a secret itself, and restart the runtime    |
+| The command            | With the runtime running on this computer, started by `npx @on.auto/runtime`, run `npx -y @on.auto/runtime license activate <key>`          |
+| Studio                 | Connect Studio to the runtime, open Settings, Runtime, paste the key under License and choose Activate                                      |
+| The API                | `POST /v1/orgs/{org}/license` with `{ "key": "<key>" }`, or the MCP tool `activate_license`. It needs permission to change the organization |
+
+In the configuration file, the key reads like this:
+
+```yaml
+license:
+  key: ${ACME_LICENSE_KEY}
 ```
 
-A workflow whose call is refused this way waits at that step and asks again, so it goes on once the limit lifts.
+A key activated by the command, Studio or the API is kept in the runtime's secret store, so it stays after a restart. A key in the environment or the configuration file is read at every start, and wins over one activated any other way. The key covers the whole runtime, whichever organization the route names.
 
-## Register the runtime in Studio
+## 3. Check where it stands {#check-where-it-stands}
 
-Open the refusal's `resolve_at`, or Studio's Licenses page with the runtime id that [its license](#see-where-the-runtime-stands) gives, while signed in to Studio as an owner of the org whose credits the runtime should run on, and register the runtime under a name. Studio shows the key once, `alk.<org>.<runtime id>.<secret>`. Keep it where you keep your other secrets; an owner can rotate it, which retires the old key, or remove the runtime from the org.
+The command answers in one line, such as:
 
-You can register a runtime before its free runs run out. A runtime whose ledger is new takes the id of the first key it holds.
-
-## Activate the key
-
-Give the runtime its key in one of four ways. A key in the environment or the configuration file is activated each time the runtime starts and wins over one activated by the command or through the API.
-
-- **The environment.** Set `AUTO_RUNTIME_LICENSE_KEY` to the key, in the `.env` the runtime reads or the environment of its container, and restart the runtime.
-- **The configuration file.** Write a reference to the variable that holds the key under `license.key`, since the file never holds a secret itself:
-
-  ```yaml
-  license:
-    key: ${ACME_LICENSE_KEY}
-  ```
-
-- **The command.** With Auto Runtime running on your computer, started by `npx @on.auto/runtime`, run:
-
-  ```sh
-  npx -y @on.auto/runtime license activate alk.<org>.<runtime id>.<secret>
-  ```
-
-  It asks the runtime running on this computer to activate the key, and says where the runtime stands, the org by its name at Auto, or by its id where Auto names none:
-
-  ```text
-  Licensed to Acme Corporation on the free plan, with 1000 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a. Features: none.
-  ```
-
-- **Studio, or any client of the API.** `POST /v1/orgs/{org}/license` with `{ "key": "<the key>" }`, or the MCP tool `activate_license`, activates the key for the whole runtime and answers where it stands, as [`GET /v1/orgs/{org}/license`](#see-where-the-runtime-stands) does. It takes the permission to change the org, as adding a connection does.
-
-A key activated by the command or through the API is kept in the runtime's secret store, as the credentials of connections are, so it stands after a restart. A key given in the environment or the file is activated as the runtime starts; until Auto has answered for a new key, the runtime runs as it would without one.
-
-## How a licensed runtime runs
-
-The runtime activates its key by asking Auto's account service at `https://billing.on.auto`, which answers a license Auto signs: the org, its name at Auto, its plan and how its credits stand, and `admits_through`, the count of licensed runs the runtime may reach on them. The runtime ships Auto's public key and checks every license against it; no setting adds or replaces a key, and a license not signed by Auto is refused.
-
-From then on the runtime starts each run itself while its count of licensed runs is below `admits_through`, and asks Auto nothing for the run. Every hour, and sooner once it has used half of what its license left it (at most once a minute), and as it stops, it reports two numbers: the runs it admitted in all, and those it admitted on its license. Auto takes credits for the licensed runs it has not charged before, and answers a fresh license. Runs admitted without a key, or at the free rate, are never charged.
-
-A paid plan may go into overage up to its cap, a quarter of its monthly credits, which the org's next credits repay first. Past the cap, or out of credits on the Free plan, the runtime runs at the free rate until credits arrive, and takes them at its next report.
-
-When the runtime cannot reach Auto, it goes on with its last license. Fourteen days after Auto signed that license it says it is out of touch, and from 28 days it runs at the free rate until it reaches Auto again. Time alone never stops it.
-
-When an owner rotates the key or removes the runtime from its org, the runtime runs at the free rate until a valid key is activated. It never stops outright.
-
-A runtime that held a key once runs no new first 100 runs: whenever it is without a usable license, it runs at the free rate. A ledger wiped, or restored from an older copy, and started again with the same key gains nothing either: whenever the runtime takes a license, as it activates its key or as Auto answers a report, it takes what Auto already charged as the least of its licensed count. A restored ledger reports a lower count once, which Auto charges nothing for, and counts on from what Auto charged after that.
-
-The runtime reaches `billing.on.auto` over HTTPS; allow it in your egress rules beside `studio.on.auto`.
-
-## See where the runtime stands
-
-`GET /v1/orgs/{org}/license` answers where the runtime stands. Every member of an org may read it, and it covers the whole runtime, whatever org the route names; Studio reads it to show the runtime's license.
-
-```json
-{
-  "state": "licensed",
-  "limited_because": null,
-  "runtime_id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
-  "free_runs": null,
-  "org": "acme",
-  "org_name": "Acme Corporation",
-  "plan": "team",
-  "features": ["prediction-onnx"],
-  "standing": "overage",
-  "licensed": 2430,
-  "runs_left": 570,
-  "credits": { "available": 0, "owed": 30, "overage_cap": 600 },
-  "issued_at": "2026-10-28T12:00:00.000Z",
-  "warn_at": "2026-11-11T12:00:00.000Z",
-  "limit_at": "2026-11-25T12:00:00.000Z",
-  "last_report_at": "2026-10-28T12:00:00.000Z",
-  "fallback": null,
-  "key_source": "environment",
-  "offline": null,
-  "invalid_because": null,
-  "summary": "Licensed to Acme Corporation on the team plan, with 570 runs left. The organization owes 30 credits of overage, and its cap is 600. Its next credits repay the overage first."
-}
+```text
+Licensed to Acme Corporation on the team plan, with 570 runs left. Runtime id 0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a. Features: none.
 ```
 
-- `state` is `unregistered` while the runtime holds no key; `licensed` while it runs on its license; `out_of_touch` from the license's `warn_at` while it has not reached Auto, still running on that license; `limited` while it runs at the free rate though it holds a key; `offline` while it spends [offline credits](#offline-runtimes); and `invalid` once those credits have stopped.
-- `limited_because` says why a limited runtime runs at the free rate: `credits`, its org has none left on the Free plan; `cap`, its org owes as much overage as its plan allows; `out_of_touch`, it has not reached Auto since the license's `limit_at`; `key_rotated`, its key was replaced; `key_revoked`, it was removed from its org or Auto no longer accepts its key; `org_closed`, its org was closed; `not_activated`, it holds a key Auto has not answered for yet. It is `null` otherwise.
-- `runtime_id` is the id an owner registers in Studio. A runtime that has no id yet takes one as it is first read, the id its first run would have taken.
-- `free_runs` is `{ used, of }`, the first runs the runtime used of its 100, while it has never held a license, and `null` once it has.
-- `org`, `org_name`, `plan`, `standing`, `credits`, `issued_at`, `warn_at` and `limit_at` are those of the license of the key in force, `standing` being `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`, and all `null` without one. `org_name` is kept on one line of at most 80 characters, its control and format characters taken out, and is `null` where Auto named none or a blank one.
-- `features` lists the [features](#features) of the license in force, `[]` without a license in force: without a key, before its key is activated, once the license lapsed at its `limit_at`, unless live offline credits stand, once its key was replaced or removed or its org closed, or once offline credits it holds stopped. A license whose org has run out of credits is still in force, so its features stand while the runtime runs at the free rate.
-- `licensed` is the runs the runtime started on a license, in all, and `runs_left` the runs it may still start on its license, `0` while it is limited, `null` without a license.
-- `last_report_at` is when the runtime last took a license from Auto, as it activated its key or reported.
-- `fallback` is the free rate it runs at, `{ per_day, per_month, used_today, used_this_month, lifts_at }`, while it runs at it, `lifts_at` being when it can run again once it has used what the rate allows; `null` otherwise.
-- `key_source` says where the key in force came from: `environment`, `configuration` or `activated`, by the command or the API; `null` without a key.
-- `offline` is `{ credits, spent, usable_until }` while the runtime holds offline credits, and `invalid_because` the words a run is refused in once they have stopped.
-- `summary` says all of it in plain words, with how to put it right.
+The runtime says where it stands as it starts, in its terminal and on the page it serves at its root. `GET /v1/orgs/{org}/license` answers it as `summary`, beside `state`, the license's dates and its [features](licensing.md#features); the [HTTP reference](../reference/http.md#license) describes each field.
 
-Started by `npx @on.auto/runtime`, the runtime says its `summary` in its terminal and on the page it serves at its root, such as `This runtime has used 12 of its 100 free runs. After that, without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. Get a free license key at https://studio.on.auto/licenses?installation=….` without a key, `Licensed to Acme Corporation on the free plan, with 940 runs left.` once it is licensed, or, while it runs at the free rate, why, what it has used and how to put it right.
+In Studio, Settings, Self-hosted lists each runtime with its state, its last report and when it would warn and fall back. Settings, Runtime shows the same for the runtime Studio is connected to.
 
-## Features
+| Studio shows                | `state`                                       | What to do                                                                                                                 |
+| --------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Licensed                    | `licensed`                                    | Nothing. It reports every hour                                                                                             |
+| Registered, not activated   | `unregistered` or `limited`                   | Activate the key on the runtime                                                                                            |
+| Out of touch                | `out_of_touch`                                | Check that it can reach `billing.on.auto`                                                                                  |
+| Limited to the free rate    | `limited`                                     | Follow the reason Studio gives. [Falling back to the free rate](licensing.md#falling-back-to-the-free-rate) lists each one |
+| Revoked                     | `limited`                                     | Register it again to use credits                                                                                           |
+| Offline, or Offline, paused | `offline`, or `invalid` once its credits stop | Upload its reports, and request new credits before these run out                                                           |
 
-A feature is a part of Auto Runtime licensed on its own, beyond the runs a license admits. A license lists the features its org's agreement includes, and a license that lists none includes none. Each is a name of lower-case letters, digits and hyphens; a name of another shape is left out, and the rest of the license stands. The ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository, needs the feature `prediction-onnx`; the release's own model runtime, `series`, needs none, so it always runs.
+## Rotate a key
 
-A [model runtime](../reference/model-runtimes.md) that names a feature does its work only while the license in force lists it. Every piece of its work is checked as it starts, so nothing it executes can run without the feature:
+Rotate a key when it may have leaked, or when it is lost.
 
-- A build offers a trainer none of its formats, and a candidate uploaded in one is refused `409` with the kind `feature_unlicensed`, whose `detail` says which feature the license does not include, which format it executes and where to add it, `This runtime's license does not include prediction-onnx, which executes onnx models. The account holder or an organization admin can add it at https://studio.on.auto/licenses?installation=….`, with that page in `resolve_at`.
-- A candidate in one of its formats that a build has not scored yet is disqualified `feature_unlicensed`, and a model a build fits itself in one of them is refused `feature_unlicensed`, each in those words.
-- A version in one of its formats is not walked in a shadow, which records why. A close at which either version was not walked decides nothing and uses up none of the shadow's closes, so a lapse never changes which version is active; the shadow goes on once the feature is back, within its most of 52 closes. A lapse that outlasts those 52 closes ends the shadow as failed for the challenger, which is not activated, and the active version stays active.
-- A prediction function whose active version is in one of its formats answers from the runtime's own models, the [default forecast](../reference/prediction-format.md#the-default-forecast), and its record says why, `because: "feature_unlicensed"` and the `feature`. A default forecast whose model is in one of its formats is refused `feature_unlicensed`.
-- A runtime that names a feature fits neither a build's candidates nor the default forecast while the license lacks it; the next runtime that fits does, as the release's `series` does.
+1. In Self-hosted, choose Rotate key on the runtime, and confirm.
+2. Copy the new key Studio shows once.
+3. [Activate it](#activate-the-key) on the runtime. If the old key is in the environment or the configuration file, replace it there.
 
-When the license lapses at its `limit_at`, or its key is replaced or removed, or its org is closed, nothing stops: each prediction function goes on answering, from the runtime's own models where its active version needs the feature, and candidates in those formats are refused until a license that lists the feature is in force again. The function's active version answers again from then on, with nothing to rebuild. A license whose org has run out of credits, or reached its overage cap, is still in force, so its features stand while its runs are limited to the free rate.
+The old key stops working at once. Until the new one is active, the runtime runs at the free rate. A workflow that goes over that rate waits at its next call for up to 24 hours. Every admin of the organization gets an email about the change.
 
-A runtime on [offline credits](#offline-runtimes) keeps the features of the license it holds for as long as live offline credits admit its runs, past the license's `limit_at`, since such a runtime never reaches Auto to renew it; once the credits stop, so do the features.
+## Revoke a runtime
 
-`GET /v1/orgs/{org}/license` lists the features in force as `features`, and `auto-runtime license activate` ends with them, `Features: prediction-onnx.` or `Features: none.` A runtime that cannot read its own ledger to check a feature answers the work `503` `meter_unavailable`, as it answers a run it cannot admit, and a build waits and tries again.
+Revoke a runtime that should no longer use the organization's credits. In Self-hosted, choose Revoke on the runtime, and confirm.
 
-## When a run is refused
+Its key stops working, and the runtime runs at the free rate. Its run history stays. To use credits again, register it again with the same runtime id and activate the new key.
 
-Each refusal is a problem document with the status `409`, the reason `conflict` and one of these kinds, or with `503` and the kind `meter_unavailable`. Beside its `detail`, a refusal that a person resolves somewhere gives that page's absolute URL in `resolve_at`, the runtime's id in `runtime_id`, and its case in `because`, so Studio and an agent can offer the way out. A refusal at the free rate also gives when the limit lifts in `lifts_at`, in ISO 8601 UTC, and, for a runtime that holds a key, why it is limited in `limited_because`, which reads as `limited_because` of [where the runtime stands](#see-where-the-runtime-stands) does. A workflow whose call is refused with one of these kinds waits at that step and asks again.
+## Run a runtime that can't reach Auto {#offline}
 
-| Kind                | Means                                                                                                                                                                                                                                                                                            | What to do                                                                                                                             |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `license_required`  | The runtime holds no key and has used the free rate, `because` `free_daily_limit` or `free_month_used`                                                                                                                                                                                           | Wait until the time its `detail` gives, or get a free key at `resolve_at` and [activate it](#activate-the-key)                         |
-| `credits_exhausted` | The runtime runs at the free rate since its org has no credits or owes its cap, and has used the rate, `because` `free_daily_limit` or `free_month_used`; or its offline credits are spent, `because: "none_left"`                                                                               | An owner adds credits at `resolve_at`, Billing in Studio, which the runtime takes at its next report; or requests more offline credits |
-| `license_invalid`   | The runtime runs at the free rate since its key was rotated or removed, its organization is closed, it has been out of touch since its license's `limit_at` or it has not activated its key, and has used the rate; or its offline credits stopped; or a key it was given to activate is invalid | Its `detail` says which, and how to put it right at `resolve_at`                                                                       |
-| `meter_unavailable` | The runtime could not read or write its own ledger to admit the run, or could not reach Auto to activate a key                                                                                                                                                                                   | Ask again shortly                                                                                                                      |
+A runtime behind an air gap can't report to Auto, so it spends offline credits that Auto signs for it.
 
-The `detail` of a refusal at the free rate says why the runtime runs at it, which limit it reached and when it lifts, and how to put it right:
+1. In Self-hosted, choose Request offline credits on the runtime. Enter how many credits, and why you need them, then choose Send request.
+2. When Auto has sent them, choose Download on the runtime. You can download them only once, so keep the file until the runtime has them.
+3. Give them to the runtime, with its key, which signs its reports. Run the command Studio shows on the runtime's computer, `npx @on.auto/runtime license allocation '<what you downloaded>'`. Or set `AUTO_RUNTIME_ALLOCATION` to what you downloaded, or `license.allocation` in the configuration file, and restart the runtime.
 
-| Case                    | Kind and `detail`                                                                                                                                                                                                                                                                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| No key                  | `license_required`: `This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month.`, or `This runtime has no license key, so it's limited to …` for one that held a key once, then the limit, then `To run more, get a free license key at {resolve_at} and activate it on this runtime.` |
-| No credits              | `credits_exhausted`, `limited_because: "credits"`: `This runtime's organization is out of credits, so the runtime is limited to the free rate of …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}; the runtime picks them up within the hour.`                                                                          |
-| The overage cap         | `credits_exhausted`, `limited_because: "cap"`: `This runtime's organization has reached its overage cap of {cap} credits, so the runtime is limited to …`, the limit, `The account holder or an organization admin can add credits at {resolve_at}. New credits repay the overage first, and the runtime picks them up within the hour.`                           |
-| Out of touch            | `license_invalid`, `limited_because: "out_of_touch"`: `This runtime hasn't reached Auto since {date}, so it has been limited to … since {date}.`, the limit, `Make sure it can reach billing.on.auto. It goes back to its organization's credits at its next report, within the hour.`                                                                             |
-| The key was rotated     | `license_invalid`, `limited_because: "key_rotated"`: `This runtime's license key was replaced, so it's limited to …`, the limit, `Activate the new key that was shown when the key was rotated. If that key is lost, the account holder or an organization admin can rotate it again at {resolve_at}.`                                                             |
-| The runtime was removed | `license_invalid`, `limited_because: "key_revoked"`: `This runtime was removed from its organization, so it's limited to …`, the limit, `To use the organization's credits again, the account holder or an organization admin can register it again at {resolve_at}, then activate the new key.`                                                                   |
-| The org was closed      | `license_invalid`, `limited_because: "org_closed"`: `This runtime's organization at Auto is closed, so it's limited to …`, the limit, then how to restore the organization or register the runtime with another                                                                                                                                                    |
-| A key not yet activated | `license_invalid`, `limited_because: "not_activated"`: `This runtime's license key isn't activated yet, so it's limited to …`, the limit, `Make sure it can reach billing.on.auto. It activates the key at its next report, within the hour.`                                                                                                                      |
+The command answers what the runtime holds, such as `This runtime uses offline credits: 0 of 50 used, usable until 2026-11-27.` The API takes them too, as `POST /v1/orgs/{org}/license/allocation`.
 
-The limit reads `It has used all of today's free runs, so it can start runs again at 00:00 UTC on {date}.` or `It has used all of this month's free runs, so it can start runs again at 00:00 UTC on {date}.`, the same time `lifts_at` gives.
+To report what the runtime spent:
 
-Activating a key can be refused too: as `license_invalid` for a key that is not one of Studio's, one Auto does not know, one for another runtime, one that was rotated (`because: "key_rotated"`) or removed (`because: "installation_revoked"`), or a license not signed by Auto; and as `account_closed` for a key of an org whose account is closed, `because: "org_deleted"` while an owner can still restore it, until the date at the `resolve_at` Auto gives, or `"org_purged"` once it is gone for good.
+1. On the runtime's computer, run `npx @on.auto/runtime license report`, or `POST /v1/orgs/{org}/license/allocation/report`.
+2. In Self-hosted, choose Upload report on the runtime, and paste the whole output or upload the saved file.
 
-A run asked again under the run id of one that already started is never refused, and counts nothing more. Reading runs and events, editing definitions and exporting go on whatever the license says.
+[Offline credits](licensing.md#offline-credits) gives how long they last and how a runtime that reaches Auto now and then refreshes them.
 
-A workflow is not stopped by these refusals at once. When a step calls a function or a workflow the runtime refuses as `license_required`, `license_invalid`, `credits_exhausted` or `meter_unavailable`, the step waits, says in the run's history what it waits for and where to put it right, and asks again: after a minute, then twice as long each time up to an hour, for 24 hours. Once the free rate lifts, a key is activated or the runtime takes credits at its next report, the workflow goes on from that step, and the steps before it are neither run nor counted again. [When the runtime will not start the run for now](../reference/workflow-format.md#when-the-runtime-will-not-start-the-run-for-now) gives the details.
+## If something goes wrong
 
-## Offline runtimes
-
-A runtime that never reaches Auto, behind an air gap or a network that lets nothing out, cannot report to its org. For it, an operator of Auto issues offline credits: credits moved out of the org's account for that runtime alone, which it spends itself, signed by Auto like every answer the runtime takes, and usable for 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. Ask for them through [Studio's support page](https://studio.on.auto/support), naming the runtime id.
-
-Give the runtime its offline credits, and its key, which signs its reports, in any of these ways. None of them needs Auto: the runtime checks the credits against Auto's public key, which it ships, and keeps them in its ledger.
-
-- **The environment.** Set `AUTO_RUNTIME_ALLOCATION` to their JSON, `{"payload":"…","signature":"…","kid":"…"}`, and `AUTO_RUNTIME_LICENSE_KEY` to the key.
-- **The configuration file.** Write references to the variables that hold them:
-
-  ```yaml
-  license:
-    key: ${ACME_LICENSE_KEY}
-    allocation: ${ACME_ALLOCATION}
-  ```
-
-- **The command.** With Auto Runtime running on your computer, `npx -y @on.auto/runtime license allocation '<their JSON>'`, which says what the runtime holds: `This runtime uses offline credits: 0 of 50 used, usable until 2026-11-27.`
-- **The API.** `POST /v1/orgs/{org}/license/allocation` with `{ "allocation": { "payload": "…", "signature": "…", "kid": "…" } }`.
-
-While it holds offline credits, the runtime starts each new run against them and asks Auto nothing. It counts what it spent from its own record of the runs it admitted since it took them; replicas of one ledger admit exactly that many between them. Past the date Auto signed into them the runtime refuses new runs as `license_invalid`, `This runtime's offline credits expired on 2026-11-27, so it can't start runs. The account holder or an organization admin can request new offline credits at https://studio.on.auto/licenses?installation=…`, and once they are spent as `credits_exhausted` with `because: "none_left"`, `This runtime has used its 50 offline credits, so it can't start more runs. The account holder or an organization admin can request more offline credits at https://studio.on.auto/licenses?installation=…`, each with that page in `resolve_at`.
-
-A runtime that does reach Auto now and then refreshes its offline credits every day, which gives them their days again, and sends Auto a report of what it spent every hour. One that never does needs an owner to carry its reports to Studio:
-
-1. Make the next report on the runtime: `npx -y @on.auto/runtime license report`, or `POST /v1/orgs/{org}/license/allocation/report`. It prints `{"report":{"allocation":…,"installation":…,"sequence":…,"spent":…,"at":…},"signature":…}`: all the runtime spent of them so far, under the next number, signed with its key.
-2. Upload it in Studio, on the runtime's page under Licenses.
-
-Each report counts everything spent, so a later report replaces an earlier one, and a lost report costs nothing. Auto freezes offline credits whose report counts fewer runs than one before it, or comes under a number it already took, as a ledger restored from an older copy does; reach Auto through support to have it looked at. When Auto closes them, the runtime gives them up at its next refresh and runs by its key, or without one, from then on.
+[Troubleshooting](troubleshooting.md#license-required) covers the refusals people meet most, with their fixes. [Refusals](licensing.md#refusals) lists every kind and its words.
