@@ -19,7 +19,9 @@ const DatasetDataSchema = Schema.Struct({
 
 export type DatasetData = typeof DatasetDataSchema.Type;
 
-const DatasetDetailsSchema = Schema.Struct({ data: DatasetDataSchema });
+export const DatasetDetailsSchema = Schema.Struct({ data: DatasetDataSchema });
+
+export type DatasetDetails = typeof DatasetDetailsSchema.Type;
 
 export interface KeptDataset {
   readonly dataSha256: string;

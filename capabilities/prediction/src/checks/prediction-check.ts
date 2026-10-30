@@ -12,7 +12,10 @@ const dataNames = ['$data'];
 
 const nothingToCheck: CheckedDocument = { stripped: noStrippedForms };
 
-function expressionsChecked(pool: ProgramPool, { dataExpressions }: PredictionFunctionDefinitionDocument) {
+function expressionsChecked(
+  pool: Pick<ProgramPool, 'check'>,
+  { dataExpressions }: PredictionFunctionDefinitionDocument,
+) {
   return dataExpressions.length === 0
     ? Effect.succeed(nothingToCheck)
     : checkedAtSave(pool, {
@@ -31,7 +34,7 @@ function placedIssues(
 }
 
 export function predictionCheck(
-  pool: ProgramPool,
+  pool: Pick<ProgramPool, 'check'>,
 ): (document: PredictionFunctionDefinitionDocument) => Effect.Effect<StrippedForms, InvalidInput | Unavailable> {
   return (document) =>
     Effect.flatMap(expressionsChecked(pool, document), (checked) =>

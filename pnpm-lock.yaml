@@ -1167,6 +1167,9 @@ importers:
       '@on.auto/ledger':
         specifier: workspace:*
         version: link:../ledger
+      '@on.auto/meter':
+        specifier: workspace:*
+        version: link:../meter
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations

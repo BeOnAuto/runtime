@@ -180,11 +180,14 @@ allowed_origins:
 
 # The packages Auto Runtime loads as extensions as it starts, each installed
 # beside it and named here in order of precedence, each filling a point a
-# capability declares; no capability of this release declares one. integrity
-# pins the installed files of a package, and a package whose files differ
-# stops the start, naming the integrity of the one installed.
+# capability declares. This release serves capability/prediction: the
+# extension that fills it answers every prediction function in place of the
+# built-in forecaster. An extension reads its own settings from the variables
+# under its prefix, AUTO_RUNTIME_ACME_FORECASTS_ for @acme/forecasts. integrity
+# pins the installed files of a package, and a package whose files differ stops
+# the start, naming the integrity of the one installed.
 # AUTO_RUNTIME_EXTENSIONS wins over it. See
 # https://on.auto/docs/self-host/configuration#extensions
 # extensions:
-#   - package: '@acme/greeter'
+#   - package: '@acme/forecasts'
 #     integrity: sha512-<the base64 a refused start names>

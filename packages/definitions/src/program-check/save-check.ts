@@ -85,7 +85,7 @@ function issuesOf(
 }
 
 export function checkedAtSave(
-  pool: ProgramPool,
+  pool: Pick<ProgramPool, 'check'>,
   job: CheckJob,
   deadlineMs: number = checkDeadlineMs,
 ): Effect.Effect<CheckedDocument, InvalidInput | Unavailable> {

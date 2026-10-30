@@ -71,13 +71,13 @@ describe('a server composed with packages and the features of a license of its o
     expect(answered).toEqual([[true, false]]);
   });
 
-  it('refuses to start for a listed extension that provides a point, since no capability of this release declares one', async () => {
+  it('refuses to start for a listed extension that provides a point this release does not serve, naming the one it serves', async () => {
     const composition = compositionRootWith(loggedModelAccess, {
-      installed: packagesHolding([{ point: 'example/greeter', contract: 1, implementation: {} }]),
+      installed: packagesHolding([{ point: 'capability/greeting', contract: 1, implementation: {} }]),
     });
 
     await expect(startServer(settingsListingTheGreeters(), composition)).rejects.toThrow(
-      'The extension @acme/greeters is refused: it provides example/greeter, which no capability of this runtime declares',
+      'The extension @acme/greeters is refused: it provides capability/greeting, a point this release does not serve; it serves capability/prediction',
     );
   });
 });

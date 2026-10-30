@@ -17,10 +17,7 @@ import { programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Exit, type Schema } from 'effect';
 import { afterEach } from 'vitest';
 
-import {
-  makePredictionFunctionAdapter,
-  type PredictionFunctionAdapterOptions,
-} from '../capability/prediction-function.ts';
+import { predictionFunctionOf, type PredictionFunctionParts } from '../capability/prediction-function.ts';
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import type { DatasetsPort } from '../dataset/datasets-port.ts';
 
@@ -63,7 +60,7 @@ function keptDatasets(): KeptDatasets {
   };
 }
 
-const noDatasetRows: PredictionFunctionAdapterOptions['database'] = {
+const noDatasetRows: PredictionFunctionParts['database'] = {
   readConsistently: (reads) => reads(() => Effect.succeed([])),
 };
 
@@ -85,7 +82,7 @@ function preparedOnTheStandingClock(definition: PreparedDefinition): PreparedDef
 
 export function predictionRuns(pool: ProgramPool = poolOf(), mostFunctions?: number): PredictionRuns {
   const datasets = keptDatasets();
-  const capability = makePredictionFunctionAdapter({
+  const capability = predictionFunctionOf({
     pool,
     database: noDatasetRows,
     datasets,

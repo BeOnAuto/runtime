@@ -1,25 +1,13 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import type { ExtensionPoint } from '@on.auto/definitions';
 import { Result, Schema } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import {
-  listedExtensions,
-  loadedExtensions,
-  packageDirectoryOf,
-  type InstalledPackages,
-  type ListedExtension,
-} from './extension-loading.ts';
+import { configured, manifestSource, scratchFolder, scratchPackages } from '../testing/extensions/scratch-packages.ts';
+import { listedExtensions, loadedExtensions, packageDirectoryOf, type LoadedExtensions } from './extension-loading.ts';
 import { integrityOf } from './package-integrity.ts';
-
-interface Fixture {
-  readonly name: string;
-  readonly module: string;
-}
 
 const GreeterSchema = Schema.Struct({
   name: Schema.String,
@@ -44,14 +32,6 @@ const greeterPoint: ExtensionPoint<Greeter> = {
 
 const points = [greeterPoint];
 
-function scratch(): string {
-  const folder = mkdtempSync(join(tmpdir(), 'auto-runtime-extension-'));
-  onTestFinished(() => {
-    rmSync(folder, { recursive: true, force: true });
-  });
-  return folder;
-}
-
 function greeterSource(greeter: string, greetings: readonly string[], place = 'apart'): string {
   return `{ name: '${greeter}', greetings: ${JSON.stringify(greetings)}, place: '${place}' }`;
 }
@@ -60,47 +40,13 @@ function provisionSource(implementation: string, contract = 1, point = 'example/
   return `{ point: '${point}', contract: ${contract}, implementation: ${implementation} }`;
 }
 
-function manifestSource(name: string, provisions: readonly string[]): string {
-  return `export const manifest = { name: '${name}', version: '1.0.0', provides: [${provisions.join(', ')}] };\n`;
-}
-
-function installed(fixtures: readonly Fixture[]): {
-  readonly packages: InstalledPackages;
-  readonly folderOf: (name: string) => string;
-} {
-  const root = scratch();
-  const folders = new Map(
-    fixtures.map(({ name, module }, at) => {
-      const folder = join(root, `package-${at}`);
-      mkdirSync(folder);
-      writeFileSync(join(folder, 'package.json'), JSON.stringify({ name, type: 'module' }));
-      writeFileSync(join(folder, 'index.mjs'), module);
-      return [name, folder];
-    }),
-  );
-  const folderOf = (name: string): string => {
-    const folder = folders.get(name);
-    if (folder === undefined) {
-      throw new Error(`Cannot find package '${name}'`);
-    }
-    return folder;
-  };
-  return {
-    folderOf,
-    packages: {
-      imported: (name) => import(pathToFileURL(join(folderOf(name), 'index.mjs')).href),
-      directoryOf: folderOf,
-    },
-  };
-}
-
-function configured(...packages: readonly string[]): readonly ListedExtension[] {
-  return packages.map((name) => ({ package: name, provenance: 'configured', ofTheRelease: false }));
+function greetingsProvidedBy(loaded: LoadedExtensions): readonly (readonly [string, readonly string[]])[] {
+  return loaded.provided(greeterPoint).map(({ package: name, implementation }) => [name, implementation.greetings]);
 }
 
 describe('the extensions a runtime loads', () => {
   it('import each listed package, read the manifest it exports, and provide each point its implementations in the order listed', async () => {
-    const { packages } = installed([
+    const { packages } = scratchPackages([
       {
         name: '@acme/greeters',
         module: manifestSource('@acme/greeters', [provisionSource(greeterSource('acme', ['hello', 'hi']))]),
@@ -129,9 +75,9 @@ describe('the extensions a runtime loads', () => {
         provides: [{ point: 'example/greeter', contract: 1 }],
       },
     ]);
-    expect(loaded.provided(greeterPoint).map(({ name, greetings }) => [name, greetings])).toEqual([
-      ['acme', ['hello', 'hi']],
-      ['other', ['hey']],
+    expect(greetingsProvidedBy(loaded)).toEqual([
+      ['@acme/greeters', ['hello', 'hi']],
+      ['other-greeters', ['hey']],
     ]);
   });
 
@@ -162,9 +108,9 @@ describe('an extension a runtime refuses, so that it does not start', () => {
       'The extension @acme/greeters is refused: it exports no manifest; an extension exports its manifest as manifest',
     ],
     [
-      'that provides a point no capability declares',
+      'that provides a point this release does not serve',
       manifestSource('@acme/greeters', [provisionSource(greeterSource('acme', ['hello']), 1, 'reasoning/gateway')]),
-      'The extension @acme/greeters is refused: it provides reasoning/gateway, which no capability of this runtime declares; the points declared are example/greeter',
+      'The extension @acme/greeters is refused: it provides reasoning/gateway, a point this release does not serve; it serves example/greeter',
     ],
     [
       'whose manifest is malformed',
@@ -179,18 +125,26 @@ describe('an extension a runtime refuses, so that it does not start', () => {
     [
       'whose implementation is not one of its point',
       manifestSource('@acme/greeters', [provisionSource(greeterSource('acme', []))]),
-      'The extension @acme/greeters is refused: its implementation of example/greeter is refused: Expected a value with a length of at least 1',
+      'The extension @acme/greeters is refused: its implementation of example/greeter is malformed: Expected a value with a length of at least 1',
+    ],
+    [
+      'that provides one point twice',
+      manifestSource('@acme/greeters', [
+        provisionSource(greeterSource('acme', ['hello'])),
+        provisionSource(greeterSource('acme', ['hi'])),
+      ]),
+      'The extension @acme/greeters is refused: it provides example/greeter twice, and an extension provides each point once',
     ],
   ])('names the package and why, for one %s', async (_case, module, refusal) => {
-    const { packages } = installed([{ name: '@acme/greeters', module }]);
+    const { packages } = scratchPackages([{ name: '@acme/greeters', module }]);
 
     await expect(loadedExtensions(configured('@acme/greeters'), points, packages)).rejects.toThrow(refusal);
   });
 });
 
-describe('an extension a runtime whose capabilities declare no point refuses', () => {
-  it('names no declared point where no capability of this runtime declares one', async () => {
-    const { packages } = installed([
+describe('an extension a runtime that serves no point refuses', () => {
+  it('names no point it serves where it serves none', async () => {
+    const { packages } = scratchPackages([
       {
         name: '@acme/greeters',
         module: manifestSource('@acme/greeters', [provisionSource(greeterSource('acme', ['hello']))]),
@@ -198,7 +152,7 @@ describe('an extension a runtime whose capabilities declare no point refuses', (
     ]);
 
     await expect(loadedExtensions(configured('@acme/greeters'), [], packages)).rejects.toThrow(
-      /^The extension @acme\/greeters is refused: it provides example\/greeter, which no capability of this runtime declares$/u,
+      /^The extension @acme\/greeters is refused: it provides example\/greeter, a point this release does not serve$/u,
     );
   });
 });
@@ -209,7 +163,7 @@ describe('an implementation a point reserves for the extensions of the release',
   ]);
 
   it('is refused in a listed extension, by name, with the words of its point', async () => {
-    const { packages } = installed([{ name: '@acme/greeters', module: withinManifest }]);
+    const { packages } = scratchPackages([{ name: '@acme/greeters', module: withinManifest }]);
 
     await expect(loadedExtensions(configured('@acme/greeters'), points, packages)).rejects.toThrow(
       "The extension @acme/greeters is refused: it places the greeter acme within the server's own process, which only the release's own extensions may",
@@ -217,7 +171,7 @@ describe('an implementation a point reserves for the extensions of the release',
   });
 
   it('loads in an extension the release provides itself, listed by the settings or not', async () => {
-    const { packages } = installed([{ name: '@acme/greeters', module: withinManifest }]);
+    const { packages } = scratchPackages([{ name: '@acme/greeters', module: withinManifest }]);
     const ofTheRelease = { package: '@acme/greeters', ofTheRelease: true };
 
     const loaded = await Promise.all([
@@ -225,16 +179,15 @@ describe('an implementation a point reserves for the extensions of the release',
       loadedExtensions([{ ...ofTheRelease, provenance: 'configured' }], points, packages),
     ]);
 
-    expect(loaded.map(({ provided }) => provided(greeterPoint).map(({ place }) => place))).toEqual([
-      ['within'],
-      ['within'],
-    ]);
+    expect(
+      loaded.map(({ provided }) => provided(greeterPoint).map(({ implementation }) => implementation.place)),
+    ).toEqual([['within'], ['within']]);
   });
 });
 
 describe('an extension a runtime refuses before it reads its manifest', () => {
   it('names a package that could not be imported', async () => {
-    const { packages } = installed([]);
+    const { packages } = scratchPackages([]);
 
     await expect(loadedExtensions(configured('@acme/missing'), points, packages)).rejects.toThrow(
       "The extension @acme/missing is refused: it could not be imported: Cannot find package '@acme/missing'",
@@ -245,7 +198,7 @@ describe('an extension a runtime refuses before it reads its manifest', () => {
 describe('the integrity of an extension', () => {
   it('lets the package load when its installed files are what the setting names, and refuses them otherwise, naming both', async () => {
     const module = manifestSource('@acme/greeters', [provisionSource(greeterSource('acme', ['hello']))]);
-    const { packages, folderOf } = installed([{ name: '@acme/greeters', module }]);
+    const { packages, folderOf } = scratchPackages([{ name: '@acme/greeters', module }]);
     const integrity = await integrityOf(folderOf('@acme/greeters'));
     const other = `sha512-${'B'.repeat(86)}==`;
 
@@ -268,7 +221,7 @@ describe('the integrity of an extension', () => {
   });
 
   it('refuses a package whose folder cannot be found or read', async () => {
-    const { packages } = installed([]);
+    const { packages } = scratchPackages([]);
 
     await expect(
       loadedExtensions(
@@ -282,7 +235,7 @@ describe('the integrity of an extension', () => {
 
 describe('the folder of an installed package', () => {
   it('is the nearest folder above its entry whose package.json names it, and none when no folder does', () => {
-    const root = scratch();
+    const root = scratchFolder();
     const entry = join(root, 'greeters', 'dist');
     mkdirSync(entry, { recursive: true });
     writeFileSync(join(root, 'greeters', 'package.json'), JSON.stringify({ name: '@acme/greeters' }));

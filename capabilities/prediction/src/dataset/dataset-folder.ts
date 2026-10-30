@@ -1,10 +1,13 @@
 import type { FilterSandbox } from '@on.auto/workflow-engine';
 import {
   rowsOf,
+  someFolder,
+  type CapabilityPorts,
   type DatabaseFailed,
   type Folder,
   type HostDatabase,
   type KeptFunction,
+  type ProvidedCapability,
   type Reconciled,
   type Reconciling,
   type RowPhase,
@@ -102,5 +105,14 @@ export function datasetFolder({
     unchanged: (row) => ({ row, next: standingOf(row), upserts: [], passedOver: [] }),
     joinedLive: (change) => ({ ...change, next: { ...change.next, phase: 'live' } }),
     hasChanged: hasDatasetChanged,
+  };
+}
+
+export function datasetsProvidedOn({
+  pool,
+  triesBeforeStall,
+}: Pick<CapabilityPorts, 'pool' | 'triesBeforeStall'>): Required<Pick<ProvidedCapability, 'folders'>> {
+  return {
+    folders: [someFolder(datasetFolder({ filters: pool.evaluations.filters, triesBeforeStall }))],
   };
 }

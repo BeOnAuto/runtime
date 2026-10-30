@@ -80,6 +80,7 @@ describe('readSettings', () => {
       distribution: 'source',
       configFile: undefined,
       extensions: [],
+      extensionSettings: new Map(),
     });
   });
 });
@@ -173,6 +174,7 @@ const everySettingRead = {
   distribution: 'source',
   configFile: undefined,
   extensions: [{ package: '@acme/extension' }],
+  extensionSettings: new Map(),
 };
 
 describe('readSettings given the distribution', () => {

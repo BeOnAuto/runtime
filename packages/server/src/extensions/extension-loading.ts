@@ -40,7 +40,7 @@ export interface InstalledPackages {
   readonly directoryOf: (name: string) => string;
 }
 
-class ExtensionRefused extends Data.TaggedError('ExtensionRefused')<{ readonly message: string }> {}
+export class ExtensionRefused extends Data.TaggedError('ExtensionRefused')<{ readonly message: string }> {}
 
 interface Loaded {
   readonly extension: LoadedExtension;
@@ -124,19 +124,27 @@ function provisionProblem(
 ): string | undefined {
   const point = points.find(({ name }) => name === provision.point);
   if (point === undefined) {
-    const declared = points.map(({ name }) => name).join(', ');
-    const unknown = `it provides ${provision.point}, which no capability of this runtime declares`;
-    return declared === '' ? unknown : `${unknown}; the points declared are ${declared}`;
+    const served = points.map(({ name }) => name).join(', ');
+    const unknown = `it provides ${provision.point}, a point this release does not serve`;
+    return served === '' ? unknown : `${unknown}; it serves ${served}`;
   }
   const { least, most } = point.contracts;
   if (provision.contract < least || provision.contract > most) {
-    return `it provides ${provision.point} built against contract ${provision.contract}, and this runtime accepts contracts ${least} to ${most}`;
+    const accepted = least === most ? `contract ${least}` : `contracts ${least} to ${most}`;
+    return `it provides ${provision.point} built against contract ${provision.contract}, and this runtime accepts ${accepted}`;
   }
   const implemented = point.implementationOf(provision.implementation);
   if (Result.isFailure(implemented)) {
-    return `its implementation of ${provision.point} is refused: ${implemented.failure}`;
+    return `its implementation of ${provision.point} is malformed: ${implemented.failure}`;
   }
   return entry.ofTheRelease ? undefined : point.reservedForTheRelease?.(implemented.success);
+}
+
+function pointProvidedTwice(provisions: readonly Provision[]): string | undefined {
+  const twice = provisions.find(({ point }, at) => provisions.findIndex((other) => other.point === point) !== at);
+  return twice === undefined
+    ? undefined
+    : `it provides ${twice.point} twice, and an extension provides each point once`;
 }
 
 async function loadedOne(
@@ -163,9 +171,11 @@ async function loadedOne(
       `its manifest names the package ${manifest.name}, and an extension's manifest names its own package`,
     );
   }
-  const problem = manifest.provides
-    .map((provision) => provisionProblem(provision, points, entry))
-    .find((found) => found !== undefined);
+  const problem =
+    pointProvidedTwice(manifest.provides) ??
+    manifest.provides
+      .map((provision) => provisionProblem(provision, points, entry))
+      .find((found) => found !== undefined);
   if (problem !== undefined) {
     throw refusedAs(entry, problem);
   }
@@ -184,10 +194,14 @@ async function loadedOne(
 
 function providedBy(loaded: readonly Loaded[]): LoadedExtensions['provided'] {
   return (point) =>
-    loaded
-      .flatMap(({ manifest }) => manifest.provides)
-      .filter((provision) => provision.point === point.name)
-      .map((provision) => Result.getOrThrow(point.implementationOf(provision.implementation)));
+    loaded.flatMap(({ extension, manifest }) =>
+      manifest.provides
+        .filter((provision) => provision.point === point.name)
+        .map((provision) => ({
+          package: extension.package,
+          implementation: Result.getOrThrow(point.implementationOf(provision.implementation)),
+        })),
+    );
 }
 
 export async function loadedExtensions(

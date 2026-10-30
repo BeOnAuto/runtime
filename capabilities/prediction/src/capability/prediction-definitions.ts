@@ -21,9 +21,9 @@ export function parse(source: string): Effect.Effect<PredictionFunctionDefinitio
   });
 }
 
-type DatasetDetails = { readonly data: Schema.JsonObject };
+type WrittenDatasetDetails = { readonly data: Schema.JsonObject };
 
-export function datasetDetailsOf({ data, predicts }: PredictionFunctionDefinitionDocument): DatasetDetails {
+export function datasetDetailsOf({ data, predicts }: PredictionFunctionDefinitionDocument): WrittenDatasetDetails {
   return { data: dataJsonOf(data, predicts.period) };
 }
 

@@ -1,4 +1,4 @@
-import { capabilityRegistryHeld } from '../capability-registry/capability-registry.ts';
+import { madeAtStart, type MadeAtStart, type StartWiring } from '../capability-registry/made-at-start.ts';
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
 import {
   ledgerConnectionIn,
@@ -14,15 +14,13 @@ import { ledgerLayerFor } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
 
-type Installed = NonNullable<Parameters<typeof functionsServedBy>[3]['installed']>;
-
 export interface CompositionParts {
   readonly programPoolOf?: FunctionWiring['programPoolOf'];
   readonly clock?: WorkflowParts['clock'];
   readonly toolTiming?: FunctionWiring['toolTiming'];
   readonly signers?: NonNullable<Parameters<typeof applicationLayer>[1]>['signers'];
   readonly features?: NonNullable<Parameters<typeof applicationLayer>[1]>['features'];
-  readonly installed?: Installed;
+  readonly installed?: NonNullable<StartWiring['installed']>;
 }
 
 type Composing = Parameters<ComposedServerOptions['composed']>;
@@ -35,31 +33,30 @@ interface Serving {
   readonly telemetry: Composing[1];
   readonly shippedFiles: Composing[2];
   readonly database: Awaited<ReturnType<typeof ledgerDatabaseOf>>;
-  readonly capabilities: ReturnType<typeof capabilityRegistryHeld>;
-  readonly installed: Installed | undefined;
+  readonly made: MadeAtStart;
 }
 
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
-  const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, capabilities, installed } =
-    serving;
+  const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, made } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
     const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata, license } =
       await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
-    const registry = await capabilities.openedIn(runtime, settings, {
+    const registry = await made.registry.openedIn(runtime, settings, {
       ...wiring,
       modelAccessOf,
       telemetry,
       consent,
       connections: source,
     });
+    await made.extensions.logged(runtime);
     const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
       ...wiring,
       registry,
       connections: source,
       offering,
-      shippedFiles,
-      ...(installed === undefined ? {} : { installed }),
+      computation: made.computation,
+      prediction: made.prediction,
     });
     const parts = {
       ledger,
@@ -73,7 +70,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       ...(clock === undefined ? {} : { clock }),
     };
     const served = stores.withSecretsClosed(
-      registry.processes.withDocumentsClosed(functions.closing(await serveWorkflows(runtime, parts))),
+      registry.processes.withDocumentsClosed(await serveWorkflows(runtime, parts)),
     );
     const closing = await withHeldRequestsEndedFirst(
       runtime,
@@ -90,7 +87,7 @@ export function compositionRootWith(
   const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
     const database = await ledgerDatabaseOf(settings, telemetry.appended);
-    const capabilities = capabilityRegistryHeld();
+    const made = await madeAtStart(settings, { programPoolOf: wiring.programPoolOf, shippedFiles, installed });
     const ledgerLayer = withARefusedLayoutExplained(
       ledgerLayerFor(settings, database, wiring.projections.appends),
       settings,
@@ -102,18 +99,8 @@ export function compositionRootWith(
       ...(features === undefined ? {} : { features }),
     };
     return {
-      services: capabilities.closedFirstOf(applicationLayer(ledgerLayer, meter)),
-      serve: servedWith({
-        modelAccessOf,
-        wiring,
-        clock,
-        settings,
-        telemetry,
-        shippedFiles,
-        database,
-        capabilities,
-        installed,
-      }),
+      services: made.computation.closedLastOf(made.registry.closedFirstOf(applicationLayer(ledgerLayer, meter))),
+      serve: servedWith({ modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, made }),
     };
   });
 }

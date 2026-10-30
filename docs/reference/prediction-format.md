@@ -176,7 +176,7 @@ A data test can also run out of time or memory. No event causes that, so the eve
 
 ## The forecaster
 
-The forecaster answers every question in the server's own process, within the question's call. It reads the series' window from the dataset: each period's value as the dataset folds it, a period with no row being 0 for a `count` or a `sum` and unobserved for a `last` or a `mean`. The series' **history** runs to the origin from its first period with a row in the window, or from the window's first period for a `count` or a `sum` whose series has a row before the window; a period before that holds no history.
+The forecaster answers every question in the server's own process, within the question's call, unless an extension fills `capability/prediction`, which then answers every question in its place (see [Extensions](../self-host/configuration.md#extensions)). It reads the series' window from the dataset: each period's value as the dataset folds it, a period with no row being 0 for a `count` or a `sum` and unobserved for a `last` or a `mean`. The series' **history** runs to the origin from its first period with a row in the window, or from the window's first period for a `count` or a `sum` whose series has a row before the window; a period before that holds no history.
 
 ### The methods
 

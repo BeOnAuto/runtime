@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   cpSync,
   existsSync,
@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -91,9 +92,20 @@ function workspacePackages(release: string): ReadonlyMap<string, string> {
   );
 }
 
+function jsonIn(file: string): object {
+  return new Object(existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : undefined);
+}
+
+function manifestIn(directory: string): object {
+  return jsonIn(join(directory, 'package.json'));
+}
+
+function runtimeNameOf(packageRoot: string): string {
+  return String(Reflect.get(manifestIn(packageRoot), 'name'));
+}
+
 function packagesOfTheRelease(packageRoot: string): ReadonlySet<string> {
-  const manifest: unknown = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
-  return new Set([...workspacePackages(packageRoot).keys(), String(Reflect.get(new Object(manifest), 'name'))]);
+  return new Set([...workspacePackages(packageRoot).keys(), runtimeNameOf(packageRoot)]);
 }
 
 function visibleDependencies(packageRoot: string): ReadonlyMap<string, string> {
@@ -117,10 +129,72 @@ export function linked(release: string, links: ReadonlyMap<string, string>): voi
     const link = join(release, 'node_modules', name);
     if (!pointsTo(link, target)) {
       mkdirSync(dirname(link), { recursive: true });
-      rmSync(link, { force: true });
-      symlinkSync(target, link);
+      const fresh = `${link}.${randomUUID()}`;
+      symlinkSync(target, fresh);
+      renameSync(fresh, link);
     }
   }
+}
+
+function npmIntegrityOf(installed: string, name: string): unknown {
+  const modulesFolder = resolve(installed, ...name.split('/').map(() => '..'));
+  const packages: unknown = Reflect.get(jsonIn(join(modulesFolder, '.package-lock.json')), 'packages');
+  return Reflect.get(new Object(Reflect.get(new Object(packages), `node_modules/${name}`)), 'integrity');
+}
+
+function filesDigestOf(installed: string): string {
+  const digest = createHash('sha256');
+  for (const path of readdirSync(installed, { recursive: true, encoding: 'utf8' }).toSorted()) {
+    const file = join(installed, path);
+    if (lstatSync(file).isFile()) {
+      digest.update(path).update('\0').update(readFileSync(file));
+    }
+  }
+  return digest.digest('hex');
+}
+
+function installedAs(installed: string, name: string): string {
+  const integrity = npmIntegrityOf(installed, name);
+  return typeof integrity === 'string' ? integrity : filesDigestOf(installed);
+}
+
+export function movedIntoPlace(copy: string, place: string): void {
+  try {
+    renameSync(copy, place);
+  } catch (refused) {
+    rmSync(copy, { recursive: true, force: true });
+    if (!existsSync(place)) {
+      throw refused;
+    }
+  }
+}
+
+function placedIn(release: string, name: string, installed: string): string {
+  const identity = createHash('sha256').update(name).update('\0').update(installedAs(installed, name)).digest('hex');
+  const place = join(release, 'extensions', identity.slice(0, 16));
+  if (!existsSync(place)) {
+    const copy = `${place}.${randomUUID()}`;
+    cpSync(installed, join(copy, name), { recursive: true });
+    movedIntoPlace(copy, place);
+  }
+  return join(place, name);
+}
+
+function extendsTheRuntime(directory: string, runtime: string): boolean {
+  return Object.hasOwn(new Object(Reflect.get(manifestIn(directory), 'peerDependencies')), runtime);
+}
+
+function besideTheRelease(release: string, packageRoot: string): void {
+  const runtime = runtimeNameOf(packageRoot);
+  linked(
+    release,
+    new Map(
+      [...visibleDependencies(packageRoot)].map(([name, installed]: readonly [string, string]): [string, string] => [
+        name,
+        extendsTheRuntime(installed, runtime) ? placedIn(release, name, installed) : installed,
+      ]),
+    ),
+  );
 }
 
 function releaseDirectory(packageRoot: string, cacheRoot: string): string {
@@ -143,7 +217,7 @@ export function installedRelease(packageDirectory: string, cacheRoot: string): s
     linked(release, workspacePackages(release));
     writeFileSync(join(release, installedMarker), '');
   }
-  linked(release, visibleDependencies(packageRoot));
+  besideTheRelease(release, packageRoot);
   return release;
 }
 

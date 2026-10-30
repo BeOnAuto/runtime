@@ -9,7 +9,7 @@ import { memoryLedger } from '@on.auto/operations/testing';
 import type { HostDatabase } from '@on.auto/workflow-host';
 import type { Clock } from 'effect';
 
-import { makePredictionFunctionAdapter } from '../capability/prediction-function.ts';
+import { predictionFunctionOf } from '../capability/prediction-function.ts';
 import { datasetsPortOn } from '../dataset/datasets-port.ts';
 import { poolOf } from '../testing/prediction-runs.ts';
 import { playbookCalls, type PlaybookCall } from './playbook-calls.ts';
@@ -32,7 +32,7 @@ interface QuestionPlaybookOptions {
 }
 
 export function questionPlaybook({ clock, database, datasets }: QuestionPlaybookOptions): QuestionPlaybook {
-  const prediction = makePredictionFunctionAdapter({ pool: poolOf(), database, datasets: datasetsPortOn(datasets) });
+  const prediction = predictionFunctionOf({ pool: poolOf(), database, datasets: datasetsPortOn(datasets) });
   const capabilities = [prediction];
   return {
     call: playbookCalls(memoryLedger(runOutcomeMapping), clock),

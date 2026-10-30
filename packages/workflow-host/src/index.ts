@@ -19,6 +19,14 @@ export {
 } from './host/run-requests.ts';
 export { openWorkflowHost, type HostOptions, type WorkflowHost } from './host/workflow-host.ts';
 export { openWorkflowStore, type WorkflowStore } from './host/workflow-store.ts';
+export type {
+  CapabilityDatabase,
+  CapabilityFactory,
+  CapabilityPool,
+  CapabilityPorts,
+  OwnSettings,
+  ProvidedCapability,
+} from './host/capability-ports.ts';
 export {
   DatabaseFailed,
   rowsOf,

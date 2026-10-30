@@ -7,6 +7,11 @@ export interface ExtensionPoint<Implementation = unknown> {
   reservedForTheRelease?(implementation: Implementation): string | undefined;
 }
 
+export interface ProvidedImplementation<Implementation> {
+  readonly package: string;
+  readonly implementation: Implementation;
+}
+
 export type ImplementationsProvided = <Implementation>(
   point: ExtensionPoint<Implementation>,
-) => readonly Implementation[];
+) => readonly ProvidedImplementation<Implementation>[];

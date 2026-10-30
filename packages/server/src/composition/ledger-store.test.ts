@@ -1,6 +1,5 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { layoutStepsInSequence } from '@on.auto/ledger';
 import { factTypesOf } from '@on.auto/operations';
@@ -10,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { knownFactSchemas } from './known-facts.ts';
 import { layoutSteps } from './ledger-store.ts';
 
-const repository = fileURLToPath(new URL('../../../../', import.meta.url));
+const repository = join(import.meta.dirname, '..', '..', '..', '..');
 
 const fixtureOfARelease = /(?:^|\/)\d+\.\d+\.\d+\/(?<type>[a-z][a-z0-9_]*)\.json$/u;
 

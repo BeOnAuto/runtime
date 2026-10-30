@@ -8,7 +8,9 @@ export { defineListDefinitions } from './operations/list-definitions.ts';
 export { defineStartVersion } from './operations/start-version.ts';
 export {
   cancelledAsAsked,
+  capabilityContract,
   defineCapability,
+  predictionCapabilityPoint,
   defaultRunWords,
   type CancelDecision,
   type CancelledAttempt,
@@ -36,7 +38,7 @@ export { attemptEnded, type AttemptOfARun } from './operations/attempt-endings.t
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
 export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
 export { toolEnded } from './journal/run-journal.ts';
-export type { ExtensionPoint, ImplementationsProvided } from './capability/extension-points.ts';
+export type { ExtensionPoint, ImplementationsProvided, ProvidedImplementation } from './capability/extension-points.ts';
 export { ExtensionManifestSchema, type ExtensionManifest, type Provision } from './capability/extension-manifest.ts';
 export { firstLineOf } from './capability/first-lines.ts';
 export {

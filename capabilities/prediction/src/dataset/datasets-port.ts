@@ -9,7 +9,7 @@ export interface DatasetsPort {
   readonly datasetOf: (playbook: PlaybookAddress, dataSha256: string) => Effect.Effect<DatasetRow | undefined>;
 }
 
-export function datasetsPortOn(database: HostDatabase): DatasetsPort {
+export function datasetsPortOn(database: Pick<HostDatabase, 'read'>): DatasetsPort {
   return {
     datasetOf: (playbook, dataSha256) =>
       rowsOf(StoredDatasetSchema, database.read(datasetNamed(streamPrefixOfPlaybook(playbook), dataSha256))).pipe(

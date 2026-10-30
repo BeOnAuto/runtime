@@ -177,6 +177,10 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
+export const capabilityContract = 1;
+
+export const predictionCapabilityPoint = 'capability/prediction';
+
 const definitionTypePattern = /^[a-z][a-z0-9-]{2,31}$/u;
 
 export function isDefinitionTypeName(name: string): boolean {

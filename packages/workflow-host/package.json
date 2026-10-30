@@ -18,6 +18,7 @@
     "@on.auto/definitions": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/ledger": "workspace:*",
+    "@on.auto/meter": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/playbooks": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",

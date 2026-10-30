@@ -16,10 +16,15 @@ const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettin
 
 afterAll(() => pool.close());
 
-const prediction = makePredictionFunctionAdapter({
+const noRows = () => Effect.succeed([]);
+
+const { capability: prediction } = makePredictionFunctionAdapter({
   pool,
-  database: { readConsistently: (reads) => reads(() => Effect.succeed([])) },
-  datasets: { datasetOf: () => Effect.undefined },
+  database: { read: noRows, write: noRows, transaction: noRows, readConsistently: (reads) => reads(noRows) },
+  features: { includes: () => Effect.succeed(false), refusal: () => Effect.die('No feature is asked') },
+  settings: new Map(),
+  mostFunctions: 1,
+  triesBeforeStall: 1,
 });
 
 const question = '{ series: north, horizon: 1, given: { promotion: 1 } }';

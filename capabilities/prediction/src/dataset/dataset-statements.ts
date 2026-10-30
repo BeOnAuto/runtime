@@ -19,7 +19,11 @@ export const predictionLayoutSteps: readonly LayoutStep[] = [
   },
 ];
 
-export const datasetsTable = statement`CREATE TABLE IF NOT EXISTS prediction_datasets (
+export const datasetTables = { datasets: 'prediction_datasets', rows: 'prediction_rows' } as const;
+
+export const datasetsTable = statementOf(
+  [
+    `CREATE TABLE IF NOT EXISTS ${datasetTables.datasets} (
     playbook_key TEXT NOT NULL,
     data_sha256 TEXT NOT NULL,
     saved BIGINT NOT NULL,
@@ -37,9 +41,14 @@ export const datasetsTable = statement`CREATE TABLE IF NOT EXISTS prediction_dat
     stalled_detail TEXT,
     data TEXT NOT NULL,
     PRIMARY KEY (playbook_key, data_sha256)
-  )`;
+  )`,
+  ],
+  [],
+);
 
-export const rowsTable = statement`CREATE TABLE IF NOT EXISTS prediction_rows (
+export const rowsTable = statementOf(
+  [
+    `CREATE TABLE IF NOT EXISTS ${datasetTables.rows} (
     playbook_key TEXT NOT NULL,
     data_sha256 TEXT NOT NULL,
     series TEXT NOT NULL,
@@ -50,7 +59,10 @@ export const rowsTable = statement`CREATE TABLE IF NOT EXISTS prediction_rows (
     target_at BIGINT,
     events BIGINT NOT NULL,
     PRIMARY KEY (playbook_key, data_sha256, series, period_index)
-  )`;
+  )`,
+  ],
+  [],
+);
 
 export interface Values {
   readonly values: readonly StatementValue[];
