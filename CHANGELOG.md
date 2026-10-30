@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.51.0](https://github.com/BeOnAuto/runtime/compare/v0.50.0...v0.51.0) (2026-10-30)
+
+
+### Features
+
+* **prediction:** a dataset page's data tests are judged as one by the host's filters ([c54976e](https://github.com/BeOnAuto/runtime/commit/c54976e145e2fd04959280ae2bd741a5f532686c))
+* **providers:** x connects under the org's own app, posting and reading as the person who signs in ([aaf22dd](https://github.com/BeOnAuto/runtime/commit/aaf22dddb18c520e63fc9c732b00f534dcef8989))
+* **server:** an installed extension fills the prediction capability in place of the forecaster ([75ee4da](https://github.com/BeOnAuto/runtime/commit/75ee4da9fb3561f561e4d8ee529ec153e59f5109))
+
 ## [0.50.0](https://github.com/BeOnAuto/runtime/compare/v0.49.0...v0.50.0) (2026-10-30)
 
 
