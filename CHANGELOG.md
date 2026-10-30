@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.50.0](https://github.com/BeOnAuto/runtime/compare/v0.49.0...v0.50.0) (2026-10-30)
+
+
+### Features
+
+* **connections:** a connection may run under the org's own app, given on the connect page ([34961db](https://github.com/BeOnAuto/runtime/commit/34961db2f778b5f7814859b6db587cecd22ba02b))
+
+
+### Bug Fixes
+
+* **prediction:** the dataset fold binds no more values in a statement than the database allows ([ada2297](https://github.com/BeOnAuto/runtime/commit/ada2297aa1ad6bc873e43c97a244a3ae9a844c22))
+
 ## [0.49.0](https://github.com/BeOnAuto/runtime/compare/v0.48.1...v0.49.0) (2026-10-30)
 
 
