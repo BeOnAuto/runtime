@@ -69,8 +69,8 @@ describe('a public client registered at a server that registers once in a while'
       await refused(consentClientWith(), startAskedAt(fake, { clients: ['dynamic'] })),
       await refused(consentClientWith(), startAskedAt(unnamedWait, { clients: ['dynamic'] })),
     ]).toEqual([
-      unansweredCall('registration', fake, { status: 429, retryAfterMs: 600_000 }),
-      unansweredCall('registration', unnamedWait, { status: 429, retryAfterMs: null }),
+      unansweredCall('registration', fake, { status: 429, retryAfterMs: 600_000, errorCode: 'rate_limited' }),
+      unansweredCall('registration', unnamedWait, { status: 429, retryAfterMs: null, errorCode: 'rate_limited' }),
     ]);
   });
 });

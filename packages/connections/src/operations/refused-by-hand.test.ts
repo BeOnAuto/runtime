@@ -184,3 +184,22 @@ describe('a server given by hand that does not answer', () => {
     ]);
   });
 });
+
+function resourceMetadataRefused(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
+  return new URL(String(address)).pathname.startsWith('/.well-known/oauth-protected-resource')
+    ? Promise.resolve(Response.json({ error: 'access_denied' }, { status: 403 }))
+    : globalThis.fetch(String(address), Object.assign({}, init));
+}
+
+describe('a server given by hand that refuses a read of the metadata its challenge names', () => {
+  it('is unavailable, in words that say it does not serve it and may take an API key, and name no wait', async () => {
+    const refusing = await served({ dynamicRegistration: true });
+    const h = harnessByHand({ consenting: { fetch: resourceMetadataRefused } });
+
+    expect(await adding(h, byHandAt(refusing))).toEqual({
+      status: 'rejected',
+      reason: 'unavailable',
+      detail: `The server at ${refusing.url} cannot be connected now: ${hostOf(refusing)} does not serve its protected resource metadata (HTTP 403); the server may take an API key instead of a sign-in`,
+    });
+  });
+});

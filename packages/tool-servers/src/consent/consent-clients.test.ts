@@ -94,7 +94,11 @@ describe('a dynamic registration the runtime does not keep', () => {
       await refused(client, startAskedAt(refusing, { clients: ['dynamic'] })),
       await refused(client, startAskedAt(nameless, { clients: ['dynamic'] })),
     ]).toEqual([
-      unansweredCall('registration', refusing, { status: 400, retryAfterMs: null }),
+      unansweredCall('registration', refusing, {
+        status: 400,
+        retryAfterMs: null,
+        errorCode: 'invalid_client_metadata',
+      }),
       unansweredCall('registration', nameless, { failed: 'unreadable' }),
     ]);
     expect(registrations.kept()).toEqual([]);

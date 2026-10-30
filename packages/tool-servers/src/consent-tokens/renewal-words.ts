@@ -1,11 +1,17 @@
 import { callWordsOf } from '../consent/call-words.ts';
 import type { ConsentCall, ConsentRefusal } from '../consent/consent-client.ts';
 
+function unrenewedSince(name: string, call: ConsentCall): string {
+  const { told, wait } = callWordsOf(call);
+  const since = `The tokens of the connection ${name} were not renewed, since ${told}`;
+  return wait === undefined ? since : `${since}; the next call tries again`;
+}
+
 export const renewalWords = {
   unanswered: (name: string, call: ConsentCall | undefined) =>
     call === undefined
       ? `The authorization server of the connection ${name} did not answer as an authorization server does, so its tokens were not renewed; the next call tries again`
-      : `The tokens of the connection ${name} were not renewed, since ${callWordsOf(call)}; the next call tries again`,
+      : unrenewedSince(name, call),
   serviceUnanswered: (name: string) =>
     `Auto's consent service did not answer for the connection ${name}, so its tokens were not renewed; the next call tries again`,
   unrenewable: (name: string) =>

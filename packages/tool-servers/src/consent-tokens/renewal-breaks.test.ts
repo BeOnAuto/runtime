@@ -190,6 +190,30 @@ describe('a renewal that fails otherwise', () => {
   });
 });
 
+function resourceMetadataRefused(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
+  return String(address).includes('/.well-known/oauth-protected-resource')
+    ? Promise.resolve(Response.json({ error: 'access_denied' }, { status: 403 }))
+    : globalThis.fetch(String(address), Object.assign({}, init));
+}
+
+describe('a renewal whose server refuses a read of its metadata with a 4xx', () => {
+  it('fails in words that say the server does not serve it, and name no try again', async () => {
+    const connected = await connectedAt();
+
+    const failed = await renewed(
+      connected,
+      sourceOf(connected, consentClientAt(connected.fake, { fetch: resourceMetadataRefused })),
+    );
+
+    expect(failed).toEqual(
+      new Error(
+        `The tokens of the connection files were not renewed, since ${hostOf(connected.fake)} does not serve its protected resource metadata (HTTP 403); the server may take an API key instead of a sign-in`,
+      ),
+    );
+    expect(connected.row.version()).toBe(1);
+  });
+});
+
 const allowed: string | undefined = undefined;
 
 function unresolvedOnLocalhost(url: string): Promise<string | undefined> {

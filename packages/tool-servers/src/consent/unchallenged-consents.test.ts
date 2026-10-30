@@ -82,7 +82,11 @@ describe('the refusals of a way whose server takes no PKCE', () => {
 
     expect(await refusedAtTheFinish(client, await finishAskedOf(client, writtenOutAt(fake)))).toEqual({
       refused: 'unanswered',
-      call: { step: 'token', host: hostOf(fake), answer: { status: 401, retryAfterMs: null } },
+      call: {
+        step: 'token',
+        host: hostOf(fake),
+        answer: { status: 401, retryAfterMs: null, errorCode: 'invalid_client' },
+      },
     });
   });
 

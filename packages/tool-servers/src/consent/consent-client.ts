@@ -78,7 +78,7 @@ export interface FinishedConsent {
 export type ConsentStep = 'ping' | 'resource_metadata' | 'authorization_server_metadata' | 'registration' | 'token';
 
 export type ConsentCallAnswer =
-  | { readonly status: number; readonly retryAfterMs: number | null }
+  | { readonly status: number; readonly retryAfterMs: number | null; readonly errorCode?: string }
   | { readonly failed: 'timed_out' | 'unreachable' | 'unreadable' | 'failing' };
 
 export interface ConsentCall {

@@ -1,6 +1,8 @@
 import { IssuerMismatchError, OAuthError, OAuthErrorCode, type FetchLike } from '@modelcontextprotocol/client';
-import { causesOf } from '@on.auto/outbound';
+import { boundedAnswerOf, causesOf } from '@on.auto/outbound';
+import { Option, Schema } from 'effect';
 
+import { ignored } from '../clients/ignored.ts';
 import { retryAfterMsOf } from '../clients/observed-requests.ts';
 import { failureOf } from '../clients/server-failures.ts';
 import type {
@@ -22,16 +24,27 @@ const invalidGrant: string = OAuthErrorCode.InvalidGrant;
 
 const endedByTheBound: ReadonlySet<unknown> = new Set(['TimeoutError', 'AbortError']);
 
-interface Answered {
-  readonly status: number;
-  readonly retryAfterMs: number | null;
-}
+type Answered = Extract<ConsentCallAnswer, { readonly status: number }>;
+
+const clientErrors = { first: 400, past: 500 };
+
+const mostErrorBytes = 16_384;
+
+const errorCodePattern = /^[\w.-]{1,64}$/u;
+
+const decodeError = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ error: Schema.String.check(Schema.isPattern(errorCodePattern)) })),
+);
 
 export interface ObservedCalls {
   readonly fetch: FetchLike;
   readonly answeredWith: (judged: (status: number) => boolean) => boolean;
   readonly refusalOf: (error: unknown) => CallRefusal;
   readonly refusalOfTheAnswer: () => UnansweredCall;
+}
+
+export function answeredAClientError(status: number): boolean {
+  return status >= clientErrors.first && status < clientErrors.past;
 }
 
 function isEndedByTheBound(error: unknown): boolean {
@@ -43,6 +56,22 @@ function unansweredHow(error: unknown): ConsentCallAnswer {
     return { failed: 'timed_out' };
   }
   return failureOf(error).kind === 'unreachable' ? { failed: 'unreachable' } : { failed: 'failing' };
+}
+
+async function errorCodeIn(response: Readonly<Response>): Promise<string | undefined> {
+  const text = await boundedAnswerOf(response.clone(), mostErrorBytes, ignored)
+    .text()
+    .catch(() => '');
+  return Option.getOrUndefined(Option.map(decodeError(text), ({ error }) => error));
+}
+
+async function answeredBy(response: Readonly<Response>): Promise<Answered> {
+  const answered = {
+    status: response.status,
+    retryAfterMs: retryAfterMsOf(response.headers.get('retry-after'), Date.now()),
+  };
+  const errorCode = response.ok ? undefined : await errorCodeIn(response);
+  return errorCode === undefined ? answered : { ...answered, errorCode };
 }
 
 function answerOf(answered: Answered | undefined, error: unknown): ConsentCallAnswer {
@@ -65,10 +94,7 @@ export function observedCalls(step: ConsentStep, first: string, fetch: FetchLike
       last.asked = String(address);
       last.answered = undefined;
       const response = await fetch(last.asked, Object.assign({}, init));
-      last.answered = {
-        status: response.status,
-        retryAfterMs: retryAfterMsOf(response.headers.get('retry-after'), Date.now()),
-      };
+      last.answered = await answeredBy(response);
       return response;
     },
     answeredWith: (judged) => last.answered !== undefined && judged(last.answered.status),

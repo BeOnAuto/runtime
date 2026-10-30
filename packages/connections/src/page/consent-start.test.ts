@@ -235,6 +235,17 @@ describe('a start refused where the server cannot proceed', () => {
     ]);
   });
 
+  it('is refused where the authorization server refuses to register a client, in words that say so and ask for no wait', async () => {
+    const refusing = await served({ dynamicRegistration: true, refusesRegistration: true });
+    const h = consentHarnessAt(refusing, { way: { clients: ['dynamic'] } });
+
+    expect(await starting(h, await added(h, { provider: 'files' }))).toEqual({
+      status: 'rejected',
+      reason: 'unavailable',
+      detail: `The consent of the connection files cannot go on: ${hostOf(refusing)} refuses to register a client (invalid_client_metadata); its sign-in is open only to clients it already knows; connect with an API key instead, if the server takes one`,
+    });
+  });
+
   it('is refused for a host the rules do not allow among the endpoints of the metadata, before the person is sent anywhere', async () => {
     const fake = await served({ endpointHost: 'localhost' });
     const h = consentHarnessAt(fake, { policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] }) });

@@ -85,7 +85,7 @@ export {
 } from './consent/client-sources.ts';
 export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
 export { makeConsentClient } from './consent/consent-making.ts';
-export { callWordsOf, waitWordsOf } from './consent/call-words.ts';
+export { callWordsOf } from './consent/call-words.ts';
 export {
   type ChosenClient,
   type ClientRegistrations,

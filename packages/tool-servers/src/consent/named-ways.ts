@@ -4,6 +4,7 @@ import { Effect, Result } from 'effect';
 import { noClient, takesOwnSource, type OwnSource } from './acting-clients.ts';
 import type { WayClientSource } from './client-sources.ts';
 import type { IssuerRefusal, NamedWay, Refused, WayAsked, WayRefusal } from './consent-client.ts';
+import { answeredAClientError } from './consent-failures.ts';
 import { isScope } from './scopes.ts';
 import {
   answeredNotFound,
@@ -29,14 +30,8 @@ const malformedScope: Refused<'malformed_scope'> = { refused: 'malformed_scope' 
 
 const sourcesOfAServerGivenByHand: readonly OwnSource[] = ['dynamic', 'metadata_document'];
 
-const clientErrors = { first: 400, past: 500 };
-
 function orNoAuthorizationServer<A>(found: A | undefined): Effect.Effect<A, WayRefusal> {
   return found === undefined ? Effect.fail(noAuthorizationServer) : Effect.succeed(found);
-}
-
-function answeredAClientError(status: number): boolean {
-  return status >= clientErrors.first && status < clientErrors.past;
 }
 
 function unpublishedWhere({ resourceMetadata }: Challenge): typeof answeredNotFound {
