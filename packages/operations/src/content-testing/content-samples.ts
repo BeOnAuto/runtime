@@ -30,11 +30,6 @@ export interface Generated {
   readonly content: () => ContentToKeep;
 }
 
-export interface Unread {
-  readonly content: ContentToKeep;
-  readonly cancelled: () => boolean;
-}
-
 export interface Delivered {
   readonly bytes: number;
   readonly failure: unknown;
@@ -80,10 +75,8 @@ export async function generated(bytes: number, seed = 7): Promise<Generated> {
   return { sha256, bytes, content: () => ({ stream: generatedStream(bytes, seed), mediaType: octets }) };
 }
 
-export async function readBack(content: StreamedContent | undefined): Promise<ReadBack | undefined> {
-  return content === undefined
-    ? content
-    : { ...(await readThrough(content.stream)), mediaType: content.mediaType, declared: content.bytes };
+export async function readBack(content: StreamedContent): Promise<ReadBack> {
+  return { ...(await readThrough(content.stream)), mediaType: content.mediaType, declared: content.bytes };
 }
 
 export async function deliveredBeforeFailing(stream: ReadableStream<Uint8Array>): Promise<Delivered> {
@@ -107,19 +100,6 @@ export function refusalOf<A, E>(effect: Effect.Effect<A, E>): Promise<E> {
 
 export function present<A, E>(effect: Effect.Effect<A | undefined, E>): Promise<A> {
   return Effect.runPromise(Effect.flatMap(effect, Effect.fromNullishOr));
-}
-
-export function unread(): Unread {
-  let cancelled = false;
-  const stream = new ReadableStream<Uint8Array>(
-    {
-      cancel: () => {
-        cancelled = true;
-      },
-    },
-    { highWaterMark: 0 },
-  );
-  return { content: { stream, mediaType: octets }, cancelled: () => cancelled };
 }
 
 export function brokenAfter(bytes: number): ContentToKeep {

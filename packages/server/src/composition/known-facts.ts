@@ -8,7 +8,6 @@ import {
 import { InteractionRunFactSchema } from '@on.auto/interaction';
 import { MeterEventSchema } from '@on.auto/meter';
 import { PlaybookEventSchema } from '@on.auto/playbooks';
-import { BuildFactSchema, ModelFactSchema } from '@on.auto/prediction';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
 import { RunLogRecordSchema } from '@on.auto/workflow-engine';
 
@@ -20,11 +19,9 @@ export const knownFactSchemas = [
   DefinitionEventSchema,
   RunEventSchema,
   InteractionRunFactSchema,
-  BuildFactSchema,
   RunLogRecordSchema,
   EventPublishedSchema,
   ReactionRefusedSchema,
-  ModelFactSchema,
   ConnectionEventSchema,
   RegistrationEventSchema,
   HandCallEventSchema,

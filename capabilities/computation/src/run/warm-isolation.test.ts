@@ -1,4 +1,3 @@
-import { nothingSaved } from '@on.auto/definitions/testing';
 import type { Json, PoolOutcome, ProgramPool, ProgramRequest } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -9,9 +8,7 @@ import { computationBounds, mostOutputBytes } from './run-bounds.ts';
 
 const checking = poolOf();
 
-const { module: example = '' } = await Effect.runPromise(
-  computationWith(checking).prepared(campaignPace).check(nothingSaved),
-);
+const { module: example = '' } = await Effect.runPromise(computationWith(checking).prepared(campaignPace).check());
 
 await checking.close();
 

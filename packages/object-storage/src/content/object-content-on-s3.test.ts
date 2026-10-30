@@ -23,7 +23,7 @@ describe.skipIf(skipped)(`The content kept on an S3-compatible object store${not
   const warned = vi.spyOn(console, 'warn');
   recordedContentBehaviour(contentEntryOf(onTheServer));
   objectContentBehaviour(onTheServer);
-  it('writes nothing to console.warn from the SDK while it keeps, reads, stages and sweeps', () => {
+  it('writes nothing to console.warn from the SDK while it keeps, reads and sweeps', () => {
     expect(warned).not.toHaveBeenCalled();
   });
 });

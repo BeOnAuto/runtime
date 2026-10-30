@@ -16,7 +16,7 @@ export const getPlaybook = defineHttpOperation('org', 'query', {
   route: { method: 'GET', path: '/playbooks/{playbook}' },
   body: { kind: 'none' },
   inputSchema: Schema.Struct({ playbook: PlaybookIdField }),
-  answer: { kind: 'json', outputSchema: PlaybookSchema },
+  outputSchema: PlaybookSchema,
   reasons: ['not_found'],
   handle: ({ playbook }) => foundPlaybook(playbook),
 });

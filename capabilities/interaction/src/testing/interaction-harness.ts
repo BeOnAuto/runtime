@@ -19,7 +19,6 @@ import {
   type Ledger,
   type Outcome,
   type Runnable,
-  type Succeeded,
 } from '@on.auto/operations';
 import { memoryPlaybookRegistry, memoryLedger, recordingReporter } from '@on.auto/operations/testing';
 import { Clock, Effect, Layer } from 'effect';
@@ -62,7 +61,7 @@ interface PlaybookRoute {
 
 interface Calling {
   (operation: PlaybookOperation, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
-  (operation: PlaybookRoute, input: unknown, caller?: CallerIdentity): Promise<Outcome<Succeeded>>;
+  (operation: PlaybookRoute, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
 }
 
 export interface InteractionHarness {
@@ -89,8 +88,8 @@ export interface InteractionHarness {
 function callingIn(services: Layer.Layer<DispatcherServices>): Calling {
   const dispatcher = makeDispatcher([]);
   function call(operation: PlaybookOperation, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
-  function call(operation: PlaybookRoute, input: unknown, caller?: CallerIdentity): Promise<Outcome<Succeeded>>;
-  function call(operation: PlaybookRoute, input: unknown, caller = acmeAdmin): Promise<Outcome<Succeeded>> {
+  function call(operation: PlaybookRoute, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
+  function call(operation: PlaybookRoute, input: unknown, caller = acmeAdmin): Promise<Outcome> {
     return Effect.runPromise(
       dispatcher
         .dispatchToPlaybook(operation.registration, { caller, ...alpha, input, encoding: 'json' })

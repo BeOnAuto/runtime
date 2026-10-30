@@ -41,7 +41,6 @@ export function spawnServer(entry: string, env: Readonly<Record<string, string>>
   const child = spawnForTheTest(process.execPath, [entry], {
     env: {
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
-      PREDICTION_CACHE_DIR: folderOfTheTest('auto-runtime-test-cache-'),
       DO_NOT_TRACK: '1',
       ...noConsentThroughAuto,
       ...env,

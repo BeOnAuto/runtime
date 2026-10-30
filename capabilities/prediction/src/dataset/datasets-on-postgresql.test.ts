@@ -8,8 +8,6 @@ import { datasetLifecycleSuite } from '../dataset-testing/dataset-lifecycle-suit
 import type { SettingsOf } from '../dataset-testing/dataset-stores.ts';
 import { datasetFoldingSuite } from '../dataset-testing/dataset-suite.ts';
 import { datasetWritesSuite } from '../dataset-testing/dataset-writes-suite.ts';
-import { datasetFilesBoundsSuite } from '../dataset-testing/files-bounds-suite.ts';
-import { datasetFilesSuite } from '../dataset-testing/files-suite.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -41,8 +39,6 @@ const onPostgreSQL: SettingsOf = async () => {
 describe.skipIf(skipped)(`the datasets of prediction functions on PostgreSQL${notice}`, () => {
   datasetFoldingSuite(onPostgreSQL);
   datasetLifecycleSuite(onPostgreSQL);
-  datasetFilesSuite(onPostgreSQL);
-  datasetFilesBoundsSuite(onPostgreSQL);
   datasetEdgesSuite(onPostgreSQL);
   datasetWritesSuite(onPostgreSQL);
 });

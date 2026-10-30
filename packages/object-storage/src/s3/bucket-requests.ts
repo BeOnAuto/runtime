@@ -26,7 +26,7 @@ export interface OpenUpload {
 
 export interface WrittenObject {
   readonly data: Readonly<Uint8Array>;
-  readonly mediaType?: string | undefined;
+  readonly mediaType: string;
   readonly ifAbsent?: boolean | undefined;
 }
 
@@ -181,7 +181,7 @@ export function written(
     Bucket: name,
     Key: key,
     Body: data,
-    ...(mediaType === undefined ? {} : { ContentType: mediaType }),
+    ContentType: mediaType,
     ...(ifAbsent === true ? { IfNoneMatch: ifNoneMatch } : {}),
   });
   return writtenAsAsked(ifAbsent, () => client().send(put));

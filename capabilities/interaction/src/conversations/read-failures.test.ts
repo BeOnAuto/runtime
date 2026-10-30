@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { answeringAnyRun } from '../testing/harness-parts.ts';
+import { answerInteraction } from '../requests/answer-interaction.ts';
 import {
   answered,
   answererId,
@@ -99,7 +99,7 @@ describe('a conversation whose reading tool its operator disallowed', () => {
 describe('a conversation with nothing open in it', () => {
   it('rests, with no call, once its one request was answered through answer_interaction', async () => {
     const playbook = await deliveredInThread();
-    await playbook.call(answeringAnyRun, { run_id: runId, answer: { choice: 'approve' } });
+    await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' } });
 
     await playbook.performReads(Date.now() + farAhead);
     const [row] = await conversationRows(playbook.ledger);

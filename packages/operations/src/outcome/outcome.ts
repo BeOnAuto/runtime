@@ -1,6 +1,5 @@
 import type { Schema } from 'effect';
 
-import type { StreamedContent } from '../content/streamed-content.ts';
 import type { Resolution } from './conflict.ts';
 import { cappedIssues, type Issue } from './issue.ts';
 import type { RejectionBecause } from './rejection-because.ts';
@@ -8,17 +7,10 @@ import type { DeclarableReason, RejectionKind } from './rejection.ts';
 
 export type RejectionReason = 'forbidden' | DeclarableReason;
 
-export interface Answered {
+export interface Succeeded {
   readonly status: 'succeeded';
   readonly output: Schema.JsonObject;
 }
-
-export interface Streamed {
-  readonly status: 'succeeded';
-  readonly streamed: StreamedContent;
-}
-
-export type Succeeded = Answered | Streamed;
 
 export interface Rejected extends Resolution {
   readonly status: 'rejected';
@@ -38,16 +30,12 @@ export interface Cancelled {
   readonly status: 'cancelled';
 }
 
-export type Outcome<S extends Succeeded = Answered> = S | Rejected | Failed;
+export type Outcome<S extends Succeeded = Succeeded> = S | Rejected | Failed;
 
-export type Settled<S extends Succeeded = Answered> = Outcome<S> | Cancelled;
+export type Settled<S extends Succeeded = Succeeded> = Outcome<S> | Cancelled;
 
-export function succeeded(output: Schema.JsonObject): Answered {
+export function succeeded(output: Schema.JsonObject): Succeeded {
   return { status: 'succeeded', output };
-}
-
-export function streamed(content: StreamedContent): Streamed {
-  return { status: 'succeeded', streamed: content };
 }
 
 export function rejected(

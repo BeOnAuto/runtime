@@ -27,7 +27,6 @@ async function startedOn(port: number, environment: Readonly<Record<string, stri
       HOST: '127.0.0.1',
       PORT: String(port),
       LEDGER_FILE: ledger.fileName,
-      PREDICTION_CACHE_DIR: ledger.cacheDirectory,
       ...environment,
     },
     compositionRoot,

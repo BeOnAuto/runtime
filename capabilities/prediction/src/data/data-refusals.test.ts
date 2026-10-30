@@ -7,59 +7,18 @@ type Replacement = readonly [string, string];
 
 type Refusal = readonly [string, readonly Replacement[], readonly string[]];
 
-const basket = '    - { name: basket, of: /total, as: mean }';
-
-const promotion = '    - { name: promotion, of: /promotion, as: last }';
-
-const uploaded: readonly Replacement[] = [
-  ['  events:', `  dataset: ${'b'.repeat(64)}`],
-  ['    - type: order.placed', ''],
-  ['  time: /placed_at', ''],
-  ['  series: /region', ''],
-  ['  target: { as: count }', ''],
-  [basket, '    - basket'],
-  [promotion, '    - promotion'],
-];
-
-const manyFeatures = Array.from({ length: 41 }, (_, index) => `    - { name: f${index}, of: /f${index}, as: sum }`);
+const keysTaken = 'it takes events, time, series, target, window';
 
 const columns: readonly Refusal[] = [
   [
-    'a given name not among the features',
-    [['  given: [promotion]', '  given: [discount]']],
-    ['Line 18, /data/given/0: discount is not among the features, and given names only features'],
+    'features, which the forecaster does not read',
+    [['  target: { as: count }', '  target: { as: count }\n  features:\n    - { name: basket, of: /total, as: mean }']],
+    [`Line 16, /data/features: features is not a key of data; ${keysTaken}`],
   ],
   [
-    'a given name repeated',
-    [['  given: [promotion]', '  given: [promotion, promotion]']],
-    ['Line 18, /data/given/1: promotion is given more than once'],
-  ],
-  [
-    'a feature named series',
-    [[basket, '    - { name: series, of: /total, as: mean }']],
-    ['Line 16, /data/features/0/name: series is a column every dataset row already has; name the quantity otherwise'],
-  ],
-  [
-    'a feature named as the target',
-    [[basket, '    - { name: orders, of: /total, as: mean }']],
-    ['Line 16, /data/features/0: The feature orders is named as the target; the target is its own column'],
-  ],
-  [
-    'a feature named twice',
-    [
-      [promotion, '    - { name: basket, of: /promotion, as: last }'],
-      ['  given: [promotion]', '  given: [basket]'],
-    ],
-    ['Line 17, /data/features/1: The feature basket is named more than once'],
-  ],
-  [
-    'forty-one features',
-    [
-      [basket, manyFeatures.join('\n')],
-      [promotion, ''],
-      ['  given: [promotion]', '  given: [f0]'],
-    ],
-    ['Line 16, /data/features: A prediction function takes at most 40 features; it names 41'],
+    'given features, which a question does not take',
+    [['  target: { as: count }', '  target: { as: count }\n  given: [promotion]']],
+    [`Line 15, /data/given: given is not a key of data; ${keysTaken}`],
   ],
 ];
 
@@ -75,26 +34,6 @@ const measures: readonly Refusal[] = [
     ['Line 14, /data/target: sum reads a value of each event, so it names where with of, a JSON Pointer into its data'],
   ],
   [
-    'a feature counted with of',
-    [[basket, '    - { name: basket, of: /total, as: count }']],
-    ['Line 16, /data/features/0/of: count counts the events and reads no value, so it takes no of'],
-  ],
-  [
-    'a feature that is not a mapping',
-    [[basket, '    - basket']],
-    ['Line 16, /data/features/0: A feature is a mapping of its name, of and as'],
-  ],
-  [
-    'a feature of keys it does not take',
-    [[basket, '    - { title: basket, of: 5, as: median }']],
-    [
-      'Line 16, /data/features/0/title: title is not a key of a feature; it takes name, of and as',
-      'Line 16, /data/features/0/name: name is required, as text',
-      'Line 16, /data/features/0/of: of is text',
-      'Line 16, /data/features/0/as: as is required: count, sum, last, mean',
-    ],
-  ],
-  [
     'a series that is not a JSON Pointer',
     [['  series: /region', '  series: region']],
     [
@@ -106,23 +45,21 @@ const measures: readonly Refusal[] = [
     [
       ['    - type: order.placed', '    - type: run_succeeded'],
       ['  time: /placed_at', '  time: /output/placed_at'],
-      [basket, '    - { name: basket, of: /output/total, as: mean }'],
-      [promotion, '    - { name: promotion, of: /output/promotion, as: last }'],
     ],
     [
       'Line 13, /data/series: None of the events the filters name holds a value at /region: a run_succeeded event holds the run’s output under /output',
     ],
   ],
   [
-    'features where neither a run_started nor a run_rejected event holds a value',
+    'a target where neither a run_started nor a run_rejected event holds a value',
     [
       ['    - type: order.placed', '    - type: run_started\n    - type: run_rejected'],
       ['  time: /placed_at', '  time: /reason'],
       ['  series: /region', '  series: /kind'],
+      ['  target: { as: count }', '  target: { of: /total, as: sum }'],
     ],
     [
-      'Line 17, /data/features/0/of: None of the events the filters name holds a value at /total: a run_rejected event holds /reason and /kind',
-      'Line 18, /data/features/1/of: None of the events the filters name holds a value at /promotion: a run_rejected event holds /reason and /kind',
+      'Line 15, /data/target/of: None of the events the filters name holds a value at /total: a run_rejected event holds /reason and /kind',
     ],
   ],
   [
@@ -130,10 +67,6 @@ const measures: readonly Refusal[] = [
     [
       ['    - type: order.placed', '    - type: definition_created'],
       ['  series: /region', "  series: ''"],
-      ['  features:', ''],
-      [basket, ''],
-      [promotion, ''],
-      ['  given: [promotion]', ''],
     ],
     [
       'Line 12, /data/time: None of the events the filters name holds a value at /placed_at: the events the filters name hold no data',
@@ -178,30 +111,8 @@ const parts: readonly Refusal[] = [
           ['    - type: order.placed', ''],
         ]
       : [[{ time: '  time: /placed_at', series: '  series: /region', target: '  target: { as: count }' }[key], '']],
-    [`Line 10, /data: ${key} is required, unless the function names an uploaded dataset`],
+    [`Line 10, /data/${key}: ${key} is required`],
   ]),
-  [
-    'an uploaded dataset beside a projection',
-    uploaded.filter(([from]) => from !== '  time: /placed_at'),
-    [
-      "Line 11, /data/time: time describes a projection of the playbook's history, and a function that names an uploaded dataset has none",
-    ],
-  ],
-  [
-    'an uploaded dataset that is not a digest',
-    [...uploaded, [`  dataset: ${'b'.repeat(64)}`, '  dataset: B2']],
-    ['Line 10, /data/dataset: dataset is the SHA-256 of an uploaded dataset, 64 lowercase hexadecimal digits'],
-  ],
-  [
-    'a feature of an uploaded dataset that is not a name',
-    [...uploaded, ['    - basket', '    - { name: basket }']],
-    ['Line 12, /data/features/0: A feature of an uploaded dataset is the name of its column, as text'],
-  ],
-  [
-    'an uploaded feature named as a header column',
-    [...uploaded, ['    - basket', '    - period']],
-    ['Line 12, /data/features/0: period is a column every dataset row already has; name the quantity otherwise'],
-  ],
 ];
 
 describe('a prediction function document whose data part differs from a valid one by one fault', () => {

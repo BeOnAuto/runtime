@@ -1,4 +1,4 @@
-import type { CallerIdentity, Outcome, Succeeded } from '@on.auto/operations';
+import type { CallerIdentity, Outcome } from '@on.auto/operations';
 import { providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -94,7 +94,7 @@ const regionsPlaceholders = [
   },
 ];
 
-function listing(options: HarnessOptions = {}, caller = ada): Promise<Outcome<Succeeded>> {
+function listing(options: HarnessOptions = {}, caller = ada): Promise<Outcome> {
   const h = harness(options);
   return h.call(operationNamed(h.operations, 'list_providers'), caller);
 }

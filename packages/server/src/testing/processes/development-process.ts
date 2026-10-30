@@ -99,7 +99,6 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
       TMPDIR: tmpdir(),
       PORT: '0',
       LEDGER_FILE: files.ledgerFile,
-      PREDICTION_CACHE_DIR: join(files.directory, 'prediction-cache'),
       DO_NOT_TRACK: '1',
       ...noConsentThroughAuto,
       ...options.environment,

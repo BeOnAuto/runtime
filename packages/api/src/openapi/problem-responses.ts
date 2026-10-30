@@ -1,4 +1,4 @@
-import { isStreamedBody, type RouteRegistration } from '@on.auto/operations';
+import type { RouteRegistration } from '@on.auto/operations';
 
 import { problemReasons, problemTypes, type ProblemReason } from '../problem/problem-document.ts';
 import { problemMediaType } from '../problem/problem.ts';
@@ -43,17 +43,8 @@ function retiredPlaybookOf({ scope, kind }: RouteRegistration): readonly Problem
   return scope === 'playbook' && kind === 'command' ? ['conflict'] : [];
 }
 
-function streamedBodyOf({ servedOverHttpAlone }: RouteRegistration): readonly ProblemReason[] {
-  return servedOverHttpAlone !== undefined && isStreamedBody(servedOverHttpAlone) ? ['length_required'] : [];
-}
-
 function answeredReasonsOf(registration: RouteRegistration): ReadonlySet<ProblemReason> {
-  return new Set([
-    ...answeredToEveryOperation,
-    ...registration.reasons,
-    ...retiredPlaybookOf(registration),
-    ...streamedBodyOf(registration),
-  ]);
+  return new Set([...answeredToEveryOperation, ...registration.reasons, ...retiredPlaybookOf(registration)]);
 }
 
 function responseOf(reasons: readonly ProblemReason[]): OpenApiObject {

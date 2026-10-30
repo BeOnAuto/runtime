@@ -138,7 +138,7 @@ export function defineFinishConsent(services: ConsentServices) {
     route: { method: 'POST', path: '/connections/{id}/consent/code' },
     body: { kind: 'json' },
     inputSchema: FinishingSchema,
-    answer: { kind: 'json', outputSchema: ConnectionSchema },
+    outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* (finishing) {
       const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token), bindsPerson };

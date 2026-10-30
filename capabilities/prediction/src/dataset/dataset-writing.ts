@@ -14,7 +14,6 @@ import type { DatasetChange } from './dataset-fold.ts';
 import type { MergedRow } from './dataset-merging.ts';
 import type { DatasetRow } from './dataset-rows.ts';
 import { composed, tuples } from './dataset-statements.ts';
-import { storedOf } from './row-measures.ts';
 
 const WrittenSchema = Schema.Struct({ data_sha256: Schema.String });
 
@@ -22,7 +21,7 @@ function upserted(row: DatasetRow, upserts: readonly MergedRow[]): readonly Stat
   if (upserts.length === 0) {
     return [];
   }
-  const values = upserts.map(({ series, period, target, events, features }) => [
+  const values = upserts.map(({ series, period, target, events }) => [
     row.playbookKey,
     row.dataSha256,
     series,
@@ -32,15 +31,13 @@ function upserted(row: DatasetRow, upserts: readonly MergedRow[]): readonly Stat
     target.count,
     target.at,
     events,
-    JSON.stringify(features.map((feature) => storedOf(feature))),
   ]);
   return [
     composed(
-      'INSERT INTO prediction_rows (playbook_key, data_sha256, series, period_index, period, target, target_count, target_at, events, features) VALUES ',
+      'INSERT INTO prediction_rows (playbook_key, data_sha256, series, period_index, period, target, target_count, target_at, events) VALUES ',
       ...tuples(values),
       ' ON CONFLICT (playbook_key, data_sha256, series, period_index) DO UPDATE SET target = excluded.target,',
-      ' target_count = excluded.target_count, target_at = excluded.target_at, events = excluded.events,',
-      ' features = excluded.features',
+      ' target_count = excluded.target_count, target_at = excluded.target_at, events = excluded.events',
     ),
   ];
 }

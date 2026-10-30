@@ -1,4 +1,4 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { providerListOf } from '@on.auto/providers/testing';
 import { servedThroughAuto } from '@on.auto/tool-servers/served-fakes';
 import { autoClientsOf, consentedAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
@@ -44,7 +44,7 @@ async function sharingHarness(): Promise<Harness> {
   return consentHarnessAt(await served(), { way: sharingWay });
 }
 
-function reading(h: Harness, { id, token }: Added, at?: string): Promise<Outcome<Succeeded>> {
+function reading(h: Harness, { id, token }: Added, at?: string): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'read_link'), ada, { id, token }, at);
 }
 

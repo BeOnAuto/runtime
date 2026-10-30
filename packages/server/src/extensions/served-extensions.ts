@@ -13,13 +13,18 @@ import {
 import type { ExtensionEntry } from './extension-settings.ts';
 import { releaseExtensions } from './release-extensions.ts';
 
+const pointsTheCapabilitiesDeclare: readonly ExtensionPoint[] = [];
+
 export async function extensionsServedBy(
   runtime: AppRuntime<DispatcherServices>,
   configured: readonly ExtensionEntry[],
-  points: readonly ExtensionPoint[],
   installed: InstalledPackages = installedPackages,
 ): Promise<LoadedExtensions> {
-  const extensions = await loadedExtensions(listedExtensions(configured, releaseExtensions), points, installed);
+  const extensions = await loadedExtensions(
+    listedExtensions(configured, releaseExtensions),
+    pointsTheCapabilitiesDeclare,
+    installed,
+  );
   await runtime.run(logExtensions(extensions.extensions));
   return extensions;
 }

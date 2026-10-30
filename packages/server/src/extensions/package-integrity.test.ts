@@ -31,7 +31,7 @@ function expectedIntegrity(files: readonly (readonly [string, string])[]): strin
 describe('the integrity of an installed package', () => {
   it('is the SHA-512 of each file under its folder, by its path sorted as UTF-8 bytes, its length and its bytes, past node_modules', async () => {
     const folder = packageFolder({
-      'package.json': '{"name":"@acme/models"}',
+      'package.json': '{"name":"@acme/extension"}',
       'src/index.js': 'export const manifest = {};',
       'src/Zeta.js': 'export {};',
       'node_modules/dependency/index.js': 'never read',
@@ -39,7 +39,7 @@ describe('the integrity of an installed package', () => {
 
     expect(await integrityOf(folder)).toBe(
       expectedIntegrity([
-        ['package.json', '{"name":"@acme/models"}'],
+        ['package.json', '{"name":"@acme/extension"}'],
         ['src/Zeta.js', 'export {};'],
         ['src/index.js', 'export const manifest = {};'],
       ]),
@@ -63,7 +63,7 @@ describe('the integrity of an installed package', () => {
 
 describe('the dependencies an installed package bundles', () => {
   it('are covered, every file under node_modules/<name> for each name it bundles, and no other nested package is', async () => {
-    const manifest = JSON.stringify({ name: '@acme/models', bundleDependencies: ['bundled', '@acme/inner'] });
+    const manifest = JSON.stringify({ name: '@acme/extension', bundleDependencies: ['bundled', '@acme/inner'] });
     const files = (bundled: string, other: string): Readonly<Record<string, string>> => ({
       'package.json': manifest,
       'node_modules/bundled/index.js': bundled,
@@ -89,7 +89,7 @@ describe('the dependencies an installed package bundles', () => {
 
   it('are read from bundledDependencies as from bundleDependencies, and as every dependency the package names when true', async () => {
     const manifest = JSON.stringify({
-      name: '@acme/models',
+      name: '@acme/extension',
       dependencies: { bundled: '1.0.0' },
       bundledDependencies: true,
     });

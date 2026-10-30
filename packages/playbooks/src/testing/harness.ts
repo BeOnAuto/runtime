@@ -9,7 +9,6 @@ import {
   type Outcome,
   type Registration,
   type Runnable,
-  type Succeeded,
 } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
@@ -36,7 +35,7 @@ interface OrgRoute {
 
 interface Calling {
   (operation: OrgOperation, request: OrgRequest, at?: string): Promise<Outcome>;
-  (operation: OrgRoute, request: OrgRequest, at?: string): Promise<Outcome<Succeeded>>;
+  (operation: OrgRoute, request: OrgRequest, at?: string): Promise<Outcome>;
 }
 
 export interface Harness {
@@ -71,8 +70,8 @@ export function harness(
       ),
     );
   function call(operation: OrgOperation, request: OrgRequest, at?: string): Promise<Outcome>;
-  function call(operation: OrgRoute, request: OrgRequest, at?: string): Promise<Outcome<Succeeded>>;
-  function call(operation: OrgRoute, request: OrgRequest, at?: string): Promise<Outcome<Succeeded>> {
+  function call(operation: OrgRoute, request: OrgRequest, at?: string): Promise<Outcome>;
+  function call(operation: OrgRoute, request: OrgRequest, at?: string): Promise<Outcome> {
     return run(dispatcher.dispatchToOrg(operation.registration, request), at);
   }
   return {

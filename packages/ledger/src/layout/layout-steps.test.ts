@@ -32,15 +32,22 @@ describe('the steps that carry a database forward', () => {
     expect(stepsFrom(9, { kept: 9, steps })).toEqual([]);
   });
 
-  it('are refused when two lead to one layout, as when none does', () => {
-    expect(() => stepsFrom(6, { kept: 7, steps: [aStepTo(7), aStepTo(7)] })).toThrow(
-      'The ledger was given 2 steps to layout 7 of its database, where it takes exactly one',
-    );
-    expect(() => stepsFrom(6, { kept: 7, steps: [] })).toThrow(
-      'The ledger was given 0 steps to layout 7 of its database, where it takes exactly one',
-    );
+  it('are taken together when several packages each give one to a layout, their statements in the order given', () => {
+    const [first, second] = [aStepTo(7), aStepTo(7)];
+
+    expect(stepsFrom(6, { kept: 7, steps: [first, second] })).toEqual([
+      { layout: 7, statements: [...first.statements, ...second.statements] },
+    ]);
   });
 
+  it('are refused when none leads to a layout', () => {
+    expect(() => stepsFrom(6, { kept: 7, steps: [] })).toThrow(
+      'The ledger was given no step to layout 7 of its database, where it takes at least one',
+    );
+  });
+});
+
+describe('the steps of a layout, as their statements run and as they are put in sequence', () => {
   it('run a statement as it is written, or the one written for the dialect of the database', () => {
     const shared = statement`CREATE TABLE notes (note TEXT)`;
     const eachDialect = { sqlite: statement`SELECT ${'sqlite'}`, postgresql: statement`SELECT ${'postgresql'}` };
@@ -53,11 +60,13 @@ describe('the steps that carry a database forward', () => {
   });
 
   it('are put in sequence from the earliest layout carried forward to the layout kept, leaving out a step to any other number', () => {
+    const steps = Array.from({ length: ledgerLayout - ledgerLayoutFloor }, (_, at) =>
+      aStepTo(ledgerLayoutFloor + at + 1),
+    );
     const beyond = aStepTo(ledgerLayout + 1);
 
     expect(layoutCarryingBy()).toEqual({ kept: ledgerLayout, floor: ledgerLayoutFloor, steps: [] });
-    expect(layoutStepsInSequence([])).toEqual(stepsFrom(ledgerLayoutFloor, { kept: ledgerLayout, steps: [] }));
-    expect(layoutStepsInSequence([beyond])).not.toContain(beyond);
+    expect(layoutStepsInSequence([beyond, ...steps.toReversed()])).toEqual(steps);
   });
 
   it('are carried beside a reader of the facts the server reads, when it is given their schemas', () => {

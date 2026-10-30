@@ -2,13 +2,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { ExtensionPoint, ImplementationsProvided } from '@on.auto/definitions';
 import {
   ExtensionManifestSchema,
   firstLineOf,
   type ExtensionManifest,
+  type ExtensionPoint,
+  type ImplementationsProvided,
   type Provision,
-} from '@on.auto/prediction-contract';
+} from '@on.auto/definitions';
 import { Data, Option, Result, Schema } from 'effect';
 
 import type { ExtensionEntry } from './extension-settings.ts';
@@ -124,7 +125,8 @@ function provisionProblem(
   const point = points.find(({ name }) => name === provision.point);
   if (point === undefined) {
     const declared = points.map(({ name }) => name).join(', ');
-    return `it provides ${provision.point}, which no capability of this runtime declares; the points declared are ${declared}`;
+    const unknown = `it provides ${provision.point}, which no capability of this runtime declares`;
+    return declared === '' ? unknown : `${unknown}; the points declared are ${declared}`;
   }
   const { least, most } = point.contracts;
   if (provision.contract < least || provision.contract > most) {

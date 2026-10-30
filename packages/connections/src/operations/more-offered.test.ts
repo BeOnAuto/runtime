@@ -1,4 +1,4 @@
-import type { Outcome, RegisteredPlainLanguage, Succeeded } from '@on.auto/operations';
+import type { Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
 import { providerListOf } from '@on.auto/providers/testing';
 import { consentedAt, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
@@ -34,7 +34,7 @@ async function served(): Promise<FakeMcpServer> {
   return fake;
 }
 
-function listed(h: Harness, input: Readonly<Record<string, unknown>> = {}): Promise<Outcome<Succeeded>> {
+function listed(h: Harness, input: Readonly<Record<string, unknown>> = {}): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'list_connections'), ada, input);
 }
 

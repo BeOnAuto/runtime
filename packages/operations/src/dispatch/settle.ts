@@ -1,6 +1,6 @@
 import { Cause, Effect } from 'effect';
 
-import { cancelled, type Answered, type Outcome, type Settled, type Succeeded } from '../outcome/outcome.ts';
+import { cancelled, type Outcome, type Settled, type Succeeded } from '../outcome/outcome.ts';
 import { failureOf } from './error-boundary.ts';
 import type { IncidentReporter } from './incident-reporter.ts';
 
@@ -19,7 +19,7 @@ function stoppedWhenAborted(signal: AbortSignal): Effect.Effect<Settled<never>> 
   });
 }
 
-export function settle<R, A extends Succeeded = Answered>(
+export function settle<R, A extends Succeeded = Succeeded>(
   call: Effect.Effect<Outcome<A>, never, R>,
   signal?: AbortSignal,
 ): Effect.Effect<Settled<A>, never, R | IncidentReporter> {

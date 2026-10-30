@@ -1,62 +1,33 @@
-import type { CapabilityAnswer, CapabilityRejection, RunContext } from '@on.auto/definitions';
+import { checkedInput, functionResourceLabels, type CapabilityDeclaration } from '@on.auto/definitions';
+import type { HostDatabase } from '@on.auto/workflow-host';
 import { Clock, Effect, Schema } from 'effect';
 
-import { decimalsObserved } from '../capability/figures.ts';
-import type { PredictionPorts } from '../capability/prediction-ports.ts';
 import type { PredictionFunctionDefinitionDocument } from '../document/prediction-document.ts';
+import { seriesWindow } from '../window/series-window.ts';
 import { checkedAnswer } from './answer-check.ts';
-import { answeringModelOf } from './default-forecast.ts';
-import { answeredWhileLicensed } from './model-answers.ts';
-import { aheadOf, observedOf, originFormOf, QuestionSchema } from './question-asked.ts';
-import { seriesWindow } from './series-window.ts';
+import { historyTooShort } from './history-refusal.ts';
+import { forecastAt, predictionOf, QuestionSchema } from './question-asked.ts';
+import { questionRecordOf } from './question-record.ts';
 
-const coverage = 0.8;
+type QuestionRun = CapabilityDeclaration<PredictionFunctionDefinitionDocument>['run'];
 
-export function questionRun(
-  ports: PredictionPorts,
-  document: PredictionFunctionDefinitionDocument,
-  input: Schema.Json,
-  context: RunContext,
-): Effect.Effect<CapabilityAnswer, CapabilityRejection> {
-  const playbook = { org: context.org, playbook: context.playbook };
-  const question = Schema.decodeUnknownSync(QuestionSchema)(input);
-  const { predicts } = document;
-  return Effect.gen(function* () {
-    const model = yield* answeringModelOf(ports, document, {
-      playbook,
-      name: context.definition.name,
-      definitionVersion: context.definition.version,
+export function questionRunOn(database: Pick<HostDatabase, 'readConsistently'>): QuestionRun {
+  return (document, input, context) =>
+    Effect.gen(function* () {
+      yield* checkedInput(input, document.schemas.question, functionResourceLabels.prediction.singular);
+      const question = Schema.decodeUnknownSync(QuestionSchema)(input);
+      const { predicts } = document;
+      const now = yield* Clock.currentTimeMillis;
+      const playbook = { org: context.org, playbook: context.playbook };
+      const window = yield* seriesWindow(database, { playbook, document, series: question.series, now });
+      const answer = forecastAt(predicts, window);
+      if ('refused' in answer) {
+        return yield* Effect.fail(
+          historyTooShort({ series: question.series, predicts, as: document.data.target.as, window }, answer),
+        );
+      }
+      const output = predictionOf(predicts, window, question, answer.points);
+      yield* checkedAnswer(output);
+      return { output, record: questionRecordOf(answer, predicts, window) };
     });
-    const now = yield* Clock.currentTimeMillis;
-    const window = yield* seriesWindow(ports, { playbook, document, series: question.series, now });
-    const answering = { ports, document, question, org: context.org };
-    const { model: answered, answer } = yield* answeredWhileLicensed(answering, model, window);
-    const origin = originFormOf(predicts, window.origin);
-    const ahead = aheadOf(predicts, window.origin);
-    const output = {
-      unit: predicts.unit,
-      period: predicts.period,
-      origin,
-      lines: [
-        { name: 'observed', points: observedOf(window, predicts) },
-        { name: ahead.line, points: answer.predicted },
-      ],
-      ...(question.marks === undefined ? {} : { marks: question.marks }),
-    };
-    yield* checkedAnswer(output);
-    return {
-      output,
-      record: {
-        version: answered.version,
-        ...(answered.version === null ? { default_forecast: true, ...answered.defaultBecause } : {}),
-        runtime: { ...answer.runtime },
-        coverage,
-        decimals: decimalsObserved(window.y),
-        ...ahead.record,
-        origin,
-        dataset_checkpoint: window.checkpoint,
-        duration_ms: Math.round(answer.milliseconds),
-      },
-    };
-  });
 }

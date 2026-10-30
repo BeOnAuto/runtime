@@ -5,14 +5,13 @@ import type { PageEvent } from '@on.auto/workflow-host';
 import { predictionBounds } from '../capability/prediction-bounds.ts';
 import { eventTime, valueAt } from '../data/data-pointers.ts';
 import { momentOf, periodOfMoment } from '../periods/moments.ts';
-import type { DatasetData, DatasetMeasure } from './dataset-data.ts';
+import type { DatasetData } from './dataset-data.ts';
 
 export interface Contribution {
   readonly series: string;
   readonly period: number;
   readonly moment: number;
   readonly target: number | undefined;
-  readonly features: readonly (number | undefined)[];
 }
 
 interface Refusal {
@@ -46,26 +45,14 @@ function seriesOf({ series }: DatasetData, { event }: PageEvent): Read<string> {
   return { refusal: `Its series at ${where} is not text of 1 to ${mostSeriesBytes} bytes` };
 }
 
-function readingOf({ of }: DatasetMeasure, { event }: PageEvent, what: string): Read<number | undefined> {
+function targetOf({ target: { of } }: DatasetData, { event }: PageEvent): Read<number | undefined> {
   const found = of === undefined ? undefined : valueAt(event.data, of);
   if (found === undefined || found === null) {
     return { value: undefined };
   }
   return typeof found === 'number' && Number.isFinite(found)
     ? { value: found }
-    : { refusal: `Its ${what} at ${String(of)} is not a finite number` };
-}
-
-function featuresOf(data: DatasetData, placed: PageEvent): Read<readonly (number | undefined)[]> {
-  const values: (number | undefined)[] = [];
-  for (const feature of data.features) {
-    const read = readingOf(feature, placed, `feature ${feature.name}`);
-    if ('refusal' in read) {
-      return read;
-    }
-    values.push(read.value);
-  }
-  return { value: values };
+    : { refusal: `Its target at ${String(of)} is not a finite number` };
 }
 
 export function eventReadingOf(data: DatasetData, placed: PageEvent): EventReading {
@@ -77,20 +64,15 @@ export function eventReadingOf(data: DatasetData, placed: PageEvent): EventReadi
   if ('refusal' in series) {
     return series;
   }
-  const target = readingOf(data.target, placed, 'target');
-  if ('refusal' in target) {
-    return target;
-  }
-  const features = featuresOf(data, placed);
-  return 'refusal' in features
-    ? features
+  const target = targetOf(data, placed);
+  return 'refusal' in target
+    ? target
     : {
         contribution: {
           series: series.value,
           moment: time.value,
           period: periodOfMoment(data.period, time.value),
           target: target.value,
-          features: features.value,
         },
       };
 }

@@ -60,10 +60,6 @@
       "description": "The requests runs wait on, and their answers"
     },
     {
-      "name": "prediction",
-      "description": "A prediction function's datasets and versions, and the routes of the trainer that builds it"
-    },
-    {
       "name": "guides",
       "description": "The playbook's guides: what its words mean, how each kind of definition is written, and recipes"
     }
@@ -7358,7 +7354,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "description": "The features of the license in force, which a model runtime that names one needs to do its work; none without a license, or once it is invalid or lapsed"
+                      "description": "The features of the license in force, which work that needs one checks before it starts; none without a license, or once it is invalid or lapsed"
                     },
                     "standing": {
                       "anyOf": [
@@ -7808,7 +7804,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "description": "The features of the license in force, which a model runtime that names one needs to do its work; none without a license, or once it is invalid or lapsed"
+                      "description": "The features of the license in force, which work that needs one checks before it starts; none without a license, or once it is invalid or lapsed"
                     },
                     "standing": {
                       "anyOf": [
@@ -8810,12 +8806,10 @@
                               "relation": {
                                 "type": "string",
                                 "enum": [
-                                  "sends-builds",
-                                  "asks-approval",
                                   "remembers-runs",
                                   "remembers-changes"
                                 ],
-                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
                               }
                             },
                             "required": [
@@ -8827,7 +8821,7 @@
                           }
                         ]
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -9550,12 +9544,10 @@
                               "relation": {
                                 "type": "string",
                                 "enum": [
-                                  "sends-builds",
-                                  "asks-approval",
                                   "remembers-runs",
                                   "remembers-changes"
                                 ],
-                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
                               }
                             },
                             "required": [
@@ -9567,7 +9559,7 @@
                           }
                         ]
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -9990,12 +9982,10 @@
                               "relation": {
                                 "type": "string",
                                 "enum": [
-                                  "sends-builds",
-                                  "asks-approval",
                                   "remembers-runs",
                                   "remembers-changes"
                                 ],
-                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
                               }
                             },
                             "required": [
@@ -10007,7 +9997,7 @@
                           }
                         ]
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -10420,12 +10410,10 @@
                               "relation": {
                                 "type": "string",
                                 "enum": [
-                                  "sends-builds",
-                                  "asks-approval",
                                   "remembers-runs",
                                   "remembers-changes"
                                 ],
-                                "description": "sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
                               }
                             },
                             "required": [
@@ -10437,7 +10425,7 @@
                           }
                         ]
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
                     }
                   },
                   "required": [
@@ -10604,7 +10592,7 @@
                         "table",
                         "text"
                       ],
-                      "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise, as for a build of a prediction function"
+                      "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
                     },
                     "status": {
                       "type": "string",
@@ -10691,10 +10679,7 @@
                                 "tools_unfinished",
                                 "rebuilding",
                                 "requests_full",
-                                "builds_full",
                                 "dataset_not_ready",
-                                "model_process_busy",
-                                "model_process_failed",
                                 "meter_unavailable"
                               ],
                               "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which its server marks read-only, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
@@ -10725,12 +10710,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -10771,16 +10751,7 @@
                                 "tools_called",
                                 "effect_unknown",
                                 "oversized",
-                                "no_active_version",
-                                "data_changed",
-                                "build_in_flight",
-                                "dataset_too_large",
-                                "baseline_perfect",
-                                "unscorable",
-                                "not_a_build",
-                                "build_ended",
-                                "no_trainer",
-                                "already_active",
+                                "history_too_short",
                                 "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
@@ -10816,12 +10787,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -11057,7 +11023,7 @@
                         "table",
                         "text"
                       ],
-                      "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise, as for a build of a prediction function"
+                      "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
                     },
                     "status": {
                       "type": "string",
@@ -11144,10 +11110,7 @@
                                 "tools_unfinished",
                                 "rebuilding",
                                 "requests_full",
-                                "builds_full",
                                 "dataset_not_ready",
-                                "model_process_busy",
-                                "model_process_failed",
                                 "meter_unavailable"
                               ],
                               "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which its server marks read-only, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
@@ -11178,12 +11141,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -11224,16 +11182,7 @@
                                 "tools_called",
                                 "effect_unknown",
                                 "oversized",
-                                "no_active_version",
-                                "data_changed",
-                                "build_in_flight",
-                                "dataset_too_large",
-                                "baseline_perfect",
-                                "unscorable",
-                                "not_a_build",
-                                "build_ended",
-                                "no_trainer",
-                                "already_active",
+                                "history_too_short",
                                 "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
@@ -11269,12 +11218,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -11525,7 +11469,7 @@
                         "table",
                         "text"
                       ],
-                      "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise, as for a build of a prediction function"
+                      "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
                     },
                     "status": {
                       "type": "string",
@@ -11612,10 +11556,7 @@
                                 "tools_unfinished",
                                 "rebuilding",
                                 "requests_full",
-                                "builds_full",
                                 "dataset_not_ready",
-                                "model_process_busy",
-                                "model_process_failed",
                                 "meter_unavailable"
                               ],
                               "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which its server marks read-only, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
@@ -11646,12 +11587,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -11692,16 +11628,7 @@
                                 "tools_called",
                                 "effect_unknown",
                                 "oversized",
-                                "no_active_version",
-                                "data_changed",
-                                "build_in_flight",
-                                "dataset_too_large",
-                                "baseline_perfect",
-                                "unscorable",
-                                "not_a_build",
-                                "build_ended",
-                                "no_trainer",
-                                "already_active",
+                                "history_too_short",
                                 "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
@@ -11737,12 +11664,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -12056,7 +11978,7 @@
                             "table",
                             "text"
                           ],
-                          "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise, as for a build of a prediction function"
+                          "description": "The output shape the output of this run takes, series, categories, table or text, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
                         },
                         "status": {
                           "type": "string",
@@ -12119,10 +12041,7 @@
                                 "tools_unfinished",
                                 "rebuilding",
                                 "requests_full",
-                                "builds_full",
                                 "dataset_not_ready",
-                                "model_process_busy",
-                                "model_process_failed",
                                 "meter_unavailable",
                                 "taken",
                                 "retired",
@@ -12132,16 +12051,7 @@
                                 "tools_called",
                                 "effect_unknown",
                                 "oversized",
-                                "no_active_version",
-                                "data_changed",
-                                "build_in_flight",
-                                "dataset_too_large",
-                                "baseline_perfect",
-                                "unscorable",
-                                "not_a_build",
-                                "build_ended",
-                                "no_trainer",
-                                "already_active",
+                                "history_too_short",
                                 "feature_unlicensed",
                                 "connections_full",
                                 "credits_exhausted",
@@ -12182,12 +12092,7 @@
                                 "restarted_without_content",
                                 "call_outcome_unknown",
                                 "only_read",
-                                "builds_of_the_day",
                                 "stalled",
-                                "not_finite",
-                                "not_in_order",
-                                "baseline_check",
-                                "no_model_runtime",
                                 "none_left",
                                 "free_daily_limit",
                                 "free_month_used",
@@ -13022,14 +12927,6 @@
                 "delivery_failed",
                 "delivery_refused",
                 "reply_refused",
-                "dataset_assembled",
-                "candidate_uploaded",
-                "candidate_refused",
-                "candidate_scored",
-                "candidate_disqualified",
-                "baseline_scored",
-                "baseline_not_walked",
-                "candidates_fitted",
                 "run_deferred",
                 "interaction_requested",
                 "definition_created",
@@ -13042,15 +12939,6 @@
                 "telling_failed",
                 "replies_read",
                 "reading_failed",
-                "version_built",
-                "shadow_predicted",
-                "shadow_graded",
-                "shadow_passed",
-                "shadow_failed",
-                "version_activated",
-                "activation_refused",
-                "build_asked",
-                "build_ended",
                 "workflow_input_applied",
                 "step_started",
                 "step_waiting",
@@ -15458,575 +15346,6 @@
         ]
       }
     },
-    "/orgs/{org}/playbooks/{playbook}/datasets/{sha256}": {
-      "put": {
-        "operationId": "upload_dataset",
-        "summary": "Upload dataset",
-        "description": "Keeps an uploaded dataset that a prediction function names as data.dataset in place of a projection of the playbook’s history. The body is CSV in UTF-8 with the header series,period then the target and the features, one row a series and period, sorted by series then period, each value a JSON number or empty. The path names the SHA-256 of the body, and a body whose digest is not the path’s is refused, as is one that breaks the grammar, at its first faulty line; nothing is kept then.",
-        "tags": [
-          "prediction"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/org"
-          },
-          {
-            "$ref": "#/components/parameters/playbook"
-          },
-          {
-            "name": "sha256",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The SHA-256 of the body, 64 lowercase hexadecimal digits",
-              "pattern": "^[0-9a-f]{64}$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "At most 67,108,864 bytes, with their length as Content-Length",
-          "content": {
-            "text/csv": {}
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succeeded",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://on.auto/schemas/runtime/upload_dataset/output",
-                  "type": "object",
-                  "properties": {
-                    "dataset": {
-                      "type": "string",
-                      "description": "The SHA-256 a definition names as data.dataset"
-                    },
-                    "bytes": {
-                      "type": "integer"
-                    },
-                    "rows": {
-                      "type": "integer"
-                    },
-                    "series": {
-                      "type": "integer"
-                    },
-                    "columns": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "description": "The target and the features, in the header’s order"
-                    },
-                    "period": {
-                      "type": "string",
-                      "enum": [
-                        "day",
-                        "week",
-                        "month",
-                        "quarter",
-                        "year"
-                      ]
-                    },
-                    "first_period": {
-                      "type": "string"
-                    },
-                    "last_period": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "dataset",
-                    "bytes",
-                    "rows",
-                    "series",
-                    "columns",
-                    "period",
-                    "first_period",
-                    "last_period"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/bad_request"
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthenticated"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
-          },
-          "404": {
-            "$ref": "#/components/responses/not_found"
-          },
-          "405": {
-            "$ref": "#/components/responses/method_not_allowed"
-          },
-          "409": {
-            "$ref": "#/components/responses/conflict"
-          },
-          "411": {
-            "$ref": "#/components/responses/length_required"
-          },
-          "413": {
-            "$ref": "#/components/responses/content_too_large"
-          },
-          "415": {
-            "$ref": "#/components/responses/unsupported_media_type"
-          },
-          "422": {
-            "$ref": "#/components/responses/invalid_input"
-          },
-          "500": {
-            "$ref": "#/components/responses/internal"
-          },
-          "503": {
-            "$ref": "#/components/responses/unavailable"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/orgs/{org}/playbooks/{playbook}/runs/{run_id}/build/brief": {
-      "get": {
-        "operationId": "read_build_brief",
-        "summary": "Read build brief",
-        "description": "Reads the brief of a build of a prediction function that waits for its trainer, as Markdown, whole. It is the text the trainer reads first: what to predict, from which rows, and the rules to follow. A run that is not a build, or a build that has ended or taken its answer, is refused.",
-        "tags": [
-          "prediction"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/org"
-          },
-          {
-            "$ref": "#/components/parameters/playbook"
-          },
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The run's id, a UUID in any case, kept in lowercase",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succeeded",
-            "content": {
-              "text/markdown": {}
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/bad_request"
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthenticated"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
-          },
-          "404": {
-            "$ref": "#/components/responses/not_found"
-          },
-          "405": {
-            "$ref": "#/components/responses/method_not_allowed"
-          },
-          "409": {
-            "$ref": "#/components/responses/conflict"
-          },
-          "413": {
-            "$ref": "#/components/responses/content_too_large"
-          },
-          "415": {
-            "$ref": "#/components/responses/unsupported_media_type"
-          },
-          "422": {
-            "$ref": "#/components/responses/invalid_input"
-          },
-          "500": {
-            "$ref": "#/components/responses/internal"
-          },
-          "503": {
-            "$ref": "#/components/responses/unavailable"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          }
-        ]
-      }
-    },
-    "/orgs/{org}/playbooks/{playbook}/runs/{run_id}/build/rows": {
-      "get": {
-        "operationId": "read_build_rows",
-        "summary": "Read build rows",
-        "description": "Reads the training rows of a build of a prediction function that waits for its trainer, as CSV, streamed. They are the rows a trainer fits a model on: the held-back periods the playbook scores candidates on are not among them. A run that is not a build, or a build that has ended or taken its answer, is refused.",
-        "tags": [
-          "prediction"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/org"
-          },
-          {
-            "$ref": "#/components/parameters/playbook"
-          },
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The run's id, a UUID in any case, kept in lowercase",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succeeded",
-            "content": {
-              "text/csv": {}
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/bad_request"
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthenticated"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
-          },
-          "404": {
-            "$ref": "#/components/responses/not_found"
-          },
-          "405": {
-            "$ref": "#/components/responses/method_not_allowed"
-          },
-          "409": {
-            "$ref": "#/components/responses/conflict"
-          },
-          "413": {
-            "$ref": "#/components/responses/content_too_large"
-          },
-          "415": {
-            "$ref": "#/components/responses/unsupported_media_type"
-          },
-          "422": {
-            "$ref": "#/components/responses/invalid_input"
-          },
-          "500": {
-            "$ref": "#/components/responses/internal"
-          },
-          "503": {
-            "$ref": "#/components/responses/unavailable"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
-              "playbook:read"
-            ]
-          }
-        ]
-      }
-    },
-    "/orgs/{org}/playbooks/{playbook}/runs/{run_id}/build/candidates": {
-      "post": {
-        "operationId": "upload_candidate",
-        "summary": "Upload candidate",
-        "description": "Uploads a candidate model to a build of a prediction function that waits for its trainer: a file in a format the brief of the build lists, named by format, at most 64 MiB, with its Content-Length. The file is checked in a model process by the model runtime of its format, and refused when that runtime does not load it, when its signature is not the one the function feeds, or when the build has its 8 candidates; a format the server does not execute for the function is refused at format, and one whose model runtime needs a feature the license of the runtime does not include is refused as feature_unlicensed. The answer is the SHA-256 the answer to the build names; the same bytes again answer the same.",
-        "tags": [
-          "prediction"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/org"
-          },
-          {
-            "$ref": "#/components/parameters/playbook"
-          },
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "The run's id, a UUID in any case, kept in lowercase",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "format",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "The format of the candidate, one the brief of the build lists; the one format it lists when it lists one"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "At most 67,108,864 bytes, with their length as Content-Length",
-          "content": {
-            "application/octet-stream": {}
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succeeded",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://on.auto/schemas/runtime/upload_candidate/output",
-                  "type": "object",
-                  "properties": {
-                    "candidate": {
-                      "type": "string",
-                      "description": "The SHA-256 of the candidate, which the answer names"
-                    },
-                    "bytes": {
-                      "type": "integer"
-                    },
-                    "format": {
-                      "type": "string",
-                      "description": "The format of the candidate, as the upload named it"
-                    },
-                    "signature": {
-                      "type": "object",
-                      "description": "The signature of the candidate as the model runtime of its format answered it"
-                    }
-                  },
-                  "required": [
-                    "candidate",
-                    "bytes",
-                    "format",
-                    "signature"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/bad_request"
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthenticated"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
-          },
-          "404": {
-            "$ref": "#/components/responses/not_found"
-          },
-          "405": {
-            "$ref": "#/components/responses/method_not_allowed"
-          },
-          "409": {
-            "$ref": "#/components/responses/conflict"
-          },
-          "411": {
-            "$ref": "#/components/responses/length_required"
-          },
-          "413": {
-            "$ref": "#/components/responses/content_too_large"
-          },
-          "415": {
-            "$ref": "#/components/responses/unsupported_media_type"
-          },
-          "422": {
-            "$ref": "#/components/responses/invalid_input"
-          },
-          "500": {
-            "$ref": "#/components/responses/internal"
-          },
-          "503": {
-            "$ref": "#/components/responses/unavailable"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/orgs/{org}/playbooks/{playbook}/definitions/prediction/{name}/activate": {
-      "post": {
-        "operationId": "activate_version",
-        "summary": "Activate version",
-        "description": "Makes a built version of a prediction function its active one, which every question then asks, whatever its shadow or its approval decided. An earlier version activated again is a rollback, recorded the same way. The version must be built, and must not already be the active one.",
-        "tags": [
-          "prediction"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/org"
-          },
-          {
-            "$ref": "#/components/parameters/playbook"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9-]{2,47}$",
-              "description": "The prediction function"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://on.auto/schemas/runtime/activate_version/input",
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "version": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "description": "A version it has built"
-                  }
-                },
-                "required": [
-                  "version"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succeeded",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://on.auto/schemas/runtime/activate_version/output",
-                  "type": "object",
-                  "properties": {
-                    "function": {
-                      "type": "string",
-                      "description": "The prediction function"
-                    },
-                    "version": {
-                      "type": "integer",
-                      "description": "The version now active"
-                    },
-                    "rule": {
-                      "type": "string",
-                      "enum": [
-                        "requested"
-                      ],
-                      "description": "Activated at the request of the caller"
-                    },
-                    "activated_at": {
-                      "type": "string",
-                      "description": "When it was activated, in ISO 8601 UTC"
-                    }
-                  },
-                  "required": [
-                    "function",
-                    "version",
-                    "rule",
-                    "activated_at"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/bad_request"
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthenticated"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
-          },
-          "404": {
-            "$ref": "#/components/responses/not_found"
-          },
-          "405": {
-            "$ref": "#/components/responses/method_not_allowed"
-          },
-          "409": {
-            "$ref": "#/components/responses/conflict"
-          },
-          "413": {
-            "$ref": "#/components/responses/content_too_large"
-          },
-          "415": {
-            "$ref": "#/components/responses/unsupported_media_type"
-          },
-          "422": {
-            "$ref": "#/components/responses/invalid_input"
-          },
-          "500": {
-            "$ref": "#/components/responses/internal"
-          },
-          "503": {
-            "$ref": "#/components/responses/unavailable"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
-              "playbook:write"
-            ]
-          }
-        ]
-      }
-    },
     "/orgs/{org}/playbooks/{playbook}/runs/{run_id}/events": {
       "post": {
         "operationId": "send_run_event",
@@ -16396,14 +15715,6 @@
               {
                 "type": "string",
                 "enum": [
-                  "length_required"
-                ],
-                "title": "Length required",
-                "description": "A body the route streams came without its length"
-              },
-              {
-                "type": "string",
-                "enum": [
                   "content_too_large"
                 ],
                 "title": "Content too large",
@@ -16467,16 +15778,7 @@
               "tools_called",
               "effect_unknown",
               "oversized",
-              "no_active_version",
-              "data_changed",
-              "build_in_flight",
-              "dataset_too_large",
-              "baseline_perfect",
-              "unscorable",
-              "not_a_build",
-              "build_ended",
-              "no_trainer",
-              "already_active",
+              "history_too_short",
               "feature_unlicensed",
               "connections_full",
               "credits_exhausted",
@@ -16489,10 +15791,7 @@
               "tools_unfinished",
               "rebuilding",
               "requests_full",
-              "builds_full",
               "dataset_not_ready",
-              "model_process_busy",
-              "model_process_failed",
               "meter_unavailable",
               "requested",
               "deadline",
@@ -16529,12 +15828,7 @@
               "restarted_without_content",
               "call_outcome_unknown",
               "only_read",
-              "builds_of_the_day",
               "stalled",
-              "not_finite",
-              "not_in_order",
-              "baseline_check",
-              "no_model_runtime",
               "none_left",
               "free_daily_limit",
               "free_month_used",
@@ -16671,16 +15965,6 @@
       },
       "unanswered": {
         "description": "unanswered: Nobody answered the request the run waited on.",
-        "content": {
-          "application/problem+json": {
-            "schema": {
-              "$ref": "#/components/schemas/problem"
-            }
-          }
-        }
-      },
-      "length_required": {
-        "description": "length_required: A body the route streams came without its length.",
         "content": {
           "application/problem+json": {
             "schema": {

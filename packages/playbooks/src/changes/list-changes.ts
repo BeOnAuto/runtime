@@ -37,7 +37,7 @@ export function defineListOrgChanges(namings: readonly ChangeNaming<ChangedFact>
     permittedBy: ['org:read', 'playbook:read'],
     body: { kind: 'none' },
     inputSchema: ChangesInputSchema,
-    answer: { kind: 'json', outputSchema: changesOutputSchemaOf(catalog) },
+    outputSchema: changesOutputSchemaOf(catalog),
     reasons: ['invalid_input'],
     handle: (input) =>
       Effect.gen(function* () {
@@ -63,7 +63,7 @@ export function defineListPlaybookChanges(presenters: readonly Presenter[]) {
     route: { method: 'GET', path: '/changes' },
     body: { kind: 'none' },
     inputSchema: ChangesInputSchema,
-    answer: { kind: 'json', outputSchema: changesOutputSchemaOf(catalog) },
+    outputSchema: changesOutputSchemaOf(catalog),
     reasons: ['invalid_input'],
     handle: (input) =>
       Effect.gen(function* () {

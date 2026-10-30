@@ -166,14 +166,14 @@ What a token then allows:
 - For an access token, `org_id` binds the org, not `user:org:read`. An access token that holds `org_id` and the four permissions, but not `user:org:read`, admits the person to that org with all four permissions.
 - Every other org refuses the person `403` with `insufficient_scope`, over HTTP and on the MCP endpoints. `/mcp` serves them the org their token names.
 
-API keys cover what sign-in does not: a machine, a pipeline or a trainer's agent that does not sign in, and a grant over only some of an org's playbooks, such as reading one playbook.
+API keys cover what sign-in does not: a machine, a pipeline or an agent that does not sign in, and a grant over only some of an org's playbooks, such as reading one playbook.
 
 ## The name recorded for a signed-in person
 
 A signed-in person acts under the id `person:<subject>`, where the subject is the token's `sub`, unchanged, and the name the token's `name` claim gives, or the subject where an access token holds no `name`, as an identity service may issue one. The id lets a reader of the facts tell a person from a key.
 
-- The id is the `by` of every fact the person records, including the activation of a prediction function version they ask for.
-- The id and the name, as `{ id, name }`, are the `created_by` of a playbook and a definition they create, the `added_by` and the `connected_by` of a connection they add and connect, the `started_by` of a run they start, the `answered_by` of a request they answer, and the `trained_by`, `approved_by` and `refused_by` of a version of a prediction function they train, approve or refuse.
+- The id is the `by` of every fact the person records.
+- The id and the name, as `{ id, name }`, are the `created_by` of a playbook and a definition they create, the `added_by` and the `connected_by` of a connection they add and connect, the `started_by` of a run they start and the `answered_by` of a request they answer.
 - A run event the person sends without a `source` gets the source `/callers/` followed by that name, percent-encoded as one path segment.
 
 ## What happens when access is revoked

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { basketLine, promotionLine, weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
-import { handled, type Holds } from './dataset-predicates.ts';
+import { weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
+import { handled, isLive, type Holds } from './dataset-predicates.ts';
+import { questionRefusedOn } from './dataset-questions.ts';
 import type { SettingsOf } from './dataset-stores.ts';
 import { watchingDatasets } from './dataset-watch.ts';
 import { keptRowsOf } from './kept-rows.ts';
 import { orderPlaced } from './orders.ts';
 import { alphaKey, projectedDatasets } from './projected-datasets.ts';
-import { refusalWhenFolded } from './written-files.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -22,14 +22,7 @@ function notedWith(detail: string): unknown {
   return expect.objectContaining({ detail });
 }
 
-const atTheRoot = weeklyOrdersWith(
-  ['  time: /placed_at', '  time: event'],
-  ['  series: /region', "  series: ''"],
-  ['  features:', ''],
-  [basketLine, ''],
-  [promotionLine, ''],
-  ['  given: [promotion]', ''],
-);
+const atTheRoot = weeklyOrdersWith(['  time: /placed_at', '  time: event'], ['  series: /region', "  series: ''"]);
 
 const outOfMemory = weeklyOrdersWith([
   '    - type: order.placed',
@@ -89,8 +82,9 @@ function stoppedTest(settingsOf: SettingsOf): void {
     expect(datasets.notes()).toEqual([
       { kind: 'dataset_stalled', playbook: alphaKey, dataSha256, record: row.stall?.record, detail: stalledWords },
     ]);
-    expect(await refusalWhenFolded(datasets, document)).toMatchObject({
-      refusal: { kind: 'not_ready', phase: 'stalled' },
+    expect(await questionRefusedOn(datasets.database, document)).toMatchObject({
+      kind: 'dataset_not_ready',
+      because: 'stalled',
       detail: notReadyWords,
     });
   });
@@ -153,11 +147,24 @@ function timeTest(settingsOf: SettingsOf): void {
   });
 }
 
+function detailsTest(settingsOf: SettingsOf): void {
+  it('keeps no dataset for a definition whose details name none, and the datasets of the others', async () => {
+    const datasets = await projectedDatasets(await settingsOf());
+    await datasets.keptWith('unread', { shape: 'series' });
+    const { dataSha256 } = await datasets.saved('orders', weeklyOrders);
+    datasets.start();
+    await datasets.until(dataSha256, isLive);
+
+    expect((await datasets.datasets()).map((row) => row.dataSha256)).toEqual([dataSha256]);
+  });
+}
+
 export function datasetEdgesSuite(settingsOf: SettingsOf): void {
   describe('the datasets of prediction functions at their edges', () => {
     stoppedTest(settingsOf);
     stalledTest(settingsOf);
     attributeTest(settingsOf);
     timeTest(settingsOf);
+    detailsTest(settingsOf);
   });
 }

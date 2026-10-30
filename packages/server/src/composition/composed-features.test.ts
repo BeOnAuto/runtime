@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { unlicensed } from '../licensing/meter-layer.ts';
 import { applicationLayer } from './application-layer.ts';
 
-const entitled: ReadonlyMap<string, readonly string[]> = new Map([['acme', ['prediction-onnx']]]);
+const entitled: ReadonlyMap<string, readonly string[]> = new Map([['acme', ['example-feature']]]);
 
 function featuresOf(org: string): Effect.Effect<readonly string[]> {
   return Effect.succeed(entitled.get(org) ?? []);
@@ -14,8 +14,8 @@ function featuresOf(org: string): Effect.Effect<readonly string[]> {
 
 const included = Effect.flatMap(Effect.service(LicensedFeatures), (features) =>
   Effect.all([
-    features.includes({ org: 'acme', feature: 'prediction-onnx' }),
-    features.includes({ org: 'globex', feature: 'prediction-onnx' }),
+    features.includes({ org: 'acme', feature: 'example-feature' }),
+    features.includes({ org: 'globex', feature: 'example-feature' }),
   ]),
 );
 

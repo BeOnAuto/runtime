@@ -1,4 +1,4 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import type { Placeholder, ProviderEntry } from '@on.auto/providers';
 import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
 import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
@@ -58,7 +58,7 @@ export interface ProviderAsked {
 
 export interface ConsentedAtTheVendor {
   readonly asked: URL;
-  readonly finished: Outcome<Succeeded>;
+  readonly finished: Outcome;
 }
 
 type AnsweredAt = readonly [string, string];

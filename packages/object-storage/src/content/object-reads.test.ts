@@ -1,11 +1,11 @@
 import { CreateMultipartUploadCommand, ListBucketsCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { sha256Of, textOfContent, textToKeep } from '@on.auto/operations';
-import { alpha, generated, octets, present, refusalOf, resultOf } from '@on.auto/operations/testing';
+import { alpha, generated, octets, present, resultOf } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { objectKeysOf } from '../location/object-keys.ts';
-import { uploadPartBytes } from '../s3/s3-bucket.ts';
+import { bucketOnS3, uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore, type FakeContentStore } from '../testing/fake-bucket.ts';
 import { openUploadsIn } from '../testing/test-object-store.ts';
 
@@ -59,50 +59,18 @@ describe('a read on object storage', () => {
   });
 });
 
-describe('the end of the staging of a run on object storage', () => {
-  it('writes its marker first, then deletes every object of the run, a listing page and a thousand at a time', async () => {
-    const store = fakeContentStore(location, { pageSize: 600 });
-    await Promise.all(
-      Array.from({ length: 1001 }, (_, index) => objectWritten(store, keys.staged(alpha, 'run-1', String(index)))),
-    );
-    const before = store.bucket.asked().length;
+describe('the head of an object on object storage', () => {
+  it('answers its size and media type, an object put over another without asking to keep the first, and the default media type for one kept without one', async () => {
+    const store = fakeContentStore(location);
+    const bucket = bucketOnS3({ client: store.client, name: location.bucket });
+    await bucket.put('typed', { data: new TextEncoder().encode('first'), mediaType: 'text/plain' });
+    await bucket.put('typed', { data: new TextEncoder().encode('typed'), mediaType: 'text/plain' });
+    await objectWritten(store, 'bare', 'bare');
 
-    await resultOf(store.content.unstage(alpha, 'run-1'));
-
-    expect(store.bucket.asked().slice(before)).toEqual([
-      'PutObject',
-      'ListObjectsV2',
-      'ListObjectsV2',
-      'DeleteObjects',
-      'DeleteObjects',
+    expect([await bucket.head('typed'), await bucket.head('bare')]).toEqual([
+      { bytes: 5, mediaType: 'text/plain' },
+      { bytes: 4, mediaType: octets },
     ]);
-    expect(store.bucket.keys()).toEqual([keys.ended(alpha, 'run-1')]);
-  });
-
-  it('refuses a stage once its run ended, looking at the marker alone', async () => {
-    const store = fakeContentStore(location);
-    await resultOf(store.content.unstage(alpha, 'run-1'));
-    const before = store.bucket.asked().length;
-
-    const refused = await refusalOf(store.content.stage(alpha, 'run-1', textToKeep('late', octets)));
-
-    expect(refused).toMatchObject({ _tag: 'staging_ended', run: 'run-1' });
-    expect(store.bucket.asked().slice(before)).toEqual(['HeadObject']);
-  });
-
-  it('fails as a defect when the store keeps an object it was asked to delete', async () => {
-    const store = fakeContentStore(location);
-    await resultOf(store.content.stage(alpha, 'run-1', textToKeep('staged', octets)));
-    const key = keys.staged(alpha, 'run-1', sha256Of('staged'));
-    store.bucket.intercepting('DeleteObjectsCommand', () =>
-      Promise.resolve({ $metadata: {}, Errors: [{ Key: key, Code: 'AccessDenied' }] }),
-    );
-
-    const unstaged = Effect.runPromise(store.content.unstage(alpha, 'run-1'));
-
-    await expect(unstaged).rejects.toThrow(
-      `The object store kept objects it was asked to delete: [{"Key":"${key}","Code":"AccessDenied"}]`,
-    );
   });
 });
 
@@ -138,6 +106,37 @@ describe('the sweep of the uploads on object storage', () => {
 
     expect(puts).toEqual(['failed', 'failed', 'failed']);
     expect([open.length, store.bucket.openUploads()]).toEqual([3, []]);
+  });
+});
+
+describe('the deletes of the sweep on object storage', () => {
+  it('deletes what it removes a thousand objects at a time', async () => {
+    const store = fakeContentStore(location, { pageSize: 600 });
+    await Promise.all(Array.from({ length: 1001 }, (_, at) => objectWritten(store, keys.upload(uploadIdAt(at + 1)))));
+    const before = store.bucket.asked().length;
+
+    await store.sweepContent(4000);
+
+    expect(
+      store.bucket
+        .asked()
+        .slice(before)
+        .filter((asked) => asked === 'DeleteObjects'),
+    ).toHaveLength(2);
+    expect(store.bucket.keys()).toEqual([]);
+  });
+
+  it('fails as a defect when the store keeps an object it was asked to delete', async () => {
+    const store = fakeContentStore(location);
+    const key = keys.upload(uploadIdAt(1));
+    await objectWritten(store, key);
+    store.bucket.intercepting('DeleteObjectsCommand', () =>
+      Promise.resolve({ $metadata: {}, Errors: [{ Key: key, Code: 'AccessDenied' }] }),
+    );
+
+    await expect(store.sweepContent(4000)).rejects.toThrow(
+      `The object store kept objects it was asked to delete: [{"Key":"${key}","Code":"AccessDenied"}]`,
+    );
   });
 });
 

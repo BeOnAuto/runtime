@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { ConversationLedger } from '../conversations/conversation-parts.ts';
 import { conversationsDue } from '../conversations/conversations-due.ts';
-import { answeringAnyRun, dueInBothLanes } from '../testing/harness-parts.ts';
+import { answerInteraction } from '../requests/answer-interaction.ts';
+import { dueInBothLanes } from '../testing/harness-parts.ts';
 import { answererId, chatHarness, farAhead, recordsOf, type ChatHarness } from '../testing/index.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -15,7 +16,7 @@ function answeredMeanwhile(playbook: ChatHarness): ConversationLedger {
     ...ledger,
     readProjectedRows: (name, place, query) =>
       Effect.tap(ledger.readProjectedRows(name, place, query), () =>
-        Effect.promise(() => playbook.call(answeringAnyRun, { run_id: runId, answer: { choice: 'reject' } })),
+        Effect.promise(() => playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'reject' } })),
       ),
   };
 }

@@ -1,21 +1,12 @@
-import { readFileSync } from 'node:fs';
-
 import { structureOfTheSQLiteFile } from '@on.auto/ledger/database-structure';
 import { ledgerLayoutFloor } from '@on.auto/ledger/testing';
-import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
-import { aDatabaseFrom, databaseDumpOf, DatabaseDumpSchema } from '../testing/records/database-floor.ts';
+import { aDatabaseFrom, databaseDumpOf, theSQLiteFloor } from '../testing/records/database-floor.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { loopbackSettingsOver } from '../testing/servers/reasoning-server.ts';
-
-function theFloor() {
-  return Schema.decodeUnknownSync(Schema.fromJsonString(DatabaseDumpSchema))(
-    readFileSync(new URL('database-floor-sqlite.json', import.meta.url), 'utf8'),
-  );
-}
 
 function aLedgerOfTheTest(): TemporaryLedger {
   const ledger = temporaryLedger();
@@ -32,7 +23,7 @@ async function openedOn(ledger: TemporaryLedger): Promise<string> {
 describe('the layout of the database the server opens in SQLite', () => {
   it('is, in the columns, types, nullability, defaults, primary keys and indexes of every table, the layout a database made at the floor, database-floor-sqlite.json, is carried forward to by every step', async () => {
     const carried = aLedgerOfTheTest();
-    aDatabaseFrom(theFloor(), carried.fileName);
+    aDatabaseFrom(theSQLiteFloor(), carried.fileName);
 
     const [made, carriedForward] = [
       await structureOfTheSQLiteFile(await openedOn(aLedgerOfTheTest())),
@@ -50,9 +41,9 @@ describe('the SQLite database made at the floor', () => {
   it('is in the layout of the floor, made as database-floor-sqlite.json describes it, every table and index in the order the server made them, with the rows the stores keep of their own', () => {
     const ledger = aLedgerOfTheTest();
 
-    aDatabaseFrom(theFloor(), ledger.fileName);
+    aDatabaseFrom(theSQLiteFloor(), ledger.fileName);
 
-    expect(theFloor().layout).toBe(ledgerLayoutFloor);
-    expect(databaseDumpOf(ledger.fileName)).toEqual(theFloor());
+    expect(theSQLiteFloor().layout).toBe(ledgerLayoutFloor);
+    expect(databaseDumpOf(ledger.fileName)).toEqual(theSQLiteFloor());
   });
 });

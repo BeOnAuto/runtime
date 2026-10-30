@@ -21,7 +21,7 @@ const notAnObject = Result.fail(problemOf('bad_request', 'The body must be a JSO
 
 const unreadable = Result.fail(problemOf('bad_request', 'The body could not be read as UTF-8 text'));
 
-export function mediaTypeOf(contentType: string | null): MediaType {
+function mediaTypeOf(contentType: string | null): MediaType {
   const [type = '', ...parameters] = (contentType ?? '').split(';');
   const charset = parameters
     .map((parameter) => parameter.trim().toLowerCase())
@@ -30,7 +30,7 @@ export function mediaTypeOf(contentType: string | null): MediaType {
   return { type: type.trim().toLowerCase(), charset: charset?.replace(/^"(.*)"$/u, '$1') };
 }
 
-export function isIdentity(contentEncoding: string | null): boolean {
+function isIdentity(contentEncoding: string | null): boolean {
   return contentEncoding === null || ['', 'identity'].includes(contentEncoding.trim().toLowerCase());
 }
 

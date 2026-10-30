@@ -28,7 +28,7 @@ For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization 
 - A connection lists only the tools its key or token may call. A read-only key sees the tools that read, and none that creates or runs a function. A key that may only read inside some playbooks is offered `list_playbooks`, which lists those playbooks.
 - Which tools a connection lists depends on both the endpoint and the caller's permissions. A missing `create_definition` can mean either. The connection may be to the org endpoint, or its key or token may lack `playbook:write`.
 - The org and playbook a scoped endpoint names stay subject to the caller's access. Choosing a more specific endpoint grants no extra permission.
-- Five prediction routes are served only over [HTTP](http.md#prediction-functions): the three a build's trainer calls, the upload of a dataset and the activation of a version. So are the five routes of Studio's page that connects a [connection](#connections): `read_link`, `approve`, `give_credential`, `start` and `finish`, and `list_providers`, which a page reads to show what a person may connect. So are five reads an agent does with another tool or leaves to Studio: `get_playbook`, since each playbook `list_playbooks` returns holds the same fields; `get_connection`, since each connection `list_connections` returns holds the same fields, its `status` among them; `get_run_history`, since `list_playbook_events` with a `run_id` returns the run's events and those of every run it started; `get_playbook_analytics`, which Studio presents; and `validate`, since `dry_run` reports the same check of the arguments in its `arguments` field. No endpoint offers any of them as a tool.
+- The five routes of Studio's page that connects a [connection](#connections), `read_link`, `approve`, `give_credential`, `start` and `finish`, are served only over [HTTP](http.md), and so is `list_providers`, which a page reads to show what a person may connect. So are five reads an agent does with another tool or leaves to Studio: `get_playbook`, since each playbook `list_playbooks` returns holds the same fields; `get_connection`, since each connection `list_connections` returns holds the same fields, its `status` among them; `get_run_history`, since `list_playbook_events` with a `run_id` returns the run's events and those of every run it started; `get_playbook_analytics`, which Studio presents; and `validate`, since `dry_run` reports the same check of the arguments in its `arguments` field. No endpoint offers any of them as a tool.
 
 ### What a connecting agent is told
 
@@ -48,7 +48,7 @@ An agent that connects receives instructions written for its caller and the tool
 
 What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. That of `run_definition` says that a run that finishes later returns `started` and that `get_run` shows how it ended. Those of `list_models` and `search` say how a reasoning function names its model and its tools, as the reasoning function's guide does. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs.
 
-The recall sentence says that a recall function reads run results, definitions and events from the playbook's history, never a run's input or its tool calls. The prediction sentence says that a prediction function predicts from a model a trainer built on the playbook's history. The [prediction format](prediction-format.md) says that a build (the input `{ build: {} }`) returns `started`.
+The recall sentence says that a recall function reads run results, definitions and events from the playbook's history, never a run's input or its tool calls. The prediction sentence says that a prediction function forecasts a series from its own history, with a range; the [prediction format](prediction-format.md) sets out its forecaster.
 
 ## Authentication
 
@@ -147,7 +147,7 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 
 | Tool                 | HTTP operation               | What it is for                                                                                             |
 | -------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `list_interactions`  | `GET /interactions`          | List the open requests of interaction functions and of prediction functions' builds, newest first          |
+| `list_interactions`  | `GET /interactions`          | List the open requests of interaction functions, newest first                                              |
 | `answer_interaction` | `POST /runs/{run_id}/answer` | Answer a request in the shape its `answer_schema` gives; the run that asked takes it within about a second |
 
 [Interaction functions](http.md#interaction-functions) lists every field of a request and of an answer, and each refusal. [Answering a request](interaction-format.md#answering-a-request) explains how a run takes its answer.

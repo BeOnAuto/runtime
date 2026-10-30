@@ -1,5 +1,5 @@
 {
-  "layout": 6,
+  "layout": 7,
   "catalog": [
     {
       "name": "conversations_3",
@@ -78,32 +78,12 @@
       "sql": "CREATE INDEX open_requests_7_endings_due ON open_requests_7 (ending_due_at) WHERE ending_due_at IS NOT NULL"
     },
     {
-      "name": "prediction_builds_1",
-      "sql": "CREATE TABLE prediction_builds_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, function TEXT, definition_version INTEGER, standing TEXT, through TEXT, requested_at INTEGER, expires_at INTEGER, uploaded INTEGER, scored INTEGER, winner TEXT, version INTEGER, rule TEXT, shadow_origins INTEGER, next_due_at INTEGER, open INTEGER, scoring_since INTEGER, ended TEXT, staged INTEGER, cause TEXT, PRIMARY KEY (playbook_key, row_key))"
-    },
-    {
-      "name": "prediction_builds_1_builds_due",
-      "sql": "CREATE INDEX prediction_builds_1_builds_due ON prediction_builds_1 (next_due_at) WHERE next_due_at IS NOT NULL"
-    },
-    {
-      "name": "prediction_builds_1_builds_scoring",
-      "sql": "CREATE INDEX prediction_builds_1_builds_scoring ON prediction_builds_1 (scoring_since) WHERE scoring_since IS NOT NULL"
-    },
-    {
-      "name": "prediction_builds_1_by_open",
-      "sql": "CREATE INDEX prediction_builds_1_by_open ON prediction_builds_1 (playbook_key, function, open, requested_at, row_key)"
-    },
-    {
       "name": "prediction_datasets",
       "sql": "CREATE TABLE prediction_datasets (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, saved BIGINT NOT NULL, phase TEXT NOT NULL, checkpoint TEXT NOT NULL, checkpoint_at TEXT, rows BIGINT NOT NULL, series BIGINT NOT NULL, first_period TEXT, last_period TEXT, events_folded BIGINT NOT NULL, passed_over BIGINT NOT NULL, tries BIGINT NOT NULL, stalled_record TEXT, stalled_detail TEXT, data TEXT NOT NULL, PRIMARY KEY (playbook_key, data_sha256))"
     },
     {
-      "name": "prediction_models_1",
-      "sql": "CREATE TABLE prediction_models_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, active INTEGER, active_data_sha256 TEXT, active_file_sha256 TEXT, active_file_format TEXT, active_definition_version INTEGER, latest INTEGER, versions INTEGER, challenger INTEGER, challenger_build TEXT, shadow_predicted INTEGER, shadow_graded INTEGER, shadow TEXT, PRIMARY KEY (playbook_key, row_key))"
-    },
-    {
       "name": "prediction_rows",
-      "sql": "CREATE TABLE prediction_rows (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, series TEXT NOT NULL, period_index BIGINT NOT NULL, period TEXT NOT NULL, target DOUBLE PRECISION, target_count BIGINT NOT NULL, target_at BIGINT, events BIGINT NOT NULL, features TEXT NOT NULL, PRIMARY KEY (playbook_key, data_sha256, series, period_index))"
+      "sql": "CREATE TABLE prediction_rows (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, series TEXT NOT NULL, period_index BIGINT NOT NULL, period TEXT NOT NULL, target DOUBLE PRECISION, target_count BIGINT NOT NULL, target_at BIGINT, events BIGINT NOT NULL, PRIMARY KEY (playbook_key, data_sha256, series, period_index))"
     },
     {
       "name": "recall_views",
@@ -128,22 +108,6 @@
     {
       "name": "run_outcomes_4_by_playbook_and_day",
       "sql": "CREATE INDEX run_outcomes_4_by_playbook_and_day ON run_outcomes_4 (playbook_key, started_day)"
-    },
-    {
-      "name": "staged_content",
-      "sql": "CREATE TABLE staged_content (playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL, bytes BIGINT NOT NULL, chunks INTEGER NOT NULL, media_type TEXT NOT NULL, PRIMARY KEY (playbook_key, run_id, sha256))"
-    },
-    {
-      "name": "staged_content_by_upload",
-      "sql": "CREATE INDEX staged_content_by_upload ON staged_content (playbook_key, run_id, upload_id)"
-    },
-    {
-      "name": "staged_content_chunks",
-      "sql": "CREATE TABLE staged_content_chunks (playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, upload_id TEXT NOT NULL, chunk INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (playbook_key, run_id, upload_id, chunk))"
-    },
-    {
-      "name": "unstaged_runs",
-      "sql": "CREATE TABLE unstaged_runs (playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, PRIMARY KEY (playbook_key, run_id))"
     },
     {
       "name": "workflow_calls",

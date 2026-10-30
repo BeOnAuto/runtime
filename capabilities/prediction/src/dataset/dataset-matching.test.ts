@@ -18,7 +18,6 @@ const dataNamedFirst: DatasetData = {
   time: 'event',
   series: '/region',
   target: { as: 'count' },
-  features: [],
 };
 
 const placed: PageEvent = {

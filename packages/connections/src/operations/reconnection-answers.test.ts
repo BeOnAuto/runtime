@@ -1,4 +1,4 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -12,7 +12,7 @@ const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
 const aDayAndTenMinutesLater = '2026-10-16T14:10:00.000Z';
 
-function outputOf(outcome: Outcome<Succeeded>): unknown {
+function outputOf(outcome: Outcome): unknown {
   return 'output' in outcome ? outcome.output : undefined;
 }
 
@@ -21,7 +21,7 @@ function linkingOf(h: Harness) {
   return Option.getOrThrow(Option.fromNullishOr('link' in registration ? registration.link : undefined));
 }
 
-function answeredAfter(h: Harness, link: Added, at: string): Promise<Outcome<Succeeded>> {
+function answeredAfter(h: Harness, link: Added, at: string): Promise<Outcome> {
   return h.call({ registration: linkingOf(h).answerAfter(link) }, ada, { id: link.id }, at);
 }
 

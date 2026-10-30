@@ -1,11 +1,4 @@
-import {
-  allPermissions,
-  makeDispatcher,
-  type CallerIdentity,
-  type Outcome,
-  type Runnable,
-  type Succeeded,
-} from '@on.auto/operations';
+import { allPermissions, makeDispatcher, type CallerIdentity, type Outcome, type Runnable } from '@on.auto/operations';
 import {
   memoryLedger,
   memoryPlaybookRegistry,
@@ -99,7 +92,7 @@ export interface Harness {
     caller: CallerIdentity,
     input?: unknown,
     at?: string,
-  ) => Promise<Outcome<Succeeded>>;
+  ) => Promise<Outcome>;
 }
 
 type ConnectionServices = Parameters<typeof makeConnectionOperations>[0];

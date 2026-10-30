@@ -1,92 +1,119 @@
-import { Schema } from 'effect';
+import { Option, Schema } from 'effect';
 
-import type { PredictionFunctionDefinitionDocument, Predicts } from '../document/prediction-document.ts';
-import { enclosingOf, periodsToTheEnd } from '../periods/enclosing.ts';
-import { periodForm } from '../periods/grains.ts';
-import type { SeriesWindow } from './series-window.ts';
+import type { Predicts } from '../document/prediction-document.ts';
+import { isObserved } from '../forecast/history.ts';
+import { forecastOf, type Forecast, type HistoryTooShort } from '../forecast/ladder.ts';
+import type { Asked, PastTotal } from '../forecast/methods.ts';
+import type { Point } from '../forecast/quantiles.ts';
+import { longestSpanOf, periodsToTheEnd, startOfEnclosing, type Enclosing } from '../periods/enclosing.ts';
+import { periodForm, type Grain } from '../periods/grains.ts';
+import type { SeriesWindow } from '../window/series-window.ts';
 
 export const QuestionSchema = Schema.Struct({
   series: Schema.String,
   horizon: Schema.optionalKey(Schema.Int),
-  given: Schema.optionalKey(Schema.Record(Schema.String, Schema.Number)),
   marks: Schema.optionalKey(Schema.Array(Schema.Struct({ label: Schema.String, value: Schema.Number }))),
 });
 
 export type Question = typeof QuestionSchema.Type;
 
-interface AskedPoint {
-  readonly step: number;
-  readonly period: number;
-}
-
-export interface Asked {
-  readonly steps: number;
-  readonly summed: number | null;
-  readonly points: readonly AskedPoint[];
-}
-
 type ObservedPoint = { readonly at: string; readonly value: number };
 
 type PredictedPoint = ObservedPoint & { readonly low: number; readonly high: number };
 
-export function askedOf({ period: grain, horizons, accumulates }: Predicts, origin: number, question: Question): Asked {
+const enclosingPeriodsBeforeTheWindow = 4;
+
+interface Calendar {
+  readonly grain: Grain;
+  readonly accumulates: Enclosing;
+  readonly first: number;
+  readonly reach: number;
+  readonly periodsSoFar: number;
+}
+
+function pastTotalsBefore(calendar: Calendar, end: number): readonly PastTotal[] {
+  const { grain, accumulates, first, reach, periodsSoFar } = calendar;
+  const start = startOfEnclosing(grain, accumulates, end - 1);
+  if (start < reach) {
+    return [];
+  }
+  const origin = Math.min(start + periodsSoFar, end - 1) - 1;
+  return [
+    { origin: origin - first, periodsToTheEnd: periodsToTheEnd(grain, accumulates, origin) },
+    ...pastTotalsBefore(calendar, start),
+  ];
+}
+
+function forecastAskedOf({ period: grain, horizons, accumulates }: Predicts, window: SeriesWindow): Asked {
   if (accumulates === undefined) {
-    const asked =
-      question.horizon === undefined ? horizons.toSorted((left, right) => left - right) : [question.horizon];
-    return {
-      steps: Math.max(...horizons),
-      summed: null,
-      points: asked.map((horizon) => ({ step: horizon - 1, period: origin + horizon })),
-    };
+    return { kind: 'steps', steps: Math.max(...horizons) };
   }
-  const remaining = periodsToTheEnd(grain, accumulates, origin);
-  return { steps: remaining, summed: remaining, points: [{ step: 0, period: origin + remaining }] };
+  const start = startOfEnclosing(grain, accumulates, window.origin + 1);
+  const periodsSoFar = window.origin + 1 - start;
+  const reach = window.first - enclosingPeriodsBeforeTheWindow * Number(longestSpanOf(grain, accumulates));
+  return {
+    kind: 'total',
+    periodsToTheEnd: periodsToTheEnd(grain, accumulates, window.origin),
+    periodsSoFar,
+    pastTotals: pastTotalsBefore({ grain, accumulates, first: window.first, reach, periodsSoFar }, start),
+  };
 }
 
-export function aheadOf({ period: grain, accumulates }: Predicts, origin: number) {
-  return accumulates === undefined
-    ? { line: 'predicted', record: {} }
-    : { line: 'total', record: { total_to: periodForm(accumulates, enclosingOf(grain, accumulates, origin + 1)) } };
-}
-
-export function givenOf(
-  document: PredictionFunctionDefinitionDocument,
-  { given }: Question,
-  steps: number,
-): Float32Array | null {
-  if (given === undefined) {
-    return null;
-  }
-  const values = document.data.given.map((name) => Number(given[name]));
-  return Float32Array.from(Array.from({ length: steps }, () => values).flat());
-}
-
-export function predictedOf(
-  q: Readonly<Float32Array>,
-  { period: grain }: Predicts,
-  points: readonly AskedPoint[],
-): readonly PredictedPoint[] | undefined {
-  const predicted: readonly PredictedPoint[] = points.map(({ step, period }) => {
-    const [low, value, high] = Array.from(q.subarray(step * 3, step * 3 + 3));
-    return { at: periodForm(grain, period), value: Number(value), low: Number(low), high: Number(high) };
+export function forecastAt(predicts: Predicts, window: SeriesWindow): Forecast | HistoryTooShort {
+  return forecastOf({
+    observed: window.observed,
+    season: predicts.season ?? null,
+    coverage: predicts.coverage,
+    asked: forecastAskedOf(predicts, window),
   });
-  return predicted.every(({ low, value, high }) => [low, value, high].every((each) => Number.isFinite(each)))
-    ? predicted
-    : undefined;
 }
 
-export function observedOf(
-  { y, origin }: SeriesWindow,
+function predictedPoint(grain: Grain, period: number, { value, low, high }: Point): PredictedPoint {
+  return { at: periodForm(grain, period), value, low, high };
+}
+
+function predictedOf(
+  { period: grain, horizons, accumulates }: Predicts,
+  { origin }: SeriesWindow,
+  question: Question,
+  points: readonly Point[],
+): readonly PredictedPoint[] {
+  if (accumulates !== undefined) {
+    return points.map((point) => predictedPoint(grain, origin + periodsToTheEnd(grain, accumulates, origin), point));
+  }
+  const asked = question.horizon === undefined ? horizons.toSorted((one, other) => one - other) : [question.horizon];
+  return asked.map((horizon) =>
+    predictedPoint(grain, origin + horizon, Option.getOrThrow(Option.fromNullishOr(points[horizon - 1]))),
+  );
+}
+
+function observedOf(
+  { observed, origin }: SeriesWindow,
   { period: grain, history }: Predicts,
 ): readonly ObservedPoint[] {
-  const first = origin - history + 1;
-  const shown: readonly ObservedPoint[] = Array.from(y.subarray(y.length - history), (value, at) => ({
-    at: periodForm(grain, first + at),
-    value,
-  }));
-  return shown.filter(({ value }) => Number.isFinite(value));
+  const shownFrom = origin - history + 1;
+  return observed
+    .slice(observed.length - history)
+    .flatMap((value, at) => (isObserved(value) ? [{ at: periodForm(grain, shownFrom + at), value }] : []));
 }
 
-export function originFormOf({ period }: Predicts, origin: number): string {
-  return periodForm(period, origin);
+export function predictionOf(
+  predicts: Predicts,
+  window: SeriesWindow,
+  question: Question,
+  points: readonly Point[],
+): Schema.JsonObject {
+  return {
+    unit: predicts.unit,
+    period: predicts.period,
+    origin: periodForm(predicts.period, window.origin),
+    lines: [
+      { name: 'observed', points: observedOf(window, predicts) },
+      {
+        name: predicts.accumulates === undefined ? 'predicted' : 'total',
+        points: predictedOf(predicts, window, question, points),
+      },
+    ],
+    ...(question.marks === undefined ? {} : { marks: question.marks }),
+  };
 }

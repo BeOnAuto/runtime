@@ -252,7 +252,7 @@ await test('every fixture a package keeps is in its manifest, recorded-facts.jso
   const differences = [...packages.values()].flatMap((found) => manifestDifferences(found));
 
   assert.deepEqual(differences, []);
-  assert.ok([...packages.values()].filter(({ folder }) => existsSync(join(folder, manifestName))).length >= 9);
+  assert.ok([...packages.values()].filter(({ folder }) => existsSync(join(folder, manifestName))).length >= 8);
 });
 
 await test('a fact is read from a call of the factOf of the operations package, under any name, and a call that names no literal type is told', () => {

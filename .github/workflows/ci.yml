@@ -94,8 +94,6 @@ jobs:
               - operations
               - outbound
               - playbooks
-              - prediction-contract
-              - prediction-series
               - providers
               - reasoning
               - recall
@@ -798,7 +796,7 @@ jobs:
           test "$(call again.json --data '{"answer":{"choice":"reject"}}' "$playbook/runs/$asked/answer")" = 409
           docker stop interaction
           test "$(docker inspect interaction --format '{{.State.ExitCode}}')" = 0
-      - name: Build a prediction function and ask it a question
+      - name: Save a prediction function, publish its events and ask it a question
         timeout-minutes: 5
         run: |
           . .github/smoke/calls.sh
@@ -814,61 +812,46 @@ jobs:
             sleep 1
           done
           call() {
-            answered "$1" --max-time 60 --header "authorization: Bearer $key" "${@:2}"
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
           }
-          json=(--header 'content-type: application/json')
           playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
-          printf 'series,period,visits\n' > rows.csv
-          for store in north south; do
-            level=$([ "$store" = north ] && echo 10 || echo 20)
-            for day in $(seq 0 39); do
-              printf '%s,%s,%s\n' "$store" "$(date --utc --date "2026-08-31 +$day days" +%F)" "$((level + day % 3))" >> rows.csv
+          now="$(date --utc +%s)"
+          day_of() {
+            date --utc --date "@$((now - $1 * 86400))" +%F
+          }
+          source="$(printf '%s\n' '---' 'predicts:' '  target: visits' '  period: day' '  horizons: [1, 2]' \
+            '  unit: visits' 'data:' '  events:' '    - type: visit.made' '  time: event' '  series: /store' \
+            '  target: { of: /visits, as: sum }' '  window: 24' '---')"
+          definition="$(jq --null-input --arg source "$source" '{name: "daily-visits", source: $source}')"
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          test "$(call created.json --data "$definition" "$playbook/definitions/prediction")" = 201
+          published=0
+          for store in north east; do
+            days=$([ "$store" = north ] && echo 8 || echo 3)
+            for ago in $(seq "$days" -1 1); do
+              event="$(jq --null-input --arg store "$store" --argjson visits "$((10 + ago % 3))" \
+                --arg time "$(day_of "$ago")T10:00:00Z" \
+                '{event: {source: "/stores", type: "visit.made", time: $time, data: {store: $store, visits: $visits}}}')"
+              test "$(call published.json --data "$event" "$playbook/events")" = 200
+              published=$((published + 1))
             done
           done
-          dataset="$(sha256sum rows.csv | cut --delimiter ' ' --fields 1)"
-          source="$(printf '%s\n' '---' 'predicts:' '  target: visits' '  period: day' '  horizons: [1, 2]' \
-            '  unit: visits' 'data:' "  dataset: $dataset" '  window: 24' 'evaluation:' '  holdout: 8' \
-            '  activate: automatic' 'source:' '  expires: P1D' '---' \
-            'Fit a model of the daily {{ function.target }} of each of {{ dataset.series }} stores.')"
-          definition="$(jq --null-input --arg source "$source" '{name: "daily-visits", source: $source}')"
-          test "$(call playbook.json "${json[@]}" --data '{"playbook":"smoke","name":"Smoke test"}' \
-            http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
-          test "$(call kept.json --request PUT --header 'content-type: text/csv' --data-binary @rows.csv \
-            "$playbook/datasets/$dataset")" = 200
-          test "$(call created.json "${json[@]}" --data "$definition" "$playbook/definitions/prediction")" = 201
-          test "$(call asked.json "${json[@]}" --data '{"input":{"build":{}}}' \
-            "$playbook/definitions/prediction/daily-visits/run")" = 200
-          test "$(jq --raw-output .status asked.json)" = started
-          build="$(jq --raw-output .run_id asked.json)"
-          test "$(call brief.md "$playbook/runs/$build/build/brief")" = 200
-          grep --quiet 'Fit a model of the daily visits of each of 2 stores.' brief.md
-          test "$(call training.csv "$playbook/runs/$build/build/rows")" = 200
-          test "$(head --lines 1 training.csv | tr --delete '\r')" = series,period,visits
-          printf '%s' '{"recipe":"mean","attributes":{"answers":{"steps":2},"interval":{"method":"residual"}}}' > visits-mean.series
-          test "$(call visits-mean.json --header 'content-type: application/octet-stream' \
-            --data-binary @visits-mean.series "$playbook/runs/$build/build/candidates?format=series")" = 200
-          candidate="$(jq --raw-output .candidate visits-mean.json)"
-          test "$candidate" = "$(sha256sum visits-mean.series | cut --delimiter ' ' --fields 1)"
-          test "$(jq --raw-output '[.format, .signature.recipe] | join(" ")' visits-mean.json)" = 'series mean'
-          answer="$(jq --null-input --arg candidate "$candidate" '{answer: {candidates: [$candidate]}}')"
-          test "$(call answered.json "${json[@]}" --data "$answer" "$playbook/runs/$build/answer")" = 200
-          for attempt in $(seq 1 60); do
-            test "$(call built.json "$playbook/runs/$build")" = 200
-            test "$(jq --raw-output .status built.json)" != started && break
-            sleep 1
-          done
-          test "$(jq --compact-output '[.status, .output.version, .output.winner]' built.json)" = \
-            "[\"succeeded\",1,\"$candidate\"]"
           for attempt in $(seq 1 30); do
             test "$(call function.json "$playbook/definitions/prediction/daily-visits")" = 200
-            test "$(jq --raw-output '.standing.models.active.version // empty' function.json)" = 1 && break
+            test "$(jq --raw-output '[.standing.dataset.phase, .standing.dataset.events_folded] | join(" ")' function.json)" = \
+              "live $published" && break
             sleep 1
           done
-          test "$(jq --raw-output .standing.models.active.version function.json)" = 1
-          test "$(call question.json "${json[@]}" --data '{"input":{"series":"north","horizon":1}}' \
+          test "$(jq --raw-output .standing.dataset.events_folded function.json)" = "$published"
+          test "$(call question.json --data '{"input":{"series":"north","horizon":1}}' \
             "$playbook/definitions/prediction/daily-visits/run")" = 200
-          test "$(jq --compact-output '[.status, (.output.lines[] | select(.name == "predicted") | .points[0] | .value, (.low | floor), (.high | ceil)), .record.version, .record.runtime.name, .output_shape]' question.json)" = \
-            '["succeeded",11,9,13,1,"series","series"]'
+          test "$(jq --compact-output '[.status, (.output.lines[] | select(.name == "predicted") | .points[0] | .value, .low, .high), .record.method, .record.coverage, .output_shape]' question.json)" = \
+            '["succeeded",11,10,13,"persistence",0.8,"series"]'
+          test "$(call refused.json --data '{"input":{"series":"east","horizon":1}}' \
+            "$playbook/definitions/prediction/daily-visits/run")" = 409
+          test "$(jq --raw-output '[.reason, .kind, .detail] | join(" | ")' refused.json)" = \
+            "conflict | history_too_short | The series \"east\" has 3 periods of history up to $(day_of 1), too few for the forecaster to backtest an answer; ask again from $(day_of -2)"
           docker stop prediction
           test "$(docker inspect prediction --format '{{.State.ExitCode}}')" = 0
       - name: Run workflows across a restart, and read the steps of a run and their causes

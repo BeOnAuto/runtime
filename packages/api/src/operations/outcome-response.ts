@@ -1,20 +1,19 @@
-import type { Settled, Succeeded } from '@on.auto/operations';
+import type { Settled } from '@on.auto/operations';
 
 import type { ChallengeHeaders } from '../authentication/challenges.ts';
 import { problemOfOutcome } from '../problem/outcome-problem.ts';
 import { problemResponse } from '../problem/problem.ts';
-import { streamedResponse, type StreamServing } from './streamed-response.ts';
 
-export interface OutcomeAnswering extends StreamServing {
+export interface OutcomeAnswering {
+  readonly status: number;
+  readonly signal: AbortSignal;
   readonly forbidden: ChallengeHeaders;
 }
 
-export function toHttpResponse(settled: Settled<Succeeded>, answering: OutcomeAnswering): Response | Promise<Response> {
+export function toHttpResponse(settled: Settled, answering: OutcomeAnswering): Response {
   if (settled.status !== 'succeeded') {
     const problem = problemOfOutcome(settled, answering.signal.aborted);
     return problemResponse(problem, problem.reason === 'forbidden' ? answering.forbidden : {});
   }
-  return 'streamed' in settled
-    ? streamedResponse(settled.streamed, answering)
-    : Response.json(settled.output, { status: answering.status, headers: { 'cache-control': 'no-store' } });
+  return Response.json(settled.output, { status: answering.status, headers: { 'cache-control': 'no-store' } });
 }

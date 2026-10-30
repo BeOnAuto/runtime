@@ -21,7 +21,6 @@ const loopback = {
   HOST: '127.0.0.1',
   PORT: '0',
   LEDGER_FILE: ledger.fileName,
-  PREDICTION_CACHE_DIR: ledger.cacheDirectory,
 };
 
 const invalidSettings: ReadonlyArray<readonly [Readonly<Record<string, string>>, string]> = [
@@ -61,7 +60,6 @@ const noModelProvider =
 
 const functionsRun: readonly unknown[] = [
   "Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window",
-  `Prediction functions run in this server: a playbook keeps at most 32 active, each builds at most 4 times a day, and model processes may run at most 4 at once, at most 2 of them for the builds being scored, with 1,280 MiB of data each, which nothing bounds, since prlimit is not on the path, reading the files of their models from ${ledger.cacheDirectory}`,
   'Workflows run in this server: a run lasts at most 30 days, at most 32 of their calls run at once, and the runs are swept every 1000 ms',
 ];
 
@@ -74,9 +72,7 @@ const keptIn: readonly unknown[] = [
   ),
 ];
 
-const extensionsLoaded: unknown = expect.stringMatching(
-  /^Extensions loaded, in their order of precedence: @on\.auto\/prediction-series [\d.]+, of the release, filling prediction\/model-runtime$/u,
-);
+const extensionsLoaded = 'Extensions loaded, in their order of precedence: none';
 
 function startInLocalMode(...after: readonly string[]): readonly unknown[] {
   return [

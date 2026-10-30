@@ -1,4 +1,4 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,7 +7,7 @@ import { ada, harness, operationNamed, type Harness } from '../testing/harness.t
 
 const IdentifiedSchema = Schema.Struct({ output: Schema.Struct({ id: Schema.String }) });
 
-function outputOf(outcome: Outcome<Succeeded>): unknown {
+function outputOf(outcome: Outcome): unknown {
   return 'output' in outcome ? outcome.output : undefined;
 }
 

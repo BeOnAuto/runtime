@@ -24,12 +24,12 @@ These are refused when the definition is saved, each with its line:
 
 What the shape changes depends on the type, and a prediction function answers one without declaring it:
 
-| Type                 | With `output.shape`                                                                                                                                                                                                                                                                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reasoning function   | The answer is JSON of the shape, so `output.format` is `json` or left out; `text` is refused. The model is asked for the shape's schema, and an answer that does not match fails as `output_invalid`. See [Answers that are JSON](reasoning-format.md#answers-that-are-json)                                                                |
-| Computation function | The program's `Output` type is the shape's. An output that does not match ends the run as `conflict` of the kind `unworkable`. See [How a run ends](computation-format.md#how-a-run-ends)                                                                                                                                                   |
-| Workflow             | `output.shape` sits beside `output.as`, which shapes the output first. An output that does not match ends the run as `conflict` of the kind `unworkable`. See [How a run ends](workflow-format.md#how-a-run-ends)                                                                                                                           |
-| Prediction function  | It declares no `output.shape`. A question answers a `series`, checked against the shape, and an answer whose low is above its likely value or whose high is below it ends the run as `unavailable` with the because `not_in_order`; a build answers no shape. See [The input and the output](prediction-format.md#the-input-and-the-output) |
+| Type                 | With `output.shape`                                                                                                                                                                                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reasoning function   | The answer is JSON of the shape, so `output.format` is `json` or left out; `text` is refused. The model is asked for the shape's schema, and an answer that does not match fails as `output_invalid`. See [Answers that are JSON](reasoning-format.md#answers-that-are-json) |
+| Computation function | The program's `Output` type is the shape's. An output that does not match ends the run as `conflict` of the kind `unworkable`. See [How a run ends](computation-format.md#how-a-run-ends)                                                                                    |
+| Workflow             | `output.shape` sits beside `output.as`, which shapes the output first. An output that does not match ends the run as `conflict` of the kind `unworkable`. See [How a run ends](workflow-format.md#how-a-run-ends)                                                            |
+| Prediction function  | It declares no `output.shape`. A question answers a `series`, checked against the shape. See [The input and the output](prediction-format.md#the-input-and-the-output)                                                                                                       |
 
 Each issue is worded as a schema's is, at its JSON pointer, such as `/lines/0/points/2/at: Expected a time later than the point before it`. The rejection of a computation function or a workflow names at most three, and the `output_invalid` of a reasoning function at most 20. A definition without `output.shape` keeps its own `output.schema`, checked as its type checks it.
 
@@ -47,7 +47,7 @@ A reasoning function's shape is sent to the provider as an output schema of the 
 `get_run`, `list_runs` and `run_definition` show a run's own shape as `output_shape`, the name of the shape its output takes, and Auto Studio draws the output of a run from it:
 
 - A run of a reasoning function, a computation function or a workflow that declares `output.shape` says that shape.
-- A question to a prediction function says `series`. A build of a prediction function, whose output is `{ version, winner, candidates }`, says none.
+- A question to a prediction function says `series`.
 - A run of a definition that declares no shape says none.
 
 The run says its shape from the moment it starts, so a run that is rejected still says the shape its output would have taken.

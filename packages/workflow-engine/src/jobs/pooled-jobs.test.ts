@@ -32,9 +32,9 @@ async function measured<Outcome>(job: Effect.Effect<Outcome>): Promise<Measured>
 }
 
 describe('a job run in a pool of workers', () => {
-  it('is a span named for its pool and its kind, saying how it ended and how long it ran', async () => {
+  it('is a span named for the pool of programs and its kind, saying how it ended and how long it ran', async () => {
     const { spans, durations } = await measured(
-      pooledJob('program', 'computation', () => Promise.resolve({ ran: 'answered', text: 'null', milliseconds: 120 })),
+      pooledJob('computation', () => Promise.resolve({ ran: 'answered', text: 'null', milliseconds: 120 })),
     );
 
     expect(spans).toMatchObject([
@@ -53,17 +53,5 @@ describe('a job run in a pool of workers', () => {
       { 'auto.on.pool': 'program', 'auto.on.pool.kind': 'computation', 'auto.on.pool.ending': 'answered' },
     ]);
     expect(durations.map(({ state }) => state)).toMatchObject([{ count: 1, sum: 0.12 }]);
-  });
-});
-
-describe('a job run in a pool of processes', () => {
-  it('names how its process ended', async () => {
-    const { spans } = await measured(
-      pooledJob('model', 'walk', () => Promise.resolve({ ended: 'timed_out', milliseconds: 5 })),
-    );
-
-    expect(spans.map(({ name, attributes }) => [name, attributes['auto.on.pool.ending']])).toEqual([
-      ['model walk', 'timed_out'],
-    ]);
   });
 });

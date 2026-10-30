@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { interactionBounds } from '../run/run-bounds.ts';
-import { answeringAnyRun } from '../testing/harness-parts.ts';
 import { interactionHarness } from '../testing/index.ts';
+import { answerInteraction } from './answer-interaction.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
-
-const answer = answeringAnyRun;
 
 const anyAnswer = ['---', "to: 'ada'", 'expires: P2D', 'output:', '  schema: {}', '---', 'Anything?'].join('\n');
 
@@ -27,7 +25,7 @@ describe('the claim an answer makes', () => {
   it('takes 256 bytes and refuses one more, and refuses a blank claim or one with a control character', async () => {
     const playbook = await asked();
     const answering = (claimedFor: string) =>
-      playbook.call(answer, { run_id: runId, answer: 'yes', claimed_for: claimedFor });
+      playbook.call(answerInteraction, { run_id: runId, answer: 'yes', claimed_for: claimedFor });
 
     const refusals = [
       await answering(`${'é'.repeat(128)}a`),
@@ -49,11 +47,11 @@ describe('the depth of an answer', () => {
   it(`takes an answer ${interactionBounds.answerDepth} levels deep and refuses one level more`, async () => {
     const playbook = await asked();
 
-    const deeper = await playbook.call(answer, {
+    const deeper = await playbook.call(answerInteraction, {
       run_id: runId,
       answer: nestedLevels(interactionBounds.answerDepth + 1),
     });
-    const deepest = await playbook.call(answer, {
+    const deepest = await playbook.call(answerInteraction, {
       run_id: runId,
       answer: nestedLevels(interactionBounds.answerDepth),
     });

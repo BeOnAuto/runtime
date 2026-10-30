@@ -179,13 +179,12 @@ allowed_origins:
 #   allocation: ${ACME_ALLOCATION}
 
 # The packages Auto Runtime loads as extensions as it starts, each installed
-# beside it and named here in order of precedence: a package that fills a point
-# a capability declares, such as prediction/model-runtime, the model runtime
-# that executes a format of candidate. The extension of the release, the
-# runtime of its own models, stands after these. integrity pins the installed files of a
-# package, and a package whose files differ stops the start, naming the
-# integrity of the one installed. AUTO_RUNTIME_EXTENSIONS wins over it. See
-# https://on.auto/docs/reference/model-runtimes
+# beside it and named here in order of precedence, each filling a point a
+# capability declares; no capability of this release declares one. integrity
+# pins the installed files of a package, and a package whose files differ
+# stops the start, naming the integrity of the one installed.
+# AUTO_RUNTIME_EXTENSIONS wins over it. See
+# https://on.auto/docs/self-host/configuration#extensions
 # extensions:
-#   - package: '@acme/prediction-models'
+#   - package: '@acme/greeter'
 #     integrity: sha512-<the base64 a refused start names>

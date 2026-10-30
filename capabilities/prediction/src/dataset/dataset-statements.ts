@@ -7,7 +7,17 @@ import {
   type StatementValue,
 } from '@on.auto/workflow-host';
 
-export const datasetLayoutSteps: readonly LayoutStep[] = [];
+export const predictionLayoutSteps: readonly LayoutStep[] = [
+  {
+    layout: 7,
+    statements: [
+      statement`DROP TABLE IF EXISTS prediction_builds_1`,
+      statement`DROP TABLE IF EXISTS prediction_models_1`,
+      statement`DROP TABLE IF EXISTS prediction_rows`,
+      statement`DROP TABLE IF EXISTS prediction_datasets`,
+    ],
+  },
+];
 
 export const datasetsTable = statement`CREATE TABLE IF NOT EXISTS prediction_datasets (
     playbook_key TEXT NOT NULL,
@@ -39,7 +49,6 @@ export const rowsTable = statement`CREATE TABLE IF NOT EXISTS prediction_rows (
     target_count BIGINT NOT NULL,
     target_at BIGINT,
     events BIGINT NOT NULL,
-    features TEXT NOT NULL,
     PRIMARY KEY (playbook_key, data_sha256, series, period_index)
   )`;
 

@@ -43,8 +43,8 @@ These four need no key. Where sign-in is on, the [protected resource metadata](a
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five prediction routes, the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `list_org_changes`, `list_playbook_changes`, `activate_allocation` and `report_allocation`.
-- Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body. The two uploads take a CSV dataset or a candidate's bytes as the body, and the document gives their maximum size; an upload takes the rest of its input, such as the `format` of a candidate, in the query string.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `list_org_changes`, `list_playbook_changes`, `activate_allocation` and `report_allocation`.
+- Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
 - The server URL is the relative `/v1`, so the document stays valid behind any host.
@@ -142,19 +142,18 @@ A definition names the caller who created it as `created_by`, by `id` and `name`
 `create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview` and its `used_by`; `list_definitions` leaves both out.
 
 - `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
-- `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`; `sends-builds` or `asks-approval` for a prediction function that sends it builds to train or asks it to approve a version; `remembers-runs` or `remembers-changes` for a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`). A definition that uses this one in two ways is listed for each.
+- `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`; `remembers-runs` or `remembers-changes` for a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`). A definition that uses this one in two ways is listed for each.
 
-The interaction function `send-build` that a prediction function trains through, that a workflow calls in two steps and that two recall functions follow is returned with this `used_by`, shown here without its other fields:
+The interaction function `approve-brief` that a workflow calls in two steps and that two recall functions follow is returned with this `used_by`, shown here without its other fields:
 
 ```json
 {
   "used_by": [
-    { "type": "prediction", "name": "weekly-orders", "relation": "sends-builds" },
-    { "type": "recall", "name": "build-answers", "relation": "remembers-runs" },
-    { "type": "recall", "name": "build-changes", "relation": "remembers-changes" },
+    { "type": "recall", "name": "brief-answers", "relation": "remembers-runs" },
+    { "type": "recall", "name": "brief-changes", "relation": "remembers-changes" },
     {
       "type": "workflow",
-      "name": "weekly-build",
+      "name": "briefing",
       "relation": "calls",
       "steps": [
         { "number": 1, "name": "send" },
@@ -189,7 +188,7 @@ The requests of a playbook have two routes of their own, relative to `/v1/orgs/{
 
 ### Listing open requests
 
-`list_interactions` returns `interactions`, the playbook's open requests newest first, with `has_more` and `next_cursor`. They are the requests of interaction functions and of prediction functions' builds. An answered request leaves the list. Anyone who may read the playbook sees each request's party and message, just as they see a run's input.
+`list_interactions` returns `interactions`, the playbook's open requests newest first, with `has_more` and `next_cursor`. They are the requests of interaction functions. An answered request leaves the list. Anyone who may read the playbook sees each request's party and message, just as they see a run's input.
 
 - `to` keeps only the requests to one party.
 - `type` keeps only those from one type of function.
@@ -240,7 +239,6 @@ It records the answer on the run as one fact, `request_answered`, and returns th
 The run takes the answer within about a second (the server checks waiting runs every second by default), as [Answering a request](interaction-format.md#answering-a-request) explains.
 
 - A run of an interaction function succeeds with the answer as its `output`, which reaches a workflow that waits for it.
-- A prediction function's build scores the candidates the answer names, `{ candidates }`, each by the SHA-256 its upload returned. A candidate not uploaded to that build is refused as `invalid_input`.
 
 | Case                                                                                                                       | Response                                                              |
 | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -294,43 +292,9 @@ A recall function keeps a view: a JSON value its module builds from the playbook
 Prediction functions use the operations of reasoning functions, with `prediction` in place of `reasoning` in each route, such as `POST /definitions/prediction` and `POST /definitions/prediction/{name}/run`. The `source` is a [prediction function document](prediction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
 
 - A playbook may have at most 32 active prediction functions.
-- A question finishes within the request that asks it, and the function's active version makes the prediction. A question such as `{ "series": "north", "horizon": 1 }` answers a [series](output-shapes.md#series) whose `observed` line holds the last periods of the dataset and whose `predicted` line holds the period asked, with its `value`, `low` and `high`; without `horizon` it holds every horizon the function names. The run's `record` holds the model's `version` and the `coverage`. [The input and the output](prediction-format.md#the-input-and-the-output) has every field, and [A question](prediction-format.md#a-question) an answer in full.
-- A build (the input `{ build: {} }`) responds with `200` and `status: started`, then waits for its trainer, as [A build](prediction-format.md#a-build) explains.
-- `get_definition` adds the dataset's and the models' `standing`.
-
-Five routes are served only over HTTP; no MCP endpoint offers them as tools. They are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
-
-| Operation          | Method and route                               | Permission       | Body                                                                                                                       | Returns                                                  |
-| ------------------ | ---------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `upload_dataset`   | `PUT /datasets/{sha256}`                       | `playbook:write` | `text/csv` with `Content-Length`, at most 64 MiB                                                                           | `{ dataset, bytes, rows, series, columns, period, ... }` |
-| `read_build_brief` | `GET /runs/{run_id}/build/brief`               | `playbook:read`  | None                                                                                                                       | The brief, `text/markdown`                               |
-| `read_build_rows`  | `GET /runs/{run_id}/build/rows`                | `playbook:read`  | None                                                                                                                       | The training rows, `text/csv`, streamed                  |
-| `upload_candidate` | `POST /runs/{run_id}/build/candidates`         | `playbook:write` | A model in a format the brief lists, named by `?format=`, `application/octet-stream` with `Content-Length`, at most 64 MiB | `{ candidate, bytes, format, signature }`                |
-| `activate_version` | `POST /definitions/prediction/{name}/activate` | `playbook:write` | `{ version }`                                                                                                              | `{ function, version, rule, activated_at }`              |
-
-- A body sent without its `Content-Length` gets `411`. A body whose `Content-Length` is larger than the route accepts gets `413`, before the body is read.
-- The build itself is answered through `answer_interaction`, with `{ candidates }`: the SHA-256 of each candidate, as `upload_candidate` returned it.
-
-The three build routes work only on a build that is waiting for its answer:
-
-| Case                                  | Response                               |
-| ------------------------------------- | -------------------------------------- |
-| A run the playbook does not have      | `not_found`                            |
-| A run that is not a build             | `conflict` with the kind `not_a_build` |
-| A build that took its answer or ended | `conflict` with the kind `build_ended` |
-
-`upload_candidate` refuses a candidate as `invalid_input` when:
-
-- its `format` is not one a [model runtime](model-runtimes.md) of the server executes for the function, at `/format`, naming the formats it takes, or it names none where the brief lists several; this is refused before the body is read;
-- the model runtime of its format cannot load it;
-- that runtime finds its signature does not match what the function feeds it;
-- the build already has the 8 candidates it accepts.
-
-A candidate in a format whose model runtime needs a [feature](../self-host/licensing.md#features) the runtime's license does not include is refused before the body is read, as `conflict` with the kind `feature_unlicensed`. Its `detail` names the feature and the format and says where an owner adds the feature, which `resolve_at` links, and the brief never lists such a format.
-
-While every model process available to builds is busy, it returns `unavailable` with the kind `model_process_busy` and a `Retry-After`. The check shares those processes with the builds' scoring, and never takes one a question needs.
-
-`activate_version` returns `not_found` for a version the function did not build, and `conflict` with the kind `already_active` for the version that is already active.
+- A question finishes within the request that asks it, and the runtime's forecaster makes the prediction. A question such as `{ "series": "north", "horizon": 1 }` answers a [series](output-shapes.md#series) whose `observed` line holds the last periods of the dataset and whose `predicted` line holds the period asked, with its `value`, `low` and `high`; without `horizon` it holds every horizon the function names. The run's `record` holds the `method` the forecaster used, the `coverage` and the `history` it backtested. [The input and the output](prediction-format.md#the-input-and-the-output) has every field, and [A question](prediction-format.md#a-question) an answer in full.
+- A series whose history is too short to forecast from is refused as `conflict` with the kind `history_too_short`, its `detail` naming the periods it has and the periods it needs.
+- `get_definition` adds the dataset's `standing`.
 
 ## Workflows
 
@@ -407,8 +371,7 @@ A run accepts an event with a given `id` only once, so a request can be retried 
 
 - a workflow run that is still `started`;
 - the run of a reasoning function that is still `started`, whether its client is there or gone;
-- the run of an interaction function whose request waits;
-- a prediction function's build, whether it is starting, waiting for its trainer or scoring.
+- the run of an interaction function whose request waits.
 
 It takes an optional `reason`, 1 to 1,024 characters with no control character. The run keeps it as the detail of its ending; without one, the detail says who asked.
 
@@ -443,13 +406,12 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a build of a prediction function, and a run of a definition that declares no shape, has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 
 - a workflow's run, whose `record` is empty while it is in progress;
-- an interaction function's run that asks a person, or that sends a notification through a tool;
-- a prediction function's build, the input `{ build: {} }`, which waits for its trainer.
+- an interaction function's run that asks a person, or that sends a notification through a tool.
 
 Read such a run again with `get_run` until its status is `succeeded`, `rejected` or `failed`. A cancelled run is `rejected` with the reason `cancelled`. [Workflows and runs](../concepts/workflows.md) explains how a run waits and ends.
 
@@ -484,7 +446,7 @@ A request that reuses an id for another definition or another input returns `con
 | Was rejected as `invalid_input`                                                                                                        | Returns the same rejection                                                                                                                                                                      |
 | Was cancelled                                                                                                                          | Returns its cancellation, `cancelled` (409)                                                                                                                                                     |
 | Went unanswered                                                                                                                        | Returns `unanswered` (410), as [A request nobody answers](#a-request-nobody-answers) says                                                                                                       |
-| Still waits: a workflow run, an interaction function's request, or a prediction function's build                                       | Returns the run as it stands, still `started`, and starts nothing                                                                                                                               |
+| Still waits: a workflow run or an interaction function's request                                                                       | Returns the run as it stands, still `started`, and starts nothing                                                                                                                               |
 | Has no final result: it ended `unavailable`, `conflict` or `failed`, or it is `started` without waiting, such as after an interruption | Runs the definition again, as a new attempt. The attempt may use the latest version, and records the one it used. A `started` run of a reasoning function goes on from what it recorded instead |
 
 The last row has three exceptions.
@@ -582,7 +544,7 @@ Some types, sources and attributes are reserved for what the runtime records its
 | Sources    | Those beginning `/runs/`, `/definitions/` or `/callers/`                                                                              | `/event/source`                    |
 | Attributes | `causationid`, `correlationid`, `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind` and `triggerreference` | `/event/` and the attribute's name |
 
-The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `dataset_assembled`, `candidate_uploaded`, `candidate_refused`, `candidate_scored`, `candidate_disqualified`, `baseline_scored`, `baseline_not_walked`, `version_built`, `shadow_predicted`, `shadow_graded`, `shadow_passed`, `shadow_failed`, `version_activated`, `activation_refused`, `build_asked`, `build_ended`, `definition_created`, `definition_updated`, `definition_retired`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
+The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `definition_created`, `definition_updated`, `definition_retired`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
 
 A run of a reasoning function also records each call of its model: `model_call_started`, then `model_call_answered` with the tool calls the model asked for, or `model_call_failed` with `because`. [The run's model calls](reasoning-format.md#the-run-s-model-calls) gives their fields.
 
@@ -808,7 +770,7 @@ Each returns `cursor`, `changes` and `more`:
 | ----------------------- | ------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_org_changes`      | `playbook`    | `playbook`     | A playbook created, updated or retired                                                                                                                                             |
 | `list_org_changes`      | `connection`  | `connection`   | A connection added, connected, broken or removed, or asked for more                                                                                                                |
-| `list_playbook_changes` | `definition`  | `type`, `name` | A function or workflow saved or retired, or a prediction function's versions                                                                                                       |
+| `list_playbook_changes` | `definition`  | `type`, `name` | A function or workflow saved or retired                                                                                                                                            |
 | `list_playbook_changes` | `run`         | `run_id`       | A run started, given an input or an event, or ended                                                                                                                                |
 | `list_playbook_changes` | `interaction` | `run_id`       | Everything the run of an interaction function records: its request opened, answered, expired, undelivered or cancelled, beside the run                                             |
 | `list_playbook_changes` | `event`       | `event_id`     | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |
@@ -1260,26 +1222,26 @@ A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a U
 
 `get_license` answers where the runtime stands, to every member of an org, and is served over HTTP alone:
 
-| Field                              | Value                                                                                                                                                                                                                                                                                                                                                                                    |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state`                            | `unregistered` while it holds no key; `licensed` while it runs on its license; `out_of_touch` from the license's `warn_at` while it has not reached Auto, still running on it; `limited` while it runs at the free rate though it holds a key; `offline` while it spends offline credits; `invalid` once they have stopped                                                               |
-| `limited_because`                  | While it is `limited`: `credits`, `cap`, `out_of_touch`, `key_rotated`, `key_revoked`, `org_closed` or `not_activated`; `null` otherwise                                                                                                                                                                                                                                                 |
-| `runtime_id`                       | The runtime's id, which an owner registers in Studio; a runtime that has no id yet takes one as it is first read                                                                                                                                                                                                                                                                         |
-| `free_runs`                        | `{ used, of }`: the first runs it used of its 100, while it has never held a license; `null` once it has                                                                                                                                                                                                                                                                                 |
-| `org`, `plan`                      | The org at Auto and its plan, of the license of the key in force; `null` without one                                                                                                                                                                                                                                                                                                     |
-| `org_name`                         | The name of that org at Auto, as Auto signed it into the license, on one line of at most 80 characters; `null` without one, or where Auto named none or a blank one                                                                                                                                                                                                                      |
-| `features`                         | The features of the license in force, such as `prediction-onnx`, which a model runtime that names one needs to do its work; `[]` without a license in force: without a key, before its key is activated, once the license lapsed at its `limit_at` while no live offline credits stand, once its key was replaced or removed or its org closed, or once offline credits it holds stopped |
-| `standing`                         | Where the org's credits stood when Auto signed the license: `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`; `null` without one                                                                                                                                                                                                                                                  |
-| `licensed`                         | The runs it started on a license, in all                                                                                                                                                                                                                                                                                                                                                 |
-| `runs_left`                        | The runs it may still start on its license; `0` while it is limited, `null` without a license                                                                                                                                                                                                                                                                                            |
-| `credits`                          | `{ available, owed, overage_cap }` of the org when Auto signed the license; `null` without one                                                                                                                                                                                                                                                                                           |
-| `issued_at`, `warn_at`, `limit_at` | When Auto signed the license, from when it is out of touch and from when it runs at the free rate, unless it reports first; `null` without one                                                                                                                                                                                                                                           |
-| `last_report_at`                   | When it last took a license from Auto, as it activated or reported; `null` without one                                                                                                                                                                                                                                                                                                   |
-| `fallback`                         | `{ per_day, per_month, used_today, used_this_month, lifts_at }` while it runs at the free rate, `lifts_at` being when it can run again once it has used the rate; `null` otherwise                                                                                                                                                                                                       |
-| `key_source`                       | Where the key in force came from: `environment`, `configuration` or `activated`; `null` without a key. A key in the environment or the configuration file wins at each start                                                                                                                                                                                                             |
-| `offline`                          | `{ credits, spent, usable_until }` while it holds offline credits; `null` otherwise                                                                                                                                                                                                                                                                                                      |
-| `invalid_because`                  | While it is `invalid`, the `detail` a run is refused in; `null` otherwise                                                                                                                                                                                                                                                                                                                |
-| `summary`                          | Where it stands in plain words, and how to put it right, as it says in its terminal                                                                                                                                                                                                                                                                                                      |
+| Field                              | Value                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`                            | `unregistered` while it holds no key; `licensed` while it runs on its license; `out_of_touch` from the license's `warn_at` while it has not reached Auto, still running on it; `limited` while it runs at the free rate though it holds a key; `offline` while it spends offline credits; `invalid` once they have stopped                            |
+| `limited_because`                  | While it is `limited`: `credits`, `cap`, `out_of_touch`, `key_rotated`, `key_revoked`, `org_closed` or `not_activated`; `null` otherwise                                                                                                                                                                                                              |
+| `runtime_id`                       | The runtime's id, which an owner registers in Studio; a runtime that has no id yet takes one as it is first read                                                                                                                                                                                                                                      |
+| `free_runs`                        | `{ used, of }`: the first runs it used of its 100, while it has never held a license; `null` once it has                                                                                                                                                                                                                                              |
+| `org`, `plan`                      | The org at Auto and its plan, of the license of the key in force; `null` without one                                                                                                                                                                                                                                                                  |
+| `org_name`                         | The name of that org at Auto, as Auto signed it into the license, on one line of at most 80 characters; `null` without one, or where Auto named none or a blank one                                                                                                                                                                                   |
+| `features`                         | The features of the license in force, which work that needs one checks before it starts; `[]` without a license in force: without a key, before its key is activated, once the license lapsed at its `limit_at` while no live offline credits stand, once its key was replaced or removed or its org closed, or once offline credits it holds stopped |
+| `standing`                         | Where the org's credits stood when Auto signed the license: `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`; `null` without one                                                                                                                                                                                                               |
+| `licensed`                         | The runs it started on a license, in all                                                                                                                                                                                                                                                                                                              |
+| `runs_left`                        | The runs it may still start on its license; `0` while it is limited, `null` without a license                                                                                                                                                                                                                                                         |
+| `credits`                          | `{ available, owed, overage_cap }` of the org when Auto signed the license; `null` without one                                                                                                                                                                                                                                                        |
+| `issued_at`, `warn_at`, `limit_at` | When Auto signed the license, from when it is out of touch and from when it runs at the free rate, unless it reports first; `null` without one                                                                                                                                                                                                        |
+| `last_report_at`                   | When it last took a license from Auto, as it activated or reported; `null` without one                                                                                                                                                                                                                                                                |
+| `fallback`                         | `{ per_day, per_month, used_today, used_this_month, lifts_at }` while it runs at the free rate, `lifts_at` being when it can run again once it has used the rate; `null` otherwise                                                                                                                                                                    |
+| `key_source`                       | Where the key in force came from: `environment`, `configuration` or `activated`; `null` without a key. A key in the environment or the configuration file wins at each start                                                                                                                                                                          |
+| `offline`                          | `{ credits, spent, usable_until }` while it holds offline credits; `null` otherwise                                                                                                                                                                                                                                                                   |
+| `invalid_because`                  | While it is `invalid`, the `detail` a run is refused in; `null` otherwise                                                                                                                                                                                                                                                                             |
+| `summary`                          | Where it stands in plain words, and how to put it right, as it says in its terminal                                                                                                                                                                                                                                                                   |
 
 `activate_license` answers `200` with the same document. The runtime keeps the key in its secret store, so it stands after a restart, unless `AUTO_RUNTIME_LICENSE_KEY` or the configuration file gives another, which wins at each start. A key that is not one of Studio is refused as `invalid_input`; one Auto does not know, rotated away, removed or for another runtime, and a license not signed by Auto, as `license_invalid`; a key of an org whose account is closed as `account_closed`; and an account service that cannot be reached as `unavailable` of the kind `meter_unavailable`. Activating the same key again takes a fresh license.
 
@@ -1327,7 +1289,6 @@ A nested field is named by its path, such as `address, then city`, and an item o
 | 405    | Unsupported method; see the `Allow` header |
 | 409    | `conflict` or `cancelled`                  |
 | 410    | `unanswered`                               |
-| 411    | `length_required`                          |
 | 413    | `content_too_large`                        |
 | 415    | `unsupported_media_type`                   |
 | 422    | `invalid_input`                            |
@@ -1352,9 +1313,8 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/license_invalid`        | 409    | The runtime runs at the free rate since its license can't be used right now, its key rotated or removed, its org closed, out of touch past its license's `limit_at` or not yet activated, and has used the rate; or its offline credits stopped; or a key given to activate is invalid; its `reason` is `conflict`. Nothing of the run is recorded         |
 | `https://on.auto/problems/account_closed`         | 409    | The account of the run's org is closed: its runs are refused until the org is restored, `because: "org_deleted"`, which an owner can do only for a limited time, until the date the `resolve_at` page gives, after which it is purged and they never run again, `because: "org_purged"`; its `reason` is `conflict`, and nothing of the run is recorded    |
 | `https://on.auto/problems/cancelled`              | 409    | The run was cancelled, with the `kind` of its cancellation; its `reason` is `cancelled`                                                                                                                                                                                                                                                                    |
-| `https://on.auto/problems/unanswered`             | 410    | Nobody answered the request a run waited on, of an interaction function or a prediction function's build, with the `kind` `expired` or `undelivered`                                                                                                                                                                                                       |
-| `https://on.auto/problems/length_required`        | 411    | A body a route streams, a dataset or a candidate, was sent without its `Content-Length`                                                                                                                                                                                                                                                                    |
-| `https://on.auto/problems/content_too_large`      | 413    | The body is larger than the operation accepts: 1,048,576 bytes of JSON, or 64 MiB for a dataset or a candidate. Their `Content-Length` is refused before the body is read                                                                                                                                                                                  |
+| `https://on.auto/problems/unanswered`             | 410    | Nobody answered the request a run waited on, of an interaction function, with the `kind` `expired` or `undelivered`                                                                                                                                                                                                                                        |
+| `https://on.auto/problems/content_too_large`      | 413    | The body is larger than the operation accepts: 1,048,576 bytes of JSON                                                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/unsupported_media_type` | 415    | The body is not sent as the media type the operation accepts, `application/json` in UTF-8 unless the route says otherwise, or is sent compressed                                                                                                                                                                                                           |
 | `https://on.auto/problems/invalid_input`          | 422    | The input does not fit, with the `errors` that point at it                                                                                                                                                                                                                                                                                                 |
 | `https://on.auto/problems/cursor_not_held`        | 422    | The `since` of `list_org_changes` or `list_playbook_changes` is not a cursor the ledger holds; its `reason` is `invalid_input`; ask again without `since`                                                                                                                                                                                                  |
@@ -1399,7 +1359,7 @@ A `500` response contains an incident reference: its `instance` and the `x-reque
 `Retry-After` comes only with an `unavailable` response that a retry of the same request may resolve. It never comes:
 
 - with the kinds `tools_unfinished`, `tool_not_offered` or `model_not_offered`;
-- with `because` set to `builds_of_the_day`, `stalled`, `not_finite`, `not_in_order` or `no_model_runtime`, which no wait resolves;
+- with `because` set to `stalled`, which no wait resolves;
 - with `cancelled`.
 
 ### Models and tools a function may not use

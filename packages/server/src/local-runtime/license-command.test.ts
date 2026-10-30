@@ -104,11 +104,11 @@ describe('auto-runtime license activate', () => {
 
 describe('auto-runtime license activate, for a license that includes features', () => {
   it('names the features its license includes', async () => {
-    const featured = { ...licensed, features: ['prediction-onnx', 'prediction-other'] };
+    const featured = { ...licensed, features: ['example-feature', 'other-feature'] };
     const asked = await ranWith(['activate', key], () => Promise.resolve(Response.json(featured)));
 
     expect(asked.logged).toEqual([
-      `Licensed to acme (free plan): 1000 runs left. Runtime id ${runtimeId}. Features: prediction-onnx, prediction-other.`,
+      `Licensed to acme (free plan): 1000 runs left. Runtime id ${runtimeId}. Features: example-feature, other-feature.`,
     ]);
   });
 });

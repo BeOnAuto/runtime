@@ -2,15 +2,15 @@ import { makeCatalog, type RouteRegistration } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { blobOperations } from '../testing/blob-operations.ts';
 import { findNotes } from '../testing/found-notes.ts';
 import { testShelf } from '../testing/guides.ts';
+import { httpAloneOperations } from '../testing/http-alone-operations.ts';
 import { listNotesOfTheOrg, notebookOperations } from '../testing/notebook.ts';
 import { operationsIn, type DocumentedOperation } from '../testing/openapi/openapi-document.ts';
 import { testIdentityIssuer, testServerInfo } from '../testing/operation-server.ts';
 import { openApiDocumentOf } from './openapi-document.ts';
 
-const catalog = makeCatalog([...notebookOperations, findNotes, listNotesOfTheOrg, ...blobOperations]);
+const catalog = makeCatalog([...notebookOperations, findNotes, listNotesOfTheOrg, ...httpAloneOperations]);
 
 const documented = operationsIn(openApiDocumentOf(catalog, testServerInfo, testShelf, testIdentityIssuer));
 

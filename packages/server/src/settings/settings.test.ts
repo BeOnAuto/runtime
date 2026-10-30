@@ -20,14 +20,7 @@ function aKeyFileAt(file: string) {
   return { current: { from: 'file', setting: 'SECRETS_KEY_FILE', file, madeByTheServer: true }, previous: undefined };
 }
 
-const defaultPrediction = {
-  processes: 4,
-  processMemoryMebibytes: 1280,
-  buildsAtOnce: 2,
-  buildsPerDay: 4,
-  mostFunctions: 32,
-  cacheDirectory: '/var/tmp/auto-runtime',
-};
+const defaultPrediction = { mostFunctions: 32 };
 
 const modelProvidersByDefault = [
   'anthropic',
@@ -73,7 +66,7 @@ describe('readSettings', () => {
       computation: { workers: 4 },
       recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
-      documents: { processes: 2 },
+      documents: { processes: 2, processMemoryMebibytes: 1280 },
       connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
       registeredClients: [],
       autoClientsWritten: undefined,
@@ -108,7 +101,7 @@ const everySetting = {
   OPENAI_API_KEY: 'sk-test',
   INTERACTION_OPEN_REQUESTS: '250',
   REASONING_MAX_INPUT_TOKENS: '500000',
-  AUTO_RUNTIME_EXTENSIONS: JSON.stringify([{ package: '@acme/models' }]),
+  AUTO_RUNTIME_EXTENSIONS: JSON.stringify([{ package: '@acme/extension' }]),
   CONNECTIONS: JSON.stringify({
     people_may_add: false,
     allowed_hosts: ['*.example.com'],
@@ -156,7 +149,7 @@ const everySettingRead = {
   computation: { workers: 4 },
   recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
   prediction: defaultPrediction,
-  documents: { processes: 2 },
+  documents: { processes: 2, processMemoryMebibytes: 1280 },
   connections: {
     peopleMayAdd: false,
     allowedHosts: ['*.example.com'],
@@ -179,7 +172,7 @@ const everySettingRead = {
   },
   distribution: 'source',
   configFile: undefined,
-  extensions: [{ package: '@acme/models' }],
+  extensions: [{ package: '@acme/extension' }],
 };
 
 describe('readSettings given the distribution', () => {

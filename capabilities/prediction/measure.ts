@@ -4,7 +4,6 @@ import { handedWorkersOf, programPool, sandboxShippedRoots } from '@on.auto/work
 import { rebuiltOn, type Folding, type History } from './measure/dataset-rebuild.ts';
 import { dailyOrders, seriesMeasured, testedDailyOrders } from './measure/order-history.ts';
 import { measuredStores, type MeasuredStore } from './measure/stores.ts';
-import { writtenOn, type FileRead } from './measure/written-files.ts';
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
@@ -15,8 +14,6 @@ const days = 200;
 const liveDays = 10;
 
 const counted = new Intl.NumberFormat('en');
-
-const mebibyte = 1_048_576;
 
 function write(line: string): void {
   process.stdout.write(`${line}\n`);
@@ -34,12 +31,8 @@ function pageCostOf({ pages, milliseconds }: Folding): string {
   return `${(milliseconds / pages).toFixed(1)} ms a page`;
 }
 
-function readLine(file: string, { bytes, milliseconds, whole }: FileRead): string {
-  return `${file} ${counted.format(bytes)} bytes (${(bytes / mebibyte).toFixed(1)} MiB) read back in ${milliseconds.toFixed(1)} ms, ${whole ? 'its digest the one it was kept under' : 'NOT its digest'}`;
-}
-
 async function untestedOn({ store, aDatabase }: MeasuredStore, history: History): Promise<void> {
-  const { settings, ledger } = await aDatabase();
+  const { settings } = await aDatabase();
   const { folders, recordingMs, rebuild, live } = await rebuiltOn(settings, dailyOrders, history);
   write(
     `${store}: ${counted.format(rebuild.events)} events of ${seriesMeasured} series over ${days} days recorded in ${seconds(recordingMs)}`,
@@ -50,12 +43,6 @@ async function untestedOn({ store, aDatabase }: MeasuredStore, history: History)
   write(
     `${store}: ${counted.format(live.events)} more events appended in ${liveDays} appends folded live within ${seconds(live.milliseconds)} of the first, ${rateOf(live)}, to ${counted.format(live.row.rows)} rows`,
   );
-  const written = await writtenOn(folders.database, ledger, days + liveDays);
-  write(
-    `${store}: the two files of ${counted.format(written.files.rows)} rows written at a build's start in ${seconds(written.writtenMs)}`,
-  );
-  write(`${store}: ${readLine('the training rows', written.training)}`);
-  write(`${store}: ${readLine('the scoring rows', written.scoring)}`);
   await folders.close();
 }
 

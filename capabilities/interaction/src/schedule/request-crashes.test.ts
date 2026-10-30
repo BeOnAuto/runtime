@@ -1,8 +1,8 @@
 import { memoryLedger } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
+import { answerInteraction } from '../requests/answer-interaction.ts';
 import { openRequests } from '../requests/open-requests.ts';
-import { answeringAnyRun } from '../testing/harness-parts.ts';
 import {
   askedRunId,
   askedThroughChat,
@@ -81,7 +81,7 @@ describe('an answer a reply brought and another one given meanwhile', () => {
     const { playbook } = await askedThroughChat();
     await recordedReply(playbook.ledger, { choice: 'approve' });
 
-    const meanwhile = await playbook.call(answeringAnyRun, { run_id: askedRunId, answer: { choice: 'reject' } });
+    const meanwhile = await playbook.call(answerInteraction, { run_id: askedRunId, answer: { choice: 'reject' } });
     await playbook.performDue(Date.now());
 
     expect(meanwhile).toMatchObject({
@@ -99,7 +99,7 @@ describe('an answer a reply brought and another one given meanwhile', () => {
     const asked = await askedThroughChat({ ledger: racing.ledger });
     await racing.started();
 
-    const meanwhile = await asked.playbook.call(answeringAnyRun, {
+    const meanwhile = await asked.playbook.call(answerInteraction, {
       run_id: askedRunId,
       answer: { choice: 'reject' },
     });

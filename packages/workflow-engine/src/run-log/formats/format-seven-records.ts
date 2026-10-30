@@ -29,10 +29,7 @@ const UnavailableKindSchema = Schema.Literals([
   'tools_unfinished',
   'rebuilding',
   'requests_full',
-  'builds_full',
   'dataset_not_ready',
-  'model_process_busy',
-  'model_process_failed',
 ]);
 
 const RejectionBecauseSchema = Schema.Literals([
@@ -52,9 +49,7 @@ const RejectionBecauseSchema = Schema.Literals([
   'run_bound',
   'no_answer',
   'only_read',
-  'builds_of_the_day',
   'stalled',
-  'not_finite',
 ]);
 
 const BecauseOfFormatEightSchema = RejectionBecauseSchema.pipe(
@@ -70,13 +65,6 @@ const ConflictKindSchema = Schema.Literals([
   'tools_called',
   'effect_unknown',
   'oversized',
-  'no_active_version',
-  'data_changed',
-  'build_in_flight',
-  'dataset_too_large',
-  'not_a_build',
-  'build_ended',
-  'already_active',
 ]);
 
 const settledBy = { by: Schema.optionalKey(Schema.NonEmptyString) };

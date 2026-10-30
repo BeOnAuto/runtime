@@ -46,7 +46,7 @@ await test('every filter the reference of templates lists is one a template may 
 });
 
 await test('the formats that hold a template lead to its filters in the same words, and list none of their own', () => {
-  for (const format of ['reasoning-format.md', 'interaction-format.md', 'prediction-format.md']) {
+  for (const format of ['reasoning-format.md', 'interaction-format.md']) {
     const guide = readFileSync(join(docs, 'reference', format), 'utf8');
     assert.ok(guide.includes(theFiltersOfEveryTemplate), `${format} needs a link to the filters of every template`);
     assert.doesNotMatch(

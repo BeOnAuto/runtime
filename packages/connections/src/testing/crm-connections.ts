@@ -1,11 +1,11 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { added, crm, type Added } from './additions.ts';
 import { ada, operationNamed, type Harness } from './harness.ts';
 import { preparedOf, sourceOver } from './served-connections.ts';
 
-export function giving(h: Harness, { id, token }: Added, value: string, at?: string): Promise<Outcome<Succeeded>> {
+export function giving(h: Harness, { id, token }: Added, value: string, at?: string): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value }, at);
 }
 

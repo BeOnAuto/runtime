@@ -2,13 +2,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { problemsOf } from '../testing/document-problems.ts';
-import {
-  basketLine,
-  promotionLine,
-  uploadedWeeklyOrders,
-  weeklyOrders,
-  weeklyOrdersWith,
-} from '../testing/weekly-orders.ts';
+import { weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
 import { parsePredictionDocument } from './document-parsing.ts';
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
@@ -23,55 +17,51 @@ function digestOf(source: string): string {
   return documentOf(source).dataSha256;
 }
 
+function coverageOf(coverage: string): number {
+  return documentOf(weeklyOrdersWith(['  unit: orders', `  unit: orders\n  coverage: ${coverage}`])).predicts.coverage;
+}
+
 describe('a prediction function document', () => {
-  it('reads what it predicts, its data, its evaluation with the defaults, where its builds go and its rules', () => {
+  it('reads what it predicts, with the coverage of its ranges, and the data it forecasts from', () => {
     expect(documentOf(weeklyOrders)).toMatchObject({
       description: 'Predicts the orders of each region one and four weeks ahead',
-      predicts: { target: 'orders', period: 'week', season: 52, horizons: [1, 4], unit: 'orders', history: 8 },
+      predicts: {
+        target: 'orders',
+        period: 'week',
+        season: 52,
+        horizons: [1, 4],
+        unit: 'orders',
+        history: 8,
+        coverage: 0.8,
+      },
       data: {
         events: [{ type: 'order.placed' }],
         time: '/placed_at',
         series: '/region',
         target: { as: 'count' },
-        features: [
-          { name: 'basket', of: '/total', as: 'mean' },
-          { name: 'promotion', of: '/promotion', as: 'last' },
-        ],
-        given: ['promotion'],
         window: 156,
       },
       dataSha256: aDigest,
-      source: { to: 'trainer', expires: 'P7D', expiresMs: 604_800_000 },
-      rules: ['Train on the rows given and on nothing else'],
       dataExpressions: [],
     });
   });
 
-  it('takes the evaluation’s defaults, with the seasonal baseline beside persistence when a season is named', () => {
-    expect(documentOf(weeklyOrders).evaluation).toEqual({
-      holdout: 12,
-      metric: 'mase',
-      coverageFloor: 0.7,
-      baselines: ['persistence', 'seasonal-naive'],
-      confidence: 0.9,
-      shadowPeriods: 0,
-      activate: 'automatic',
-    });
+  it('takes the coverage it names, from 0.5 to 0.95', () => {
+    expect([coverageOf('0.5'), coverageOf('0.9'), coverageOf('0.95')]).toEqual([0.5, 0.9, 0.95]);
   });
 });
 
 describe('the digest of the data part of a prediction function document', () => {
-  it('is one for the rows a data part folds, however it is written and whatever its window and its given features', () => {
+  it('is one for the rows a data part folds, however it is written and whatever its window', () => {
     const reordered = weeklyOrdersWith(['  target: { as: count }', '  target:\n    as: count']);
     const rephrased = weeklyOrdersWith([
       'description: Predicts the orders of each region one and four weeks ahead',
       'description: Orders',
     ]);
     const windowed = weeklyOrdersWith(['  window: 156', '  window: 160']);
-    const givenNothing = weeklyOrdersWith(['  given: [promotion]', '']);
 
-    expect([reordered, rephrased, windowed, givenNothing].map((source) => digestOf(source))).toEqual(
-      Array.from({ length: 4 }, () => digestOf(weeklyOrders)),
+    expect([reordered, rephrased, windowed].map((source) => digestOf(source))).toEqual(
+      Array.from({ length: 3 }, () => digestOf(weeklyOrders)),
     );
   });
 
@@ -84,41 +74,12 @@ describe('the digest of the data part of a prediction function document', () => 
 });
 
 describe('the data part of a prediction function document', () => {
-  it('names an uploaded dataset with its features by name and no projection', () => {
-    expect(documentOf(uploadedWeeklyOrders('a'.repeat(64))).data).toEqual({
-      dataset: 'a'.repeat(64),
-      features: ['basket', 'promotion'],
-      given: ['promotion'],
-      window: 156,
-    });
-  });
-
-  it('names an uploaded dataset with no features and nothing given', () => {
-    const bare = weeklyOrdersWith(
-      ['  events:', `  dataset: ${'c'.repeat(64)}`],
-      ['    - type: order.placed', ''],
-      ['  time: /placed_at', ''],
-      ['  series: /region', ''],
-      ['  target: { as: count }', ''],
-      ['  features:', ''],
-      [basketLine, ''],
-      [promotionLine, ''],
-      ['  given: [promotion]', ''],
-    );
-
-    expect(documentOf(bare).data).toEqual({ dataset: 'c'.repeat(64), features: [], given: [], window: 156 });
-  });
-
-  it('reads a feature that counts, and the time of the event itself with a data test kept for the check', () => {
-    const counted = weeklyOrdersWith([basketLine, '    - { name: lines, as: count }']);
+  it('reads the time of the event itself, with a data test kept for the check', () => {
     const tested = weeklyOrdersWith(
       ['  time: /placed_at', '  time: event'],
       ['    - type: order.placed', `    - type: order.placed\n      data: '\${ $data.region !== "test" }'`],
     );
 
-    expect(documentOf(counted).data).toMatchObject({
-      features: [{ name: 'lines', as: 'count' }, { name: 'promotion' }],
-    });
     expect([documentOf(tested).data, documentOf(tested).dataExpressions]).toMatchObject([
       { time: 'event' },
       [{ source: ' $data.region !== "test" ', pointer: '/data/events/0/data', line: 12 }],
@@ -127,37 +88,23 @@ describe('the data part of a prediction function document', () => {
 });
 
 describe('the defaults of a prediction function document', () => {
-  it('leave out the description, the features, given, the rules and the seasonal baseline when none is written', () => {
+  it('leave out the description and the season when none is written', () => {
     const bare = weeklyOrdersWith(
       ['description: Predicts the orders of each region one and four weeks ahead', ''],
-      ['  features:', ''],
-      [basketLine, ''],
-      [promotionLine, ''],
-      ['  given: [promotion]', ''],
       ['  season: 52', ''],
       ['  window: 156', '  window: 40'],
-      ['rules:', ''],
-      ['  - Train on the rows given and on nothing else', ''],
-      [
-        '{% for feature in dataset.features %}{{ feature.name }} ({{ feature.as }}){% unless forloop.last %}, {% endunless %}{% endfor %}.',
-        '',
-      ],
     );
     const document = documentOf(bare);
 
-    expect([document.description, document.data, document.evaluation.baselines, document.rules]).toEqual([
+    expect([document.description, document.data]).toEqual([
       undefined,
       {
         events: [{ type: 'order.placed' }],
         time: '/placed_at',
         series: '/region',
         target: { as: 'count' },
-        features: [],
-        given: [],
         window: 40,
       },
-      ['persistence'],
-      [],
     ]);
   });
 
@@ -166,28 +113,34 @@ describe('the defaults of a prediction function document', () => {
       documentOf(weeklyOrdersWith(['  unit: orders', `  unit: orders\n  history: ${history}`])).predicts.history;
 
     expect([documentOf(weeklyOrders).predicts.history, historyOf('0'), historyOf('156')]).toEqual([8, 0, 156]);
-  });
-
-  it('send a build to the trainer unless another party is named', () => {
-    expect(documentOf(weeklyOrdersWith(['  expires: P7D', '  expires: P7D\n  to: data-team'])).source).toMatchObject({
-      to: 'data-team',
-    });
     expect(() => weeklyOrdersWith(['no such line', ''])).toThrow('The example has no line no such line');
   });
 });
 
 describe('a text that is not a prediction function document', () => {
-  it('is refused at its first line, for empty front matter, and for keys the front matter does not take', () => {
+  it('is refused at its first line, for empty front matter, for keys the front matter does not take, and for a body', () => {
     expect(problemsOf('no front matter')).toEqual([
       'Line 1: A prediction function definition starts with a line of three dashes (---) that opens its front matter of YAML',
     ]);
-    expect(problemsOf('---\n---\n')).toEqual([
-      'Line 2: The front matter is empty; it names at least what it predicts, the data it learns from and how it is evaluated',
-      'Line 3: The definition has no brief: write it after the front matter',
+    expect(problemsOf('---\n---\nA note')).toEqual([
+      'Line 2: The front matter is empty; it names at least what it predicts and the data it forecasts from',
+      'Line 3: A prediction function has no body: leave the body after the front matter empty, and say what the function predicts in description',
     ]);
-    expect(problemsOf(weeklyOrdersWith(['source:', 'input:\n  schema: {}\nsource:']))).toEqual([
-      'Line 24, /input: input is not a key of the front matter; it takes description, predicts, data, evaluation, source, rules',
+    expect(problemsOf(weeklyOrdersWith(['  window: 156', '  window: 156\ninput:\n  schema: {}']))).toEqual([
+      'Line 17, /input: input is not a key of the front matter; it takes description, predicts, data',
     ]);
-    expect(problemsOf(weeklyOrdersWith(['  period: week', '  period: fortnight']))).toEqual([periodRefused]);
+    expect(problemsOf(`${weeklyOrdersWith(['  period: week', '  period: fortnight'])}\n\nNotes`)).toEqual([
+      periodRefused,
+      'Line 18: A prediction function has no body: leave the body after the front matter empty, and say what the function predicts in description',
+    ]);
+  });
+
+  it('is refused for a body beside a front matter that reads, and takes a body of blank lines', () => {
+    expect([problemsOf(`${weeklyOrders}\n\nA note`), problemsOf(`${weeklyOrders}\n\n  \n`)]).toEqual([
+      [
+        'Line 18: A prediction function has no body: leave the body after the front matter empty, and say what the function predicts in description',
+      ],
+      [],
+    ]);
   });
 });

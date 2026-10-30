@@ -15,7 +15,6 @@ const statusAndTitleByReason: ReadonlyArray<readonly [ProblemReason, number, str
   ['unauthenticated', 401, 'Unauthenticated'],
   ['origin_not_allowed', 403, 'Origin not allowed'],
   ['method_not_allowed', 405, 'Method not allowed'],
-  ['length_required', 411, 'Length required'],
   ['content_too_large', 413, 'Content too large'],
   ['unsupported_media_type', 415, 'Unsupported media type'],
   ['internal', 500, 'Internal error'],
@@ -109,22 +108,11 @@ describe('problemResponse', () => {
 });
 
 describe('the retry of a refusal of a prediction function', () => {
-  it('asks for a retry of a prediction function whose builds or model processes are all taken, or whose dataset is not ready', () => {
+  it('asks for a retry of a prediction function whose dataset is not ready, and none of one whose dataset stalled', () => {
     expect([
-      retryAfterOf({ kind: 'builds_full' }),
       retryAfterOf({ kind: 'dataset_not_ready' }),
-      retryAfterOf({ kind: 'model_process_busy' }),
-      retryAfterOf({ kind: 'model_process_failed' }),
-    ]).toEqual(['5', '5', '5', '5']);
-  });
-
-  it('asks for no retry of a prediction function whose builds of the day are spent, whose dataset stalled, whose model answers what it cannot or whose model no runtime executes', () => {
-    expect([
-      retryAfterOf({ kind: 'builds_full', because: 'builds_of_the_day' }),
       retryAfterOf({ kind: 'dataset_not_ready', because: 'stalled' }),
-      retryAfterOf({ kind: 'model_process_failed', because: 'not_finite' }),
-      retryAfterOf({ kind: 'model_process_failed', because: 'no_model_runtime' }),
-    ]).toEqual([null, null, null, null]);
+    ]).toEqual(['5', null]);
   });
 });
 

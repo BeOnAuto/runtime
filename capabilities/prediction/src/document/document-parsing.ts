@@ -7,31 +7,25 @@ import {
 } from '@on.auto/definitions/document';
 import { Result } from 'effect';
 
-import { compiledBrief } from '../brief/brief-template.ts';
 import { dataDigestOf } from '../data/data-digest.ts';
-import { issuesOf, type Checked } from './checked-parts.ts';
+import type { Checked } from './checked-parts.ts';
 import { derivedSchemasOf } from './derived-schemas.ts';
-import { doneOf, partsOf, type Done } from './document-parts.ts';
+import { bodyIssues, doneOf, type Done } from './document-parts.ts';
 import { decodeFrontMatter, predictionFrontMatter, type PredictionFrontMatter } from './front-matter.ts';
 import type { PredictionFunctionDefinitionDocument } from './prediction-document.ts';
 
 function assembled(
   front: PredictionFrontMatter,
-  done: Done,
+  { predicts, data }: Done,
   lines: ReadFrontMatter['lines'],
 ): PredictionFunctionDefinitionDocument {
-  const { predicts, data, evaluation, source, rules, brief } = done;
   return {
     ...(front.description === undefined ? {} : { description: front.description }),
     predicts,
     data: data.data,
     dataSha256: dataDigestOf(data.data, predicts.period),
-    evaluation,
-    ...(source === undefined ? {} : { source }),
-    rules,
-    brief,
     dataExpressions: data.expressions,
-    schemas: derivedSchemasOf(predicts, data.data),
+    schemas: derivedSchemasOf(predicts),
     lines,
   };
 }
@@ -39,17 +33,17 @@ function assembled(
 function documentFrom(reading: ReadFrontMatter, parts: DocumentParts): Checked<PredictionFunctionDefinitionDocument> {
   const decoded = decodeFrontMatter(reading.root);
   if (reading.issues.length > 0 || Result.isFailure(decoded)) {
-    return Result.fail([...reading.issues, ...issuesOf(() => compiledBrief(parts))]);
+    return Result.fail([...reading.issues, ...bodyIssues(parts)]);
   }
   const front = decoded.success;
-  const done = doneOf(() => partsOf(front, reading, parts));
+  const done = doneOf(front, reading, bodyIssues(parts));
   return Result.map(done, (ready) => assembled(front, ready, reading.lines));
 }
 
 function documentOf(parts: DocumentParts): Checked<PredictionFunctionDefinitionDocument> {
   const reading = frontMatterIn(parts.frontMatter, parts.frontMatterLine, predictionFrontMatter);
   return Result.isFailure(reading)
-    ? Result.fail([...reading.failure, ...issuesOf(() => compiledBrief(parts))])
+    ? Result.fail([...reading.failure, ...bodyIssues(parts)])
     : documentFrom(reading.success, parts);
 }
 

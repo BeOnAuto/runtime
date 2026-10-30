@@ -52,7 +52,7 @@ The ledger holds every playbook, definition, run and its history, and the workfl
 | --------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- |
 | SQLite on a volume                            | One server. Keep the volume on durable storage                          | [Copy the volume](docker.md#back-up-and-restore)    |
 | [PostgreSQL](postgresql.md)                   | A managed database with automated backups. Required for several servers | With the database's own backups                     |
-| [Object storage](object-storage.md), optional | Content such as datasets and model files, kept out of the database      | [Alongside the database](object-storage.md#back-up) |
+| [Object storage](object-storage.md), optional | Content such as the results of tool calls, kept out of the database     | [Alongside the database](object-storage.md#back-up) |
 
 Whoever can read the database can read what the runtime recorded:
 
@@ -138,15 +138,13 @@ The server stops cleanly on `SIGTERM`, usually within a second. It finishes the 
 
 Size the container's memory limit from the parts you use:
 
-| Part                                              | Memory                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The server                                        | About 180 MiB idle, measured once with the arm64 image and no memory limit                                                                                                                                                                                                                                     |
-| Computation and recall workers                    | Up to `COMPUTATION_WORKERS` threads, 4 unless set. Each is stopped past a 256 MiB heap and has a 64 MiB stack: about 320 MiB each, 1.25 GiB for four at once                                                                                                                                                   |
-| Model processes of prediction functions           | Up to `PREDICTION_PROCESSES`, 4 unless set, started only when needed. Each is ended if it reserves more than `PREDICTION_PROCESS_MEMORY`, 1,280 MiB unless set. Each stays far below that: about 160 MiB before it loads a model, and about 650 MiB at the peak of walking a 64 MiB model over the widest rows |
-| Processes that read the text of files tools fetch | Up to `DOCUMENT_PROCESSES`, 2 unless set, started only when a tool answers a file, apart from the model processes. Each is ended if it reserves more than `PREDICTION_PROCESS_MEMORY`, or when the call runs out of its 30 seconds, and its read answers in words                                              |
-| The runtime's own models                          | In the server itself, at most `PREDICTION_BUILDS_AT_ONCE` walks at once, 2 unless set. A walk over the widest rows holds about 190 MiB more at its peak                                                                                                                                                        |
+| Part                                              | Memory                                                                                                                                                                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The server                                        | About 180 MiB idle, measured once with the arm64 image and no memory limit                                                                                                                                                                            |
+| Computation and recall workers                    | Up to `COMPUTATION_WORKERS` threads, 4 unless set. Each is stopped past a 256 MiB heap and has a 64 MiB stack: about 320 MiB each, 1.25 GiB for four at once                                                                                          |
+| Processes that read the text of files tools fetch | Up to `DOCUMENT_PROCESSES`, 2 unless set, started only when a tool answers a file. Each is ended if it reserves more than `DOCUMENT_PROCESS_MEMORY`, 1,280 MiB unless set, or when the call runs out of its 30 seconds, and its read answers in words |
 
-Reasoning functions, workflows and the runtime's own models run in the server itself. Computation, recall and prediction functions add their workers and processes while they run. Watch the container's memory under your own load, and set the limit with room above the peak. The [configuration reference](configuration.md#settings) lists the settings that bound each part, with their defaults.
+Reasoning functions, workflows and the forecasts of prediction functions run in the server itself. Computation and recall functions add their workers, and the reading of a file its process, while they run. Watch the container's memory under your own load, and set the limit with room above the peak. The [configuration reference](configuration.md#settings) lists the settings that bound each part, with their defaults.
 
 ## Choose one server or a standby {#run-several-servers}
 

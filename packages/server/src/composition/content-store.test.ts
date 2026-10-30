@@ -60,7 +60,7 @@ describe('the store the content of a playbook is kept in', () => {
 
     const ledger = await ledgerOn(reachable);
 
-    expect(Object.keys(ledger.content)).toEqual(['put', 'get', 'stage', 'staged', 'unstage']);
+    expect(Object.keys(ledger.content)).toEqual(['put', 'get']);
   });
 
   it('reads through the client it is composed with, answering nothing for a digest its bucket does not hold', async () => {

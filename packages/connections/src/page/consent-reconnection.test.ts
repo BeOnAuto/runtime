@@ -1,4 +1,4 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { admitted, consentedAt, hostOf, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -23,7 +23,7 @@ const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
 const StartedSchema = Schema.Struct({ output: Schema.Struct({ authorize: Schema.Struct({ url: Schema.String }) }) });
 
-function consentedThrough(started: Outcome<Succeeded>) {
+function consentedThrough(started: Outcome) {
   return consentedAt(Schema.decodeUnknownSync(StartedSchema)(started).output.authorize.url);
 }
 

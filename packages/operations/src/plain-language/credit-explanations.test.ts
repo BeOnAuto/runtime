@@ -46,6 +46,11 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
     'Could not run the workflow “tally”: this runtime was removed from its org. To use it again, an owner can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
   ],
   [
+    'a license that lacks a feature the work needs',
+    { reason: 'conflict', kind: 'feature_unlicensed' },
+    'Could not run the workflow “tally”: the license of this runtime does not include a feature it needs. Trying again will not help until the account holder or an organization admin adds the feature to the license at the page the details name.',
+  ],
+  [
     'an account that is closed, which names no case',
     { reason: 'conflict', kind: 'account_closed' },
     'Could not run the workflow “tally”: the account it runs under is closed. A deleted org can be restored only for a limited time, after which it is purged and its runs never run again; the details below say which this is, and the resolve_at link, where they give one, says until when.',

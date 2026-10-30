@@ -87,7 +87,7 @@ export const DefinitionSchema = Schema.Struct({
   used_by: Schema.optionalKey(
     Schema.Array(DefinitionUserSchema).annotate({
       description:
-        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a prediction function that sends it builds or asks it to approve, a recall function that remembers its runs or its changes',
+        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes',
     }),
   ),
 }).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });

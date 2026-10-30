@@ -120,7 +120,6 @@ export type {
 export { mostContentChunkBytes } from './content/content-chunks.ts';
 export { leftUnread, requireExpected, takenInChunks, type Taken, type TakeChunk } from './content/content-intake.ts';
 export { ContentRefused, notTheBytesOfItsDigest, type ContentRefusedBecause } from './content/content-refusals.ts';
-export { StagingEnded, stagingEnded } from './content/staging-ended.ts';
 export { verifiedStream } from './content/content-verification.ts';
 export {
   contentOfBytes,
@@ -167,8 +166,7 @@ export { lineageAttributeNames, messageIdOf, noLineage, type Lineage } from './l
 export { NotFound } from './outcome/not-found.ts';
 export { defineCommand, defineQuery, type Operation } from './definition/operation.ts';
 export { defineHttpOperation, type HttpOperation } from './definition/http-operation.ts';
-export { isStreamedBody, mediaTypeOfBody } from './definition/http-body.ts';
-export type { HttpBody, OfferedLink, StreamedBody } from './definition/definition.ts';
+export type { HttpBody, OfferedLink } from './definition/definition.ts';
 export { OrgReader } from './ledger/org-reader.ts';
 export { explanationOf, unsuccessfulWords, type ExplainedRejection } from './plain-language/explanation.ts';
 export { refusalInWords } from './plain-language/refusal-words.ts';
@@ -195,8 +193,6 @@ export { OrgContext, type OrgAddress } from './caller/org-context.ts';
 export { OrgWriter } from './ledger/org-writer.ts';
 export {
   rejected,
-  type Answered,
-  type Streamed,
   type Succeeded,
   type Failed,
   type Outcome,
@@ -236,7 +232,6 @@ export type { DeclarableReason, Rejection, RejectionKind } from './outcome/rejec
 export type { InputEncoding } from './definition/registered-run.ts';
 export type {
   HttpRegistration,
-  RegisteredAnswer,
   RegisteredLink,
   Registration,
   RouteRegistration,

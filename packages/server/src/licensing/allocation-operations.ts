@@ -40,7 +40,7 @@ export function defineActivateAllocation(license: Pick<LicensePorts, 'allocate'>
     body: { kind: 'json' },
     permittedBy: ['org:write'],
     inputSchema: AllocationGivenSchema,
-    answer: { kind: 'json', outputSchema: AllocationSchema },
+    outputSchema: AllocationSchema,
     reasons: ['invalid_input', 'conflict', 'unavailable'],
     handle: ({ allocation }) => license.allocate(allocation),
   });
@@ -66,7 +66,7 @@ export function defineReportAllocation(license: Pick<LicensePorts, 'allocationRe
         }),
       ),
     }),
-    answer: { kind: 'json', outputSchema: ReportSchema },
+    outputSchema: ReportSchema,
     reasons: ['conflict', 'unavailable'],
     handle: ({ allocation }) => license.allocationReport(allocation),
   });

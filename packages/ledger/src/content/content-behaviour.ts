@@ -44,8 +44,6 @@ const theHeads =
 const unnamedChunks = [
   `SELECT CAST(count(*) AS INTEGER) AS count FROM recorded_content_chunks c WHERE NOT EXISTS (
     SELECT 1 FROM recorded_content_heads h WHERE h.playbook_key = c.playbook_key AND h.upload_id = c.upload_id)`,
-  `SELECT CAST(count(*) AS INTEGER) AS count FROM staged_content_chunks c WHERE NOT EXISTS (
-    SELECT 1 FROM staged_content h WHERE h.playbook_key = c.playbook_key AND h.run_id = c.run_id AND h.upload_id = c.upload_id)`,
 ];
 
 const notItsBytes = (sha256: string) =>
@@ -100,7 +98,7 @@ function keptInChunks(entry: LedgerEntry): void {
       await resultOf(ledger.content.put(alpha, content()));
       const chunks = Schema.decodeUnknownSync(ChunkRows)(await entry.queried(database, chunksOfTheDigest(sha256)));
       const heads = Schema.decodeUnknownSync(HeadRows)(await entry.queried(database, theHeads));
-      const read = await readBack(await resultOf(ledger.content.get(alpha, sha256)));
+      const read = await readBack(await present(ledger.content.get(alpha, sha256)));
 
       expect(read?.largestPiece).toBe(Math.min(bytes, mostContentChunkBytes));
       expect(heads).toEqual([{ sha256, bytes, chunks: chunks.length, media_type: octets }]);
@@ -153,25 +151,6 @@ function readFailing(entry: LedgerEntry): void {
   });
 }
 
-function readWhileUnstaged(entry: LedgerEntry): void {
-  it('fails a read of a staged content whose run is unstaged while it is read, in words that say so', async () => {
-    const ledger = await aLedger(entry);
-    const { sha256, content } = await generated(2_500_000);
-    await resultOf(ledger.content.stage(alpha, 'run-1', content()));
-
-    const staged = await present(ledger.content.staged(alpha, 'run-1', sha256));
-    await resultOf(ledger.content.unstage(alpha, 'run-1'));
-    const { bytes, failure } = await deliveredBeforeFailing(staged.stream);
-
-    expect([0, mostContentChunkBytes]).toContain(bytes);
-    expect(failure).toEqual(
-      new Error(
-        `The content staged under ${sha256} has no chunk ${bytes / mostContentChunkBytes}, as when its run is unstaged while it is read`,
-      ),
-    );
-  });
-}
-
 export function contentBehaviour(entry: LedgerEntry): void {
   recordedContentBehaviour(contentEntryOf(entry));
   describe('the content a playbook recorded, in chunks', () => {
@@ -179,7 +158,6 @@ export function contentBehaviour(entry: LedgerEntry): void {
   });
   describe('the content a playbook recorded, read back', () => {
     readFailing(entry);
-    readWhileUnstaged(entry);
   });
   unnamedChunksSwept(entry);
 }

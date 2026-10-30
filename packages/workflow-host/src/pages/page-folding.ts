@@ -119,7 +119,7 @@ function foldedChanges(foldings: readonly Folding[], page: ReadPage, outcome: Fo
 }
 
 function foldedBy(request: FoldRequest, { settings, share }: PageFolding): Effect.Effect<FoldOutcome> {
-  return share.withPermits(1)(pooledJob('program', 'fold', (signal) => settings.pool.fold(request, signal)));
+  return share.withPermits(1)(pooledJob('fold', (signal) => settings.pool.fold(request, signal)));
 }
 
 function salvageOf(page: ReadPage, at: number): ReadPage {

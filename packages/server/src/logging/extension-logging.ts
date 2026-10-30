@@ -7,8 +7,12 @@ const provenanceWords: Readonly<Record<LoadedExtension['provenance'], string>> =
   release: 'of the release',
 };
 
+function filledWords(provides: LoadedExtension['provides']): string {
+  return provides.length === 0 ? 'filling no point' : `filling ${provides.map(({ point }) => point).join(', ')}`;
+}
+
 function extensionWords({ package: name, version, provenance, provides }: LoadedExtension): string {
-  return `${name} ${version}, ${provenanceWords[provenance]}, filling ${provides.map(({ point }) => point).join(', ')}`;
+  return `${name} ${version}, ${provenanceWords[provenance]}, ${filledWords(provides)}`;
 }
 
 export function logExtensions(extensions: readonly LoadedExtension[]): Effect.Effect<void> {

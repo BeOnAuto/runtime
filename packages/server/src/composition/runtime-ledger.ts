@@ -1,12 +1,13 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { ConversationLedger } from '@on.auto/interaction';
-import { Ledger, type DispatcherServices, type ProjectionReader } from '@on.auto/operations';
-import type { PredictionLedger } from '@on.auto/prediction';
+import { Ledger, type DispatcherServices, type ProjectionReader, type RecordedContent } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { inRuntime } from '../workflows/in-runtime.ts';
 
-type RuntimeLedger = ConversationLedger & Pick<ProjectionReader, 'countProjectedRows'> & PredictionLedger;
+interface RuntimeLedger extends ConversationLedger, Pick<ProjectionReader, 'countProjectedRows'> {
+  readonly content: Pick<RecordedContent, 'put' | 'get'>;
+}
 
 export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeLedger {
   const viaLedger = <A, E>(use: (ledger: Ledger['Service']) => Effect.Effect<A, E>): Effect.Effect<A, E> =>
@@ -27,9 +28,6 @@ export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeL
     content: {
       put: (playbook, content) => viaLedger((ledger) => ledger.content.put(playbook, content)),
       get: (playbook, sha256) => viaLedger((ledger) => ledger.content.get(playbook, sha256)),
-      stage: (playbook, run, content) => viaLedger((ledger) => ledger.content.stage(playbook, run, content)),
-      staged: (playbook, run, sha256) => viaLedger((ledger) => ledger.content.staged(playbook, run, sha256)),
-      unstage: (playbook, run) => viaLedger((ledger) => ledger.content.unstage(playbook, run)),
     },
   };
 }

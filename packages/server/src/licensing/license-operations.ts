@@ -21,7 +21,7 @@ function defineGetLicense(license: Pick<LicensePorts, 'status'>) {
     body: { kind: 'none' },
     permittedBy: ['org:read', 'playbook:read'],
     inputSchema: Schema.Record(Schema.String, Schema.Never),
-    answer: { kind: 'json', outputSchema: LicenseStatusSchema },
+    outputSchema: LicenseStatusSchema,
     reasons: ['unavailable'],
     handle: () => license.status,
   });

@@ -64,9 +64,7 @@ function answeredBy(
   asked: Asked,
 ): Answering {
   const bounds = { deadlineMs, budget, memoryBytes };
-  return pooledJob('program', 'recall', (signal) =>
-    pool.run(requestOf({ document, program }, asked, bounds), signal),
-  ).pipe(
+  return pooledJob('recall', (signal) => pool.run(requestOf({ document, program }, asked, bounds), signal)).pipe(
     Effect.flatMap((outcome) =>
       answerEndingOf(outcome, {
         foldLine: document.details.foldLine,

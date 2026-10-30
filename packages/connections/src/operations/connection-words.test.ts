@@ -1,4 +1,4 @@
-import type { LinkToOpen, Outcome, RegisteredPlainLanguage, Succeeded } from '@on.auto/operations';
+import type { LinkToOpen, Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
 import { Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -21,7 +21,7 @@ function wordsOf(h: Harness, name: string): RegisteredPlainLanguage {
   return registration.plainLanguage;
 }
 
-function outputOf(outcome: Outcome<Succeeded>): unknown {
+function outputOf(outcome: Outcome): unknown {
   return 'output' in outcome ? outcome.output : undefined;
 }
 

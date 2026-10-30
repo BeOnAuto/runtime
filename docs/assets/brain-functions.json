@@ -21,7 +21,7 @@
       "label": "Prediction",
       "singular": "prediction function",
       "plural": "prediction functions",
-      "description": "Predict a quantity from the playbook's own history with a model a trainer builds."
+      "description": "Predict a quantity from the playbook's own history, with a likely range."
     },
     {
       "type": "recall",

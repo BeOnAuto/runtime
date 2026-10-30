@@ -11,8 +11,8 @@ export function runInPlaybook<A extends Succeeded>(
   bound: PlaybookBinding,
 ): Effect.Effect<A, Rejected> {
   const { forQueries, forCommands } = playbookServicesOf(request, bound);
-  const { input, encoding, body } = request;
+  const { input, encoding } = request;
   return registration.kind === 'query'
-    ? registration.run(input, encoding, body).pipe(Effect.provideContext(forQueries))
-    : registration.run(input, encoding, body).pipe(Effect.provideContext(forCommands));
+    ? registration.run(input, encoding).pipe(Effect.provideContext(forQueries))
+    : registration.run(input, encoding).pipe(Effect.provideContext(forCommands));
 }

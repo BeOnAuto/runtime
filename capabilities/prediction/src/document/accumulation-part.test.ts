@@ -43,10 +43,10 @@ const refusals: readonly Refusal[] = [
     ['Line 14, /data/target/as: A total to the end of a week is a count or a sum; a sum of mean values says nothing'],
   ],
   [
-    'a holdout under twice the most days a week holds',
-    [['  holdout: 14', '  holdout: 13']],
+    'a window under four times the most days a week holds',
+    [['  window: 56', '  window: 27']],
     [
-      'Line 17, /evaluation/holdout: The holdout holds back 13 periods, fewer than 14: at least twice the longest horizon, 14, and at least 8',
+      'Line 15, /data/window: The window of 27 periods is under 28, 4 times the 7 periods a week holds at most, which the forecaster needs to backtest a total at 3 past weeks',
     ],
   ],
 ];
@@ -65,6 +65,7 @@ describe('a prediction function that sums its target to the end of an enclosing 
       accumulates: 'week',
       unit: 'sales',
       history: 14,
+      coverage: 0.8,
     });
   });
 
@@ -80,38 +81,9 @@ describe('a prediction function that sums its target to the end of an enclosing 
       Result.isSuccess(schemas.question.validate({ series: 'north', horizon: 1 })),
     ]).toEqual([true, false]);
     expect(schemas.input).toMatchObject({
-      oneOf: [
-        {
-          required: ['series'],
-          description:
-            'A question: the series to predict the total of its sales for, in sales, from the day after its last observed one to the end of that week',
-        },
-        { title: 'build' },
-      ],
-    });
-  });
-});
-
-describe('the brief of a prediction function that sums its target', () => {
-  it('parses whole, reading the enclosing period', () => {
-    expect(problemsOf(dailyTotals)).toEqual([]);
-  });
-});
-
-describe('the given features of a prediction function that sums its target', () => {
-  it('are taken over the periods its total sums', () => {
-    const given = dailyTotalsWith([
-      '  target: { of: /amount, as: sum }',
-      '  target: { of: /amount, as: sum }\n  features:\n    - { name: promotion, of: /promotion, as: last }\n  given: [promotion]',
-    ]);
-
-    expect(documentOf(given).schemas.input).toMatchObject({
-      oneOf: [
-        {
-          properties: { given: { description: 'The value of each given feature for the periods summed, by its name' } },
-        },
-        {},
-      ],
+      required: ['series'],
+      description:
+        'A question: the series to predict the total of its sales for, in sales, from the day after its last observed one to the end of that week',
     });
   });
 });

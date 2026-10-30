@@ -49,6 +49,20 @@ const event: RunLogEvent = {
   ],
 };
 
+function settledWith(format: number, kind: string): unknown {
+  return {
+    ...event,
+    format,
+    outputs: [
+      { kind: 'settle', runId, settlement: { status: 'rejected', reason: 'unavailable', kind, detail: 'Refused' } },
+    ],
+  };
+}
+
+function readsBack(format: number, kind: string): boolean {
+  return Result.isSuccess(readBack(RunLogEventSchema, settledWith(format, kind)));
+}
+
 function countedAfter(before: number): readonly [unknown, unknown] {
   const applied = withHistoryBytes(event, before);
   return [applied.patch.at(-1), { op: 'replace', path: '/historyBytes', value: before + eventBytesOf(applied) }];
@@ -82,6 +96,19 @@ describe('a run event', () => {
       Result.isFailure(readBack(RunLogEventSchema, { ...event, format: 0 })),
       Result.isFailure(readBack(RunLogEventSchema, { ...event, outputs: [{ kind: 'send_email', to: 'someone' }] })),
     ]).toEqual([true, true]);
+  });
+
+  it('is refused when it settles a run with a kind of rejection this release no longer has, as the prediction refusals of earlier releases, in any format', () => {
+    expect(
+      [stateFormat, 9, 8].map((format) => [
+        readsBack(format, 'dataset_not_ready'),
+        readsBack(format, 'model_process_busy'),
+      ]),
+    ).toEqual([
+      [true, false],
+      [true, false],
+      [true, false],
+    ]);
   });
 
   it('is measured in bytes of UTF-8 JSON, and fits when it takes at most 1.5 MiB', () => {

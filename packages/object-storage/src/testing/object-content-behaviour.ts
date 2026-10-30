@@ -21,7 +21,7 @@ import { keysIn, openUploadsIn } from './test-object-store.ts';
 const longAgo = '00000000-0000-7000-8000-000000000001';
 
 function keptOnObjects(entry: ObjectStoreEntry): void {
-  it('keeps a content as one object under its playbook and digest, with its media type and size, and stages it under its run until the run is unstaged', async () => {
+  it('keeps a content as one object under its playbook and digest, with its media type and size', async () => {
     const store = await entry.aStore();
     const bucket = bucketOnS3(store.bucket);
     const { content } = objectContentOn(bucket, store.location);
@@ -29,19 +29,11 @@ function keptOnObjects(entry: ObjectStoreEntry): void {
     const { sha256, content: generatedContent } = await generated(2_500_000);
 
     await resultOf(content.put(alpha, { ...generatedContent(), mediaType: json }));
-    await resultOf(content.stage(alpha, 'run/1', generatedContent()));
     const kept = await keysIn(store.bucket, store.location.prefix);
     const held = await bucket.head(keys.kept(alpha, sha256));
-    await resultOf(content.unstage(alpha, 'run/1'));
 
-    expect(kept).toEqual(
-      [
-        `${store.location.prefix}/playbook/acme/alpha/${sha256}`,
-        `${store.location.prefix}/staging/playbook/acme/alpha/run%2F1/${sha256}`,
-      ].toSorted(),
-    );
+    expect(kept).toEqual([`${store.location.prefix}/playbook/acme/alpha/${sha256}`]);
     expect(held).toEqual({ bytes: 2_500_000, mediaType: json });
-    expect(await keysIn(store.bucket, keys.run(alpha, 'run/1'))).toEqual([keys.ended(alpha, 'run/1')]);
   });
 }
 

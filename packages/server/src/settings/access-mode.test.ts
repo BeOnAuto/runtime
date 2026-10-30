@@ -49,7 +49,6 @@ async function statusesOn(
       HOST: '127.0.0.1',
       PORT: '0',
       LEDGER_FILE: ledger.fileName,
-      PREDICTION_CACHE_DIR: ledger.cacheDirectory,
       ...noConsentThroughAuto,
       ...env,
     },

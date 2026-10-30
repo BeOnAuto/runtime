@@ -238,7 +238,7 @@ function carriedForwardOnlyBehaviour(entry: LedgerEntry): void {
     const refused = entry.carriedOn(database, carryingTo(9, [notesMade, retiredDropped]));
 
     await expect(refused).rejects.toThrow(
-      'The ledger was given 0 steps to layout 8 of its database, where it takes exactly one',
+      'The ledger was given no step to layout 8 of its database, where it takes at least one',
     );
     expect((await layoutIn(entry, database)).layout).toBe(6);
     expect(await tablesIn(entry, database)).not.toContain('carried_notes');

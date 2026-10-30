@@ -10,7 +10,6 @@ import {
   checksAwaitedAtMostMs,
   measuredPoolSettings,
   noCalledDefinitions,
-  nothingSaved,
   recordingJournal,
 } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
@@ -89,7 +88,7 @@ export function recallWith(pool: ProgramPool = poolOf(), bounds: AnswerBounds = 
   const capability = makeRecallFunctionAdapter({ pool, views: views.views, ...bounds });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   const saved = (source: string) =>
-    Effect.flatMap(prepared(source).check(nothingSaved), (stripped) => capability.prepare(source, stripped));
+    Effect.flatMap(prepared(source).check(), (stripped) => capability.prepare(source, stripped));
   return {
     ...views,
     capability,

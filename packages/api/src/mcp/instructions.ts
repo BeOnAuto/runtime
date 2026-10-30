@@ -43,7 +43,7 @@ const purposesByType: Readonly<Record<string, readonly string[]>> = {
     'Recall retrieves run results, definitions and events, never run inputs or tool calls.',
     'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
   ],
-  prediction: ["A prediction function answers from a model trained on the playbook's history."],
+  prediction: ['A prediction function forecasts a series from its own history, with a range.'],
   workflow: ['A workflow runs functions in steps, waits for input and can start on a schedule or event.'],
 };
 

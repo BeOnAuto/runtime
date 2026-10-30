@@ -59,7 +59,7 @@ Whenever it takes a license, the runtime raises its licensed count to the licens
 | `standing`                | Where the organization's credits stood: `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`                                                           |
 | `credits`                 | `{ available, owed, overage_cap }`: what the organization could spend, what it owed in overage and the most it may owe                                    |
 | `fallback`                | `{ per_day, per_month }`: the free rate the runtime falls back to                                                                                         |
-| `features`                | The [features](#features) the organization's agreement includes, such as `prediction-onnx`; none where the license lists none                             |
+| `features`                | The [features](#features) the organization's agreement includes; none where the license lists none                                                        |
 
 `admits_through` is the higher of `charged_through` and the licensed count the runtime reported, plus what the organization may still spend. On a paid plan, that is its available credits plus its overage cap, less what it owes. On Free, it is its available credits, counting Free plan credits only up to what is left of the day's 15.
 
@@ -151,19 +151,11 @@ When Auto closes offline credits, what they didn't spend goes back to the credit
 
 ## Features {#features}
 
-A feature is a part of Auto Runtime licensed on its own, beyond the runs a license admits. A license lists the features its organization's agreement includes, and a license that lists none includes none. Each is a name of lower-case letters, digits and hyphens; a name of another shape is left out, and the rest of the license stands. The ONNX model runtime, `@on.auto/prediction-onnx`, which is licensed separately and is not part of this repository, needs the feature `prediction-onnx`. The release's own model runtime, `series`, needs none, so it always runs.
+A feature is a part of Auto Runtime licensed on its own, beyond the runs a license admits. A license lists the features its organization's agreement includes, and a license that lists none includes none. Each is a name of lower-case letters, digits and hyphens; a name of another shape is left out, and the rest of the license stands. No part of this release needs a feature, so everything it runs runs without one.
 
 The features in force are those of the license of the key in force: the license holds them until its `limit_at`, and past it while live offline credits stand. A license whose organization has run out of credits, or reached its overage cap, is still in force, so its features stand while its runs are limited to the free rate. Without a key, before the key is activated, once the license lapses at its `limit_at`, once its key is rotated or revoked or its organization closed, and once offline credits stop, no feature is in force. `GET /v1/orgs/{org}/license` lists them as `features`, and the command that activates a key ends with them, `Features: none.` where there are none.
 
-A [model runtime](../reference/model-runtimes.md) that names a feature does its work only while the features in force include it. Every piece of its work is checked as it starts, so nothing it executes can run without the feature:
-
-- A build offers a trainer none of its formats, and a candidate uploaded in one is refused `409` with the kind `feature_unlicensed`. Its `detail` says which feature the license does not include, which format it executes and where to add it, `This runtime's license does not include prediction-onnx, which executes onnx models. The account holder or an organization admin can add it at https://studio.on.auto/licenses?installation=….`, with that page in `resolve_at`.
-- A candidate in one of its formats that a build has not scored yet is disqualified `feature_unlicensed`, and a model a build fits itself in one of them is refused `feature_unlicensed`, each in those words.
-- A version in one of its formats is not walked in a shadow, which records why. A close at which either version was not walked decides nothing and uses up none of the shadow's closes, so a lapse never changes which version is active; the shadow goes on once the feature is back, within its most of 52 closes. A lapse that outlasts those 52 closes ends the shadow as failed for the challenger, which is not activated, and the active version stays active.
-- A prediction function whose active version is in one of its formats answers from the runtime's own models, the [default forecast](../reference/prediction-format.md#the-default-forecast), and its record says why, `because: "feature_unlicensed"` and the `feature`. A default forecast whose model is in one of its formats is refused `feature_unlicensed`.
-- A runtime that names a feature fits neither a build's candidates nor the default forecast while the license lacks it; the next runtime that fits does, as the release's `series` does.
-
-When a feature stops being in force, nothing stops: each prediction function goes on answering, from the runtime's own models where its active version needs the feature, and candidates in those formats are refused until a license that lists the feature is in force again. The function's active version answers again from then on, with nothing to rebuild.
+Work that needs a feature checks it as it starts, and is refused `409` with the kind `feature_unlicensed` while the features in force lack it. Its `detail` says which feature the license does not include, what it does and where to add it, `This runtime's license does not include <feature>, which <what it does>. The account holder or an organization admin can add it at https://studio.on.auto/licenses?installation=….`, with that page in `resolve_at`.
 
 ## What a runtime sends Auto
 

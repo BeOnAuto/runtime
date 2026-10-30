@@ -6,15 +6,15 @@ Each function has one of five types, described below. Workflows coordinate funct
 
 ## Choose a function type
 
-| Type        | Use it to                                                       | Example                                              |
-| ----------- | --------------------------------------------------------------- | ---------------------------------------------------- |
-| Reasoning   | Interpret, judge or write with a language model                 | Review a campaign brief against your team's criteria |
-| Interaction | Ask a person or a system, and take the answer                   | Ask the brief's owner to approve the review          |
-| Prediction  | Predict a quantity from the playbook's history or uploaded rows | Forecast next week's sign-ups in each region         |
-| Recall      | Look up what the playbook has already recorded                  | Bring back the last reviews of one campaign          |
-| Computation | Calculate or transform data exactly, with code                  | Total a campaign's spend and its pace against budget |
+| Type        | Use it to                                          | Example                                              |
+| ----------- | -------------------------------------------------- | ---------------------------------------------------- |
+| Reasoning   | Interpret, judge or write with a language model    | Review a campaign brief against your team's criteria |
+| Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
+| Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
+| Recall      | Look up what the playbook has already recorded     | Bring back the last reviews of one campaign          |
+| Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
 
-Choose a type by the function's job, not by how it does it. A function that looks up what the playbook has already recorded is recall. A function that asks another system for what it holds right now is interaction, even when it only reads. A function whose job is to forecast is prediction, even though its model runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
+Choose a type by the function's job, not by how it does it. A function that looks up what the playbook has already recorded is recall. A function that asks another system for what it holds right now is interaction, even when it only reads. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
 
 Real work often combines types. A budget review might recall the last decisions, compute the totals, reason about the options and then ask a person to approve. A workflow puts those steps in order; [Workflows and runs](workflows.md) explains how.
 
@@ -54,14 +54,14 @@ Choose interaction when a person must decide or supply something, or when the pl
 
 ## Prediction
 
-A prediction function predicts a number over time from the playbook's history, or from rows you upload. For example, it can forecast each region's orders next week, or their total to the end of the quarter. Each prediction is a series: the last periods observed, and each period ahead as a likely value with a low and a high.
+A prediction function predicts a number over time from the playbook's own history. For example, it can forecast each region's orders next week, or their total to the end of the quarter. Each prediction is a series: the last periods observed, and each period ahead as a likely value with a low and a high.
 
-The model behind it is one of the runtime's own, which a build fits from the playbook's data when no trainer is named, or one trained outside the playbook, by a person or an agent that can run code. The playbook tests each candidate model on periods it was not fitted on, and keeps the best of those that do better than simple baselines. Before any model is kept, the function answers from the runtime's default forecast. So keep three things apart: the prediction function you define, the predictive model it holds, and the prediction a run gives back.
+The runtime's forecaster answers it, from the moment the function is saved and the series' history is long enough. It forecasts the series' own past from earlier points to see which of its simple methods, the same periods a season earlier, at the recent level or as they were, the last value carried forward or the pace so far, the history supports, and answers with the first that does, its range set from how far that method missed. So keep apart the prediction function you define, the dataset it keeps of the playbook's history, and the prediction a run gives back.
 
 Choose prediction for a numeric question that comes back again and again, such as weekly sign-ups, and that past figures can answer. A prediction function uses no language model.
 
-- [Forecast with a prediction function](../guides/forecast.md) shows how to forecast from your own playbook, and [Developer example: forecast sign-ups](../tutorials/first-forecast.md) builds one with supplied data.
-- [Prediction function format](../reference/prediction-format.md) describes the document and how a model is built, and [Terminology](terminology.md#prediction) defines its words.
+- [Forecast with a prediction function](../guides/forecast.md) shows how to forecast from your own playbook's events.
+- [Prediction function format](../reference/prediction-format.md) describes the document and the forecaster, and [Terminology](terminology.md#prediction) defines its words.
 
 ## Recall
 

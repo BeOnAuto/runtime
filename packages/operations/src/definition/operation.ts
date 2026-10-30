@@ -1,13 +1,11 @@
-import { Effect, type Schema } from 'effect';
+import { Effect } from 'effect';
 
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
-import { succeeded, type Answered, type Rejected } from '../outcome/outcome.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import { inputDecoder, linkFields, outputEncoder, plainLanguageFields, typeValidator } from './codecs.ts';
 import type { Definition, InputSchemaFor, ObjectSchema, RelativePath } from './definition.ts';
 import type { HandlerServices } from './handler-services.ts';
-import type { InputEncoding } from './registered-run.ts';
-import { registeredFieldsOf, registeredOutputOf, settledOf } from './registration-parts.ts';
+import { registeredFieldsOf, registeredOutputOf, runnerOf } from './registration-parts.ts';
 import type { RegistrationOf } from './registration.ts';
 
 export interface Operation<
@@ -50,18 +48,6 @@ export function defineCommand<
   definition: Definition<'command', P, In, Out, R, Services, ReadServices>,
 ): Operation<S, 'command', In['Type'], Out['Type'], R, Services> {
   return defineOperation(scope, 'command', definition);
-}
-
-function runnerOf<Input, Output, R extends DeclarableReason, Services>(
-  decodeInput: (input: unknown, encoding: InputEncoding) => Effect.Effect<Input, Rejected>,
-  handle: (input: Input) => Effect.Effect<Output, Rejection<R>, Services>,
-  encodeOutput: (output: Output) => Effect.Effect<Schema.JsonObject>,
-  reasons: readonly DeclarableReason[],
-): (input: unknown, encoding: InputEncoding) => Effect.Effect<Answered, Rejected, Services> {
-  return (input, encoding) =>
-    Effect.flatMap(decodeInput(input, encoding), (decoded) =>
-      settledOf(handle(decoded), (output) => Effect.map(encodeOutput(output), succeeded), reasons),
-    );
 }
 
 function defineOperation<

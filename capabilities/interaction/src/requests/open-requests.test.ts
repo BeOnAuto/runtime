@@ -43,7 +43,7 @@ const request = {
   deliver,
 };
 
-const build = { ...Struct.omit(request, ['deliver']), build: { brief_sha256: 'c'.repeat(64) } };
+const inTheInbox = Struct.omit(request, ['deliver']);
 
 function deferralOf(record: object): Fact {
   return { type: 'run_deferred', data: { record } };
@@ -57,7 +57,7 @@ describe('the open request of a run', () => {
   it('is made by the deferral of a run whose record is a request, whatever the type of its function, which it keeps', () => {
     expect([
       open,
-      after(undefined, deferralOf(build), { ...ofTheRun, definitionType: 'prediction', definitionName: 'demand' }),
+      after(undefined, deferralOf(inTheInbox), { ...ofTheRun, definitionType: 'reasoning', definitionName: 'demand' }),
       after(undefined, deferralOf({ run: 'x' })),
       after(undefined, deferralOf({ run: 'x' }), { ...ofTheRun, definitionType: 'workflow' }),
     ]).toEqual([
@@ -90,7 +90,7 @@ describe('the open request of a run', () => {
         refusals_told: 0,
       },
       expect.objectContaining({
-        type: 'prediction',
+        type: 'reasoning',
         function: 'demand',
         delivery: null,
         standing: 'in_inbox',
@@ -113,9 +113,9 @@ describe('the open request of a run whose request carries blocks the interaction
     };
 
     expect(
-      after(undefined, deferralOf(elsewhere), { ...ofTheRun, definitionType: 'prediction', definitionName: 'demand' }),
+      after(undefined, deferralOf(elsewhere), { ...ofTheRun, definitionType: 'reasoning', definitionName: 'demand' }),
     ).toMatchObject({
-      type: 'prediction',
+      type: 'reasoning',
       delivery: null,
       replies: JSON.stringify({ by: 'post' }),
       reply: JSON.stringify({ kind: 'yes_or_no' }),
@@ -240,12 +240,12 @@ describe('the open request of a run that took an answer', () => {
   });
 
   it('closes on the ending its run settles with, and of a function the playbook does not settle from its answer, waits for its run', () => {
-    const ofABuild = { ...ofTheRun, definitionType: 'prediction' };
-    const answeredBuild = after(after(undefined, deferralOf(request), ofABuild), taken, ofABuild);
+    const ofAnother = { ...ofTheRun, definitionType: 'reasoning' };
+    const answeredElsewhere = after(after(undefined, deferralOf(request), ofAnother), taken, ofAnother);
 
     expect([
       after(after(open, taken), { type: 'run_succeeded', data: { output: { choice: 'approve' }, record: {} } }),
-      answeredBuild,
+      answeredElsewhere,
     ]).toMatchObject([
       { standing: 'answered', open: false, ended: 'answered', ending_due_at: null },
       { standing: 'answered', open: false, ended: null, ending_due_at: null, attempt_due_at: null },
@@ -253,13 +253,13 @@ describe('the open request of a run that took an answer', () => {
   });
 
   it('of a notification of another function, delivered or not, waits for its run to settle it until it expires', () => {
-    const ofABuild = { ...ofTheRun, definitionType: 'prediction' };
-    const notification = after(undefined, deferralOf(Struct.omit(request, ['answer_schema'])), ofABuild);
-    const deliveredOne = after(after(notification, attempt, ofABuild), delivered, ofABuild);
+    const ofAnother = { ...ofTheRun, definitionType: 'reasoning' };
+    const notification = after(undefined, deferralOf(Struct.omit(request, ['answer_schema'])), ofAnother);
+    const deliveredOne = after(after(notification, attempt, ofAnother), delivered, ofAnother);
     const undelivered = after(
-      after(notification, attempt, ofABuild),
+      after(notification, attempt, ofAnother),
       { type: 'delivery_refused', data: { number: 1, because: 'unworkable', duration_ms: 3 } },
-      ofABuild,
+      ofAnother,
     );
 
     expect([deliveredOne, undelivered]).toMatchObject([

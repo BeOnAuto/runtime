@@ -1,9 +1,9 @@
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
 import type { Permission } from '../caller/permission.ts';
-import type { Answered, Succeeded } from '../outcome/outcome.ts';
+import type { Succeeded } from '../outcome/outcome.ts';
 import type { DeclarableReason } from '../outcome/rejection.ts';
 import type { LinkToOpen, RegisteredPlainLanguage } from '../plain-language/plain-language.ts';
-import type { HttpBody, OfferedLink, StreamAnswer, SuccessStatusByKind } from './definition.ts';
+import type { HttpBody, OfferedLink, SuccessStatusByKind } from './definition.ts';
 import type { HandlerServices } from './handler-services.ts';
 import type { JsonSchemaDocument } from './json-schema.ts';
 import type { RegisteredRun } from './registered-run.ts';
@@ -45,18 +45,11 @@ interface RunnableOf<S extends OperationScope, K extends OperationKind, A extend
   readonly run: RegisteredRun<HandlerServices<S, K>, A>;
 }
 
-export interface RegistrationOf<S extends OperationScope, K extends OperationKind> extends RunnableOf<S, K, Answered> {
+export interface RegistrationOf<S extends OperationScope, K extends OperationKind> extends RunnableOf<S, K, Succeeded> {
   readonly servedOverHttpAlone?: never;
   readonly output: JsonSchemaDocument;
   readonly link?: RegisteredLink<RegistrationOf<S, K>>;
 }
-
-interface JsonAnswered {
-  readonly kind: 'json';
-  readonly output: JsonSchemaDocument;
-}
-
-export type RegisteredAnswer = JsonAnswered | StreamAnswer;
 
 export interface HttpRegistrationOf<S extends OperationScope, K extends OperationKind> extends RunnableOf<
   S,
@@ -64,7 +57,7 @@ export interface HttpRegistrationOf<S extends OperationScope, K extends Operatio
   Succeeded
 > {
   readonly servedOverHttpAlone: HttpBody;
-  readonly answer: RegisteredAnswer;
+  readonly output: JsonSchemaDocument;
 }
 
 export type Runnable<S extends OperationScope = OperationScope, A extends Succeeded = Succeeded> = {

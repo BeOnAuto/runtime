@@ -1,4 +1,4 @@
-import { mostExaminedInAPage, type Outcome, type Succeeded } from '@on.auto/operations';
+import { mostExaminedInAPage, type Outcome } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -54,7 +54,7 @@ async function playbookWithEchoes(count: number, input: object = {}) {
 type Page = (typeof PageSchema.Type)['output'];
 
 async function everyPage(
-  read: (cursor: string | undefined) => Promise<Outcome<Succeeded>>,
+  read: (cursor: string | undefined) => Promise<Outcome>,
   between: () => Promise<unknown> = () => Promise.resolve(),
   cursor?: string,
 ): Promise<readonly Page[]> {

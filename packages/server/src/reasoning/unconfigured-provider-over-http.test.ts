@@ -40,7 +40,6 @@ async function executedVerdict(models: Readonly<Record<string, string>>): Promis
       HOST: '127.0.0.1',
       PORT: '0',
       LEDGER_FILE: ledger.fileName,
-      PREDICTION_CACHE_DIR: ledger.cacheDirectory,
       ...noConsentThroughAuto,
       ...models,
     },

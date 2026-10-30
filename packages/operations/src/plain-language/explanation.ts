@@ -178,12 +178,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   call_outcome_unknown:
     'because the server restarted while it called a tool that may change something, so whether that call did is not known',
   only_read: "because every tool it called only reads, by its server's own account",
-  builds_of_the_day: 'because the function has had its builds of the day',
   stalled: 'because its dataset stopped at an event its fold could not take',
-  not_finite: 'because the model answered something other than finite numbers',
-  not_in_order: 'because the model answered a low above its likely value or a high below it',
-  baseline_check: 'because the process that checks a build’s baselines ended before it answered',
-  no_model_runtime: 'because no model runtime this server has installed executes or fits the model it needs',
   ...creditBecauses,
 };
 
@@ -195,36 +190,11 @@ const remedyByBecause: Remedies = {
 const explanationByKindAndBecause: Readonly<
   Partial<Record<RejectionKind, Partial<Record<RejectionBecause, Explanation>>>>
 > = {
-  builds_full: {
-    builds_of_the_day: {
-      why: 'the function has had its builds of the day',
-      remedy: 'It can be asked again once a day has passed since the oldest of them; the details below say when.',
-    },
-  },
   dataset_not_ready: {
     stalled: {
       why: 'its dataset stopped at an event its fold could not take',
       remedy:
         'Trying again will not help: get_definition names the event and why, and a change of the data part folds a dataset of its own.',
-    },
-  },
-  model_process_failed: {
-    not_finite: {
-      why: 'the model answered something other than finite numbers in the shape its signature gives',
-      remedy: 'Trying again gives the same answer; a new build gives the function another model.',
-    },
-    not_in_order: {
-      why: 'the model answered a low above its likely value or a high below it',
-      remedy: 'Trying again gives the same answer; a new build gives the function another model.',
-    },
-    baseline_check: {
-      why: 'the process that checks the build’s baselines ended before it answered',
-      remedy: 'Nothing needs to change: asking for the build again starts a new process to check them.',
-    },
-    no_model_runtime: {
-      why: 'no model runtime this server has installed executes the model it needs, or fits its own for a function that names no trainer',
-      remedy:
-        'This can be put right on the server: install the extension that executes that format or fits its own models, or ask for a build in a format the server executes.',
     },
   },
   tools_called: {

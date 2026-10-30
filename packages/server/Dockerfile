@@ -21,8 +21,6 @@ COPY packages/meter/package.json packages/meter/
 COPY packages/object-storage/package.json packages/object-storage/
 COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
-COPY packages/prediction-contract/package.json packages/prediction-contract/
-COPY packages/prediction-series/package.json packages/prediction-series/
 COPY packages/providers/package.json packages/providers/
 COPY packages/secrets/package.json packages/secrets/
 COPY packages/tool-servers/package.json packages/tool-servers/
@@ -69,8 +67,6 @@ COPY packages/meter/src packages/meter/src
 COPY packages/object-storage/src packages/object-storage/src
 COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src
-COPY packages/prediction-contract/src packages/prediction-contract/src
-COPY packages/prediction-series/src packages/prediction-series/src
 COPY packages/providers/src packages/providers/src
 COPY packages/secrets/src packages/secrets/src
 COPY packages/server/src packages/server/src
@@ -89,7 +85,6 @@ RUN apt-get update \
   && install --directory --owner=node --group=node /data \
   && ln --symbolic /data /app/data
 USER node
-RUN prlimit --core=0 --data=805306368 node --input-type=module --eval "await import('/app/capabilities/prediction/src/model-jobs/model-process.ts')"
 VOLUME /data
 EXPOSE 5555
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

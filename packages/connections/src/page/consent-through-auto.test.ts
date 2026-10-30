@@ -1,5 +1,5 @@
 import { servedStudio } from '@on.auto/identity/testing';
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { keptTokensIn, type ConsentClientOptions, type KeptTokens, type ReturnKind } from '@on.auto/tool-servers';
 import { servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/served-fakes';
 import { autoClientsOf, failingAt, handleOf, serviceCallsAt } from '@on.auto/tool-servers/testing';
@@ -37,7 +37,7 @@ function finishedWith(h: Harness, { id, token }: Added, returned: Readonly<Recor
   return h.call(operationNamed(h.operations, 'finish'), ada, { id, token, ...returned });
 }
 
-function readingOf(h: Harness, { id, token }: Added): Promise<Outcome<Succeeded>> {
+function readingOf(h: Harness, { id, token }: Added): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'read_link'), acmeWriter, { id, token });
 }
 

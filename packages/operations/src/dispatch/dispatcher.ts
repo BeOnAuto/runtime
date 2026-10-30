@@ -25,10 +25,7 @@ export interface Dispatcher {
     registration: Registration<'org'>,
     request: OrgRequest,
   ): Effect.Effect<Outcome, never, DispatcherServices>;
-  dispatchToOrg(
-    registration: Runnable<'org'>,
-    request: OrgRequest,
-  ): Effect.Effect<Outcome<Succeeded>, never, DispatcherServices>;
+  dispatchToOrg(registration: Runnable<'org'>, request: OrgRequest): Effect.Effect<Outcome, never, DispatcherServices>;
   dispatchToPlaybook(
     registration: Registration<'playbook'>,
     request: PlaybookRequest,
@@ -36,7 +33,7 @@ export interface Dispatcher {
   dispatchToPlaybook(
     registration: Runnable<'playbook'>,
     request: PlaybookRequest,
-  ): Effect.Effect<Outcome<Succeeded>, never, DispatcherServices>;
+  ): Effect.Effect<Outcome, never, DispatcherServices>;
 }
 
 export function makeDispatcher(steps: readonly PipelineStep[]): Dispatcher {

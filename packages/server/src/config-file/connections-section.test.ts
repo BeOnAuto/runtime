@@ -145,7 +145,8 @@ describe('the variables a connection may never name', () => {
       'AZURE_CLIENT_CERTIFICATE_PASSWORD',
       'AWS_SESSION_TOKEN',
       'OTEL_EXPORTER_OTLP_LOGS_HEADERS',
-      'PREDICTION_CACHE_DIR',
+      'PREDICTION_MAX_FUNCTIONS',
+      'DOCUMENT_PROCESS_MEMORY',
       'HTTPS_PROXY',
       'HOST',
     ];

@@ -63,10 +63,6 @@
           {
             "text": "Forecast with a prediction function",
             "link": "/guides/forecast"
-          },
-          {
-            "text": "Developer example: forecast sign-ups",
-            "link": "/tutorials/first-forecast"
           }
         ]
       },
@@ -137,10 +133,6 @@
       {
         "text": "Prediction function format",
         "link": "/reference/prediction-format"
-      },
-      {
-        "text": "Model runtimes",
-        "link": "/reference/model-runtimes"
       },
       {
         "text": "Recall function format",

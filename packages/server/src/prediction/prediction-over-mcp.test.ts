@@ -1,17 +1,9 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import { internalTermsIn } from '@on.auto/operations/testing';
-import { dailyRows, uploadedDailyVisits } from '@on.auto/prediction/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { askedBuild, candidateBytes, digestOf, sentCandidate, standingWhen } from './build-calls.ts';
-import { uploaded } from './dataset-uploads.ts';
-
-function hundredsOfVisits(series: string, day: number): number {
-  return (series === 'north' ? 130 : 140) + (day % 3);
-}
-
-const visitsInHundreds = dailyRows('visits', ['north', 'south'], 40, hundredsOfVisits);
+import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { publishedVisits, savedVisits, visitsToday } from './published-visits.ts';
 
 let server: ReasoningServer;
 
@@ -19,25 +11,13 @@ afterEach(async () => {
   await server.stop();
 });
 
-async function activeVisitsInHundreds(): Promise<void> {
-  await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await uploaded(server.origin, visitsInHundreds.text);
-  await server.call('POST', `${alpha}/definitions/prediction`, {
-    body: { name: 'daily-visits', source: uploadedDailyVisits(visitsInHundreds.sha256) },
-  });
-  const build = await askedBuild(server);
-  const candidate = candidateBytes('visits-mean');
-  await sentCandidate(server, build, candidate);
-  await server.call('POST', `${alpha}/runs/${build}/answer`, {
-    body: { answer: { candidates: [digestOf(candidate)] } },
-  });
-  await standingWhen(server, 'daily-visits', { models: { active: { version: 1 } }, build: null });
-}
-
 describe('the plain words for a question to a prediction function over MCP', () => {
-  it('say each predicted number in digits with its unit after it, and name no internal term', async () => {
+  it('say each predicted number in digits with its unit after it, the coverage of its ranges and the method, and name no internal term', async () => {
     server = await servingReasoning([]);
-    await activeVisitsInHundreds();
+    await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    const visits = visitsToday();
+    await savedVisits(server);
+    await publishedVisits(server, visits, { north: 8 });
 
     const asked = await withMcpSession(
       'current revision',
@@ -47,7 +27,7 @@ describe('the plain words for a question to a prediction function over MCP', () 
     );
 
     expect(plainTextIn(asked)).toContain(
-      'it predicts 131 visits in 2026-10-10 (130 to 132 visits) and 131 visits in 2026-10-11 (130 to 132 visits)',
+      `From ${visits.dayOf(1)}, it predicts 11 visits in ${visits.dayOf(0)} (10 to 13 visits) and 11 visits in ${visits.dayOf(-1)} (9 to 12 visits), each range meant to hold the truth 8 times in 10, by carrying the last observed value forward.`,
     );
     expect(internalTermsIn(plainTextIn(asked), ['visits'])).toEqual([]);
   });

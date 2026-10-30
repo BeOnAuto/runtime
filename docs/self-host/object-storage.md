@@ -12,14 +12,9 @@ By default, the content a playbook keeps is stored in the ledger's database. Set
 
 Choose before content builds up. The server moves nothing between the database and the bucket, so content kept before a switch is no longer read; see [Switch a deployment that already has content](#switch-a-deployment-that-already-has-content).
 
-Content is what grows large:
+Content is what grows large: a tool's arguments and results.
 
-- a tool's arguments and results;
-- a prediction function's uploaded datasets;
-- the rows and the brief of each build;
-- the model file of each version.
-
-Moving content out keeps the database small and its backups fast. The server keeps one object for each piece of content, under its playbook and its SHA-256. A build's candidates are staged under `<prefix>/staging/` and deleted when the build ends.
+Moving content out keeps the database small and its backups fast. The server keeps one object for each piece of content, under its playbook and its SHA-256.
 
 The server speaks the S3 API, so the bucket may be on Amazon S3 or on any S3-compatible server.
 
@@ -97,8 +92,6 @@ So when you set `CONTENT_STORE_URL` on a server whose database already holds con
 - New content goes to the bucket.
 - The content already in the database stays there, unchanged, but the server no longer reads it.
 - Tool calls made before the switch still appear in the history, with their sizes and digests, but without their arguments and results.
-- A prediction function cannot read a dataset or model file kept before the switch, so its builds and questions fail. Files the server still holds in its `PREDICTION_CACHE_DIR` cache can be used until the cache drops them.
-- A build still open at the switch cannot read the candidates staged for it.
 
 Removing `CONTENT_STORE_URL` has the same effect the other way. The server goes back to the database, and what it kept in the bucket is no longer read.
 
@@ -107,7 +100,6 @@ To switch:
 1. Stop every server that shares the database. They must all keep content in the same place, or one cannot read what another kept.
 2. Set `CONTENT_STORE_URL`, with the endpoint, region and credentials the bucket needs, for every server. To switch back, remove it.
 3. Start the servers. Each logs where it keeps content: `Content is kept on object storage, in the bucket <bucket> under <prefix>/, on <host>`, or `Content is kept in the ledger's database`.
-4. For each prediction function, upload its dataset again and ask for a build, so that it has a model the server can read.
 
 To roll back, switch back the same way. The content kept in the old place becomes readable again, and content kept in the new place since the switch is no longer read. Setting the same bucket and prefix again makes the bucket's content readable once more. So keep both the database's content and the bucket until you no longer need to go back.
 

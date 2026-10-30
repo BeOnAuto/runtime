@@ -9,7 +9,6 @@ import {
   checkingWithin,
   measuredPoolSettings,
   noCalledDefinitions,
-  nothingSaved,
   recordingJournal,
 } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
@@ -72,7 +71,7 @@ export function computationWith(pool: ProgramPool = poolOf(), bounds: RunBounds 
   const capability = makeComputationFunctionAdapter({ pool, deadlineMs: runsAwaitedAtMostMs, ...bounds });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   const saved = (source: string) =>
-    Effect.flatMap(prepared(source).check(nothingSaved), (stripped) => capability.prepare(source, stripped));
+    Effect.flatMap(prepared(source).check(), (stripped) => capability.prepare(source, stripped));
   return {
     capability,
     prepared,

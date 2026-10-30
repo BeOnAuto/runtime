@@ -9,8 +9,6 @@ export { defineStartVersion } from './operations/start-version.ts';
 export {
   cancelledAsAsked,
   defineCapability,
-  type AnswerIssues,
-  type AnsweringRun,
   defaultRunWords,
   type CancelDecision,
   type CancelledAttempt,
@@ -38,8 +36,9 @@ export { attemptEnded, type AttemptOfARun } from './operations/attempt-endings.t
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
 export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
 export { toolEnded } from './journal/run-journal.ts';
-export type { SavedDefinition, SavedDefinitions } from './capability/saved-definitions.ts';
 export type { ExtensionPoint, ImplementationsProvided } from './capability/extension-points.ts';
+export { ExtensionManifestSchema, type ExtensionManifest, type Provision } from './capability/extension-manifest.ts';
+export { firstLineOf } from './capability/first-lines.ts';
 export {
   changedExpressions,
   noStrippedForms,
@@ -140,7 +139,7 @@ export { defineListRuns } from './reading/list-runs.ts';
 export { ListedRunSchema, type ListedRun } from './reading/listed-run.ts';
 export { RunIdInputField, definitionNamePattern } from './operations/definition-fields.ts';
 export { makeDefinitionPresenters } from './presenting/definition-presenters.ts';
-export { definitionChanged, definitionChangedBy, runChanged, runChangedBy } from './presenting/changed-resources.ts';
+export { runChanged, runChangedBy } from './presenting/changed-resources.ts';
 export { cutAtCodePoint, issuesShown, mostNameBytes } from './presenting/event-data.ts';
 export { playbookEventOf, playbookFactOf } from './events/playbook-facts.ts';
 export {
@@ -246,4 +245,4 @@ export { declaredShape, type ShapeRefusal } from './shapes/shape-declarations.ts
 export { publishedOutputOf } from './shapes/published-output.ts';
 export { seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
-export type { CalledDefinition, CallingStep, CallRole } from './used-by/called-definitions.ts';
+export type { CalledDefinition, CallingStep } from './used-by/called-definitions.ts';

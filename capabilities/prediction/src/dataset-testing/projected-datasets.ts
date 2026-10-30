@@ -26,6 +26,7 @@ type Document = ReturnType<typeof documentOf>;
 
 export interface ProjectedDatasets extends ProjectedFolders {
   readonly saved: (name: string, source: string) => Promise<Document>;
+  readonly keptWith: (name: string, details: Schema.JsonObject) => Promise<void>;
   readonly retired: (name: string) => Promise<void>;
   readonly published: (events: readonly Schema.JsonObject[]) => Promise<void>;
   readonly datasets: () => Promise<readonly DatasetRow[]>;
@@ -48,22 +49,25 @@ function contextOf(name: string, version: number) {
   };
 }
 
-function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'saved' | 'retired'> {
+function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'saved' | 'keptWith' | 'retired'> {
   const versions = new Map<string, number>();
   const stream = `${alphaKey}definitions/prediction`;
+  const kept = async (name: string, content: Schema.JsonObject) => {
+    const version = (versions.get(name) ?? 0) + 1;
+    versions.set(name, version);
+    const saving =
+      version === 1
+        ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+        : { type: 'definition_updated', data: { content } };
+    await folders.append(stream, [saving], contextOf(name, version));
+  };
   return {
     saved: async (name, source) => {
       const document = documentOf(source);
-      const version = (versions.get(name) ?? 0) + 1;
-      versions.set(name, version);
-      const content = { source, details: datasetDetailsOf(document) };
-      const saving =
-        version === 1
-          ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
-          : { type: 'definition_updated', data: { content } };
-      await folders.append(stream, [saving], contextOf(name, version));
+      await kept(name, { source, details: datasetDetailsOf(document) });
       return document;
     },
+    keptWith: (name, details) => kept(name, { source: '', details }),
     retired: async (name) => {
       const ended = [{ type: 'definition_retired', data: {} }];
       await folders.append(stream, ended, contextOf(name, Number(versions.get(name))));

@@ -6,7 +6,6 @@ import {
   type RecordedEvent,
   type RouteRegistration,
   type Settled,
-  type Succeeded,
 } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
@@ -44,7 +43,7 @@ export interface Asking {
 
 export interface PlaybookToolCalls {
   readonly registrations: Readonly<Record<PlaybookTool, RouteRegistration<'playbook'>>>;
-  readonly call: (tool: PlaybookTool, input: unknown, asking?: Asking) => Promise<Settled<Succeeded>>;
+  readonly call: (tool: PlaybookTool, input: unknown, asking?: Asking) => Promise<Settled>;
   readonly recorded: () => Promise<readonly RecordedEvent[]>;
   readonly incidents: () => readonly ReportedIncident[];
   readonly writesAttempted: () => number;

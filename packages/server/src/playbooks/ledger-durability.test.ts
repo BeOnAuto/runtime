@@ -30,7 +30,6 @@ function onLoopback(fileName: string): Readonly<Record<string, string>> {
     HOST: '127.0.0.1',
     PORT: '0',
     LEDGER_FILE: fileName,
-    PREDICTION_CACHE_DIR: ledger.cacheDirectory,
   };
 }
 

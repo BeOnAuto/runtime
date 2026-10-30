@@ -56,12 +56,9 @@ const indexes = [
   'ledger_messages_by_id',
 ].map((name) => ({ name }));
 
-const contentAndSecrets = [
-  ...contentTableNames,
-  'recorded_content_heads_by_upload',
-  'staged_content_by_upload',
-  'kept_secrets',
-].map((name) => ({ name }));
+const contentAndSecrets = [...contentTableNames, 'recorded_content_heads_by_upload', 'kept_secrets'].map((name) => ({
+  name,
+}));
 
 function aLedgerWithOneRun(tables: readonly string[]): Answers {
   return (statement) => {

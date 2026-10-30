@@ -2,8 +2,8 @@ import { defineUpdateDefinition } from '@on.auto/definitions';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { answeringAnyRun } from '../testing/harness-parts.ts';
 import { approvalDocument, askedThroughChat, interactionHarness, nudging } from '../testing/index.ts';
+import { answerInteraction } from './answer-interaction.ts';
 import { listInteractions } from './list-interactions.ts';
 
 const runIds = [
@@ -128,8 +128,6 @@ async function shapesIn(playbook: ReturnType<typeof interactionHarness>) {
   return decodeShapes(await playbook.call(listInteractions, {})).output.interactions;
 }
 
-const answer = answeringAnyRun;
-
 describe('the answer shape of an open request', () => {
   it('is the answer schema its request recorded for a question, and null for a notification', async () => {
     const questioning = interactionHarness();
@@ -156,11 +154,13 @@ describe('the answer shape of an open request', () => {
 
     expect(changed).toMatchObject({ status: 'succeeded', output: { version: 2 } });
     expect(shapes).toEqual([{ version: 1, takes_answer: true, answer_schema: approvalSchema }]);
-    expect(await playbook.call(answer, { run_id: runIds[0], answer: { decision: 'approve' } })).toMatchObject({
+    expect(
+      await playbook.call(answerInteraction, { run_id: runIds[0], answer: { decision: 'approve' } }),
+    ).toMatchObject({
       status: 'rejected',
       reason: 'invalid_input',
     });
-    expect(await playbook.call(answer, { run_id: runIds[0], answer: { choice: 'approve' } })).toMatchObject({
+    expect(await playbook.call(answerInteraction, { run_id: runIds[0], answer: { choice: 'approve' } })).toMatchObject({
       status: 'succeeded',
       output: { answer: { choice: 'approve' } },
     });

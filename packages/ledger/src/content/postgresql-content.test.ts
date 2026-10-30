@@ -1,8 +1,14 @@
+import { SQL } from '@event-driven-io/dumbo';
 import { sha256Of, textOfContent, textToKeep } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { postgresqlContentOn, type ContentConnection, type ContentConnections } from './postgresql-content.ts';
+import {
+  inTransactionOn,
+  postgresqlContentOn,
+  type ContentConnection,
+  type ContentConnections,
+} from './postgresql-content.ts';
 
 interface Asked {
   readonly on: string;
@@ -33,10 +39,6 @@ function connectionsAnswering(
     asked,
     connections: { query: querying('pool'), connect: () => Promise.resolve(connection) },
   };
-}
-
-function nothing(): readonly unknown[] {
-  return [];
 }
 
 function headOf(uploadId: string) {
@@ -82,32 +84,30 @@ describe('the content a playbook keeps on PostgreSQL', () => {
   });
 });
 
-describe('the content a run staged on PostgreSQL', () => {
-  it('is removed in one transaction on one connection, which it releases', async () => {
+function nothing(): readonly unknown[] {
+  return [];
+}
+
+describe('a transaction on PostgreSQL', () => {
+  it('runs on one connection, which it commits and releases', async () => {
     const { connections, asked } = connectionsAnswering(nothing);
 
-    await Effect.runPromise(postgresqlContentOn(connections).content.unstage(alpha, 'run-1'));
+    await inTransactionOn(connections)((execute) => execute.command(SQL`DELETE FROM notes`));
 
-    expect(asked.map(({ on, text }) => `${on}: ${text.split(' ').slice(0, 3).join(' ')}`)).toEqual([
-      'pool: INSERT INTO unstaged_runs',
+    expect(asked.map(({ on, text }) => `${on}: ${text}`)).toEqual([
       'connection: BEGIN',
-      'connection: DELETE FROM staged_content',
-      'connection: DELETE FROM staged_content_chunks',
+      'connection: DELETE FROM notes',
       'connection: COMMIT',
       'connection: released',
     ]);
   });
 
-  it('rolls the transaction back when a delete fails, releases its connection, and fails as a defect', async () => {
-    const { connections, asked } = connectionsAnswering(nothing, 'DELETE FROM staged_content_chunks');
+  it('rolls back when a statement fails, releases its connection, and fails', async () => {
+    const { connections, asked } = connectionsAnswering(nothing, 'DELETE FROM notes');
 
-    const unstaged = Effect.runPromise(postgresqlContentOn(connections).content.unstage(alpha, 'run-1'));
+    const failed = inTransactionOn(connections)((execute) => execute.command(SQL`DELETE FROM notes`));
 
-    await expect(unstaged).rejects.toThrow('The connection dropped');
-    expect(asked.slice(-3).map(({ text }) => text.split(' ').slice(0, 3).join(' '))).toEqual([
-      'DELETE FROM staged_content_chunks',
-      'ROLLBACK',
-      'released',
-    ]);
+    await expect(failed).rejects.toThrow('The connection dropped');
+    expect(asked.slice(-3).map(({ text }) => text)).toEqual(['DELETE FROM notes', 'ROLLBACK', 'released']);
   });
 });

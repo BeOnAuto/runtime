@@ -2,7 +2,6 @@ import type { Effect } from 'effect';
 
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { ContentRefused } from './content-refusals.ts';
-import type { StagingEnded } from './staging-ended.ts';
 import type { ContentToKeep, StreamedContent } from './streamed-content.ts';
 
 export interface Digested {
@@ -17,17 +16,6 @@ export interface ContentKept extends Digested {
 export interface RecordedContent {
   readonly put: (playbook: PlaybookAddress, content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
   readonly get: (playbook: PlaybookAddress, sha256: string) => Effect.Effect<StreamedContent | undefined>;
-  readonly stage: (
-    playbook: PlaybookAddress,
-    run: string,
-    content: ContentToKeep,
-  ) => Effect.Effect<ContentKept, ContentRefused | StagingEnded>;
-  readonly staged: (
-    playbook: PlaybookAddress,
-    run: string,
-    sha256: string,
-  ) => Effect.Effect<StreamedContent | undefined>;
-  readonly unstage: (playbook: PlaybookAddress, run: string) => Effect.Effect<void>;
 }
 
 export interface ContentStore {

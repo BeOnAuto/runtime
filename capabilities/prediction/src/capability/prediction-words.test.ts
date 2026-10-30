@@ -20,39 +20,32 @@ const prediction = {
   ],
 };
 
+const onePoint = {
+  ...prediction,
+  lines: [observed, { name: 'predicted', points: [{ at: '2026-W42', value: 7, low: 6, high: 8 }] }],
+};
+
 describe('the words of what a run of a prediction function answers', () => {
-  it('say each predicted point with its range, from the last period observed and the version that made them', () => {
-    expect(describeOutput(prediction, { version: 3, coverage: 0.8 })).toBe(
-      'From 2026-W41, it predicts 120.5 orders in 2026-W42 (96 to 1,250 orders) and 131 orders in 2026-W45 (100 to 160 orders), each range holding the truth eight times in ten, from version 3 of its model.',
-    );
+  it('say each predicted point with its range, from the last period observed, the coverage of its ranges and the method that made them', () => {
+    expect([
+      describeOutput(prediction, { method: 'level-adjusted-seasonal-naive', coverage: 0.8 }),
+      describeOutput(onePoint, { method: 'persistence', coverage: 0.8 }),
+      describeOutput(onePoint),
+    ]).toEqual([
+      'From 2026-W41, it predicts 120.5 orders in 2026-W42 (96 to 1,250 orders) and 131 orders in 2026-W45 (100 to 160 orders), each range meant to hold the truth 8 times in 10, by repeating the periods a season earlier at the level of the last ones.',
+      'From 2026-W41, it predicts 7 orders in 2026-W42 (6 to 8 orders), its range meant to hold the truth 8 times in 10, by carrying the last observed value forward.',
+      'From 2026-W41, it predicts 7 orders in 2026-W42 (6 to 8 orders).',
+    ]);
+  });
+
+  it('say the coverage in tenths, in twentieths, or as a share of the time', () => {
     expect(
-      describeOutput({
-        ...prediction,
-        lines: [observed, { name: 'predicted', points: [{ at: '2026-W42', value: 7, low: 6, high: 8 }] }],
-      }),
-    ).toBe(
-      'From 2026-W41, it predicts 7 orders in 2026-W42 (6 to 8 orders), its range holding the truth eight times in ten.',
-    );
-  });
-
-  it('say that the default forecast answered when no version of the model is active', () => {
-    expect(describeOutput(prediction, { version: null, default_forecast: true, coverage: 0.8 })).toBe(
-      'From 2026-W41, it predicts 120.5 orders in 2026-W42 (96 to 1,250 orders) and 131 orders in 2026-W45 (100 to 160 orders), each range holding the truth eight times in ten, from the default forecast, since no version of its model is active.',
-    );
-  });
-
-  it('say that the default forecast answered when the active version needs a feature the license does not include', () => {
-    const record = {
-      version: null,
-      default_forecast: true,
-      because: 'feature_unlicensed',
-      feature: 'prediction-example',
-      coverage: 0.8,
-    };
-
-    expect(describeOutput(prediction, record)).toBe(
-      "From 2026-W41, it predicts 120.5 orders in 2026-W42 (96 to 1,250 orders) and 131 orders in 2026-W45 (100 to 160 orders), each range holding the truth eight times in ten, from the default forecast, since its active version needs prediction-example, which this runtime's license does not include.",
-    );
+      [0.7, 0.95, 0.734].map((coverage) => describeOutput(onePoint, { method: 'seasonal-naive', coverage })),
+    ).toEqual([
+      'From 2026-W41, it predicts 7 orders in 2026-W42 (6 to 8 orders), its range meant to hold the truth 7 times in 10, by repeating the periods a season earlier.',
+      'From 2026-W41, it predicts 7 orders in 2026-W42 (6 to 8 orders), its range meant to hold the truth 19 times in 20, by repeating the periods a season earlier.',
+      'From 2026-W41, it predicts 7 orders in 2026-W42 (6 to 8 orders), its range meant to hold the truth 73.4% of the time, by repeating the periods a season earlier.',
+    ]);
   });
 
   it('say a total by the end of the period it sums to, in its unit, from the period the record names', () => {
@@ -60,11 +53,11 @@ describe('the words of what a run of a prediction function answers', () => {
     const answer = { ...prediction, unit: 'visits', origin: '2026-10-25', lines: [observed, total] };
 
     expect([
-      describeOutput(answer, { version: 1, coverage: 0.8, total_to: '2026-W44' }),
+      describeOutput(answer, { method: 'run-rate', coverage: 0.8, total_to: '2026-W44' }),
       describeOutput(answer, { coverage: 0.8 }),
     ]).toEqual([
-      'From 2026-10-25, it predicts 78 visits by the end of 2026-W44 (70 to 85 visits), its range holding the truth eight times in ten, from version 1 of its model.',
-      'From 2026-10-25, it predicts 78 visits by the end of 2026-11-01 (70 to 85 visits), its range holding the truth eight times in ten.',
+      'From 2026-10-25, it predicts 78 visits by the end of 2026-W44 (70 to 85 visits), its range meant to hold the truth 8 times in 10, by running the pace of the periods so far to the end.',
+      'From 2026-10-25, it predicts 78 visits by the end of 2026-11-01 (70 to 85 visits), its range meant to hold the truth 8 times in 10.',
     ]);
   });
 });
@@ -83,29 +76,10 @@ describe('the figures in the words of a prediction', () => {
       ],
     };
 
-    expect([
-      describeOutput(visits, { version: 1, coverage: 0.8, decimals: 0 }),
-      describeOutput(visits, { version: 1, coverage: 0.8, decimals: 1 }),
-    ]).toEqual([
-      'From 2026-W41, it predicts 131 visits in 2026-W42 (130 to 132 visits), its range holding the truth eight times in ten, from version 1 of its model.',
-      'From 2026-W41, it predicts 131 visits in 2026-W42 (129.9 to 132.1 visits), its range holding the truth eight times in ten, from version 1 of its model.',
+    expect([describeOutput(visits, { decimals: 0 }), describeOutput(visits, { decimals: 1 })]).toEqual([
+      'From 2026-W41, it predicts 131 visits in 2026-W42 (130 to 132 visits).',
+      'From 2026-W41, it predicts 131 visits in 2026-W42 (129.9 to 132.1 visits).',
     ]);
-  });
-});
-
-describe('the words of what a build of a prediction function answers', () => {
-  it('say what a build kept, and that it kept nothing when no candidate won or none was uploaded', () => {
-    const sha256 = 'ab'.repeat(32);
-
-    expect(describeOutput({ version: 2, winner: sha256, candidates: [{ sha256, verdict: 'won' }] })).toBe(
-      'The build made version 2 of its model from one candidate, won by abababababab.',
-    );
-    expect(describeOutput({ version: null, winner: null, candidates: [{}, {}] })).toBe(
-      'The build kept no version: none of its 2 candidates passed its scoring on the held-back periods.',
-    );
-    expect(describeOutput({ version: null, winner: null, candidates: [] })).toBe(
-      'The build kept no version, since it had no candidate, uploaded or fitted, to score.',
-    );
   });
 
   it('say any other output as a result', () => {

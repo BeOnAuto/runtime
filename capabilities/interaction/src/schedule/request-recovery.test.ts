@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { answeringAnyRun } from '../testing/harness-parts.ts';
+import { answerInteraction } from '../requests/answer-interaction.ts';
 import { askedRunId, askedThroughChat, noTools } from '../testing/index.ts';
 import { requestsDue } from './due-requests.ts';
 import { recordedCall } from './request-ledger.ts';
@@ -49,7 +49,7 @@ describe('a due request whose run has ended, or whose tool is no longer allowed'
   it('sends nothing for a run answered since it was read as due', async () => {
     const { playbook, tools, askedAt } = await askedThroughChat();
     const items = await playbook.dueItems(askedAt);
-    await playbook.call(answeringAnyRun, { run_id: askedRunId, answer: { choice: 'approve' } });
+    await playbook.call(answerInteraction, { run_id: askedRunId, answer: { choice: 'approve' } });
 
     await playbook.performAll(items, askedAt);
 
@@ -63,7 +63,7 @@ describe('a due request whose run has ended, or whose tool is no longer allowed'
     await playbook.performDue(askedAt);
     const open = await playbook.firstOpen();
     const nextDue = await Effect.runPromise(playbook.due.nextDueAt(askedAt));
-    const answered = await playbook.call(answeringAnyRun, { run_id: askedRunId, answer: { choice: 'approve' } });
+    const answered = await playbook.call(answerInteraction, { run_id: askedRunId, answer: { choice: 'approve' } });
 
     expect(tools.calls()).toEqual([]);
     expect(open).toMatchObject({ attempts: 1, standing: 'retrying' });

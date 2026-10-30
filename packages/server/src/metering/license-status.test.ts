@@ -88,12 +88,12 @@ describe('the license a runtime nobody registered holds', () => {
 describe('the features of the license a licensed runtime holds', () => {
   it('lists the features its license includes', async () => {
     const accounts = await accountsServed();
-    accounts.account.grant('acme', ['prediction-onnx']);
+    accounts.account.grant('acme', ['example-feature']);
     const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
 
     expect((await server.call('GET', license)).body).toMatchObject({
       state: 'licensed',
-      features: ['prediction-onnx'],
+      features: ['example-feature'],
     });
   });
 });

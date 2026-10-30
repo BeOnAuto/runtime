@@ -15,18 +15,10 @@ export const CallingStepSchema = Schema.Struct({
 
 export type CallingStep = typeof CallingStepSchema.Type;
 
-const CallRoleSchema = Schema.Literals(['trainer', 'approver']);
-
-export type CallRole = typeof CallRoleSchema.Type;
-
-const CallByRoleSchema = Schema.Struct({ type: Schema.String, name: Schema.String, role: CallRoleSchema });
-
-const CallByStepsSchema = Schema.Struct({
+export const CalledDefinitionSchema = Schema.Struct({
   type: Schema.String,
   name: Schema.String,
   steps: Schema.Array(CallingStepSchema),
 });
-
-export const CalledDefinitionSchema = Schema.Union([CallByRoleSchema, CallByStepsSchema]);
 
 export type CalledDefinition = typeof CalledDefinitionSchema.Type;

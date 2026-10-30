@@ -37,7 +37,7 @@ function viewOf(stored: Readonly<Uint8Array> | Readonly<ArrayBuffer>): Uint8Arra
   return stored instanceof Uint8Array ? stored : new Uint8Array(stored);
 }
 
-export function matching(key: Key): SQL {
+function matching(key: Key): SQL {
   return SQL.merge(
     key.map(([column, value]) => SQL`${SQL.identifier(column)} = ${value}`),
     ' AND ',
@@ -62,7 +62,7 @@ export function hexOf(chunk: Readonly<Uint8Array>): string {
   return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength).toString('hex');
 }
 
-export function queried({ execute }: Shelved, sql: SQL): Effect.Effect<readonly unknown[]> {
+function queried({ execute }: Shelved, sql: SQL): Effect.Effect<readonly unknown[]> {
   return Effect.promise(async () => (await execute.query(sql)).rows);
 }
 
@@ -151,8 +151,4 @@ export function readOn(shelved: Shelved, place: Key, sha256: string): Effect.Eff
 
 export function playbookPlaceOf(playbook: PlaybookAddress): Key {
   return [['playbook_key', streamPrefixOfPlaybook(playbook)]];
-}
-
-export function runPlaceOf(playbook: PlaybookAddress, run: string): Key {
-  return [...playbookPlaceOf(playbook), ['run_id', run]];
 }

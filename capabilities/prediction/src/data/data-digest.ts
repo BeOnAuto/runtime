@@ -2,7 +2,7 @@ import { sha256Of } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import { isMapping } from '../document/checked-parts.ts';
-import { isProjected, type DataPart } from '../document/prediction-document.ts';
+import type { DataPart } from '../document/prediction-document.ts';
 import type { Grain } from '../periods/grains.ts';
 
 export function canonicalJson(value: Schema.Json): string {
@@ -19,19 +19,19 @@ export function canonicalJson(value: Schema.Json): string {
 }
 
 export function dataJsonOf(data: DataPart, period: Grain): Schema.JsonObject {
-  if (!isProjected(data)) {
-    return { dataset: data.dataset, features: [...data.features], period };
-  }
   return {
     period,
     events: [...data.events],
     time: data.time,
     series: data.series,
     target: { ...data.target },
-    features: data.features.map((feature) => ({ ...feature })),
   };
 }
 
+export function digestOfData(json: Schema.JsonObject): string {
+  return sha256Of(canonicalJson(json));
+}
+
 export function dataDigestOf(data: DataPart, period: Grain): string {
-  return sha256Of(canonicalJson(dataJsonOf(data, period)));
+  return digestOfData(dataJsonOf(data, period));
 }

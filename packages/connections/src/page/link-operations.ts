@@ -18,8 +18,6 @@ import { isCoveredHere, sourceOfAStartOf, sourcesFor, type Sources } from './con
 
 export const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
-const answeringTheRecord = { kind: 'json', outputSchema: ConnectionSchema } as const;
-
 const LinkedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
   asked_scopes: ConnectionSchema.fields.asked_scopes.annotate({
@@ -105,7 +103,7 @@ export function defineReadLink(reading: LinkReading) {
     body: { kind: 'none' },
     permittedBy: ['org:write'],
     inputSchema: LinkSchema,
-    answer: { kind: 'json', outputSchema: LinkedSchema },
+    outputSchema: LinkedSchema,
     reasons: ['not_found', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const registry = yield* loadRegistry;
@@ -144,7 +142,7 @@ export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }
     route: { method: 'POST', path: '/connections/{id}/approve' },
     body: { kind: 'json' },
     inputSchema: LinkSchema,
-    answer: answeringTheRecord,
+    outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };

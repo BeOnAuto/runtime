@@ -19,16 +19,6 @@ export const keptShelf: Shelf = {
   chunkMissing: (sha256, index) => new Error(`The content kept under ${sha256} is missing its chunk ${index}`),
 };
 
-export const stagingShelf: Shelf = {
-  chunks: 'staged_content_chunks',
-  heads: 'staged_content',
-  placeColumns: ['playbook_key', 'run_id'],
-  chunkMissing: (sha256, index) =>
-    new Error(`The content staged under ${sha256} has no chunk ${index}, as when its run is unstaged while it is read`),
-};
-
-export const unstagedRuns = 'unstaged_runs';
-
 interface ContentTable {
   readonly name: string;
   readonly create: (dialect: ContentDialect) => SQL;
@@ -75,20 +65,9 @@ function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
   };
 }
 
-const unstagedRunsTable: ContentTable = {
-  name: unstagedRuns,
-  create: () => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(unstagedRuns)} (
-    ${textColumns(stagingShelf.placeColumns)},
-    PRIMARY KEY (${namesOf(stagingShelf.placeColumns)})
-  )`,
-};
+export const shelves: readonly Shelf[] = [keptShelf];
 
-export const shelves: readonly Shelf[] = [keptShelf, stagingShelf];
-
-const contentTables: readonly ContentTable[] = [
-  ...shelves.flatMap((shelf) => [chunkTableOf(shelf), headTableOf(shelf)]),
-  unstagedRunsTable,
-];
+const contentTables: readonly ContentTable[] = shelves.flatMap((shelf) => [chunkTableOf(shelf), headTableOf(shelf)]);
 
 export const contentTableNames: readonly string[] = contentTables.map(({ name }) => name);
 

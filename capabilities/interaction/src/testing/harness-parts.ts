@@ -3,7 +3,6 @@ import { onTheStandingClock } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { defineAnswerInteraction } from '../requests/answer-interaction.ts';
 import { listInteractions } from '../requests/list-interactions.ts';
 import type { DueRequestItem, RequestsDue } from '../schedule/due-requests.ts';
 
@@ -13,8 +12,6 @@ const ListedSchema = Schema.Struct({
 });
 
 const decodeListed = Schema.decodeUnknownSync(ListedSchema);
-
-export const answeringAnyRun = defineAnswerInteraction([]);
 
 export async function firstOpenOf(
   call: (operation: PlaybookOperation, input: unknown) => Promise<Outcome>,

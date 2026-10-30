@@ -18,7 +18,7 @@ const integrity = /^sha512-[A-Za-z0-9+/]{86}==$/u;
 const ExtensionEntrySchema = Schema.Struct({
   package: Schema.String.check(
     Schema.isMaxLength(214),
-    Schema.isPattern(packageName, { message: 'Expected the name of an installed package, such as @acme/models' }),
+    Schema.isPattern(packageName, { message: 'Expected the name of an installed package, such as @acme/extension' }),
   ).annotate({ description: 'The package of the extension, which the server imports by its name' }),
   integrity: Schema.optionalKey(
     Schema.String.check(
@@ -42,7 +42,7 @@ const eachPackageOnce = Schema.makeFilter(
 const ExtensionsSchema = Schema.Array(ExtensionEntrySchema)
   .check(eachPackageOnce)
   .annotate({
-    description: `The packages the runtime loads as extensions as it starts, in order of precedence, each filling a point a capability declares, such as prediction/model-runtime; the extensions of the release stand after them. ${extensionsVariable} wins over it`,
+    description: `The packages the runtime loads as extensions as it starts, in order of precedence, each filling a point a capability declares; the extensions of the release stand after them. ${extensionsVariable} wins over it`,
   });
 
 export const extensionsFileSetting: FileSetting = {

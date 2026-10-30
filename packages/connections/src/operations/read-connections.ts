@@ -70,7 +70,7 @@ export function defineGetConnection(reading: Reading) {
     route: { method: 'GET', path: '/connections/{id}' },
     body: { kind: 'none' },
     inputSchema: Schema.Struct({ id: ConnectionIdField }),
-    answer: { kind: 'json', outputSchema: ListedConnectionSchema },
+    outputSchema: ListedConnectionSchema,
     reasons: ['not_found'],
     handle: Effect.fnUntraced(function* ({ id }) {
       const [listed] = yield* listedOf([yield* foundConnection(id)], reading);

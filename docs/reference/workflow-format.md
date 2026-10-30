@@ -299,21 +299,20 @@ A `switch` tests its cases in order and follows the `then` of the first case who
 
 `call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`recall`](recall-format.md), [`computation`](computation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
 
-The task's output is that run's output: a reasoning function's text or JSON, an interaction function's answer from its tool or its request, a prediction function's series or its build's outcome, what a recall function returned from its view, the value a computation function's program gave, or the output of the workflow it ran.
+The task's output is that run's output: a reasoning function's text or JSON, an interaction function's answer from its tool or its request, a prediction function's series, what a recall function returned from its view, the value a computation function's program gave, or the output of the workflow it ran.
 
 Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started, and names that caller, by id and name, as its `started_by`.
 
 Some runs finish within their call, and others later. A task waits for the longest its definition's run may take, plus one minute:
 
-| Definition                                 | Finishes        | The function's own maximum                                                       |
-| ------------------------------------------ | --------------- | -------------------------------------------------------------------------------- |
-| A reasoning function                       | Within its call | Its model's deadline, or its tool loop's bound when it names tools               |
-| An interaction function that calls a tool  | Within its call | 70 seconds                                                                       |
-| An interaction function that asks a person | Later           | The `expires` of its document                                                    |
-| A computation or recall function           | Within its call | 10 seconds                                                                       |
-| A prediction function's question           | Within its call | 10 seconds                                                                       |
-| A prediction function's build              | Later           | Its `source.expires`, a minute to start, and 10 minutes for each of 8 candidates |
-| A workflow                                 | Later           | The longest a run may last                                                       |
+| Definition                                 | Finishes        | The function's own maximum                                         |
+| ------------------------------------------ | --------------- | ------------------------------------------------------------------ |
+| A reasoning function                       | Within its call | Its model's deadline, or its tool loop's bound when it names tools |
+| An interaction function that calls a tool  | Within its call | 70 seconds                                                         |
+| An interaction function that asks a person | Later           | The `expires` of its document                                      |
+| A computation or recall function           | Within its call | 10 seconds                                                         |
+| A prediction function's question           | Within its call | 10 seconds                                                         |
+| A workflow                                 | Later           | The longest a run may last                                         |
 
 - A run that finishes later records the task that waits for it. Its ending reaches the task whenever it comes and on whichever server it is recorded. While the task waits, it holds none of the calls the server runs at once. A restart of the server does not start the run again.
 - A task never waits past the longest the workflow itself may still run.
@@ -372,7 +371,7 @@ Other function types:
 
 - The refusals of a [computation](computation-format.md#in-a-workflow), [recall](recall-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
-- A request that nobody answered, of an [interaction function](interaction-format.md) or a prediction function's build, raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.
+- A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.
 
 ### Waiting for events
 
@@ -624,20 +623,20 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 The rejection gives a `reason`, and a `kind` where it has one:
 
-| Reason          | Kind                             | When                                                                         |
-| --------------- | -------------------------------- | ---------------------------------------------------------------------------- |
-| `invalid_input` | None                             | An uncaught error had a 4xx status other than 408 and 429                    |
-| `invalid_input` | `input_schema`                   | Its input schema refused the input a caller gave, before any step ran        |
-| `unavailable`   | None                             | Any other uncaught error, such as a `timeout`                                |
-| `unavailable`   | `tools_unfinished`, `rebuilding` | An uncaught error of the problem type of that kind                           |
-| `conflict`      | `effect_unknown`, `tools_called` | An uncaught error of the problem type of that kind                           |
-| `conflict`      | `oversized`                      | Its output is larger than 1,048,574 bytes as JSON                            |
-| `conflict`      | `unworkable`                     | Its output does not match the shape its `output.shape` names                 |
-| `cancelled`     | `requested`                      | `cancel_run` cancelled it                                                    |
-| `cancelled`     | `deadline`                       | The workflow that waited for it ran out of time                              |
-| `cancelled`     | `overrun`                        | It was still running at the longest a run may last                           |
-| `cancelled`     | `parent_ended`                   | The workflow waiting for it ended first, or its waiting branch lost a race   |
-| `unanswered`    | `expired`, `undelivered`         | It did not catch an unanswered request of an interaction function or a build |
+| Reason          | Kind                             | When                                                                       |
+| --------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `invalid_input` | None                             | An uncaught error had a 4xx status other than 408 and 429                  |
+| `invalid_input` | `input_schema`                   | Its input schema refused the input a caller gave, before any step ran      |
+| `unavailable`   | None                             | Any other uncaught error, such as a `timeout`                              |
+| `unavailable`   | `tools_unfinished`, `rebuilding` | An uncaught error of the problem type of that kind                         |
+| `conflict`      | `effect_unknown`, `tools_called` | An uncaught error of the problem type of that kind                         |
+| `conflict`      | `oversized`                      | Its output is larger than 1,048,574 bytes as JSON                          |
+| `conflict`      | `unworkable`                     | Its output does not match the shape its `output.shape` names               |
+| `cancelled`     | `requested`                      | `cancel_run` cancelled it                                                  |
+| `cancelled`     | `deadline`                       | The workflow that waited for it ran out of time                            |
+| `cancelled`     | `overrun`                        | It was still running at the longest a run may last                         |
+| `cancelled`     | `parent_ended`                   | The workflow waiting for it ended first, or its waiting branch lost a race |
+| `unanswered`    | `expired`, `undelivered`         | It did not catch an unanswered request of an interaction function          |
 
 - A rejection of the kind `tools_unfinished`, `effect_unknown` or `rebuilding` keeps the error's `because`. A rejection's `detail` gives the error's title, or else its type, then the step that raised it by its name, then its detail, such as `The brief is not usable, at the step stop: Missing: audience.`
 - A step whose function refused its input keeps its `issues`, each at its pointer and in the field's words: `The computation function month-window refused its input, at the step work-out-month: month, The month to report on: expected at least 6 characters.` A workflow that called it reads `The workflow monthly stopped, at the step report: ` before those words.

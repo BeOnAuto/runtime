@@ -16,13 +16,6 @@
         { "type": "generic", "path": "docs/get-started/local.md" },
         { "type": "generic", "path": "packages/server/npm/README.md" }
       ]
-    },
-    "packages/prediction-contract": {
-      "package-name": "@on.auto/prediction-contract",
-      "component": "prediction-contract",
-      "include-component-in-tag": true,
-      "changelog-path": "CHANGELOG.md",
-      "initial-version": "1.0.0"
     }
   }
 }

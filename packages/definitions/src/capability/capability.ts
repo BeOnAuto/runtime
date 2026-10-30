@@ -1,4 +1,4 @@
-import type { Conflict, InvalidInput, Issue, Noun, RunCancelled, Settlement, Unavailable } from '@on.auto/operations';
+import type { Conflict, InvalidInput, Noun, RunCancelled, Settlement, Unavailable } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { CallEnd } from '../journal/call-numbering.ts';
@@ -7,7 +7,6 @@ import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import type { RecordedAnswer, RecordedWork } from '../runs/run-state.ts';
 import type { RunAttempt, RunContext } from './run-context.ts';
-import type { SavedDefinitions } from './saved-definitions.ts';
 import { noStrippedForms, type StrippedForms } from './stripped-forms.ts';
 
 export interface DefinitionSummary {
@@ -84,12 +83,6 @@ export interface RunWords {
 
 type WhenCancelled = 'stop' | 'finish';
 
-export interface AnsweringRun {
-  readonly work: readonly RecordedWork[];
-}
-
-export type AnswerIssues = (answer: Schema.Json, run: AnsweringRun) => readonly Issue[];
-
 const defaultLongestAnyRunMs = 600_000;
 
 export interface CapabilityDeclaration<Parsed> {
@@ -103,7 +96,6 @@ export interface CapabilityDeclaration<Parsed> {
   readonly check?: (
     parsed: NoInfer<Parsed>,
     source: string,
-    saved: SavedDefinitions,
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
   readonly run: (
@@ -124,7 +116,6 @@ export interface CapabilityDeclaration<Parsed> {
   readonly longestRunFor?: (parsed: NoInfer<Parsed>, input: Schema.Json) => number;
   readonly resumes?: Resumption<NoInfer<Parsed>>;
   readonly cancel?: CancelDecision;
-  readonly answerIssues?: AnswerIssues;
   readonly runWords?: Partial<RunWords>;
   readonly facts?: CapabilityFacts;
   readonly mostActive?: number;
@@ -133,7 +124,7 @@ export interface CapabilityDeclaration<Parsed> {
 
 export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
-  readonly check: (saved: SavedDefinitions) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+  readonly check: () => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
   readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;
@@ -159,10 +150,6 @@ export function cancelledAsAsked({ kind, reason }: CancelledRun): Settlement {
   return { status: 'rejected', reason: 'cancelled', kind, detail: reason };
 }
 
-function takesAnyAnswer(): readonly Issue[] {
-  return [];
-}
-
 function standsAsSaved(): Effect.Effect<Schema.JsonObject | undefined> {
   return Effect.undefined;
 }
@@ -184,7 +171,6 @@ export interface Capability {
   readonly mostActive: number;
   readonly standing: Standing;
   readonly cancel: CancelDecision;
-  readonly answerIssues: AnswerIssues;
   readonly runWords: RunWords;
   readonly facts: CapabilityFacts;
   readonly resumes: boolean;
@@ -205,7 +191,6 @@ function declaredBounds<Parsed>(definition: CapabilityDeclaration<Parsed>) {
     mostActive: definition.mostActive ?? Number.POSITIVE_INFINITY,
     standing: definition.standing ?? standsAsSaved,
     cancel: definition.cancel ?? cancelledAsAsked,
-    answerIssues: definition.answerIssues ?? takesAnyAnswer,
     runWords: { ...defaultRunWords, ...definition.runWords },
     facts: definition.facts ?? noFacts,
   };
@@ -257,7 +242,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
       parse(source).pipe(
         Effect.map((parsed) => ({
           summary: summarize(parsed),
-          check: (saved) => Effect.suspend(() => check(parsed, source, saved)),
+          check: () => Effect.suspend(() => check(parsed, source)),
           run: (input, context) => run(parsed, input, context, stripped),
           whenCancelled,
           cancelledAttempt: (attempt) => resumption?.cancelledAttempt(parsed, attempt) ?? nothingToEnd,

@@ -1,18 +1,17 @@
 import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '@on.auto/workflow-host';
-import { Array, Effect, Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 
-import type { DatasetData, DatasetMeasure } from './dataset-data.ts';
+import type { DatasetData } from './dataset-data.ts';
 import type { DatasetRow } from './dataset-rows.ts';
 import { composed, each, tuples } from './dataset-statements.ts';
 import type { Contribution } from './event-values.ts';
-import { emptyMeasure, MeasureStateSchema, measureTaken, stateOf, type MeasureState } from './row-measures.ts';
+import { emptyMeasure, measureTaken, type MeasureState } from './row-measures.ts';
 
 export interface MergedRow {
   readonly series: string;
   readonly period: number;
   readonly target: MeasureState;
   readonly events: number;
-  readonly features: readonly MeasureState[];
 }
 
 export interface Merged {
@@ -28,7 +27,6 @@ const StoredRowSchema = Schema.Struct({
   target_count: WholeNumber,
   target_at: Schema.NullOr(WholeNumber),
   events: WholeNumber,
-  features: Schema.fromJsonString(Schema.Array(MeasureStateSchema)),
 });
 
 const SeriesSchema = Schema.Struct({ series: Schema.String });
@@ -40,13 +38,7 @@ function keyOf(series: string, period: number): string {
 }
 
 function emptyRow(data: DatasetData, series: string, period: number): MergedRow {
-  return {
-    series,
-    period,
-    target: emptyMeasure(data.target.as),
-    events: 0,
-    features: data.features.map(({ as }) => emptyMeasure(as)),
-  };
+  return { series, period, target: emptyMeasure(data.target.as), events: 0 };
 }
 
 function taken(data: DatasetData, row: MergedRow, contribution: Contribution): MergedRow {
@@ -55,12 +47,6 @@ function taken(data: DatasetData, row: MergedRow, contribution: Contribution): M
     ...row,
     target: measureTaken(row.target, data.target.as, contribution.target, moment),
     events: row.events + 1,
-    features: Array.zipWith(
-      Array.zip(data.features, row.features),
-      contribution.features,
-      ([{ as }, state]: readonly [DatasetMeasure, MeasureState], reading: number | undefined) =>
-        measureTaken(state, as, reading, moment),
-    ),
   };
 }
 
@@ -69,7 +55,7 @@ function existingRows(database: HostDatabase, row: DatasetRow, contributions: re
   const touched = new Map(contributions.map(({ series: named, period }) => [keyOf(named, period), [named, period]]));
   const where = [' WHERE playbook_key = ', each([row.playbookKey]), ' AND data_sha256 = ', each([row.dataSha256])];
   const kept = composed(
-    'SELECT series, period_index, target, target_count, target_at, events, features FROM prediction_rows',
+    'SELECT series, period_index, target, target_count, target_at, events FROM prediction_rows',
     ...where,
     ' AND (series, period_index) IN (',
     ...tuples([...touched.values()]),
@@ -104,7 +90,6 @@ export function mergedRows(
             period: kept.period_index,
             target: { value: kept.target, count: kept.target_count, at: kept.target_at },
             events: kept.events,
-            features: kept.features.map((feature) => stateOf(feature)),
           },
         ]),
       );

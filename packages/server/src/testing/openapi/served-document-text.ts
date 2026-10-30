@@ -14,7 +14,6 @@ export async function servedDocumentText(): Promise<string> {
         PORT: '0',
         LOG_LEVEL: 'error',
         LEDGER_FILE: ledger.fileName,
-        PREDICTION_CACHE_DIR: ledger.cacheDirectory,
         ...noConsentThroughAuto,
       },
       compositionRoot,

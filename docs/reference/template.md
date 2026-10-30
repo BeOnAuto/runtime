@@ -5,8 +5,7 @@
 These are [Liquid](https://shopify.github.io/liquid/) templates:
 
 - a reasoning function's prompt;
-- an interaction function's `to`, `from` and message, and the templates of the tools it names;
-- a prediction function's brief.
+- an interaction function's `to`, `from` and message, and the templates of the tools it names.
 
 Each format says which variables its templates read. Every template may use the same filters.
 

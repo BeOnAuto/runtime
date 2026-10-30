@@ -1,4 +1,4 @@
-import type { CallerIdentity, Outcome, Succeeded } from '@on.auto/operations';
+import type { CallerIdentity, Outcome } from '@on.auto/operations';
 import type { FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -20,7 +20,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-type Calling = (caller: CallerIdentity) => Promise<Outcome<Succeeded>>;
+type Calling = (caller: CallerIdentity) => Promise<Outcome>;
 
 function callingOn(h: Harness, operation: string, input: unknown): Calling {
   return (caller) => h.call(operationNamed(h.operations, operation), caller, input);

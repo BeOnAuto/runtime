@@ -10,7 +10,12 @@ import type { Explanation } from './plain-language.ts';
 
 type CreditKind = Extract<
   ConflictKind | UnavailableKind,
-  'credits_exhausted' | 'license_required' | 'license_invalid' | 'account_closed' | 'meter_unavailable'
+  | 'credits_exhausted'
+  | 'license_required'
+  | 'license_invalid'
+  | 'feature_unlicensed'
+  | 'account_closed'
+  | 'meter_unavailable'
 >;
 
 type CreditBecause = Extract<
@@ -47,6 +52,11 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
     why: 'the license this runtime holds no longer stands',
     remedy:
       'The details below say why and what to do, and an owner of its org can put it right in Auto Studio at their resolve_at link; then run this again.',
+  },
+  feature_unlicensed: {
+    why: 'the license of this runtime does not include a feature it needs',
+    remedy:
+      'Trying again will not help until the account holder or an organization admin adds the feature to the license at the page the details name.',
   },
   account_closed: {
     why: 'the account it runs under is closed',

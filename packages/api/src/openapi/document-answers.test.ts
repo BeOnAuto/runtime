@@ -2,15 +2,15 @@ import { makeCatalog } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { blobOperations } from '../testing/blob-operations.ts';
 import { testShelf } from '../testing/guides.ts';
+import { httpAloneOperations } from '../testing/http-alone-operations.ts';
 import { listNotesOfTheOrg, notebookOperations } from '../testing/notebook.ts';
 import { operationsIn } from '../testing/openapi/openapi-document.ts';
 import { testIdentityIssuer, testServerInfo } from '../testing/operation-server.ts';
 import { openApiDocumentOf } from './openapi-document.ts';
 
 const document = openApiDocumentOf(
-  makeCatalog([...notebookOperations, listNotesOfTheOrg, ...blobOperations]),
+  makeCatalog([...notebookOperations, listNotesOfTheOrg, ...httpAloneOperations]),
   testServerInfo,
   testShelf,
   testIdentityIssuer,
@@ -61,14 +61,6 @@ describe('the answers of an operation', () => {
     });
     expect(responsesOf('clear_blobs')['409']).toEqual({ $ref: '#/components/responses/conflict' });
   });
-
-  it('are, for an answer it streams, its media type with no schema, and for a body it streams, the length it requires', () => {
-    expect(responsesOf('read_blob')['200']).toEqual({ description: 'Succeeded', content: { 'text/plain': {} } });
-    expect(responsesOf('keep_blob')).toMatchObject({
-      200: { content: { 'application/octet-stream': {} } },
-      411: { $ref: '#/components/responses/length_required' },
-    });
-  });
 });
 
 describe('the problems operations answer', () => {
@@ -88,7 +80,6 @@ describe('the problems operations answer', () => {
       'not_found',
       'method_not_allowed',
       'conflict',
-      'length_required',
       'content_too_large',
       'unsupported_media_type',
       'invalid_input',
@@ -135,8 +126,6 @@ describe('the components of the document', () => {
       { name: 'playbooks', description: 'The playbooks of the org: made, listed, read, renamed and retired' },
       { name: 'playbook-labels' },
       { name: 'blobs' },
-      { name: 'rows' },
-      { name: 'failing-blobs' },
       {
         name: 'guides',
         description: "The playbook's guides: what its words mean, how each kind of definition is written, and recipes",

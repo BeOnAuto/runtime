@@ -10,7 +10,6 @@ import {
   type RecordedSelection,
   type Runnable,
   type Settled,
-  type Succeeded,
 } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
@@ -37,7 +36,7 @@ interface PlaybookRoute {
 
 interface Calling {
   (operation: PlaybookOperation, request: PlaybookRequest, at?: string): Promise<Outcome>;
-  (operation: PlaybookRoute, request: PlaybookRequest, at?: string): Promise<Outcome<Succeeded>>;
+  (operation: PlaybookRoute, request: PlaybookRequest, at?: string): Promise<Outcome>;
 }
 
 export interface Harness {
@@ -106,8 +105,8 @@ export function harness(meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admi
       ),
     );
   function call(operation: PlaybookOperation, request: PlaybookRequest, at?: string): Promise<Outcome>;
-  function call(operation: PlaybookRoute, request: PlaybookRequest, at?: string): Promise<Outcome<Succeeded>>;
-  function call(operation: PlaybookRoute, request: PlaybookRequest, at?: string): Promise<Outcome<Succeeded>> {
+  function call(operation: PlaybookRoute, request: PlaybookRequest, at?: string): Promise<Outcome>;
+  function call(operation: PlaybookRoute, request: PlaybookRequest, at?: string): Promise<Outcome> {
     return run(dispatcher.dispatchToPlaybook(operation.registration, request), at);
   }
   return {

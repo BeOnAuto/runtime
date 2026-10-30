@@ -21,8 +21,6 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       version: ${{ steps.release.outputs.version }}
-      contract_release_created: ${{ steps.release.outputs['packages/prediction-contract--release_created'] }}
-      contract_version: ${{ steps.release.outputs['packages/prediction-contract--version'] }}
     steps:
       - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
@@ -178,33 +176,3 @@ jobs:
           fi
         env:
           VERSION: ${{ needs.release-please.outputs.version }}
-
-  contract-package:
-    name: Publish the contract's npm package
-    needs: release-please
-    if: needs.release-please.outputs.contract_release_created == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-      - run: pnpm install --frozen-lockfile
-      - name: Publish the package through npm trusted publishing, unless this version is there already
-        run: |
-          if npm view "@on.auto/prediction-contract@$VERSION" version > /dev/null 2>&1; then
-            echo "@on.auto/prediction-contract@$VERSION is on npm already"
-          else
-            pnpm --filter @on.auto/prediction-contract publish --no-git-checks
-          fi
-        env:
-          VERSION: ${{ needs.release-please.outputs.contract_version }}

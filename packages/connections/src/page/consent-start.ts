@@ -44,7 +44,7 @@ export function defineStartConsent(services: ConsentServices) {
     body: { kind: 'json' },
     successStatus: 201,
     inputSchema: LinkSchema,
-    answer: { kind: 'json', outputSchema: StartedSchema },
+    outputSchema: StartedSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };

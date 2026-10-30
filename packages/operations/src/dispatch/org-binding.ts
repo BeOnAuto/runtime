@@ -17,7 +17,7 @@ import type { OrgRequest } from './request.ts';
 
 export function runInOrg<A extends Succeeded>(
   registration: Runnable<'org', A>,
-  { caller, org, input, encoding, body }: OrgRequest,
+  { caller, org, input, encoding }: OrgRequest,
   ledger: StreamReader & StreamWriter & AppendedFactsReader,
 ): Effect.Effect<A, Rejected> {
   const prefix = streamPrefixOfOrg({ org });
@@ -26,8 +26,8 @@ export function runInOrg<A extends Succeeded>(
     Context.add(OrgReader, { ...prefixedReader(ledger, prefix), ...orgBoundAppendedFactsReader(ledger, { org }) }),
   );
   return registration.kind === 'query'
-    ? registration.run(input, encoding, body).pipe(Effect.provideContext(forQueries))
+    ? registration.run(input, encoding).pipe(Effect.provideContext(forQueries))
     : registration
-        .run(input, encoding, body)
+        .run(input, encoding)
         .pipe(Effect.provideContext(forQueries.pipe(Context.add(OrgWriter, prefixedWriter(ledger, prefix)))));
 }

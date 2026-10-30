@@ -1,12 +1,4 @@
-import {
-  catalogPathOf,
-  isStreamedBody,
-  mediaTypeOfBody,
-  takesNoBody,
-  type RegisteredAnswer,
-  type RouteRegistration,
-  type StreamedBody,
-} from '@on.auto/operations';
+import { catalogPathOf, takesNoBody, type RouteRegistration } from '@on.auto/operations';
 
 import { selfContainedSchemaOf } from '../tools/tool-schema.ts';
 import {
@@ -41,12 +33,6 @@ interface InputParts {
 
 const successWords: Readonly<Record<RouteRegistration['successStatus'], string>> = { 200: 'Succeeded', 201: 'Created' };
 
-function answerOf(registration: RouteRegistration): RegisteredAnswer {
-  return registration.servedOverHttpAlone === undefined
-    ? { kind: 'json', output: registration.output }
-    : registration.answer;
-}
-
 function parameterNamesIn(path: string): readonly string[] {
   return path
     .split('/')
@@ -63,14 +49,6 @@ function pathParametersOf(registration: RouteRegistration, input: readonly Field
     const field = input.find((each) => each.name === name);
     return field === undefined ? { $ref: `#/components/parameters/${name}` } : parameterOf('path', field);
   });
-}
-
-function streamedBodyOf({ kind, mostBytes }: StreamedBody): OpenApiObject {
-  return {
-    required: true,
-    description: `At most ${mostBytes.toLocaleString('en-US')} bytes, with their length as Content-Length`,
-    content: { [mediaTypeOfBody[kind]]: {} },
-  };
 }
 
 function jsonBodyOf(operationId: string, body: OpenApiObject, refusesEmptyBody: boolean): OpenApiObject {
@@ -95,21 +73,16 @@ function inputPartsOf(registration: RouteRegistration, operationId: string): Inp
     return { parameters: [...path, ...queryParametersOf(registration, given)] };
   }
   const body = registration.servedOverHttpAlone ?? { kind: 'json' };
-  if (isStreamedBody(body)) {
-    return { parameters: [...path, ...queryParametersOf(registration, given)], requestBody: streamedBodyOf(body) };
-  }
   return body.kind === 'json'
     ? { parameters: path, requestBody: jsonBodyOf(operationId, given, registration.refusesEmptyBody) }
     : { parameters: path };
 }
 
 function successOf(registration: RouteRegistration, operationId: string): OpenApiObject {
-  const answer = answerOf(registration);
-  const content =
-    answer.kind === 'json'
-      ? { 'application/json': { schema: schemaOf(answer.output, operationId, 'output') } }
-      : { [answer.mediaType]: {} };
-  return { description: successWords[registration.successStatus], content };
+  return {
+    description: successWords[registration.successStatus],
+    content: { 'application/json': { schema: schemaOf(registration.output, operationId, 'output') } },
+  };
 }
 
 export function describedOperationOf(registration: RouteRegistration, operationId: string): DescribedOperation {

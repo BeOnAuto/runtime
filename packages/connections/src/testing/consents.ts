@@ -1,4 +1,4 @@
-import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Outcome } from '@on.auto/operations';
 import { audiences, providerListOf, providerOf } from '@on.auto/providers/testing';
 import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { consentedAt, registeredAt, type ClientRegistration, type Consented } from '@on.auto/tool-servers/testing';
@@ -62,7 +62,7 @@ export function consentHarnessAt(fake: FakeMcpServer, { way, ...options }: Conse
   });
 }
 
-export function starting(h: Harness, { id, token }: Added, at?: string): Promise<Outcome<Succeeded>> {
+export function starting(h: Harness, { id, token }: Added, at?: string): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'start'), ada, { id, token }, at);
 }
 
@@ -76,7 +76,7 @@ export function finishing(
   { id, token }: Added,
   { code, state, iss }: Consented,
   at?: string,
-): Promise<Outcome<Succeeded>> {
+): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'finish'), ada, { id, token, code, state, iss }, at);
 }
 
@@ -88,7 +88,7 @@ export async function consentedOf(h: Harness, link: Added, at?: string): Promise
   return consentedAt((await startedAt(h, link, at)).url);
 }
 
-export async function connectedThrough(h: Harness, link: Added, at?: string): Promise<Outcome<Succeeded>> {
+export async function connectedThrough(h: Harness, link: Added, at?: string): Promise<Outcome> {
   return finishing(h, link, await consentedOf(h, link, at), at);
 }
 

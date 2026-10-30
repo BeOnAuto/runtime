@@ -41,13 +41,10 @@ export function sqlOn(dialect: Dialect, statement: StepStatement): SQL {
 
 function theStepTo(layout: number, steps: readonly LayoutStep[]): LayoutStep {
   const leading = steps.filter((step) => step.layout === layout);
-  const [step] = leading;
-  if (step === undefined || leading.length > 1) {
-    throw new Error(
-      `The ledger was given ${leading.length} steps to layout ${layout} of its database, where it takes exactly one`,
-    );
+  if (leading.length === 0) {
+    throw new Error(`The ledger was given no step to layout ${layout} of its database, where it takes at least one`);
   }
-  return step;
+  return { layout, statements: leading.flatMap(({ statements }) => statements) };
 }
 
 export function stepsFrom(layout: number, { kept, steps }: Omit<LayoutCarrying, 'floor'>): readonly LayoutStep[] {

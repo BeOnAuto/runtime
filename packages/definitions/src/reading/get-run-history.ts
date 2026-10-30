@@ -90,7 +90,7 @@ export function defineGetRunHistory(presenters: readonly Presenter[]) {
     route: { method: 'GET', path: '/runs/{run_id}/history' },
     body: { kind: 'none' },
     inputSchema: RunHistoryInput,
-    answer: { kind: 'json', outputSchema: EventsPage },
+    outputSchema: EventsPage,
     reasons: ['not_found', 'invalid_input'],
     handle: historyReader(presentationOf(presenters)),
   });

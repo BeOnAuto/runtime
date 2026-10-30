@@ -1,4 +1,4 @@
-import type { Issue, Outcome, Settled, Succeeded } from '@on.auto/operations';
+import type { Issue, Outcome, Settled } from '@on.auto/operations';
 import { providerListOf } from '@on.auto/providers/testing';
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
 import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
@@ -18,7 +18,7 @@ import {
 } from './harness.ts';
 
 export interface Called {
-  readonly called: Settled<Succeeded>;
+  readonly called: Settled;
   readonly close: () => Promise<void>;
 }
 
@@ -32,7 +32,7 @@ export function harnessByHand(options: HarnessOptions = {}): Harness {
   return harness({ mostSecretCharacters: 4096, policy: loopbackPolicy, ...options });
 }
 
-export function readingTheLink(h: Harness, { id, token }: Added): Promise<Outcome<Succeeded>> {
+export function readingTheLink(h: Harness, { id, token }: Added): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'read_link'), acmeWriter, { id, token });
 }
 

@@ -2,9 +2,9 @@ import { defineCommand, defineQuery, makeCatalog } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { blobOperations } from '../testing/blob-operations.ts';
 import { findNotes } from '../testing/found-notes.ts';
 import { testShelf } from '../testing/guides.ts';
+import { httpAloneOperations } from '../testing/http-alone-operations.ts';
 import { listNotesOfTheOrg, notebookOperations } from '../testing/notebook.ts';
 import { openApiErrorsIn, operationsIn, unresolvedSchemasIn } from '../testing/openapi/openapi-document.ts';
 import { testIdentityIssuer, testServerInfo } from '../testing/operation-server.ts';
@@ -65,7 +65,7 @@ const operations = [
   ...notebookOperations,
   findNotes,
   listNotesOfTheOrg,
-  ...blobOperations,
+  ...httpAloneOperations,
   moveNote,
   findNote,
   countNotes,
@@ -119,7 +119,7 @@ describe('the OpenAPI document of a catalog', () => {
 
   it('describes each registration once, by its name, its title and the description its tool has', () => {
     expect(operationsIn(document).map(({ operation }) => operation.operationId)).toEqual(
-      expect.arrayContaining(['list_notes', 'list_notes_in_org', 'add_note', 'keep_blob', 'get_guide']),
+      expect.arrayContaining(['list_notes', 'list_notes_in_org', 'add_note', 'read_blob', 'get_guide']),
     );
     expect(operationsIn(document)).toHaveLength(operations.length + 1);
     expect(operationNamed('list_notes_in_org')).toMatchObject({
@@ -218,34 +218,6 @@ describe('the input of a command', () => {
         },
       },
     });
-  });
-});
-
-describe('the input of a command that streams its body', () => {
-  it('takes its fields beside the path in its query', () => {
-    expect(operationNamed('keep_blob').operation.parameters).toContainEqual({
-      name: 'label',
-      in: 'query',
-      required: false,
-      schema: { type: 'string' },
-    });
-  });
-
-  it('is a body of its media type, of at most its bytes with their length, required', () => {
-    expect(
-      [operationNamed('keep_blob'), operationNamed('keep_rows')].map(({ operation }) => operation.requestBody),
-    ).toEqual([
-      {
-        required: true,
-        description: 'At most 1,024 bytes, with their length as Content-Length',
-        content: { 'application/octet-stream': {} },
-      },
-      {
-        required: true,
-        description: 'At most 1,024 bytes, with their length as Content-Length',
-        content: { 'text/csv': {} },
-      },
-    ]);
   });
 });
 

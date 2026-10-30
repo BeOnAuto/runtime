@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { datasetsPortOn } from '../dataset/datasets-port.ts';
-import { uploadedWeeklyOrders, weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
+import { weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
 import { isLive, liveFolded } from './dataset-predicates.ts';
 import type { SettingsOf } from './dataset-stores.ts';
 import { north } from './orders.ts';
@@ -13,11 +13,10 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 const refunds = weeklyOrdersWith(['    - type: order.placed', '    - type: order.refunded']);
 
 function staleWriteTest(settingsOf: SettingsOf): void {
-  it('writes nothing once another projector moved its checkpoint first, and keeps no dataset for a function that names an uploaded one', async () => {
+  it('writes nothing once another projector moved its checkpoint first', async () => {
     const datasets = await projectedDatasets(await settingsOf());
     const { dataSha256 } = await datasets.saved('orders', weeklyOrders);
     const idle = await datasets.saved('refunds', refunds);
-    await datasets.saved('uploaded', uploadedWeeklyOrders('c'.repeat(64)));
     await datasets.published([north('2026-10-06T10:00:00Z')]);
     datasets.start();
     const row = await datasets.until(dataSha256, liveFolded(1));

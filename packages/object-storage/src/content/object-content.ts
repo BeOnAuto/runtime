@@ -4,7 +4,6 @@ import { Effect } from 'effect';
 import type { Bucket } from '../bucket/bucket.ts';
 import type { ContentLocation } from '../location/content-location.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
-import { stagedOn, unstagedOn } from './object-staging.ts';
 import { placedOn, type Placing } from './object-writes.ts';
 import { sweptUploads } from './upload-sweep.ts';
 
@@ -21,9 +20,6 @@ export function objectContentOn(bucket: Bucket, location: ContentLocation): Cont
     content: {
       put: (playbook, content) => placedOn(placing, (sha256) => keys.kept(playbook, sha256), content),
       get: (playbook, sha256) => readOf(keys.kept(playbook, sha256), sha256),
-      stage: (playbook, run, content) => stagedOn(placing, { playbook, run }, content),
-      staged: (playbook, run, sha256) => readOf(keys.staged(playbook, run, sha256), sha256),
-      unstage: (playbook, run) => Effect.promise(() => unstagedOn(placing, { playbook, run })),
     },
     sweepContent: (before) => sweptUploads(bucket, keys.uploads, before),
   };

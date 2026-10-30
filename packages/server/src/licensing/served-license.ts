@@ -1,11 +1,5 @@
 import type { AppRuntime } from '@on.auto/api';
-import {
-  LicensedFeatures,
-  RuntimeLicense,
-  type KeyInHand,
-  type LicensedFeaturesPorts,
-  type Signed,
-} from '@on.auto/meter';
+import { RuntimeLicense, type KeyInHand, type Signed } from '@on.auto/meter';
 import { Effect, Function } from 'effect';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
@@ -27,7 +21,6 @@ interface Worded {
 
 export interface ServedLicense {
   readonly operations: ReturnType<typeof licenseOperationsOf>;
-  readonly features: LicensedFeaturesPorts;
   readonly dueWork: ReturnType<typeof licenseChores>;
   readonly notice: () => Promise<string | undefined>;
   readonly withALastReport: <S extends Stopping>(served: S) => S;
@@ -58,7 +51,6 @@ export async function licenseServedBy(
   }
   return {
     operations: licenseOperationsOf(license, kept),
-    features: await inTheRuntime(Effect.service(LicensedFeatures)),
     dueWork: licenseChores(license),
     notice: () =>
       inTheRuntime(

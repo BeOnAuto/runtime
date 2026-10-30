@@ -19,17 +19,11 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
   providers: 'The providers a person may connect to the org by name, and whether the caller may add a connection',
   license:
     'The license of the runtime, activated with the key Studio gives, by which each new action is admitted against the account of an org at Auto',
-  prediction: "A prediction function's datasets and versions, and the routes of the trainer that builds it",
   guides: "The playbook's guides: what its words mean, how each kind of definition is written, and recipes",
 };
 
 const resourcesOfOperations: Readonly<Record<string, string>> = {
   answer_interaction: 'interactions',
-  activate_version: 'prediction',
-  read_build_brief: 'prediction',
-  read_build_rows: 'prediction',
-  upload_candidate: 'prediction',
-  upload_dataset: 'prediction',
 };
 
 export const guidesTag = 'guides';

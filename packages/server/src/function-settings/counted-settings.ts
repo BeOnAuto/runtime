@@ -15,7 +15,6 @@ type Counts<Name extends string> = { readonly [Count in Name]: number };
 interface Counting<Name extends string> {
   readonly settings: string;
   readonly bounds: { readonly [Count in Name]: CountBounds };
-  readonly beyondTheRanges?: (counts: Counts<Name>) => readonly string[];
 }
 
 const wholeNumber = /^\d{1,7}$/u;
@@ -37,11 +36,10 @@ function problemsOf(count: number, { setting, least, most, example }: CountBound
 
 export function countsIn<Name extends string>(
   environment: Environment,
-  { settings, bounds, beyondTheRanges }: Counting<Name>,
+  { settings, bounds }: Counting<Name>,
 ): Effect.Effect<Counts<Name>, InvalidSettingsError> {
   const counts = Record.map(bounds, (bound) => countIn(environment, bound));
-  const outOfRange = Record.collect(bounds, (name, bound) => problemsOf(counts[name], bound)).flat();
-  const problems = outOfRange.length === 0 && beyondTheRanges !== undefined ? beyondTheRanges(counts) : outOfRange;
+  const problems = Record.collect(bounds, (name, bound) => problemsOf(counts[name], bound)).flat();
   return problems.length === 0
     ? Effect.succeed(counts)
     : Effect.fail(new InvalidSettingsError({ message: `The ${settings} are invalid. ${problems.join('; ')}` }));

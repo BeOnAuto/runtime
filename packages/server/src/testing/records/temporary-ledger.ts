@@ -1,16 +1,11 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 export interface TemporaryLedger {
   readonly directory: string;
   readonly fileName: string;
-  readonly cacheDirectory: string;
   readonly remove: () => void;
-}
-
-export function cacheBeside(ledgerFile: string, name = 'prediction-cache'): string {
-  return join(dirname(ledgerFile), name);
 }
 
 export function temporaryLedger(): TemporaryLedger {
@@ -18,7 +13,6 @@ export function temporaryLedger(): TemporaryLedger {
   return {
     directory,
     fileName: join(directory, 'ledger.db'),
-    cacheDirectory: cacheBeside(join(directory, 'ledger.db')),
     remove: () => {
       rmSync(directory, { recursive: true, force: true });
     },

@@ -9,8 +9,11 @@ import { spawnServer } from '../testing/processes/spawned-server.ts';
 import {
   aFactInAnEarlierShape,
   aFactOfAnEarlierVersion,
+  aFactOfAPredictionBuild,
   aLedgerHoldingAFactInAnEarlierShapeAt,
   aLedgerHoldingAFactOfAnEarlierVersionAt,
+  aLedgerHoldingAPredictionBuildAt,
+  aLedgerHoldingAPredictionRejectedAt,
   aLedgerOfAnEarlierVersionAt,
   aLedgerOfANewerVersionAt,
   aNewerLayout,
@@ -141,6 +144,38 @@ describe('a ledger file that holds facts this version of Auto Runtime does not r
     expect(await child.exited).toBe(1);
     expect(child.output().stderr).toContain(
       `, and holds the fact ${aFactInAnEarlierShape.type} at position 1, in a shape this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.`,
+    );
+  });
+});
+
+describe('a ledger file that holds what an earlier version of Auto Runtime recorded of prediction builds', () => {
+  it('stops the process before it reads the ledger when its newest fact is a version built, naming the type', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    await aLedgerHoldingAPredictionBuildAt(ledger.fileName);
+
+    const child = spawnServer(mainModule, { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ledger.fileName });
+
+    expect(await child.exited).toBe(1);
+    expect(child.output().stderr).toContain(
+      `, and holds facts of the type ${aFactOfAPredictionBuild}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.`,
+    );
+  });
+
+  it('stops the process when its newest rejected run names a kind of refusal of an earlier version, and starts where it names one of this version', async () => {
+    const [earlier, current] = [temporaryLedger(), temporaryLedger()];
+    onTestFinished(earlier.remove);
+    onTestFinished(current.remove);
+    await aLedgerHoldingAPredictionRejectedAt(earlier.fileName, 'model_process_busy');
+    await aLedgerHoldingAPredictionRejectedAt(current.fileName, 'dataset_not_ready');
+
+    const child = spawnServer(mainModule, { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: earlier.fileName });
+    const started = await startServer({ HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: current.fileName }, compositionRoot);
+    await started.stop();
+
+    expect(await child.exited).toBe(1);
+    expect(child.output().stderr).toContain(
+      ', and holds the fact run_rejected at position 1, in a shape this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.',
     );
   });
 });

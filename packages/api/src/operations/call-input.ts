@@ -1,12 +1,4 @@
-import {
-  isStreamedBody,
-  takesNoBody,
-  type HttpBody,
-  type InputEncoding,
-  type RouteRegistration,
-  type StreamedBody,
-  type StreamedContent,
-} from '@on.auto/operations';
+import { takesNoBody, type HttpBody, type InputEncoding, type RouteRegistration } from '@on.auto/operations';
 import { Result } from 'effect';
 import type { Context } from 'hono';
 
@@ -14,12 +6,10 @@ import type { ApiEnv } from '../api-env.ts';
 import type { Problem } from '../problem/problem-document.ts';
 import { problemOf } from '../problem/problem.ts';
 import { bodyTextOf, parseJsonBody, type JsonObject } from './request-body.ts';
-import { streamedBodyOf } from './streamed-body.ts';
 
 export interface CallInput {
   readonly input: JsonObject;
   readonly encoding: InputEncoding;
-  readonly body?: StreamedContent;
 }
 
 const jsonBody: HttpBody = { kind: 'json' };
@@ -32,19 +22,6 @@ const queryBesideABody = Result.fail(
     'An operation called by POST or PUT takes no query parameters; send its input in the JSON body',
   ),
 );
-
-function streamedInputOf(
-  request: Request,
-  body: StreamedBody,
-  pathFields: JsonObject,
-  query: URLSearchParams,
-): Result.Result<CallInput, Problem> {
-  return Result.flatMap(queryFieldsOf(query), (given) =>
-    Result.flatMap(combined(pathFields, given, 'strings'), ({ input, encoding }) =>
-      Result.map(streamedBodyOf(request, body), (streamed) => ({ input, encoding, body: streamed })),
-    ),
-  );
-}
 
 function givenTwice(name: string): Result.Result<never, Problem> {
   return Result.fail(problemOf('bad_request', `The field ${name} is given in more than one place`));
@@ -81,9 +58,6 @@ export async function parseCallInput(
     return Result.flatMap(queryFieldsOf(query), (given) => combined(pathFields, given, 'strings'));
   }
   const body = registration.servedOverHttpAlone ?? jsonBody;
-  if (isStreamedBody(body)) {
-    return streamedInputOf(c.req.raw, body, pathFields, query);
-  }
   if (query.size > 0) {
     return queryBesideABody;
   }

@@ -12,7 +12,7 @@ const failedTestWords: unknown = expect.stringMatching(/^Its data test failed: /
 
 const dataTestFailed: unknown = expect.objectContaining({ kind: 'record_passed_over', detail: failedTestWords });
 
-const widened = weeklyOrdersWith(['  window: 156', '  window: 160'], ['  given: [promotion]', '']);
+const widened = weeklyOrdersWith(['  window: 156', '  window: 160']);
 
 const summed = weeklyOrdersWith(['  target: { as: count }', '  target: { of: /total, as: sum }']);
 
@@ -27,7 +27,7 @@ const tested = weeklyOrdersWith([
 ]);
 
 function sharingTest(settingsOf: SettingsOf): void {
-  it('keeps one dataset for the data part several definitions name, rebuilds nothing for an edit that leaves its rows alone, as a wider window or other given features do, builds another for an edit that changes them and drops one once no definition names it', async () => {
+  it('keeps one dataset for the data part several definitions name, rebuilds nothing for an edit that leaves its rows alone, as a wider window does, builds another for an edit that changes them and drops one once no definition names it', async () => {
     const datasets = await projectedDatasets(await settingsOf());
     const first = await datasets.saved('orders', weeklyOrders);
     await datasets.saved('orders-again', weeklyOrders);

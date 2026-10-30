@@ -18,7 +18,7 @@ export function defineListProviders(listing: OfferingServices) {
     route: { method: 'GET', path: '/providers' },
     body: { kind: 'none' },
     inputSchema: Schema.Record(Schema.String, Schema.Never),
-    answer: { kind: 'json', outputSchema: ProvidersSchema },
+    outputSchema: ProvidersSchema,
     reasons: [],
     handle: Effect.fnUntraced(function* () {
       const refusal = refusalToAdd(listing, yield* Caller);

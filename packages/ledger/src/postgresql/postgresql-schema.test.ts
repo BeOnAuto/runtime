@@ -29,28 +29,14 @@ function executorFinding(names: readonly string[]): {
 
 const firstContentTable = 'CREATE TABLE IF NOT EXISTS recorded_content_chunks';
 
-const theContentTables = [
-  firstContentTable,
-  'CREATE TABLE IF NOT EXISTS recorded_content_heads',
-  'CREATE TABLE IF NOT EXISTS staged_content_chunks',
-  'CREATE TABLE IF NOT EXISTS staged_content',
-  'CREATE TABLE IF NOT EXISTS unstaged_runs',
-];
+const theContentTables = [firstContentTable, 'CREATE TABLE IF NOT EXISTS recorded_content_heads'];
 
-const theContentIndexes = [
-  'CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads',
-  'CREATE INDEX IF NOT EXISTS staged_content_by_upload ON staged_content',
-];
+const theContentIndexes = ['CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads'];
 
 describe("the ledger's own schema on PostgreSQL", () => {
   it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the table of its kept secrets, each only when missing", async () => {
     const empty = executorFinding([]);
-    const found = executorFinding([
-      ...contentTableNames,
-      'recorded_content_heads_by_upload',
-      'staged_content_by_upload',
-      'kept_secrets',
-    ]);
+    const found = executorFinding([...contentTableNames, 'recorded_content_heads_by_upload', 'kept_secrets']);
 
     await postgresqlSchemaCreated(empty.execute);
     await postgresqlSchemaCreated(found.execute);

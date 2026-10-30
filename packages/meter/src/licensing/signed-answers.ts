@@ -1,6 +1,5 @@
 import { createPublicKey, verify } from 'node:crypto';
 
-import { FeatureSchema } from '@on.auto/prediction-contract';
 import { Option, Schema } from 'effect';
 
 import { shownOrgName } from './org-name.ts';
@@ -18,6 +17,8 @@ export const StandingSchema = Schema.Literals(['ok', 'low', 'empty', 'overage', 
 export type Standing = typeof StandingSchema.Type;
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
+
+const FeatureSchema = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{0,31}$/u));
 
 const Credits = Schema.Finite;
 

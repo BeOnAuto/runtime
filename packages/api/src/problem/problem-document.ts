@@ -34,7 +34,6 @@ const reasons = [
   reasonOf('unauthenticated', 401, 'Unauthenticated', 'Credentials are missing or invalid'),
   reasonOf('origin_not_allowed', 403, 'Origin not allowed', 'A browser sent it from an origin the server refuses'),
   reasonOf('method_not_allowed', 405, 'Method not allowed', 'The path does not take that method'),
-  reasonOf('length_required', 411, 'Length required', 'A body the route streams came without its length'),
   reasonOf('content_too_large', 413, 'Content too large', 'The body is larger than the operation takes'),
   reasonOf('unsupported_media_type', 415, 'Unsupported media type', 'The body is not of a type the operation takes'),
   reasonOf('internal', 500, 'Internal error', 'Something went wrong inside the server'),

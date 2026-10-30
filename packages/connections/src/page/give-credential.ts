@@ -31,7 +31,7 @@ export function defineGiveCredential(services: GivingServices) {
     route: { method: 'POST', path: '/connections/{id}/credential' },
     body: { kind: 'json' },
     inputSchema: GivingSchema,
-    answer: { kind: 'json', outputSchema: ConnectionSchema },
+    outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* (giving) {
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };

@@ -53,7 +53,7 @@ export function defineGetPlaybookAnalytics(capabilities: readonly Capability[]) 
     route: { method: 'GET', path: '/analytics' },
     body: { kind: 'none' },
     inputSchema: analyticsInputOf(known.field),
-    answer: { kind: 'json', outputSchema: PlaybookAnalyticsSchema },
+    outputSchema: PlaybookAnalyticsSchema,
     reasons: ['invalid_input'],
     handle: readAnalytics,
   });

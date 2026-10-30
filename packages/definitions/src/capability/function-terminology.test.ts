@@ -34,7 +34,7 @@ describe('playbook function terminology', () => {
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
       'Use a prompt, skills, and tools to interpret information or produce a response.',
       'Exchange information with people or systems.',
-      "Predict a quantity from the playbook's own history with a model a trainer builds.",
+      "Predict a quantity from the playbook's own history, with a likely range.",
       'Answer from what the playbook keeps of its own history.',
       'Run defined code or expressions to calculate or transform data.',
     ]);

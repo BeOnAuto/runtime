@@ -1,5 +1,5 @@
 import { randomUUIDv7, textToKeep } from '@on.auto/operations';
-import { alpha, generated, resultOf } from '@on.auto/operations/testing';
+import { alpha, resultOf } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -12,11 +12,6 @@ const UploadRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
 
 const anHourOld = '00000000-0000-7000-8000-000000000001';
 
-interface Named {
-  readonly kept: readonly string[];
-  readonly staged: readonly string[];
-}
-
 interface Orphans {
   readonly fresh: string;
   readonly named: readonly string[];
@@ -27,16 +22,16 @@ async function uploadsIn(entry: LedgerEntry, database: string, table: string): P
   return Schema.decodeUnknownSync(UploadRows)(rows).map(({ upload_id }) => upload_id);
 }
 
-async function orphanedLike(entry: LedgerEntry, database: string, named: Named, upload: string): Promise<void> {
+async function orphanedLike(
+  entry: LedgerEntry,
+  database: string,
+  named: readonly string[],
+  upload: string,
+): Promise<void> {
   await entry.queried(
     database,
     `INSERT INTO recorded_content_chunks (playbook_key, upload_id, chunk, data)
-      SELECT playbook_key, '${upload}', chunk, data FROM recorded_content_chunks WHERE upload_id = '${named.kept.join()}'`,
-  );
-  await entry.queried(
-    database,
-    `INSERT INTO staged_content_chunks (playbook_key, run_id, upload_id, chunk, data)
-      SELECT playbook_key, run_id, '${upload}', chunk, data FROM staged_content_chunks WHERE upload_id = '${named.staged.join()}'`,
+      SELECT playbook_key, '${upload}', chunk, data FROM recorded_content_chunks WHERE upload_id = '${named.join()}'`,
   );
 }
 
@@ -44,22 +39,15 @@ async function keptAndOrphaned(entry: LedgerEntry, database: string): Promise<Or
   const { ledger, dispose } = await openLedgerWith(entry.ledgerOn(database));
   onTestFinished(dispose);
   await resultOf(ledger.content.put(alpha, textToKeep('{"kept":true}', 'application/json')));
-  await resultOf(ledger.content.stage(alpha, 'run-1', (await generated(1000)).content()));
-  const named = {
-    kept: await uploadsIn(entry, database, 'recorded_content_chunks'),
-    staged: await uploadsIn(entry, database, 'staged_content_chunks'),
-  };
+  const named = await uploadsIn(entry, database, 'recorded_content_chunks');
   const fresh = randomUUIDv7();
   await orphanedLike(entry, database, named, anHourOld);
   await orphanedLike(entry, database, named, fresh);
-  return { fresh, named: [...named.kept, ...named.staged] };
+  return { fresh, named };
 }
 
 async function uploadsLeft(entry: LedgerEntry, database: string): Promise<readonly string[]> {
-  return [
-    ...(await uploadsIn(entry, database, 'recorded_content_chunks')),
-    ...(await uploadsIn(entry, database, 'staged_content_chunks')),
-  ].toSorted();
+  return (await uploadsIn(entry, database, 'recorded_content_chunks')).toSorted();
 }
 
 function sweptByItsChore(entry: LedgerEntry): void {
@@ -74,7 +62,7 @@ function sweptByItsChore(entry: LedgerEntry): void {
     const dueAgainAt = await sweptAt(now);
 
     expect([await watched.finished, dueAgainAt]).toEqual(['swept', now + unnamedChunksLastMs]);
-    expect(await uploadsLeft(entry, database)).toEqual([...named, fresh, fresh].toSorted());
+    expect(await uploadsLeft(entry, database)).toEqual([...named, fresh].toSorted());
   });
 }
 
@@ -93,7 +81,7 @@ function sweepFinishedBeforeClosing(entry: LedgerEntry): void {
     await disposing;
 
     expect(await Promise.all([watched.finished, sweeping])).toEqual(['swept', 'ended']);
-    expect(await uploadsLeft(entry, database)).toEqual([...named, fresh, fresh].toSorted());
+    expect(await uploadsLeft(entry, database)).toEqual([...named, fresh].toSorted());
   });
 }
 

@@ -7,7 +7,18 @@ import { checkedFrom, isWhole, nameIssues, refusedAt, type Checked } from './che
 import type { WrittenData, WrittenPredicts } from './front-matter.ts';
 import type { Predicts } from './prediction-document.ts';
 
-const { mostHorizons, mostHorizon, leastSeason, mostSeason, mostUnitCharacters, mostHistory } = predictionBounds;
+const {
+  mostHorizons,
+  mostHorizon,
+  leastSeason,
+  mostSeason,
+  mostUnitCharacters,
+  mostHistory,
+  mostWindow,
+  leastCoverage,
+  mostCoverage,
+  coverage: usualCoverage,
+} = predictionBounds;
 
 const summedPairs =
   'a day sums to a week, a month or a quarter, a week to a quarter or a year, and a month to a quarter or a year';
@@ -101,29 +112,72 @@ function historyIssues(history: number | undefined, window: number, lines: Sourc
     : [];
 }
 
+function coverageIssues(coverage: number, lines: SourceLines): readonly DocumentIssue[] {
+  return coverage >= leastCoverage && coverage <= mostCoverage
+    ? []
+    : refusedAt(
+        lines,
+        '/predicts/coverage',
+        `The coverage is a share from ${leastCoverage} to ${mostCoverage}, not ${figure(coverage)}; leave it out for ${usualCoverage}`,
+      );
+}
+
 type Reach = Pick<Predicts, 'period' | 'horizons' | 'accumulates'>;
 
-export function longestHorizonOf({ period, horizons, accumulates }: Reach): number {
+function longestHorizonOf({ period, horizons, accumulates }: Reach): number {
   return accumulates === undefined ? Math.max(...horizons) : Number(longestSpanOf(period, accumulates));
 }
 
+const pastTotalsBackTested = 3;
+
+function leastWindowOf(reach: Reach): { readonly least: number; readonly words: string } {
+  const longest = longestHorizonOf(reach);
+  if (reach.accumulates === undefined) {
+    return {
+      least: longest + pastTotalsBackTested,
+      words: `the longest horizon and ${pastTotalsBackTested} more, which the forecaster needs to backtest an answer ${figure(longest)} periods ahead`,
+    };
+  }
+  return {
+    least: (pastTotalsBackTested + 1) * longest,
+    words: `${pastTotalsBackTested + 1} times the ${figure(longest)} periods a ${reach.accumulates} holds at most, which the forecaster needs to backtest a total at ${pastTotalsBackTested} past ${reach.accumulates}s`,
+  };
+}
+
+function windowIssues(window: number, reach: Reach, lines: SourceLines): readonly DocumentIssue[] {
+  const at = '/data/window';
+  if (!isWhole(window, 1, mostWindow)) {
+    return refusedAt(
+      lines,
+      at,
+      `The window is a whole number of periods, at most ${figure(mostWindow)}, not ${figure(window)}`,
+    );
+  }
+  const { least, words } = leastWindowOf(reach);
+  return window < least
+    ? refusedAt(lines, at, `The window of ${figure(window)} periods is under ${figure(least)}, ${words}`)
+    : [];
+}
+
 export function predictsOf(written: WrittenPredicts, data: WrittenData, lines: SourceLines): Checked<Predicts> {
-  const { target: name, period, season, horizons = [], accumulates, unit, history } = written;
+  const { target: name, period, season, horizons = [], accumulates, unit, history, coverage = usualCoverage } = written;
+  const reach: Reach = { period, horizons, ...(accumulates === undefined ? {} : { accumulates }) };
+  const reached = accumulationIssues(written, data.target, lines);
   const issues = [
     ...nameIssues(name, lines, '/predicts/target'),
     ...seasonIssues(season, lines),
-    ...accumulationIssues(written, data.target, lines),
+    ...reached,
+    ...(reached.length === 0 ? windowIssues(data.window, reach, lines) : []),
     ...unitIssues(unit, lines),
     ...historyIssues(history, data.window, lines),
+    ...coverageIssues(coverage, lines),
   ];
-  return checkedFrom(issues, () => {
-    const reach: Reach = { period, horizons, ...(accumulates === undefined ? {} : { accumulates }) };
-    return {
-      target: name,
-      ...(season === undefined ? {} : { season }),
-      ...reach,
-      unit: unit.trim(),
-      history: history ?? 2 * longestHorizonOf(reach),
-    };
-  });
+  return checkedFrom(issues, () => ({
+    target: name,
+    ...(season === undefined ? {} : { season }),
+    ...reach,
+    unit: unit.trim(),
+    history: history ?? 2 * longestHorizonOf(reach),
+    coverage,
+  }));
 }

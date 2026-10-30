@@ -23,7 +23,7 @@ export function defineValidate(access: ToolLookup) {
     route: { method: 'POST', path: '/tool-servers/{server}/tools/{tool}/validate' },
     body: { kind: 'json' },
     inputSchema: ValidateInputSchema,
-    answer: { kind: 'json', outputSchema: ArgumentCheckSchema },
+    outputSchema: ArgumentCheckSchema,
     reasons: ['unavailable'],
     handle: Effect.fnUntraced(function* ({ server, tool, arguments: input }) {
       const { input_schema } = yield* namedToolOf(access, { server, tool });

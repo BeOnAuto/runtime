@@ -59,7 +59,6 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       connections: source,
       offering,
       shippedFiles,
-      features: license.features,
       ...(installed === undefined ? {} : { installed }),
     });
     const parts = {

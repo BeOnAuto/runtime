@@ -259,10 +259,7 @@ const becauseOfKind = {
   tools_unfinished: { because: 'model_unavailable' },
   rebuilding: {},
   requests_full: {},
-  builds_full: {},
   dataset_not_ready: {},
-  model_process_busy: {},
-  model_process_failed: {},
   meter_unavailable: {},
 } as const;
 

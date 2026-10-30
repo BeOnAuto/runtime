@@ -3,7 +3,7 @@ import { Conflict } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { answeringAnyRun } from '../testing/harness-parts.ts';
+import { answerInteraction } from '../requests/answer-interaction.ts';
 import { askedRunId, askedThroughChat, type InteractionHarness } from '../testing/index.ts';
 import type { DeliveryEvent } from './run-facts.ts';
 import { deliveryRule, interactionWorkOf, replyBounds, replyRule } from './work-rules.ts';
@@ -68,7 +68,7 @@ describe('the delivery attempts of a request', () => {
     const answered = await askedThroughChat();
     await delivering(cancelling.playbook)(started(1));
     await cancelling.playbook.cancel(askedRunId);
-    await answered.playbook.call(answeringAnyRun, { run_id: askedRunId, answer: { choice: 'approve' } });
+    await answered.playbook.call(answerInteraction, { run_id: askedRunId, answer: { choice: 'approve' } });
 
     expect([
       await delivering(cancelling.playbook)(failed(1)),

@@ -1,7 +1,5 @@
 import {
-  callSummaryOf,
   settle,
-  type CallSummary,
   type Catalog,
   type Dispatcher,
   type DispatcherServices,
@@ -32,34 +30,21 @@ export interface OperationRoutesOptions {
   readonly runCall: RunCall;
 }
 
-interface Dispatched {
-  readonly call: Effect.Effect<Outcome<Succeeded>, never, DispatcherServices>;
-  readonly summary: CallSummary;
-}
-
 function dispatched(
   dispatcher: Dispatcher,
   registration: RouteRegistration,
   c: Context<ApiEnv>,
   request: OrgRequest,
-): Dispatched {
-  if (registration.scope === 'org') {
-    return {
-      call: dispatcher.dispatchToOrg(registration, request),
-      summary: callSummaryOf(registration.name, request),
-    };
-  }
-  const playbook = String(c.req.param('playbook'));
-  return {
-    call: dispatcher.dispatchToPlaybook(registration, { ...request, playbook }),
-    summary: callSummaryOf(registration.name, request, playbook),
-  };
+): Effect.Effect<Outcome, never, DispatcherServices> {
+  return registration.scope === 'org'
+    ? dispatcher.dispatchToOrg(registration, request)
+    : dispatcher.dispatchToPlaybook(registration, { ...request, playbook: String(c.req.param('playbook')) });
 }
 
 export function handlerFor(
   registration: RouteRegistration,
   { dispatcher, runCall }: OperationRoutesOptions,
-  { reportThrown, resource, callContext }: Routes,
+  { resource, callContext }: Routes,
 ): RouteHandler {
   const forbidden = insufficientScope(resource, registration.permissions);
   return async (c) => {
@@ -73,7 +58,7 @@ export function handlerFor(
       return problemResponse(given.failure);
     }
     const requestId = c.get('requestId');
-    const { call, summary } = dispatched(dispatcher, registration, c, { caller, org, ...given.success });
+    const call = dispatched(dispatcher, registration, c, { caller, org, ...given.success });
     const inTheCall = call.pipe(Effect.provideContext(callContext(c.req.raw)));
     const settled = await runCall(
       underTraceParent(
@@ -81,12 +66,6 @@ export function handlerFor(
         c.get('traceParent'),
       ),
     );
-    return toHttpResponse(settled, {
-      status: registration.successStatus,
-      signal: c.req.raw.signal,
-      failed: (thrown) => reportThrown(thrown, requestId, summary),
-      abortConnection: c.env.abortConnection,
-      forbidden,
-    });
+    return toHttpResponse(settled, { status: registration.successStatus, signal: c.req.raw.signal, forbidden });
   };
 }

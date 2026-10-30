@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 import { Schema } from 'effect';
@@ -6,13 +7,19 @@ const ValueSchema = Schema.Union([Schema.String, Schema.Number, Schema.Null]);
 
 const RowsSchema = Schema.Array(Schema.Record(Schema.String, ValueSchema));
 
-export const DatabaseDumpSchema = Schema.Struct({
+const DatabaseDumpSchema = Schema.Struct({
   layout: Schema.Number,
   made: Schema.Array(Schema.String),
   kept: Schema.Array(Schema.Struct({ table: Schema.String, rows: RowsSchema })),
 });
 
 export type DatabaseDump = typeof DatabaseDumpSchema.Type;
+
+export function theSQLiteFloor(): DatabaseDump {
+  return Schema.decodeUnknownSync(Schema.fromJsonString(DatabaseDumpSchema))(
+    readFileSync(new URL('../../database/database-floor-sqlite.json', import.meta.url), 'utf8'),
+  );
+}
 
 const tablesOfTheStoresOwnBookkeeping: readonly string[] = ['ledger_layout', 'dmb_migrations'];
 

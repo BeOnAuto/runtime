@@ -9,10 +9,7 @@ export const UnavailableKindSchema = Schema.Literals([
   'tools_unfinished',
   'rebuilding',
   'requests_full',
-  'builds_full',
   'dataset_not_ready',
-  'model_process_busy',
-  'model_process_failed',
   'meter_unavailable',
 ]);
 

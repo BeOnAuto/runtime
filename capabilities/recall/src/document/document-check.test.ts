@@ -1,4 +1,3 @@
-import { nothingSaved } from '@on.auto/definitions/testing';
 import { InvalidInput, Unavailable } from '@on.auto/operations';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -18,7 +17,7 @@ const filtered = [
 ].join('\n');
 
 function checking(source: string) {
-  return Effect.runPromiseExit(recallWith().prepared(source).check(nothingSaved));
+  return Effect.runPromiseExit(recallWith().prepared(source).check());
 }
 
 describe('the filter expressions of a recall function', () => {
@@ -79,7 +78,7 @@ describe('the check of a recall function when it is saved', () => {
       check: () => Promise.resolve({ ran: 'stopped', because: 'closing', milliseconds: 1 } as const),
     };
 
-    expect(await Effect.runPromiseExit(recallWith(closing).prepared(campaignReviews).check(nothingSaved))).toEqual(
+    expect(await Effect.runPromiseExit(recallWith(closing).prepared(campaignReviews).check())).toEqual(
       Exit.fail(new Unavailable({ detail: 'The server is stopping' })),
     );
   });

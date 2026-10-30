@@ -10,7 +10,6 @@ import {
   CalledDefinitionSchema,
   type CalledDefinition,
   type CallingStep,
-  type CallRole,
   type NamedDefinition,
 } from './called-definitions.ts';
 import type { DefinitionUser, NamingRelation } from './user-relations.ts';
@@ -38,11 +37,6 @@ type Use =
   | { readonly relation: 'calls'; readonly steps: readonly CallingStep[] }
   | { readonly relation: NamingRelation };
 
-const relationsOfRoles: Readonly<Record<CallRole, NamingRelation>> = {
-  trainer: 'sends-builds',
-  approver: 'asks-approval',
-};
-
 const typeRanks: readonly string[] = [...functionTypeOrder, 'workflow'];
 
 function rankOf({ type }: DefinitionUser): number {
@@ -61,11 +55,8 @@ function namingDetailsOf(details: StoredDefinition['details']): NamingDetails {
 }
 
 function usesOfCalls(calls: readonly CalledDefinition[]): readonly Use[] {
-  const steps = calls.flatMap((call) => ('steps' in call ? call.steps : []));
-  const roles: readonly Use[] = calls.flatMap((call) =>
-    'role' in call ? [{ relation: relationsOfRoles[call.role] }] : [],
-  );
-  return steps.length === 0 ? roles : [...roles, { relation: 'calls', steps }];
+  const steps = calls.flatMap((call) => call.steps);
+  return steps.length === 0 ? [] : [{ relation: 'calls', steps }];
 }
 
 function relationsOfFilter({ type, subject, source }: NamingFilter, used: NamedDefinition): readonly NamingRelation[] {

@@ -6,7 +6,6 @@ export interface Order {
   readonly region: Schema.Json;
   readonly at: Schema.Json;
   readonly total?: Schema.Json;
-  readonly promotion?: Schema.Json;
 }
 
 export interface Placed {
@@ -17,14 +16,13 @@ export interface Placed {
 }
 
 export function orderPlaced(
-  { region, at, total, promotion }: Order,
+  { region, at, total }: Order,
   { type = 'order.placed', time = '2026-10-06T10:00:00Z', subject, data }: Placed = {},
 ): Schema.JsonObject {
   const ordered = {
     region,
     placed_at: at,
     ...(total === undefined ? {} : { total }),
-    ...(promotion === undefined ? {} : { promotion }),
   };
   return {
     specversion: '1.0',

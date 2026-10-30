@@ -6,8 +6,6 @@ import { parsePredictionDocument } from '../src/document/document-parsing.ts';
 import type { PredictionFunctionDefinitionDocument } from '../src/document/prediction-document.ts';
 import { weeklyOrdersWith } from '../src/testing/weekly-orders.ts';
 
-export const alpha = { org: 'acme', playbook: 'alpha' };
-
 export const alphaKey = 'playbook/acme/alpha/';
 
 export const seriesMeasured = 1000;
@@ -27,7 +25,6 @@ const dailyLines: readonly (readonly [string, string])[] = [
   ['  season: 52', ''],
   ['  horizons: [1, 4]', '  horizons: [1, 7]'],
   ['  window: 156', '  window: 200'],
-  ['  holdout: 12', '  holdout: 14'],
 ];
 
 const testedLine: readonly [string, string] = [
@@ -42,10 +39,6 @@ function measuredFunction(name: string, source: string): MeasuredFunction {
 export const dailyOrders = measuredFunction('daily-orders', weeklyOrdersWith(...dailyLines));
 
 export const testedDailyOrders = measuredFunction('tested-daily-orders', weeklyOrdersWith(...dailyLines, testedLine));
-
-export function buildStartAfter(days: number): number {
-  return firstDay + days * day + day / 2;
-}
 
 function regionOf(series: number): string {
   return `region-${String(series).padStart(4, '0')}`;
@@ -66,7 +59,6 @@ function ordersOf(dayIndex: number) {
           region: regionOf(series),
           placed_at: at,
           total: 10 + ((series * 7 + dayIndex * 3) % 90),
-          ...(dayIndex % 7 === 0 ? { promotion: series % 2 } : {}),
         },
       },
       filled: [],

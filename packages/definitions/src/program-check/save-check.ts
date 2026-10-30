@@ -89,7 +89,7 @@ export function checkedAtSave(
   job: CheckJob,
   deadlineMs: number = checkDeadlineMs,
 ): Effect.Effect<CheckedDocument, InvalidInput | Unavailable> {
-  return pooledJob('program', 'check', (signal) =>
-    pool.check({ ...job, deadlineMs, worker: checkWorker }, signal),
-  ).pipe(Effect.flatMap((outcome) => issuesOf(job, outcome, deadlineMs)));
+  return pooledJob('check', (signal) => pool.check({ ...job, deadlineMs, worker: checkWorker }, signal)).pipe(
+    Effect.flatMap((outcome) => issuesOf(job, outcome, deadlineMs)),
+  );
 }

@@ -1,8 +1,6 @@
-import { deferredCanceller } from '@on.auto/definitions';
-import { Effect, Schema, SchemaTransformation } from 'effect';
+import { Schema, SchemaTransformation } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { answeringAnyRun } from '../testing/harness-parts.ts';
 import {
   acmeAdmin,
   approvalDocument,
@@ -15,13 +13,12 @@ import {
   takenReply,
 } from '../testing/index.ts';
 import { answerIssuesOf } from './answer-check.ts';
+import { answerInteraction } from './answer-interaction.ts';
 import { listInteractions } from './list-interactions.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const otherRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
-
-const answer = answeringAnyRun;
 
 const someText: unknown = expect.any(String);
 
@@ -101,7 +98,7 @@ describe('an answer to a request', () => {
   it('is recorded on the run with who answered and the claim, and the run takes it at the next due work', async () => {
     const { playbook } = await askedApproval();
 
-    const answered = await playbook.call(answer, {
+    const answered = await playbook.call(answerInteraction, {
       run_id: runId,
       answer: { choice: 'approve' },
       claimed_for: 'ada',
@@ -131,12 +128,12 @@ describe('an answer to a request', () => {
 describe('an answer to a request that took one', () => {
   it('answers the answer the run took for the same answer again, and is a conflict for another one', async () => {
     const { playbook } = await askedApproval();
-    const first = await playbook.call(answer, { run_id: runId, answer: { choice: 'approve' } });
+    const first = await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' } });
     await playbook.performDue(Date.now());
 
     expect([
-      await playbook.call(answer, { run_id: runId, answer: { choice: 'approve' }, claimed_for: 'ada' }),
-      await playbook.call(answer, { run_id: runId, answer: { choice: 'reject' } }),
+      await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' }, claimed_for: 'ada' }),
+      await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'reject' } }),
     ]).toMatchObject([
       first,
       {
@@ -153,10 +150,12 @@ describe('an answer to a request a reply answered first', () => {
     const { playbook } = await askedThroughChat();
     await recordedReply(playbook.ledger, { choice: 'approve' });
 
-    expect(await playbook.call(answer, { run_id: askedRunId, answer: { choice: 'approve' } })).toMatchObject({
-      status: 'succeeded',
-      output: { answer: { choice: 'approve' }, reply: takenReply, answered_by: thePlaybook },
-    });
+    expect(await playbook.call(answerInteraction, { run_id: askedRunId, answer: { choice: 'approve' } })).toMatchObject(
+      {
+        status: 'succeeded',
+        output: { answer: { choice: 'approve' }, reply: takenReply, answered_by: thePlaybook },
+      },
+    );
   });
 });
 
@@ -164,7 +163,9 @@ describe('an answer the request does not take', () => {
   it('is invalid input when it does not match the answer schema, with pointers, and leaves the request open', async () => {
     const { playbook } = await askedApproval(approvalDocument([], 'P2D', datedAnswerSchema));
 
-    expect(await playbook.call(answer, { run_id: runId, answer: { choice: 'maybe', due: 'Friday' } })).toMatchObject({
+    expect(
+      await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'maybe', due: 'Friday' } }),
+    ).toMatchObject({
       status: 'rejected',
       reason: 'invalid_input',
       detail: 'choice: expected one of: approve, reject. due: expected a date such as 2026-04-01.',
@@ -181,8 +182,8 @@ describe('an answer the request does not take', () => {
     await playbook.ask('tell', { campaign: 'Spring', owner: 'ada' }, otherRunId);
 
     expect([
-      await playbook.call(answer, { run_id: runId, answer: {} }),
-      await playbook.call(answer, { run_id: otherRunId, answer: {} }),
+      await playbook.call(answerInteraction, { run_id: runId, answer: {} }),
+      await playbook.call(answerInteraction, { run_id: otherRunId, answer: {} }),
     ]).toMatchObject([
       { status: 'rejected', reason: 'not_found' },
       {
@@ -198,7 +199,7 @@ describe('an answer that is refused before it is checked', () => {
   it('is a conflict for a notification that waits for its delivery', async () => {
     const { playbook } = await askedThroughChat({ notification: true });
 
-    expect(await playbook.call(answer, { run_id: askedRunId, answer: {} })).toMatchObject({
+    expect(await playbook.call(answerInteraction, { run_id: askedRunId, answer: {} })).toMatchObject({
       status: 'rejected',
       reason: 'conflict',
       detail: 'The request is a notification, which takes no answer',
@@ -209,7 +210,10 @@ describe('an answer that is refused before it is checked', () => {
     const { playbook } = await askedApproval();
 
     expect([
-      await playbook.call(answer, { run_id: runId, answer: { choice: 'approve', note: 'x'.repeat(70_000) } }),
+      await playbook.call(answerInteraction, {
+        run_id: runId,
+        answer: { choice: 'approve', note: 'x'.repeat(70_000) },
+      }),
       answerIssuesOf({}, { type: 'thing' }),
     ]).toMatchObject([
       {
@@ -226,13 +230,13 @@ describe('an answer that is refused before it is checked', () => {
 describe('the words of answers and requests', () => {
   it('is told in plain words, as the requests are', async () => {
     const { playbook } = await askedApproval();
-    const answered = outputOf(await playbook.call(answer, { run_id: runId, answer: { choice: 'approve' } }));
+    const answered = outputOf(await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' } }));
     const listing = outputOf(await playbook.call(listInteractions, {}));
     const input = { run_id: runId, answer: { choice: 'approve' } };
 
     expect([
-      answer.registration.plainLanguage?.attempt(input),
-      answer.registration.plainLanguage?.outcome(answered, input),
+      answerInteraction.registration.plainLanguage?.attempt(input),
+      answerInteraction.registration.plainLanguage?.outcome(answered, input),
       listInteractions.registration.plainLanguage?.attempt({}),
       listInteractions.registration.plainLanguage?.outcome(listing, {}),
       listInteractions.registration.plainLanguage?.outcome(
@@ -256,45 +260,5 @@ describe('the words of answers and requests', () => {
       'Found 2 requests waiting on this page. One of them has had a reply refused.',
       'Found 2 requests waiting on this page. 2 of them have had a reply refused.',
     ]);
-  });
-});
-
-describe('a request whose run is cancelled', () => {
-  it('ends rejected as cancelled with the kind asked, closes, and takes no answer after', async () => {
-    const { playbook } = await askedApproval();
-
-    expect(await playbook.cancel(runId)).toMatchObject({ status: 'succeeded', output: { status: 'started' } });
-    await Effect.runPromise(
-      deferredCanceller([playbook.capability], playbook.ledger.service)(
-        { org: 'acme', playbook: 'alpha', id: runId },
-        { kind: 'requested', reason: 'Not needed any more', by: 'acme-admin' },
-        { causationId: null, correlationId: runId },
-      ),
-    );
-
-    expect(await playbook.runOf(runId)).toMatchObject({
-      output: {
-        status: 'rejected',
-        rejection: { reason: 'cancelled', kind: 'requested', detail: 'Not needed any more' },
-      },
-    });
-    expect(await playbook.call(listInteractions, {})).toMatchObject({ output: { interactions: [] } });
-    expect(await playbook.call(answer, { run_id: runId, answer: { choice: 'approve' } })).toMatchObject({
-      reason: 'conflict',
-    });
-  });
-});
-
-describe('an answer to a request whose run has a cancel asked', () => {
-  it('is a conflict before the run ends, and the run stays started', async () => {
-    const { playbook } = await askedApproval();
-    await playbook.cancel(runId);
-
-    expect(await playbook.call(answer, { run_id: runId, answer: { choice: 'approve' } })).toMatchObject({
-      status: 'rejected',
-      reason: 'conflict',
-      detail: 'A cancel of the run was asked before it took an answer, so it takes none',
-    });
-    expect(await playbook.runOf(runId)).toMatchObject({ output: { status: 'started' } });
   });
 });

@@ -4,20 +4,28 @@ import {
   functionResourceLabels,
   type Capability,
 } from '@on.auto/definitions';
+import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
+import type { HostDatabase } from '@on.auto/workflow-host';
 
 import { predictionCheck } from '../checks/prediction-check.ts';
-import { predictionFacts } from '../facts/prediction-facts.ts';
-import { predictionRunsOn } from '../run/prediction-runs.ts';
+import type { DatasetsPort } from '../dataset/datasets-port.ts';
+import { questionRunOn } from '../question/question-run.ts';
 import { predictionStanding } from '../standing/prediction-standing.ts';
 import { predictionBounds, predictionDefinitionType } from './prediction-bounds.ts';
 import { parse, summarize } from './prediction-definitions.ts';
-import type { PredictionFunctionAdapterOptions } from './prediction-ports.ts';
 import { describeOutput } from './prediction-words.ts';
+
+export interface PredictionFunctionAdapterOptions {
+  readonly pool: ProgramPool;
+  readonly database: Pick<HostDatabase, 'readConsistently'>;
+  readonly datasets: DatasetsPort;
+  readonly mostFunctions?: number;
+}
 
 export function makePredictionFunctionAdapter({
   pool,
+  database,
   datasets,
-  ports,
   mostFunctions = predictionBounds.mostFunctions,
 }: PredictionFunctionAdapterOptions): Capability {
   return defineCapability({
@@ -30,9 +38,9 @@ export function makePredictionFunctionAdapter({
     parse,
     check: predictionCheck(pool),
     summarize,
-    ...predictionRunsOn(ports),
-    facts: predictionFacts,
+    run: questionRunOn(database),
+    longestAnyRunMs: predictionBounds.questionMs,
     mostActive: mostFunctions,
-    standing: predictionStanding(datasets, ports.ledger),
+    standing: predictionStanding(datasets),
   });
 }

@@ -4,8 +4,6 @@ import type {
   CapabilityRejection,
   PreparedDefinition,
   RunContext,
-  SavedDefinition,
-  SavedDefinitions,
 } from '@on.auto/definitions';
 import {
   checkingWithin,
@@ -14,15 +12,17 @@ import {
   onTheStandingClock,
   recordingJournal,
 } from '@on.auto/definitions/testing';
-import { allPermissions, contentOfText } from '@on.auto/operations';
+import { allPermissions } from '@on.auto/operations';
 import { programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Exit, type Schema } from 'effect';
 import { afterEach } from 'vitest';
 
-import { makePredictionFunctionAdapter } from '../capability/prediction-function.ts';
+import {
+  makePredictionFunctionAdapter,
+  type PredictionFunctionAdapterOptions,
+} from '../capability/prediction-function.ts';
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import type { DatasetsPort } from '../dataset/datasets-port.ts';
-import { testPorts, type PortOptions } from './prediction-ports.ts';
 
 const pools: ProgramPool[] = [];
 
@@ -63,24 +63,9 @@ function keptDatasets(): KeptDatasets {
   };
 }
 
-export interface KeptText {
-  readonly text: string;
-  readonly mediaType: string;
-}
-
-export function savedInPlaybook(
-  saved: readonly SavedDefinition[],
-  kept: ReadonlyMap<string, KeptText> = new Map(),
-): SavedDefinitions {
-  return {
-    active: (_type, name) => Effect.sync(() => saved.find((definition) => definition.name === name)),
-    content: (sha256) =>
-      Effect.sync(() => {
-        const found = kept.get(sha256);
-        return found === undefined ? undefined : contentOfText(found.text, found.mediaType);
-      }),
-  };
-}
+const noDatasetRows: PredictionFunctionAdapterOptions['database'] = {
+  readConsistently: (reads) => reads(() => Effect.succeed([])),
+};
 
 export interface PredictionRuns {
   readonly capability: Capability;
@@ -93,21 +78,17 @@ export interface PredictionRuns {
 function preparedOnTheStandingClock(definition: PreparedDefinition): PreparedDefinition {
   return {
     ...definition,
-    check: (saved) => onTheStandingClock(definition.check(saved)),
+    check: () => onTheStandingClock(definition.check()),
     run: (input, context) => onTheStandingClock(definition.run(input, context)),
   };
 }
 
-export function predictionRuns(
-  pool: ProgramPool = poolOf(),
-  mostFunctions?: number,
-  runtimes?: PortOptions['runtimes'],
-): PredictionRuns {
+export function predictionRuns(pool: ProgramPool = poolOf(), mostFunctions?: number): PredictionRuns {
   const datasets = keptDatasets();
   const capability = makePredictionFunctionAdapter({
     pool,
+    database: noDatasetRows,
     datasets,
-    ports: testPorts(runtimes === undefined ? {} : { runtimes }).ports,
     ...(mostFunctions === undefined ? {} : { mostFunctions }),
   });
   const prepared = (source: string) => preparedOnTheStandingClock(Effect.runSync(capability.prepare(source)));

@@ -8,27 +8,39 @@ describe('the log of the extensions a server loaded', () => {
     const [line] = await linesLoggedBy(
       logExtensions([
         {
-          package: '@acme/models',
+          package: '@acme/extension',
           provenance: 'configured',
-          name: '@acme/models',
+          name: '@acme/extension',
           version: '2.0.0',
-          provides: [{ point: 'prediction/model-runtime', contract: 1 }],
+          provides: [{ point: 'example/greeter', contract: 1 }],
         },
         {
-          package: '@on.auto/prediction-series',
+          package: '@on.auto/greeters',
           provenance: 'release',
-          name: '@on.auto/prediction-series',
+          name: '@on.auto/greeters',
           version: '0.36.0',
-          provides: [{ point: 'prediction/model-runtime', contract: 1 }],
+          provides: [{ point: 'example/greeter', contract: 1 }],
         },
       ]),
     );
 
     expect(line).toContain(
-      '"message":"Extensions loaded, in their order of precedence: @acme/models 2.0.0, listed in the settings, filling prediction/model-runtime; @on.auto/prediction-series 0.36.0, of the release, filling prediction/model-runtime","level":"INFO"',
+      '"message":"Extensions loaded, in their order of precedence: @acme/extension 2.0.0, listed in the settings, filling example/greeter; @on.auto/greeters 0.36.0, of the release, filling example/greeter","level":"INFO"',
     );
     expect(line).toContain(
-      '"annotations":{"extensions":[{"package":"@acme/models","version":"2.0.0","provenance":"configured","provides":["prediction/model-runtime@1"]},{"package":"@on.auto/prediction-series","version":"0.36.0","provenance":"release","provides":["prediction/model-runtime@1"]}]}',
+      '"annotations":{"extensions":[{"package":"@acme/extension","version":"2.0.0","provenance":"configured","provides":["example/greeter@1"]},{"package":"@on.auto/greeters","version":"0.36.0","provenance":"release","provides":["example/greeter@1"]}]}',
+    );
+  });
+
+  it('says an extension that provides no point fills none', async () => {
+    const [line] = await linesLoggedBy(
+      logExtensions([
+        { package: '@acme/plain', provenance: 'configured', name: '@acme/plain', version: '1.0.0', provides: [] },
+      ]),
+    );
+
+    expect(line).toContain(
+      '"message":"Extensions loaded, in their order of precedence: @acme/plain 1.0.0, listed in the settings, filling no point"',
     );
   });
 

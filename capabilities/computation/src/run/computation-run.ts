@@ -81,9 +81,7 @@ export function computationRun({ pool, ...bounds }: ComputationRunOptions): Comp
           CapabilityAnswer,
           CapabilityRejection | InvalidInput
         > =>
-          pooledJob('program', 'computation', (signal) =>
-            pool.run(requestOf(runnable, admitted, moment, bounds), signal),
-          ).pipe(
+          pooledJob('computation', (signal) => pool.run(requestOf(runnable, admitted, moment, bounds), signal)).pipe(
             Effect.flatMap((outcome) =>
               endingOf(outcome, {
                 document,

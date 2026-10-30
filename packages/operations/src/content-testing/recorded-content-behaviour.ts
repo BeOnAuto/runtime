@@ -17,7 +17,6 @@ import {
   refusalOf,
   resultOf,
 } from './content-samples.ts';
-import { stagedContentBehaviour } from './staged-content-behaviour.ts';
 
 function keptWhole(entry: ContentEntry): void {
   it.each([
@@ -34,7 +33,7 @@ function keptWhole(entry: ContentEntry): void {
       const { sha256, content } = await generated(bytes);
 
       const kept = await resultOf(store.content.put(alpha, content()));
-      const read = await readBack(await resultOf(store.content.get(alpha, sha256)));
+      const read = await readBack(await present(store.content.get(alpha, sha256)));
 
       expect(kept).toEqual({ sha256, bytes, mediaType: octets });
       expect(read).toMatchObject({ bytes, sha256, mediaType: octets, declared: bytes });
@@ -138,7 +137,7 @@ function heldDigestDefended(entry: ContentEntry): void {
     );
 
     expect(refused).toMatchObject({ _tag: 'content_refused', because: 'not_its_digest' });
-    expect(await readBack(await resultOf(store.content.get(alpha, right.sha256)))).toMatchObject({
+    expect(await readBack(await present(store.content.get(alpha, right.sha256)))).toMatchObject({
       sha256: right.sha256,
       bytes: 2_500_000,
     });
@@ -164,7 +163,7 @@ function putRaced(entry: ContentEntry): void {
       { sha256: right.sha256, bytes: 2_500_000, mediaType: octets },
       { sha256: right.sha256, bytes: 2_500_000, mediaType: octets },
     ]);
-    expect(await readBack(await resultOf(store.content.get(alpha, right.sha256)))).toMatchObject({
+    expect(await readBack(await present(store.content.get(alpha, right.sha256)))).toMatchObject({
       sha256: right.sha256,
       bytes: 2_500_000,
     });
@@ -182,5 +181,4 @@ export function recordedContentBehaviour(entry: ContentEntry): void {
     heldDigestDefended(entry);
     putRaced(entry);
   });
-  stagedContentBehaviour(entry);
 }

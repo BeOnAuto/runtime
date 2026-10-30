@@ -1,22 +1,19 @@
 import { SQL } from '@event-driven-io/dumbo';
 import {
-  leftUnread,
   mostContentChunkBytes,
   randomUUIDv7,
   requireExpected,
-  stagingEnded,
   takenInChunks,
   type ContentKept,
   type ContentStore,
   type ContentRefused,
   type ContentToKeep,
   type RecordedContent,
-  type StagingEnded,
   type Taken,
 } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { Effect } from 'effect';
 
-import { inTransactionOf, type InTransaction, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
+import type { StatementExecutor, TransactionalPool } from '../event-store.ts';
 import { sqliteContent, type ContentDialect } from './content-dialects.ts';
 import {
   playbookPlaceOf,
@@ -24,10 +21,7 @@ import {
   commanded,
   headOf,
   hexOf,
-  matching,
-  queried,
   readOn,
-  runPlaceOf,
   uploadOf,
   uploadRemoved,
   valuesOf,
@@ -36,7 +30,7 @@ import {
   type Shelved,
 } from './content-places.ts';
 import { contentSweepOn } from './content-sweep.ts';
-import { keptShelf, stagingShelf, unstagedRuns } from './content-tables.ts';
+import { keptShelf } from './content-tables.ts';
 
 interface Placed {
   readonly uploadId: string;
@@ -48,8 +42,6 @@ interface ChunkWriting {
   readonly written: () => number;
   readonly flushed: () => Effect.Effect<void>;
 }
-
-const UnstagedRows = Schema.Array(Schema.Struct({ run_id: Schema.String }));
 
 function chunkWritingOf(shelved: Shelved, upload: Key): ChunkWriting {
   let pending: Readonly<Uint8Array> | undefined;
@@ -141,75 +133,17 @@ function keptOf({ head }: Placed): Effect.Effect<ContentKept> {
     : Effect.succeed({ sha256: head.sha256, bytes: head.bytes, mediaType: head.mediaType });
 }
 
-function unstagedOf(shelved: Shelved, place: Key): Effect.Effect<boolean> {
-  return Effect.map(
-    queried(shelved, SQL`SELECT run_id FROM ${SQL.identifier(unstagedRuns)} WHERE ${matching(place)}`),
-    (rows) => Schema.decodeUnknownSync(UnstagedRows)(rows).length > 0,
-  );
-}
-
-function stagingOpen(shelved: Shelved, place: Key, run: string): Effect.Effect<void, StagingEnded> {
-  return Effect.flatMap(unstagedOf(shelved, place), (unstaged) =>
-    unstaged ? Effect.fail(stagingEnded(run)) : Effect.void,
-  );
-}
-
-function stagedOn(
-  shelved: Shelved,
-  { place, run }: { readonly place: Key; readonly run: string },
-  content: ContentToKeep,
-): Effect.Effect<ContentKept, ContentRefused | StagingEnded> {
-  return Effect.gen(function* () {
-    yield* stagingOpen(shelved, place, run).pipe(Effect.tapError(() => leftUnread(content.stream)));
-    const placed = yield* placedOn(shelved, place, content);
-    if (yield* unstagedOf(shelved, place)) {
-      yield* commanded(
-        shelved,
-        SQL`DELETE FROM ${SQL.identifier(shelved.shelf.heads)} WHERE ${matching(uploadOf(place, placed.uploadId))}`,
-      );
-      yield* uploadRemoved(shelved, place, { uploadId: placed.uploadId, sha256: undefined });
-      return yield* Effect.fail(stagingEnded(run));
-    }
-    return yield* keptOf(placed);
-  });
-}
-
-function unstagedOn(shelved: Shelved, place: Key, inTransaction: InTransaction): Effect.Effect<void> {
-  const { heads, chunks } = shelved.shelf;
-  return Effect.andThen(
-    commanded(
-      shelved,
-      SQL`INSERT INTO ${SQL.identifier(unstagedRuns)} (${columnsOf(place)}) VALUES (${valuesOf(place)})
-        ON CONFLICT DO NOTHING`,
-    ),
-    Effect.promise(() =>
-      inTransaction(async (execute) => {
-        await execute.command(SQL`DELETE FROM ${SQL.identifier(heads)} WHERE ${matching(place)}`);
-        await execute.command(SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(place)}`);
-      }),
-    ),
-  );
-}
-
-export function recordedContentOn(
-  execute: StatementExecutor,
-  dialect: ContentDialect,
-  inTransaction: InTransaction,
-): RecordedContent {
+export function recordedContentOn(execute: StatementExecutor, dialect: ContentDialect): RecordedContent {
   const keeping: Shelved = { execute, dialect, shelf: keptShelf };
-  const staging: Shelved = { execute, dialect, shelf: stagingShelf };
   return {
     put: (playbook, content) => Effect.flatMap(placedOn(keeping, playbookPlaceOf(playbook), content), keptOf),
     get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
-    stage: (playbook, run, content) => stagedOn(staging, { place: runPlaceOf(playbook, run), run }, content),
-    staged: (playbook, run, sha256) => readOn(staging, runPlaceOf(playbook, run), sha256),
-    unstage: (playbook, run) => unstagedOn(staging, runPlaceOf(playbook, run), inTransaction),
   };
 }
 
 export function sqliteContentOn(pool: TransactionalPool): ContentStore {
   return {
-    content: recordedContentOn(pool.execute, sqliteContent, inTransactionOf(pool)),
+    content: recordedContentOn(pool.execute, sqliteContent),
     sweepContent: contentSweepOn(pool.execute),
   };
 }

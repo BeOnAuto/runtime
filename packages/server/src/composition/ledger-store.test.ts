@@ -23,10 +23,14 @@ function fixtureTypesUnder(group: string): readonly string[] {
 }
 
 describe('the steps the server gives the ledger, from every package that owns a table in its database', () => {
-  it('lead from the floor to the layout kept by one step for each number, and hold no step to any other', () => {
-    const inSequence = layoutStepsInSequence(layoutSteps).map(({ layout }) => layout);
+  it('lead from the floor to the layout kept by one step for each number, the statements every package gives a number taken together, and hold no step to any other', () => {
+    const inSequence = layoutStepsInSequence(layoutSteps);
+    const numbers = [...new Set(layoutSteps.map(({ layout }) => layout))].toSorted((one, other) => one - other);
 
-    expect(inSequence).toEqual(layoutSteps.map(({ layout }) => layout).toSorted((one, other) => one - other));
+    expect(inSequence.map(({ layout }) => layout)).toEqual(numbers);
+    expect(inSequence.flatMap(({ statements }) => statements)).toEqual(
+      layoutSteps.flatMap(({ statements }) => statements),
+    );
   });
 });
 
@@ -38,6 +42,6 @@ describe('the fact types the server gives the ledger to read', () => {
     const kept = [...new Set([...fixtureTypesUnder('packages'), ...fixtureTypesUnder('capabilities')])].toSorted();
 
     expect(factTypes).toEqual(kept);
-    expect(factTypes).toHaveLength(70);
+    expect(factTypes).toHaveLength(53);
   });
 });

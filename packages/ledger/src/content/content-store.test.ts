@@ -155,18 +155,4 @@ describe('the reads and the removals of a recorded content', () => {
 
     expect(read).toBe('kept');
   });
-
-  it('mark a run unstaged, then remove the heads and the chunks it staged in one transaction, the heads first', async () => {
-    const recording = recordingFinding([]);
-
-    await Effect.runPromise(sqliteContentOn(recording.pool).content.unstage(alpha, 'run-1'));
-
-    expect(recording.statements).toEqual([
-      'INSERT INTO unstaged_runs (playbook_key, run_id) VALUES ("playbook/acme/alpha/", "run-1") ON CONFLICT DO NOTHING',
-      'BEGIN',
-      'DELETE FROM staged_content WHERE playbook_key = "playbook/acme/alpha/" AND run_id = "run-1"',
-      'DELETE FROM staged_content_chunks WHERE playbook_key = "playbook/acme/alpha/" AND run_id = "run-1"',
-      'COMMIT',
-    ]);
-  });
 });

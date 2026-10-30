@@ -1,19 +1,16 @@
 import { withMcpSession } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
+import { approvalDocument } from '@on.auto/interaction/testing';
 import { allPermissions } from '@on.auto/operations';
-import { weeklyOrders } from '@on.auto/prediction/testing';
 import { foldOf, recallDocument } from '@on.auto/recall/testing';
 import { Schema } from 'effect';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
 
 const admin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
 
 const reader = createApiKey({ id: 'acme-reader', org: 'acme', permissions: ['playbook:read'], playbooks: ['alpha'] });
-
-const [, , , sendBuildExample] = blocksInOrderOf('reference/prediction-format.md');
 
 interface Saved {
   readonly type: string;
@@ -21,52 +18,49 @@ interface Saved {
   readonly source: string;
 }
 
-const sendBuild: Saved = { type: 'interaction', name: 'send-build', source: String(sendBuildExample?.body) };
+const approveBrief: Saved = { type: 'interaction', name: 'approve-brief', source: approvalDocument() };
 
 function remembering(name: string, filter: readonly string[]): Saved {
   const frontMatter = ['language: typescript', 'source:', '  events:', ...filter, 'view:', '  initial: 0'];
   return { type: 'recall', name, source: recallDocument(foldOf('return view + 1;'), frontMatter.join('\n')) };
 }
 
-const weeklyBuild: Saved = {
+const briefing: Saved = {
   type: 'workflow',
-  name: 'weekly-build',
+  name: 'briefing',
   source: [
     'document:',
     "  dsl: '1.0.3'",
     '  namespace: acme',
-    '  name: weekly-build',
+    '  name: briefing',
     "  version: '1.0.0'",
     'do:',
     '  - send:',
     '      call: run_definition',
-    '      with: { type: interaction, name: send-build, input: { build: {} } }',
+    '      with: { type: interaction, name: approve-brief, input: { owner: ada, campaign: Spring } }',
     '  - note: { set: { sent: true } }',
     '  - again:',
     '      call: run_definition',
-    '      with: { type: interaction, name: send-build, input: { build: {} } }',
+    '      with: { type: interaction, name: approve-brief, input: { owner: ada, campaign: Spring } }',
     '',
   ].join('\n'),
 };
 
-const usingSendBuild: readonly Saved[] = [
-  weeklyBuild,
-  {
-    type: 'prediction',
-    name: 'weekly-orders',
-    source: weeklyOrders.replace('  expires: P7D', '  through: send-build\n  expires: P7D'),
-  },
-  remembering('build-answers', ['    - type: run_succeeded', '      subject: interaction/send-build']),
-  remembering('build-changes', ['    - type: definition_updated', '      source: /definitions/interaction/send-build']),
+const usingApproveBrief: readonly Saved[] = [
+  briefing,
+  remembering('brief-answers', ['    - type: run_succeeded', '      subject: interaction/approve-brief']),
+  remembering('brief-changes', [
+    '    - type: definition_updated',
+    '      source: /definitions/interaction/approve-brief',
+  ]),
 ];
 
-const usedBySendBuild = [
-  { type: 'prediction', name: 'weekly-orders', relation: 'sends-builds' },
-  { type: 'recall', name: 'build-answers', relation: 'remembers-runs' },
-  { type: 'recall', name: 'build-changes', relation: 'remembers-changes' },
+const usedByApproveBrief = [
+  { type: 'recall', name: 'brief-answers', relation: 'remembers-runs' },
+  { type: 'recall', name: 'brief-changes', relation: 'remembers-changes' },
   {
     type: 'workflow',
-    name: 'weekly-build',
+    name: 'briefing',
     relation: 'calls',
     steps: [
       { number: 1, name: 'send' },
@@ -115,11 +109,14 @@ function usersOverMcp(definitions: readonly Saved[]): Promise<readonly unknown[]
 
 describe('the definitions that use a definition', () => {
   it('are answered with it over HTTP and by the MCP tool, each with its relation and a workflow with its steps', async () => {
-    const statuses = [await created(sendBuild), ...(await Promise.all(usingSendBuild.map((saved) => created(saved))))];
-    const overHttp = await Promise.all([sendBuild, weeklyBuild].map((saved) => usersOverHttp(saved)));
+    const statuses = [
+      await created(approveBrief),
+      ...(await Promise.all(usingApproveBrief.map((saved) => created(saved)))),
+    ];
+    const overHttp = await Promise.all([approveBrief, briefing].map((saved) => usersOverHttp(saved)));
 
-    expect(statuses).toEqual([201, 201, 201, 201, 201]);
-    expect(overHttp).toEqual([usedBySendBuild, undefined]);
-    expect(await usersOverMcp([sendBuild, weeklyBuild])).toEqual(overHttp);
+    expect(statuses).toEqual([201, 201, 201, 201]);
+    expect(overHttp).toEqual([usedByApproveBrief, undefined]);
+    expect(await usersOverMcp([approveBrief, briefing])).toEqual(overHttp);
   });
 });

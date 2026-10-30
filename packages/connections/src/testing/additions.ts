@@ -1,4 +1,4 @@
-import type { CallerIdentity, Outcome, Succeeded } from '@on.auto/operations';
+import type { CallerIdentity, Outcome } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { ada, operationNamed, type Harness } from './harness.ts';
@@ -62,17 +62,15 @@ export async function lastFact(h: Harness): Promise<unknown> {
   return (await h.facts()).at(-1)?.data;
 }
 
-export function namesIn(outcome: Outcome<Succeeded>): readonly string[] {
+export function namesIn(outcome: Outcome): readonly string[] {
   return Schema.decodeUnknownSync(ListedSchema)(outcome).output.connections.map(({ name }) => name);
 }
 
-export function issuesIn(
-  outcome: Outcome<Succeeded>,
-): readonly { readonly pointer: string; readonly detail: string }[] {
+export function issuesIn(outcome: Outcome): readonly { readonly pointer: string; readonly detail: string }[] {
   return Schema.decodeUnknownSync(RejectedSchema)(outcome).issues;
 }
 
-export function adding(h: Harness, input: unknown, caller = ada): Promise<Outcome<Succeeded>> {
+export function adding(h: Harness, input: unknown, caller = ada): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'add_connection'), caller, input);
 }
 
@@ -83,7 +81,7 @@ export function statusesOf(h: Harness, inputs: readonly unknown[]): Promise<read
   );
 }
 
-function linkedIn(outcome: Outcome<Succeeded>): Added {
+function linkedIn(outcome: Outcome): Added {
   const { output } = Schema.decodeUnknownSync(AddedSchema)(outcome);
   const { token } = Schema.decodeUnknownSync(LinkSchema)(Object.fromEntries(new URL(output.connect.url).searchParams));
   return {
@@ -103,7 +101,7 @@ export async function added(h: Harness, input: unknown = crm, { caller = ada, at
   return linkedIn(await h.call(operationNamed(h.operations, 'add_connection'), caller, input, at));
 }
 
-export function reconnecting(h: Harness, id: string, at?: string): Promise<Outcome<Succeeded>> {
+export function reconnecting(h: Harness, id: string, at?: string): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'reconnect_connection'), ada, { id }, at);
 }
 
@@ -111,7 +109,7 @@ export async function reconnected(h: Harness, id: string, at?: string): Promise<
   return linkedIn(await reconnecting(h, id, at));
 }
 
-export function reconnectingFor(h: Harness, id: string, more: string, at?: string): Promise<Outcome<Succeeded>> {
+export function reconnectingFor(h: Harness, id: string, more: string, at?: string): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'reconnect_connection'), ada, { id, more }, at);
 }
 

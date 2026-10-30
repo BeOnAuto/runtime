@@ -1,5 +1,3 @@
-import { Schema } from 'effect';
-
 import type { Aggregation } from '../document/prediction-document.ts';
 
 export interface MeasureState {
@@ -7,14 +5,6 @@ export interface MeasureState {
   readonly count: number;
   readonly at: number | null;
 }
-
-export const MeasureStateSchema = Schema.Tuple([
-  Schema.NullOr(Schema.Number),
-  Schema.Number,
-  Schema.NullOr(Schema.Number),
-]);
-
-export type StoredMeasure = typeof MeasureStateSchema.Type;
 
 export function emptyMeasure(as: Aggregation): MeasureState {
   return { value: as === 'last' ? null : 0, count: 0, at: null };
@@ -52,12 +42,4 @@ export function cellOf(state: MeasureState | undefined, as: Aggregation): number
     return state.count === 0 ? null : Number(state.value) / state.count;
   }
   return state.value;
-}
-
-export function storedOf({ value, count, at }: MeasureState): StoredMeasure {
-  return [value, count, at];
-}
-
-export function stateOf([value, count, at]: StoredMeasure): MeasureState {
-  return { value, count, at };
 }

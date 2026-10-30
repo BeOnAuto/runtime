@@ -39,7 +39,6 @@ const live: DatasetRow = {
     time: 'event',
     series: '',
     target: { as: 'count' },
-    features: [],
   },
 };
 
@@ -49,10 +48,7 @@ const stall = { record: 'a1b2c3d4-0000-7000-8000-000000000001', detail: 'Its dat
 
 const stalled: DatasetRow = { ...live, phase: 'stalled', tries: 20, stall };
 
-const noModels = { models: { active: null, latest: null, versions: 0, challenger: null }, build: null };
-
 const waitingStanding = {
-  ...noModels,
   dataset: {
     kind: 'projection',
     data_sha256: dataSha256,
@@ -70,7 +66,6 @@ const waitingStanding = {
 };
 
 const liveStanding = {
-  ...noModels,
   dataset: {
     kind: 'projection',
     data_sha256: dataSha256,
@@ -103,18 +98,13 @@ describe('the standing of a prediction function whose data is a projection', () 
   });
 });
 
-describe('the standing of a prediction function whose data is uploaded or that is retired', () => {
-  it('says a function that names an uploaded dataset has no projection, with no version built yet, and shows nothing for one retired', async () => {
+describe('the standing of a prediction function that is retired', () => {
+  it('shows nothing for one retired or saved without the details of its dataset', async () => {
     const { capability } = predictionRuns();
-    const uploaded = { data_sha256: 'd'.repeat(64), data: { dataset: 'e'.repeat(64) } };
 
-    expect(await Effect.runPromise(capability.standing({ ...asked, status: 'active', details: uploaded }))).toEqual({
-      ...noModels,
-      dataset: { kind: 'uploaded', sha256: 'e'.repeat(64) },
-    });
-    expect(
-      await Effect.runPromise(capability.standing({ ...asked, status: 'retired', details: uploaded })),
-    ).toBeUndefined();
-    expect(await Effect.runPromise(capability.standing({ ...asked, status: 'active' }))).toBeUndefined();
+    expect([
+      await Effect.runPromise(capability.standing({ ...asked, status: 'retired', details })),
+      await Effect.runPromise(capability.standing({ ...asked, status: 'active' })),
+    ]).toEqual([undefined, undefined]);
   });
 });

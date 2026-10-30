@@ -328,4 +328,4 @@ With the input above, the workflow ends `succeeded`. Its output holds the figure
 - [Computation function format](../reference/computation-format.md) has the sandbox, the rules for numbers and every bound.
 - [Functions](../concepts/functions.md) explains when to choose a computation function over the other types.
 - [Workflow format](../reference/workflow-format.md#calling-a-function) describes calling a function from a workflow and catching its errors.
-- [Forecast with a prediction function](forecast.md) projects a figure with a model trained on your data, where a straight-line pace is not enough.
+- [Forecast with a prediction function](forecast.md) projects a figure from your own history, with its usual seasonal pattern and a range, where a straight-line pace is not enough.

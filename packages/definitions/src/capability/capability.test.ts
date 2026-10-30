@@ -2,13 +2,7 @@ import { InvalidInput } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import {
-  defineRunDefinition,
-  defineCapability,
-  type AnswerIssues,
-  type RunContext,
-  type CapabilityDeclaration,
-} from '../index.ts';
+import { defineRunDefinition, defineCapability, type RunContext, type CapabilityDeclaration } from '../index.ts';
 import { recordingJournal } from '../journal-testing/recording-journal.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
 import { noCalledDefinitions } from '../testing/called-definitions.ts';
@@ -201,34 +195,5 @@ describe('the cancelling of a run', () => {
       { status: 'rejected', reason: 'cancelled', kind: 'deadline', detail: 'The step ran out of time' },
       { status: 'rejected', reason: 'conflict', detail: 'At step {"step":1}' },
     ]);
-  });
-});
-
-const onTheRun = {
-  at: '2026-10-01T09:00:00.000Z',
-  by: 'acme-admin',
-  runId: run.id,
-  definitionType: 'counting',
-  definitionName: 'count',
-  definitionVersion: 3,
-};
-
-const countedOnly: AnswerIssues = (answer, { work }) =>
-  work.some(({ data }) => data['word'] === answer)
-    ? []
-    : [{ pointer: '', detail: `${JSON.stringify(answer)} was not counted` }];
-
-describe('the answer a run takes', () => {
-  it('is any answer its request takes, unless the capability names issues of it against the run as it stands', () => {
-    const answering = {
-      work: [{ type: 'counted', data: { word: 'one' }, context: onTheRun }],
-    };
-    const checking = defineCapability({ ...words, answerIssues: countedOnly });
-
-    expect([
-      defineCapability(words).answerIssues('two', answering),
-      checking.answerIssues('one', answering),
-      checking.answerIssues('two', answering),
-    ]).toEqual([[], [], [{ pointer: '', detail: '"two" was not counted' }]]);
   });
 });

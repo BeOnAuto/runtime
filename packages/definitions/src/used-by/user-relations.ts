@@ -15,9 +15,8 @@ const CallingUserSchema = Schema.Struct({
 
 const NamingUserSchema = Schema.Struct({
   ...userFields,
-  relation: Schema.Literals(['sends-builds', 'asks-approval', 'remembers-runs', 'remembers-changes']).annotate({
-    description:
-      'sends-builds or asks-approval, for a prediction function that sends this one its builds to train or asks it to approve a version; remembers-runs or remembers-changes, for a recall function that folds its runs or its changes',
+  relation: Schema.Literals(['remembers-runs', 'remembers-changes']).annotate({
+    description: 'remembers-runs or remembers-changes, for a recall function that folds its runs or its changes',
   }),
 });
 

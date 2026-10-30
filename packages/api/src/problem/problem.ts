@@ -45,13 +45,7 @@ const resolvedOnlyByChange: ReadonlySet<RejectionKind> = new Set<UnavailableKind
   'model_not_offered',
 ]);
 
-const notResolvedByWaiting: ReadonlySet<RejectionBecause> = new Set<RejectionBecause>([
-  'builds_of_the_day',
-  'stalled',
-  'not_finite',
-  'not_in_order',
-  'no_model_runtime',
-]);
+const notResolvedByWaiting: ReadonlySet<RejectionBecause> = new Set<RejectionBecause>(['stalled']);
 
 function isWorthRetrying({ reason, kind, because }: Problem): boolean {
   return (
