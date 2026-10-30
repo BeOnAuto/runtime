@@ -1,5 +1,6 @@
 import { Schema } from 'effect';
 
+import { postgresqlMostBoundValues } from '../connection/bound-values.ts';
 import type { ConnectionPorts, ReadRows } from '../connection/ledger-connection.ts';
 import { lastAnswerOf, wroteARow, type StatementAnswer } from '../connection/statement-answers.ts';
 import { statement, textOnPostgreSQL, type Statement, type StatementValue } from '../connection/statement.ts';
@@ -92,6 +93,7 @@ export function postgresqlConnectionOn(connections: Connections, streams: Ledger
       const [{ now }] = Schema.decodeUnknownSync(NowRows)(await query(clockRead));
       return now;
     },
+    mostBoundValues: postgresqlMostBoundValues,
     migrated: async (statements) => {
       await inTransaction(
         connections,

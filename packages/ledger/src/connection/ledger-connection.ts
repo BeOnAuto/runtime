@@ -22,6 +22,7 @@ export interface ConnectionPorts {
   readonly transaction: (statements: readonly Statement[]) => Promise<Rows>;
   readonly readConsistently: <A>(reads: (read: ReadRows) => Promise<A>) => Promise<A>;
   readonly sharedClock: (() => Promise<number>) | null;
+  readonly mostBoundValues: number;
   readonly migrated: (statements: readonly Statement[]) => Promise<void>;
 }
 

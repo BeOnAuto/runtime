@@ -48,7 +48,7 @@ export interface Reconciled<Row> {
 }
 
 export interface Writing {
-  readonly database: Pick<HostDatabase, 'write' | 'transaction'>;
+  readonly database: Pick<HostDatabase, 'write' | 'transaction' | 'mostBoundValues'>;
   readonly playbook: string;
   readonly note: (note: HostNote) => Effect.Effect<void>;
 }

@@ -9,3 +9,4 @@ export { recordedFactsBehaviour } from '../recorded-facts/recorded-facts-behavio
 export type { RecordedFacts } from '../recorded-facts/recorded-facts.ts';
 export type { LedgerEntry } from './ledger-entry.ts';
 export { unreachableDatabase, type UnreachableDatabase } from './unreachable-database.ts';
+export { valuesListOf } from './values-list.ts';

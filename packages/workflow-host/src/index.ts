@@ -26,7 +26,14 @@ export {
   type HostDatabase,
   type ReadStatement,
 } from './database/host-database.ts';
-export { statement, statementOf, type LayoutStep, type Statement, type StatementValue } from '@on.auto/ledger';
+export {
+  chunksWithin,
+  statement,
+  statementOf,
+  type LayoutStep,
+  type Statement,
+  type StatementValue,
+} from '@on.auto/ledger';
 export { hostLayoutSteps } from './database/host-tables.ts';
 export type { PageEvent, ReadPage } from './pages/page-events.ts';
 export type { PlaybookDefinitions, KeptFunction, KeptOf } from './projector/playbook-definitions.ts';

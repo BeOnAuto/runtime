@@ -1,9 +1,11 @@
 import {
+  chunksWithin,
   pointText,
   rowsOf,
   statement,
   type DatabaseFailed,
   type Statement,
+  type StatementValue,
   type Writing,
 } from '@on.auto/workflow-host';
 import { Effect, Schema } from 'effect';
@@ -17,11 +19,19 @@ import { composed, tuples } from './dataset-statements.ts';
 
 const WrittenSchema = Schema.Struct({ data_sha256: Schema.String });
 
-function upserted(row: DatasetRow, upserts: readonly MergedRow[]): readonly Statement[] {
-  if (upserts.length === 0) {
-    return [];
-  }
-  const values = upserts.map(({ series, period, target, events }) => [
+const valuesOfARow = 9;
+
+function upsertOf(values: readonly (readonly StatementValue[])[]): Statement {
+  return composed(
+    'INSERT INTO prediction_rows (playbook_key, data_sha256, series, period_index, period, target, target_count, target_at, events) VALUES ',
+    ...tuples(values),
+    ' ON CONFLICT (playbook_key, data_sha256, series, period_index) DO UPDATE SET target = excluded.target,',
+    ' target_count = excluded.target_count, target_at = excluded.target_at, events = excluded.events',
+  );
+}
+
+function upserted(row: DatasetRow, upserts: readonly MergedRow[], mostBoundValues: number): readonly Statement[] {
+  const values = upserts.map(({ series, period, target, events }): readonly StatementValue[] => [
     row.playbookKey,
     row.dataSha256,
     series,
@@ -32,14 +42,7 @@ function upserted(row: DatasetRow, upserts: readonly MergedRow[]): readonly Stat
     target.at,
     events,
   ]);
-  return [
-    composed(
-      'INSERT INTO prediction_rows (playbook_key, data_sha256, series, period_index, period, target, target_count, target_at, events) VALUES ',
-      ...tuples(values),
-      ' ON CONFLICT (playbook_key, data_sha256, series, period_index) DO UPDATE SET target = excluded.target,',
-      ' target_count = excluded.target_count, target_at = excluded.target_at, events = excluded.events',
-    ),
-  ];
+  return chunksWithin(values, { mostBoundValues, valuesEach: valuesOfARow }).map((chunk) => upsertOf(chunk));
 }
 
 function moved({ row, next }: DatasetChange): Statement {
@@ -83,7 +86,8 @@ export function datasetWritten(
   change: DatasetChange,
 ): Effect.Effect<DatasetRow | undefined, DatabaseFailed> {
   const { row, next, upserts } = change;
-  const written = writing.database.transaction([...upserted(row, upserts), moved(change)]);
+  const { database } = writing;
+  const written = database.transaction([...upserted(row, upserts, database.mostBoundValues), moved(change)]);
   return Effect.flatMap(rowsOf(WrittenSchema, written), (took) =>
     took.length === 0
       ? Effect.undefined

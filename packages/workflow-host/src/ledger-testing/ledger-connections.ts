@@ -11,10 +11,17 @@ import { Effect, ManagedRuntime, type Layer } from 'effect';
 import { hostDatabaseOn, type HostDatabase } from '../database/host-database.ts';
 import { hostTablesMadeOn } from '../database/host-tables.ts';
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
+import { boundedConnection } from './bounded-connection.ts';
 
-export type DatabaseSettings =
-  | { readonly store: 'sqlite'; readonly file: string; readonly observer?: AppendObserver | undefined }
-  | { readonly store: 'postgresql'; readonly pools: PostgreSQLPools; readonly observer?: AppendObserver | undefined };
+interface DatabaseBound {
+  readonly mostBoundValues?: number | undefined;
+}
+
+export type DatabaseSettings = DatabaseBound &
+  (
+    | { readonly store: 'sqlite'; readonly file: string; readonly observer?: AppendObserver | undefined }
+    | { readonly store: 'postgresql'; readonly pools: PostgreSQLPools; readonly observer?: AppendObserver | undefined }
+  );
 
 export interface ConnectedLedger {
   readonly connection: ConnectionPorts;
@@ -38,7 +45,11 @@ export async function ledgerConnectedOn(settings: DatabaseSettings): Promise<Con
   const runtime = ManagedRuntime.make(await ledgerLayerOn(settings));
   try {
     const connection = await runtime.runPromise(Effect.service(LedgerConnection));
-    return { connection, close: () => runtime.dispose() };
+    const { mostBoundValues } = settings;
+    return {
+      connection: mostBoundValues === undefined ? connection : boundedConnection(connection, mostBoundValues),
+      close: () => runtime.dispose(),
+    };
   } catch (failure) {
     await runtime.dispose();
     throw failure;

@@ -41,6 +41,7 @@ export interface SQLitePool {
 export interface SQLiteConnecting {
   readonly inMemory: boolean;
   readonly streams: LedgerStreams;
+  readonly mostBoundValues: number;
 }
 
 const deferred = { mode: 'DEFERRED' } as const;
@@ -62,7 +63,10 @@ function snapshotsOn(pool: SQLitePool, inMemory: boolean): ConnectionPorts['read
   return read;
 }
 
-export function sqliteConnectionOn(pool: SQLitePool, { inMemory, streams }: SQLiteConnecting): ConnectionPorts {
+export function sqliteConnectionOn(
+  pool: SQLitePool,
+  { inMemory, streams, mostBoundValues }: SQLiteConnecting,
+): ConnectionPorts {
   const write = async (asked: Parameters<ReadRows>[0]) => (await pool.execute.command(sqlOf(asked))).rows;
   return {
     dialect: 'sqlite',
@@ -76,6 +80,7 @@ export function sqliteConnectionOn(pool: SQLitePool, { inMemory, streams }: SQLi
       }),
     readConsistently: snapshotsOn(pool, inMemory),
     sharedClock: null,
+    mostBoundValues,
     migrated: (statements) => inTurn(statements, write),
   };
 }

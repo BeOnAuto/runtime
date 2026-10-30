@@ -1,4 +1,12 @@
-import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '@on.auto/workflow-host';
+import {
+  chunksWithin,
+  rowsOf,
+  WholeNumber,
+  type DatabaseFailed,
+  type HostDatabase,
+  type Statement,
+  type StatementValue,
+} from '@on.auto/workflow-host';
 import { Effect, Schema } from 'effect';
 
 import type { DatasetData } from './dataset-data.ts';
@@ -50,29 +58,51 @@ function taken(data: DatasetData, row: MergedRow, contribution: Contribution): M
   };
 }
 
-function existingRows(database: HostDatabase, row: DatasetRow, contributions: readonly Contribution[]) {
+type Database = Pick<HostDatabase, 'read' | 'mostBoundValues'>;
+
+const valuesOfTheDataset = 2;
+
+function readInChunks<Item, Row>(
+  { read, mostBoundValues }: Database,
+  items: readonly Item[],
+  { valuesEach, rowSchema }: { readonly valuesEach: number; readonly rowSchema: Schema.Codec<Row, unknown> },
+  statementOf: (chunk: readonly Item[]) => Statement,
+): Effect.Effect<readonly Row[], DatabaseFailed> {
+  const chunks = chunksWithin(items, { mostBoundValues, valuesEach, valuesBeside: valuesOfTheDataset });
+  return Effect.map(
+    Effect.forEach(chunks, (chunk) => rowsOf(rowSchema, read(statementOf(chunk)))),
+    (chunked: readonly (readonly Row[])[]) => chunked.flat(),
+  );
+}
+
+function existingRows(database: Database, row: DatasetRow, contributions: readonly Contribution[]) {
   const series = [...new Set(contributions.map(({ series: named }) => named))];
   const touched = new Map(contributions.map(({ series: named, period }) => [keyOf(named, period), [named, period]]));
   const where = [' WHERE playbook_key = ', each([row.playbookKey]), ' AND data_sha256 = ', each([row.dataSha256])];
-  const kept = composed(
-    'SELECT series, period_index, target, target_count, target_at, events FROM prediction_rows',
-    ...where,
-    ' AND (series, period_index) IN (',
-    ...tuples([...touched.values()]),
-    ')',
-  );
-  const known = composed(
-    'WITH probe (series) AS (VALUES ',
-    ...tuples(series.map((named) => [named])),
-    ') SELECT series FROM probe WHERE (SELECT 1 FROM prediction_rows',
-    ...where,
-    ' AND prediction_rows.series = probe.series LIMIT 1) IS NOT NULL',
-  );
-  return Effect.all([rowsOf(StoredRowSchema, database.read(kept)), rowsOf(SeriesSchema, database.read(known))]);
+  const kept = (pairs: readonly (readonly StatementValue[])[]) =>
+    composed(
+      'SELECT series, period_index, target, target_count, target_at, events FROM prediction_rows',
+      ...where,
+      ' AND (series, period_index) IN (',
+      ...tuples(pairs),
+      ')',
+    );
+  const known = (named: readonly string[]) =>
+    composed(
+      'WITH probe (series) AS (VALUES ',
+      ...tuples(named.map((one) => [one])),
+      ') SELECT series FROM probe WHERE (SELECT 1 FROM prediction_rows',
+      ...where,
+      ' AND prediction_rows.series = probe.series LIMIT 1) IS NOT NULL',
+    );
+  return Effect.all([
+    readInChunks(database, [...touched.values()], { valuesEach: 2, rowSchema: StoredRowSchema }, kept),
+    readInChunks(database, series, { valuesEach: 1, rowSchema: SeriesSchema }, known),
+  ]);
 }
 
 export function mergedRows(
-  database: HostDatabase,
+  database: Database,
   row: DatasetRow,
   contributions: readonly Contribution[],
 ): Effect.Effect<Merged, DatabaseFailed> {

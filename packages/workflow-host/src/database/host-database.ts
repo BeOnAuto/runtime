@@ -14,6 +14,7 @@ export interface HostDatabase {
     reads: (read: ReadStatement) => Effect.Effect<A, E>,
   ) => Effect.Effect<A, E | DatabaseFailed>;
   readonly sharedClock: Effect.Effect<number, DatabaseFailed> | null;
+  readonly mostBoundValues: number;
 }
 
 export const WholeNumber = Schema.Union([Schema.Finite, Schema.FiniteFromString]);
@@ -44,7 +45,7 @@ function consistentReadsOn(connection: ConnectionPorts): HostDatabase['readConsi
 }
 
 export function hostDatabaseOn(connection: ConnectionPorts): HostDatabase {
-  const { sharedClock } = connection;
+  const { sharedClock, mostBoundValues } = connection;
   return {
     store: connection.streams,
     read: readsOn(connection.read),
@@ -52,6 +53,7 @@ export function hostDatabaseOn(connection: ConnectionPorts): HostDatabase {
     transaction: (statements) => asked(() => connection.transaction(statements)),
     readConsistently: consistentReadsOn(connection),
     sharedClock: sharedClock === null ? null : asked(sharedClock),
+    mostBoundValues,
   };
 }
 

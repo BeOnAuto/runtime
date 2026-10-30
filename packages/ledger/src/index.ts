@@ -19,6 +19,7 @@ export {
   type Statement,
   type StatementValue,
 } from './connection/statement.ts';
+export { chunksWithin, sqliteMostBoundValues } from './connection/bound-values.ts';
 export { LedgerChores, type ChorePorts } from './content/content-sweep.ts';
 export { LedgerLog, samePoint, type LoggedEvent, type LogPage, type LogPorts } from './log/ledger-log.ts';
 export { UnreadableEvent } from './log/unreadable-event.ts';

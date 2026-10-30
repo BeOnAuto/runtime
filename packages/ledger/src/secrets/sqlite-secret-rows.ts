@@ -2,6 +2,7 @@ import { dumbo } from '@event-driven-io/dumbo';
 import type { SecretRows } from '@on.auto/secrets';
 import { Effect } from 'effect';
 
+import { mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { sqliteEventStore, type AnyDriver, type SQLiteStoreOptions } from '../sqlite-event-store.ts';
 import { secretRowsOn } from './secret-rows.ts';
 
@@ -17,6 +18,6 @@ export function sqliteSecretRowsOn<Driver extends AnyDriver>(
     const pool = dumbo({ serialization: options.serialization, ...options.driver.mapToDumboOptions(options) });
     const store = sqliteEventStore(() => ({ ...options, pool }));
     await store.migrate();
-    return secretRowsOn(pool.execute, () => store.close());
+    return secretRowsOn(pool.execute, () => store.close(), mostValuesTheLedgerBindsOnSQLite);
   });
 }

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Client, Pool } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
+import { datasetBoundSuite } from '../dataset-testing/dataset-bound-suite.ts';
 import { datasetEdgesSuite } from '../dataset-testing/dataset-edges-suite.ts';
 import { datasetLifecycleSuite } from '../dataset-testing/dataset-lifecycle-suite.ts';
 import type { SettingsOf } from '../dataset-testing/dataset-stores.ts';
@@ -41,4 +42,5 @@ describe.skipIf(skipped)(`the datasets of prediction functions on PostgreSQL${no
   datasetLifecycleSuite(onPostgreSQL);
   datasetEdgesSuite(onPostgreSQL);
   datasetWritesSuite(onPostgreSQL);
+  datasetBoundSuite(onPostgreSQL);
 });

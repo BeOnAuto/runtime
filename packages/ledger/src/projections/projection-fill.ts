@@ -6,6 +6,7 @@ import {
   type ProjectedRow,
 } from '@on.auto/operations';
 
+import { chunksOf } from '../connection/bound-values.ts';
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import { inTurn } from './inline-projection.ts';
 import { filledMessageOf, replayedRow, type ProjectionKeeping, type ReplayedMessage } from './projection-keeping.ts';
@@ -40,12 +41,6 @@ export function versionOfTable({ name }: NamedProjection, table: string): number
 function isEarlierVersion({ projection }: ProjectionKeeping, table: string): boolean {
   const version = versionOfTable(projection, table);
   return version !== undefined && version < projection.version;
-}
-
-function chunksOf<Item>(items: readonly Item[], size: number): readonly (readonly Item[])[] {
-  return Array.from({ length: Math.ceil(items.length / size) }, (_, index) =>
-    items.slice(index * size, (index + 1) * size),
-  );
 }
 
 function writtenInChunks(keeping: ProjectionKeeping, execute: StatementExecutor, kept: readonly KeptRow[]) {

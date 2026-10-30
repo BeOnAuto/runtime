@@ -1,6 +1,7 @@
 import type { SecretRows } from '@on.auto/secrets';
 import { Effect } from 'effect';
 
+import { postgresqlMostBoundValues } from '../connection/bound-values.ts';
 import { executorOn } from '../content/postgresql-content.ts';
 import { lostConnectionsLoggedWith } from '../postgresql/lost-connections.ts';
 import type { PoolBounds } from '../postgresql/postgresql-options.ts';
@@ -22,6 +23,6 @@ export function postgresqlSecretRows({ pools }: PostgreSQLSecretRowsOptions): Ef
   return Effect.map(Effect.context(), (context) => {
     const connections = pools({ max: connectionsOfTheSecretRows });
     connections.on('error', lostConnectionsLoggedWith(context));
-    return secretRowsOn(executorOn(connections), () => connections.end());
+    return secretRowsOn(executorOn(connections), () => connections.end(), postgresqlMostBoundValues);
   });
 }

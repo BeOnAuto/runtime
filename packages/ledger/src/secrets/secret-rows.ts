@@ -2,6 +2,7 @@ import { SQL } from '@event-driven-io/dumbo';
 import type { Claim, HeldRow, Holder, Holding, Replacement, SecretRow, SecretRows } from '@on.auto/secrets';
 import { DateTime, Effect, Schema } from 'effect';
 
+import { chunksWithin } from '../connection/bound-values.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { keptSecrets } from './kept-secrets.ts';
 
@@ -118,17 +119,26 @@ function claimedOn(execute: StatementExecutor, id: string, version: number, last
   });
 }
 
-function endingsOn(execute: StatementExecutor, ids: readonly string[]): Effect.Effect<ReadonlyMap<string, string>> {
-  if (ids.length === 0) {
-    return Effect.succeed(new Map());
-  }
+function endingsInChunk(execute: StatementExecutor, ids: readonly string[]) {
   const named = SQL.merge(
     ids.map((id) => SQL`${id}`),
     ', ',
   );
   return Effect.map(
     queried(execute, SQL`SELECT id, ends_with FROM ${keptSecrets} WHERE id IN (${named}) AND ends_with IS NOT NULL`),
-    (rows) => new Map(Schema.decodeUnknownSync(EndingRows)(rows).map(({ id, ends_with: endsWith }) => [id, endsWith])),
+    (rows) => Schema.decodeUnknownSync(EndingRows)(rows),
+  );
+}
+
+function endingsOn(
+  execute: StatementExecutor,
+  ids: readonly string[],
+  mostBoundValues: number,
+): Effect.Effect<ReadonlyMap<string, string>> {
+  return Effect.map(
+    Effect.forEach(chunksWithin(ids, { mostBoundValues, valuesEach: 1 }), (chunk) => endingsInChunk(execute, chunk)),
+    (chunks: readonly (typeof EndingRows.Type)[]) =>
+      new Map(chunks.flat().map(({ id, ends_with: endsWith }) => [id, endsWith])),
   );
 }
 
@@ -176,13 +186,17 @@ function reheldOn(execute: StatementExecutor, read: HeldRow, holding: Holding): 
   );
 }
 
-export function secretRowsOn(execute: StatementExecutor, close: () => Promise<void>): SecretRows {
+export function secretRowsOn(
+  execute: StatementExecutor,
+  close: () => Promise<void>,
+  mostBoundValues: number,
+): SecretRows {
   return {
     keep: (id, holding, endsWith) => keptOn(execute, id, holding, endsWith),
     read: (id) => readOn(execute, id),
     replace: (id, version, holding) => replacedOn(execute, { id, version }, holding),
     claim: (id, version, lastingMs) => claimedOn(execute, id, version, lastingMs),
-    endingsOf: (ids) => endingsOn(execute, ids),
+    endingsOf: (ids) => endingsOn(execute, ids, mostBoundValues),
     forget: (id) => forgottenOn(execute, id),
     heldBy: (holder, limit, after) => heldOn(execute, holder, { limit, after }),
     reheld: (read, holding) => reheldOn(execute, read, holding),

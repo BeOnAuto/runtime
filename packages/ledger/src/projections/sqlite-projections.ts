@@ -1,13 +1,12 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
+import { itemsInAStatement, mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { inTransactionOf, type TransactionalPool } from '../event-store.ts';
 import type { ProjectionDialect } from './projection-dialect.ts';
 import { projectionPartsOf, type KeptTables, type ProjectionParts } from './projection-parts.ts';
 
 const defaultPartition = 'emt:default';
-
-const mostParameters = 100;
 
 const decodeText = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 
@@ -46,7 +45,8 @@ const sqliteProjectionDialect: ProjectionDialect = {
         AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
       ORDER BY m.global_position
       LIMIT ${count}`,
-  rowsInAWrite: (columns) => Math.max(1, Math.floor(mostParameters / (columns + 2))),
+  rowsInAWrite: (columns) =>
+    itemsInAStatement({ mostBoundValues: mostValuesTheLedgerBindsOnSQLite, valuesEach: columns + 2 }),
   filledData: (column) => decodeText(column),
   filledMetadata: (column) => decodeText(column),
   appendedData: (stored) => stored,

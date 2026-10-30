@@ -1,5 +1,6 @@
 import { describe } from 'vitest';
 
+import { datasetBoundSuite } from '../dataset-testing/dataset-bound-suite.ts';
 import { datasetEdgesSuite } from '../dataset-testing/dataset-edges-suite.ts';
 import { datasetLifecycleSuite } from '../dataset-testing/dataset-lifecycle-suite.ts';
 import { onSQLite } from '../dataset-testing/dataset-stores.ts';
@@ -11,4 +12,5 @@ describe('the datasets of prediction functions on SQLite', () => {
   datasetLifecycleSuite(onSQLite);
   datasetEdgesSuite(onSQLite);
   datasetWritesSuite(onSQLite);
+  datasetBoundSuite(onSQLite);
 });
